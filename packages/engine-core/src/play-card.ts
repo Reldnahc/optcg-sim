@@ -42,6 +42,7 @@ import {
 import {
   canResolveDestinationConflict,
   getActiveDonCount,
+  getEffectivePlayCost,
   getPlayableHandCards,
   getSupportedPlayMetadata,
   type SupportedPlayMetadata,
@@ -73,12 +74,16 @@ export const getPlayCardLegalActions = (
   }
   for (const card of getPlayableHandCards(state, playerId)) {
     const supported = getSupportedPlayMetadata(state, card);
+    const playCost =
+      supported === null
+        ? null
+        : getEffectivePlayCost(state, playerId, card, supported);
     actions.push({
       type: "playCard",
       cardInstanceId: card.instanceId,
-      ...(supported === null
+      ...(playCost === null
         ? {}
-        : canonicalRestDonCostPayment(player.costArea, supported.printedCost)),
+        : canonicalRestDonCostPayment(player.costArea, playCost)),
     });
   }
   return actions;
@@ -144,7 +149,8 @@ export const applyPlayCard = (
   if (supported === null) {
     return illegalAction(state, "playCard card is unsupported.");
   }
-  if (getActiveDonCount(player.costArea) < supported.printedCost) {
+  const playCost = getEffectivePlayCost(state, playerId, handCard, supported);
+  if (getActiveDonCount(player.costArea) < playCost) {
     return illegalAction(state, "playCard requires enough active DON!!.");
   }
   if (!canResolveDestinationConflict(player, supported.category)) {
@@ -160,13 +166,14 @@ export const applyPlayCard = (
     { type: "public" },
   );
 
-  if (supported.printedCost > 0) {
+  if (playCost > 0) {
     if (action.costPayment !== undefined) {
       const payment = validatePlayCardPaymentSelection({
         state,
         response: { type: "payment", ...action.costPayment },
         player,
         supported,
+        playCost,
       });
       if (!payment.ok) {
         return payment.result;
@@ -208,7 +215,7 @@ export const applyPlayCard = (
       events,
       playerId,
       handCard,
-      printedCost: supported.printedCost,
+      playCost,
     });
   }
 
@@ -736,7 +743,8 @@ export const applyRuntimePlaySelectedFromHand = (params: {
   }
   if (
     !ignoreCost &&
-    getActiveDonCount(player.costArea) < supported.printedCost
+    getActiveDonCount(player.costArea) <
+      getEffectivePlayCost(state, playerId, handCard, supported)
   ) {
     return illegalAction(state, "playSelected requires enough active DON!!.");
   }
@@ -899,6 +907,12 @@ const applyPlayCardPaymentResponse = (
     response,
     player,
     supported,
+    playCost: getEffectivePlayCost(
+      state,
+      decision.playerId,
+      handCard,
+      supported,
+    ),
   });
   if (!payment.ok) {
     return payment.result;

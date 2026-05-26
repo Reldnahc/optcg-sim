@@ -1,10 +1,15 @@
 import type {
+  CardFilter,
   CardInstance,
+  ContinuousEffectRecord,
   EffectDefinition,
+  EffectQueueEntry,
   GameState,
   PlayerId,
 } from "@optcg/types";
 
+import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
 import { hasUnsupportedSupportGateText } from "./battle-support.js";
@@ -12,6 +17,133 @@ import { hasUnsupportedSupportGateText } from "./battle-support.js";
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
   printedCost: number;
+};
+
+const numericFilterMatches = (
+  value: number | undefined,
+  filter: CardFilter["cost"] | CardFilter["power"],
+): boolean => {
+  if (filter === undefined) return true;
+  if (value === undefined) return false;
+  if ("op" in filter) return value === filter.value;
+  if (filter.min !== undefined && value < filter.min) return false;
+  if (filter.max !== undefined && value > filter.max) return false;
+  return true;
+};
+
+const cardMatchesCostModifierFilter = (
+  state: GameState,
+  card: CardInstance,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) return true;
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (metadata === undefined) return false;
+  if (
+    filter.categories !== undefined &&
+    !filter.categories.includes(metadata.category)
+  ) {
+    return false;
+  }
+  if (
+    filter.typesAny !== undefined &&
+    !filter.typesAny.some((type) => metadata.types.includes(type))
+  ) {
+    return false;
+  }
+  return numericFilterMatches(metadata.cost, filter.cost);
+};
+
+const isCardRefLive = (
+  state: GameState,
+  ref: ContinuousEffectRecord["source"],
+): boolean => {
+  const player = state.players[ref.playerId];
+  if (player === undefined) return false;
+  if (
+    player.leader.instanceId === ref.instanceId &&
+    player.leader.cardId === ref.cardId
+  ) {
+    return true;
+  }
+  if (
+    player.stage?.instanceId === ref.instanceId &&
+    player.stage.cardId === ref.cardId
+  ) {
+    return true;
+  }
+  return player.characters.some(
+    (character) =>
+      character.instanceId === ref.instanceId &&
+      character.cardId === ref.cardId,
+  );
+};
+
+const costModifierDurationIsActive = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  if (effect.duration.type === "thisBattle") return state.battle !== undefined;
+  if (effect.duration.type === "whileSourceOnField") {
+    return isCardRefLive(state, effect.source);
+  }
+  return true;
+};
+
+const toConditionQueueEntry = (
+  effect: ContinuousEffectRecord,
+): EffectQueueEntry => ({
+  id: `play-cost-condition:${effect.id}` as EffectQueueEntry["id"],
+  state: "resolving",
+  timingWindowId:
+    `play-cost-condition:${effect.id}` as EffectQueueEntry["timingWindowId"],
+  generation: 0,
+  controllerId: effect.controller,
+  source: effect.source,
+  sourceSnapshot: effect.sourceSnapshot,
+  effectBlockId:
+    `play-cost-condition:${effect.id}` as EffectQueueEntry["effectBlockId"],
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: effect.createdAtStateSeq,
+  sourcePresencePolicy: "mustRemainInSameZone",
+  causedBy: effect.createdBy,
+});
+
+const costModifierConditionPasses = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const result = evaluateQueuedEffectCondition(
+    state,
+    toConditionQueueEntry(effect),
+    effect.condition,
+  );
+  return result.supported && result.passed;
+};
+
+const costModifierAppliesToCard = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  if (effect.modifier.layer !== "costAdd") return false;
+  if (effect.modifier.operation.type !== "addCost") return false;
+  if (!costModifierDurationIsActive(state, effect)) return false;
+  if (!costModifierConditionPasses(state, effect)) return false;
+  const target = effect.modifier.target;
+  if (target.type !== "allMatching") return false;
+  if (target.zone !== "hand") return false;
+  if (card.zone.zone !== "hand") return false;
+  if (target.player === "self" && card.controller !== effect.controller) {
+    return false;
+  }
+  if (target.player === "opponent" && card.controller === effect.controller) {
+    return false;
+  }
+  if (card.controller !== playerId) return false;
+  return cardMatchesCostModifierFilter(state, card, target.filter);
 };
 
 const hasOnlySupportedRelevantEffects = (
@@ -143,6 +275,25 @@ export const getSupportedPlayMetadata = (
   };
 };
 
+export const getEffectivePlayCost = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  supported: SupportedPlayMetadata,
+): number => {
+  const costDelta = [
+    ...state.continuousEffects,
+    ...deriveImplementedDslPermanentContinuousEffects(state),
+  ].reduce((total, effect) => {
+    if (!costModifierAppliesToCard(state, playerId, card, effect)) {
+      return total;
+    }
+    const operation = effect.modifier.operation;
+    return operation.type === "addCost" ? total + operation.value : total;
+  }, 0);
+  return Math.max(0, supported.printedCost + costDelta);
+};
+
 export const getPlayableHandCards = (
   state: GameState,
   playerId: PlayerId,
@@ -157,7 +308,9 @@ export const getPlayableHandCards = (
     if (supported === null) {
       return false;
     }
-    if (activeDonCount < supported.printedCost) {
+    if (
+      activeDonCount < getEffectivePlayCost(state, playerId, card, supported)
+    ) {
       return false;
     }
     return canResolveDestinationConflict(player, supported.category);

@@ -621,6 +621,7 @@ export const deriveImplementedDslPermanentContinuousEffects = (
   const liveCards = Object.values(state.players).flatMap((player) => [
     player.leader,
     ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
   ]);
 
   for (const card of liveCards) {
@@ -683,7 +684,12 @@ export const deriveImplementedDslPermanentContinuousEffects = (
       ownerId: card.owner,
       controllerId: card.controller,
       zone: card.zone,
-      category: card.zone.zone === "leaderArea" ? "leader" : "character",
+      category:
+        card.zone.zone === "leaderArea"
+          ? "leader"
+          : card.zone.zone === "stageArea"
+            ? "stage"
+            : "character",
       colors: [],
       keywords: [],
     };

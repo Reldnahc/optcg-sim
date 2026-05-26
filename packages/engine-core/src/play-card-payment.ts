@@ -40,9 +40,9 @@ export const createPlayCardPaymentDecisionResult = (params: {
   events: EngineEvent[];
   playerId: PlayerId;
   handCard: CardInstance;
-  printedCost: number;
+  playCost: number;
 }): EngineResult => {
-  const { state, events, playerId, handCard, printedCost } = params;
+  const { state, events, playerId, handCard, playCost } = params;
   const decisionId = getPlayCardDecisionId(state, handCard);
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: decisionId,
@@ -54,8 +54,8 @@ export const createPlayCardPaymentDecisionResult = (params: {
       actionId: `action:${String(state.actionSeq + 1)}`,
     },
     visibility: { type: "public" },
-    cost: { type: "restDon", count: printedCost },
-    paymentOptions: [{ id: "restDon", type: "restDon", count: printedCost }],
+    cost: { type: "restDon", count: playCost },
+    paymentOptions: [{ id: "restDon", type: "restDon", count: playCost }],
   };
   appendEvent(
     state,
@@ -178,8 +178,9 @@ export const validatePlayCardPaymentSelection = (params: {
   response: PaymentResponse;
   player: GameState["players"][PlayerId];
   supported: SupportedPlayMetadata;
+  playCost: number;
 }): PlayCardPaymentSelection => {
-  const { state, response, player, supported } = params;
+  const { state, response, player, supported, playCost } = params;
   if (response.optionId !== "restDon") {
     return {
       ok: false,
@@ -187,7 +188,7 @@ export const validatePlayCardPaymentSelection = (params: {
     };
   }
   const selected = response.selectedDonInstanceIds;
-  if (selected === undefined || selected.length !== supported.printedCost) {
+  if (selected === undefined || selected.length !== playCost) {
     return {
       ok: false,
       result: illegalAction(state, "Payment DON!! selection count mismatch."),

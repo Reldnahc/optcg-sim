@@ -4,6 +4,8 @@ import { test } from "vitest";
 import type {
   Action,
   CardInstance,
+  ContinuousEffectRecord,
+  EffectDefinition,
   EngineResult,
   GameState,
 } from "@optcg/types";
@@ -31,6 +33,122 @@ const applyPlayCardTestAction = (
   const result = applyPlayCardDecisionResponse(state, action);
   assert.ok(result !== null, "expected play-card decision response");
   return result;
+};
+
+const addCelestialDragonsHandCostReduction = (
+  state: GameState,
+  value = -1,
+): void => {
+  const source = must(state.players[p1], "p1").leader;
+  state.continuousEffects.push({
+    id: "test:cost-reduction",
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "leader",
+      colors: [],
+      keywords: [],
+    },
+    controller: p1,
+    duration: { type: "permanent" },
+    createdBy: { type: "ruleProcess", name: "test" },
+    createdAtStateSeq: state.seq,
+    modifier: {
+      layer: "costAdd",
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Celestial Dragons"],
+          cost: { min: 2 },
+        },
+      },
+      operation: { type: "addCost", value },
+    },
+  } satisfies ContinuousEffectRecord);
+};
+
+const addStageDerivedCelestialDragonsHandCostReduction = (
+  state: GameState,
+): void => {
+  const player = must(state.players[p1], "p1");
+  const stageSource = must(player.hand[3], "stage source");
+  player.stage = {
+    ...stageSource,
+    zone: { zone: "stageArea", playerId: p1, slot: "stage", index: 0 },
+    state: "active",
+    attachedDon: [],
+  };
+  const support = {
+    status: "implemented-dsl" as const,
+    effectDefinitionId: "test-stage-cost-reduction",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "stage-cost-reduction-source",
+    behaviorHash: "stage-cost-reduction-behavior",
+  };
+  state.cardManifest.cards[player.stage.cardId] = {
+    ...resolvedCard({
+      cardId: player.stage.cardId,
+      category: "stage",
+      cost: 7,
+      support,
+    }),
+    effectText:
+      "[Your Turn] The cost of playing {Celestial Dragons} type Character cards with a cost of 2 or more from your hand will be reduced by 1.",
+    types: ["Mary Geoise"],
+  };
+  const definition: EffectDefinition = {
+    cardId: player.stage.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "stage:cost-reduction" as EffectDefinition["effects"][number]["id"],
+        category: "permanent",
+        trigger: { type: "permanent" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          sourceZone: "hand",
+          value: -1,
+          duration: {
+            type: "whileConditionTrue",
+            condition: { type: "yourTurn" },
+          },
+          filter: {
+            categories: ["character"],
+            typesAny: ["Celestial Dragons"],
+            cost: { min: 2 },
+          },
+        },
+      },
+    ],
+    metadata: {
+      rulesVersion: support.rulesVersion,
+      sourceTextHash: support.sourceTextHash,
+      effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+      tested: true,
+      reviewedBy: "test",
+      reviewedAt: "2026-05-26T00:00:00.000Z",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [support.effectDefinitionId]: definition,
+  };
 };
 test("applyAction playCard rejects forged card instance references without mutation", () => {
   const state = setupMainPlayState();
@@ -136,6 +254,66 @@ test("getLegalActions includes playCard for supported vanilla Character and Stag
     hasPlayCardAction(getPlayCardLegalActions(state, p2), character),
     false,
   );
+});
+
+test("playCard uses continuous cost reductions when checking and paying play cost", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "celestial dragon");
+  state.cardManifest.cards[card.cardId] = {
+    ...resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    }),
+    types: ["Celestial Dragons"],
+  };
+  addCelestialDragonsHandCostReduction(state);
+
+  const action = getPlayCardLegalActions(state, p1).find(
+    (candidate) =>
+      candidate.type === "playCard" &&
+      candidate.cardInstanceId === card.instanceId,
+  );
+
+  assert.ok(action !== undefined, "expected reduced-cost play action");
+  assert.equal(action.type, "playCard");
+  assert.equal(action.costPayment?.selectedDonInstanceIds?.length, 3);
+  const result = applyPlayCardTestAction(state, action);
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p1], "p1 after").costArea.filter(
+      (don) => don.state === "rested",
+    ).length,
+    3,
+  );
+});
+
+test("playCard uses derived stage cost reductions for cards in hand", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "celestial dragon");
+  state.cardManifest.cards[card.cardId] = {
+    ...resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    }),
+    types: ["Celestial Dragons"],
+  };
+  addStageDerivedCelestialDragonsHandCostReduction(state);
+
+  const action = getPlayCardLegalActions(state, p1).find(
+    (candidate) =>
+      candidate.type === "playCard" &&
+      candidate.cardInstanceId === card.instanceId,
+  );
+
+  assert.ok(action !== undefined, "expected stage-reduced play action");
+  assert.equal(action.type, "playCard");
+  assert.equal(action.costPayment?.selectedDonInstanceIds?.length, 3);
 });
 
 test("getLegalActions omits playCard when card play preconditions fail", () => {
