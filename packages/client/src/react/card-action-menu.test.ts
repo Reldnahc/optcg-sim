@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
@@ -12,6 +15,8 @@ import type {
   ClientActionModel,
   ClientCardModel,
 } from "../view-model.js";
+
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 const card = (instanceId: string, name = instanceId): ClientCardModel => ({
   instanceId: instanceId as InstanceId,
@@ -76,5 +81,34 @@ describe("card action menu", () => {
 
     assert.match(boardMarkup, /class="[^"]*card-action-popover/u);
     assert.equal(boardMarkup.includes("Play"), true);
+  });
+
+  test("card action popovers are not clipped by immediate card containers", async () => {
+    const [zoneStyles, appShellStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "zone.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+    ]);
+
+    for (const selector of [".zone", ".zone-cards"]) {
+      assert.equal(
+        new RegExp(
+          `${selector.replace(".", "\\.")}\\s*\\{[^}]*overflow:\\s*hidden`,
+          "u",
+        ).test(zoneStyles),
+        false,
+        `${selector} must not clip card action popovers.`,
+      );
+    }
+
+    for (const selector of [".hand-row", ".hand-cards"]) {
+      assert.equal(
+        new RegExp(
+          `${selector.replace(".", "\\.")}\\s*\\{[^}]*overflow:\\s*hidden`,
+          "u",
+        ).test(appShellStyles),
+        false,
+        `${selector} must not clip card action popovers.`,
+      );
+    }
   });
 });

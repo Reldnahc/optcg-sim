@@ -5,7 +5,7 @@
   border: 2px solid rgba(255, 255, 255, 0.78);
   background: rgba(70, 68, 67, 0.28);
   padding: 3px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .zone-label {
@@ -30,7 +30,7 @@
   align-items: center;
   gap: 5px;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .empty-zone {
