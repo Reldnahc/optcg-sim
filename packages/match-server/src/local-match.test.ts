@@ -468,6 +468,60 @@ describe("local dev match", () => {
     assert.equal(counterLabels.includes("Choose 0 card"), false);
   });
 
+  test("OP13-084 projects its own active base-power change in the filtered view", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const sourceIndex = p1State.deck.findIndex(
+      (card) => card.cardId === ("OP13-084" as CardId),
+    );
+    if (sourceIndex < 0) {
+      throw new Error("Missing OP13-084 in p1 deck.");
+    }
+    const [source] = p1State.deck.splice(sourceIndex, 1);
+    if (source === undefined) {
+      throw new Error("Failed to remove OP13-084 from p1 deck.");
+    }
+    source.zone = {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    };
+    source.state = "active";
+    source.turnPlayed = 1;
+    p1State.characters = [source];
+    p1State.deck = p1State.deck.map((card, index) => ({
+      ...card,
+      zone: { zone: "deck", playerId: p1, slot: "deck", index },
+    }));
+    const trashCards = p1State.deck.splice(0, 10).map((card, index) => ({
+      ...card,
+      zone: {
+        zone: "trash" as const,
+        playerId: p1,
+        slot: "trash" as const,
+        index,
+      },
+    }));
+    p1State.trash = trashCards;
+    match.state.turn.phase = "main";
+    match.state.turn.turnPlayerId = p1;
+    match.state.turn.globalTurn = 3;
+    match.state.turn.playerTurnCounts[p1] = 2;
+
+    const snapshot = getLocalDevSnapshot(match);
+    const character = mustPlayerSnapshot(snapshot, p1).view.self.characters[0];
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+
+    assert.equal(character?.cardId, "OP13-084");
+    assert.equal(character.printedPower, 5000);
+    assert.equal(character.currentPower, 7000);
+    assert.equal(catalog.players[p1]?.cards["OP13-084" as CardId]?.power, 5000);
+  });
+
   test("rejects a stale action index without mutating the match", () => {
     const match = createTestMatch();
     const before = getLocalDevSnapshot(match);

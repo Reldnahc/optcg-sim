@@ -38,11 +38,14 @@ const toPublicCardView = (card: CardInstance): PublicCardView => ({
 
 const toBoardPublicCardView = (
   card: CardInstance,
+  state: GameState,
   currentPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
 ): PublicCardView => {
   const currentPower = currentPowerByInstance?.get(card.instanceId);
+  const printedPower = state.cardManifest.cards[card.cardId]?.power;
   return {
     ...toPublicCardView(card),
+    ...(printedPower === undefined ? {} : { printedPower }),
     ...(currentPower === undefined ? {} : { currentPower }),
   };
 };
@@ -68,12 +71,6 @@ const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
       return false;
     }
     if (resolved.power === undefined) return false;
-    if (
-      resolved.support.status !== "vanilla-confirmed" &&
-      resolved.support.status !== "implemented-dsl"
-    ) {
-      return false;
-    }
     return true;
   });
 };
@@ -85,6 +82,7 @@ const computedPowerByInstance = (
     return undefined;
   }
   const view: ComputedGameView = computeView(state, {
+    supportStatusPolicy: "ignore",
     unsupportedCombatKeywordPolicy: "ignore",
   });
   return new Map<InstanceId, number>(
@@ -97,6 +95,7 @@ const computedPowerByInstance = (
 };
 
 const toVisiblePlayerState = (
+  state: GameState,
   player: PlayerState,
   currentPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
 ): VisiblePlayerState => ({
@@ -105,9 +104,9 @@ const toVisiblePlayerState = (
   donDeckCount: player.donDeck.length,
   hand: player.hand.map((card) => toPublicCardView(card)),
   trash: player.trash.map((card) => toPublicCardView(card)),
-  leader: toBoardPublicCardView(player.leader, currentPowerByInstance),
+  leader: toBoardPublicCardView(player.leader, state, currentPowerByInstance),
   characters: player.characters.map((card) =>
-    toBoardPublicCardView(card, currentPowerByInstance),
+    toBoardPublicCardView(card, state, currentPowerByInstance),
   ),
   ...(player.stage === undefined
     ? {}
@@ -119,6 +118,7 @@ const toVisiblePlayerState = (
 });
 
 const toOpponentVisibleState = (
+  state: GameState,
   player: PlayerState,
   currentPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
 ): OpponentVisibleState => ({
@@ -127,9 +127,9 @@ const toOpponentVisibleState = (
   donDeckCount: player.donDeck.length,
   handCount: player.hand.length,
   trash: player.trash.map((card) => toPublicCardView(card)),
-  leader: toBoardPublicCardView(player.leader, currentPowerByInstance),
+  leader: toBoardPublicCardView(player.leader, state, currentPowerByInstance),
   characters: player.characters.map((card) =>
-    toBoardPublicCardView(card, currentPowerByInstance),
+    toBoardPublicCardView(card, state, currentPowerByInstance),
   ),
   ...(player.stage === undefined
     ? {}
@@ -728,8 +728,12 @@ export const filterStateForPlayer = (
     stateSeq: state.seq,
     actionSeq: state.actionSeq,
     turn,
-    self: toVisiblePlayerState(selfState, currentPowerByInstance),
-    opponent: toOpponentVisibleState(opponentState, currentPowerByInstance),
+    self: toVisiblePlayerState(state, selfState, currentPowerByInstance),
+    opponent: toOpponentVisibleState(
+      state,
+      opponentState,
+      currentPowerByInstance,
+    ),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
     legalActions: dedupePublicLegalActions([

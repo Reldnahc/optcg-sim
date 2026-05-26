@@ -34,6 +34,7 @@ const unsupportedCombatKeywords = new Set<Keyword>([
   "unblockable",
 ]);
 interface ComputeViewOptions {
+  supportStatusPolicy?: "throw" | "ignore";
   unsupportedCombatKeywordPolicy?: "throw" | "ignore";
 }
 
@@ -450,6 +451,7 @@ const resolveCombatMetadata = (
     );
   }
   if (
+    options.supportStatusPolicy !== "ignore" &&
     resolved.support.status !== "vanilla-confirmed" &&
     resolved.support.status !== "implemented-dsl"
   ) {

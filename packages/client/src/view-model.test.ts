@@ -65,11 +65,13 @@ const minimalView = (): PlayerView => ({
       ...card("leader-1", "OP13-079", "leaderArea"),
       attachedDonCount: 1,
       attachedDonIds: ["don-1" as InstanceId],
+      printedPower: 5000,
       currentPower: 7000,
     },
     characters: [
       {
         ...card("char-1", "OP13-089", "characterArea"),
+        printedPower: 5000,
         currentPower: 4000,
       },
     ],
@@ -159,17 +161,10 @@ describe("board view model", () => {
               triggerText: "Draw 1 card.",
               imageUrl: "https://cdn.example/card.png",
             },
-            ["OP13-079" as CardId]: {
-              cardId: "OP13-079" as CardId,
-              name: "Leader",
-              category: "Leader",
-              power: 5000,
-            },
             ["OP13-089" as CardId]: {
               cardId: "OP13-089" as CardId,
               name: "Character",
               category: "Character",
-              power: 5000,
             },
           },
         },

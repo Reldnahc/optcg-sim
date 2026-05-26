@@ -76,12 +76,13 @@ const cardModel = (
   catalog: MatchCardCatalog,
 ): ClientCardModel => {
   const entry = catalogEntry(catalog, card.owner, card.cardId);
+  const printedPower = card.printedPower ?? entry.power;
   const powerDelta =
-    entry.power === undefined ||
+    printedPower === undefined ||
     card.currentPower === undefined ||
-    entry.power === card.currentPower
+    printedPower === card.currentPower
       ? undefined
-      : card.currentPower - entry.power;
+      : card.currentPower - printedPower;
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
@@ -93,7 +94,7 @@ const cardModel = (
       : { triggerText: entry.triggerText }),
     ...(entry.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
     ...(card.state === undefined ? {} : { state: card.state }),
-    ...(entry.power === undefined ? {} : { printedPower: entry.power }),
+    ...(printedPower === undefined ? {} : { printedPower }),
     ...(card.currentPower === undefined
       ? {}
       : { currentPower: card.currentPower }),

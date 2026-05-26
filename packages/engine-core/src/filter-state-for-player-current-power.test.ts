@@ -48,7 +48,9 @@ test("projects computed current power only for public board card views", () => {
   const view = filterStateForPlayer(state, p1);
 
   assert.equal(view.self.leader.currentPower, 7000);
+  assert.equal(view.self.leader.printedPower, 5000);
   assert.equal(must(view.self.characters[0], "self char").currentPower, 7000);
+  assert.equal(must(view.self.characters[0], "self char").printedPower, 7000);
   assert.equal(view.opponent.leader.currentPower, 5000);
   assert.equal(
     must(view.opponent.characters[0], "opponent char").currentPower,
@@ -111,7 +113,12 @@ test("projects setBasePower modifiers as current power in public board card view
   );
   state.cardManifest.cards[character.cardId] = {
     ...metadata,
+    power: 5000,
     types: ["Five Elders"],
+    support: {
+      ...metadata.support,
+      status: "unsupported",
+    },
   };
   state.continuousEffects = [
     {
@@ -148,6 +155,7 @@ test("projects setBasePower modifiers as current power in public board card view
   const view = filterStateForPlayer(state, p1);
 
   assert.equal(must(view.self.characters[0], "self char").currentPower, 7000);
+  assert.equal(must(view.self.characters[0], "self char").printedPower, 5000);
   assert.equal(
     must(view.opponent.characters[0], "opponent char").currentPower,
     3000,
