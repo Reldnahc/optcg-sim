@@ -158,4 +158,28 @@ describe("card action menu", () => {
 
     assert.match(markup, /class="[^"]*card-tile[^"]*is-selected/u);
   });
+
+  test("selected DON attachment is rendered as a selected-card menu action", () => {
+    const layout = board();
+    const attachActions: readonly ClientActionModel[] = [
+      { index: -1, type: "attachDon", label: "Attach selected DON!!" },
+    ];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedCardInstanceId: "self-leader",
+        selectedDonInstanceIds: ["don-1"],
+        cardActions: (instanceId: string) =>
+          instanceId === "self-leader" ? attachActions : [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*card-action-popover/u);
+    assert.equal(markup.includes("Attach selected DON!!"), true);
+  });
 });

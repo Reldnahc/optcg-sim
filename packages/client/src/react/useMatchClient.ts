@@ -16,9 +16,11 @@ import {
   createDevHttpMatchTransport,
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
+  ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
   isSelectableCostAreaDon,
   createMatchClientController,
+  selectedDonAttachmentMenuAction,
   moveOrderedCardNear,
   setDecisionActionOption,
   setDecisionQuantity,
@@ -300,25 +302,6 @@ export const useMatchClient = (): MatchClientUi => {
     setErrors([]);
   }, [controller]);
 
-  const submitAction = useCallback(
-    async (actionIndex: number): Promise<void> => {
-      setActionInFlight(true);
-      try {
-        const result = await controller.submitVisibleAction({ actionIndex });
-        setClientState(result);
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        setDecisionDraft(undefined);
-        setErrors([]);
-      } catch (error) {
-        setErrors([error instanceof Error ? error.message : String(error)]);
-      } finally {
-        setActionInFlight(false);
-      }
-    },
-    [controller],
-  );
-
   const attachSelectedDonToTarget = useCallback(
     async (targetInstanceId: string): Promise<void> => {
       if (selectedDonInstanceIds.length === 0) {
@@ -356,6 +339,32 @@ export const useMatchClient = (): MatchClientUi => {
     [controller, selectedDonInstanceIds],
   );
 
+  const submitAction = useCallback(
+    async (actionIndex: number): Promise<void> => {
+      if (
+        actionIndex === ATTACH_SELECTED_DON_ACTION_INDEX &&
+        selectedCardInstanceId !== undefined
+      ) {
+        await attachSelectedDonToTarget(selectedCardInstanceId);
+        return;
+      }
+      setActionInFlight(true);
+      try {
+        const result = await controller.submitVisibleAction({ actionIndex });
+        setClientState(result);
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
+        setDecisionDraft(undefined);
+        setErrors([]);
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : String(error)]);
+      } finally {
+        setActionInFlight(false);
+      }
+    },
+    [attachSelectedDonToTarget, controller, selectedCardInstanceId],
+  );
+
   const selectCard = useCallback(
     (instanceId: string | undefined): void => {
       if (instanceId === undefined) {
@@ -374,7 +383,7 @@ export const useMatchClient = (): MatchClientUi => {
         selectedDonInstanceIds.length > 0 &&
         isSelfAttachmentTarget(board, instanceId)
       ) {
-        void attachSelectedDonToTarget(instanceId);
+        setSelectedCardInstanceId(instanceId);
         return;
       }
       setSelectedDonInstanceIds([]);
@@ -415,9 +424,20 @@ export const useMatchClient = (): MatchClientUi => {
   }, [activeDecisionDraft, controller, pendingDecision, submitAction]);
 
   const cardActions = useCallback(
-    (instanceId: string): ClientActionModel[] =>
-      board?.actionsByCardInstanceId[instanceId] ?? [],
-    [board],
+    (instanceId: string): ClientActionModel[] => {
+      const base = board?.actionsByCardInstanceId[instanceId] ?? [];
+      if (
+        selectedCardInstanceId === instanceId &&
+        isSelfAttachmentTarget(board, instanceId)
+      ) {
+        const attachAction = selectedDonAttachmentMenuAction(
+          selectedDonInstanceIds,
+        );
+        return attachAction === undefined ? base : [...base, attachAction];
+      }
+      return base;
+    },
+    [board, selectedCardInstanceId, selectedDonInstanceIds],
   );
 
   const globalActions = useCallback((): ClientActionModel[] => {

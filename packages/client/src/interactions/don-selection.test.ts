@@ -4,8 +4,10 @@ import { describe, test } from "vitest";
 import type { InstanceId } from "@optcg/types";
 
 import {
+  ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
   isSelectableCostAreaDon,
+  selectedDonAttachmentMenuAction,
   toggleSelectedDonInstanceId,
 } from "./don-selection.js";
 import type { ClientVisibleAction } from "../transport.js";
@@ -97,5 +99,19 @@ describe("DON selection interaction", () => {
     assert.equal(isSelectableCostAreaDon(model, "rested-don"), false);
     assert.equal(isSelectableCostAreaDon(model, "leader-1"), false);
     assert.equal(isSelectableCostAreaDon(model, "opponent-active-don"), false);
+  });
+
+  test("creates a normal card menu action for selected DON attachment", () => {
+    assert.equal(selectedDonAttachmentMenuAction([]), undefined);
+    assert.deepEqual(selectedDonAttachmentMenuAction(["don-1"]), {
+      index: ATTACH_SELECTED_DON_ACTION_INDEX,
+      type: "attachDon",
+      label: "Attach selected DON!!",
+    });
+    assert.deepEqual(selectedDonAttachmentMenuAction(["don-1", "don-2"]), {
+      index: ATTACH_SELECTED_DON_ACTION_INDEX,
+      type: "attachDon",
+      label: "Attach 2 selected DON!!",
+    });
   });
 });

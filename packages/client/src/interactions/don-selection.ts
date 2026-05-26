@@ -1,7 +1,9 @@
 import type { InstanceId } from "@optcg/types";
 
 import type { ClientVisibleAction } from "../transport.js";
-import type { BoardViewModel } from "../view-model.js";
+import type { BoardViewModel, ClientActionModel } from "../view-model.js";
+
+export const ATTACH_SELECTED_DON_ACTION_INDEX = -1;
 
 export const toggleSelectedDonInstanceId = (
   selectedInstanceIds: readonly string[],
@@ -34,4 +36,20 @@ export const isSelectableCostAreaDon = (
     card.state === "active" &&
     (String(card.cardId) === "DON" || card.category.toLowerCase() === "don")
   );
+};
+
+export const selectedDonAttachmentMenuAction = (
+  selectedDonInstanceIds: readonly string[],
+): ClientActionModel | undefined => {
+  if (selectedDonInstanceIds.length === 0) {
+    return undefined;
+  }
+  return {
+    index: ATTACH_SELECTED_DON_ACTION_INDEX,
+    type: "attachDon",
+    label:
+      selectedDonInstanceIds.length === 1
+        ? "Attach selected DON!!"
+        : `Attach ${String(selectedDonInstanceIds.length)} selected DON!!`,
+  };
 };
