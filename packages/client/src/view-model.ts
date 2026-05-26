@@ -21,6 +21,9 @@ export interface ClientCardModel {
   effectText?: string;
   triggerText?: string;
   imageUrl?: string;
+  printedPower?: number;
+  currentPower?: number;
+  powerDelta?: number;
   state?: PublicCardView["state"];
   attachedDonCount: number;
   attachedDonCards: ClientCardModel[];
@@ -73,6 +76,12 @@ const cardModel = (
   catalog: MatchCardCatalog,
 ): ClientCardModel => {
   const entry = catalogEntry(catalog, card.owner, card.cardId);
+  const powerDelta =
+    entry.power === undefined ||
+    card.currentPower === undefined ||
+    entry.power === card.currentPower
+      ? undefined
+      : card.currentPower - entry.power;
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
@@ -84,6 +93,11 @@ const cardModel = (
       : { triggerText: entry.triggerText }),
     ...(entry.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
     ...(card.state === undefined ? {} : { state: card.state }),
+    ...(entry.power === undefined ? {} : { printedPower: entry.power }),
+    ...(card.currentPower === undefined
+      ? {}
+      : { currentPower: card.currentPower }),
+    ...(powerDelta === undefined ? {} : { powerDelta }),
     attachedDonCount: card.attachedDonCount,
     attachedDonCards: [],
   };

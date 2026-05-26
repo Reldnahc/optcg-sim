@@ -153,6 +153,41 @@ describe("card action menu", () => {
     assert.equal(markup.includes("DON!! 2"), true);
   });
 
+  test("renders positive and negative power deltas on modified cards", () => {
+    const layout = board();
+    layout.self.leader = {
+      ...layout.self.leader,
+      printedPower: 5000,
+      currentPower: 7000,
+      powerDelta: 2000,
+    };
+    layout.self.characters = [
+      {
+        ...card("self-character", "Reduced Character"),
+        printedPower: 5000,
+        currentPower: 4000,
+        powerDelta: -1000,
+      },
+    ];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedCardInstanceId: undefined,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*power-delta-positive/u);
+    assert.match(markup, /class="[^"]*power-delta-negative/u);
+    assert.equal(markup.includes("+2000"), true);
+    assert.equal(markup.includes("-1000"), true);
+  });
+
   test("selected cost-area DON cards use the selected card styling", () => {
     const layout = board();
     layout.self.costArea = [card("don-1", "DON!!")];

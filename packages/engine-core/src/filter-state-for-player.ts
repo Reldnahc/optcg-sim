@@ -36,8 +36,16 @@ const toPublicCardView = (card: CardInstance): PublicCardView => ({
   ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
 });
 
-const toBoardPublicCardView = (card: CardInstance): PublicCardView =>
-  toPublicCardView(card);
+const toBoardPublicCardView = (
+  card: CardInstance,
+  currentPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
+): PublicCardView => {
+  const currentPower = currentPowerByInstance?.get(card.instanceId);
+  return {
+    ...toPublicCardView(card),
+    ...(currentPower === undefined ? {} : { currentPower }),
+  };
+};
 
 const toPublicLifeView = (player: PlayerState) => ({
   count: player.life.length,
@@ -55,9 +63,6 @@ const boardCardsForState = (state: GameState): CardInstance[] =>
 const viewPowerUnsupportedKeywords = new Set(["doubleAttack", "unblockable"]);
 
 const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
-  const effectDefinitions = Object.values(
-    state.cardManifest.effectDefinitions ?? {},
-  );
   return boardCardsForState(state).every((card) => {
     const resolved = state.cardManifest.cards[card.cardId];
     if (resolved === undefined) return false;
@@ -78,10 +83,7 @@ const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
     ) {
       return false;
     }
-    if (resolved.support.effectDefinitionId !== undefined) return false;
-    return !effectDefinitions.some(
-      (definition) => definition.cardId === card.cardId,
-    );
+    return true;
   });
 };
 
@@ -101,14 +103,19 @@ const computedPowerByInstance = (
   );
 };
 
-const toVisiblePlayerState = (player: PlayerState): VisiblePlayerState => ({
+const toVisiblePlayerState = (
+  player: PlayerState,
+  currentPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
+): VisiblePlayerState => ({
   playerId: player.playerId,
   deckCount: player.deck.length,
   donDeckCount: player.donDeck.length,
   hand: player.hand.map((card) => toPublicCardView(card)),
   trash: player.trash.map((card) => toPublicCardView(card)),
-  leader: toBoardPublicCardView(player.leader),
-  characters: player.characters.map((card) => toBoardPublicCardView(card)),
+  leader: toBoardPublicCardView(player.leader, currentPowerByInstance),
+  characters: player.characters.map((card) =>
+    toBoardPublicCardView(card, currentPowerByInstance),
+  ),
   ...(player.stage === undefined
     ? {}
     : { stage: toPublicCardView(player.stage) }),
@@ -118,14 +125,19 @@ const toVisiblePlayerState = (player: PlayerState): VisiblePlayerState => ({
   turnCount: player.turnCount,
 });
 
-const toOpponentVisibleState = (player: PlayerState): OpponentVisibleState => ({
+const toOpponentVisibleState = (
+  player: PlayerState,
+  currentPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
+): OpponentVisibleState => ({
   playerId: player.playerId,
   deckCount: player.deck.length,
   donDeckCount: player.donDeck.length,
   handCount: player.hand.length,
   trash: player.trash.map((card) => toPublicCardView(card)),
-  leader: toBoardPublicCardView(player.leader),
-  characters: player.characters.map((card) => toBoardPublicCardView(card)),
+  leader: toBoardPublicCardView(player.leader, currentPowerByInstance),
+  characters: player.characters.map((card) =>
+    toBoardPublicCardView(card, currentPowerByInstance),
+  ),
   ...(player.stage === undefined
     ? {}
     : { stage: toPublicCardView(player.stage) }),
@@ -715,7 +727,7 @@ export const filterStateForPlayer = (
 
   const pendingDecision = toPublicDecision(state, playerId);
   // Keep computeView validation fail-closed for unsupported board-power metadata.
-  computedPowerByInstance(state);
+  const currentPowerByInstance = computedPowerByInstance(state);
 
   return {
     matchId: state.matchId,
@@ -723,8 +735,8 @@ export const filterStateForPlayer = (
     stateSeq: state.seq,
     actionSeq: state.actionSeq,
     turn,
-    self: toVisiblePlayerState(selfState),
-    opponent: toOpponentVisibleState(opponentState),
+    self: toVisiblePlayerState(selfState, currentPowerByInstance),
+    opponent: toOpponentVisibleState(opponentState, currentPowerByInstance),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
     legalActions: dedupePublicLegalActions([

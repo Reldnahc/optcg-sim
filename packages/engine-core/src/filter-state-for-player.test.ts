@@ -30,6 +30,7 @@ import {
   cardRef,
   continuousEffectRecord,
   setupAttackState,
+  withWhenAttackingDrawEffect,
 } from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
@@ -189,12 +190,13 @@ test("filters hidden information and keeps public zones", () => {
   assert.equal("audit" in raw, false);
 });
 
-test("does not project computed current power in public card views", () => {
+test("projects computed current power only for public board card views", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
   const p1Character = must(p1State.characters[0], "p1 character");
   const p2Character = must(p2State.characters[0], "p2 character");
+  withWhenAttackingDrawEffect(state, p1Character);
   must(p1State.life[0], "p1 face-up life").faceUp = true;
   const p1TrashCard = must(p1State.hand.shift(), "p1 hand -> trash");
   p1TrashCard.zone = { zone: "trash", playerId: p1, slot: "trash", index: 0 };
@@ -225,15 +227,12 @@ test("does not project computed current power in public card views", () => {
   ).power;
   const view = filterStateForPlayer(state, p1);
 
-  assert.equal("currentPower" in view.self.leader, false);
+  assert.equal(view.self.leader.currentPower, 7000);
+  assert.equal(must(view.self.characters[0], "self char").currentPower, 7000);
+  assert.equal(view.opponent.leader.currentPower, 5000);
   assert.equal(
-    "currentPower" in must(view.self.characters[0], "self char"),
-    false,
-  );
-  assert.equal("currentPower" in view.opponent.leader, false);
-  assert.equal(
-    "currentPower" in must(view.opponent.characters[0], "opponent char"),
-    false,
+    must(view.opponent.characters[0], "opponent char").currentPower,
+    3000,
   );
   assert.deepEqual(
     [
@@ -253,7 +252,6 @@ test("does not project computed current power in public card views", () => {
     ].map((card) => "currentPower" in card),
     [false, false, false, false, false],
   );
-  assert.equal(JSON.stringify(view).includes("currentPower"), false);
   assert.equal(
     state.cardManifest.cards[p1State.leader.cardId]?.power,
     beforeLeaderPower,

@@ -65,8 +65,14 @@ const minimalView = (): PlayerView => ({
       ...card("leader-1", "OP13-079", "leaderArea"),
       attachedDonCount: 1,
       attachedDonIds: ["don-1" as InstanceId],
+      currentPower: 7000,
     },
-    characters: [card("char-1", "OP13-089", "characterArea")],
+    characters: [
+      {
+        ...card("char-1", "OP13-089", "characterArea"),
+        currentPower: 4000,
+      },
+    ],
     costArea: [
       card("don-1", "DON", "costArea"),
       card("don-2", "DON", "costArea"),
@@ -153,6 +159,18 @@ describe("board view model", () => {
               triggerText: "Draw 1 card.",
               imageUrl: "https://cdn.example/card.png",
             },
+            ["OP13-079" as CardId]: {
+              cardId: "OP13-079" as CardId,
+              name: "Leader",
+              category: "Leader",
+              power: 5000,
+            },
+            ["OP13-089" as CardId]: {
+              cardId: "OP13-089" as CardId,
+              name: "Character",
+              category: "Character",
+              power: 5000,
+            },
           },
         },
       },
@@ -185,6 +203,13 @@ describe("board view model", () => {
       model.self.leader.attachedDonCards.map((don) => String(don.instanceId)),
       ["don-1"],
     );
+    assert.equal(model.self.leader.printedPower, 5000);
+    assert.equal(model.self.leader.currentPower, 7000);
+    assert.equal(model.self.leader.powerDelta, 2000);
+    const character = model.self.characters[0];
+    assert.equal(character.printedPower, 5000);
+    assert.equal(character.currentPower, 4000);
+    assert.equal(character.powerDelta, -1000);
     assert.equal(JSON.stringify(model).includes("deckOrder"), false);
   });
 

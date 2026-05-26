@@ -31,6 +31,10 @@ export const CardTile = ({
     ) : (
       <img className="card-face" src={card.imageUrl} alt={card.name} />
     );
+  const powerDeltaText =
+    card.powerDelta === undefined
+      ? undefined
+      : `${card.powerDelta > 0 ? "+" : ""}${String(card.powerDelta)}`;
   return (
     <div className="card-tile-shell">
       <button
@@ -46,6 +50,17 @@ export const CardTile = ({
       >
         {image}
         {label === undefined ? null : <span className="card-tag">{label}</span>}
+        {powerDeltaText === undefined ? null : (
+          <span
+            className={`power-delta ${
+              card.powerDelta === undefined || card.powerDelta > 0
+                ? "power-delta-positive"
+                : "power-delta-negative"
+            }`}
+          >
+            {powerDeltaText}
+          </span>
+        )}
       </button>
       {selected && actions.length > 0 && onAction !== undefined ? (
         <div

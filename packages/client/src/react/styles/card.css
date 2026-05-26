@@ -56,6 +56,28 @@
   font-size: 10px;
 }
 
+.power-delta {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  border-radius: 3px;
+  padding: 1px 3px;
+  color: #ffffff;
+  background: rgba(12, 12, 12, 0.78);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
+}
+
+.power-delta-positive {
+  color: #42e67c;
+}
+
+.power-delta-negative {
+  color: #ff5f68;
+}
+
 .card-action-popover {
   position: absolute;
   z-index: 20;
