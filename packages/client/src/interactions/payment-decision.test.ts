@@ -9,6 +9,9 @@ import type {
 } from "@optcg/types";
 
 import {
+  optionalCardCostActionForInstance,
+  optionalCardCostGroupForActionIndex,
+  optionalCardCostInstanceIds,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
 } from "./payment-decision.js";
@@ -58,10 +61,15 @@ describe("optional card-cost interaction", () => {
     assert.deepEqual(choice, {
       decisionId: payCostDecision.id,
       declineActionIndex: 1,
-      chooseLabel: "Choose card to trash",
-      cardActions: [
-        { instanceId: "hand-1", actionIndex: 2 },
-        { instanceId: "hand-2", actionIndex: 3 },
+      groups: [
+        {
+          chooseActionIndex: -5,
+          chooseLabel: "Choose card to trash",
+          cardActions: [
+            { instanceId: "hand-1", actionIndex: 2 },
+            { instanceId: "hand-2", actionIndex: 3 },
+          ],
+        },
       ],
     });
     assert.deepEqual(createOptionalCardCostModalActions(choice), [
@@ -166,7 +174,7 @@ describe("optional card-cost interaction", () => {
     );
   });
 
-  test("does not collapse mixed card-cost labels into one ambiguous choice", () => {
+  test("collapses mixed card-cost labels into scoped choose-card options", () => {
     const actions: readonly ClientActionModel[] = [
       {
         index: 1,
@@ -196,8 +204,29 @@ describe("optional card-cost interaction", () => {
       },
     ];
 
+    const choice = createOptionalCardCostChoice(payCostDecision, actions);
+
+    assert.deepEqual(createOptionalCardCostModalActions(choice), [
+      { index: 1, type: "respondToDecision", label: "Decline cost" },
+      {
+        index: -5,
+        type: "respondToDecision",
+        label: "Choose card to trash",
+      },
+      {
+        index: -6,
+        type: "respondToDecision",
+        label: "Choose Character to return to hand",
+      },
+    ]);
+
+    const trashGroup = optionalCardCostGroupForActionIndex(choice, -5);
+    const returnGroup = optionalCardCostGroupForActionIndex(choice, -6);
+    assert.deepEqual(optionalCardCostInstanceIds(trashGroup), ["hand-1"]);
+    assert.deepEqual(optionalCardCostInstanceIds(returnGroup), ["character-1"]);
+    assert.equal(optionalCardCostActionForInstance(trashGroup, "hand-1"), 2);
     assert.equal(
-      createOptionalCardCostChoice(payCostDecision, actions),
+      optionalCardCostActionForInstance(trashGroup, "character-1"),
       undefined,
     );
   });

@@ -4,11 +4,16 @@ import type { ClientActionModel } from "../view-model.js";
 
 export const CHOOSE_CARD_COST_ACTION_INDEX = -5;
 
+export interface OptionalCardCostGroup {
+  chooseActionIndex: number;
+  chooseLabel: string;
+  cardActions: Array<{ instanceId: string; actionIndex: number }>;
+}
+
 export interface OptionalCardCostChoice {
   decisionId: DecisionId;
   declineActionIndex: number;
-  chooseLabel: string;
-  cardActions: Array<{ instanceId: string; actionIndex: number }>;
+  groups: OptionalCardCostGroup[];
 }
 
 export const createOptionalCardCostChoice = (
@@ -38,42 +43,40 @@ export const createOptionalCardCostChoice = (
     return undefined;
   }
 
-  const chooseLabels = new Set(
-    actions.flatMap((action) =>
-      action.decisionPayment?.kind === "cardCost"
-        ? [action.decisionPayment.chooseLabel]
-        : [],
-    ),
-  );
-  if (chooseLabels.size !== 1) {
-    return undefined;
-  }
-  const chooseLabel = [...chooseLabels][0];
-  if (chooseLabel === undefined) {
-    return undefined;
-  }
-
-  const cardActions = actions.flatMap((action) => {
+  const groupedActions = new Map<
+    string,
+    Array<{ instanceId: string; actionIndex: number }>
+  >();
+  for (const action of actions) {
     const payment = action.decisionPayment;
     if (
       payment?.kind !== "cardCost" ||
       payment.selectedCardInstanceIds.length !== 1
     ) {
-      return [];
+      continue;
     }
     const instanceId = payment.selectedCardInstanceIds[0];
-    return instanceId === undefined
-      ? []
-      : [{ instanceId: String(instanceId), actionIndex: action.index }];
-  });
-  if (cardActions.length === 0) {
+    if (instanceId === undefined) {
+      continue;
+    }
+    const current = groupedActions.get(payment.chooseLabel) ?? [];
+    current.push({ instanceId: String(instanceId), actionIndex: action.index });
+    groupedActions.set(payment.chooseLabel, current);
+  }
+  const groups = [...groupedActions.entries()].map(
+    ([chooseLabel, cardActions], index) => ({
+      chooseActionIndex: CHOOSE_CARD_COST_ACTION_INDEX - index,
+      chooseLabel,
+      cardActions,
+    }),
+  );
+  if (groups.length === 0) {
     return undefined;
   }
   return {
     decisionId: decision.id,
     declineActionIndex: declineAction.index,
-    chooseLabel,
-    cardActions,
+    groups,
   };
 };
 
@@ -88,20 +91,26 @@ export const createOptionalCardCostModalActions = (
           type: "respondToDecision",
           label: "Decline cost",
         },
-        {
-          index: CHOOSE_CARD_COST_ACTION_INDEX,
-          type: "respondToDecision",
-          label: choice.chooseLabel,
-        },
+        ...choice.groups.map((group) => ({
+          index: group.chooseActionIndex,
+          type: "respondToDecision" as const,
+          label: group.chooseLabel,
+        })),
       ];
 
-export const optionalCardCostActionForInstance = (
+export const optionalCardCostGroupForActionIndex = (
   choice: OptionalCardCostChoice | undefined,
+  actionIndex: number,
+): OptionalCardCostGroup | undefined =>
+  choice?.groups.find((group) => group.chooseActionIndex === actionIndex);
+
+export const optionalCardCostActionForInstance = (
+  choice: OptionalCardCostGroup | undefined,
   instanceId: string,
 ): number | undefined =>
   choice?.cardActions.find((action) => action.instanceId === instanceId)
     ?.actionIndex;
 
 export const optionalCardCostInstanceIds = (
-  choice: OptionalCardCostChoice | undefined,
+  choice: OptionalCardCostGroup | undefined,
 ): string[] => choice?.cardActions.map((action) => action.instanceId) ?? [];

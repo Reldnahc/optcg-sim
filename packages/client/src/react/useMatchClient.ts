@@ -19,12 +19,12 @@ import {
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
   ATTACH_SELECTED_DON_ACTION_INDEX,
-  CHOOSE_CARD_COST_ACTION_INDEX,
   findAttachDonActionIndex,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
   isSelectableCostAreaDon,
   optionalCardCostActionForInstance,
+  optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
   createMatchClientController,
   selectedDonAttachmentMenuAction,
@@ -197,8 +197,9 @@ export const useMatchClient = (): MatchClientUi => {
   const [decisionDraft, setDecisionDraft] = useState<
     DecisionDraft | undefined
   >();
-  const [activeCardCostChoiceDecisionId, setactiveCardCostChoiceDecisionId] =
-    useState<string | undefined>();
+  const [activeCardCostChoice, setActiveCardCostChoice] = useState<
+    { decisionId: string; actionIndex: number } | undefined
+  >();
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -253,13 +254,17 @@ export const useMatchClient = (): MatchClientUi => {
           pendingDecision,
           pendingDecisionResponseActions,
         );
-  const cardCostChoiceActive =
-    optionalCardCostChoice !== undefined &&
-    activeCardCostChoiceDecisionId ===
-      String(optionalCardCostChoice.decisionId);
-  const activeCardCostChoice = cardCostChoiceActive
-    ? optionalCardCostChoice
-    : undefined;
+  const activeCardCostGroup =
+    activeCardCostChoice === undefined ||
+    optionalCardCostChoice === undefined ||
+    activeCardCostChoice.decisionId !==
+      String(optionalCardCostChoice.decisionId)
+      ? undefined
+      : optionalCardCostGroupForActionIndex(
+          optionalCardCostChoice,
+          activeCardCostChoice.actionIndex,
+        );
+  const cardCostChoiceActive = activeCardCostGroup !== undefined;
   const modalResponseActions =
     optionalCardCostChoice === undefined || cardCostChoiceActive
       ? pendingDecisionResponseActions
@@ -282,8 +287,8 @@ export const useMatchClient = (): MatchClientUi => {
           activeDecisionDraft,
           modalResponseActions,
         );
-  const pendingChoiceInstanceIds = activeCardCostChoice
-    ? optionalCardCostInstanceIds(activeCardCostChoice)
+  const pendingChoiceInstanceIds = activeCardCostGroup
+    ? optionalCardCostInstanceIds(activeCardCostGroup)
     : pendingDecisionInteractionMode === "zoneClick" &&
         pendingDecision !== undefined
       ? decisionCandidateInstanceIds(pendingDecision)
@@ -391,7 +396,7 @@ export const useMatchClient = (): MatchClientUi => {
     setSelectedCardInstanceId(undefined);
     setSelectedDonInstanceIds([]);
     setDecisionDraft(undefined);
-    setactiveCardCostChoiceDecisionId(undefined);
+    setActiveCardCostChoice(undefined);
     setClientState(created);
     setErrors([]);
   }, [controller]);
@@ -423,7 +428,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedDonInstanceIds([]);
         setSelectedCardInstanceId(undefined);
         setDecisionDraft(undefined);
-        setactiveCardCostChoiceDecisionId(undefined);
+        setActiveCardCostChoice(undefined);
         setErrors([]);
       } catch (error) {
         setErrors([error instanceof Error ? error.message : String(error)]);
@@ -440,15 +445,21 @@ export const useMatchClient = (): MatchClientUi => {
         return;
       }
       if (draft.kind === "actionOptions") {
-        if (draft.actionIndex === CHOOSE_CARD_COST_ACTION_INDEX) {
-          if (optionalCardCostChoice !== undefined) {
-            setactiveCardCostChoiceDecisionId(
-              String(optionalCardCostChoice.decisionId),
-            );
-            setSelectedCardInstanceId(undefined);
-            setSelectedDonInstanceIds([]);
-            setDecisionDraft(undefined);
-          }
+        const cardCostGroup = optionalCardCostGroupForActionIndex(
+          optionalCardCostChoice,
+          draft.actionIndex,
+        );
+        if (
+          cardCostGroup !== undefined &&
+          optionalCardCostChoice !== undefined
+        ) {
+          setActiveCardCostChoice({
+            decisionId: String(optionalCardCostChoice.decisionId),
+            actionIndex: cardCostGroup.chooseActionIndex,
+          });
+          setSelectedCardInstanceId(undefined);
+          setSelectedDonInstanceIds([]);
+          setDecisionDraft(undefined);
           return;
         }
         setActionInFlight(true);
@@ -460,7 +471,7 @@ export const useMatchClient = (): MatchClientUi => {
           setSelectedCardInstanceId(undefined);
           setSelectedDonInstanceIds([]);
           setDecisionDraft(undefined);
-          setactiveCardCostChoiceDecisionId(undefined);
+          setActiveCardCostChoice(undefined);
           setErrors([]);
         } catch (error) {
           setErrors([error instanceof Error ? error.message : String(error)]);
@@ -486,7 +497,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedCardInstanceId(undefined);
         setSelectedDonInstanceIds([]);
         setDecisionDraft(undefined);
-        setactiveCardCostChoiceDecisionId(undefined);
+        setActiveCardCostChoice(undefined);
         setErrors([]);
       } catch (error) {
         setErrors([error instanceof Error ? error.message : String(error)]);
@@ -508,7 +519,7 @@ export const useMatchClient = (): MatchClientUi => {
       }
       if (actionIndex === CLEAR_DECISION_SELECTION_ACTION_INDEX) {
         setDecisionDraft(undefined);
-        setactiveCardCostChoiceDecisionId(undefined);
+        setActiveCardCostChoice(undefined);
         return;
       }
       if (actionIndex === CHOOSE_NO_DECISION_CARDS_ACTION_INDEX) {
@@ -532,7 +543,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedCardInstanceId(undefined);
         setSelectedDonInstanceIds([]);
         setDecisionDraft(undefined);
-        setactiveCardCostChoiceDecisionId(undefined);
+        setActiveCardCostChoice(undefined);
         setErrors([]);
       } catch (error) {
         setErrors([error instanceof Error ? error.message : String(error)]);
@@ -558,9 +569,9 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedDonInstanceIds([]);
         return;
       }
-      if (activeCardCostChoice !== undefined) {
+      if (activeCardCostGroup !== undefined) {
         const actionIndex = optionalCardCostActionForInstance(
-          activeCardCostChoice,
+          activeCardCostGroup,
           instanceId,
         );
         if (actionIndex !== undefined) {
@@ -609,7 +620,7 @@ export const useMatchClient = (): MatchClientUi => {
     },
     [
       activeDecisionDraft,
-      activeCardCostChoice,
+      activeCardCostGroup,
       board,
       pendingDecision,
       pendingDecisionInteractionMode,
@@ -648,10 +659,13 @@ export const useMatchClient = (): MatchClientUi => {
     if (playerSnapshot === undefined) {
       return [];
     }
-    if (activeCardCostChoice !== undefined) {
+    if (
+      activeCardCostGroup !== undefined &&
+      optionalCardCostChoice !== undefined
+    ) {
       return [
         {
-          index: activeCardCostChoice.declineActionIndex,
+          index: optionalCardCostChoice.declineActionIndex,
           label: "Decline cost",
           type: "respondToDecision",
         },
@@ -705,7 +719,8 @@ export const useMatchClient = (): MatchClientUi => {
       }));
   }, [
     activeDecisionDraft,
-    activeCardCostChoice,
+    activeCardCostGroup,
+    optionalCardCostChoice,
     pendingDecision,
     pendingDecisionInteractionMode,
     playerSnapshot,
