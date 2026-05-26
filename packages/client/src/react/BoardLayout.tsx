@@ -67,7 +67,12 @@ export const BoardLayout = ({
     </div>
     <div className="tabletop-board">
       <div className="playmat-zone opponent-cost">
-        <Zone label="Cost Area" cards={board.opponent.costArea} size="mini" />
+        <Zone
+          label="Cost Area"
+          cards={board.opponent.costArea}
+          size="mini"
+          displayMode="overlap"
+        />
       </div>
       <div className="playmat-zone opponent-life">
         {stack("Life", board.opponent.lifeCount)}
@@ -183,7 +188,12 @@ export const BoardLayout = ({
         />
       </div>
       <div className="playmat-zone player-cost">
-        <Zone label="Cost Area" cards={board.self.costArea} size="mini" />
+        <Zone
+          label="Cost Area"
+          cards={board.self.costArea}
+          size="mini"
+          displayMode="overlap"
+        />
       </div>
     </div>
   </section>

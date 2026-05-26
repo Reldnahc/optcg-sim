@@ -43,6 +43,19 @@ describe("collection modal", () => {
     assert.match(markup, /zone-stack/u);
   });
 
+  test("overlap mode marks zone rows for overlap layout", () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Cost Area",
+        cards: [card("don-1", "DON!!"), card("don-2", "DON!!")],
+        displayMode: "overlap",
+      }),
+    );
+
+    assert.match(markup, /zone-overlap/u);
+    assert.match(markup, /zone-cards-overlap/u);
+  });
+
   test("collection viewer is separate from decision modal and can show many cards", () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {

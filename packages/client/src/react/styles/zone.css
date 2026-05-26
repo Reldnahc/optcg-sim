@@ -31,6 +31,25 @@
   gap: 5px;
   height: 100%;
   overflow: visible;
+  --card-row-overlap: 0px;
+}
+
+.zone-cards-overlap {
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.zone-cards-overlap.is-edge-packed {
+  justify-content: flex-start;
+}
+
+.zone-cards-overlap.is-overlapping {
+  gap: 0;
+}
+
+.zone-cards-overlap.is-overlapping .card-tile-shell + .card-tile-shell {
+  margin-left: calc(-1 * var(--card-row-overlap));
 }
 
 .empty-zone {

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
+import {
+  calculateCardRowLayout,
+  type CardRowLayout,
+} from "./card-row-layout.js";
 import { CardTile } from "./CardTile.js";
-
-const HAND_CARD_GAP_PX = 5;
-const MIN_VISIBLE_CARD_WIDTH_PX = 18;
 
 export type HandOverflowDirection = "left" | "right";
 
@@ -16,41 +17,20 @@ export interface HandOverlapInput {
   cardCount: number;
 }
 
-export interface HandLayout {
-  overlap: number;
-  laneExtension: number;
-  edgePacked: boolean;
-}
-
-export const calculateHandLayout = ({
+export const calculateHandOverlap = ({
   availableWidth,
-  outsideOverflowWidth = 0,
+  outsideOverflowWidth,
   cardWidth,
   cardCount,
-}: HandOverlapInput): HandLayout => {
-  if (cardCount <= 1 || availableWidth <= 0 || cardWidth <= 0) {
-    return { overlap: 0, laneExtension: 0, edgePacked: false };
-  }
-
-  const naturalWidth =
-    cardCount * cardWidth + (cardCount - 1) * HAND_CARD_GAP_PX;
-  if (naturalWidth <= availableWidth) {
-    return { overlap: 0, laneExtension: 0, edgePacked: false };
-  }
-
-  const laneExtension = Math.min(
-    Math.max(0, outsideOverflowWidth),
-    naturalWidth - availableWidth,
-  );
-  const usableWidth = availableWidth + laneExtension;
-  const requiredOverlap = (naturalWidth - usableWidth) / (cardCount - 1);
-  const maximumOverlap = Math.max(0, cardWidth - MIN_VISIBLE_CARD_WIDTH_PX);
-  const overlap = Math.min(Math.max(0, requiredOverlap), maximumOverlap);
-  return { overlap, laneExtension, edgePacked: true };
-};
-
-export const calculateHandOverlap = (input: HandOverlapInput): number =>
-  calculateHandLayout(input).overlap;
+}: HandOverlapInput): number =>
+  calculateCardRowLayout({
+    availableWidth,
+    cardWidth,
+    cardCount,
+    ...(outsideOverflowWidth === undefined
+      ? {}
+      : { laneExtensionWidth: outsideOverflowWidth }),
+  }).overlap;
 
 export interface HandRowProps {
   label: string;
@@ -75,7 +55,7 @@ export const HandRow = ({
 }: HandRowProps): React.JSX.Element => {
   const rowRef = useRef<HTMLElement | null>(null);
   const cardsRef = useRef<HTMLDivElement | null>(null);
-  const [layout, setLayout] = useState<HandLayout>({
+  const [layout, setLayout] = useState<CardRowLayout>({
     overlap: 0,
     laneExtension: 0,
     edgePacked: false,
@@ -93,9 +73,9 @@ export const HandRow = ({
         cardsElement.querySelector<HTMLElement>(".card-tile-shell");
       const rowRect = rowElement.getBoundingClientRect();
       setLayout(
-        calculateHandLayout({
+        calculateCardRowLayout({
           availableWidth: rowElement.clientWidth,
-          outsideOverflowWidth:
+          laneExtensionWidth:
             overflowDirection === "left" ? rowRect.left : 0,
           cardWidth: firstCard?.getBoundingClientRect().width ?? 0,
           cardCount: cards.length,

@@ -8,11 +8,8 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId } from "@optcg/types";
 
-import {
-  HandRow,
-  calculateHandLayout,
-  calculateHandOverlap,
-} from "./HandRow.js";
+import { HandRow, calculateHandOverlap } from "./HandRow.js";
+import { calculateCardRowLayout } from "./card-row-layout.js";
 import type { ClientCardModel } from "../view-model.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
@@ -48,9 +45,9 @@ describe("hand layout", () => {
 
   test("player hand consumes outside-left lane before overlapping cards", () => {
     assert.deepEqual(
-      calculateHandLayout({
+      calculateCardRowLayout({
         availableWidth: 200,
-        outsideOverflowWidth: 80,
+        laneExtensionWidth: 80,
         cardWidth: 60,
         cardCount: 5,
       }),
@@ -61,9 +58,9 @@ describe("hand layout", () => {
       },
     );
     assert.deepEqual(
-      calculateHandLayout({
+      calculateCardRowLayout({
         availableWidth: 200,
-        outsideOverflowWidth: 200,
+        laneExtensionWidth: 200,
         cardWidth: 60,
         cardCount: 5,
       }),
