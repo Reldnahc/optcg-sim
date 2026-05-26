@@ -1,4 +1,5 @@
 import type {
+  CardRef,
   DecisionId,
   DecisionResponse,
   InstanceId,
@@ -6,6 +7,7 @@ import type {
   PublicOrderCardsDecision,
   PublicPendingDecision,
   PublicSelectCardsDecision,
+  PublicSelectTargetsDecision,
 } from "@optcg/types";
 
 import type { ClientActionModel } from "../view-model.js";
@@ -50,7 +52,7 @@ export type DecisionModalModel =
       max: number;
       canConfirm: boolean;
       selectedInstanceIds: InstanceId[];
-      cards: PublicSelectCardsDecision["choices"];
+      cards: Array<{ card: CardRef; selectable: boolean }>;
       confirmLabel: string;
     }
   | {
@@ -97,10 +99,13 @@ export type DecisionModalModel =
 
 type CardDecision =
   | PublicSelectCardsDecision
+  | PublicSelectTargetsDecision
   | PublicOrderCardsDecision
   | PublicChooseQuantityDecision;
 
 const suppressedDecisionIdPrefixes = ["decision:counterStep:pass:"] as const;
+
+export type PendingDecisionInteractionMode = "modal" | "global" | "zoneClick";
 
 export const isDecisionModalSuppressed = (
   decision: PublicPendingDecision,
@@ -109,19 +114,51 @@ export const isDecisionModalSuppressed = (
     String(decision.id).startsWith(prefix),
   );
 
+const selectableDecisionCandidateIds = (
+  decision: PublicPendingDecision,
+): readonly InstanceId[] =>
+  decision.type === "selectCards" || decision.type === "selectTargets"
+    ? decision.candidates.map((candidate) => candidate.card.instanceId)
+    : [];
+
+export const getPendingDecisionInteractionMode = (
+  decision: PublicPendingDecision,
+  options: { visibleZoneClickInstanceIds?: readonly string[] } = {},
+): PendingDecisionInteractionMode => {
+  if (isDecisionModalSuppressed(decision)) {
+    return "global";
+  }
+  if (decision.type !== "selectCards" && decision.type !== "selectTargets") {
+    return "modal";
+  }
+  const candidateIds = selectableDecisionCandidateIds(decision);
+  if (candidateIds.length === 0) {
+    return decision.type === "selectTargets" && decision.min === 0
+      ? "zoneClick"
+      : "modal";
+  }
+  const visibleIds = new Set(options.visibleZoneClickInstanceIds ?? []);
+  return candidateIds.every((id) => visibleIds.has(instanceKey(id)))
+    ? "zoneClick"
+    : "modal";
+};
+
 const instanceKey = (instanceId: InstanceId): string => String(instanceId);
 
 const assertDraftForDecision = (
   decision: CardDecision,
   draft: DecisionDraft,
 ): void => {
-  if (draft.decisionId !== decision.id || draft.kind !== decision.type) {
+  const kindMatches =
+    draft.kind === decision.type ||
+    (decision.type === "selectTargets" && draft.kind === "selectCards");
+  if (draft.decisionId !== decision.id || !kindMatches) {
     throw new Error("Decision draft does not match the active decision.");
   }
 };
 
 const selectCandidateIds = (
-  decision: PublicSelectCardsDecision,
+  decision: PublicSelectCardsDecision | PublicSelectTargetsDecision,
 ): ReadonlySet<string> =>
   new Set(
     decision.candidates.map((candidate) =>
@@ -135,7 +172,7 @@ const orderCardIds = (
   new Set(decision.cards.map((card) => instanceKey(card.instanceId)));
 
 const isSelectConfirmable = (
-  decision: PublicSelectCardsDecision,
+  decision: PublicSelectCardsDecision | PublicSelectTargetsDecision,
   draft: Extract<DecisionDraft, { kind: "selectCards" }>,
 ): boolean =>
   draft.selectedInstanceIds.length >= decision.min &&
@@ -177,6 +214,13 @@ export const createDecisionDraft = (
   responseActions: readonly ClientActionModel[] = [],
 ): DecisionDraft => {
   if (decision.type === "selectCards") {
+    return {
+      kind: "selectCards",
+      decisionId: decision.id,
+      selectedInstanceIds: [],
+    };
+  }
+  if (decision.type === "selectTargets") {
     return {
       kind: "selectCards",
       decisionId: decision.id,
@@ -243,7 +287,7 @@ export const setDecisionActionOption = (
 };
 
 export const toggleDecisionSelectedCard = (
-  decision: PublicSelectCardsDecision,
+  decision: PublicSelectCardsDecision | PublicSelectTargetsDecision,
   draft: DecisionDraft,
   instanceId: InstanceId,
 ): DecisionDraft => {
@@ -353,6 +397,30 @@ export const createDecisionModalModel = (
           : "Confirm",
     };
   }
+  if (decision.type === "selectTargets") {
+    assertDraftForDecision(decision, draft);
+    if (draft.kind !== "selectCards") {
+      throw new Error("Decision draft is not a selectCards draft.");
+    }
+    const canConfirm = isSelectConfirmable(decision, draft);
+    return {
+      kind: "selectCards",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      min: decision.min,
+      max: decision.max,
+      canConfirm,
+      selectedInstanceIds: draft.selectedInstanceIds,
+      cards: decision.candidates.map((candidate) => ({
+        card: candidate.card,
+        selectable: true,
+      })),
+      confirmLabel:
+        decision.min === 0 && draft.selectedInstanceIds.length === 0
+          ? "Choose no target"
+          : "Confirm",
+    };
+  }
   if (decision.type === "orderCards") {
     assertDraftForDecision(decision, draft);
     if (draft.kind !== "orderCards") {
@@ -438,6 +506,24 @@ export const buildDecisionResponse = (
     return {
       type: "cards",
       cards: decision.candidates
+        .filter((candidate) =>
+          draft.selectedInstanceIds.some(
+            (selectedId) => selectedId === candidate.card.instanceId,
+          ),
+        )
+        .map((candidate) => candidate.card),
+    };
+  }
+  if (decision.type === "selectTargets") {
+    if (!model.canConfirm) {
+      throw new Error("Decision draft is not confirmable.");
+    }
+    if (draft.kind !== "selectCards") {
+      throw new Error("Decision draft is not a selectCards draft.");
+    }
+    return {
+      type: "targets",
+      targets: decision.candidates
         .filter((candidate) =>
           draft.selectedInstanceIds.some(
             (selectedId) => selectedId === candidate.card.instanceId,

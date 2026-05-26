@@ -15,6 +15,8 @@ export interface ZoneProps {
   displayMode?: "spread" | "stack" | "overlap" | "slots" | undefined;
   slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
+  pendingChoiceInstanceIds?: readonly string[] | undefined;
+  decisionSelectedInstanceIds?: readonly string[] | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
   cardActions?:
     | ((instanceId: string) => readonly ClientActionModel[])
@@ -32,6 +34,8 @@ export const Zone = ({
   displayMode = "spread",
   slotCount = 0,
   selectedCardInstanceId,
+  pendingChoiceInstanceIds = [],
+  decisionSelectedInstanceIds = [],
   selectedDonInstanceIds = [],
   cardActions,
   actionDisabled = false,
@@ -125,7 +129,11 @@ export const Zone = ({
               <div key={instanceId} className="zone-card-slot">
                 <CardTile
                   card={card}
-                  selected={selectedCardInstanceId === instanceId}
+                  selected={
+                    selectedCardInstanceId === instanceId ||
+                    decisionSelectedInstanceIds.includes(instanceId)
+                  }
+                  pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
                   selectedDonInstanceIds={selectedDonInstanceIds}
                   actions={cardActions?.(instanceId) ?? []}
                   disabled={actionDisabled}
@@ -151,7 +159,11 @@ export const Zone = ({
               <CardTile
                 key={instanceId}
                 card={card}
-                selected={selectedCardInstanceId === instanceId}
+                selected={
+                  selectedCardInstanceId === instanceId ||
+                  decisionSelectedInstanceIds.includes(instanceId)
+                }
+                pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
                 selectedDonInstanceIds={selectedDonInstanceIds}
                 actions={cardActions?.(instanceId) ?? []}
                 disabled={actionDisabled}

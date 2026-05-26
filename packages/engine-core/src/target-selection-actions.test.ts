@@ -436,11 +436,12 @@ test("getLegalActions exposes an empty selectTargets response when min is zero",
   );
 });
 
-test("PlayerView hides zero-target selectTargets internals while exposing the response affordance", () => {
+test("PlayerView exposes public selectTargets candidates while hiding request internals", () => {
   const { state } = setupSelectTargetsDecision(
     publicCharacterTargetRequest({ min: 0, max: 1 }),
   );
   const decision = must(state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectTargets");
   const chooserView = filterStateForPlayer(state, p1);
   const opponentView = filterStateForPlayer(state, p2);
 
@@ -450,6 +451,11 @@ test("PlayerView hides zero-target selectTargets internals while exposing the re
     playerId: p1,
     prompt: "Select targets.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    min: 0,
+    max: 1,
+    candidates: decision.candidates.map((candidate) => ({
+      card: candidate.card,
+    })),
   });
   assert.deepEqual(
     chooserView.legalActions.filter(
@@ -464,7 +470,6 @@ test("PlayerView hides zero-target selectTargets internals while exposing the re
     ),
     [],
   );
-  assert.equal(JSON.stringify(chooserView).includes("candidates"), false);
   assert.equal(JSON.stringify(chooserView).includes("request"), false);
   assert.equal(JSON.stringify(chooserView).includes("queueEntryId"), false);
 });

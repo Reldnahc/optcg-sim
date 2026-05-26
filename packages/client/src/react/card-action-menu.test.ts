@@ -241,4 +241,25 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-action-popover/u);
     assert.equal(markup.includes("Attach selected DON!!"), true);
   });
+
+  test("pending zone-click decision candidates render on board cards", () => {
+    const layout = board();
+    layout.opponent.characters = [card("target-1", "Target")];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        pendingChoiceInstanceIds: ["target-1"],
+        decisionSelectedInstanceIds: ["target-1"],
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*is-pending-choice/u);
+    assert.match(markup, /class="[^"]*is-selected/u);
+  });
 });

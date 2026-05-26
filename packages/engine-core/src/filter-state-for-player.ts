@@ -457,6 +457,15 @@ const toPublicDecision = (
       choices: toPublicCardChoices(state, playerId, pending),
     };
   }
+  if (pending.type === "selectTargets") {
+    return {
+      ...base,
+      type: "selectTargets",
+      min: pending.request.min,
+      max: pending.request.max,
+      candidates: toPublicCardCandidates(pending.candidates, playerId),
+    };
+  }
   if (pending.type === "orderCards") {
     return {
       ...base,

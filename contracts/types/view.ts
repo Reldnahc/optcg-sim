@@ -10,7 +10,7 @@ import type {
   Zone,
 } from "./primitives.js";
 import type { CardRef, ZoneRef } from "./card-metadata.js";
-import type { CardSelectionCandidate } from "./decisions.js";
+import type { CardSelectionCandidate, TargetCandidate } from "./decisions.js";
 import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
 import type { PublicTimerState } from "./runtime.js";
@@ -114,6 +114,13 @@ export interface PublicSelectCardsDecision extends PublicDecision<"selectCards">
   >;
 }
 
+export interface PublicSelectTargetsDecision extends PublicDecision<"selectTargets"> {
+  type: "selectTargets";
+  min: number;
+  max: number;
+  candidates: Array<Pick<TargetCandidate, "card">>;
+}
+
 export interface PublicOrderCardsDecision extends PublicDecision<"orderCards"> {
   type: "orderCards";
   cards: CardRef[];
@@ -124,11 +131,12 @@ export type PublicPendingDecision =
   | PublicDecision<
       Exclude<
         PendingDecision["type"],
-        "chooseQuantity" | "selectCards" | "orderCards"
+        "chooseQuantity" | "selectCards" | "selectTargets" | "orderCards"
       >
     >
   | PublicChooseQuantityDecision
   | PublicSelectCardsDecision
+  | PublicSelectTargetsDecision
   | PublicOrderCardsDecision;
 
 export type PublicLegalAction =

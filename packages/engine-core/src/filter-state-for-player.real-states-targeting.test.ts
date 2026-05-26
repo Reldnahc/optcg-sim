@@ -126,7 +126,19 @@ const assertPublicDecisionShape = (
   const pending = view.pendingDecision;
   assert.ok(pending, `${label}: pending decision must exist`);
   const keys = Object.keys(pending).sort();
-  const required = ["causedBy", "id", "playerId", "prompt", "type"].sort();
+  const required =
+    pending.type === "selectTargets"
+      ? [
+          "candidates",
+          "causedBy",
+          "id",
+          "max",
+          "min",
+          "playerId",
+          "prompt",
+          "type",
+        ].sort()
+      : ["causedBy", "id", "playerId", "prompt", "type"].sort();
   if ("timeoutMs" in pending) {
     assert.deepEqual(
       keys,
@@ -326,7 +338,6 @@ const assertNoHiddenLeak = (
       "sourceSnapshot",
       "sourcePresencePolicy",
       "orderingGroup",
-      "candidates",
       "paymentOptions",
       "targetOptions",
       "cardOptions",
@@ -511,7 +522,7 @@ const createSelectTargetsDecisionState = (): {
   };
 };
 
-test("real selectTargets views omit candidates, legal responses, and private queue metadata", () => {
+test("real selectTargets views expose public candidates without legal responses or private queue metadata", () => {
   const {
     state,
     target,
@@ -531,6 +542,9 @@ test("real selectTargets views omit candidates, legal responses, and private que
     playerId: p1,
     prompt: "Select a target.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    min: 1,
+    max: 1,
+    candidates: [{ card: target }],
   });
   assert.deepEqual(
     recipientView.legalActions.filter(
@@ -566,7 +580,6 @@ test("real selectTargets views omit candidates, legal responses, and private que
   );
   for (const view of [recipientView, opponentView]) {
     const serialized = JSON.stringify(view);
-    assert.equal(serialized.includes("candidates"), false);
     assert.equal(serialized.includes("request"), false);
     assert.equal(serialized.includes("response"), false);
     assert.equal(serialized.includes("queueEntryId"), false);

@@ -447,7 +447,7 @@ test("chooseTriggerOrder projection stays metadata-only and hides private ids fr
   );
 });
 
-test("selectTargets projection stays metadata-only and does not expose candidate arrays or legal responses", () => {
+test("selectTargets projection exposes public target candidates without private request metadata", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
@@ -539,6 +539,18 @@ test("selectTargets projection stays metadata-only and does not expose candidate
     playerId: p1,
     prompt: "Select targets.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    min: 1,
+    max: 1,
+    candidates: [
+      {
+        card: {
+          instanceId: target.instanceId,
+          cardId: target.cardId,
+          playerId: p2,
+          zone: target.zone,
+        },
+      },
+    ],
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
@@ -552,7 +564,6 @@ test("selectTargets projection stays metadata-only and does not expose candidate
     ],
   );
   assert.equal(JSON.stringify(forDecisionPlayer).includes("response"), false);
-  assert.equal(JSON.stringify(forDecisionPlayer).includes("candidates"), false);
   assert.equal(JSON.stringify(forDecisionPlayer).includes("request"), false);
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes("queueEntryId"),

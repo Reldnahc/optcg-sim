@@ -37,6 +37,8 @@ export interface HandRowProps {
   cards: readonly ClientCardModel[];
   overflowDirection: HandOverflowDirection;
   selectedCardInstanceId?: string | undefined;
+  pendingChoiceInstanceIds?: readonly string[] | undefined;
+  decisionSelectedInstanceIds?: readonly string[] | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
   cardActions?:
     | ((instanceId: string) => readonly ClientActionModel[])
@@ -51,6 +53,8 @@ export const HandRow = ({
   cards,
   overflowDirection,
   selectedCardInstanceId,
+  pendingChoiceInstanceIds = [],
+  decisionSelectedInstanceIds = [],
   selectedDonInstanceIds = [],
   cardActions,
   actionDisabled = false,
@@ -129,7 +133,11 @@ export const HandRow = ({
             <CardTile
               key={instanceId}
               card={card}
-              selected={selectedCardInstanceId === instanceId}
+              selected={
+                selectedCardInstanceId === instanceId ||
+                decisionSelectedInstanceIds.includes(instanceId)
+              }
+              pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
               selectedDonInstanceIds={selectedDonInstanceIds}
               actions={cardActions?.(instanceId) ?? []}
               disabled={actionDisabled}

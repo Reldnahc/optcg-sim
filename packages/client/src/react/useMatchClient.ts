@@ -13,6 +13,7 @@ import {
   createClientSessionStore,
   createDecisionDraft,
   createDecisionModalModel,
+  getPendingDecisionInteractionMode,
   isDecisionModalSuppressed,
   createDevHttpMatchTransport,
   createDevWebSocketLobbyTransport,
@@ -47,6 +48,8 @@ export interface MatchClientUiState {
   selectedDonInstanceIds: string[];
   decisionDraft?: DecisionDraft;
   decisionModal?: DecisionModalModel;
+  pendingChoiceInstanceIds: string[];
+  decisionSelectedInstanceIds: string[];
   actionInFlight: boolean;
   errors: string[];
 }
@@ -129,6 +132,52 @@ const isSelfAttachmentTarget = (
       (card) => String(card.instanceId) === instanceId,
     ));
 
+const zoneClickVisibleInstanceIds = (
+  board: BoardViewModel | undefined,
+): string[] => {
+  if (board === undefined) {
+    return [];
+  }
+  return [
+    ...board.self.hand,
+    board.self.leader,
+    ...board.self.characters,
+    ...(board.self.stage === undefined ? [] : [board.self.stage]),
+    ...board.self.costArea,
+    board.opponent.leader,
+    ...board.opponent.characters,
+    ...(board.opponent.stage === undefined ? [] : [board.opponent.stage]),
+    ...board.opponent.costArea,
+  ].map((card) => String(card.instanceId));
+};
+
+const decisionCandidateInstanceIds = (
+  decision: NonNullable<
+    MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+  >,
+): string[] =>
+  decision.type === "selectCards" || decision.type === "selectTargets"
+    ? decision.candidates.map((candidate) => String(candidate.card.instanceId))
+    : [];
+
+const decisionHasCandidate = (
+  decision: NonNullable<
+    MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+  >,
+  instanceId: string,
+): boolean => decisionCandidateInstanceIds(decision).includes(instanceId);
+
+const chooseNoDecisionLabel = (
+  decision: NonNullable<
+    MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+  >,
+): string =>
+  decision.type === "selectTargets" ? "Choose no target" : "Choose no card";
+
+const CONFIRM_DECISION_SELECTION_ACTION_INDEX = -2;
+const CLEAR_DECISION_SELECTION_ACTION_INDEX = -3;
+const CHOOSE_NO_DECISION_CARDS_ACTION_INDEX = -4;
+
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
   const [clientState, setClientState] = useState<
@@ -166,6 +215,13 @@ export const useMatchClient = (): MatchClientUi => {
       ? undefined
       : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
   const pendingDecision = playerSnapshot?.view.pendingDecision;
+  const zoneClickVisibleIds = zoneClickVisibleInstanceIds(board);
+  const pendingDecisionInteractionMode =
+    pendingDecision === undefined
+      ? undefined
+      : getPendingDecisionInteractionMode(pendingDecision, {
+          visibleZoneClickInstanceIds: zoneClickVisibleIds,
+        });
   const pendingDecisionResponseActions =
     pendingDecision === undefined || playerSnapshot === undefined
       ? []
@@ -189,6 +245,7 @@ export const useMatchClient = (): MatchClientUi => {
   const decisionModal =
     pendingDecision === undefined ||
     activeDecisionDraft === undefined ||
+    pendingDecisionInteractionMode !== "modal" ||
     isDecisionModalSuppressed(pendingDecision)
       ? undefined
       : createDecisionModalModel(
@@ -196,6 +253,16 @@ export const useMatchClient = (): MatchClientUi => {
           activeDecisionDraft,
           pendingDecisionResponseActions,
         );
+  const pendingChoiceInstanceIds =
+    pendingDecisionInteractionMode === "zoneClick" &&
+    pendingDecision !== undefined
+      ? decisionCandidateInstanceIds(pendingDecision)
+      : [];
+  const decisionSelectedInstanceIds =
+    pendingDecisionInteractionMode === "zoneClick" &&
+    activeDecisionDraft?.kind === "selectCards"
+      ? activeDecisionDraft.selectedInstanceIds.map(String)
+      : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -335,6 +402,56 @@ export const useMatchClient = (): MatchClientUi => {
     [controller, selectedDonInstanceIds],
   );
 
+  const submitDecisionDraft = useCallback(
+    async (draft: DecisionDraft): Promise<void> => {
+      if (pendingDecision === undefined) {
+        return;
+      }
+      if (draft.kind === "actionOptions") {
+        setActionInFlight(true);
+        try {
+          const result = await controller.submitVisibleAction({
+            actionIndex: draft.actionIndex,
+          });
+          setClientState(result);
+          setSelectedCardInstanceId(undefined);
+          setSelectedDonInstanceIds([]);
+          setDecisionDraft(undefined);
+          setErrors([]);
+        } catch (error) {
+          setErrors([error instanceof Error ? error.message : String(error)]);
+        } finally {
+          setActionInFlight(false);
+        }
+        return;
+      }
+      let response: DecisionResponse;
+      try {
+        response = buildDecisionResponse(pendingDecision, draft);
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : String(error)]);
+        return;
+      }
+      setActionInFlight(true);
+      try {
+        const result = await controller.respondToDecision({
+          decisionId: pendingDecision.id,
+          response,
+        });
+        setClientState(result);
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
+        setDecisionDraft(undefined);
+        setErrors([]);
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : String(error)]);
+      } finally {
+        setActionInFlight(false);
+      }
+    },
+    [controller, pendingDecision],
+  );
+
   const submitAction = useCallback(
     async (actionIndex: number): Promise<void> => {
       if (
@@ -342,6 +459,27 @@ export const useMatchClient = (): MatchClientUi => {
         selectedCardInstanceId !== undefined
       ) {
         await attachSelectedDonToTarget(selectedCardInstanceId);
+        return;
+      }
+      if (actionIndex === CLEAR_DECISION_SELECTION_ACTION_INDEX) {
+        setDecisionDraft(undefined);
+        return;
+      }
+      if (actionIndex === CHOOSE_NO_DECISION_CARDS_ACTION_INDEX) {
+        if (pendingDecision !== undefined) {
+          await submitDecisionDraft(
+            createDecisionDraft(
+              pendingDecision,
+              pendingDecisionResponseActions,
+            ),
+          );
+        }
+        return;
+      }
+      if (actionIndex === CONFIRM_DECISION_SELECTION_ACTION_INDEX) {
+        if (activeDecisionDraft !== undefined) {
+          await submitDecisionDraft(activeDecisionDraft);
+        }
         return;
       }
       setActionInFlight(true);
@@ -358,7 +496,15 @@ export const useMatchClient = (): MatchClientUi => {
         setActionInFlight(false);
       }
     },
-    [attachSelectedDonToTarget, controller, selectedCardInstanceId],
+    [
+      activeDecisionDraft,
+      attachSelectedDonToTarget,
+      controller,
+      pendingDecision,
+      pendingDecisionResponseActions,
+      selectedCardInstanceId,
+      submitDecisionDraft,
+    ],
   );
 
   const selectCard = useCallback(
@@ -366,6 +512,31 @@ export const useMatchClient = (): MatchClientUi => {
       if (instanceId === undefined) {
         setSelectedCardInstanceId(undefined);
         setSelectedDonInstanceIds([]);
+        return;
+      }
+      if (
+        pendingDecisionInteractionMode === "zoneClick" &&
+        pendingDecision !== undefined &&
+        (pendingDecision.type === "selectCards" ||
+          pendingDecision.type === "selectTargets") &&
+        decisionHasCandidate(pendingDecision, instanceId)
+      ) {
+        const nextDraft = toggleDecisionSelectedCard(
+          pendingDecision,
+          activeDecisionDraft?.decisionId === pendingDecision.id
+            ? activeDecisionDraft
+            : createDecisionDraft(
+                pendingDecision,
+                pendingDecisionResponseActions,
+              ),
+          instanceId as InstanceId,
+        );
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
+        setDecisionDraft(nextDraft);
+        if (pendingDecision.max === 1) {
+          void submitDecisionDraft(nextDraft);
+        }
         return;
       }
       if (isSelectableCostAreaDon(board, instanceId)) {
@@ -385,39 +556,23 @@ export const useMatchClient = (): MatchClientUi => {
       setSelectedDonInstanceIds([]);
       setSelectedCardInstanceId(instanceId);
     },
-    [attachSelectedDonToTarget, board, selectedDonInstanceIds.length],
+    [
+      activeDecisionDraft,
+      board,
+      pendingDecision,
+      pendingDecisionInteractionMode,
+      pendingDecisionResponseActions,
+      selectedDonInstanceIds.length,
+      submitDecisionDraft,
+    ],
   );
 
   const confirmDecision = useCallback(async (): Promise<void> => {
     if (pendingDecision === undefined || activeDecisionDraft === undefined) {
       return;
     }
-    if (activeDecisionDraft.kind === "actionOptions") {
-      await submitAction(activeDecisionDraft.actionIndex);
-      return;
-    }
-    let response: DecisionResponse;
-    try {
-      response = buildDecisionResponse(pendingDecision, activeDecisionDraft);
-    } catch (error) {
-      setErrors([error instanceof Error ? error.message : String(error)]);
-      return;
-    }
-    setActionInFlight(true);
-    try {
-      const result = await controller.respondToDecision({
-        decisionId: pendingDecision.id,
-        response,
-      });
-      setClientState(result);
-      setDecisionDraft(undefined);
-      setErrors([]);
-    } catch (error) {
-      setErrors([error instanceof Error ? error.message : String(error)]);
-    } finally {
-      setActionInFlight(false);
-    }
-  }, [activeDecisionDraft, controller, pendingDecision, submitAction]);
+    await submitDecisionDraft(activeDecisionDraft);
+  }, [activeDecisionDraft, pendingDecision, submitDecisionDraft]);
 
   const cardActions = useCallback(
     (instanceId: string): ClientActionModel[] => {
@@ -440,6 +595,40 @@ export const useMatchClient = (): MatchClientUi => {
     if (playerSnapshot === undefined) {
       return [];
     }
+    if (
+      pendingDecisionInteractionMode === "zoneClick" &&
+      pendingDecision !== undefined &&
+      (pendingDecision.type === "selectCards" ||
+        pendingDecision.type === "selectTargets")
+    ) {
+      const actions: ClientActionModel[] = [];
+      if (pendingDecision.min === 0) {
+        actions.push({
+          index: CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
+          label: chooseNoDecisionLabel(pendingDecision),
+          type: "chooseNoDecisionCards",
+        });
+      }
+      if (
+        pendingDecision.max > 1 &&
+        activeDecisionDraft?.kind === "selectCards" &&
+        activeDecisionDraft.selectedInstanceIds.length >= pendingDecision.min
+      ) {
+        actions.push({
+          index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+          label: "Confirm selection",
+          type: "confirmDecisionSelection",
+        });
+        if (activeDecisionDraft.selectedInstanceIds.length > 0) {
+          actions.push({
+            index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+            label: "Clear selection",
+            type: "clearDecisionSelection",
+          });
+        }
+      }
+      return actions;
+    }
     return playerSnapshot.actions
       .filter((action) => action.placement === undefined)
       .map((action) => ({
@@ -447,11 +636,19 @@ export const useMatchClient = (): MatchClientUi => {
         label: action.label,
         type: action.type,
       }));
-  }, [playerSnapshot]);
+  }, [
+    activeDecisionDraft,
+    pendingDecision,
+    pendingDecisionInteractionMode,
+    playerSnapshot,
+  ]);
 
   const toggleDecisionCard = useCallback(
     (instanceId: InstanceId): void => {
-      if (pendingDecision?.type !== "selectCards") {
+      if (
+        pendingDecision?.type !== "selectCards" &&
+        pendingDecision?.type !== "selectTargets"
+      ) {
         return;
       }
       setDecisionDraft((draft) =>
@@ -563,6 +760,8 @@ export const useMatchClient = (): MatchClientUi => {
         ? {}
         : { decisionDraft: activeDecisionDraft }),
       ...(decisionModal === undefined ? {} : { decisionModal }),
+      pendingChoiceInstanceIds,
+      decisionSelectedInstanceIds,
       actionInFlight,
       errors: visibleErrors(errors),
     },

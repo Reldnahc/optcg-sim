@@ -9,6 +9,8 @@ import { Zone } from "./Zone.js";
 export interface BoardLayoutProps {
   board: BoardViewModel;
   selectedCardInstanceId?: string | undefined;
+  pendingChoiceInstanceIds?: readonly string[] | undefined;
+  decisionSelectedInstanceIds?: readonly string[] | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
   cardActions: (instanceId: string) => readonly ClientActionModel[];
   actionDisabled?: boolean | undefined;
@@ -37,6 +39,8 @@ const stack = (label: string, count: number): React.JSX.Element => (
 export const BoardLayout = ({
   board,
   selectedCardInstanceId,
+  pendingChoiceInstanceIds = [],
+  decisionSelectedInstanceIds = [],
   selectedDonInstanceIds = [],
   cardActions,
   actionDisabled = false,
@@ -62,6 +66,8 @@ export const BoardLayout = ({
         cards={board.self.hand}
         overflowDirection="left"
         selectedCardInstanceId={selectedCardInstanceId}
+        pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+        decisionSelectedInstanceIds={decisionSelectedInstanceIds}
         selectedDonInstanceIds={selectedDonInstanceIds}
         cardActions={cardActions}
         actionDisabled={actionDisabled}
@@ -104,6 +110,8 @@ export const BoardLayout = ({
           cards={[board.opponent.leader]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -119,6 +127,8 @@ export const BoardLayout = ({
           }
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -133,6 +143,8 @@ export const BoardLayout = ({
           displayMode="slots"
           slotCount={5}
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -148,6 +160,8 @@ export const BoardLayout = ({
           displayMode="slots"
           slotCount={5}
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -164,6 +178,8 @@ export const BoardLayout = ({
           cards={[board.self.leader]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -177,6 +193,8 @@ export const BoardLayout = ({
           cards={board.self.stage === undefined ? [] : [board.self.stage]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -207,6 +225,8 @@ export const BoardLayout = ({
           cards={board.self.costArea}
           size="mini"
           displayMode="overlap"
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           onCardClick={onCardClick}
         />

@@ -18,6 +18,8 @@ export const MatchApp = (): React.JSX.Element => {
     board,
     clientState,
     decisionModal,
+    pendingChoiceInstanceIds,
+    decisionSelectedInstanceIds,
     selectedCardInstanceId,
     selectedDonInstanceIds,
   } = client.state;
@@ -57,6 +59,8 @@ export const MatchApp = (): React.JSX.Element => {
         <BoardLayout
           board={board}
           selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={client.cardActions}
           actionDisabled={client.state.actionInFlight}

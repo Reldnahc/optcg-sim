@@ -96,6 +96,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PublicDecision: "TYP-002A",
   PublicChooseQuantityDecision: "TYP-007A",
   PublicSelectCardsDecision: "TYP-007A",
+  PublicSelectTargetsDecision: "TYP-007A",
   PublicOrderCardsDecision: "TYP-007A",
   PublicPendingDecision: "TYP-007A",
   PublicLegalAction: "TYP-002A",

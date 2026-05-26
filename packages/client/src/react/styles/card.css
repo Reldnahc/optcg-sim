@@ -45,6 +45,15 @@
   outline-offset: 2px;
 }
 
+.card-tile.is-pending-choice .card-face {
+  box-shadow: 0 0 0 3px rgba(68, 216, 255, 0.75);
+}
+
+.card-tile.is-pending-choice.is-selected .card-face {
+  outline: 3px solid #ffdc62;
+  box-shadow: 0 0 0 5px rgba(68, 216, 255, 0.55);
+}
+
 .card-tag {
   position: absolute;
   right: 2px;

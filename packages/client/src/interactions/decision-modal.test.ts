@@ -11,12 +11,14 @@ import type {
   PublicOrderCardsDecision,
   PublicPendingDecision,
   PublicSelectCardsDecision,
+  PublicSelectTargetsDecision,
 } from "@optcg/types";
 
 import {
   buildDecisionResponse,
   createDecisionDraft,
   createDecisionModalModel,
+  getPendingDecisionInteractionMode,
   isDecisionModalSuppressed,
   moveOrderedCardNear,
   setDecisionActionOption,
@@ -51,6 +53,14 @@ const selectDecision = (): PublicSelectCardsDecision => ({
     { card: cardRef("1"), selectable: true },
     { card: cardRef("2"), selectable: true },
   ],
+});
+
+const targetDecision = (): PublicSelectTargetsDecision => ({
+  ...baseDecision,
+  type: "selectTargets",
+  min: 0,
+  max: 1,
+  candidates: [{ card: cardRef("target-1") }, { card: cardRef("target-2") }],
 });
 
 const orderDecision = (): PublicOrderCardsDecision => ({
@@ -124,6 +134,26 @@ describe("headless decision modal models", () => {
 
     assert.equal(model.kind, "selectCards");
     assert.deepEqual(model.selectedInstanceIds, ["2"]);
+  });
+
+  test("selectTargets draft builds a targets response", () => {
+    const decision = targetDecision();
+    const draft = toggleDecisionSelectedCard(
+      decision,
+      createDecisionDraft(decision),
+      "target-2" as InstanceId,
+    );
+
+    const model = createDecisionModalModel(decision, draft);
+    const response = buildDecisionResponse(decision, draft);
+
+    assert.equal(model.kind, "selectCards");
+    assert.equal(model.confirmLabel, "Confirm");
+    assert.deepEqual(model.selectedInstanceIds, ["target-2"]);
+    assert.deepEqual(response, {
+      type: "targets",
+      targets: [cardRef("target-2")],
+    });
   });
 
   test("selectCards draft exposes disabled choices and prevents selecting them", () => {
@@ -270,5 +300,50 @@ describe("headless decision modal models", () => {
 
     assert.equal(isDecisionModalSuppressed(counterPass), true);
     assert.equal(isDecisionModalSuppressed(normalSelection), false);
+  });
+
+  test("pending decision interaction mode sends visible board targets to zone clicks", () => {
+    assert.equal(
+      getPendingDecisionInteractionMode(targetDecision(), {
+        visibleZoneClickInstanceIds: ["target-1", "target-2"],
+      }),
+      "zoneClick",
+    );
+  });
+
+  test("pending decision interaction mode fails closed to modal when candidates are not visible zone cards", () => {
+    assert.equal(
+      getPendingDecisionInteractionMode(targetDecision(), {
+        visibleZoneClickInstanceIds: ["target-1"],
+      }),
+      "modal",
+    );
+    assert.equal(
+      getPendingDecisionInteractionMode(
+        {
+          ...selectDecision(),
+          id: "decision:selectCards:search-reveal:queue-entry-1" as DecisionId,
+        },
+        { visibleZoneClickInstanceIds: [] },
+      ),
+      "modal",
+    );
+  });
+
+  test("pending decision interaction mode keeps counter pass in global actions", () => {
+    const counterPass: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      id: "decision:counterStep:pass:attacker-1:7" as DecisionId,
+      min: 0,
+      max: 0,
+      candidates: [],
+    };
+
+    assert.equal(
+      getPendingDecisionInteractionMode(counterPass, {
+        visibleZoneClickInstanceIds: [],
+      }),
+      "global",
+    );
   });
 });

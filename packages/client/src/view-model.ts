@@ -43,7 +43,12 @@ export interface ClientPlayerZonesModel {
 
 export interface ClientActionModel {
   index: number;
-  type: PublicLegalAction["type"] | "advanceToMainPhase";
+  type:
+    | PublicLegalAction["type"]
+    | "advanceToMainPhase"
+    | "confirmDecisionSelection"
+    | "clearDecisionSelection"
+    | "chooseNoDecisionCards";
   label: string;
 }
 
