@@ -186,4 +186,31 @@ describe("board view model", () => {
     );
     assert.equal(JSON.stringify(model).includes("deckOrder"), false);
   });
+
+  test("tolerates older snapshots that do not include attached DON ids yet", () => {
+    const view = minimalView();
+    const legacyLeader: Partial<PlayerView["self"]["leader"]> = {
+      ...view.self.leader,
+    };
+    delete legacyLeader.attachedDonIds;
+    view.self.leader = legacyLeader as unknown as PlayerView["self"]["leader"];
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(model.self.leader.attachedDonCards, []);
+  });
 });

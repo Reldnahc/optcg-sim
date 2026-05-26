@@ -51,6 +51,10 @@ export interface BoardViewModel {
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
 }
 
+type LegacyPublicCardView = Omit<PublicCardView, "attachedDonIds"> & {
+  attachedDonIds?: InstanceId[];
+};
+
 const unknownCard = (cardId: CardId): MatchCardCatalogEntry => ({
   cardId,
   name: String(cardId),
@@ -85,8 +89,11 @@ const cardModel = (
   };
 };
 
+const attachedDonIdsFor = (card: PublicCardView): readonly InstanceId[] =>
+  (card as LegacyPublicCardView).attachedDonIds ?? [];
+
 const attachedDonIdSet = (cards: readonly PublicCardView[]): Set<InstanceId> =>
-  new Set(cards.flatMap((card) => card.attachedDonIds));
+  new Set(cards.flatMap((card) => attachedDonIdsFor(card)));
 
 const attachDonCards = (
   card: PublicCardView,
@@ -94,7 +101,7 @@ const attachDonCards = (
   costAreaById: ReadonlyMap<InstanceId, ClientCardModel>,
 ): ClientCardModel => ({
   ...cardModel(card, catalog),
-  attachedDonCards: card.attachedDonIds.flatMap((id) => {
+  attachedDonCards: attachedDonIdsFor(card).flatMap((id) => {
     const donCard = costAreaById.get(id);
     return donCard === undefined ? [] : [donCard];
   }),
