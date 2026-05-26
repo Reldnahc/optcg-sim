@@ -37,4 +37,13 @@ describe("playmat structure", () => {
       );
     }
   });
+
+  test("physical table grid uses mirrored player and opponent row heights", async () => {
+    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+
+    assert.match(
+      styles,
+      /grid-template-rows:\s*72px\s+84px\s+minmax\(\s*126px,\s*1fr\s*\)\s+34px\s+minmax\(\s*126px,\s*1fr\s*\)\s+84px\s+72px;/,
+    );
+  });
 });
