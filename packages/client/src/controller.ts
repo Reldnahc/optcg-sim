@@ -78,6 +78,15 @@ const throwIfActionResultFailed = (errors: readonly string[]): void => {
   }
 };
 
+const requireLiveConnection = (
+  liveConnection: LiveMatchConnection | undefined,
+): LiveMatchConnection => {
+  if (liveConnection === undefined) {
+    throw new Error("Live match connection is not active.");
+  }
+  return liveConnection;
+};
+
 export const createMatchClientController = ({
   transport,
   liveTransport,
@@ -240,12 +249,14 @@ export const createMatchClientController = ({
           : { expectedStateSeq: currentState.snapshot.stateSeq }),
       };
       const result =
-        liveConnection === undefined
+        liveTransport === undefined
           ? await transport.submitVisibleAction({
               ...transportInput,
               sessionToken: credential.sessionToken,
             })
-          : await liveConnection.submitVisibleAction(transportInput);
+          : await requireLiveConnection(liveConnection).submitVisibleAction(
+              transportInput,
+            );
       throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));
@@ -269,12 +280,14 @@ export const createMatchClientController = ({
         response: input.response,
       };
       const result =
-        liveConnection === undefined
+        liveTransport === undefined
           ? await transport.respondToDecision({
               ...transportInput,
               sessionToken: credential.sessionToken,
             })
-          : await liveConnection.respondToDecision(transportInput);
+          : await requireLiveConnection(liveConnection).respondToDecision(
+              transportInput,
+            );
       throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));

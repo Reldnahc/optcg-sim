@@ -7,7 +7,7 @@ import {
   createClientSessionStore,
   createMemoryClientStorage,
 } from "./session.js";
-import type { MatchTransport } from "./transport.js";
+import type { MatchLiveTransport, MatchTransport } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
 
 const createFakeTransport = (options?: {
@@ -174,6 +174,58 @@ describe("match client controller", () => {
     await controller.submitVisibleAction({ actionIndex: 0 });
 
     assert.deepEqual(transport.submittedTokens, ["token-p1"]);
+  });
+
+  test("does not fall back to HTTP gameplay when live transport is configured but disconnected", async () => {
+    const transport = createFakeTransport();
+    const liveTransport: MatchLiveTransport = {
+      connect() {
+        throw new Error("Live connection was not expected.");
+      },
+    };
+    const controller = createMatchClientController({
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    await controller.startNewLocalMatch("p1" as PlayerId);
+
+    await assert.rejects(
+      () => controller.submitVisibleAction({ actionIndex: 0 }),
+      /Live match connection is not active/u,
+    );
+    assert.deepEqual(transport.submittedTokens, []);
+  });
+
+  test("does not fall back to HTTP decisions when live transport is configured but disconnected", async () => {
+    const transport = createFakeTransport();
+    const liveTransport: MatchLiveTransport = {
+      connect() {
+        throw new Error("Live connection was not expected.");
+      },
+    };
+    const controller = createMatchClientController({
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    await controller.startNewLocalMatch("p1" as PlayerId);
+
+    await assert.rejects(
+      () =>
+        controller.respondToDecision({
+          decisionId: "decision-1" as DecisionId,
+          response: { type: "mulligan", keep: true },
+        }),
+      /Live match connection is not active/u,
+    );
+    assert.deepEqual(transport.submittedTokens, []);
   });
 
   test("revalidates an existing seat credential when joining a match", async () => {
