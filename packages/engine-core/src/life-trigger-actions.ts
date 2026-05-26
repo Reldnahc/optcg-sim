@@ -70,6 +70,13 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
 
 const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
   const effect = effectBlock.effect;
+  if (
+    effect.type === "activateReferencedEffect" &&
+    effect.source.type === "triggerCard" &&
+    effect.trigger.type === "main"
+  ) {
+    return true;
+  }
   if (effect.type === "draw") {
     return (
       Number.isInteger(effect.count) &&

@@ -28,6 +28,7 @@ import {
   evaluateQueueOrdering,
   orderNoChoiceQueueEntries,
 } from "./effect-runtime-queue-ordering.js";
+import { hasExactQueueEntryIds } from "./effect-runtime-queue-id-matching.js";
 import { evaluateQueuedEffectSourcePresence } from "./effect-runtime-queue-source-presence.js";
 import type {
   CreateUnsupportedPendingRuntimeWorkError,
@@ -46,6 +47,7 @@ import {
   isSupportedActivateMainNoChoiceDrawEffect,
   isSupportedOptionalActivateMainNoChoiceDrawEffect,
 } from "./effect-runtime-activation-main.js";
+import { queueReferencedMainEffectFromTrigger } from "./effect-runtime-activate-referenced-effect.js";
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
@@ -87,20 +89,6 @@ export interface EffectRuntimeQueueResults {
     orderedIds: readonly QueueEntryId[],
   ) => EngineResult;
 }
-
-const hasExactIds = (
-  expectedIds: readonly QueueEntryId[],
-  receivedIds: readonly QueueEntryId[],
-): boolean => {
-  if (expectedIds.length !== receivedIds.length) {
-    return false;
-  }
-  if (new Set(receivedIds).size !== receivedIds.length) {
-    return false;
-  }
-  const expected = new Set(expectedIds);
-  return receivedIds.every((id) => expected.has(id));
-};
 
 const isActiveDoubleAttackDamageProcess = (state: GameState): boolean =>
   (() => {
@@ -564,6 +552,19 @@ export const createEffectRuntimeQueueResults = (
           },
         );
       }
+      const referencedMainEffect = queueReferencedMainEffectFromTrigger(
+        nextState,
+        selected,
+        dependencies.resolveImplementedDslEffectDefinition,
+      );
+      if (referencedMainEffect !== undefined) {
+        nextState = referencedMainEffect.state;
+        allEvents.push(...referencedMainEffect.events);
+        const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+        nextState = cleanup.state;
+        allEvents.push(...cleanup.events);
+        continue;
+      }
       const sequenceFrame = createSupportedSequenceFrameDecision(
         nextState,
         selected,
@@ -956,7 +957,7 @@ export const createEffectRuntimeQueueResults = (
         const expectedIds = earliestChoiceGroup.entries.map(
           (entry) => entry.id,
         );
-        if (!hasExactIds(expectedIds, orderedCurrentChoiceGroupIds)) {
+        if (!hasExactQueueEntryIds(expectedIds, orderedCurrentChoiceGroupIds)) {
           return unsupportedEffectQueueResult(state);
         }
         const selectedById = new Map(
