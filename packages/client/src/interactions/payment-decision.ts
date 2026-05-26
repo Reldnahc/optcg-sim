@@ -6,6 +6,7 @@ export const CHOOSE_CARD_COST_ACTION_INDEX = -5;
 
 export interface OptionalCardCostGroup {
   chooseActionIndex: number;
+  operation: "trash" | "returnToHand";
   chooseLabel: string;
   cardActions: Array<{ instanceId: string; actionIndex: number }>;
 }
@@ -44,8 +45,11 @@ export const createOptionalCardCostChoice = (
   }
 
   const groupedActions = new Map<
-    string,
-    Array<{ instanceId: string; actionIndex: number }>
+    "trash" | "returnToHand",
+    {
+      chooseLabel: string;
+      cardActions: Array<{ instanceId: string; actionIndex: number }>;
+    }
   >();
   for (const action of actions) {
     const payment = action.decisionPayment;
@@ -59,13 +63,23 @@ export const createOptionalCardCostChoice = (
     if (instanceId === undefined) {
       continue;
     }
-    const current = groupedActions.get(payment.chooseLabel) ?? [];
-    current.push({ instanceId: String(instanceId), actionIndex: action.index });
-    groupedActions.set(payment.chooseLabel, current);
+    const current = groupedActions.get(payment.operation) ?? {
+      chooseLabel: chooseLabelForCardCostOperation(
+        payment.operation,
+        payment.chooseLabel,
+      ),
+      cardActions: [],
+    };
+    current.cardActions.push({
+      instanceId: String(instanceId),
+      actionIndex: action.index,
+    });
+    groupedActions.set(payment.operation, current);
   }
   const groups = [...groupedActions.entries()].map(
-    ([chooseLabel, cardActions], index) => ({
+    ([operation, { chooseLabel, cardActions }], index) => ({
       chooseActionIndex: CHOOSE_CARD_COST_ACTION_INDEX - index,
+      operation,
       chooseLabel,
       cardActions,
     }),
@@ -114,3 +128,15 @@ export const optionalCardCostActionForInstance = (
 export const optionalCardCostInstanceIds = (
   choice: OptionalCardCostGroup | undefined,
 ): string[] => choice?.cardActions.map((action) => action.instanceId) ?? [];
+
+const chooseLabelForCardCostOperation = (
+  operation: "trash" | "returnToHand",
+  fallback: string,
+): string => {
+  switch (operation) {
+    case "trash":
+      return "Choose card to trash";
+    case "returnToHand":
+      return fallback;
+  }
+};

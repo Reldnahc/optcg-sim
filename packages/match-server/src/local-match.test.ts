@@ -433,6 +433,7 @@ describe("local dev match", () => {
       cardCostActions.every(
         (action) =>
           action.decisionPayment?.kind === "cardCost" &&
+          action.decisionPayment.operation === "trash" &&
           action.decisionPayment.chooseLabel === "Choose card to trash" &&
           action.decisionPayment.selectedCardInstanceIds.length === 1,
       ),

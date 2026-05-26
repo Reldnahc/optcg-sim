@@ -38,6 +38,7 @@ export interface DevVisibleAction {
     | { kind: "paymentDeclined" }
     | {
         kind: "cardCost";
+        operation: "trash" | "returnToHand";
         chooseLabel: string;
         selectedCardInstanceIds: CardInstance["instanceId"][];
       };
@@ -543,6 +544,7 @@ const actionDecisionPayment = (
   }
   return {
     kind: "cardCost",
+    operation: "trash",
     chooseLabel:
       option.type === "trashFromField"
         ? "Choose Character to trash"

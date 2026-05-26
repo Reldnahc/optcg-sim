@@ -40,6 +40,7 @@ describe("optional card-cost interaction", () => {
         label: "Pay cost with 1 card",
         decisionPayment: {
           kind: "cardCost",
+          operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
         },
@@ -50,6 +51,7 @@ describe("optional card-cost interaction", () => {
         label: "Pay cost with 1 card",
         decisionPayment: {
           kind: "cardCost",
+          operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-2" as InstanceId],
         },
@@ -64,6 +66,7 @@ describe("optional card-cost interaction", () => {
       groups: [
         {
           chooseActionIndex: -5,
+          operation: "trash",
           chooseLabel: "Choose card to trash",
           cardActions: [
             { instanceId: "hand-1", actionIndex: 2 },
@@ -96,6 +99,7 @@ describe("optional card-cost interaction", () => {
         label: "Return 1 Character",
         decisionPayment: {
           kind: "cardCost",
+          operation: "returnToHand",
           chooseLabel: "Choose Character to return to hand",
           selectedCardInstanceIds: ["character-1" as InstanceId],
         },
@@ -128,6 +132,7 @@ describe("optional card-cost interaction", () => {
         label: "Pay cost with 2 cards",
         decisionPayment: {
           kind: "cardCost",
+          operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: [
             "hand-1" as InstanceId,
@@ -157,6 +162,7 @@ describe("optional card-cost interaction", () => {
         label: "Pay cost with 1 card",
         decisionPayment: {
           kind: "cardCost",
+          operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
         },
@@ -174,7 +180,7 @@ describe("optional card-cost interaction", () => {
     );
   });
 
-  test("collapses mixed card-cost labels into scoped choose-card options", () => {
+  test("combines same-operation card costs with different legal zones into one scoped choice", () => {
     const actions: readonly ClientActionModel[] = [
       {
         index: 1,
@@ -188,6 +194,7 @@ describe("optional card-cost interaction", () => {
         label: "Pay cost with 1 card",
         decisionPayment: {
           kind: "cardCost",
+          operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
         },
@@ -195,10 +202,11 @@ describe("optional card-cost interaction", () => {
       {
         index: 3,
         type: "respondToDecision",
-        label: "Return 1 Character",
+        label: "Pay cost with 1 Character",
         decisionPayment: {
           kind: "cardCost",
-          chooseLabel: "Choose Character to return to hand",
+          operation: "trash",
+          chooseLabel: "Choose Character to trash",
           selectedCardInstanceIds: ["character-1" as InstanceId],
         },
       },
@@ -213,21 +221,17 @@ describe("optional card-cost interaction", () => {
         type: "respondToDecision",
         label: "Choose card to trash",
       },
-      {
-        index: -6,
-        type: "respondToDecision",
-        label: "Choose Character to return to hand",
-      },
     ]);
 
     const trashGroup = optionalCardCostGroupForActionIndex(choice, -5);
-    const returnGroup = optionalCardCostGroupForActionIndex(choice, -6);
-    assert.deepEqual(optionalCardCostInstanceIds(trashGroup), ["hand-1"]);
-    assert.deepEqual(optionalCardCostInstanceIds(returnGroup), ["character-1"]);
+    assert.deepEqual(optionalCardCostInstanceIds(trashGroup), [
+      "hand-1",
+      "character-1",
+    ]);
     assert.equal(optionalCardCostActionForInstance(trashGroup, "hand-1"), 2);
     assert.equal(
       optionalCardCostActionForInstance(trashGroup, "character-1"),
-      undefined,
+      3,
     );
   });
 });
