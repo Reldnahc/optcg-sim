@@ -7,6 +7,7 @@ import "./styles/zone.css";
 import "./styles/card.css";
 import "./styles/controls.css";
 import "./styles/decision-modal.css";
+import "./styles/collection-modal.css";
 
 const root = document.getElementById("root");
 if (root === null) {

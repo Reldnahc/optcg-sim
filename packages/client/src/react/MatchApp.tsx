@@ -1,10 +1,17 @@
+import { useState } from "react";
+
 import { BoardLayout } from "./BoardLayout.js";
+import type { CollectionModalModel } from "./CollectionModalHost.js";
+import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import { useMatchClient } from "./useMatchClient.js";
 
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
+  const [collectionModal, setCollectionModal] = useState<
+    CollectionModalModel | undefined
+  >(undefined);
   const { board, clientState, decisionModal, selectedCardInstanceId } =
     client.state;
   const matchState =
@@ -37,6 +44,9 @@ export const MatchApp = (): React.JSX.Element => {
           onCardClick={client.selectCard}
           onCardAction={(actionIndex) => {
             void client.submitAction(actionIndex);
+          }}
+          onViewCollection={(title, cards) => {
+            setCollectionModal({ title, cards });
           }}
           onBackgroundClick={() => {
             client.selectCard(undefined);
@@ -77,6 +87,12 @@ export const MatchApp = (): React.JSX.Element => {
         onActionOption={client.setDecisionActionOptionValue}
         onConfirm={() => {
           void client.confirmDecision();
+        }}
+      />
+      <CollectionModalHost
+        model={collectionModal}
+        onClose={() => {
+          setCollectionModal(undefined);
         }}
       />
     </main>

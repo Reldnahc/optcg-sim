@@ -13,6 +13,7 @@ export interface BoardLayoutProps {
   actionDisabled?: boolean | undefined;
   onCardClick: (instanceId: string) => void;
   onCardAction: (actionIndex: number) => void;
+  onViewCollection: (title: string, cards: readonly ClientCardModel[]) => void;
   onBackgroundClick: () => void;
 }
 
@@ -38,6 +39,7 @@ export const BoardLayout = ({
   actionDisabled = false,
   onCardClick,
   onCardAction,
+  onViewCollection,
   onBackgroundClick,
 }: BoardLayoutProps): React.JSX.Element => (
   <section
@@ -77,7 +79,15 @@ export const BoardLayout = ({
         {stack("DON!! Deck", board.opponent.donDeckCount)}
       </div>
       <div className="playmat-zone opponent-trash">
-        <Zone label="Trash" cards={board.opponent.trash} size="small" />
+        <Zone
+          label="Trash"
+          cards={board.opponent.trash}
+          size="small"
+          displayMode="stack"
+          onViewCollection={() => {
+            onViewCollection("Opponent trash", board.opponent.trash);
+          }}
+        />
       </div>
       <div className="playmat-zone opponent-leader">
         <Zone
@@ -162,7 +172,15 @@ export const BoardLayout = ({
         {stack("DON!! Deck", board.self.donDeckCount)}
       </div>
       <div className="playmat-zone player-trash">
-        <Zone label="Trash" cards={board.self.trash} size="small" />
+        <Zone
+          label="Trash"
+          cards={board.self.trash}
+          size="small"
+          displayMode="stack"
+          onViewCollection={() => {
+            onViewCollection("Player trash", board.self.trash);
+          }}
+        />
       </div>
       <div className="playmat-zone player-cost">
         <Zone label="Cost Area" cards={board.self.costArea} size="mini" />

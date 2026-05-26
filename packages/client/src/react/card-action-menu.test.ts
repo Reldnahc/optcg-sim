@@ -75,6 +75,7 @@ describe("card action menu", () => {
           instanceId === "hand-1" ? playActions : [],
         onCardClick: () => undefined,
         onCardAction: () => undefined,
+        onViewCollection: () => undefined,
         onBackgroundClick: () => undefined,
       }),
     );
