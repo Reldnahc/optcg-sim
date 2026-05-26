@@ -8,6 +8,7 @@ export interface DecisionModalHostProps {
   onToggleCard: (instanceId: InstanceId) => void;
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
+  onActionOption: (actionIndex: number) => void;
   onConfirm: () => void;
 }
 
@@ -17,6 +18,7 @@ export const DecisionModalHost = ({
   onToggleCard,
   onQuantity,
   onOption,
+  onActionOption,
   onConfirm,
 }: DecisionModalHostProps): React.JSX.Element | null => {
   if (model === undefined) {
@@ -78,6 +80,26 @@ export const DecisionModalHost = ({
               type="button"
               onClick={() => {
                 onOption(option.value);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {model.kind === "actionOptions" ? (
+        <div className="decision-option-list">
+          {model.options.map((option) => (
+            <button
+              key={option.actionIndex}
+              className={`decision-choice ${
+                option.actionIndex === model.selectedActionIndex
+                  ? "is-selected"
+                  : ""
+              }`}
+              type="button"
+              onClick={() => {
+                onActionOption(option.actionIndex);
               }}
             >
               {option.label}

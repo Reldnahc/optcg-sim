@@ -74,6 +74,7 @@ export const MatchApp = (): React.JSX.Element => {
         onToggleCard={client.toggleDecisionCard}
         onQuantity={client.setDecisionQuantityValue}
         onOption={client.setDecisionOptionValue}
+        onActionOption={client.setDecisionActionOptionValue}
         onConfirm={() => {
           void client.confirmDecision();
         }}

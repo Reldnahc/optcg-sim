@@ -8,6 +8,8 @@ import type {
   PublicSelectCardsDecision,
 } from "@optcg/types";
 
+import type { ClientActionModel } from "../view-model.js";
+
 export type DecisionDraft =
   | {
       kind: "selectCards";
@@ -28,6 +30,11 @@ export type DecisionDraft =
       kind: "chooseOption";
       decisionId: DecisionId;
       option: string;
+    }
+  | {
+      kind: "actionOptions";
+      decisionId: DecisionId;
+      actionIndex: number;
     }
   | {
       kind: "generic";
@@ -70,6 +77,14 @@ export type DecisionModalModel =
       prompt: string;
       options: Array<{ value: string; label: string }>;
       selectedOption: string;
+      canConfirm: true;
+    }
+  | {
+      kind: "actionOptions";
+      decisionId: DecisionId;
+      prompt: string;
+      options: Array<{ actionIndex: number; label: string }>;
+      selectedActionIndex: number;
       canConfirm: true;
     }
   | {
@@ -141,8 +156,16 @@ const simpleDecisionOptions = (
   return undefined;
 };
 
+const actionOptionModels = (
+  actions: readonly ClientActionModel[],
+): Array<{ actionIndex: number; label: string }> =>
+  actions
+    .filter((action) => action.type === "respondToDecision")
+    .map((action) => ({ actionIndex: action.index, label: action.label }));
+
 export const createDecisionDraft = (
   decision: PublicPendingDecision,
+  responseActions: readonly ClientActionModel[] = [],
 ): DecisionDraft => {
   if (decision.type === "selectCards") {
     return {
@@ -173,6 +196,15 @@ export const createDecisionDraft = (
       option: options[0] ?? "",
     };
   }
+  const actionOptions = actionOptionModels(responseActions);
+  const firstAction = actionOptions[0];
+  if (firstAction !== undefined) {
+    return {
+      kind: "actionOptions",
+      decisionId: decision.id,
+      actionIndex: firstAction.actionIndex,
+    };
+  }
   return { kind: "generic", decisionId: decision.id };
 };
 
@@ -189,6 +221,16 @@ export const setDecisionOption = (
     return draft;
   }
   return { ...draft, option };
+};
+
+export const setDecisionActionOption = (
+  draft: DecisionDraft,
+  actionIndex: number,
+): DecisionDraft => {
+  if (draft.kind !== "actionOptions") {
+    throw new Error("Decision draft is not an actionOptions draft.");
+  }
+  return { ...draft, actionIndex };
 };
 
 export const toggleDecisionSelectedCard = (
@@ -273,6 +315,7 @@ export const setDecisionQuantity = (
 export const createDecisionModalModel = (
   decision: PublicPendingDecision,
   draft: DecisionDraft = createDecisionDraft(decision),
+  responseActions: readonly ClientActionModel[] = [],
 ): DecisionModalModel => {
   if (decision.type === "selectCards") {
     assertDraftForDecision(decision, draft);
@@ -339,6 +382,20 @@ export const createDecisionModalModel = (
         label: optionLabel(decision.type, option),
       })),
       selectedOption: draft.option,
+      canConfirm: true,
+    };
+  }
+  const actionOptions = actionOptionModels(responseActions);
+  if (actionOptions.length > 0) {
+    if (draft.decisionId !== decision.id || draft.kind !== "actionOptions") {
+      throw new Error("Decision draft is not an actionOptions draft.");
+    }
+    return {
+      kind: "actionOptions",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      options: actionOptions,
+      selectedActionIndex: draft.actionIndex,
       canConfirm: true,
     };
   }

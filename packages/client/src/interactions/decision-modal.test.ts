@@ -18,10 +18,12 @@ import {
   createDecisionDraft,
   createDecisionModalModel,
   moveOrderedCardNear,
+  setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
   toggleDecisionSelectedCard,
 } from "./decision-modal.js";
+import type { ClientActionModel } from "../view-model.js";
 
 const p1 = "p1" as PlayerId;
 
@@ -168,5 +170,35 @@ describe("headless decision modal models", () => {
       canConfirm: true,
     });
     assert.deepEqual(response, { type: "mulligan", keep: false });
+  });
+
+  test("default decision modal renders legal response actions as options", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay cost to play card",
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+      { index: 5, type: "respondToDecision", label: "Pay cost with 5 DON!!" },
+    ];
+    const draft = setDecisionActionOption(
+      createDecisionDraft(decision, responseActions),
+      5,
+    );
+
+    const model = createDecisionModalModel(decision, draft, responseActions);
+
+    assert.deepEqual(model, {
+      kind: "actionOptions",
+      decisionId: decision.id,
+      prompt: "Pay cost to play card",
+      options: [
+        { actionIndex: 4, label: "Pay cost with 4 DON!!" },
+        { actionIndex: 5, label: "Pay cost with 5 DON!!" },
+      ],
+      selectedActionIndex: 5,
+      canConfirm: true,
+    });
   });
 });

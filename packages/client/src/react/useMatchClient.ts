@@ -18,6 +18,7 @@ import {
   createDevWebSocketMatchTransport,
   createMatchClientController,
   moveOrderedCardNear,
+  setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
   toggleDecisionSelectedCard,
@@ -58,6 +59,7 @@ export interface MatchClientUi {
   ) => void;
   setDecisionQuantityValue: (quantity: number) => void;
   setDecisionOptionValue: (option: string) => void;
+  setDecisionActionOptionValue: (actionIndex: number) => void;
   confirmDecision: () => Promise<void>;
   createNewMatch: () => Promise<void>;
 }
@@ -149,18 +151,36 @@ export const useMatchClient = (): MatchClientUi => {
       ? undefined
       : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
   const pendingDecision = playerSnapshot?.view.pendingDecision;
+  const pendingDecisionResponseActions =
+    pendingDecision === undefined || playerSnapshot === undefined
+      ? []
+      : playerSnapshot.actions
+          .filter(
+            (action) =>
+              action.type === "respondToDecision" &&
+              action.placement === undefined,
+          )
+          .map((action) => ({
+            index: action.index,
+            label: action.label,
+            type: action.type,
+          }));
   const activeDecisionDraft =
     pendingDecision === undefined
       ? undefined
       : decisionDraft?.decisionId === pendingDecision.id
         ? decisionDraft
-        : createDecisionDraft(pendingDecision);
+        : createDecisionDraft(pendingDecision, pendingDecisionResponseActions);
   const decisionModal =
     pendingDecision === undefined ||
     activeDecisionDraft === undefined ||
     !shouldRenderDecisionModal(pendingDecision.type)
       ? undefined
-      : createDecisionModalModel(pendingDecision, activeDecisionDraft);
+      : createDecisionModalModel(
+          pendingDecision,
+          activeDecisionDraft,
+          pendingDecisionResponseActions,
+        );
 
   useEffect(() => {
     let cancelled = false;
@@ -284,6 +304,10 @@ export const useMatchClient = (): MatchClientUi => {
     if (pendingDecision === undefined || activeDecisionDraft === undefined) {
       return;
     }
+    if (activeDecisionDraft.kind === "actionOptions") {
+      await submitAction(activeDecisionDraft.actionIndex);
+      return;
+    }
     let response: DecisionResponse;
     try {
       response = buildDecisionResponse(pendingDecision, activeDecisionDraft);
@@ -305,7 +329,7 @@ export const useMatchClient = (): MatchClientUi => {
     } finally {
       setActionInFlight(false);
     }
-  }, [activeDecisionDraft, controller, pendingDecision]);
+  }, [activeDecisionDraft, controller, pendingDecision, submitAction]);
 
   const cardActions = useCallback(
     (instanceId: string): ClientActionModel[] =>
@@ -336,12 +360,15 @@ export const useMatchClient = (): MatchClientUi => {
           pendingDecision,
           draft?.decisionId === pendingDecision.id
             ? draft
-            : createDecisionDraft(pendingDecision),
+            : createDecisionDraft(
+                pendingDecision,
+                pendingDecisionResponseActions,
+              ),
           instanceId,
         ),
       );
     },
-    [pendingDecision],
+    [pendingDecision, pendingDecisionResponseActions],
   );
 
   const moveDecisionCard = useCallback(
@@ -358,14 +385,17 @@ export const useMatchClient = (): MatchClientUi => {
           pendingDecision,
           draft?.decisionId === pendingDecision.id
             ? draft
-            : createDecisionDraft(pendingDecision),
+            : createDecisionDraft(
+                pendingDecision,
+                pendingDecisionResponseActions,
+              ),
           draggedId,
           targetId,
           placement,
         ),
       );
     },
-    [pendingDecision],
+    [pendingDecision, pendingDecisionResponseActions],
   );
 
   const setDecisionQuantityValue = useCallback(
@@ -391,12 +421,35 @@ export const useMatchClient = (): MatchClientUi => {
       setDecisionDraft((draft) =>
         setDecisionOption(
           pendingDecision,
-          draft ?? createDecisionDraft(pendingDecision),
+          draft ??
+            createDecisionDraft(
+              pendingDecision,
+              pendingDecisionResponseActions,
+            ),
           option,
         ),
       );
     },
-    [pendingDecision],
+    [pendingDecision, pendingDecisionResponseActions],
+  );
+
+  const setDecisionActionOptionValue = useCallback(
+    (actionIndex: number): void => {
+      if (pendingDecision === undefined) {
+        return;
+      }
+      setDecisionDraft((draft) =>
+        setDecisionActionOption(
+          draft ??
+            createDecisionDraft(
+              pendingDecision,
+              pendingDecisionResponseActions,
+            ),
+          actionIndex,
+        ),
+      );
+    },
+    [pendingDecision, pendingDecisionResponseActions],
   );
 
   return {
@@ -422,6 +475,7 @@ export const useMatchClient = (): MatchClientUi => {
     moveDecisionCard,
     setDecisionQuantityValue,
     setDecisionOptionValue,
+    setDecisionActionOptionValue,
     confirmDecision,
     createNewMatch,
   };
