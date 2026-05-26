@@ -96,7 +96,7 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '". opponent-life . opponent-stage opponent-leader . opponent-trash ."',
+        '". opponent-deck . opponent-stage opponent-leader . opponent-life ."',
       ),
       true,
     );
@@ -113,7 +113,7 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '". opponent-life opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters ."',
+        '". opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life ."',
       ),
       true,
     );
@@ -136,13 +136,13 @@ describe("playmat structure", () => {
     );
     assert.equal(
       styles.includes(
-        '". opponent-don-deck opponent-cost opponent-cost opponent-cost opponent-cost opponent-deck ."',
+        '". opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck ."',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '". opponent-life . opponent-stage opponent-leader . opponent-trash ."',
+        '". opponent-deck . opponent-stage opponent-leader . opponent-life ."',
       ),
       true,
     );

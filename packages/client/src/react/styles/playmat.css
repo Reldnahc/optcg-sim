@@ -2,9 +2,9 @@
   position: relative;
   display: grid;
   grid-template-areas:
-    ". opponent-don-deck opponent-cost opponent-cost opponent-cost opponent-cost opponent-deck ."
-    ". opponent-life . opponent-stage opponent-leader . opponent-trash ."
-    ". opponent-life opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters ."
+    ". opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck ."
+    ". opponent-deck . opponent-stage opponent-leader . opponent-life ."
+    ". opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life ."
     ". . . center-spacer center-spacer . . ."
     ". player-life player-characters player-characters player-characters player-characters player-characters ."
     ". player-life . player-leader player-stage . player-deck ."
