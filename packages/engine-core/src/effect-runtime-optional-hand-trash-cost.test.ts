@@ -87,6 +87,43 @@ const optionalHandTrashThenFilteredKoSequence = (
   ],
 });
 
+const optionalHandTrashThenNestedFilteredKoSequence = (
+  costMax: number,
+): Extract<Effect, { type: "sequence" }> => {
+  const [, selectSegment, koSegment] =
+    optionalHandTrashThenFilteredKoSequence(costMax).effects;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-trash-from-hand-cost",
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "trashFromHand",
+            count: 1,
+            chooser: "self",
+            optional: true,
+          },
+        },
+        saveResultAs: "paidOptionalCost",
+      },
+      {
+        id: "if-paid-ko-target-sequence",
+        connector: "ifYouDo",
+        effect: {
+          type: "sequence",
+          effects: [
+            must(selectSegment, "select segment"),
+            must(koSegment, "ko segment"),
+          ],
+        },
+      },
+    ],
+  };
+};
+
 const reindexHand = (
   cards: readonly CardInstance[],
   playerId = p1,
@@ -448,6 +485,54 @@ test("optional hand-trash cost supports zero legal filtered KO targets after pay
   });
 
   assert.equal(resolved.errors, undefined);
+  assert.equal(
+    must(resolved.state.players[p2], "after p2").characters.some(
+      (card) => card.instanceId === expensiveTarget.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    resolved.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("optional hand-trash cost resumes nested filtered KO sequence when zero targets are chosen", () => {
+  const { state } = sequenceQueueState(
+    optionalHandTrashThenNestedFilteredKoSequence(3),
+  );
+  const paymentCard = must(must(state.players[p1], "p1").hand[0], "payment");
+  const p2State = must(state.players[p2], "p2");
+  const expensiveTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "expensive target"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[expensiveTarget.cardId] = resolvedCard({
+    cardId: expensiveTarget.cardId,
+    category: "character",
+    cost: 4,
+    power: 4000,
+  });
+
+  const paused = processEffectRuntime(state);
+  const paid = payWithHandCard(paused.state, paymentCard);
+  const targetDecision = must(paid.state.pendingDecision, "target decision");
+  assert.equal(paid.errors, undefined);
+  assert.equal(targetDecision.type, "selectTargets");
+  assert.deepEqual(targetDecision.candidates, []);
+
+  const resolved = applyAction(paid.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: [] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectExecutionFrames.length, 0);
   assert.equal(
     must(resolved.state.players[p2], "after p2").characters.some(
       (card) => card.instanceId === expensiveTarget.instanceId,

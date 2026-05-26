@@ -20,7 +20,7 @@ import {
 } from "./effect-runtime-sequence-frame-decisions.js";
 import { saveReference } from "./effect-runtime-sequence-segments.js";
 import {
-  isSupportedSequenceBlock,
+  toSupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./effect-runtime-sequence-support.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
@@ -239,8 +239,11 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       ok: false,
     };
   }
-  const effectBlock = params.findSequenceEffectBlock(params.state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const effectBlock = toSupportedSequenceBlock(
+    entry,
+    params.findSequenceEffectBlock(params.state, entry),
+  );
+  if (effectBlock === undefined) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
