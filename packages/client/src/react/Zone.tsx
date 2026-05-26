@@ -41,7 +41,7 @@ export const Zone = ({
 }: ZoneProps): React.JSX.Element => {
   const visibleCards =
     displayMode === "stack" && cards.length > 0
-      ? [cards[cards.length - 1] as ClientCardModel]
+      ? [cards[0] as ClientCardModel]
       : cards;
   const zoneRef = useRef<HTMLElement | null>(null);
   const cardsRef = useRef<HTMLDivElement | null>(null);

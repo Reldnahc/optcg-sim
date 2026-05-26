@@ -237,4 +237,61 @@ describe("board view model", () => {
 
     assert.deepEqual(model.self.leader.attachedDonCards, []);
   });
+
+  test("trash cards stay newest-first and render upright even if engine state was rested", () => {
+    const view = minimalView();
+    view.self.trash = [
+      {
+        instanceId: "new-trash" as InstanceId,
+        cardId: "OP13-089" as CardId,
+        owner: "p1" as PlayerId,
+        controller: "p1" as PlayerId,
+        zone: {
+          zone: "trash",
+          playerId: "p1" as PlayerId,
+          slot: "trash",
+          index: 0,
+        },
+        state: "rested",
+        attachedDonCount: 0,
+        attachedDonIds: [],
+      },
+      {
+        instanceId: "old-trash" as InstanceId,
+        cardId: "OP13-080" as CardId,
+        owner: "p1" as PlayerId,
+        controller: "p1" as PlayerId,
+        zone: {
+          zone: "trash",
+          playerId: "p1" as PlayerId,
+          slot: "trash",
+          index: 1,
+        },
+        state: "rested",
+        attachedDonCount: 0,
+        attachedDonIds: [],
+      },
+    ];
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(model.self.trash[0]?.instanceId, "new-trash");
+    assert.equal(model.self.trash[1]?.instanceId, "old-trash");
+    assert.equal(model.self.trash[0].state, undefined);
+    assert.equal(model.self.trash[1].state, undefined);
+  });
 });

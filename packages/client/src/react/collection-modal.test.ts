@@ -34,7 +34,7 @@ describe("collection modal", () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
         label: "Trash",
-        cards: [card("old", "Old Trash"), card("new", "Newest Trash")],
+        cards: [card("new", "Newest Trash"), card("old", "Old Trash")],
         displayMode: "stack",
         onViewCollection: () => undefined,
       }),

@@ -74,6 +74,7 @@ const catalogEntry = (
 const cardModel = (
   card: PublicCardView,
   catalog: MatchCardCatalog,
+  options: { includeState?: boolean } = {},
 ): ClientCardModel => {
   const entry = catalogEntry(catalog, card.owner, card.cardId);
   const printedPower = card.printedPower ?? entry.power;
@@ -93,7 +94,9 @@ const cardModel = (
       ? {}
       : { triggerText: entry.triggerText }),
     ...(entry.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
-    ...(card.state === undefined ? {} : { state: card.state }),
+    ...(options.includeState === false || card.state === undefined
+      ? {}
+      : { state: card.state }),
     ...(printedPower === undefined ? {} : { printedPower }),
     ...(card.currentPower === undefined
       ? {}
@@ -146,7 +149,9 @@ const selfZones = (
       ? {}
       : { stage: attachDonCards(view.self.stage, catalog, costAreaById) }),
     costArea: costArea.filter((card) => !attachedIds.has(card.instanceId)),
-    trash: view.self.trash.map((card) => cardModel(card, catalog)),
+    trash: view.self.trash.map((card) =>
+      cardModel(card, catalog, { includeState: false }),
+    ),
     deckCount: view.self.deckCount,
     donDeckCount: view.self.donDeckCount,
     lifeCount: view.self.life.count,
@@ -178,7 +183,9 @@ const opponentZones = (
       ? {}
       : { stage: attachDonCards(view.opponent.stage, catalog, costAreaById) }),
     costArea: costArea.filter((card) => !attachedIds.has(card.instanceId)),
-    trash: view.opponent.trash.map((card) => cardModel(card, catalog)),
+    trash: view.opponent.trash.map((card) =>
+      cardModel(card, catalog, { includeState: false }),
+    ),
     deckCount: view.opponent.deckCount,
     donDeckCount: view.opponent.donDeckCount,
     lifeCount: view.opponent.life.count,
