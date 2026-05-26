@@ -19,13 +19,13 @@ import {
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
   ATTACH_SELECTED_DON_ACTION_INDEX,
-  CHOOSE_TRASH_COST_CARD_ACTION_INDEX,
+  CHOOSE_CARD_COST_ACTION_INDEX,
   findAttachDonActionIndex,
-  createOptionalTrashCardCostChoice,
-  createOptionalTrashCardCostModalActions,
+  createOptionalCardCostChoice,
+  createOptionalCardCostModalActions,
   isSelectableCostAreaDon,
-  optionalTrashCardCostActionForInstance,
-  optionalTrashCardCostInstanceIds,
+  optionalCardCostActionForInstance,
+  optionalCardCostInstanceIds,
   createMatchClientController,
   selectedDonAttachmentMenuAction,
   moveOrderedCardNear,
@@ -197,7 +197,7 @@ export const useMatchClient = (): MatchClientUi => {
   const [decisionDraft, setDecisionDraft] = useState<
     DecisionDraft | undefined
   >();
-  const [activeTrashCostChoiceDecisionId, setActiveTrashCostChoiceDecisionId] =
+  const [activeCardCostChoiceDecisionId, setactiveCardCostChoiceDecisionId] =
     useState<string | undefined>();
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -246,24 +246,24 @@ export const useMatchClient = (): MatchClientUi => {
               ? {}
               : { decisionPayment: action.decisionPayment }),
           }));
-  const optionalTrashCardCostChoice =
+  const optionalCardCostChoice =
     pendingDecision === undefined
       ? undefined
-      : createOptionalTrashCardCostChoice(
+      : createOptionalCardCostChoice(
           pendingDecision,
           pendingDecisionResponseActions,
         );
-  const trashCostChoiceActive =
-    optionalTrashCardCostChoice !== undefined &&
-    activeTrashCostChoiceDecisionId ===
-      String(optionalTrashCardCostChoice.decisionId);
-  const activeTrashCardCostChoice = trashCostChoiceActive
-    ? optionalTrashCardCostChoice
+  const cardCostChoiceActive =
+    optionalCardCostChoice !== undefined &&
+    activeCardCostChoiceDecisionId ===
+      String(optionalCardCostChoice.decisionId);
+  const activeCardCostChoice = cardCostChoiceActive
+    ? optionalCardCostChoice
     : undefined;
   const modalResponseActions =
-    optionalTrashCardCostChoice === undefined || trashCostChoiceActive
+    optionalCardCostChoice === undefined || cardCostChoiceActive
       ? pendingDecisionResponseActions
-      : createOptionalTrashCardCostModalActions(optionalTrashCardCostChoice);
+      : createOptionalCardCostModalActions(optionalCardCostChoice);
   const activeDecisionDraft =
     pendingDecision === undefined
       ? undefined
@@ -273,7 +273,7 @@ export const useMatchClient = (): MatchClientUi => {
   const decisionModal =
     pendingDecision === undefined ||
     activeDecisionDraft === undefined ||
-    trashCostChoiceActive ||
+    cardCostChoiceActive ||
     pendingDecisionInteractionMode !== "modal" ||
     isDecisionModalSuppressed(pendingDecision)
       ? undefined
@@ -282,8 +282,8 @@ export const useMatchClient = (): MatchClientUi => {
           activeDecisionDraft,
           modalResponseActions,
         );
-  const pendingChoiceInstanceIds = activeTrashCardCostChoice
-    ? optionalTrashCardCostInstanceIds(activeTrashCardCostChoice)
+  const pendingChoiceInstanceIds = activeCardCostChoice
+    ? optionalCardCostInstanceIds(activeCardCostChoice)
     : pendingDecisionInteractionMode === "zoneClick" &&
         pendingDecision !== undefined
       ? decisionCandidateInstanceIds(pendingDecision)
@@ -391,7 +391,7 @@ export const useMatchClient = (): MatchClientUi => {
     setSelectedCardInstanceId(undefined);
     setSelectedDonInstanceIds([]);
     setDecisionDraft(undefined);
-    setActiveTrashCostChoiceDecisionId(undefined);
+    setactiveCardCostChoiceDecisionId(undefined);
     setClientState(created);
     setErrors([]);
   }, [controller]);
@@ -423,7 +423,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedDonInstanceIds([]);
         setSelectedCardInstanceId(undefined);
         setDecisionDraft(undefined);
-        setActiveTrashCostChoiceDecisionId(undefined);
+        setactiveCardCostChoiceDecisionId(undefined);
         setErrors([]);
       } catch (error) {
         setErrors([error instanceof Error ? error.message : String(error)]);
@@ -440,10 +440,10 @@ export const useMatchClient = (): MatchClientUi => {
         return;
       }
       if (draft.kind === "actionOptions") {
-        if (draft.actionIndex === CHOOSE_TRASH_COST_CARD_ACTION_INDEX) {
-          if (optionalTrashCardCostChoice !== undefined) {
-            setActiveTrashCostChoiceDecisionId(
-              String(optionalTrashCardCostChoice.decisionId),
+        if (draft.actionIndex === CHOOSE_CARD_COST_ACTION_INDEX) {
+          if (optionalCardCostChoice !== undefined) {
+            setactiveCardCostChoiceDecisionId(
+              String(optionalCardCostChoice.decisionId),
             );
             setSelectedCardInstanceId(undefined);
             setSelectedDonInstanceIds([]);
@@ -460,7 +460,7 @@ export const useMatchClient = (): MatchClientUi => {
           setSelectedCardInstanceId(undefined);
           setSelectedDonInstanceIds([]);
           setDecisionDraft(undefined);
-          setActiveTrashCostChoiceDecisionId(undefined);
+          setactiveCardCostChoiceDecisionId(undefined);
           setErrors([]);
         } catch (error) {
           setErrors([error instanceof Error ? error.message : String(error)]);
@@ -486,7 +486,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedCardInstanceId(undefined);
         setSelectedDonInstanceIds([]);
         setDecisionDraft(undefined);
-        setActiveTrashCostChoiceDecisionId(undefined);
+        setactiveCardCostChoiceDecisionId(undefined);
         setErrors([]);
       } catch (error) {
         setErrors([error instanceof Error ? error.message : String(error)]);
@@ -494,7 +494,7 @@ export const useMatchClient = (): MatchClientUi => {
         setActionInFlight(false);
       }
     },
-    [controller, optionalTrashCardCostChoice, pendingDecision],
+    [controller, optionalCardCostChoice, pendingDecision],
   );
 
   const submitAction = useCallback(
@@ -508,7 +508,7 @@ export const useMatchClient = (): MatchClientUi => {
       }
       if (actionIndex === CLEAR_DECISION_SELECTION_ACTION_INDEX) {
         setDecisionDraft(undefined);
-        setActiveTrashCostChoiceDecisionId(undefined);
+        setactiveCardCostChoiceDecisionId(undefined);
         return;
       }
       if (actionIndex === CHOOSE_NO_DECISION_CARDS_ACTION_INDEX) {
@@ -532,7 +532,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedCardInstanceId(undefined);
         setSelectedDonInstanceIds([]);
         setDecisionDraft(undefined);
-        setActiveTrashCostChoiceDecisionId(undefined);
+        setactiveCardCostChoiceDecisionId(undefined);
         setErrors([]);
       } catch (error) {
         setErrors([error instanceof Error ? error.message : String(error)]);
@@ -558,9 +558,9 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedDonInstanceIds([]);
         return;
       }
-      if (activeTrashCardCostChoice !== undefined) {
-        const actionIndex = optionalTrashCardCostActionForInstance(
-          activeTrashCardCostChoice,
+      if (activeCardCostChoice !== undefined) {
+        const actionIndex = optionalCardCostActionForInstance(
+          activeCardCostChoice,
           instanceId,
         );
         if (actionIndex !== undefined) {
@@ -609,7 +609,7 @@ export const useMatchClient = (): MatchClientUi => {
     },
     [
       activeDecisionDraft,
-      activeTrashCardCostChoice,
+      activeCardCostChoice,
       board,
       pendingDecision,
       pendingDecisionInteractionMode,
@@ -648,10 +648,10 @@ export const useMatchClient = (): MatchClientUi => {
     if (playerSnapshot === undefined) {
       return [];
     }
-    if (activeTrashCardCostChoice !== undefined) {
+    if (activeCardCostChoice !== undefined) {
       return [
         {
-          index: activeTrashCardCostChoice.declineActionIndex,
+          index: activeCardCostChoice.declineActionIndex,
           label: "Decline cost",
           type: "respondToDecision",
         },
@@ -705,7 +705,7 @@ export const useMatchClient = (): MatchClientUi => {
       }));
   }, [
     activeDecisionDraft,
-    activeTrashCardCostChoice,
+    activeCardCostChoice,
     pendingDecision,
     pendingDecisionInteractionMode,
     playerSnapshot,

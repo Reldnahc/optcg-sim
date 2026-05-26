@@ -9,8 +9,8 @@ import type {
 } from "@optcg/types";
 
 import {
-  createOptionalTrashCardCostChoice,
-  createOptionalTrashCardCostModalActions,
+  createOptionalCardCostChoice,
+  createOptionalCardCostModalActions,
 } from "./payment-decision.js";
 import type { ClientActionModel } from "../view-model.js";
 
@@ -22,7 +22,7 @@ const payCostDecision = {
   causedBy: { type: "ruleProcess", name: "privateCausality" },
 } satisfies PublicPendingDecision;
 
-describe("optional trash-card cost interaction", () => {
+describe("optional card-cost interaction", () => {
   test("collapses per-card payCost actions into decline or choose-card options", () => {
     const actions: readonly ClientActionModel[] = [
       {
@@ -36,7 +36,8 @@ describe("optional trash-card cost interaction", () => {
         type: "respondToDecision",
         label: "Pay cost with 1 card",
         decisionPayment: {
-          kind: "trashCardCost",
+          kind: "cardCost",
+          chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
         },
       },
@@ -45,28 +46,62 @@ describe("optional trash-card cost interaction", () => {
         type: "respondToDecision",
         label: "Pay cost with 1 card",
         decisionPayment: {
-          kind: "trashCardCost",
+          kind: "cardCost",
+          chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-2" as InstanceId],
         },
       },
     ];
 
-    const choice = createOptionalTrashCardCostChoice(payCostDecision, actions);
+    const choice = createOptionalCardCostChoice(payCostDecision, actions);
 
     assert.deepEqual(choice, {
       decisionId: payCostDecision.id,
       declineActionIndex: 1,
+      chooseLabel: "Choose card to trash",
       cardActions: [
         { instanceId: "hand-1", actionIndex: 2 },
         { instanceId: "hand-2", actionIndex: 3 },
       ],
     });
-    assert.deepEqual(createOptionalTrashCardCostModalActions(choice), [
+    assert.deepEqual(createOptionalCardCostModalActions(choice), [
       { index: 1, type: "respondToDecision", label: "Decline cost" },
       {
         index: -5,
         type: "respondToDecision",
         label: "Choose card to trash",
+      },
+    ]);
+  });
+
+  test("uses dynamic card-cost choose labels for non-trash costs", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Return 1 Character",
+        decisionPayment: {
+          kind: "cardCost",
+          chooseLabel: "Choose Character to return to hand",
+          selectedCardInstanceIds: ["character-1" as InstanceId],
+        },
+      },
+    ];
+
+    const choice = createOptionalCardCostChoice(payCostDecision, actions);
+
+    assert.deepEqual(createOptionalCardCostModalActions(choice), [
+      { index: 1, type: "respondToDecision", label: "Decline cost" },
+      {
+        index: -5,
+        type: "respondToDecision",
+        label: "Choose Character to return to hand",
       },
     ]);
   });
@@ -84,7 +119,8 @@ describe("optional trash-card cost interaction", () => {
         type: "respondToDecision",
         label: "Pay cost with 2 cards",
         decisionPayment: {
-          kind: "trashCardCost",
+          kind: "cardCost",
+          chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: [
             "hand-1" as InstanceId,
             "hand-2" as InstanceId,
@@ -94,7 +130,7 @@ describe("optional trash-card cost interaction", () => {
     ];
 
     assert.equal(
-      createOptionalTrashCardCostChoice(payCostDecision, actions),
+      createOptionalCardCostChoice(payCostDecision, actions),
       undefined,
     );
   });
@@ -112,7 +148,8 @@ describe("optional trash-card cost interaction", () => {
         type: "respondToDecision",
         label: "Pay cost with 1 card",
         decisionPayment: {
-          kind: "trashCardCost",
+          kind: "cardCost",
+          chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
         },
       },
@@ -124,7 +161,43 @@ describe("optional trash-card cost interaction", () => {
     ];
 
     assert.equal(
-      createOptionalTrashCardCostChoice(payCostDecision, actions),
+      createOptionalCardCostChoice(payCostDecision, actions),
+      undefined,
+    );
+  });
+
+  test("does not collapse mixed card-cost labels into one ambiguous choice", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 1 card",
+        decisionPayment: {
+          kind: "cardCost",
+          chooseLabel: "Choose card to trash",
+          selectedCardInstanceIds: ["hand-1" as InstanceId],
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Return 1 Character",
+        decisionPayment: {
+          kind: "cardCost",
+          chooseLabel: "Choose Character to return to hand",
+          selectedCardInstanceIds: ["character-1" as InstanceId],
+        },
+      },
+    ];
+
+    assert.equal(
+      createOptionalCardCostChoice(payCostDecision, actions),
       undefined,
     );
   });

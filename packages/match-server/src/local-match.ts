@@ -37,7 +37,8 @@ export interface DevVisibleAction {
   decisionPayment?:
     | { kind: "paymentDeclined" }
     | {
-        kind: "trashCardCost";
+        kind: "cardCost";
+        chooseLabel: string;
         selectedCardInstanceIds: CardInstance["instanceId"][];
       };
   placement?: {
@@ -541,7 +542,11 @@ const actionDecisionPayment = (
     return undefined;
   }
   return {
-    kind: "trashCardCost",
+    kind: "cardCost",
+    chooseLabel:
+      option.type === "trashFromField"
+        ? "Choose Character to trash"
+        : "Choose card to trash",
     selectedCardInstanceIds: [...selectedCardInstanceIds],
   };
 };

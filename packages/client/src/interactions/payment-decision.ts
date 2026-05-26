@@ -2,18 +2,19 @@ import type { DecisionId, PublicPendingDecision } from "@optcg/types";
 
 import type { ClientActionModel } from "../view-model.js";
 
-export const CHOOSE_TRASH_COST_CARD_ACTION_INDEX = -5;
+export const CHOOSE_CARD_COST_ACTION_INDEX = -5;
 
-export interface OptionalTrashCardCostChoice {
+export interface OptionalCardCostChoice {
   decisionId: DecisionId;
   declineActionIndex: number;
+  chooseLabel: string;
   cardActions: Array<{ instanceId: string; actionIndex: number }>;
 }
 
-export const createOptionalTrashCardCostChoice = (
+export const createOptionalCardCostChoice = (
   decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
-): OptionalTrashCardCostChoice | undefined => {
+): OptionalCardCostChoice | undefined => {
   if (decision.type !== "payCost") {
     return undefined;
   }
@@ -29,17 +30,33 @@ export const createOptionalTrashCardCostChoice = (
       return false;
     }
     return !(
-      payment?.kind === "trashCardCost" &&
+      payment?.kind === "cardCost" &&
       payment.selectedCardInstanceIds.length === 1
     );
   });
   if (invalidPaymentAction) {
     return undefined;
   }
+
+  const chooseLabels = new Set(
+    actions.flatMap((action) =>
+      action.decisionPayment?.kind === "cardCost"
+        ? [action.decisionPayment.chooseLabel]
+        : [],
+    ),
+  );
+  if (chooseLabels.size !== 1) {
+    return undefined;
+  }
+  const chooseLabel = [...chooseLabels][0];
+  if (chooseLabel === undefined) {
+    return undefined;
+  }
+
   const cardActions = actions.flatMap((action) => {
     const payment = action.decisionPayment;
     if (
-      payment?.kind !== "trashCardCost" ||
+      payment?.kind !== "cardCost" ||
       payment.selectedCardInstanceIds.length !== 1
     ) {
       return [];
@@ -55,12 +72,13 @@ export const createOptionalTrashCardCostChoice = (
   return {
     decisionId: decision.id,
     declineActionIndex: declineAction.index,
+    chooseLabel,
     cardActions,
   };
 };
 
-export const createOptionalTrashCardCostModalActions = (
-  choice: OptionalTrashCardCostChoice | undefined,
+export const createOptionalCardCostModalActions = (
+  choice: OptionalCardCostChoice | undefined,
 ): ClientActionModel[] =>
   choice === undefined
     ? []
@@ -71,19 +89,19 @@ export const createOptionalTrashCardCostModalActions = (
           label: "Decline cost",
         },
         {
-          index: CHOOSE_TRASH_COST_CARD_ACTION_INDEX,
+          index: CHOOSE_CARD_COST_ACTION_INDEX,
           type: "respondToDecision",
-          label: "Choose card to trash",
+          label: choice.chooseLabel,
         },
       ];
 
-export const optionalTrashCardCostActionForInstance = (
-  choice: OptionalTrashCardCostChoice | undefined,
+export const optionalCardCostActionForInstance = (
+  choice: OptionalCardCostChoice | undefined,
   instanceId: string,
 ): number | undefined =>
   choice?.cardActions.find((action) => action.instanceId === instanceId)
     ?.actionIndex;
 
-export const optionalTrashCardCostInstanceIds = (
-  choice: OptionalTrashCardCostChoice | undefined,
+export const optionalCardCostInstanceIds = (
+  choice: OptionalCardCostChoice | undefined,
 ): string[] => choice?.cardActions.map((action) => action.instanceId) ?? [];
