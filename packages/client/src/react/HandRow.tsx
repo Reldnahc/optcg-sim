@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
@@ -61,7 +61,7 @@ export const HandRow = ({
     edgePacked: false,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const rowElement = rowRef.current;
     const cardsElement = cardsRef.current;
     if (rowElement === null || cardsElement === null) {

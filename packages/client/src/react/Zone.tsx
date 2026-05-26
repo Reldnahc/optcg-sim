@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
@@ -45,7 +45,7 @@ export const Zone = ({
     edgePacked: false,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (displayMode !== "overlap") {
       return;
     }

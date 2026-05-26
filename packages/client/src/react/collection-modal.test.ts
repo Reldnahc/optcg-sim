@@ -18,6 +18,7 @@ const collectionStylesPath = join(
   "styles",
   "collection-modal.css",
 );
+const zoneStylesPath = join(sourceDirectory, "styles", "zone.css");
 
 const card = (instanceId: string, name: string): ClientCardModel => ({
   instanceId: instanceId as InstanceId,
@@ -54,6 +55,14 @@ describe("collection modal", () => {
 
     assert.match(markup, /zone-overlap/u);
     assert.match(markup, /zone-cards-overlap/u);
+  });
+
+  test("overlap zones cannot expand the playmat before measurement runs", async () => {
+    const styles = await readFile(zoneStylesPath, "utf8");
+
+    assert.match(styles, /\.zone-overlap\s*\{[^}]*overflow:\s*hidden;/u);
+    assert.match(styles, /\.zone-overlap\s*\{[^}]*contain:\s*inline-size;/u);
+    assert.match(styles, /\.zone-cards-overlap\s*\{[^}]*overflow:\s*hidden;/u);
   });
 
   test("collection viewer is separate from decision modal and can show many cards", () => {
