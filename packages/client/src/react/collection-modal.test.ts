@@ -83,6 +83,7 @@ describe("collection modal", () => {
       styles,
       /\.zone-cards-slots\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\);/u,
     );
+    assert.equal(styles.includes("border: 1px dashed"), false);
   });
 
   test("collection viewer is separate from decision modal and can show many cards", () => {
