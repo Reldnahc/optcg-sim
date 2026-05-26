@@ -12,7 +12,8 @@ export interface ZoneProps {
   label: string;
   cards: readonly ClientCardModel[];
   size?: "normal" | "small" | "mini" | "hand";
-  displayMode?: "spread" | "stack" | "overlap" | undefined;
+  displayMode?: "spread" | "stack" | "overlap" | "slots" | undefined;
+  slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
   cardActions?: ((instanceId: string) => readonly ClientActionModel[]) | undefined;
   actionDisabled?: boolean | undefined;
@@ -26,6 +27,7 @@ export const Zone = ({
   cards,
   size = "normal",
   displayMode = "spread",
+  slotCount = 0,
   selectedCardInstanceId,
   cardActions,
   actionDisabled = false,
@@ -89,6 +91,7 @@ export const Zone = ({
   const zoneCardsClassName = [
     "zone-cards",
     displayMode === "overlap" ? "zone-cards-overlap" : "",
+    displayMode === "slots" ? "zone-cards-slots" : "",
     rowLayout.edgePacked ? "is-edge-packed" : "",
     rowLayout.overlap > 0 ? "is-overlapping" : "",
   ]
@@ -102,7 +105,38 @@ export const Zone = ({
     <section ref={zoneRef} className={`zone zone-${size} zone-${displayMode}`}>
       <div className="zone-label">{label}</div>
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
-        {visibleCards.length === 0 ? (
+        {displayMode === "slots" ? (
+          Array.from({ length: slotCount }, (_, index) => {
+            const card = visibleCards[index];
+            if (card === undefined) {
+              return (
+                <div
+                  key={`empty-slot-${String(index)}`}
+                  className="zone-card-slot is-empty"
+                />
+              );
+            }
+            const instanceId = String(card.instanceId);
+            return (
+              <div key={instanceId} className="zone-card-slot">
+                <CardTile
+                  card={card}
+                  selected={selectedCardInstanceId === instanceId}
+                  actions={cardActions?.(instanceId) ?? []}
+                  disabled={actionDisabled}
+                  onAction={onCardAction}
+                  onClick={
+                    onCardClick === undefined
+                      ? undefined
+                      : () => {
+                          onCardClick(instanceId);
+                        }
+                  }
+                />
+              </div>
+            );
+          })
+        ) : visibleCards.length === 0 ? (
           <span className="empty-zone">empty</span>
         ) : (
           visibleCards.map((card) => {

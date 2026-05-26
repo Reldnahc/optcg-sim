@@ -46,6 +46,22 @@ describe("playmat structure", () => {
     }
   });
 
+  test("character areas opt into five fixed slots instead of spread or overlap rows", async () => {
+    const boardLayout = await readFile(
+      join(sourceDirectory, "BoardLayout.tsx"),
+      "utf8",
+    );
+
+    assert.match(
+      boardLayout,
+      /className="playmat-zone opponent-characters"[\s\S]*displayMode="slots"[\s\S]*slotCount=\{5\}/u,
+    );
+    assert.match(
+      boardLayout,
+      /className="playmat-zone player-characters"[\s\S]*displayMode="slots"[\s\S]*slotCount=\{5\}/u,
+    );
+  });
+
   test("physical table grid uses fixed play rows with a center flexible spacer", async () => {
     const [appShellStyles, playmatStyles] = await Promise.all([
       readFile(appShellStylesPath, "utf8"),

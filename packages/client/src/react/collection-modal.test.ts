@@ -65,6 +65,26 @@ describe("collection modal", () => {
     assert.match(styles, /\.zone-cards-overlap\s*\{[^}]*overflow:\s*hidden;/u);
   });
 
+  test("slot mode renders exactly the requested number of equal card slots", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Character Area",
+        cards: [card("character-1", "First"), card("character-2", "Second")],
+        displayMode: "slots",
+        slotCount: 5,
+      }),
+    );
+    const styles = await readFile(zoneStylesPath, "utf8");
+
+    assert.match(markup, /zone-slots/u);
+    assert.equal(markup.match(/zone-card-slot/g)?.length, 5);
+    assert.equal(markup.match(/is-empty/g)?.length, 3);
+    assert.match(
+      styles,
+      /\.zone-cards-slots\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\);/u,
+    );
+  });
+
   test("collection viewer is separate from decision modal and can show many cards", () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {

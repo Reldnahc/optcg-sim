@@ -124,6 +124,8 @@ export const BoardLayout = ({
         <Zone
           label="Character Area"
           cards={board.opponent.characters}
+          displayMode="slots"
+          slotCount={5}
           selectedCardInstanceId={selectedCardInstanceId}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
@@ -136,6 +138,8 @@ export const BoardLayout = ({
         <Zone
           label="Character Area"
           cards={board.self.characters}
+          displayMode="slots"
+          slotCount={5}
           selectedCardInstanceId={selectedCardInstanceId}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
