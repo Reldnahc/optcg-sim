@@ -1,11 +1,19 @@
-import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+import type {
+  BoardViewModel,
+  ClientActionModel,
+  ClientCardModel,
+} from "../view-model.js";
 import { HandRow } from "./HandRow.js";
 import { Zone } from "./Zone.js";
 
 export interface BoardLayoutProps {
   board: BoardViewModel;
   selectedCardInstanceId?: string | undefined;
+  cardActions: (instanceId: string) => readonly ClientActionModel[];
+  actionDisabled?: boolean | undefined;
   onCardClick: (instanceId: string) => void;
+  onCardAction: (actionIndex: number) => void;
+  onBackgroundClick: () => void;
 }
 
 const hiddenCards = (count: number): ClientCardModel[] =>
@@ -26,9 +34,18 @@ const stack = (label: string, count: number): React.JSX.Element => (
 export const BoardLayout = ({
   board,
   selectedCardInstanceId,
+  cardActions,
+  actionDisabled = false,
   onCardClick,
+  onCardAction,
+  onBackgroundClick,
 }: BoardLayoutProps): React.JSX.Element => (
-  <section className="board-shell">
+  <section
+    className="board-shell"
+    onClick={() => {
+      onBackgroundClick();
+    }}
+  >
     <div className="hand-rail">
       <HandRow
         label="Opponent hand"
@@ -38,7 +55,10 @@ export const BoardLayout = ({
         label="Player hand"
         cards={board.self.hand}
         selectedCardInstanceId={selectedCardInstanceId}
+        cardActions={cardActions}
+        actionDisabled={actionDisabled}
         onCardClick={onCardClick}
+        onCardAction={onCardAction}
       />
     </div>
     <div className="tabletop-board">
@@ -63,7 +83,10 @@ export const BoardLayout = ({
           cards={[board.opponent.leader]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
           onCardClick={onCardClick}
+          onCardAction={onCardAction}
         />
       </div>
       <div className="playmat-zone opponent-stage">
@@ -74,7 +97,10 @@ export const BoardLayout = ({
           }
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
           onCardClick={onCardClick}
+          onCardAction={onCardAction}
         />
       </div>
       <div className="playmat-zone opponent-characters">
@@ -82,7 +108,10 @@ export const BoardLayout = ({
           label="Character Area"
           cards={board.opponent.characters}
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
           onCardClick={onCardClick}
+          onCardAction={onCardAction}
         />
       </div>
       <div className="playmat-zone player-characters">
@@ -90,7 +119,10 @@ export const BoardLayout = ({
           label="Character Area"
           cards={board.self.characters}
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
           onCardClick={onCardClick}
+          onCardAction={onCardAction}
         />
       </div>
       <div className="playmat-zone player-life">
@@ -102,7 +134,10 @@ export const BoardLayout = ({
           cards={[board.self.leader]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
           onCardClick={onCardClick}
+          onCardAction={onCardAction}
         />
       </div>
       <div className="playmat-zone player-stage">
@@ -111,7 +146,10 @@ export const BoardLayout = ({
           cards={board.self.stage === undefined ? [] : [board.self.stage]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
           onCardClick={onCardClick}
+          onCardAction={onCardAction}
         />
       </div>
       <div className="playmat-zone player-deck">

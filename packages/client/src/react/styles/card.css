@@ -1,9 +1,15 @@
-.card-tile {
+.card-tile-shell {
   position: relative;
   aspect-ratio: 5 / 7;
   width: auto;
   height: 100%;
   flex: 0 0 auto;
+}
+
+.card-tile {
+  position: relative;
+  width: 100%;
+  height: 100%;
   border: 0;
   border-radius: 4px;
   padding: 0;
@@ -48,4 +54,52 @@
   color: #141414;
   background: #ffdc62;
   font-size: 10px;
+}
+
+.card-action-popover {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  display: grid;
+  min-width: 96px;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 5px;
+  background: rgba(38, 36, 35, 0.96);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+  transform: translateX(-50%);
+}
+
+.card-action-popover::after {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(38, 36, 35, 0.96);
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.card-action-button {
+  position: relative;
+  z-index: 1;
+  min-height: 26px;
+  border: 0;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: #fff;
+  background: #3f3d3c;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.card-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }

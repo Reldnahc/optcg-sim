@@ -9,8 +9,6 @@ export interface ControlRailProps {
   phase?: string | undefined;
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
-  selectedActions: readonly ClientActionModel[];
-  selectedCardInstanceId?: string | undefined;
   disabled: boolean;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
@@ -24,8 +22,6 @@ export const ControlRail = ({
   phase,
   errors,
   globalActions,
-  selectedActions,
-  selectedCardInstanceId,
   disabled,
   onAction,
   onNewMatch,
@@ -67,16 +63,6 @@ export const ControlRail = ({
           {error}
         </p>
       ))}
-      <ActionMenu
-        title={
-          selectedCardInstanceId === undefined
-            ? "Selected card"
-            : selectedCardInstanceId
-        }
-        actions={selectedActions}
-        disabled={disabled}
-        onAction={onAction}
-      />
       <ActionMenu
         title="Global actions"
         actions={globalActions}

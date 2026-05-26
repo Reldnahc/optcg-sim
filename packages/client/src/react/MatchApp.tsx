@@ -15,12 +15,10 @@ export const MatchApp = (): React.JSX.Element => {
     clientState !== undefined && "lobbyId" in clientState
       ? clientState
       : undefined;
-  const selectedActions =
-    selectedCardInstanceId === undefined
-      ? []
-      : client.cardActions(selectedCardInstanceId);
   const globalActions =
     decisionModal === undefined ? client.globalActions() : [];
+  const cardActions =
+    decisionModal === undefined ? client.cardActions : () => [];
 
   return (
     <main className="match-app">
@@ -34,7 +32,15 @@ export const MatchApp = (): React.JSX.Element => {
         <BoardLayout
           board={board}
           selectedCardInstanceId={selectedCardInstanceId}
+          cardActions={cardActions}
+          actionDisabled={client.state.actionInFlight}
           onCardClick={client.selectCard}
+          onCardAction={(actionIndex) => {
+            void client.submitAction(actionIndex);
+          }}
+          onBackgroundClick={() => {
+            client.selectCard(undefined);
+          }}
         />
       )}
       <ControlRail
@@ -54,8 +60,6 @@ export const MatchApp = (): React.JSX.Element => {
         }
         errors={client.state.errors}
         globalActions={globalActions}
-        selectedActions={selectedActions}
-        selectedCardInstanceId={selectedCardInstanceId}
         disabled={client.state.actionInFlight}
         onAction={(actionIndex) => {
           void client.submitAction(actionIndex);

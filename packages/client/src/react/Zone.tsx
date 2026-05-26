@@ -1,4 +1,4 @@
-import type { ClientCardModel } from "../view-model.js";
+import type { ClientActionModel, ClientCardModel } from "../view-model.js";
 import { CardTile } from "./CardTile.js";
 
 export interface ZoneProps {
@@ -6,7 +6,10 @@ export interface ZoneProps {
   cards: readonly ClientCardModel[];
   size?: "normal" | "small" | "mini" | "hand";
   selectedCardInstanceId?: string | undefined;
+  cardActions?: ((instanceId: string) => readonly ClientActionModel[]) | undefined;
+  actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
+  onCardAction?: ((actionIndex: number) => void) | undefined;
 }
 
 export const Zone = ({
@@ -14,7 +17,10 @@ export const Zone = ({
   cards,
   size = "normal",
   selectedCardInstanceId,
+  cardActions,
+  actionDisabled = false,
   onCardClick,
+  onCardAction,
 }: ZoneProps): React.JSX.Element => (
   <section className={`zone zone-${size}`}>
     <div className="zone-label">{label}</div>
@@ -22,20 +28,26 @@ export const Zone = ({
       {cards.length === 0 ? (
         <span className="empty-zone">empty</span>
       ) : (
-        cards.map((card) => (
-          <CardTile
-            key={String(card.instanceId)}
-            card={card}
-            selected={selectedCardInstanceId === String(card.instanceId)}
-            onClick={
-              onCardClick === undefined
-                ? undefined
-                : () => {
-                    onCardClick(String(card.instanceId));
-                  }
-            }
-          />
-        ))
+        cards.map((card) => {
+          const instanceId = String(card.instanceId);
+          return (
+            <CardTile
+              key={instanceId}
+              card={card}
+              selected={selectedCardInstanceId === instanceId}
+              actions={cardActions?.(instanceId) ?? []}
+              disabled={actionDisabled}
+              onAction={onCardAction}
+              onClick={
+                onCardClick === undefined
+                  ? undefined
+                  : () => {
+                      onCardClick(instanceId);
+                    }
+              }
+            />
+          );
+        })
       )}
     </div>
   </section>
