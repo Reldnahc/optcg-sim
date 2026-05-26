@@ -10,12 +10,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import {
-  isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
-  isSupportedNoChoiceMainEventDrawEffect,
-  isSupportedOptionalNoChoiceMainEventDrawEffect,
-} from "./effect-runtime-primitives.js";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
+import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   MainEventTriggerQueueingFailureReason,
@@ -25,25 +20,14 @@ import {
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
 
-const isSupportedMainEventDrawUpToEffect = (
+const isSupportedMainEventEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: { type: "drawUpTo"; count: number; player: "self" };
 } =>
   effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
   effect.trigger.type === "main" &&
-  effect.category === "auto" &&
-  effect.optional !== true &&
-  effect.oncePerTurn !== true &&
-  effect.cost === undefined &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  effect.effect.type === "drawUpTo" &&
-  Number.isInteger(effect.effect.count) &&
-  effect.effect.count >= 0 &&
-  effect.effect.player === "self";
+  evaluateEffectBlockRuntimeSupport(effect).supported;
 
 export const createMainEventTriggerQueueing = (
   dependencies: Pick<
@@ -133,18 +117,7 @@ export const createMainEventTriggerQueueing = (
       if (mainEffects.length === 0) {
         continue;
       }
-      const matching = mainEffects.filter(
-        (effect) =>
-          isSupportedNoChoiceMainEventDrawEffect(effect) ||
-          isSupportedOptionalNoChoiceMainEventDrawEffect(effect) ||
-          isSupportedMainEventDrawUpToEffect(effect) ||
-          isSupportedQueuedAutoSequenceForEntryPoint(
-            effect,
-            "main",
-            "resolveFromDestinationZone",
-          ) ||
-          isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect),
-      );
+      const matching = mainEffects.filter(isSupportedMainEventEffect);
       if (matching.length !== mainEffects.length) {
         return toEngineResult(
           state,

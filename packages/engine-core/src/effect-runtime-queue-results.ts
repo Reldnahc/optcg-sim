@@ -259,7 +259,8 @@ export const createEffectRuntimeQueueResults = (
       match.cost !== undefined ||
       match.failurePolicy !== undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      match.sourcePresencePolicy !== "mustRemainInSameZone"
+      (match.sourcePresencePolicy !== "mustRemainInSameZone" &&
+        match.sourcePresencePolicy !== "resolveFromDestinationZone")
     ) {
       return undefined;
     }
