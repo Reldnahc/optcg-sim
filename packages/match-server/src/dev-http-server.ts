@@ -1,13 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import {
   createServer,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
 import type { Duplex } from "node:stream";
-import { extname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type {
   DecisionId,
   DecisionResponse,
@@ -146,29 +143,8 @@ export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOp
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
 }
 
-const uiRoot = new URL("../ui/", import.meta.url);
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
-
-const staticRoutes = new Map<string, string>([
-  ["/", "index.html"],
-  ["/index.html", "index.html"],
-  ["/app.js", "app.js"],
-  ["/styles.css", "styles.css"],
-]);
-
-const contentTypeForPath = (path: string): string => {
-  switch (extname(path)) {
-    case ".html":
-      return "text/html; charset=utf-8";
-    case ".js":
-      return "text/javascript; charset=utf-8";
-    case ".css":
-      return "text/css; charset=utf-8";
-    default:
-      return "application/octet-stream";
-  }
-};
 
 const sendJson = (
   response: ServerResponse,
@@ -641,20 +617,9 @@ const handleApiRequest = async (
   sendJson(response, 404, { errors: ["API route not found."] });
 };
 
-const handleStaticRequest = async (
-  request: IncomingMessage,
-  response: ServerResponse,
-): Promise<void> => {
-  const url = request.url ?? "/";
-  const pathname = new URL(url, "http://localhost").pathname;
-  const route = staticRoutes.get(pathname);
-  if (request.method !== "GET" || route === undefined) {
-    sendText(response, 404, "text/plain; charset=utf-8", "Not found");
-    return;
-  }
-  const file = new URL(route, uiRoot);
-  const body = await readFile(fileURLToPath(file), "utf8");
-  sendText(response, 200, contentTypeForPath(route), body);
+const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
+  sendText(response, 404, "text/plain; charset=utf-8", "Not found");
+  return Promise.resolve();
 };
 
 const websocketAccept = (key: string): string =>
@@ -1003,7 +968,7 @@ export const createDevHttpServer = async (
           lobbySocketConnections,
           authProvider,
         )
-      : handleStaticRequest(request, response);
+      : handleNotFoundRequest(response);
     operation.catch((error: unknown) => {
       sendJson(response, 500, {
         errors: [error instanceof Error ? error.message : String(error)],

@@ -183,6 +183,19 @@ const claimDevLobbySeat = async (
 };
 
 describe("dev HTTP server", () => {
+  test("does not serve the legacy static match UI", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/`);
+
+      assert.equal(response.status, 404);
+      assert.equal(await response.text(), "Not found");
+    } finally {
+      await server.close();
+    }
+  });
+
   test("websocket text frames support state sync payloads larger than 16-bit lengths", () => {
     const payload = "x".repeat(81911);
 
@@ -731,34 +744,6 @@ describe("dev HTTP server", () => {
       for (const socket of sockets) {
         socket.close();
       }
-      await server.close();
-    }
-  });
-
-  test("serves browser assets that do not import server-only engine packages", async () => {
-    const server = await createFixtureDevHttpServer();
-    await server.listen(0, "127.0.0.1");
-    try {
-      const response = await fetch(`${server.url()}/app.js`);
-      assert.equal(response.status, 200);
-      const script = await response.text();
-
-      assert.equal(script.includes("@optcg/engine-core"), false);
-      assert.equal(script.includes("engine-core"), false);
-    } finally {
-      await server.close();
-    }
-  });
-
-  test("serves the dev UI shell when a matchId query is present", async () => {
-    const server = await createFixtureDevHttpServer();
-    await server.listen(0, "127.0.0.1");
-    try {
-      const response = await fetch(`${server.url()}/?matchId=dev-local-match`);
-      assert.equal(response.status, 200);
-      const body = await response.text();
-      assert.equal(body.includes('id="app"'), true);
-    } finally {
       await server.close();
     }
   });
