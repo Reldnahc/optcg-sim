@@ -24,6 +24,7 @@ const card = (instanceId: string, name = instanceId): ClientCardModel => ({
   name,
   category: "Character",
   attachedDonCount: 0,
+  attachedDonCards: [],
 });
 
 const board = (): BoardViewModel => ({
@@ -111,5 +112,50 @@ describe("card action menu", () => {
         `${selector} must not clip card action popovers.`,
       );
     }
+  });
+
+  test("attached DON cards render under their target card", () => {
+    const target = {
+      ...card("self-leader", "Self Leader"),
+      attachedDonCount: 2,
+      attachedDonCards: [card("don-1", "DON!! 1"), card("don-2", "DON!! 2")],
+    };
+    const layout = board();
+    layout.self.leader = target;
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedCardInstanceId: undefined,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*attached-don-stack/u);
+    assert.equal(markup.includes("DON!! 1"), true);
+    assert.equal(markup.includes("DON!! 2"), true);
+  });
+
+  test("selected cost-area DON cards use the selected card styling", () => {
+    const layout = board();
+    layout.self.costArea = [card("don-1", "DON!!")];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedDonInstanceIds: ["don-1"],
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*card-tile[^"]*is-selected/u);
   });
 });

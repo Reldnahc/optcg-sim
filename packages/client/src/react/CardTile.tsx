@@ -4,21 +4,27 @@ export interface CardTileProps {
   card: ClientCardModel;
   label?: string | undefined;
   selected?: boolean;
+  selectedDonInstanceIds?: readonly string[] | undefined;
   actions?: readonly ClientActionModel[] | undefined;
   disabled?: boolean | undefined;
   onClick?: (() => void) | undefined;
   onAction?: ((actionIndex: number) => void) | undefined;
+  onAttachedDonClick?: ((instanceId: string) => void) | undefined;
 }
 
 export const CardTile = ({
   card,
   label,
   selected = false,
+  selectedDonInstanceIds = [],
   actions = [],
   disabled = false,
   onClick,
   onAction,
+  onAttachedDonClick,
 }: CardTileProps): React.JSX.Element => {
+  const isSelected =
+    selected || selectedDonInstanceIds.includes(String(card.instanceId));
   const image =
     card.imageUrl === undefined ? (
       <div className="card-face card-placeholder">{card.name}</div>
@@ -29,7 +35,7 @@ export const CardTile = ({
     <div className="card-tile-shell">
       <button
         className={`card-tile ${card.state === "rested" ? "is-rested" : ""} ${
-          selected ? "is-selected" : ""
+          isSelected ? "is-selected" : ""
         }`}
         type="button"
         title={card.name}
@@ -59,6 +65,28 @@ export const CardTile = ({
               }}
             >
               {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {card.attachedDonCards.length > 0 ? (
+        <div className="attached-don-stack" aria-label="Attached DON!!">
+          {card.attachedDonCards.map((donCard) => (
+            <button
+              key={String(donCard.instanceId)}
+              className="attached-don-card"
+              type="button"
+              title={donCard.name}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAttachedDonClick?.(String(donCard.instanceId));
+              }}
+            >
+              {donCard.imageUrl === undefined ? (
+                <span>{donCard.name}</span>
+              ) : (
+                <img src={donCard.imageUrl} alt={donCard.name} />
+              )}
             </button>
           ))}
         </div>

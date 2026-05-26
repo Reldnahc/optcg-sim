@@ -23,6 +23,7 @@ export interface ClientCardModel {
   imageUrl?: string;
   state?: PublicCardView["state"];
   attachedDonCount: number;
+  attachedDonCards: ClientCardModel[];
 }
 
 export interface ClientPlayerZonesModel {
@@ -80,42 +81,88 @@ const cardModel = (
     ...(entry.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
     ...(card.state === undefined ? {} : { state: card.state }),
     attachedDonCount: card.attachedDonCount,
+    attachedDonCards: [],
   };
 };
+
+const attachedDonIdSet = (cards: readonly PublicCardView[]): Set<InstanceId> =>
+  new Set(cards.flatMap((card) => card.attachedDonIds));
+
+const attachDonCards = (
+  card: PublicCardView,
+  catalog: MatchCardCatalog,
+  costAreaById: ReadonlyMap<InstanceId, ClientCardModel>,
+): ClientCardModel => ({
+  ...cardModel(card, catalog),
+  attachedDonCards: card.attachedDonIds.flatMap((id) => {
+    const donCard = costAreaById.get(id);
+    return donCard === undefined ? [] : [donCard];
+  }),
+});
 
 const selfZones = (
   view: MatchSnapshot["players"][PlayerId]["view"],
   catalog: MatchCardCatalog,
-): ClientPlayerZonesModel => ({
-  leader: cardModel(view.self.leader, catalog),
-  hand: view.self.hand.map((card) => cardModel(card, catalog)),
-  characters: view.self.characters.map((card) => cardModel(card, catalog)),
-  ...(view.self.stage === undefined
-    ? {}
-    : { stage: cardModel(view.self.stage, catalog) }),
-  costArea: view.self.costArea.map((card) => cardModel(card, catalog)),
-  trash: view.self.trash.map((card) => cardModel(card, catalog)),
-  deckCount: view.self.deckCount,
-  donDeckCount: view.self.donDeckCount,
-  lifeCount: view.self.life.count,
-});
+): ClientPlayerZonesModel => {
+  const costArea = view.self.costArea.map((card) => cardModel(card, catalog));
+  const costAreaById = new Map(
+    costArea.map((card) => [card.instanceId, card] as const),
+  );
+  const boardCards = [
+    view.self.leader,
+    ...view.self.characters,
+    ...(view.self.stage === undefined ? [] : [view.self.stage]),
+  ];
+  const attachedIds = attachedDonIdSet(boardCards);
+  return {
+    leader: attachDonCards(view.self.leader, catalog, costAreaById),
+    hand: view.self.hand.map((card) => cardModel(card, catalog)),
+    characters: view.self.characters.map((card) =>
+      attachDonCards(card, catalog, costAreaById),
+    ),
+    ...(view.self.stage === undefined
+      ? {}
+      : { stage: attachDonCards(view.self.stage, catalog, costAreaById) }),
+    costArea: costArea.filter((card) => !attachedIds.has(card.instanceId)),
+    trash: view.self.trash.map((card) => cardModel(card, catalog)),
+    deckCount: view.self.deckCount,
+    donDeckCount: view.self.donDeckCount,
+    lifeCount: view.self.life.count,
+  };
+};
 
 const opponentZones = (
   view: MatchSnapshot["players"][PlayerId]["view"],
   catalog: MatchCardCatalog,
-): BoardViewModel["opponent"] => ({
-  leader: cardModel(view.opponent.leader, catalog),
-  characters: view.opponent.characters.map((card) => cardModel(card, catalog)),
-  ...(view.opponent.stage === undefined
-    ? {}
-    : { stage: cardModel(view.opponent.stage, catalog) }),
-  costArea: view.opponent.costArea.map((card) => cardModel(card, catalog)),
-  trash: view.opponent.trash.map((card) => cardModel(card, catalog)),
-  deckCount: view.opponent.deckCount,
-  donDeckCount: view.opponent.donDeckCount,
-  lifeCount: view.opponent.life.count,
-  handCount: view.opponent.handCount,
-});
+): BoardViewModel["opponent"] => {
+  const costArea = view.opponent.costArea.map((card) =>
+    cardModel(card, catalog),
+  );
+  const costAreaById = new Map(
+    costArea.map((card) => [card.instanceId, card] as const),
+  );
+  const boardCards = [
+    view.opponent.leader,
+    ...view.opponent.characters,
+    ...(view.opponent.stage === undefined ? [] : [view.opponent.stage]),
+  ];
+  const attachedIds = attachedDonIdSet(boardCards);
+  return {
+    leader: attachDonCards(view.opponent.leader, catalog, costAreaById),
+    characters: view.opponent.characters.map((card) =>
+      attachDonCards(card, catalog, costAreaById),
+    ),
+    ...(view.opponent.stage === undefined
+      ? {}
+      : { stage: attachDonCards(view.opponent.stage, catalog, costAreaById) }),
+    costArea: costArea.filter((card) => !attachedIds.has(card.instanceId)),
+    trash: view.opponent.trash.map((card) => cardModel(card, catalog)),
+    deckCount: view.opponent.deckCount,
+    donDeckCount: view.opponent.donDeckCount,
+    lifeCount: view.opponent.life.count,
+    handCount: view.opponent.handCount,
+  };
+};
 
 const addAction = (
   actions: Record<string, ClientActionModel[]>,
@@ -135,9 +182,6 @@ const actionMenusByCard = (
   for (const action of actions) {
     if (action.placement !== undefined) {
       addAction(byCard, action.placement.instanceId, action);
-    }
-    if (action.attachment !== undefined) {
-      addAction(byCard, action.attachment.targetInstanceId, action);
     }
   }
   return byCard;

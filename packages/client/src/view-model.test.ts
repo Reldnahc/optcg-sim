@@ -31,6 +31,7 @@ const card = (
   controller: owner,
   zone: { playerId: owner, zone },
   attachedDonCount: 0,
+  attachedDonIds: [],
 });
 
 const ref = (
@@ -60,9 +61,16 @@ const minimalView = (): PlayerView => ({
     donDeckCount: 10,
     hand: [card("hand-1", "OP13-080", "hand")],
     trash: [],
-    leader: card("leader-1", "OP13-079", "leaderArea"),
+    leader: {
+      ...card("leader-1", "OP13-079", "leaderArea"),
+      attachedDonCount: 1,
+      attachedDonIds: ["don-1" as InstanceId],
+    },
     characters: [card("char-1", "OP13-089", "characterArea")],
-    costArea: [card("don-1", "DON", "costArea")],
+    costArea: [
+      card("don-1", "DON", "costArea"),
+      card("don-2", "DON", "costArea"),
+    ],
     life: { count: 5, faceUpCards: [] },
     hasMulliganed: true,
     turnCount: 1,
@@ -119,6 +127,15 @@ describe("board view model", () => {
               label: "Activate effect",
               placement: { instanceId: "char-1" as InstanceId },
             },
+            {
+              index: 2,
+              type: "attachDon",
+              label: "Attach DON!!",
+              attachment: {
+                donInstanceId: "don-2" as InstanceId,
+                targetInstanceId: "leader-1" as InstanceId,
+              },
+            },
           ],
         },
       },
@@ -157,6 +174,15 @@ describe("board view model", () => {
     assert.deepEqual(
       model.actionsByCardInstanceId["char-1"]?.map((action) => action.label),
       ["Activate effect"],
+    );
+    assert.equal(model.actionsByCardInstanceId["leader-1"], undefined);
+    assert.deepEqual(
+      model.self.costArea.map((costCard) => String(costCard.instanceId)),
+      ["don-2"],
+    );
+    assert.deepEqual(
+      model.self.leader.attachedDonCards.map((don) => String(don.instanceId)),
+      ["don-1"],
     );
     assert.equal(JSON.stringify(model).includes("deckOrder"), false);
   });

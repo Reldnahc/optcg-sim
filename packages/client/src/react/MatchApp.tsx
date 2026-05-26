@@ -12,8 +12,13 @@ export const MatchApp = (): React.JSX.Element => {
   const [collectionModal, setCollectionModal] = useState<
     CollectionModalModel | undefined
   >(undefined);
-  const { board, clientState, decisionModal, selectedCardInstanceId } =
-    client.state;
+  const {
+    board,
+    clientState,
+    decisionModal,
+    selectedCardInstanceId,
+    selectedDonInstanceIds,
+  } = client.state;
   const matchState =
     clientState !== undefined && "matchId" in clientState
       ? clientState
@@ -39,6 +44,7 @@ export const MatchApp = (): React.JSX.Element => {
         <BoardLayout
           board={board}
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={client.state.actionInFlight}
           onCardClick={client.selectCard}

@@ -52,6 +52,7 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     zone: { zone: "leaderArea", playerId: playerA },
     state: "active",
     attachedDonCount: 0,
+    attachedDonIds: [],
   };
   const life: PublicLifeView = { count: 5, faceUpCards: [] };
   const turn: PublicTurnState = {

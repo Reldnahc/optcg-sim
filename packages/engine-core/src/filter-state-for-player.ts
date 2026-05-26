@@ -31,6 +31,7 @@ const toPublicCardView = (card: CardInstance): PublicCardView => ({
   controller: card.controller,
   zone: card.zone,
   attachedDonCount: card.attachedDon.length,
+  attachedDonIds: [...card.attachedDon],
   ...(card.state === undefined ? {} : { state: card.state }),
   ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
 });

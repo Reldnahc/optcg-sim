@@ -21,6 +21,7 @@ const card = (index: number): ClientCardModel => ({
   name: `Card ${String(index)}`,
   category: "Character",
   attachedDonCount: 0,
+  attachedDonCards: [],
 });
 
 describe("hand layout", () => {

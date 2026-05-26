@@ -16,11 +16,13 @@ import {
   createDevHttpMatchTransport,
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
+  findAttachDonActionIndex,
   createMatchClientController,
   moveOrderedCardNear,
   setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
+  toggleSelectedDonInstanceId,
   toggleDecisionSelectedCard,
 } from "../index.js";
 import type {
@@ -38,6 +40,7 @@ export interface MatchClientUiState {
   clientState?: MatchClientSessionState;
   board?: BoardViewModel;
   selectedCardInstanceId?: string;
+  selectedDonInstanceIds: string[];
   decisionDraft?: DecisionDraft;
   decisionModal?: DecisionModalModel;
   actionInFlight: boolean;
@@ -117,6 +120,23 @@ const modalSuppressedDecisionTypes: ReadonlySet<string> = new Set([]);
 const shouldRenderDecisionModal = (decisionType: string | undefined): boolean =>
   decisionType !== undefined && !modalSuppressedDecisionTypes.has(decisionType);
 
+const isSelfCostAreaCard = (
+  board: BoardViewModel | undefined,
+  instanceId: string,
+): boolean =>
+  board?.self.costArea.some((card) => String(card.instanceId) === instanceId) ??
+  false;
+
+const isSelfAttachmentTarget = (
+  board: BoardViewModel | undefined,
+  instanceId: string,
+): boolean =>
+  board !== undefined &&
+  (String(board.self.leader.instanceId) === instanceId ||
+    board.self.characters.some(
+      (card) => String(card.instanceId) === instanceId,
+    ));
+
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
   const [clientState, setClientState] = useState<
@@ -125,6 +145,9 @@ export const useMatchClient = (): MatchClientUi => {
   const [selectedCardInstanceId, setSelectedCardInstanceId] = useState<
     string | undefined
   >();
+  const [selectedDonInstanceIds, setSelectedDonInstanceIds] = useState<
+    string[]
+  >([]);
   const [decisionDraft, setDecisionDraft] = useState<
     DecisionDraft | undefined
   >();
@@ -277,6 +300,7 @@ export const useMatchClient = (): MatchClientUi => {
       setLobbyLocation(created.lobbyId, created.seat.playerId);
     }
     setSelectedCardInstanceId(undefined);
+    setSelectedDonInstanceIds([]);
     setDecisionDraft(undefined);
     setClientState(created);
     setErrors([]);
@@ -289,6 +313,7 @@ export const useMatchClient = (): MatchClientUi => {
         const result = await controller.submitVisibleAction({ actionIndex });
         setClientState(result);
         setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
         setDecisionDraft(undefined);
         setErrors([]);
       } catch (error) {
@@ -298,6 +323,70 @@ export const useMatchClient = (): MatchClientUi => {
       }
     },
     [controller],
+  );
+
+  const attachSelectedDonToTarget = useCallback(
+    async (targetInstanceId: string): Promise<void> => {
+      if (selectedDonInstanceIds.length === 0) {
+        return;
+      }
+      setActionInFlight(true);
+      try {
+        for (const donInstanceId of selectedDonInstanceIds) {
+          const current = controller.currentState();
+          const actions =
+            current?.snapshot.players[current.seat.playerId]?.actions ?? [];
+          const actionIndex = findAttachDonActionIndex(
+            actions,
+            donInstanceId,
+            targetInstanceId,
+          );
+          if (actionIndex === undefined) {
+            throw new Error(
+              `No legal attach action for ${donInstanceId} to ${targetInstanceId}.`,
+            );
+          }
+          const result = await controller.submitVisibleAction({ actionIndex });
+          setClientState(result);
+        }
+        setSelectedDonInstanceIds([]);
+        setSelectedCardInstanceId(undefined);
+        setDecisionDraft(undefined);
+        setErrors([]);
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : String(error)]);
+      } finally {
+        setActionInFlight(false);
+      }
+    },
+    [controller, selectedDonInstanceIds],
+  );
+
+  const selectCard = useCallback(
+    (instanceId: string | undefined): void => {
+      if (instanceId === undefined) {
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
+        return;
+      }
+      if (isSelfCostAreaCard(board, instanceId)) {
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds((selected) =>
+          toggleSelectedDonInstanceId(selected, instanceId),
+        );
+        return;
+      }
+      if (
+        selectedDonInstanceIds.length > 0 &&
+        isSelfAttachmentTarget(board, instanceId)
+      ) {
+        void attachSelectedDonToTarget(instanceId);
+        return;
+      }
+      setSelectedDonInstanceIds([]);
+      setSelectedCardInstanceId(instanceId);
+    },
+    [attachSelectedDonToTarget, board, selectedDonInstanceIds.length],
   );
 
   const confirmDecision = useCallback(async (): Promise<void> => {
@@ -459,6 +548,7 @@ export const useMatchClient = (): MatchClientUi => {
       ...(selectedCardInstanceId === undefined
         ? {}
         : { selectedCardInstanceId }),
+      selectedDonInstanceIds,
       ...(activeDecisionDraft === undefined
         ? {}
         : { decisionDraft: activeDecisionDraft }),
@@ -469,7 +559,7 @@ export const useMatchClient = (): MatchClientUi => {
     currentPlayerId,
     cardActions,
     globalActions,
-    selectCard: setSelectedCardInstanceId,
+    selectCard,
     submitAction,
     toggleDecisionCard,
     moveDecisionCard,

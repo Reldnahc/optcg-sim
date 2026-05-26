@@ -15,6 +15,7 @@ export interface ZoneProps {
   displayMode?: "spread" | "stack" | "overlap" | "slots" | undefined;
   slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
+  selectedDonInstanceIds?: readonly string[] | undefined;
   cardActions?: ((instanceId: string) => readonly ClientActionModel[]) | undefined;
   actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
@@ -29,6 +30,7 @@ export const Zone = ({
   displayMode = "spread",
   slotCount = 0,
   selectedCardInstanceId,
+  selectedDonInstanceIds = [],
   cardActions,
   actionDisabled = false,
   onCardClick,
@@ -122,9 +124,11 @@ export const Zone = ({
                 <CardTile
                   card={card}
                   selected={selectedCardInstanceId === instanceId}
+                  selectedDonInstanceIds={selectedDonInstanceIds}
                   actions={cardActions?.(instanceId) ?? []}
                   disabled={actionDisabled}
                   onAction={onCardAction}
+                  onAttachedDonClick={onCardClick}
                   onClick={
                     onCardClick === undefined
                       ? undefined
@@ -146,9 +150,11 @@ export const Zone = ({
                 key={instanceId}
                 card={card}
                 selected={selectedCardInstanceId === instanceId}
+                selectedDonInstanceIds={selectedDonInstanceIds}
                 actions={cardActions?.(instanceId) ?? []}
                 disabled={actionDisabled}
                 onAction={onCardAction}
+                onAttachedDonClick={onCardClick}
                 onClick={
                   displayMode === "stack" && onViewCollection !== undefined
                     ? onViewCollection

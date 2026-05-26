@@ -37,6 +37,7 @@ export interface HandRowProps {
   cards: readonly ClientCardModel[];
   overflowDirection: HandOverflowDirection;
   selectedCardInstanceId?: string | undefined;
+  selectedDonInstanceIds?: readonly string[] | undefined;
   cardActions?: ((instanceId: string) => readonly ClientActionModel[]) | undefined;
   actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
@@ -48,6 +49,7 @@ export const HandRow = ({
   cards,
   overflowDirection,
   selectedCardInstanceId,
+  selectedDonInstanceIds = [],
   cardActions,
   actionDisabled = false,
   onCardClick,
@@ -127,9 +129,11 @@ export const HandRow = ({
               key={instanceId}
               card={card}
               selected={selectedCardInstanceId === instanceId}
+              selectedDonInstanceIds={selectedDonInstanceIds}
               actions={cardActions?.(instanceId) ?? []}
               disabled={actionDisabled}
               onAction={onCardAction}
+              onAttachedDonClick={onCardClick}
               onClick={
                 onCardClick === undefined
                   ? undefined

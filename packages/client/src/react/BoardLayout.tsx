@@ -9,6 +9,7 @@ import { Zone } from "./Zone.js";
 export interface BoardLayoutProps {
   board: BoardViewModel;
   selectedCardInstanceId?: string | undefined;
+  selectedDonInstanceIds?: readonly string[] | undefined;
   cardActions: (instanceId: string) => readonly ClientActionModel[];
   actionDisabled?: boolean | undefined;
   onCardClick: (instanceId: string) => void;
@@ -24,6 +25,7 @@ const hiddenCards = (count: number): ClientCardModel[] =>
     name: "Hidden card",
     category: "hidden",
     attachedDonCount: 0,
+    attachedDonCards: [],
   }));
 
 const stack = (label: string, count: number): React.JSX.Element => (
@@ -35,6 +37,7 @@ const stack = (label: string, count: number): React.JSX.Element => (
 export const BoardLayout = ({
   board,
   selectedCardInstanceId,
+  selectedDonInstanceIds = [],
   cardActions,
   actionDisabled = false,
   onCardClick,
@@ -59,6 +62,7 @@ export const BoardLayout = ({
         cards={board.self.hand}
         overflowDirection="left"
         selectedCardInstanceId={selectedCardInstanceId}
+        selectedDonInstanceIds={selectedDonInstanceIds}
         cardActions={cardActions}
         actionDisabled={actionDisabled}
         onCardClick={onCardClick}
@@ -100,6 +104,7 @@ export const BoardLayout = ({
           cards={[board.opponent.leader]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -114,6 +119,7 @@ export const BoardLayout = ({
           }
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -127,6 +133,7 @@ export const BoardLayout = ({
           displayMode="slots"
           slotCount={5}
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -141,6 +148,7 @@ export const BoardLayout = ({
           displayMode="slots"
           slotCount={5}
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -156,6 +164,7 @@ export const BoardLayout = ({
           cards={[board.self.leader]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -168,6 +177,7 @@ export const BoardLayout = ({
           cards={board.self.stage === undefined ? [] : [board.self.stage]}
           size="small"
           selectedCardInstanceId={selectedCardInstanceId}
+          selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -197,6 +207,8 @@ export const BoardLayout = ({
           cards={board.self.costArea}
           size="mini"
           displayMode="overlap"
+          selectedDonInstanceIds={selectedDonInstanceIds}
+          onCardClick={onCardClick}
         />
       </div>
     </div>

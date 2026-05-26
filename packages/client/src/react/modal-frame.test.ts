@@ -21,6 +21,7 @@ const card = (instanceId: string, name: string): ClientCardModel => ({
   name,
   category: "Character",
   attachedDonCount: 0,
+  attachedDonCards: [],
 });
 
 describe("modal frame", () => {
