@@ -114,6 +114,7 @@ export const BoardLayout = ({
           onCardAction={onCardAction}
         />
       </div>
+      <div className="playmat-zone center-spacer" />
       <div className="playmat-zone player-characters">
         <Zone
           label="Character Area"

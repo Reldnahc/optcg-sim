@@ -1,10 +1,13 @@
 .tabletop-board {
+  --playmat-row-height: calc(100vh / 6.5);
+
   position: relative;
   display: grid;
   grid-template-areas:
     ". opponent-don-deck opponent-cost opponent-cost opponent-cost opponent-cost opponent-deck ."
     ". opponent-life . opponent-stage opponent-leader . opponent-trash ."
     ". opponent-life opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters ."
+    ". . . center-spacer center-spacer . . ."
     ". player-life player-characters player-characters player-characters player-characters player-characters ."
     ". player-life . player-leader player-stage . player-deck ."
     ". player-don-deck player-cost player-cost player-cost player-cost player-trash .";
@@ -12,8 +15,10 @@
     86px 86px minmax(116px, 1fr) 84px 84px minmax(116px, 1fr)
     86px 86px;
   grid-template-rows:
-    112px 112px minmax(100px, 1fr) minmax(100px, 1fr)
-    112px 112px;
+    var(--playmat-row-height) var(--playmat-row-height)
+    var(--playmat-row-height) minmax(0, 1fr)
+    var(--playmat-row-height) var(--playmat-row-height)
+    var(--playmat-row-height);
   gap: 6px;
   min-height: 0;
   border: 2px solid #e8e0d6;
@@ -60,6 +65,10 @@
 
 .player-characters {
   grid-area: player-characters;
+}
+
+.center-spacer {
+  grid-area: center-spacer;
 }
 
 .player-life {

@@ -25,6 +25,7 @@ describe("playmat structure", () => {
       "opponent-don-deck",
       "opponent-trash",
       "opponent-life",
+      "center-spacer",
       "player-characters",
       "player-cost",
       "player-leader",
@@ -42,12 +43,17 @@ describe("playmat structure", () => {
     }
   });
 
-  test("physical table grid uses mirrored player and opponent row heights", async () => {
+  test("physical table grid uses fixed play rows with a center flexible spacer", async () => {
     const styles = await readFile(playmatStylesPath, "utf8");
 
+    assert.match(styles, /--playmat-row-height:\s*calc\(100vh\s*\/\s*6\.5\);/);
     assert.match(
       styles,
-      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
+      /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
+    );
+    assert.equal(
+      styles.includes('". . . center-spacer center-spacer . . ."'),
+      true,
     );
   });
 
@@ -113,7 +119,7 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
+      /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
     );
   });
 });
