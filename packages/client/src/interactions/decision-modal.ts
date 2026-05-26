@@ -264,6 +264,12 @@ export const toggleDecisionSelectedCard = (
       ),
     };
   }
+  if (decision.max === 1 && draft.selectedInstanceIds.length === 1) {
+    return {
+      ...draft,
+      selectedInstanceIds: [instanceId],
+    };
+  }
   if (draft.selectedInstanceIds.length >= decision.max) {
     return draft;
   }

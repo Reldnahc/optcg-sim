@@ -83,8 +83,21 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "cards", cards: [cardRef("1")] });
   });
 
-  test("selectCards draft ignores unknown candidates and prevents selecting beyond max", () => {
-    const decision = selectDecision();
+  test("selectCards draft ignores unknown candidates and prevents selecting beyond multi-select max", () => {
+    const decision: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      max: 2,
+      candidates: [
+        { card: cardRef("1") },
+        { card: cardRef("2") },
+        { card: cardRef("3") },
+      ],
+      choices: [
+        { card: cardRef("1"), selectable: true },
+        { card: cardRef("2"), selectable: true },
+        { card: cardRef("3"), selectable: true },
+      ],
+    };
     let draft = createDecisionDraft(decision);
     draft = toggleDecisionSelectedCard(
       decision,
@@ -93,11 +106,24 @@ describe("headless decision modal models", () => {
     );
     draft = toggleDecisionSelectedCard(decision, draft, "1" as InstanceId);
     draft = toggleDecisionSelectedCard(decision, draft, "2" as InstanceId);
+    draft = toggleDecisionSelectedCard(decision, draft, "3" as InstanceId);
 
     const model = createDecisionModalModel(decision, draft);
 
     assert.equal(model.kind, "selectCards");
-    assert.deepEqual(model.selectedInstanceIds, ["1"]);
+    assert.deepEqual(model.selectedInstanceIds, ["1", "2"]);
+  });
+
+  test("selectCards draft replaces the selected card when max is one", () => {
+    const decision = selectDecision();
+    let draft = createDecisionDraft(decision);
+    draft = toggleDecisionSelectedCard(decision, draft, "1" as InstanceId);
+    draft = toggleDecisionSelectedCard(decision, draft, "2" as InstanceId);
+
+    const model = createDecisionModalModel(decision, draft);
+
+    assert.equal(model.kind, "selectCards");
+    assert.deepEqual(model.selectedInstanceIds, ["2"]);
   });
 
   test("selectCards draft exposes disabled choices and prevents selecting them", () => {
