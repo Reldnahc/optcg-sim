@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import { createDevHttpServer } from "./dev-http-server.js";
+import { websocketTextFrame } from "./dev-http-server.js";
 import { createPremadeDevMatchSetup } from "./local-match.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 
@@ -182,6 +183,18 @@ const claimDevLobbySeat = async (
 };
 
 describe("dev HTTP server", () => {
+  test("websocket text frames support state sync payloads larger than 16-bit lengths", () => {
+    const payload = "x".repeat(81911);
+
+    const frame = websocketTextFrame(payload);
+
+    assert.equal(frame[0], 0x81);
+    assert.equal(frame[1], 127);
+    assert.equal(frame.readUInt32BE(2), 0);
+    assert.equal(frame.readUInt32BE(6), Buffer.byteLength(payload, "utf8"));
+    assert.equal(frame.subarray(10).toString("utf8"), payload);
+  });
+
   test("keeps primitive lobbies separate from match creation until both seats are claimed", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");

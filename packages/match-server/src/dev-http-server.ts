@@ -662,15 +662,26 @@ const websocketAccept = (key: string): string =>
     .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
     .digest("base64");
 
-const websocketTextFrame = (payload: string): Buffer => {
+export const websocketTextFrame = (payload: string): Buffer => {
   const body = Buffer.from(payload, "utf8");
   if (body.length < 126) {
     return Buffer.concat([Buffer.from([0x81, body.length]), body]);
   }
-  const header = Buffer.alloc(4);
+  if (body.length <= 0xffff) {
+    const header = Buffer.alloc(4);
+    header[0] = 0x81;
+    header[1] = 126;
+    header.writeUInt16BE(body.length, 2);
+    return Buffer.concat([header, body]);
+  }
+  if (body.length > Number.MAX_SAFE_INTEGER) {
+    throw new Error("WebSocket payload is too large to frame safely.");
+  }
+  const header = Buffer.alloc(10);
   header[0] = 0x81;
-  header[1] = 126;
-  header.writeUInt16BE(body.length, 2);
+  header[1] = 127;
+  header.writeUInt32BE(Math.floor(body.length / 0x100000000), 2);
+  header.writeUInt32BE(body.length >>> 0, 6);
   return Buffer.concat([header, body]);
 };
 
