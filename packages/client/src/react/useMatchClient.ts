@@ -17,6 +17,7 @@ import {
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
   findAttachDonActionIndex,
+  isSelectableCostAreaDon,
   createMatchClientController,
   moveOrderedCardNear,
   setDecisionActionOption,
@@ -119,13 +120,6 @@ const modalSuppressedDecisionTypes: ReadonlySet<string> = new Set([]);
 
 const shouldRenderDecisionModal = (decisionType: string | undefined): boolean =>
   decisionType !== undefined && !modalSuppressedDecisionTypes.has(decisionType);
-
-const isSelfCostAreaCard = (
-  board: BoardViewModel | undefined,
-  instanceId: string,
-): boolean =>
-  board?.self.costArea.some((card) => String(card.instanceId) === instanceId) ??
-  false;
 
 const isSelfAttachmentTarget = (
   board: BoardViewModel | undefined,
@@ -369,7 +363,7 @@ export const useMatchClient = (): MatchClientUi => {
         setSelectedDonInstanceIds([]);
         return;
       }
-      if (isSelfCostAreaCard(board, instanceId)) {
+      if (isSelectableCostAreaDon(board, instanceId)) {
         setSelectedCardInstanceId(undefined);
         setSelectedDonInstanceIds((selected) =>
           toggleSelectedDonInstanceId(selected, instanceId),
