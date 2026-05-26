@@ -1,7 +1,6 @@
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
   createRedisCardDataCache,
-  parseDevCardIdList,
   type DevPoneglyphFetch,
 } from "@optcg/cards";
 import type { CardId, PlayerId } from "@optcg/types";
@@ -20,33 +19,38 @@ interface CreateDefaultDevMatchSetupInput {
 
 const devLeaderCardId = "OP13-079" as CardId;
 
-const devDeckCardIds = [
-  "OP13-080",
-  "OP13-082",
-  "OP13-083",
-  "OP13-084",
-  "OP13-089",
-  "OP13-091",
-  "OP13-099",
-  "OP13-086",
+export interface DevDeckCardEntry {
+  readonly cardId: CardId;
+  readonly count: number;
+}
+
+const devDeckEntries = [
+  { cardId: "OP13-080" as CardId, count: 4 },
+  { cardId: "OP13-082" as CardId, count: 4 },
+  { cardId: "OP13-083" as CardId, count: 4 },
+  { cardId: "OP13-084" as CardId, count: 4 },
+  { cardId: "OP13-089" as CardId, count: 4 },
+  { cardId: "OP13-091" as CardId, count: 4 },
+  { cardId: "OP13-099" as CardId, count: 4 },
+  { cardId: "OP13-086" as CardId, count: 4 },
 ] as const;
 
-const devCardIdsText = `
-OP13-079
-OP13-080
-OP13-082
-OP13-083
-OP13-084
-OP13-089
-OP13-091
-OP13-099
-OP13-086
-`;
-
-const repeatedDeck = (): CardId[] =>
-  devDeckCardIds.flatMap((cardId) =>
-    Array.from({ length: 4 }, () => cardId as CardId),
+export const createDevDeckCardIds = (
+  entries: readonly DevDeckCardEntry[],
+): CardId[] =>
+  entries.flatMap((entry) =>
+    Array.from({ length: entry.count }, () => entry.cardId),
   );
+
+export const createDevManifestCardIds = (
+  leaderCardId: CardId,
+  entries: readonly DevDeckCardEntry[],
+): CardId[] => {
+  const cardIds = [leaderCardId, ...entries.map((entry) => entry.cardId)];
+  return [...new Set(cardIds)];
+};
+
+const repeatedDeck = (): CardId[] => createDevDeckCardIds(devDeckEntries);
 
 const donDeck = (): CardId[] =>
   Array.from(
@@ -87,7 +91,7 @@ export const createDefaultDevMatchSetup = async (
       playerSetup(input.playerOrder[1], sharedDeck, sharedDonDeck),
     ],
     cardManifest: await buildDevMatchCardManifestFromPoneglyphIds({
-      cardIds: parseDevCardIdList(devCardIdsText),
+      cardIds: createDevManifestCardIds(devLeaderCardId, devDeckEntries),
       createdAt: input.createdAt,
       devDonCount: 10,
       versions: {
