@@ -20,6 +20,7 @@ describe("playmat structure", () => {
       "opponent-leader",
       "opponent-stage",
       "opponent-deck",
+      "opponent-don-deck",
       "opponent-trash",
       "opponent-life",
       "player-characters",
@@ -27,6 +28,7 @@ describe("playmat structure", () => {
       "player-leader",
       "player-stage",
       "player-deck",
+      "player-don-deck",
       "player-trash",
       "player-life",
     ]) {
@@ -43,7 +45,7 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*76px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+34px\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+76px;/,
+      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+34px\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
     );
   });
 
@@ -52,13 +54,53 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '". . . opponent-stage opponent-leader . . opponent-life"',
+        '". opponent-life . opponent-stage opponent-leader . opponent-trash ."',
       ),
       true,
     );
     assert.equal(
-      styles.includes('"player-life . . player-leader player-stage . . ."'),
+      styles.includes(
+        '". player-life . player-leader player-stage . player-deck ."',
+      ),
       true,
+    );
+  });
+
+  test("main deck stacks above trash and life stacks above DON deck", async () => {
+    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+
+    assert.equal(
+      styles.includes(
+        '". player-life . player-leader player-stage . player-deck ."',
+      ),
+      true,
+    );
+    assert.equal(
+      styles.includes(
+        '". player-don-deck . player-cost player-cost player-cost player-trash ."',
+      ),
+      true,
+    );
+    assert.equal(
+      styles.includes(
+        '". opponent-don-deck . opponent-cost opponent-cost opponent-cost opponent-deck ."',
+      ),
+      true,
+    );
+    assert.equal(
+      styles.includes(
+        '". opponent-life . opponent-stage opponent-leader . opponent-trash ."',
+      ),
+      true,
+    );
+  });
+
+  test("deck, DON deck, trash, leader, and stage use same-height rows", async () => {
+    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+
+    assert.match(
+      styles,
+      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+34px\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
     );
   });
 });

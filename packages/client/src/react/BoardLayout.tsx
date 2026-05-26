@@ -51,6 +51,9 @@ export const BoardLayout = ({
       <div className="playmat-zone opponent-deck">
         {stack("Deck", board.opponent.deckCount)}
       </div>
+      <div className="playmat-zone opponent-don-deck">
+        {stack("DON!! Deck", board.opponent.donDeckCount)}
+      </div>
       <div className="playmat-zone opponent-trash">
         <Zone label="Trash" cards={board.opponent.trash} size="small" />
       </div>
@@ -120,6 +123,9 @@ export const BoardLayout = ({
       </div>
       <div className="playmat-zone player-deck">
         {stack("Deck", board.self.deckCount)}
+      </div>
+      <div className="playmat-zone player-don-deck">
+        {stack("DON!! Deck", board.self.donDeckCount)}
       </div>
       <div className="playmat-zone player-trash">
         <Zone label="Trash" cards={board.self.trash} size="small" />

@@ -92,19 +92,19 @@ button {
   position: relative;
   display: grid;
   grid-template-areas:
-    ". opponent-trash . opponent-cost opponent-cost opponent-cost opponent-deck ."
-    ". . . opponent-stage opponent-leader . . opponent-life"
-    ". opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"
+    ". opponent-don-deck . opponent-cost opponent-cost opponent-cost opponent-deck ."
+    ". opponent-life . opponent-stage opponent-leader . opponent-trash ."
+    ". opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters ."
     ". phase-ladder phase-ladder phase-ladder phase-ladder phase-ladder phase-ladder ."
-    "player-life player-characters player-characters player-characters player-characters player-characters player-characters ."
-    "player-life . . player-leader player-stage . . ."
-    ". player-deck . player-cost player-cost player-cost player-trash .";
+    ". player-characters player-characters player-characters player-characters player-characters player-characters ."
+    ". player-life . player-leader player-stage . player-deck ."
+    ". player-don-deck . player-cost player-cost player-cost player-trash .";
   grid-template-columns:
     86px 86px minmax(116px, 1fr) 84px 84px minmax(116px, 1fr)
     86px 86px;
   grid-template-rows:
-    76px 112px minmax(100px, 1fr) 34px minmax(100px, 1fr)
-    112px 76px;
+    112px 112px minmax(100px, 1fr) 34px minmax(100px, 1fr)
+    112px 112px;
   gap: 6px;
   min-height: 0;
   border: 2px solid #e8e0d6;
@@ -127,6 +127,10 @@ button {
 
 .opponent-deck {
   grid-area: opponent-deck;
+}
+
+.opponent-don-deck {
+  grid-area: opponent-don-deck;
 }
 
 .opponent-trash {
@@ -167,6 +171,10 @@ button {
 
 .player-deck {
   grid-area: player-deck;
+}
+
+.player-don-deck {
+  grid-area: player-don-deck;
 }
 
 .player-trash {
