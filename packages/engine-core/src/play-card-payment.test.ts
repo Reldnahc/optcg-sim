@@ -69,6 +69,41 @@ test("nonzero playCard creates payCost decision and legal decision responses for
   );
 });
 
+test("legal nonzero playCard action carries canonical active DON payment and resolves directly", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "card");
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 2,
+    power: 3000,
+  });
+  const firstActive = must(p1State.costArea[0], "don0");
+  const secondActive = must(p1State.costArea[1], "don1");
+
+  const playAction = getPlayCardLegalActions(state, p1).find(
+    (action): action is Extract<Action, { type: "playCard" }> =>
+      action.type === "playCard" && action.cardInstanceId === card.instanceId,
+  );
+  assert.deepEqual(playAction?.costPayment, {
+    optionId: "restDon",
+    selectedDonInstanceIds: [firstActive.instanceId, secondActive.instanceId],
+  });
+
+  const result = applyPlayCardTestAction(
+    state,
+    must(playAction, "play action"),
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  const resolvedP1 = must(result.state.players[p1], "p1 after play");
+  assert.equal(resolvedP1.characters[0]?.instanceId, card.instanceId);
+  assert.equal(resolvedP1.costArea[0]?.state, "rested");
+  assert.equal(resolvedP1.costArea[1]?.state, "rested");
+});
+
 test("valid respondToDecision payment resolves nonzero Character play", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");

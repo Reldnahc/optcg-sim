@@ -7,6 +7,7 @@ import type {
   EngineResult,
   GameState,
   LegalAction,
+  PaymentSpec,
   PlayerId,
 } from "@optcg/types";
 
@@ -56,6 +57,7 @@ export const getPlayCardLegalActions = (
   if (!isMatchActive(state) || state.players[playerId] === undefined) {
     return actions;
   }
+  const player = state.players[playerId];
   if (state.pendingDecision !== undefined) {
     actions.push(...getPlayCardPendingDecisionLegalActions(state, playerId));
     return actions;
@@ -70,9 +72,34 @@ export const getPlayCardLegalActions = (
     return actions;
   }
   for (const card of getPlayableHandCards(state, playerId)) {
-    actions.push({ type: "playCard", cardInstanceId: card.instanceId });
+    const supported = getSupportedPlayMetadata(state, card);
+    actions.push({
+      type: "playCard",
+      cardInstanceId: card.instanceId,
+      ...(supported === null
+        ? {}
+        : canonicalRestDonCostPayment(player.costArea, supported.printedCost)),
+    });
   }
   return actions;
+};
+
+const canonicalRestDonCostPayment = (
+  costArea: readonly CardInstance[],
+  count: number,
+): { costPayment: PaymentSpec } | Record<string, never> => {
+  if (count <= 0) {
+    return {};
+  }
+  return {
+    costPayment: {
+      optionId: "restDon",
+      selectedDonInstanceIds: costArea
+        .filter((card) => card.state === "active")
+        .slice(0, count)
+        .map((card) => card.instanceId),
+    },
+  };
 };
 
 export const applyPlayCard = (
@@ -90,12 +117,6 @@ export const applyPlayCard = (
   }
   if (state.battle !== undefined) {
     return illegalAction(state, "playCard is illegal during an active battle.");
-  }
-  if (action.costPayment !== undefined) {
-    return illegalAction(
-      state,
-      "playCard.costPayment is illegal outside respondToDecision.",
-    );
   }
   if (hasPendingRuntimeWork(state)) {
     return illegalAction(state, "playCard requires no pending runtime work.");
@@ -140,6 +161,48 @@ export const applyPlayCard = (
   );
 
   if (supported.printedCost > 0) {
+    if (action.costPayment !== undefined) {
+      const payment = validatePlayCardPaymentSelection({
+        state,
+        response: { type: "payment", ...action.costPayment },
+        player,
+        supported,
+      });
+      if (!payment.ok) {
+        return payment.result;
+      }
+      appendEvent(
+        state,
+        events,
+        "costPaid",
+        {
+          playerId,
+          optionId: "restDon",
+          selectedDonInstanceIds: payment.selectedDonInstanceIds,
+        },
+        { type: "public" },
+      );
+      const paidPlayer = { ...player, costArea: payment.nextCostArea };
+      if (supported.category === "character" && player.characters.length >= 5) {
+        return createCharacterOverflowDecisionResult({
+          state,
+          events,
+          playerId,
+          player: paidPlayer,
+          handCard,
+        });
+      }
+      return placePlayedCardResult({
+        state,
+        events,
+        playerId,
+        player: paidPlayer,
+        handIndex,
+        handCard,
+        supported,
+        costArea: payment.nextCostArea,
+      });
+    }
     return createPlayCardPaymentDecisionResult({
       state,
       events,

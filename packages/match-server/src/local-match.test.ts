@@ -365,7 +365,7 @@ describe("local dev match", () => {
     );
   });
 
-  test("play-card payment decisions are labeled as payment, not generic response", () => {
+  test("nonzero play-card action pays canonical DON without opening payment modal", () => {
     const match = createTestMatch();
     const main = advanceUntilPlayable(match);
     const activePlayerId = main.activePlayerId;
@@ -376,19 +376,21 @@ describe("local dev match", () => {
       throw new Error("Missing playable card action.");
     }
 
-    const opened = applyLocalDevAction(match, {
+    const result = applyLocalDevAction(match, {
       playerId: activePlayerId,
       actionIndex: playAction.index,
     });
 
-    assert.deepEqual(opened.errors, []);
-    const payment = getLocalDevSnapshot(match);
-    const labels = mustPlayerSnapshot(payment, activePlayerId).actions.map(
-      (action) => action.label,
+    assert.deepEqual(result.errors, []);
+    const afterPlay = getLocalDevSnapshot(match);
+    assert.notEqual(
+      mustPlayerSnapshot(afterPlay, activePlayerId).view.pendingDecision?.type,
+      "payCost",
     );
-    assert.ok(labels.some((label) => label.includes("Pay cost")));
     assert.equal(
-      labels.some((label) => label.includes("Respond to")),
+      mustPlayerSnapshot(afterPlay, activePlayerId).actions.some((action) =>
+        action.label.includes("Pay cost"),
+      ),
       false,
     );
   });
