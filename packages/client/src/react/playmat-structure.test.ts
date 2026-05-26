@@ -43,7 +43,22 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*72px\s+84px\s+minmax\(\s*126px,\s*1fr\s*\)\s+34px\s+minmax\(\s*126px,\s*1fr\s*\)\s+84px\s+72px;/,
+      /grid-template-rows:\s*76px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+34px\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+76px;/,
+    );
+  });
+
+  test("leader and stage zones are centered and mirrored", async () => {
+    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+
+    assert.equal(
+      styles.includes(
+        '". . . opponent-stage opponent-leader . . opponent-life"',
+      ),
+      true,
+    );
+    assert.equal(
+      styles.includes('"player-life . . player-leader player-stage . . ."'),
+      true,
     );
   });
 });
