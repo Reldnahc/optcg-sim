@@ -60,7 +60,7 @@ describe("playmat structure", () => {
       /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
     );
     assert.equal(
-      playmatStyles.includes('". . . center-spacer center-spacer . . ."'),
+      playmatStyles.includes('". . center-spacer center-spacer . ."'),
       true,
     );
   });
@@ -87,7 +87,7 @@ describe("playmat structure", () => {
     assert.match(cardStyles, /height:\s*var\(--card-height\);/);
     assert.match(
       playmatStyles,
-      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/,
+      /grid-template-columns:\s*var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\);/,
     );
   });
 
@@ -106,13 +106,13 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '". opponent-deck . opponent-stage opponent-leader . opponent-life ."',
+        '"opponent-deck . opponent-stage opponent-leader . opponent-life"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '". player-life . player-leader player-stage . player-deck ."',
+        '"player-life . player-leader player-stage . player-deck"',
       ),
       true,
     );
@@ -123,13 +123,13 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '". opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life ."',
+        '"opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '". player-life player-characters player-characters player-characters player-characters player-characters ."',
+        '"player-life player-characters player-characters player-characters player-characters player-characters"',
       ),
       true,
     );
@@ -140,19 +140,19 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '". player-don-deck player-cost player-cost player-cost player-cost player-trash ."',
+        '"player-don-deck player-cost player-cost player-cost player-cost player-trash"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '". opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck ."',
+        '"opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '". opponent-deck . opponent-stage opponent-leader . opponent-life ."',
+        '"opponent-deck . opponent-stage opponent-leader . opponent-life"',
       ),
       true,
     );
