@@ -188,6 +188,17 @@ describe("card action menu", () => {
     assert.equal(markup.includes("-1000"), true);
   });
 
+  test("power delta badge sits near the top-right power area", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(styles, /\.power-delta\s*\{[^}]*right:\s*2px;/u);
+    assert.match(styles, /\.power-delta\s*\{[^}]*top:\s*12px;/u);
+    assert.equal(/\.power-delta\s*\{[^}]*left:\s*2px;/u.test(styles), false);
+  });
+
   test("selected cost-area DON cards use the selected card styling", () => {
     const layout = board();
     layout.self.costArea = [card("don-1", "DON!!")];
