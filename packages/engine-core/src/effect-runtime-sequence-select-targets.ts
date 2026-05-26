@@ -27,6 +27,58 @@ import { resolvePublicTargetCandidates } from "./target-selection.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
+const rootSequenceEffectPath = ["effect", "sequence"] as const;
+
+const isRootSequencePath = (effectPath: readonly string[]): boolean =>
+  effectPath.length === rootSequenceEffectPath.length &&
+  effectPath.every((part, index) => part === rootSequenceEffectPath[index]);
+
+const segmentKeyForPath = (
+  effectPath: readonly string[],
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+): ((segment: SequenceEffect["effects"][number], index: number) => string) => {
+  if (isRootSequencePath(effectPath)) {
+    return segmentKey;
+  }
+  return (segment, index): string =>
+    `${effectPath.join(".")}:${segmentKey(segment, index)}`;
+};
+
+const resolveSequenceForPath = (
+  effect: SequenceEffect,
+  effectPath: readonly string[],
+): SequenceEffect | undefined => {
+  if (!isRootSequencePath(effectPath.slice(0, rootSequenceEffectPath.length))) {
+    return undefined;
+  }
+  let current: SequenceEffect = effect;
+  let index = rootSequenceEffectPath.length;
+  while (index < effectPath.length) {
+    const segmentIndex = Number(effectPath[index]);
+    if (
+      !Number.isSafeInteger(segmentIndex) ||
+      effectPath[index + 1] !== "then" ||
+      effectPath[index + 2] !== "sequence"
+    ) {
+      return undefined;
+    }
+    const segment = current.effects[segmentIndex];
+    if (
+      segment === undefined ||
+      segment.effect.type !== "conditional" ||
+      segment.effect.then.type !== "sequence"
+    ) {
+      return undefined;
+    }
+    current = segment.effect.then;
+    index += 3;
+  }
+  return current;
+};
+
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -67,6 +119,7 @@ type SequenceRuntimeError = (
 export const applySelectTargetsSequenceSegment = (params: {
   entry: EffectQueueEntry;
   emptySegmentResult: () => SequenceSegmentResult;
+  effectPath?: readonly string[];
   events: EngineEvent[];
   index: number;
   nextLedgers: SegmentLedgers;
@@ -98,6 +151,7 @@ export const applySelectTargetsSequenceSegment = (params: {
   const {
     emptySegmentResult,
     entry,
+    effectPath = rootSequenceEffectPath,
     events,
     index,
     nextLedgers,
@@ -181,6 +235,7 @@ export const applySelectTargetsSequenceSegment = (params: {
   const frame = frameForPausedSequenceDecision({
     decision,
     entry,
+    effectPath: [...effectPath],
     index,
     savedReferences: nextLedgers.savedReferences,
     segmentResults: nextLedgers.segmentResults,
@@ -252,8 +307,9 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       ok: false,
     };
   }
+  const sequence = resolveSequenceForPath(effectBlock.effect, frame.effectPath);
   const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    sequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     pausedSegment.effect.type !== "selectTargets"
@@ -275,6 +331,10 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
     selectedTargets: [...params.selectedTargets],
   };
   const saveResultAs = pausedSegment.saveResultAs;
+  const scopedSegmentKey = segmentKeyForPath(
+    frame.effectPath,
+    params.segmentKey,
+  );
   const savedReferences =
     saveResultAs === undefined
       ? frame.savedReferences
@@ -306,7 +366,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       savedReferences,
       segmentResults: {
         ...frame.segmentResults,
-        [params.segmentKey(
+        [scopedSegmentKey(
           pausedSegment,
           frame.pendingDecision.resumeAtSegmentIndex,
         )]: completedPausedResult,

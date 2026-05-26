@@ -42,6 +42,7 @@ export const hasSequenceFrameForDecision = (
 export const frameForPausedSequenceDecision = (params: {
   decision: NonNullable<GameState["pendingDecision"]>;
   entry: EffectQueueEntry;
+  effectPath?: string[];
   index: number;
   segmentResults: EffectExecutionFrame["segmentResults"];
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -49,7 +50,7 @@ export const frameForPausedSequenceDecision = (params: {
 }): EffectExecutionFrame => ({
   queueEntryId: params.entry.id,
   effectBlockId: params.entry.effectBlockId,
-  effectPath: ["effect", "sequence"],
+  effectPath: params.effectPath ?? ["effect", "sequence"],
   nextSegmentIndex: params.index + 1,
   segmentResults: params.segmentResults,
   savedReferences: params.savedReferences,

@@ -118,20 +118,29 @@ export type PrimitiveEvidence =
   | "target:thisCard"
   | "target:opponentCharacters"
   | "target:thatCharacter"
+  | "target:triggerCard"
   | "target:yourLeader"
   | "target:thisCharacter"
   | "reference:thatCharacter"
   | "duration:whileConditionTrue"
+  | "duration:thisBattle"
   | "duration:thisTurn"
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
   | "modifier:positivePower"
   | "modifier:negativePower"
+  | "modifier:costReduction"
   | "protectionProcess:fieldRemoval"
   | "protectionProcess:ko"
   | "protectionSource:opponentEffects"
   | "protectionSource:effects"
-  | "protectionSource:battle";
+  | "protectionSource:battle"
+  | "condition:onlyMatchingFieldCards"
+  | "instruction:activateReferencedEffect"
+  | "instruction:modifyCost"
+  | "reference:eventMain"
+  | "target:opponentStages"
+  | "target:yourLeaderOrCharacters";
 
 export interface PrimitiveNode {
   readonly type: string;

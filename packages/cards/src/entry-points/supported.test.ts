@@ -34,6 +34,16 @@ const supportedEntryPointCases: readonly {
     evidence: ["entry:lifeTrigger", "sourcePresence:noSourceRequired"],
   },
   {
+    text: "[Main]",
+    trigger: { type: "main" },
+    evidence: ["entry:eventMain", "sourcePresence:resolveFromDestination"],
+  },
+  {
+    text: "[Counter]",
+    trigger: { type: "counter" },
+    evidence: ["entry:eventCounter", "sourcePresence:resolveFromDestination"],
+  },
+  {
     text: "[Activate: Main]",
     trigger: { type: "activateMain" },
     category: "activate",

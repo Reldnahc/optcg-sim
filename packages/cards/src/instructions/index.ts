@@ -1,3 +1,4 @@
+export { parseActivateReferencedEffectInstruction } from "./activate-referenced-effect.js";
 export {
   parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
@@ -6,6 +7,7 @@ export {
 export { parseDrawInstruction } from "./draw.js";
 export { parseKoInstruction } from "./ko.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
+export { parseModifyCostInstruction } from "./modify-cost.js";
 export { parsePlayFromHandInstruction } from "./play-from-hand.js";
 export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
 export {

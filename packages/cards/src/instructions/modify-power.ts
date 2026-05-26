@@ -1,9 +1,19 @@
 import type { Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import { parseThisTurnDuration } from "../durations/index.js";
-import { parseNegativePowerModifier } from "../modifiers/index.js";
-import { parseOpponentCharactersTarget } from "../targets/index.js";
+import {
+  parseThisBattleDuration,
+  parseThisTurnDuration,
+} from "../durations/index.js";
+import {
+  parseNegativePowerModifier,
+  parsePositivePowerModifier,
+} from "../modifiers/index.js";
+import {
+  parseOpponentCharactersTarget,
+  parseYourLeaderOrCharacterCardsTarget,
+  parseYourLeaderTarget,
+} from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
 export const modifyPowerInstructionPrimitive = {
@@ -12,11 +22,18 @@ export const modifyPowerInstructionPrimitive = {
     "cardinality:upTo",
     "target:opponentCharacters",
     "modifier:negativePower",
+    "modifier:positivePower",
+    "duration:thisBattle",
     "duration:thisTurn",
   ],
 } as const;
 
 export const parseModifyPowerInstruction: InstructionParser = (input) => {
+  const powerGain = parsePowerGainInstruction(input);
+  if (powerGain !== undefined) {
+    return powerGain;
+  }
+
   const actionMatch = /^give\s+(?<rest>.*)$/i.exec(input.text);
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
@@ -64,6 +81,79 @@ export const parseModifyPowerInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+const parsePowerGainInstruction: InstructionParser = (input) => {
+  const cardinality = parseUpToCardinality(input);
+  if (cardinality !== undefined) {
+    const target = parseYourLeaderOrCharacterCardsTarget({
+      text: cardinality.rest,
+    });
+    if (target?.target !== undefined) {
+      const parsed = parseGainsPositivePower(target.target, target.rest);
+      if (parsed !== undefined) {
+        return {
+          effect: parsed.effect,
+          evidence: [
+            "instruction:modifyPower",
+            ...cardinality.evidence,
+            "chooser:self:upTo",
+            ...target.evidence,
+            ...parsed.evidence,
+          ],
+          rest: "",
+        };
+      }
+    }
+  }
+
+  const leader = parseYourLeaderTarget(input);
+  if (leader?.target === undefined) {
+    return undefined;
+  }
+
+  const parsed = parseGainsPositivePower(leader.target, leader.rest);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: parsed.effect,
+    evidence: [
+      "instruction:modifyPower",
+      ...leader.evidence,
+      ...parsed.evidence,
+    ],
+    rest: "",
+  };
+};
+
+function parseGainsPositivePower(target: Target, text: string) {
+  const actionMatch = /^gains\s+(?<rest>.*)$/i.exec(text);
+  const modifierText = actionMatch?.groups?.["rest"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const modifier = parsePositivePowerModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+
+  const duration = parseThisBattleDuration({ text: modifier.rest });
+  if (duration?.duration === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower" as const,
+      target,
+      value: modifier.value,
+      duration: duration.duration,
+    },
+    evidence: [...modifier.evidence, ...duration.evidence],
+  };
+}
 
 function chooseOpponentCharactersTarget(
   max: number,

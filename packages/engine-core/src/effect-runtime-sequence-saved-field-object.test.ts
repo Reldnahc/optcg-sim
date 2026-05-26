@@ -956,7 +956,7 @@ test("unsupported modifier/restriction saved-field-object target use remains uns
   assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
 });
 
-test("unsupported saved-field-object KO target shape outside characterArea fails closed", () => {
+test("unsupported saved-field-object KO target shape outside supported field zones fails closed", () => {
   const unsupportedState = sequenceQueueState({
     type: "sequence",
     effects: [
@@ -966,14 +966,14 @@ test("unsupported saved-field-object KO target shape outside characterArea fails
         effect: { type: "drawUpTo", player: "self", count: 1 },
       },
       {
-        id: "ko-saved-target-stage",
+        id: "ko-saved-target-leader",
         connector: "then",
         effect: {
           type: "ko",
           target: {
             type: "savedFieldObject",
             binding: { family: "selectedTargets", saveResultAs: "savedTarget" },
-            zone: "stageArea",
+            zone: "leaderArea",
             player: "self",
             visibility: "publicOnly",
             onFailure: "failClosed",

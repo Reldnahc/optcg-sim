@@ -23,6 +23,11 @@ export const thisTurnDurationPrimitive = {
   matches: [{ id: "during-this-turn" }],
 } as const;
 
+export const thisBattleDurationPrimitive = {
+  primitiveId: "duration:thisBattle",
+  matches: [{ id: "during-this-battle" }],
+} as const;
+
 export function parseOpponentNextRefreshPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
@@ -63,6 +68,20 @@ export function parseThisTurnDuration(
   return {
     duration: { type: "thisTurn" },
     evidence: ["duration:thisTurn"],
+    rest: "",
+  };
+}
+
+export function parseThisBattleDuration(
+  input: ParseInput,
+): DurationParseResult | undefined {
+  if (!/^during this battle\.?$/i.test(input.text)) {
+    return undefined;
+  }
+
+  return {
+    duration: { type: "thisBattle" },
+    evidence: ["duration:thisBattle"],
     rest: "",
   };
 }

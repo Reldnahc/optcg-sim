@@ -168,10 +168,15 @@ const readLeaderMetadata = (
 const isSupportedLeaderZoneFilter = (
   filter: CardFilter,
 ): filter is Required<Pick<CardFilter, "categories">> &
-  Pick<CardFilter, "typesAny" | "attributesAny"> => {
+  Pick<CardFilter, "typesAny" | "attributesAny" | "names"> => {
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   for (const key of keys) {
-    if (key !== "categories" && key !== "typesAny" && key !== "attributesAny") {
+    if (
+      key !== "categories" &&
+      key !== "typesAny" &&
+      key !== "attributesAny" &&
+      key !== "names"
+    ) {
       return false;
     }
   }
@@ -190,7 +195,11 @@ const isSupportedLeaderZoneFilter = (
     Array.isArray(filter.attributesAny) &&
     filter.attributesAny.length > 0 &&
     filter.attributesAny.every((value) => typeof value === "string");
-  return hasTypes || hasAttributes;
+  const hasNames =
+    Array.isArray(filter.names) &&
+    filter.names.length > 0 &&
+    filter.names.every((value) => typeof value === "string");
+  return hasTypes || hasAttributes || hasNames;
 };
 
 const isSupportedDonFieldCountFilter = (
@@ -321,6 +330,78 @@ const countPublicCharactersOnField = (
   return player.characters.filter((card) => card.state === stateFilter).length;
 };
 
+const cardMatchesFilter = (
+  state: GameState,
+  card: CardInstance,
+  filter: CardFilter,
+): boolean => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (metadata === undefined) {
+    return false;
+  }
+  if (
+    filter.categories !== undefined &&
+    !filter.categories.includes(metadata.category)
+  ) {
+    return false;
+  }
+  if (
+    filter.typesAny !== undefined &&
+    !filter.typesAny.some((typeName) => metadata.types.includes(typeName))
+  ) {
+    return false;
+  }
+  if (
+    filter.names !== undefined &&
+    !filter.names.some((name) => metadata.name === name)
+  ) {
+    return false;
+  }
+  return true;
+};
+
+const isSupportedOnlyMatchingFieldCardsFilter = (
+  filter: CardFilter,
+): boolean => {
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return (
+    keys.every((key) => key === "categories" || key === "typesAny") &&
+    Array.isArray(filter.categories) &&
+    filter.categories.length === 1 &&
+    filter.categories[0] === "character" &&
+    Array.isArray(filter.typesAny) &&
+    filter.typesAny.length > 0 &&
+    filter.typesAny.every((value) => typeof value === "string")
+  );
+};
+
+const evaluateOnlyMatchingFieldCards = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  condition: Extract<Condition, { type: "onlyMatchingFieldCards" }>,
+): ConditionEvaluationResult => {
+  if (
+    condition.zone !== "characterArea" ||
+    !isSupportedOnlyMatchingFieldCardsFilter(condition.filter)
+  ) {
+    return { supported: false };
+  }
+  const playerId = resolveConditionPlayer(state, entry, condition.player);
+  if (playerId === undefined) {
+    return { supported: false };
+  }
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return { supported: false };
+  }
+  return {
+    supported: true,
+    passed: player.characters.every((card) =>
+      cardMatchesFilter(state, card, condition.filter),
+    ),
+  };
+};
+
 const evaluateLeaderColorCount = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -399,7 +480,14 @@ const evaluateHasCardInZone = (
       : condition.filter.attributesAny.some((attribute) =>
           leader.attributes.includes(attribute),
         );
-  return { supported: true, passed: typesMatch && attributesMatch };
+  const namesMatch =
+    condition.filter.names === undefined
+      ? true
+      : condition.filter.names.some((name) => leader.name === name);
+  return {
+    supported: true,
+    passed: typesMatch && attributesMatch && namesMatch,
+  };
 };
 
 const evaluateCondition = (
@@ -475,6 +563,8 @@ const evaluateCondition = (
     }
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
+    case "onlyMatchingFieldCards":
+      return evaluateOnlyMatchingFieldCards(state, entry, condition);
     case "and": {
       let allPassed = true;
       for (const child of condition.conditions) {
@@ -560,6 +650,12 @@ export const isSupportedQueuedEffectConditionShape = (
         condition.zone === "leaderArea" &&
         isSupportedLeaderZoneFilter(condition.filter) &&
         (condition.player === "self" || condition.player === "opponent")
+      );
+    case "onlyMatchingFieldCards":
+      return (
+        condition.zone === "characterArea" &&
+        (condition.player === "self" || condition.player === "opponent") &&
+        isSupportedOnlyMatchingFieldCardsFilter(condition.filter)
       );
     case "and":
     case "or":

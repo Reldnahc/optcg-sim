@@ -81,6 +81,12 @@ export type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "onlyMatchingFieldCards";
+      zone: Zone;
+      player: PlayerRef;
+      filter: CardFilter;
+    }
   | { type: "hasCardInZone"; zone: Zone; player: PlayerRef; filter: CardFilter }
   | { type: "attackTarget"; targetType: "leader" | "character" | "any" }
   | { type: "cardState"; target: Target; state: "active" | "rested" }
@@ -186,6 +192,10 @@ export interface TargetRequest {
   visibility?: "public" | "privateToChooser";
 }
 
+export interface MultiZoneTargetRequest extends Omit<TargetRequest, "zone"> {
+  zones: Zone[];
+}
+
 export interface SelectedTargetsRequest extends TargetRequest {
   zone: SavedFieldObjectZone;
   visibility: "public";
@@ -215,6 +225,7 @@ export type Target =
   | { type: "triggerCard" }
   | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
   | { type: "choose"; request: TargetRequest }
+  | { type: "chooseFromZones"; request: MultiZoneTargetRequest }
   | SavedFieldObjectTarget;
 
 export interface CardFilter {
@@ -573,6 +584,7 @@ export type Effect =
       value: number;
       duration: Duration;
       player: PlayerRef;
+      sourceZone?: Zone;
     }
   | { type: "setBaseCost"; target: Target; value: number; duration: Duration }
   | { type: "rest"; target: Target }
@@ -641,6 +653,7 @@ export type Effect =
       effect: Effect;
     }
   | { type: "repeat"; count: number; effect: Effect }
+  | { type: "activateReferencedEffect"; source: Target; trigger: Trigger }
   | { type: "replacement"; when: ReplacementTrigger; instead: Effect }
   | { type: "custom"; handler: string };
 

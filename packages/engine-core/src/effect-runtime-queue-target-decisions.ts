@@ -164,6 +164,9 @@ const isSupportedTargetChoiceContinuousShape = (
 } => {
   if (effect.trigger.type === "main") {
     if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
+    if (!("target" in effect.effect) || !isChooseTarget(effect.effect.target)) {
+      return false;
+    }
     return (
       effect.category === "auto" &&
       effect.cost === undefined &&
@@ -181,6 +184,7 @@ const isSupportedTargetChoiceContinuousShape = (
     return false;
   }
   if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
+  if (!("target" in effect.effect)) return false;
   return effect.effect.target.type === "choose";
 };
 

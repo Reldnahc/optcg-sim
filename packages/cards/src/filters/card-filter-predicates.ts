@@ -25,6 +25,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseGenericTypeCardPredicate,
   parseRestedCharacterPredicate,
   parseEventCategoryPredicate,
+  parseStageCategoryPredicate,
   parseCharacterCategoryPredicate,
   parsePowerPredicate,
   parseDynamicDonFieldCostPredicate,
@@ -184,6 +185,22 @@ function parseCharacterCategoryPredicate(
   };
 }
 
+function parseStageCategoryPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^Stages?\b\s*(?<rest>.*)$/i.exec(text);
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, categories: ["stage"] },
+    evidence: ["filter:category:stage"],
+    rest: match.groups?.["rest"] ?? "",
+  };
+}
+
 function parseEventCategoryPredicate(
   text: string,
   current: CardFilter,
@@ -245,6 +262,26 @@ function parseCostPredicate(
   text: string,
   current: CardFilter,
 ): ReturnType<PredicateParser> {
+  const exactMatch =
+    /^a (?:base )?cost of (?<exact>[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
+      text,
+    );
+  const exactValueText = exactMatch?.groups?.["exact"];
+  if (exactValueText !== undefined) {
+    return {
+      filter: {
+        ...current,
+        cost: { op: "eq", value: Number.parseInt(exactValueText, 10) },
+      },
+      evidence: [
+        "filter:cost",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: exactMatch?.groups?.["exactRest"] ?? "",
+    };
+  }
+
   const match =
     /^a (?:base )?cost of (?<value>[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
       text,

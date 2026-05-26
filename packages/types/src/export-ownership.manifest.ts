@@ -155,6 +155,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   OptionalCost: "TYP-009A",
   EffectBlockCost: "SUP-003A",
   TargetRequest: "TYP-001D",
+  MultiZoneTargetRequest: "TYP-001D",
   SelectedTargetsRequest: "TYP-010",
   ExactCardinality: "TYP-007A",
   UpToCardinality: "TYP-007A",

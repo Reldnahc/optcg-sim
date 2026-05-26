@@ -40,7 +40,11 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "typesAny",
 ]);
 
-const supportedZones = new Set<Zone>(["leaderArea", "characterArea"]);
+const supportedZones = new Set<Zone>([
+  "leaderArea",
+  "characterArea",
+  "stageArea",
+]);
 
 const isValidTargetCount = (request: TargetRequest): boolean =>
   Number.isInteger(request.min) &&
@@ -201,6 +205,9 @@ const candidateCardsForZone = (
 
   if (zone === "characterArea") {
     return player.characters;
+  }
+  if (zone === "stageArea") {
+    return player.stage === undefined ? [] : [player.stage];
   }
 
   return null;

@@ -2,6 +2,7 @@ import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
   parseLeaderNameCondition,
+  parseOnlyMatchingFieldCardsCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
 } from "./conditions/index.js";
@@ -13,8 +14,10 @@ import {
 } from "./entry-points/index.js";
 import { parseExpression } from "./expression-parser.js";
 import {
+  parseActivateReferencedEffectInstruction,
   parseDrawInstruction,
   parseKoInstruction,
+  parseModifyCostInstruction,
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -54,11 +57,13 @@ import type {
 
 const instructionParsers = [
   parseDrawInstruction,
+  parseActivateReferencedEffectInstruction,
   parseTrashFromHandInstruction,
   parseTrashAllYourCharactersInstruction,
   parsePlayFromHandInstruction,
   parsePlayFromTrashInstruction,
   parseModifyPowerInstruction,
+  parseModifyCostInstruction,
   parseKoInstruction,
   parseRestOpponentCharactersInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -70,6 +75,7 @@ const conditionParsers = [
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
   parseLeaderNameCondition,
+  parseOnlyMatchingFieldCardsCondition,
 ] as const;
 
 const continuousInstructionParsers = [

@@ -15,12 +15,33 @@ export const opponentCharactersTargetPrimitive = {
   matches: [{ id: "of-your-opponents-characters" }],
 } as const;
 
+export const opponentStagesTargetPrimitive = {
+  primitiveId: "target:opponentStages",
+  matches: [{ id: "of-your-opponents-stages" }],
+} as const;
+
 export const yourLeaderTargetPrimitive = {
   primitiveId: "target:yourLeader",
   matches: [{ id: "your-leader" }],
 } as const;
 
+export const yourLeaderOrCharactersTargetPrimitive = {
+  primitiveId: "target:yourLeaderOrCharacters",
+  matches: [{ id: "of-your-leader-or-character-cards" }],
+} as const;
+
 export function parseOpponentCharactersTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const target = parseOpponentFieldTarget(input);
+  if (target === undefined || target.filter?.categories?.[0] !== "character") {
+    return undefined;
+  }
+
+  return target;
+}
+
+export function parseOpponentFieldTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
   const match = /^of your opponent's\s+(?<rest>.+)$/i.exec(input.text);
@@ -33,20 +54,19 @@ export function parseOpponentCharactersTarget(
     targetText === undefined
       ? undefined
       : parseCardFilterPredicates({ text: targetText });
-  if (
-    predicates === undefined ||
-    predicates.filter.categories?.[0] !== "character"
-  ) {
+  const category = predicates?.filter.categories?.[0];
+  if (predicates === undefined || category === undefined) {
     return undefined;
   }
 
+  const targetEvidence =
+    category === "stage"
+      ? "target:opponentStages"
+      : "target:opponentCharacters";
+
   return {
     filter: predicates.filter,
-    evidence: [
-      "player:opponent",
-      "target:opponentCharacters",
-      ...predicates.evidence,
-    ],
+    evidence: ["player:opponent", targetEvidence, ...predicates.evidence],
     rest: predicates.rest.trim(),
   };
 }
@@ -62,6 +82,41 @@ export function parseYourLeaderTarget(
   return {
     target: { type: "myLeader" },
     evidence: ["target:yourLeader"],
+    rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
+
+export function parseYourLeaderOrCharacterCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match = /^of your Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "self",
+        zones: ["leaderArea", "characterArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: { categories: ["leader", "character"] },
+      },
+    },
+    evidence: [
+      "target:yourLeaderOrCharacters",
+      "player:self",
+      "filter:category:leader",
+      "filter:category:character",
+    ],
     rest: match.groups?.["rest"]?.trim() ?? "",
   };
 }

@@ -13,6 +13,8 @@ describe("modify power instruction parser", () => {
         "cardinality:upTo",
         "target:opponentCharacters",
         "modifier:negativePower",
+        "modifier:positivePower",
+        "duration:thisBattle",
         "duration:thisTurn",
       ],
     });

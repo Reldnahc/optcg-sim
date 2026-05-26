@@ -1,22 +1,10 @@
 import type { Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import { parseOpponentCharactersTarget } from "../targets/index.js";
+import { parseOpponentFieldTarget } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";
-
-const selectedKoTarget = {
-  type: "savedFieldObject",
-  binding: {
-    family: "selectedTargets",
-    saveResultAs: koTargetSelectionId,
-  },
-  zone: "characterArea",
-  player: "opponent",
-  visibility: "publicOnly",
-  onFailure: "failClosed",
-} as const satisfies Target;
 
 export const koInstructionPrimitive = {
   primitiveId: "instruction:ko",
@@ -39,16 +27,19 @@ export const parseKoInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const target = parseOpponentCharactersTarget({ text: cardinality.rest });
+  const target = parseOpponentFieldTarget({ text: cardinality.rest });
   if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
+  const category = target.filter?.categories?.[0];
+  const zone = category === "stage" ? "stageArea" : "characterArea";
 
   return {
     effect: selectThenApplyKoEffect(
       cardinality.cardinality.min,
       cardinality.cardinality.max,
       target.filter ?? { categories: ["character"] },
+      zone,
     ),
     evidence: [
       "instruction:ko",
@@ -65,6 +56,7 @@ function selectThenApplyKoEffect(
   min: number,
   max: number,
   filter: TargetFilter,
+  zone: "characterArea" | "stageArea",
 ): Effect {
   return {
     type: "sequence",
@@ -79,7 +71,7 @@ function selectThenApplyKoEffect(
             timing: "onResolution",
             chooser: "self",
             player: "opponent",
-            zone: "characterArea",
+            zone,
             min,
             max,
             allowFewerIfUnavailable: true,
@@ -92,10 +84,24 @@ function selectThenApplyKoEffect(
         connector: "then",
         effect: {
           type: "ko",
-          target: selectedKoTarget,
+          target: selectedKoTarget(zone),
         },
       },
     ],
+  };
+}
+
+function selectedKoTarget(zone: "characterArea" | "stageArea"): Target {
+  return {
+    type: "savedFieldObject",
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: koTargetSelectionId,
+    },
+    zone,
+    player: "opponent",
+    visibility: "publicOnly",
+    onFailure: "failClosed",
   };
 }
 

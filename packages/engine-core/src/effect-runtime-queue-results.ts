@@ -219,6 +219,7 @@ export const createEffectRuntimeQueueResults = (
     entry: EffectQueueEntry,
   ):
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>
@@ -234,7 +235,10 @@ export const createEffectRuntimeQueueResults = (
     if (!isSupportedContinuousQueueEffect(supportShape.effect)) {
       return undefined;
     }
-    if (supportShape.effect.target.type === "choose") {
+    if (
+      "target" in supportShape.effect &&
+      supportShape.effect.target.type === "choose"
+    ) {
       return undefined;
     }
     return supportShape.effect;

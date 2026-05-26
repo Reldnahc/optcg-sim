@@ -7,6 +7,7 @@ import {
   isSupportedNoChoiceOnKODrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
 } from "../../packages/engine-core/src/effect-runtime.ts";
+import { evaluateEffectBlockRuntimeSupport } from "../../packages/engine-core/src/effect-runtime-admission.ts";
 import {
   hasCombatSafeImplementedDslDefinition,
   isSupportedContinuousQueueEffect,
@@ -249,8 +250,6 @@ test("cards parser keeps recognized unsupported entry points out of engine suppo
   const cases = [
     ["[On Block] Draw 1 card.", "entry:onBlock"],
     ["[End of Your Turn] Draw 1 card.", "entry:endOfYourTurn"],
-    ["[Main] Draw 1 card.", "entry:eventMain"],
-    ["[Counter] Draw 1 card.", "entry:eventCounter"],
   ];
 
   for (const [text, entryEvidence] of cases) {
@@ -268,6 +267,52 @@ test("cards parser keeps recognized unsupported entry points out of engine suppo
         "mustRemainInSameZone",
       ),
       false,
+    );
+  }
+});
+
+test("cards parser emits event entry primitives without making them On Play effects", () => {
+  const cases = [
+    ["[Main] Draw 1 card.", "entry:eventMain"],
+    ["[Counter] Draw 1 card.", "entry:eventCounter"],
+  ];
+
+  for (const [text, entryEvidence] of cases) {
+    const effectBlock = parseSupportedEffectBlock(text, [
+      entryEvidence,
+      "instruction:draw",
+    ]);
+
+    assert.equal(isSupportedNoChoiceOnPlayDrawEffect(effectBlock), false);
+    assert.equal(
+      isSupportedQueuedAutoSequenceForEntryPoint(
+        effectBlock,
+        "onPlay",
+        "mustRemainInSameZone",
+      ),
+      false,
+    );
+  }
+});
+
+test("cards parser emits supported Event Main and Counter primitive blocks for runtime admission", () => {
+  const cases = [
+    "[Main] You may rest 1 of your DON!! cards: If your Leader is [Imu], K.O. up to 1 of your opponent's Stages with a cost of 7.",
+    "[Counter] If your Leader is [Imu], up to 1 of your Leader or Character cards gains +4000 power during this battle.",
+    "[Main] You may rest 5 of your DON!! cards: If the only Characters on your field are {Celestial Dragons} type Characters, K.O. up to 1 of your opponent's Characters with a base cost of 6 or less.",
+    "[Counter] Your Leader gains +3000 power during this battle.",
+    "[Main] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [The Five Elders Are at Your Service!!!] and add it to your hand. Then, trash the rest.",
+    "[Trigger] Activate this card's [Main] effect.",
+    "[Your Turn] The cost of playing {Celestial Dragons} type Character cards with a cost of 2 or more from your hand will be reduced by 1.",
+  ];
+
+  for (const text of cases) {
+    const effectBlock = parseSupportedEffectBlock(text);
+
+    assert.deepEqual(
+      evaluateEffectBlockRuntimeSupport(effectBlock),
+      { supported: true },
+      text,
     );
   }
 });

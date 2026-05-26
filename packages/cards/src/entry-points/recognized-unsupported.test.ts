@@ -19,16 +19,6 @@ const recognizedUnsupportedEntryPointCases = [
     trigger: { type: "endOfYourTurn" },
     evidence: ["entry:endOfYourTurn", "entrySupport:unsupported"],
   },
-  {
-    text: "[Main]",
-    trigger: { type: "main" },
-    evidence: ["entry:eventMain", "entrySupport:unsupported"],
-  },
-  {
-    text: "[Counter]",
-    trigger: { type: "counter" },
-    evidence: ["entry:eventCounter", "entrySupport:unsupported"],
-  },
 ] as const;
 
 describe("recognized unsupported entry-point parser", () => {

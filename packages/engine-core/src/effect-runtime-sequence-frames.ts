@@ -187,6 +187,65 @@ const segmentKey = (
   index: number,
 ): string => String(index);
 
+const rootSequenceEffectPath = ["effect", "sequence"] as const;
+
+const isRootSequencePath = (effectPath: readonly string[]): boolean =>
+  effectPath.length === rootSequenceEffectPath.length &&
+  effectPath.every((part, index) => part === rootSequenceEffectPath[index]);
+
+const segmentKeyForPath = (
+  effectPath: readonly string[],
+  segment: SequenceEffect["effects"][number],
+  index: number,
+): string =>
+  isRootSequencePath(effectPath)
+    ? segmentKey(segment, index)
+    : `${effectPath.join(".")}:${segmentKey(segment, index)}`;
+
+const conditionalThenSequencePath = (
+  effectPath: readonly string[],
+  index: number,
+): string[] => [...effectPath, String(index), "then", "sequence"];
+
+const resolveSequenceForPath = (
+  effect: SequenceEffect,
+  effectPath: readonly string[],
+): SequenceEffect | undefined => {
+  if (!isRootSequencePath(effectPath)) {
+    if (
+      effectPath.length < rootSequenceEffectPath.length ||
+      !isRootSequencePath(effectPath.slice(0, rootSequenceEffectPath.length))
+    ) {
+      return undefined;
+    }
+  }
+  let current: SequenceEffect = effect;
+  let index = rootSequenceEffectPath.length;
+  while (index < effectPath.length) {
+    const segmentIndex = Number(effectPath[index]);
+    const thenToken = effectPath[index + 1];
+    const sequenceToken = effectPath[index + 2];
+    if (
+      !Number.isSafeInteger(segmentIndex) ||
+      thenToken !== "then" ||
+      sequenceToken !== "sequence"
+    ) {
+      return undefined;
+    }
+    const segment = current.effects[segmentIndex];
+    if (
+      segment === undefined ||
+      segment.effect.type !== "conditional" ||
+      segment.effect.then.type !== "sequence"
+    ) {
+      return undefined;
+    }
+    current = segment.effect.then;
+    index += 3;
+  }
+  return current;
+};
+
 const findFrameQueueEntry = (
   state: GameState,
   frame: EffectExecutionFrame,
@@ -227,11 +286,12 @@ const resumeSequenceFrameFromLedgers = (params: {
   const continued = continueNoDecisionSegments(
     params.state,
     params.entry,
-    params.effectBlock.effect,
+    resolveSequenceForPath(params.effectBlock.effect, params.frame.effectPath),
     params.frame.nextSegmentIndex,
     params.ledgers,
     params.createTrashDecision,
     false,
+    params.frame.effectPath,
   );
   if (!continued.ok) {
     return {
@@ -269,12 +329,20 @@ const resumeSequenceFrameFromLedgers = (params: {
 const continueNoDecisionSegments = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: SupportedSequenceBlock["effect"],
+  effect: SequenceEffect | undefined,
   startIndex: number,
   ledgers: SegmentLedgers,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
   incrementStateSeqForDraw: boolean,
+  effectPath: readonly string[] = [...rootSequenceEffectPath],
 ): SequenceFrameRunResult => {
+  if (effect === undefined) {
+    return { ok: false };
+  }
+  const ledgerKey = (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ): string => segmentKeyForPath(effectPath, segment, index);
   let nextState = state;
   let nextLedgers = ledgers;
   const events: EngineEvent[] = [];
@@ -288,14 +356,14 @@ const continueNoDecisionSegments = (
         nextLedgers.segmentResults,
         effect,
         index,
-        segmentKey,
+        ledgerKey,
       )
     ) {
       nextLedgers = {
         ...nextLedgers,
         segmentResults: {
           ...nextLedgers.segmentResults,
-          [segmentKey(segment, index)]: emptySegmentResult(),
+          [ledgerKey(segment, index)]: emptySegmentResult(),
         },
       };
       continue;
@@ -309,7 +377,7 @@ const continueNoDecisionSegments = (
         ...nextLedgers,
         segmentResults: {
           ...nextLedgers.segmentResults,
-          [segmentKey(segment, index)]: partialResult,
+          [ledgerKey(segment, index)]: partialResult,
         },
       };
       const optionalDecision =
@@ -325,6 +393,7 @@ const continueNoDecisionSegments = (
       const frame = frameForPausedSequenceDecision({
         decision,
         entry,
+        effectPath: [...effectPath],
         index,
         savedReferences: pausedLedgers.savedReferences,
         segmentResults: pausedLedgers.segmentResults,
@@ -350,7 +419,7 @@ const continueNoDecisionSegments = (
         nextLedgers,
         { incrementStateSeq: incrementStateSeqForDraw },
         emptySegmentResult,
-        segmentKey,
+        ledgerKey,
       );
       if (!drawn.ok) {
         return { ok: false };
@@ -374,6 +443,7 @@ const continueNoDecisionSegments = (
       const frame = frameForPausedSequenceDecision({
         decision,
         entry,
+        effectPath: [...effectPath],
         index,
         savedReferences: nextLedgers.savedReferences,
         segmentResults: nextLedgers.segmentResults,
@@ -404,7 +474,7 @@ const continueNoDecisionSegments = (
             { type: "search" }
           >;
         },
-        segmentKey,
+        segmentKey: ledgerKey,
       });
       if (!search.ok || search.kind === "paused") {
         return search;
@@ -421,7 +491,7 @@ const continueNoDecisionSegments = (
       ...nextLedgers,
       segmentResults: {
         ...nextLedgers.segmentResults,
-        [segmentKey(segment, index)]: partialResult,
+        [ledgerKey(segment, index)]: partialResult,
       },
     };
     if (segment.effect.type === "payCost") {
@@ -439,7 +509,7 @@ const continueNoDecisionSegments = (
           ...nextLedgers,
           segmentResults: {
             ...nextLedgers.segmentResults,
-            [segmentKey(segment, index)]: {
+            [ledgerKey(segment, index)]: {
               ...emptySegmentResult(),
               attempted: true,
             },
@@ -461,6 +531,7 @@ const continueNoDecisionSegments = (
       const frame = frameForPausedSequenceDecision({
         decision,
         entry,
+        effectPath: [...effectPath],
         index,
         savedReferences: pausedLedgers.savedReferences,
         segmentResults: pausedLedgers.segmentResults,
@@ -485,7 +556,7 @@ const continueNoDecisionSegments = (
           ...nextLedgers,
           segmentResults: {
             ...nextLedgers.segmentResults,
-            [segmentKey(segment, index)]: {
+            [ledgerKey(segment, index)]: {
               ...emptySegmentResult(),
               attempted: true,
             },
@@ -500,6 +571,7 @@ const continueNoDecisionSegments = (
       const frame = frameForPausedSequenceDecision({
         decision,
         entry,
+        effectPath: [...effectPath],
         index,
         savedReferences: pausedLedgers.savedReferences,
         segmentResults: pausedLedgers.segmentResults,
@@ -516,6 +588,7 @@ const continueNoDecisionSegments = (
       const selectTargets = applySelectTargetsSequenceSegment({
         emptySegmentResult,
         entry,
+        effectPath,
         events,
         index,
         nextLedgers,
@@ -542,7 +615,7 @@ const continueNoDecisionSegments = (
         segment: segment as SupportedSequenceSegment & {
           effect: Extract<SequenceSegmentEffect, { type: "playSelected" }>;
         },
-        segmentKey,
+        segmentKey: ledgerKey,
         state: nextState,
       });
       if (played.kind === "paused") {
@@ -558,8 +631,10 @@ const continueNoDecisionSegments = (
         entry,
         index,
         ledgers: nextLedgers,
-        segment,
-        segmentKey,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<SequenceSegmentEffect, { type: "ko" }>;
+        },
+        segmentKey: ledgerKey,
         state: nextState,
       });
       nextState = resolvedKo.state;
@@ -573,8 +648,10 @@ const continueNoDecisionSegments = (
         entry,
         index,
         ledgers: nextLedgers,
-        segment,
-        segmentKey,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<SequenceSegmentEffect, { type: "rest" }>;
+        },
+        segmentKey: ledgerKey,
         state: nextState,
       });
       nextState = rested.state;
@@ -591,8 +668,13 @@ const continueNoDecisionSegments = (
         entry,
         index,
         ledgers: nextLedgers,
-        segment,
-        segmentKey,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<
+            SequenceSegmentEffect,
+            { type: "cannotBecomeActive" | "cannotAttack" | "cannotBlock" }
+          >;
+        },
+        segmentKey: ledgerKey,
         state: nextState,
       });
       nextState = restricted.state;
@@ -613,7 +695,7 @@ const continueNoDecisionSegments = (
           ...nextLedgers,
           segmentResults: {
             ...nextLedgers.segmentResults,
-            [segmentKey(segment, index)]: {
+            [ledgerKey(segment, index)]: {
               ...emptySegmentResult(),
               attempted: true,
             },
@@ -621,30 +703,70 @@ const continueNoDecisionSegments = (
         };
         continue;
       }
-      const records = createContinuousRecordsForResolvedEffect(
-        nextState,
-        entry,
-        segment.effect.then,
-      );
-      if (records === null) {
-        return { ok: false };
+      let changedState = false;
+      if (segment.effect.then.type === "sequence") {
+        const nested = continueNoDecisionSegments(
+          nextState,
+          entry,
+          segment.effect.then,
+          0,
+          nextLedgers,
+          createTrashDecision,
+          incrementStateSeqForDraw,
+          conditionalThenSequencePath(effectPath, index),
+        );
+        if (!nested.ok) {
+          return { ok: false };
+        }
+        if (nested.kind === "paused") {
+          return {
+            events: [...events, ...nested.events],
+            kind: "paused",
+            ok: true,
+            state: nested.state,
+          };
+        }
+        nextState = nested.state;
+        nextLedgers = nested.ledgers;
+        events.push(...nested.events);
+        changedState = nested.events.length > 0;
+      } else {
+        const records = createContinuousRecordsForResolvedEffect(
+          nextState,
+          entry,
+          segment.effect.then as Extract<
+            Effect,
+            {
+              type:
+                | "modifyPower"
+                | "modifyCost"
+                | "cannotBecomeActive"
+                | "cannotAttack"
+                | "cannotBlock";
+            }
+          >,
+        );
+        if (records === null) {
+          return { ok: false };
+        }
+        nextState =
+          records.length === 0
+            ? nextState
+            : {
+                ...nextState,
+                continuousEffects: [...nextState.continuousEffects, ...records],
+              };
+        changedState = records.length > 0;
       }
-      nextState =
-        records.length === 0
-          ? nextState
-          : {
-              ...nextState,
-              continuousEffects: [...nextState.continuousEffects, ...records],
-            };
       nextLedgers = {
         ...nextLedgers,
         segmentResults: {
           ...nextLedgers.segmentResults,
-          [segmentKey(segment, index)]: {
+          [ledgerKey(segment, index)]: {
             ...emptySegmentResult(),
             attempted: true,
             succeeded: true,
-            changedState: records.length > 0,
+            changedState,
           },
         },
       };
@@ -653,7 +775,7 @@ const continueNoDecisionSegments = (
     const decisionResult = createTrashDecision(
       nextState,
       entry,
-      segment.effect,
+      segment.effect as TrashFromHandEffect,
     );
     if (!decisionResult.ok) {
       return { ok: false };
@@ -665,6 +787,7 @@ const continueNoDecisionSegments = (
     const frame = frameForPausedSequenceDecision({
       decision,
       entry,
+      effectPath: [...effectPath],
       index,
       savedReferences: pausedLedgers.savedReferences,
       segmentResults: pausedLedgers.segmentResults,

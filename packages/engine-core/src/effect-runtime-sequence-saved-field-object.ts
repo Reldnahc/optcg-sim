@@ -188,7 +188,7 @@ export const applySavedFieldObjectKoSequenceSegment = (params: {
           timing: "onResolution",
           chooser: "self",
           player: params.segment.effect.target.player,
-          zone: "characterArea",
+          zone: params.segment.effect.target.zone,
           min: resolvedSavedTarget.selectedTargets.length,
           max: resolvedSavedTarget.selectedTargets.length,
           allowFewerIfUnavailable: false,

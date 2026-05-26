@@ -36,6 +36,11 @@ const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "typesAny",
 ]);
+const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
+  "categories",
+  "cost",
+  "typesAny",
+]);
 
 const isSupportedDuration = (duration: Duration): boolean => {
   if (
@@ -129,9 +134,39 @@ const isSupportedBasePowerSetFilter = (
   return isNonEmptyStringArray(filter.typesAny);
 };
 
+const isSupportedCostModifierFilter = (
+  filter: CardFilter | undefined,
+): boolean =>
+  filter !== undefined &&
+  Object.keys(filter).every((key) =>
+    supportedCostModifierFilterKeys.has(key as keyof CardFilter),
+  ) &&
+  (filter.categories === undefined ||
+    filter.categories.every((category) => category === "character")) &&
+  isNonEmptyStringArray(filter.typesAny) &&
+  hasSupportedNumericFilter(filter.cost);
+
+const isSupportedChooseFromZonesTarget = (
+  target: Extract<Target, { type: "chooseFromZones" }>,
+): boolean =>
+  target.request.timing === "onResolution" &&
+  target.request.chooser === "self" &&
+  target.request.player === "self" &&
+  target.request.zones.length > 0 &&
+  target.request.zones.every(
+    (zone) => zone === "leaderArea" || zone === "characterArea",
+  ) &&
+  target.request.min >= 0 &&
+  target.request.max >= target.request.min &&
+  target.request.visibility === "public" &&
+  isSupportedAllFilter(target.request.filter);
+
 const isSupportedTarget = (target: Target): boolean => {
   if (target.type === "self") return true;
   if (target.type === "choose") return true;
+  if (target.type === "chooseFromZones") {
+    return isSupportedChooseFromZonesTarget(target);
+  }
   if (target.type !== "all") return false;
   return (
     isSupportedAllFilter(target.filter) &&
@@ -144,11 +179,13 @@ export const isSupportedContinuousQueueEffect = (
   effect: Effect,
 ): effect is
   | Extract<Effect, { type: "modifyPower" }>
+  | Extract<Effect, { type: "modifyCost" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
   | Extract<Effect, { type: "cannotBlock" }> => {
   if (
     effect.type !== "modifyPower" &&
+    effect.type !== "modifyCost" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
     effect.type !== "cannotBlock"
@@ -162,6 +199,15 @@ export const isSupportedContinuousQueueEffect = (
     !isSupportedTarget(effect.target)
   ) {
     return false;
+  }
+  if (effect.type === "modifyCost") {
+    return (
+      effect.player === "self" &&
+      effect.sourceZone === "hand" &&
+      Number.isSafeInteger(effect.value) &&
+      effect.value < 0 &&
+      isSupportedCostModifierFilter(effect.filter)
+    );
   }
   if (effect.type !== "modifyPower" && !isSupportedTarget(effect.target)) {
     return false;
@@ -194,6 +240,7 @@ const toExactCardTarget = (
 const mapEffectToModifier = (
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
@@ -204,6 +251,13 @@ const mapEffectToModifier = (
       layer: "powerAdd",
       target,
       operation: { type: "addPower", value: effect.value },
+    };
+  }
+  if (effect.type === "modifyCost") {
+    return {
+      layer: "costAdd",
+      target,
+      operation: { type: "addCost", value: effect.value },
     };
   }
   return {
@@ -218,6 +272,7 @@ const createRecord = (
   entry: EffectQueueEntry,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
@@ -253,11 +308,28 @@ export const createContinuousRecordsForResolvedEffect = (
   entry: EffectQueueEntry,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
   chosenTargets?: readonly CardRef[],
 ): ContinuousEffectRecord[] | null => {
+  if (effect.type === "modifyCost") {
+    return [
+      createRecord(
+        state,
+        entry,
+        effect,
+        {
+          type: "allMatching",
+          zone: effect.sourceZone ?? "hand",
+          player: effect.player,
+          filter: effect.filter,
+        },
+        0,
+      ),
+    ];
+  }
   if (effect.target.type === "choose") {
     if (chosenTargets === undefined) return null;
     if (chosenTargets.length === 0) {
@@ -470,6 +542,30 @@ const effectToDerivedModifier = (
       operation: { type: "setBasePower", value: effect.value },
     };
   }
+  if (effect.type === "modifyCost") {
+    if (
+      effect.player !== "self" ||
+      effect.sourceZone !== "hand" ||
+      !isSupportedCostModifierFilter(effect.filter) ||
+      !isSupportedDuration(effect.duration) ||
+      !Number.isSafeInteger(effect.value) ||
+      effect.value >= 0
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported cost modifier shape"),
+      );
+    }
+    return {
+      layer: "costAdd",
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: effect.player,
+        filter: effect.filter,
+      },
+      operation: { type: "addCost", value: effect.value },
+    };
+  }
   if (effect.type === "protectFromKO") {
     if (
       effect.target.type !== "self" ||
@@ -660,6 +756,7 @@ const durationForDerivedEffect = (effect: Effect): Duration => {
     effect.type === "modifyPower" ||
     effect.type === "giveKeyword" ||
     effect.type === "setBasePower" ||
+    effect.type === "modifyCost" ||
     effect.type === "protectFromKO" ||
     effect.type === "giveProtection"
   ) {

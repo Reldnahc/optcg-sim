@@ -85,6 +85,9 @@ const autoAdapterFor = (
   if (block.trigger.type === "trigger") {
     return autoAdapter("trigger", ["noSourceRequired"]);
   }
+  if (block.trigger.type === "counter") {
+    return autoAdapter("counter", ["resolveFromDestinationZone"]);
+  }
   return undefined;
 };
 

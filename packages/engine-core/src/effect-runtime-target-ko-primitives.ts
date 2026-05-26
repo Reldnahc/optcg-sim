@@ -259,7 +259,10 @@ export const executeUnreplacedSelectedTargetKoProcess = (
   }
 
   const located = findCardByInstanceId(state, target.instanceId);
-  if (located === null || located.zone !== "characterArea") {
+  if (
+    located === null ||
+    (located.zone !== "characterArea" && located.zone !== "stageArea")
+  ) {
     return {
       error: selectedTargetKoExecutionError(effectId, "stale-target"),
     };
@@ -272,10 +275,18 @@ export const executeUnreplacedSelectedTargetKoProcess = (
     };
   }
 
-  const targetIndex = player.characters.findIndex(
-    (candidate) => candidate.instanceId === located.card.instanceId,
-  );
-  const koCard = player.characters[targetIndex];
+  const targetIndex =
+    located.zone === "characterArea"
+      ? player.characters.findIndex(
+          (candidate) => candidate.instanceId === located.card.instanceId,
+        )
+      : player.stage?.instanceId === located.card.instanceId
+        ? 0
+        : -1;
+  const koCard =
+    located.zone === "characterArea"
+      ? player.characters[targetIndex]
+      : player.stage;
   if (targetIndex < 0 || koCard === undefined) {
     return {
       error: selectedTargetKoExecutionError(effectId, "stale-target"),
@@ -302,12 +313,15 @@ export const executeUnreplacedSelectedTargetKoProcess = (
       index: 0,
     },
   };
-  const nextCharacters = reindexZoneCards(
-    player.characters.filter((_, index) => index !== targetIndex),
-    "characterArea",
-    located.playerId,
-    "character",
-  );
+  const nextCharacters =
+    located.zone === "characterArea"
+      ? reindexZoneCards(
+          player.characters.filter((_, index) => index !== targetIndex),
+          "characterArea",
+          located.playerId,
+          "character",
+        )
+      : player.characters;
   const nextTrash = reindexZoneCards(
     [trashedCard, ...player.trash],
     "trash",
@@ -328,6 +342,7 @@ export const executeUnreplacedSelectedTargetKoProcess = (
       [located.playerId]: {
         ...player,
         characters: nextCharacters,
+        ...(located.zone === "stageArea" ? { stage: undefined } : {}),
         trash: nextTrash,
         costArea: nextCostArea,
       },
@@ -473,7 +488,7 @@ const executeSelectedTargetKoEffect = (
       );
     }
 
-    if (located.zone !== "characterArea") {
+    if (located.zone !== "characterArea" && located.zone !== "stageArea") {
       return toEngineResult(
         state,
         [],
@@ -504,7 +519,10 @@ const executeSelectedTargetKoEffect = (
         [selectedTargetKoExecutionError(entry.effectBlockId, "missing-card")],
       );
     }
-    if (resolved.category !== "character") {
+    if (
+      (located.zone === "characterArea" && resolved.category !== "character") ||
+      (located.zone === "stageArea" && resolved.category !== "stage")
+    ) {
       return toEngineResult(
         state,
         [],

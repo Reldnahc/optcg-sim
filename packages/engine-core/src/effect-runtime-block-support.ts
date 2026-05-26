@@ -38,9 +38,17 @@ const isSupportedDrawUpToBody = (
 const isSupportedSearchBody = (
   block: EffectBlock,
 ): block is EffectBlock & { effect: Extract<Effect, { type: "search" }> } =>
-  block.sourcePresencePolicy === "mustRemainInSameZone" &&
+  (block.sourcePresencePolicy === "mustRemainInSameZone" ||
+    block.sourcePresencePolicy === "resolveFromDestinationZone") &&
   block.effect.type === "search" &&
   isSupportedSearchRequestShape(block.effect.request);
+
+const isSupportedActivateReferencedEffectBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "activateReferencedEffect" }> =>
+  effect.type === "activateReferencedEffect" &&
+  effect.source.type === "triggerCard" &&
+  effect.trigger.type === "main";
 
 const isSupportedTrashFromHandBody = (
   effect: Effect,
@@ -83,7 +91,6 @@ const isSourceDependentContinuousEffect = (effect: Effect): boolean => {
   }
   return (
     effect.target.type === "self" ||
-    effect.target.type === "myLeader" ||
     effect.duration.type === "whileSourceOnField"
   );
 };
@@ -121,6 +128,7 @@ const isSupportedNonOptionalBody = (
   isSupportedTrashFromHandBody(block.effect) ||
   isSupportedSearchBody(block) ||
   isSupportedContinuousBody(block) ||
+  isSupportedActivateReferencedEffectBody(block.effect) ||
   isSupportedTargetChoiceBody(block) ||
   isSupportedSequenceBody(block, adapter);
 

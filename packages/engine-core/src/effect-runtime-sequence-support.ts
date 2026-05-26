@@ -34,6 +34,9 @@ type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>;
 };
+type ConditionalSequenceEffect = Extract<Effect, { type: "conditional" }> & {
+  then: SequenceEffect;
+};
 type SavedTargetContinuousEffect = (
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
@@ -58,6 +61,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | RestEffect
     | SavedTargetContinuousEffect
     | ConditionalContinuousEffect
+    | ConditionalSequenceEffect
     | KoEffect;
 };
 
@@ -329,7 +333,7 @@ const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
   target.type === "savedFieldObject" &&
-  target.zone === "characterArea" &&
+  (target.zone === "characterArea" || target.zone === "stageArea") &&
   (target.player === "self" || target.player === "opponent") &&
   target.controller === undefined &&
   target.filter === undefined;
@@ -361,7 +365,7 @@ const isSupportedSequenceTargetRequest = (
 ): boolean =>
   request.timing === "onResolution" &&
   request.chooser === "self" &&
-  request.zone === "characterArea" &&
+  (request.zone === "characterArea" || request.zone === "stageArea") &&
   (request.player === "self" || request.player === "opponent") &&
   Number.isInteger(request.min) &&
   Number.isInteger(request.max) &&
@@ -400,6 +404,39 @@ const isSupportedConditionalContinuousSegment = (
   effect.else === undefined &&
   isSupportedQueuedEffectConditionShape(effect.if) &&
   isSupportedContinuousQueueEffect(effect.then);
+
+const isSupportedConditionalSequenceSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ConditionalSequenceEffect =>
+  effect.type === "conditional" &&
+  effect.else === undefined &&
+  effect.then.type === "sequence" &&
+  isSupportedQueuedEffectConditionShape(effect.if) &&
+  flattenSequenceEffect(effect.then) !== null &&
+  flattenSequenceEffect(effect.then)?.effects.every((segment, index) => {
+    if (index === 0 && segment.connector !== "always") {
+      return false;
+    }
+    if (segment.optional === true) {
+      return false;
+    }
+    if (segment.effect.type === "selectTargets") {
+      return isSupportedSequenceTargetRequest(segment.effect.request);
+    }
+    if (isSupportedKoSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedSearchSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedDrawSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedTrashFromHandSegment(segment.effect)) {
+      return true;
+    }
+    return false;
+  }) === true;
 
 const isActivateMainAreaZone = (
   zone: EffectQueueEntry["source"]["zone"],
@@ -516,6 +553,10 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedConditionalContinuousSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedConditionalSequenceSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (segment.effect.type === "playSelected") {
