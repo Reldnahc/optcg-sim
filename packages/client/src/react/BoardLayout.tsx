@@ -85,13 +85,6 @@ export const BoardLayout = ({
           onCardClick={onCardClick}
         />
       </div>
-      <div className="phase-ladder" aria-hidden="true">
-        <span>Refresh</span>
-        <span>Draw</span>
-        <span>DON!!</span>
-        <span>Main</span>
-        <span>End</span>
-      </div>
       <div className="playmat-zone player-characters">
         <Zone
           label="Character Area"

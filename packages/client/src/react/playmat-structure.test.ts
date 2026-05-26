@@ -15,6 +15,7 @@ describe("playmat structure", () => {
     );
 
     assert.equal(boardLayout.includes("PlayerMat"), false);
+    assert.equal(boardLayout.includes("phase-ladder"), false);
     for (const className of [
       "opponent-characters",
       "opponent-cost",
@@ -46,7 +47,7 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+34px\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
+      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
     );
   });
 
@@ -67,24 +68,35 @@ describe("playmat structure", () => {
     );
   });
 
+  test("life zones span into the adjacent character row", async () => {
+    const styles = await readFile(playmatStylesPath, "utf8");
+
+    assert.equal(
+      styles.includes(
+        '". opponent-life opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters ."',
+      ),
+      true,
+    );
+    assert.equal(
+      styles.includes(
+        '". player-life player-characters player-characters player-characters player-characters player-characters ."',
+      ),
+      true,
+    );
+  });
+
   test("main deck stacks above trash and life stacks above DON deck", async () => {
     const styles = await readFile(playmatStylesPath, "utf8");
 
     assert.equal(
       styles.includes(
-        '". player-life . player-leader player-stage . player-deck ."',
+        '". player-don-deck player-cost player-cost player-cost player-cost player-trash ."',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '". player-don-deck . player-cost player-cost player-cost player-trash ."',
-      ),
-      true,
-    );
-    assert.equal(
-      styles.includes(
-        '". opponent-don-deck . opponent-cost opponent-cost opponent-cost opponent-deck ."',
+        '". opponent-don-deck opponent-cost opponent-cost opponent-cost opponent-cost opponent-deck ."',
       ),
       true,
     );
@@ -101,7 +113,7 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+34px\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
+      /grid-template-rows:\s*112px\s+112px\s+minmax\(\s*100px,\s*1fr\s*\)\s+minmax\(\s*100px,\s*1fr\s*\)\s+112px\s+112px;/,
     );
   });
 });

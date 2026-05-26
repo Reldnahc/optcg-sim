@@ -54,8 +54,3 @@
 .hand-rail .hand-row:last-child .hand-cards {
   align-items: flex-end;
 }
-
-.hand-row .card-tile {
-  width: 62px;
-  height: 88px;
-}
