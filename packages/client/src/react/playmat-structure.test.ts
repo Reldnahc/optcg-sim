@@ -91,6 +91,16 @@ describe("playmat structure", () => {
     );
   });
 
+  test("board shell does not force an oversized playmat width", async () => {
+    const appShellStyles = await readFile(appShellStylesPath, "utf8");
+
+    assert.equal(appShellStyles.includes("minmax(650px, 900px)"), false);
+    assert.match(
+      appShellStyles,
+      /grid-template-columns:\s*clamp\(\s*230px,\s*24vw,\s*360px\s*\)\s+max-content;/,
+    );
+  });
+
   test("leader and stage zones are centered and mirrored", async () => {
     const styles = await readFile(playmatStylesPath, "utf8");
 
