@@ -29,8 +29,6 @@ export const MatchApp = (): React.JSX.Element => {
       : undefined;
   const globalActions =
     decisionModal === undefined ? client.globalActions() : [];
-  const cardActions =
-    decisionModal === undefined ? client.cardActions : () => [];
 
   return (
     <main className="match-app">
@@ -45,7 +43,7 @@ export const MatchApp = (): React.JSX.Element => {
           board={board}
           selectedCardInstanceId={selectedCardInstanceId}
           selectedDonInstanceIds={selectedDonInstanceIds}
-          cardActions={cardActions}
+          cardActions={client.cardActions}
           actionDisabled={client.state.actionInFlight}
           onCardClick={client.selectCard}
           onCardAction={(actionIndex) => {

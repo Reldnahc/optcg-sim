@@ -393,6 +393,42 @@ describe("local dev match", () => {
     );
   });
 
+  test("attack action labels include their target", () => {
+    const match = createTestMatch();
+    let snapshot = keepBothPlayersAndAdvance(match);
+    for (let step = 0; step < 2; step += 1) {
+      const current = mustPlayerSnapshot(snapshot, snapshot.activePlayerId);
+      const endMain = current.actions.find((action) =>
+        action.label.includes("End main phase"),
+      );
+      if (endMain === undefined) {
+        throw new Error("Expected end-main action while setting up attack.");
+      }
+      const result = applyLocalDevAction(match, {
+        playerId: snapshot.activePlayerId,
+        actionIndex: endMain.index,
+      });
+      assert.deepEqual(result.errors, []);
+      snapshot = getLocalDevSnapshot(match);
+    }
+    const p1Snapshot = mustPlayerSnapshot(snapshot, p1);
+    const attacker = p1Snapshot.view.self.leader;
+    const target = p1Snapshot.view.opponent.leader;
+    const attackAction = p1Snapshot.actions.find(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.placement?.instanceId === attacker.instanceId,
+    );
+
+    if (attackAction === undefined) {
+      throw new Error("Expected a leader attack action.");
+    }
+
+    assert.match(attackAction.label, /Attack .+ into .+/u);
+    assert.equal(attackAction.label.includes(String(target.cardId)), true);
+    void snapshot;
+  });
+
   test("rejects a stale action index without mutating the match", () => {
     const match = createTestMatch();
     const before = getLocalDevSnapshot(match);

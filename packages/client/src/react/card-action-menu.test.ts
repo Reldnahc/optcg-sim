@@ -114,6 +114,19 @@ describe("card action menu", () => {
     }
   });
 
+  test("match app keeps card actions available while a decision modal is open", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.equal(
+      source.includes("decisionModal === undefined ? client.cardActions"),
+      false,
+    );
+    assert.equal(source.includes("cardActions={client.cardActions}"), true);
+  });
+
   test("attached DON cards render under their target card", () => {
     const target = {
       ...card("self-leader", "Self Leader"),

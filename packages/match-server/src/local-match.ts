@@ -441,6 +441,11 @@ const instanceName = (
   return String(instanceId);
 };
 
+const instanceNameWithCardId = (
+  state: GameState,
+  ref: { instanceId: CardInstance["instanceId"]; cardId: CardId },
+): string => `${instanceName(state, ref.instanceId)} (${String(ref.cardId)})`;
+
 const responseLabel = (
   action: Extract<LegalAction, { type: "respondToDecision" }>,
 ): string => {
@@ -498,7 +503,10 @@ const actionLabel = (state: GameState, action: LegalAction): string => {
     case "attachDon":
       return `Attach DON!! to ${cardName(state, action.target.cardId)}`;
     case "declareAttack":
-      return `Attack with ${cardName(state, action.attacker.cardId)}`;
+      return `Attack with ${instanceNameWithCardId(
+        state,
+        action.attacker,
+      )} into ${instanceNameWithCardId(state, action.target)}`;
     case "activateBlocker":
       return `Block with ${cardName(state, action.blocker.cardId)}`;
     case "useCounter":
