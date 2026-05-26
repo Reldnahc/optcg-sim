@@ -91,7 +91,7 @@ describe("card action menu", () => {
       readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
     ]);
 
-    for (const selector of [".zone", ".zone-cards"]) {
+    for (const selector of [".zone", ".zone-cards", ".zone-cards-slots"]) {
       assert.equal(
         new RegExp(
           `${selector.replace(".", "\\.")}\\s*\\{[^}]*overflow:\\s*hidden`,
