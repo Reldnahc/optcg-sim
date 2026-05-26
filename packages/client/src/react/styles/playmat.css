@@ -1,0 +1,111 @@
+.tabletop-board {
+  position: relative;
+  display: grid;
+  grid-template-areas:
+    ". opponent-don-deck . opponent-cost opponent-cost opponent-cost opponent-deck ."
+    ". opponent-life . opponent-stage opponent-leader . opponent-trash ."
+    ". opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters ."
+    ". phase-ladder phase-ladder phase-ladder phase-ladder phase-ladder phase-ladder ."
+    ". player-characters player-characters player-characters player-characters player-characters player-characters ."
+    ". player-life . player-leader player-stage . player-deck ."
+    ". player-don-deck . player-cost player-cost player-cost player-trash .";
+  grid-template-columns:
+    86px 86px minmax(116px, 1fr) 84px 84px minmax(116px, 1fr)
+    86px 86px;
+  grid-template-rows:
+    112px 112px minmax(100px, 1fr) 34px minmax(100px, 1fr)
+    112px 112px;
+  gap: 6px;
+  min-height: 0;
+  border: 2px solid #e8e0d6;
+  background: #9d9694;
+  padding: 8px;
+}
+
+.playmat-zone {
+  min-height: 0;
+  min-width: 0;
+}
+
+.opponent-cost {
+  grid-area: opponent-cost;
+}
+
+.opponent-life {
+  grid-area: opponent-life;
+}
+
+.opponent-deck {
+  grid-area: opponent-deck;
+}
+
+.opponent-don-deck {
+  grid-area: opponent-don-deck;
+}
+
+.opponent-trash {
+  grid-area: opponent-trash;
+}
+
+.opponent-leader {
+  grid-area: opponent-leader;
+}
+
+.opponent-stage {
+  grid-area: opponent-stage;
+}
+
+.opponent-characters {
+  grid-area: opponent-characters;
+}
+
+.phase-ladder {
+  grid-area: phase-ladder;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+}
+
+.phase-ladder span {
+  min-width: 58px;
+  border-radius: 5px;
+  background: rgba(36, 35, 34, 0.72);
+  padding: 4px 7px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.player-characters {
+  grid-area: player-characters;
+}
+
+.player-life {
+  grid-area: player-life;
+}
+
+.player-leader {
+  grid-area: player-leader;
+}
+
+.player-stage {
+  grid-area: player-stage;
+}
+
+.player-deck {
+  grid-area: player-deck;
+}
+
+.player-don-deck {
+  grid-area: player-don-deck;
+}
+
+.player-trash {
+  grid-area: player-trash;
+}
+
+.player-cost {
+  grid-area: player-cost;
+}

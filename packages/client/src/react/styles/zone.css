@@ -1,0 +1,52 @@
+.zone {
+  height: 100%;
+  min-height: 0;
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  background: rgba(70, 68, 67, 0.28);
+  padding: 5px;
+}
+
+.zone-label {
+  height: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.zone-cards {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: calc(100% - 20px);
+  overflow: hidden;
+}
+
+.zone-small .card-tile {
+  width: 46px;
+  height: 64px;
+}
+
+.zone-mini .card-tile {
+  width: 42px;
+  height: 58px;
+}
+
+.empty-zone {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+}
+
+.stack-label {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+  border: 2px solid #f4eee7;
+  color: #ffffff;
+  background: rgba(64, 61, 60, 0.42);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}

@@ -1,0 +1,61 @@
+.match-app {
+  display: grid;
+  grid-template-columns: minmax(900px, 1fr) 260px;
+  gap: 8px;
+  height: 100vh;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.board-shell {
+  display: grid;
+  grid-template-columns: clamp(230px, 24vw, 360px) minmax(650px, 900px);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  justify-content: center;
+}
+
+.hand-rail {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.hand-row {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  align-items: center;
+}
+
+.hand-rail .hand-row:first-child {
+  align-items: flex-start;
+}
+
+.hand-rail .hand-row:last-child {
+  align-items: flex-end;
+}
+
+.hand-cards {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.hand-rail .hand-row:first-child .hand-cards {
+  align-items: flex-start;
+}
+
+.hand-rail .hand-row:last-child .hand-cards {
+  align-items: flex-end;
+}
+
+.hand-row .card-tile {
+  width: 62px;
+  height: 88px;
+}

@@ -1,0 +1,49 @@
+.decision-modal {
+  position: fixed;
+  inset: 10% 18%;
+  z-index: 10;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 2px solid #f4eee7;
+  background: rgba(38, 35, 34, 0.96);
+  padding: 18px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+}
+
+.decision-modal h2 {
+  margin: 0;
+}
+
+.decision-card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.decision-choice,
+.decision-order-row {
+  border: 1px solid #f4eee7;
+  color: #fff;
+  background: #5d5856;
+  padding: 10px;
+}
+
+.decision-choice.is-selected {
+  outline: 3px solid #ffdc62;
+}
+
+.decision-order-list {
+  display: grid;
+  gap: 5px;
+}
+
+.decision-order-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.quantity-input {
+  width: 140px;
+  padding: 8px;
+}

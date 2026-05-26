@@ -1,0 +1,50 @@
+.card-tile {
+  position: relative;
+  width: 54px;
+  height: 76px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.card-face {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border: 2px solid #f4eee7;
+  border-radius: 4px;
+  object-fit: cover;
+  color: #ffffff;
+  background: #615d5b;
+  font-size: 9px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.card-placeholder {
+  padding: 4px;
+}
+
+.card-tile.is-rested {
+  transform: rotate(90deg);
+}
+
+.card-tile.is-selected .card-face {
+  outline: 3px solid #ffdc62;
+  outline-offset: 2px;
+}
+
+.card-tag {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  color: #141414;
+  background: #ffdc62;
+  font-size: 10px;
+}

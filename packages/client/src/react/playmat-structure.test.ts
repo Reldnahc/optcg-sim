@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
+const playmatStylesPath = join(sourceDirectory, "styles", "playmat.css");
 
 describe("playmat structure", () => {
   test("board layout uses one physical table grid instead of mirrored player mats", async () => {
@@ -41,7 +42,7 @@ describe("playmat structure", () => {
   });
 
   test("physical table grid uses mirrored player and opponent row heights", async () => {
-    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+    const styles = await readFile(playmatStylesPath, "utf8");
 
     assert.match(
       styles,
@@ -50,7 +51,7 @@ describe("playmat structure", () => {
   });
 
   test("leader and stage zones are centered and mirrored", async () => {
-    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+    const styles = await readFile(playmatStylesPath, "utf8");
 
     assert.equal(
       styles.includes(
@@ -67,7 +68,7 @@ describe("playmat structure", () => {
   });
 
   test("main deck stacks above trash and life stacks above DON deck", async () => {
-    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+    const styles = await readFile(playmatStylesPath, "utf8");
 
     assert.equal(
       styles.includes(
@@ -96,7 +97,7 @@ describe("playmat structure", () => {
   });
 
   test("deck, DON deck, trash, leader, and stage use same-height rows", async () => {
-    const styles = await readFile(join(sourceDirectory, "styles.css"), "utf8");
+    const styles = await readFile(playmatStylesPath, "utf8");
 
     assert.match(
       styles,
