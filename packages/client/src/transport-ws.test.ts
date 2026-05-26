@@ -1,0 +1,130 @@
+import { strict as assert } from "node:assert";
+import { describe, test } from "vitest";
+
+import type { MatchId, PlayerId } from "@optcg/types";
+
+import { createDevWebSocketMatchTransport } from "./transport-ws.js";
+import type { MatchStateSyncMessage } from "./transport.js";
+
+class FakeWebSocket extends EventTarget {
+  public readonly sent: string[] = [];
+  public readyState: number = WebSocket.CONNECTING;
+
+  public constructor(public readonly url: string | URL) {
+    super();
+  }
+
+  public open(): void {
+    this.readyState = WebSocket.OPEN;
+    this.dispatchEvent(new Event("open"));
+  }
+
+  public receive(payload: unknown): void {
+    this.dispatchEvent(
+      new MessageEvent("message", { data: JSON.stringify(payload) }),
+    );
+  }
+
+  public send(payload: string): void {
+    if (this.readyState !== WebSocket.OPEN) {
+      throw new Error("Cannot send before WebSocket is open.");
+    }
+    this.sent.push(payload);
+  }
+
+  public close(): void {
+    this.readyState = WebSocket.CLOSED;
+    this.dispatchEvent(new Event("close"));
+  }
+}
+
+const createRecordingWebSocket = (): {
+  WebSocket: typeof WebSocket;
+  sockets: FakeWebSocket[];
+} => {
+  const sockets: FakeWebSocket[] = [];
+  const RecordingWebSocket = class extends FakeWebSocket {
+    public constructor(url: string | URL) {
+      super(url);
+      sockets.push(this);
+    }
+  };
+  return {
+    WebSocket: RecordingWebSocket as unknown as typeof WebSocket,
+    sockets,
+  };
+};
+
+describe("dev WebSocket match transport", () => {
+  test("queues action requests until the socket opens and resolves them from state sync", async () => {
+    const recording = createRecordingWebSocket();
+    const receivedStates: MatchStateSyncMessage[] = [];
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      randomUUID: () => "client-action-1",
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync(message) {
+        receivedStates.push(message);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    const resultPromise = connection.submitVisibleAction({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      actionIndex: 2,
+      expectedStateSeq: 7,
+    });
+
+    assert.equal(socket.sent.length, 0);
+    socket.open();
+    await Promise.resolve();
+
+    assert.equal(socket.sent.length, 1);
+    const sentPayload = socket.sent[0];
+    if (sentPayload === undefined) {
+      throw new Error("Expected a sent WebSocket payload.");
+    }
+    assert.deepEqual(JSON.parse(sentPayload) as unknown, {
+      type: "submitAction",
+      clientActionId: "client-action-1",
+      matchId: "match-1",
+      playerId: "p1",
+      actionIndex: 2,
+      expectedStateSeq: 7,
+    });
+
+    socket.receive({
+      type: "actionResult",
+      clientActionId: "client-action-1",
+      matchId: "match-1",
+      accepted: true,
+      stateSeq: 8,
+      actionSeq: 1,
+      errors: [],
+    });
+    socket.receive({
+      type: "stateSync",
+      matchId: "match-1",
+      serverSeq: 3,
+      stateSeq: 8,
+      snapshot: { stateSeq: 8, players: {} },
+    });
+
+    const result = await resultPromise;
+
+    assert.equal(result.snapshot.stateSeq, 8);
+    assert.equal(receivedStates.length, 1);
+  });
+});

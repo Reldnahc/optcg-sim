@@ -2,7 +2,9 @@ export {
   applyLocalDevAction,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
+  getLocalDevCardCatalogForPlayer,
   getLocalDevCardCatalog,
+  getLocalDevSnapshotForPlayer,
   getLocalDevSnapshot,
   isDevMatchSetup,
 } from "./local-match.js";

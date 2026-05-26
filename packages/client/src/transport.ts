@@ -89,6 +89,45 @@ export interface MatchActionResult {
   errors: string[];
 }
 
+export interface MatchStateSyncMessage {
+  type: "stateSync";
+  matchId: MatchId;
+  serverSeq: number;
+  stateSeq: number;
+  snapshot: MatchSnapshot;
+  cards: MatchCardCatalog;
+}
+
+export interface MatchActionResultMessage {
+  type: "actionResult";
+  matchId: MatchId;
+  clientActionId: string;
+  accepted: boolean;
+  stateSeq: number;
+  actionSeq?: number;
+  errors: string[];
+}
+
+export interface LiveMatchConnection {
+  close: () => void;
+  submitVisibleAction: (
+    input: Omit<SubmitVisibleActionInput, "sessionToken">,
+  ) => Promise<MatchActionResult>;
+  respondToDecision: (
+    input: Omit<RespondToDecisionInput, "sessionToken">,
+  ) => Promise<MatchActionResult>;
+}
+
+export interface MatchLiveTransport {
+  connect: (input: {
+    matchId: MatchId;
+    playerId: PlayerId;
+    sessionToken: string;
+    onStateSync: (message: MatchStateSyncMessage) => void;
+    onError: (message: string) => void;
+  }) => LiveMatchConnection;
+}
+
 export interface MatchTransport {
   createLobby: () => Promise<LocalLobby>;
   claimLobbySeat: (input: {

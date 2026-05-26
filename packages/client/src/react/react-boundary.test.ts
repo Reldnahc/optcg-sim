@@ -52,6 +52,14 @@ describe("React client skin boundary", () => {
         false,
         `${localPath} must not construct transport`,
       );
+      assert.equal(
+        source.includes("createDevWebSocketMatchTransport") ||
+          source.includes("new WebSocket") ||
+          source.includes("stateSync") ||
+          source.includes("actionResult"),
+        false,
+        `${localPath} must not own live match protocol`,
+      );
     }
   });
 });

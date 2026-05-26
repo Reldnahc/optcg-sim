@@ -28,6 +28,67 @@ interface CreatedDevLobbyBody {
   seats: Record<string, { playerId?: string; claimed?: boolean }>;
 }
 
+const webSocketUrl = (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  matchId: string,
+  playerId: string,
+  token: string,
+): string => {
+  const url = new URL(
+    `/api/matches/${encodeURIComponent(matchId)}/ws`,
+    server.url().replace(/^http/u, "ws"),
+  );
+  url.searchParams.set("playerId", playerId);
+  url.searchParams.set("sessionToken", token);
+  return url.toString();
+};
+
+interface TestSocket {
+  socket: WebSocket;
+  next: () => Promise<unknown>;
+}
+
+const openSocket = async (url: string): Promise<TestSocket> =>
+  new Promise((resolve, reject) => {
+    const socket = new WebSocket(url);
+    const messages: unknown[] = [];
+    const waiters: Array<(message: unknown) => void> = [];
+    socket.addEventListener("message", (event) => {
+      const parsed = JSON.parse(String(event.data)) as unknown;
+      const waiter = waiters.shift();
+      if (waiter === undefined) {
+        messages.push(parsed);
+        return;
+      }
+      waiter(parsed);
+    });
+    socket.addEventListener("open", () => {
+      resolve({
+        socket,
+        next: () =>
+          new Promise((messageResolve, messageReject) => {
+            const queued = messages.shift();
+            if (queued !== undefined) {
+              messageResolve(queued);
+              return;
+            }
+            const timeout = setTimeout(() => {
+              messageReject(
+                new Error("Timed out waiting for WebSocket message."),
+              );
+            }, 1000);
+            waiters.push((message) => {
+              clearTimeout(timeout);
+              messageResolve(message);
+            });
+          }),
+      });
+    });
+    socket.addEventListener("error", () => {
+      reject(new Error("WebSocket failed to open."));
+    });
+  });
+
 const createDevMatch = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
@@ -243,6 +304,120 @@ describe("dev HTTP server", () => {
       });
       assert.equal(accepted.status, 200);
     } finally {
+      await server.close();
+    }
+  });
+
+  test("websocket sends per-recipient filtered state sync and action results", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p2Token = await claimDevSeat(server, match.matchId, "p2");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      const p2Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      sockets.push(p1Socket.socket, p2Socket.socket);
+
+      const p1Initial = (await p1Socket.next()) as {
+        type?: string;
+        cards?: { players?: Record<string, unknown> };
+        snapshot?: { players?: Record<string, unknown>; stateSeq?: number };
+      };
+      const p2Initial = (await p2Socket.next()) as {
+        type?: string;
+        cards?: { players?: Record<string, unknown> };
+        snapshot?: { players?: Record<string, unknown> };
+      };
+
+      assert.equal(p1Initial.type, "stateSync");
+      assert.deepEqual(Object.keys(p1Initial.snapshot?.players ?? {}), ["p1"]);
+      assert.deepEqual(Object.keys(p1Initial.cards?.players ?? {}), ["p1"]);
+      assert.deepEqual(Object.keys(p2Initial.snapshot?.players ?? {}), ["p2"]);
+      assert.deepEqual(Object.keys(p2Initial.cards?.players ?? {}), ["p2"]);
+
+      p1Socket.socket.send(
+        JSON.stringify({
+          type: "submitAction",
+          matchId: match.matchId,
+          playerId: "p1",
+          clientActionId: "client-action-1",
+          actionIndex: 0,
+          expectedStateSeq: p1Initial.snapshot?.stateSeq,
+        }),
+      );
+
+      const actionResult = (await p1Socket.next()) as {
+        type?: string;
+        accepted?: boolean;
+        clientActionId?: string;
+      };
+      const p1Update = (await p1Socket.next()) as {
+        type?: string;
+        snapshot?: { players?: Record<string, unknown> };
+      };
+      const p2Update = (await p2Socket.next()) as {
+        type?: string;
+        snapshot?: { players?: Record<string, unknown> };
+      };
+
+      assert.equal(actionResult.type, "actionResult");
+      assert.equal(actionResult.clientActionId, "client-action-1");
+      assert.equal(actionResult.accepted, true);
+      assert.equal(p1Update.type, "stateSync");
+      assert.equal(p2Update.type, "stateSync");
+      assert.deepEqual(Object.keys(p1Update.snapshot?.players ?? {}), ["p1"]);
+      assert.deepEqual(Object.keys(p2Update.snapshot?.players ?? {}), ["p2"]);
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
+      await server.close();
+    }
+  });
+
+  test("rejects websocket messages whose player id does not match the socket seat", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      sockets.push(p1Socket.socket);
+
+      const initial = (await p1Socket.next()) as {
+        snapshot?: { stateSeq?: number };
+      };
+      p1Socket.socket.send(
+        JSON.stringify({
+          type: "submitAction",
+          matchId: match.matchId,
+          playerId: "p2",
+          clientActionId: "wrong-seat-action",
+          actionIndex: 0,
+          expectedStateSeq: initial.snapshot?.stateSeq,
+        }),
+      );
+
+      const error = (await p1Socket.next()) as {
+        type?: string;
+        message?: string;
+      };
+
+      assert.equal(error.type, "matchError");
+      assert.equal(error.message, "Invalid WebSocket action envelope.");
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
       await server.close();
     }
   });

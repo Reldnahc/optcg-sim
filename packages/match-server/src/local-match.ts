@@ -704,6 +704,23 @@ export const getLocalDevSnapshot = (
   players: devPlayerSnapshots(match.state),
 });
 
+export const getLocalDevSnapshotForPlayer = (
+  match: LocalDevMatch,
+  playerId: PlayerId,
+): DevMatchSnapshot => {
+  const player = devPlayerSnapshot(match.state, playerId);
+  return {
+    stateSeq: match.state.seq,
+    actionSeq: match.state.actionSeq,
+    stateHash: hashCanonicalStateValue(match.state),
+    status: match.state.status.type,
+    turn: match.state.turn,
+    activePlayerId:
+      match.state.pendingDecision?.playerId ?? match.state.turn.turnPlayerId,
+    players: { [playerId]: player },
+  };
+};
+
 export const applyLocalDevAction = (
   match: LocalDevMatch,
   input: ApplyLocalDevActionInput,
@@ -812,6 +829,29 @@ export const getLocalDevCardCatalog = (
     players[playerId as PlayerId] = { cards };
   }
   return { players };
+};
+
+export const getLocalDevCardCatalogForPlayer = (
+  match: LocalDevMatch,
+  playerId: PlayerId,
+): DevVisibleCardCatalog => {
+  const snapshot = getLocalDevSnapshotForPlayer(match, playerId);
+  const playerSnapshot = snapshot.players[playerId];
+  if (playerSnapshot === undefined) {
+    return { players: {} };
+  }
+  const cards: Record<CardId, DevCardCatalogEntry> = {};
+  for (const cardId of visibleCardIdsForView(playerSnapshot.view)) {
+    const card = match.state.cardManifest.cards[cardId];
+    if (card !== undefined) {
+      cards[cardId] = devCardCatalogEntry(card);
+    }
+  }
+  return {
+    players: {
+      [playerId]: { cards },
+    },
+  };
 };
 
 const addVisibleCard = (

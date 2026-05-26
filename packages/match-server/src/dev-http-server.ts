@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
   createServer,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import type { Duplex } from "node:stream";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -19,7 +20,9 @@ import {
   applyLocalDevDecision,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
+  getLocalDevCardCatalogForPlayer,
   getLocalDevCardCatalog,
+  getLocalDevSnapshotForPlayer,
   getLocalDevSnapshot,
   isDevMatchSetup,
   type CreatePremadeDevMatchSetupOptions,
@@ -37,6 +40,20 @@ interface DevDecisionRequest {
   decisionId: DecisionId;
   response: DecisionResponse;
 }
+
+interface DevSocketActionEnvelope extends DevActionRequest {
+  type: "submitAction";
+  matchId: MatchId;
+  clientActionId: string;
+}
+
+interface DevSocketDecisionEnvelope extends DevDecisionRequest {
+  type: "respondToDecision";
+  matchId: MatchId;
+  clientActionId: string;
+}
+
+type DevSocketEnvelope = DevSocketActionEnvelope | DevSocketDecisionEnvelope;
 
 interface DevResetRequest {
   setup?: unknown;
@@ -225,6 +242,27 @@ const isDevDecisionRequest = (value: unknown): value is DevDecisionRequest => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const isDevSocketEnvelope = (value: unknown): value is DevSocketEnvelope => {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (
+    value["type"] === "submitAction" &&
+    typeof value["matchId"] === "string" &&
+    typeof value["clientActionId"] === "string"
+  ) {
+    return isDevActionRequest(value);
+  }
+  if (
+    value["type"] === "respondToDecision" &&
+    typeof value["matchId"] === "string" &&
+    typeof value["clientActionId"] === "string"
+  ) {
+    return isDevDecisionRequest(value);
+  }
+  return false;
+};
 
 const matchNotFound = (response: ServerResponse, matchId: string): void => {
   sendJson(response, 404, { errors: [`Match ${matchId} not found.`] });
@@ -716,6 +754,226 @@ const handleStaticRequest = async (
   sendText(response, 200, contentTypeForPath(route), body);
 };
 
+const websocketAccept = (key: string): string =>
+  createHash("sha1")
+    .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+    .digest("base64");
+
+const websocketTextFrame = (payload: string): Buffer => {
+  const body = Buffer.from(payload, "utf8");
+  if (body.length < 126) {
+    return Buffer.concat([Buffer.from([0x81, body.length]), body]);
+  }
+  const header = Buffer.alloc(4);
+  header[0] = 0x81;
+  header[1] = 126;
+  header.writeUInt16BE(body.length, 2);
+  return Buffer.concat([header, body]);
+};
+
+const parseWebSocketFrames = (
+  buffer: Buffer,
+): {
+  messages: string[];
+  remaining: Buffer;
+  close: boolean;
+} => {
+  const messages: string[] = [];
+  let offset = 0;
+  let close = false;
+  while (offset + 2 <= buffer.length) {
+    const first = buffer[offset];
+    const second = buffer[offset + 1];
+    if (first === undefined || second === undefined) break;
+    const opcode = first & 0x0f;
+    const masked = (second & 0x80) !== 0;
+    let length = second & 0x7f;
+    let headerLength = 2;
+    if (length === 126) {
+      if (offset + 4 > buffer.length) break;
+      length = buffer.readUInt16BE(offset + 2);
+      headerLength = 4;
+    } else if (length === 127) {
+      close = true;
+      break;
+    }
+    const maskLength = masked ? 4 : 0;
+    const frameEnd = offset + headerLength + maskLength + length;
+    if (frameEnd > buffer.length) break;
+    if (opcode === 0x8) {
+      close = true;
+      offset = frameEnd;
+      break;
+    }
+    if (opcode === 0x1) {
+      const payloadStart = offset + headerLength + maskLength;
+      const payload = Buffer.from(buffer.subarray(payloadStart, frameEnd));
+      if (masked) {
+        const mask = buffer.subarray(offset + headerLength, payloadStart);
+        for (let index = 0; index < payload.length; index += 1) {
+          const key = mask[index % 4];
+          if (key !== undefined) {
+            payload.writeUInt8(payload.readUInt8(index) ^ key, index);
+          }
+        }
+      }
+      messages.push(payload.toString("utf8"));
+    }
+    offset = frameEnd;
+  }
+  return { messages, remaining: Buffer.from(buffer.subarray(offset)), close };
+};
+
+interface DevSocketConnection {
+  matchId: MatchId;
+  playerId: PlayerId;
+  socket: Duplex;
+  serverSeq: number;
+}
+
+const sendSocketJson = (
+  connection: DevSocketConnection,
+  payload: Record<string, unknown>,
+): void => {
+  connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
+};
+
+const playerStatePayload = (
+  match: LocalDevMatch,
+  connection: DevSocketConnection,
+): Record<string, unknown> => {
+  const snapshot = getLocalDevSnapshotForPlayer(match, connection.playerId);
+  return {
+    type: "stateSync",
+    matchId: connection.matchId,
+    serverSeq: ++connection.serverSeq,
+    stateSeq: snapshot.stateSeq,
+    snapshot,
+    cards: getLocalDevCardCatalogForPlayer(match, connection.playerId),
+  };
+};
+
+const handleWebSocketUpgrade = (
+  request: IncomingMessage,
+  socket: Duplex,
+  registry: LocalDevMatchRegistry,
+  authProvider: AuthProvider,
+  connections: Set<DevSocketConnection>,
+): void => {
+  const url = new URL(request.url ?? "/", "http://localhost");
+  const route = /^\/api\/matches\/(?<matchId>[^/]+)\/ws$/u.exec(url.pathname);
+  if (route === null) {
+    socket.end("HTTP/1.1 404 Not Found\r\n\r\n");
+    return;
+  }
+  const matchId = decodeURIComponent(
+    route.groups?.["matchId"] ?? "",
+  ) as MatchId;
+  const playerId = (url.searchParams.get("playerId") ?? "") as PlayerId;
+  const sessionToken = url.searchParams.get("sessionToken") ?? "";
+  const key = request.headers["sec-websocket-key"];
+  const match = registry.getMatch(matchId);
+  if (
+    match === undefined ||
+    typeof key !== "string" ||
+    key.length === 0 ||
+    playerId.length === 0 ||
+    sessionToken.length === 0
+  ) {
+    socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+    return;
+  }
+  void authProvider;
+  const auth: AuthContext = {
+    subject: { type: "anonymousDev", devSessionId: sessionToken },
+  };
+  if (registry.authorizeSeat(auth, matchId, playerId) !== "authorized") {
+    socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
+    return;
+  }
+
+  socket.write(
+    [
+      "HTTP/1.1 101 Switching Protocols",
+      "Upgrade: websocket",
+      "Connection: Upgrade",
+      `Sec-WebSocket-Accept: ${websocketAccept(key)}`,
+      "\r\n",
+    ].join("\r\n"),
+  );
+
+  const connection: DevSocketConnection = {
+    matchId,
+    playerId,
+    socket,
+    serverSeq: 0,
+  };
+  connections.add(connection);
+  socket.on("close", () => {
+    connections.delete(connection);
+  });
+  sendSocketJson(connection, playerStatePayload(match, connection));
+
+  let buffered: Buffer = Buffer.alloc(0);
+  socket.on("data", (chunk: Buffer) => {
+    buffered = Buffer.concat([buffered, chunk]);
+    const parsed = parseWebSocketFrames(buffered);
+    buffered = parsed.remaining;
+    if (parsed.close) {
+      socket.end();
+      return;
+    }
+    for (const raw of parsed.messages) {
+      let payload: unknown;
+      try {
+        payload = JSON.parse(raw) as unknown;
+      } catch {
+        sendSocketJson(connection, {
+          type: "matchError",
+          matchId,
+          serverSeq: ++connection.serverSeq,
+          message: "WebSocket message must be JSON.",
+        });
+        continue;
+      }
+      if (
+        !isDevSocketEnvelope(payload) ||
+        payload.matchId !== matchId ||
+        payload.playerId !== playerId
+      ) {
+        sendSocketJson(connection, {
+          type: "matchError",
+          matchId,
+          serverSeq: ++connection.serverSeq,
+          message: "Invalid WebSocket action envelope.",
+        });
+        continue;
+      }
+      const result =
+        payload.type === "submitAction"
+          ? applyLocalDevAction(match, payload)
+          : applyLocalDevDecision(match, payload);
+      const errors = result.errors;
+      sendSocketJson(connection, {
+        type: "actionResult",
+        matchId,
+        clientActionId: payload.clientActionId,
+        accepted: errors.length === 0,
+        stateSeq: result.snapshot.stateSeq,
+        actionSeq: result.snapshot.actionSeq,
+        errors,
+      });
+      if (errors.length === 0) {
+        for (const peer of connections) {
+          if (peer.matchId === matchId) {
+            sendSocketJson(peer, playerStatePayload(match, peer));
+          }
+        }
+      }
+    }
+  });
+};
+
 export const createDevHttpServer = async (
   options: CreateDevHttpServerOptions = {},
 ): Promise<DevHttpServer> => {
@@ -734,6 +992,7 @@ export const createDevHttpServer = async (
   );
   const lobbyRegistry = createLocalDevLobbyRegistry(registry);
   const authProvider = createDevAuthProvider();
+  const socketConnections = new Set<DevSocketConnection>();
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
@@ -751,6 +1010,15 @@ export const createDevHttpServer = async (
       });
     });
   });
+  server.on("upgrade", (request, socket) => {
+    handleWebSocketUpgrade(
+      request,
+      socket,
+      registry,
+      authProvider,
+      socketConnections,
+    );
+  });
 
   return {
     listen: async (port: number, host = "127.0.0.1") => {
@@ -763,6 +1031,10 @@ export const createDevHttpServer = async (
       });
     },
     close: async () => {
+      for (const connection of socketConnections) {
+        connection.socket.destroy();
+      }
+      socketConnections.clear();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
           if (error === undefined) {

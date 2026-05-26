@@ -1,0 +1,205 @@
+import type {
+  DecisionResponse,
+  DecisionId,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
+
+import type {
+  MatchActionResult,
+  MatchActionResultMessage,
+  MatchLiveTransport,
+  MatchStateSyncMessage,
+} from "./transport.js";
+
+export interface DevWebSocketMatchTransportOptions {
+  baseUrl: string;
+  WebSocket?: typeof WebSocket;
+  randomUUID?: () => string;
+}
+
+type PendingRequest = {
+  accepted: boolean;
+  resolve: (result: MatchActionResult) => void;
+  reject: (error: Error) => void;
+};
+
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/u, "");
+
+const socketRoot = (baseUrl: string): string => {
+  if (baseUrl.length === 0) {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}`;
+  }
+  const parsed = new URL(baseUrl);
+  parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
+  return trimTrailingSlash(parsed.toString());
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isStateSync = (value: unknown): value is MatchStateSyncMessage =>
+  isRecord(value) && value["type"] === "stateSync";
+
+const isActionResult = (value: unknown): value is MatchActionResultMessage =>
+  isRecord(value) && value["type"] === "actionResult";
+
+const messageError = (value: unknown): string =>
+  isRecord(value) && typeof value["message"] === "string"
+    ? value["message"]
+    : "Unknown WebSocket message error.";
+
+export const createDevWebSocketMatchTransport = ({
+  baseUrl,
+  WebSocket: WebSocketImpl = WebSocket,
+  randomUUID = () => crypto.randomUUID(),
+}: DevWebSocketMatchTransportOptions): MatchLiveTransport => ({
+  connect({ matchId, playerId, sessionToken, onStateSync, onError }) {
+    const url = new URL(
+      `/api/matches/${encodeURIComponent(String(matchId))}/ws`,
+      socketRoot(baseUrl),
+    );
+    url.searchParams.set("playerId", String(playerId));
+    url.searchParams.set("sessionToken", sessionToken);
+
+    const socket = new WebSocketImpl(url);
+    const pending = new Map<string, PendingRequest>();
+    let opened = false;
+
+    const openPromise = new Promise<void>((resolve, reject) => {
+      socket.addEventListener(
+        "open",
+        () => {
+          opened = true;
+          resolve();
+        },
+        { once: true },
+      );
+      socket.addEventListener(
+        "error",
+        () => {
+          if (!opened) {
+            reject(new Error("Match WebSocket failed to open."));
+          }
+        },
+        { once: true },
+      );
+    });
+    void openPromise.catch(() => undefined);
+
+    const rejectPending = (error: Error): void => {
+      for (const request of pending.values()) {
+        request.reject(error);
+      }
+      pending.clear();
+    };
+
+    socket.addEventListener("message", (event) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(event.data)) as unknown;
+      } catch {
+        onError("Received invalid WebSocket JSON.");
+        return;
+      }
+
+      if (isStateSync(parsed)) {
+        onStateSync(parsed);
+        for (const [clientActionId, request] of pending) {
+          if (!request.accepted) {
+            continue;
+          }
+          pending.delete(clientActionId);
+          request.resolve({
+            snapshot: parsed.snapshot,
+            errors: [],
+          });
+        }
+        return;
+      }
+
+      if (isActionResult(parsed)) {
+        const request = pending.get(parsed.clientActionId);
+        if (request === undefined) {
+          return;
+        }
+        pending.delete(parsed.clientActionId);
+        if (!parsed.accepted) {
+          request.reject(new Error(parsed.errors.join("\n")));
+          pending.delete(parsed.clientActionId);
+          return;
+        }
+        pending.set(parsed.clientActionId, { ...request, accepted: true });
+        return;
+      }
+
+      if (isRecord(parsed) && parsed["type"] === "matchError") {
+        onError(messageError(parsed));
+      }
+    });
+
+    socket.addEventListener("close", () => {
+      rejectPending(new Error("Match WebSocket closed."));
+    });
+    socket.addEventListener("error", () => {
+      onError("Match WebSocket error.");
+    });
+
+    const sendRequest = async (
+      payload: Record<string, unknown>,
+      clientActionId: string,
+    ): Promise<MatchActionResult> => {
+      const result = new Promise<MatchActionResult>((resolve, reject) => {
+        pending.set(clientActionId, { accepted: false, resolve, reject });
+      });
+      try {
+        await openPromise;
+        socket.send(JSON.stringify(payload));
+      } catch (error: unknown) {
+        pending.delete(clientActionId);
+        throw error instanceof Error ? error : new Error(String(error));
+      }
+      return await result;
+    };
+
+    return {
+      close() {
+        socket.close();
+      },
+      submitVisibleAction(input) {
+        const clientActionId = randomUUID();
+        return sendRequest(
+          {
+            type: "submitAction",
+            clientActionId,
+            matchId: input.matchId,
+            playerId: input.playerId,
+            actionIndex: input.actionIndex,
+            expectedStateSeq: input.expectedStateSeq,
+          },
+          clientActionId,
+        );
+      },
+      respondToDecision(input: {
+        matchId: MatchId;
+        playerId: PlayerId;
+        decisionId: DecisionId;
+        response: DecisionResponse;
+      }) {
+        const clientActionId = randomUUID();
+        return sendRequest(
+          {
+            type: "respondToDecision",
+            clientActionId,
+            matchId: input.matchId,
+            playerId: input.playerId,
+            decisionId: input.decisionId,
+            response: input.response,
+          },
+          clientActionId,
+        );
+      },
+    };
+  },
+});

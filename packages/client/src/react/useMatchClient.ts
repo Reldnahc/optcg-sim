@@ -14,6 +14,7 @@ import {
   createDecisionDraft,
   createDecisionModalModel,
   createDevHttpMatchTransport,
+  createDevWebSocketMatchTransport,
   createMatchClientController,
   moveOrderedCardNear,
   setDecisionQuantity,
@@ -100,6 +101,7 @@ const isMatchClientState = (
 const createController = (): MatchClientController =>
   createMatchClientController({
     transport: createDevHttpMatchTransport({ baseUrl: "" }),
+    liveTransport: createDevWebSocketMatchTransport({ baseUrl: "" }),
     sessionStore: createClientSessionStore({
       storage: createBrowserSessionStorage(),
     }),
@@ -138,6 +140,9 @@ export const useMatchClient = (): MatchClientUi => {
     currentPlayerId === undefined || !isMatchClientState(clientState)
       ? undefined
       : clientState.snapshot.players[currentPlayerId];
+  const liveConnectionKey = !isMatchClientState(clientState)
+    ? undefined
+    : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;
   const pendingDecision = playerSnapshot?.view.pendingDecision;
   const activeDecisionDraft =
     pendingDecision === undefined
@@ -192,6 +197,28 @@ export const useMatchClient = (): MatchClientUi => {
       cancelled = true;
     };
   }, [controller]);
+
+  useEffect(() => {
+    if (
+      liveConnectionKey === undefined ||
+      controller.currentState() === undefined
+    ) {
+      controller.disconnectLive();
+      return;
+    }
+    controller.connectLive({
+      onState(nextState) {
+        setClientState(nextState);
+        setErrors([]);
+      },
+      onError(message) {
+        setErrors([message]);
+      },
+    });
+    return () => {
+      controller.disconnectLive();
+    };
+  }, [liveConnectionKey, controller]);
 
   const refresh = useCallback(async (): Promise<void> => {
     const refreshed = await controller.refresh();

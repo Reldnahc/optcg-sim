@@ -13,8 +13,10 @@ import type {
 import type {
   LocalLobby,
   MatchCardCatalog,
+  MatchLiveTransport,
   MatchSnapshot,
   MatchTransport,
+  LiveMatchConnection,
 } from "./transport.js";
 
 export interface LobbyClientState {
@@ -51,6 +53,11 @@ export interface MatchClientController {
     decisionId: DecisionId;
     response: DecisionResponse;
   }) => Promise<MatchClientState>;
+  connectLive: (input: {
+    onState: (state: MatchClientState) => void;
+    onError: (message: string) => void;
+  }) => void;
+  disconnectLive: () => void;
   currentCredential: () => ClientSeatCredential | undefined;
   currentState: () => MatchClientState | undefined;
 }
@@ -73,13 +80,16 @@ const throwIfActionResultFailed = (errors: readonly string[]): void => {
 
 export const createMatchClientController = ({
   transport,
+  liveTransport,
   sessionStore,
 }: {
   transport: MatchTransport;
+  liveTransport?: MatchLiveTransport;
   sessionStore: ClientSessionStore;
 }): MatchClientController => {
   let currentState: MatchClientState | undefined;
   let currentLobbyState: LobbyClientState | undefined;
+  let liveConnection: LiveMatchConnection | undefined;
 
   const loadState = async (
     seat: ClientSeatIdentity,
@@ -172,6 +182,39 @@ export const createMatchClientController = ({
     joinLocalMatch(input) {
       return claimAndLoad(input);
     },
+    connectLive({ onState, onError }) {
+      const credential = sessionStore.loadClaimedSeat();
+      if (
+        credential === undefined ||
+        liveTransport === undefined ||
+        liveConnection !== undefined
+      ) {
+        return;
+      }
+      liveConnection = liveTransport.connect({
+        matchId: credential.matchId,
+        playerId: credential.playerId,
+        sessionToken: credential.sessionToken,
+        onError,
+        onStateSync(message) {
+          currentState = {
+            matchId: message.matchId,
+            seat: {
+              matchId: message.matchId,
+              playerId: credential.playerId,
+            },
+            snapshot: message.snapshot,
+            cards: message.cards,
+          };
+          currentLobbyState = undefined;
+          onState(currentState);
+        },
+      });
+    },
+    disconnectLive() {
+      liveConnection?.close();
+      liveConnection = undefined;
+    },
     async refresh() {
       if (currentLobbyState !== undefined) {
         const lobby = await transport.loadLobby(currentLobbyState.lobbyId);
@@ -188,15 +231,21 @@ export const createMatchClientController = ({
     },
     async submitVisibleAction(input) {
       const credential = requireCredential(sessionStore);
-      const result = await transport.submitVisibleAction({
+      const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
-        sessionToken: credential.sessionToken,
         actionIndex: input.actionIndex,
         ...(currentState === undefined
           ? {}
           : { expectedStateSeq: currentState.snapshot.stateSeq }),
-      });
+      };
+      const result =
+        liveConnection === undefined
+          ? await transport.submitVisibleAction({
+              ...transportInput,
+              sessionToken: credential.sessionToken,
+            })
+          : await liveConnection.submitVisibleAction(transportInput);
       throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));
@@ -213,13 +262,19 @@ export const createMatchClientController = ({
     },
     async respondToDecision(input) {
       const credential = requireCredential(sessionStore);
-      const result = await transport.respondToDecision({
+      const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
-        sessionToken: credential.sessionToken,
         decisionId: input.decisionId,
         response: input.response,
-      });
+      };
+      const result =
+        liveConnection === undefined
+          ? await transport.respondToDecision({
+              ...transportInput,
+              sessionToken: credential.sessionToken,
+            })
+          : await liveConnection.respondToDecision(transportInput);
       throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));
