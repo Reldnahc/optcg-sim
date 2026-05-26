@@ -37,6 +37,40 @@ const createRecordingFetch = (
 };
 
 describe("dev HTTP match transport", () => {
+  test("creates and claims primitive lobbies", async () => {
+    const recorder = createRecordingFetch((request) =>
+      responseJson({
+        lobbyId: "lobby-1",
+        seats: {
+          p1: { playerId: "p1", claimed: true },
+          p2: { playerId: "p2", claimed: false },
+        },
+        ...(request.url.endsWith("/claim") ? { matchId: "match-1" } : {}),
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    await transport.createLobby();
+    const claimed = await transport.claimLobbySeat({
+      lobbyId: "lobby-1",
+      playerId: "p1" as PlayerId,
+    });
+    await transport.loadLobby("lobby-1");
+
+    assert.equal(claimed.matchId, "match-1");
+    assert.deepEqual(
+      recorder.requests.map((request) => request.url),
+      [
+        "http://localhost:3000/api/lobbies",
+        "http://localhost:3000/api/lobbies/lobby-1/seats/p1/claim",
+        "http://localhost:3000/api/lobbies/lobby-1",
+      ],
+    );
+  });
+
   test("creates a match without accepting bulk seat tokens", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

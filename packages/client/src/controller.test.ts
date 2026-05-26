@@ -16,6 +16,34 @@ const createFakeTransport = (): MatchTransport & {
   const submittedTokens: string[] = [];
   return {
     submittedTokens,
+    createLobby() {
+      return Promise.resolve({
+        lobbyId: "lobby-1",
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: false },
+          p2: { playerId: "p2" as PlayerId, claimed: false },
+        },
+      });
+    },
+    claimLobbySeat(input) {
+      return Promise.resolve({
+        lobbyId: input.lobbyId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: true },
+          p2: { playerId: "p2" as PlayerId, claimed: false },
+        },
+      });
+    },
+    loadLobby(lobbyId) {
+      return Promise.resolve({
+        lobbyId,
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: true },
+          p2: { playerId: "p2" as PlayerId, claimed: true },
+        },
+      });
+    },
     createMatch() {
       return Promise.resolve({
         matchId: "match-1" as MatchId,

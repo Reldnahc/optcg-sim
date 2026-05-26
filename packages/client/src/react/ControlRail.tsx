@@ -2,6 +2,7 @@ import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 
 export interface ControlRailProps {
+  lobbyId?: string | undefined;
   matchId?: string | undefined;
   playerId?: string | undefined;
   status?: string | undefined;
@@ -17,6 +18,7 @@ export interface ControlRailProps {
 }
 
 export const ControlRail = ({
+  lobbyId,
   matchId,
   playerId,
   status,
@@ -44,6 +46,10 @@ export const ControlRail = ({
         </button>
       </div>
       <dl className="match-facts">
+        <div>
+          <dt>Lobby</dt>
+          <dd>{lobbyId ?? "none"}</dd>
+        </div>
         <div>
           <dt>Match</dt>
           <dd>{matchId ?? "loading"}</dd>

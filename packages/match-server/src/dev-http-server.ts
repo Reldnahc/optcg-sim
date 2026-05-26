@@ -53,6 +53,12 @@ interface ClaimedDevSeatResponse {
   seat: { playerId: PlayerId; sessionToken: string };
 }
 
+interface CreatedDevLobbyResponse {
+  lobbyId: string;
+  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  matchId?: MatchId;
+}
+
 type AuthSubject =
   | { type: "anonymousDev"; devSessionId: string }
   | { type: "user"; userId: string; sessionId: string };
@@ -97,6 +103,21 @@ interface LocalDevMatchRegistry {
   defaultMatchId: MatchId;
 }
 
+interface LocalDevLobby {
+  lobbyId: string;
+  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  matchId?: MatchId;
+}
+
+interface LocalDevLobbyRegistry {
+  createLobby: () => CreatedDevLobbyResponse;
+  claimSeat: (
+    lobbyId: string,
+    playerId: PlayerId,
+  ) => Promise<CreatedDevLobbyResponse | "lobbyNotFound" | "seatNotFound">;
+  getLobby: (lobbyId: string) => CreatedDevLobbyResponse | undefined;
+}
+
 export interface DevHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
   close: () => Promise<void>;
@@ -108,6 +129,8 @@ export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOp
 }
 
 const uiRoot = new URL("../ui/", import.meta.url);
+const p1 = "p1" as PlayerId;
+const p2 = "p2" as PlayerId;
 
 const staticRoutes = new Map<string, string>([
   ["/", "index.html"],
@@ -244,6 +267,11 @@ const createLocalAnonSeats = (
     ]),
   );
 
+const createLobbySeats = (): LocalDevLobby["seats"] => ({
+  p1: { playerId: p1, claimed: false },
+  p2: { playerId: p2, claimed: false },
+});
+
 const createdSeatResponse = (
   seats: Record<string, MatchSeat>,
 ): CreatedDevMatchResponse["seats"] =>
@@ -256,6 +284,17 @@ const createdSeatResponse = (
       },
     ]),
   );
+
+const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
+  lobbyId: lobby.lobbyId,
+  seats: Object.fromEntries(
+    Object.entries(lobby.seats).map(([key, seat]) => [
+      key,
+      { playerId: seat.playerId, claimed: seat.claimed },
+    ]),
+  ),
+  ...(lobby.matchId === undefined ? {} : { matchId: lobby.matchId }),
+});
 
 const subjectsMatch = (left: AuthSubject, right: AuthSubject): boolean => {
   switch (left.type) {
@@ -271,6 +310,52 @@ const subjectsMatch = (left: AuthSubject, right: AuthSubject): boolean => {
         left.sessionId === right.sessionId
       );
   }
+};
+
+const createLocalDevLobbyRegistry = (
+  matchRegistry: LocalDevMatchRegistry,
+): LocalDevLobbyRegistry => {
+  let nextLobbyNumber = 1;
+  const lobbies = new Map<string, LocalDevLobby>();
+
+  const ensureMatchWhenReady = async (lobby: LocalDevLobby): Promise<void> => {
+    if (
+      lobby.matchId !== undefined ||
+      !Object.values(lobby.seats).every((seat) => seat.claimed)
+    ) {
+      return;
+    }
+    const created = await matchRegistry.createMatch();
+    lobby.matchId = created.matchId;
+  };
+
+  return {
+    createLobby() {
+      const lobby: LocalDevLobby = {
+        lobbyId: `dev-local-lobby-${String(nextLobbyNumber++)}`,
+        seats: createLobbySeats(),
+      };
+      lobbies.set(lobby.lobbyId, lobby);
+      return lobbyResponse(lobby);
+    },
+    async claimSeat(lobbyId, playerId) {
+      const lobby = lobbies.get(lobbyId);
+      if (lobby === undefined) {
+        return "lobbyNotFound";
+      }
+      const seat = lobby.seats[String(playerId)];
+      if (seat === undefined) {
+        return "seatNotFound";
+      }
+      seat.claimed = true;
+      await ensureMatchWhenReady(lobby);
+      return lobbyResponse(lobby);
+    },
+    getLobby(lobbyId) {
+      const lobby = lobbies.get(lobbyId);
+      return lobby === undefined ? undefined : lobbyResponse(lobby);
+    },
+  };
 };
 
 const createLocalDevMatchRegistry = async (
@@ -365,6 +450,7 @@ const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
   registry: LocalDevMatchRegistry,
+  lobbyRegistry: LocalDevLobbyRegistry,
   authProvider: AuthProvider,
 ): Promise<void> => {
   const url = request.url ?? "/";
@@ -377,6 +463,50 @@ const handleApiRequest = async (
     /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
   if (request.method === "POST" && pathname === "/api/matches") {
     sendJson(response, 201, await registry.createMatch());
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/lobbies") {
+    sendJson(response, 201, lobbyRegistry.createLobby());
+    return;
+  }
+  const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(pathname);
+  if (lobbyRoute !== null) {
+    const lobbyId = decodeURIComponent(lobbyRoute.groups?.["lobbyId"] ?? "");
+    const lobby = lobbyRegistry.getLobby(lobbyId);
+    if (lobby === undefined) {
+      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
+      return;
+    }
+    if (request.method === "GET") {
+      sendJson(response, 200, lobby);
+      return;
+    }
+    sendJson(response, 404, { errors: ["API route not found."] });
+    return;
+  }
+  const lobbySeatClaimRoute =
+    /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/seats\/(?<playerId>[^/]+)\/claim$/u.exec(
+      pathname,
+    );
+  if (request.method === "POST" && lobbySeatClaimRoute !== null) {
+    const lobbyId = decodeURIComponent(
+      lobbySeatClaimRoute.groups?.["lobbyId"] ?? "",
+    );
+    const playerId = decodeURIComponent(
+      lobbySeatClaimRoute.groups?.["playerId"] ?? "",
+    ) as PlayerId;
+    const result = await lobbyRegistry.claimSeat(lobbyId, playerId);
+    if (result === "lobbyNotFound") {
+      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
+      return;
+    }
+    if (result === "seatNotFound") {
+      sendJson(response, 404, {
+        errors: [`Seat ${String(playerId)} not found.`],
+      });
+      return;
+    }
+    sendJson(response, 200, result);
     return;
   }
   const seatClaimRoute =
@@ -583,11 +713,18 @@ export const createDevHttpServer = async (
     createDefaultSetup,
     options.setup,
   );
+  const lobbyRegistry = createLocalDevLobbyRegistry(registry);
   const authProvider = createDevAuthProvider();
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
-      ? handleApiRequest(request, response, registry, authProvider)
+      ? handleApiRequest(
+          request,
+          response,
+          registry,
+          lobbyRegistry,
+          authProvider,
+        )
       : handleStaticRequest(request, response);
     operation.catch((error: unknown) => {
       sendJson(response, 500, {

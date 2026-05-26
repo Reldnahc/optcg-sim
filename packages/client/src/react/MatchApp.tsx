@@ -7,6 +7,14 @@ export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
   const { board, clientState, decisionModal, selectedCardInstanceId } =
     client.state;
+  const matchState =
+    clientState !== undefined && "matchId" in clientState
+      ? clientState
+      : undefined;
+  const lobbyState =
+    clientState !== undefined && "lobbyId" in clientState
+      ? clientState
+      : undefined;
   const selectedActions =
     selectedCardInstanceId === undefined
       ? []
@@ -15,7 +23,11 @@ export const MatchApp = (): React.JSX.Element => {
   return (
     <main className="match-app">
       {board === undefined ? (
-        <section className="loading-panel">Loading match</section>
+        <section className="loading-panel">
+          {lobbyState === undefined
+            ? "Loading match"
+            : `Waiting in lobby ${lobbyState.lobbyId}`}
+        </section>
       ) : (
         <BoardLayout
           board={board}
@@ -24,17 +36,18 @@ export const MatchApp = (): React.JSX.Element => {
         />
       )}
       <ControlRail
+        lobbyId={lobbyState === undefined ? undefined : lobbyState.lobbyId}
         matchId={
-          clientState === undefined ? undefined : String(clientState.matchId)
+          matchState === undefined ? undefined : String(matchState.matchId)
         }
         playerId={
           client.currentPlayerId === undefined
             ? undefined
             : String(client.currentPlayerId)
         }
-        status={clientState?.snapshot.status}
+        status={matchState?.snapshot.status}
         phase={
-          clientState?.snapshot.players[clientState.seat.playerId]?.view.turn
+          matchState?.snapshot.players[matchState.seat.playerId]?.view.turn
             .phase
         }
         errors={client.state.errors}

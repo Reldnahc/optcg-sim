@@ -11,10 +11,20 @@ import type {
   ClientSessionStore,
 } from "./session.js";
 import type {
+  LocalLobby,
   MatchCardCatalog,
   MatchSnapshot,
   MatchTransport,
 } from "./transport.js";
+
+export interface LobbyClientState {
+  lobbyId: string;
+  seat: {
+    lobbyId: string;
+    playerId: PlayerId;
+  };
+  lobby: LocalLobby;
+}
 
 export interface MatchClientState {
   matchId: MatchId;
@@ -23,10 +33,17 @@ export interface MatchClientState {
   cards: MatchCardCatalog;
 }
 
+export type MatchClientSessionState = LobbyClientState | MatchClientState;
+
 export interface MatchClientController {
+  startNewLocalLobby: (playerId: PlayerId) => Promise<MatchClientSessionState>;
+  joinLocalLobby: (input: {
+    lobbyId: string;
+    playerId: PlayerId;
+  }) => Promise<MatchClientSessionState>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientState>;
   joinLocalMatch: (input: ClientSeatIdentity) => Promise<MatchClientState>;
-  refresh: () => Promise<MatchClientState>;
+  refresh: () => Promise<MatchClientSessionState>;
   submitVisibleAction: (input: {
     actionIndex: number;
   }) => Promise<MatchClientState>;
@@ -56,6 +73,7 @@ export const createMatchClientController = ({
   sessionStore: ClientSessionStore;
 }): MatchClientController => {
   let currentState: MatchClientState | undefined;
+  let currentLobbyState: LobbyClientState | undefined;
 
   const loadState = async (
     seat: ClientSeatIdentity,
@@ -70,6 +88,7 @@ export const createMatchClientController = ({
       snapshot,
       cards,
     };
+    currentLobbyState = undefined;
     return currentState;
   };
 
@@ -89,7 +108,38 @@ export const createMatchClientController = ({
     return loadState(seat);
   };
 
+  const claimMatchIfReady = async (
+    lobbyState: LobbyClientState,
+  ): Promise<MatchClientSessionState> => {
+    const matchId = lobbyState.lobby.matchId;
+    if (matchId === undefined) {
+      currentLobbyState = lobbyState;
+      return lobbyState;
+    }
+    return claimAndLoad({ matchId, playerId: lobbyState.seat.playerId });
+  };
+
   return {
+    async startNewLocalLobby(playerId) {
+      const lobby = await transport.createLobby();
+      const claimedLobby = await transport.claimLobbySeat({
+        lobbyId: lobby.lobbyId,
+        playerId,
+      });
+      return claimMatchIfReady({
+        lobbyId: claimedLobby.lobbyId,
+        seat: { lobbyId: claimedLobby.lobbyId, playerId },
+        lobby: claimedLobby,
+      });
+    },
+    async joinLocalLobby(input) {
+      const claimedLobby = await transport.claimLobbySeat(input);
+      return claimMatchIfReady({
+        lobbyId: claimedLobby.lobbyId,
+        seat: { lobbyId: claimedLobby.lobbyId, playerId: input.playerId },
+        lobby: claimedLobby,
+      });
+    },
     async startNewLocalMatch(playerId) {
       const created = await transport.createMatch();
       const seat = { matchId: created.matchId, playerId };
@@ -107,12 +157,20 @@ export const createMatchClientController = ({
         snapshot: created.snapshot,
         cards,
       };
+      currentLobbyState = undefined;
       return currentState;
     },
     joinLocalMatch(input) {
       return claimAndLoad(input);
     },
     async refresh() {
+      if (currentLobbyState !== undefined) {
+        const lobby = await transport.loadLobby(currentLobbyState.lobbyId);
+        return claimMatchIfReady({
+          ...currentLobbyState,
+          lobby,
+        });
+      }
       const seat = sessionStore.loadCurrentSeat();
       if (seat === undefined) {
         throw new Error("Cannot refresh a match before selecting a seat.");

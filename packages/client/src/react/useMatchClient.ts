@@ -26,11 +26,12 @@ import type {
   DecisionModalModel,
   MatchClientController,
   MatchClientState,
+  MatchClientSessionState,
 } from "../index.js";
 import { createBrowserSessionStorage } from "./browser-storage.js";
 
 export interface MatchClientUiState {
-  clientState?: MatchClientState;
+  clientState?: MatchClientSessionState;
   board?: BoardViewModel;
   selectedCardInstanceId?: string;
   decisionDraft?: DecisionDraft;
@@ -68,12 +69,31 @@ const matchIdFromUrl = (): MatchId | undefined => {
   return value === null ? undefined : (value as MatchId);
 };
 
+const lobbyIdFromUrl = (): string | undefined => {
+  const value = new URL(window.location.href).searchParams.get("lobbyId");
+  return value === null ? undefined : value;
+};
+
 const setMatchLocation = (matchId: MatchId, playerId: PlayerId): void => {
   const url = new URL(window.location.href);
+  url.searchParams.delete("lobbyId");
   url.searchParams.set("matchId", String(matchId));
   url.searchParams.set("seat", String(playerId));
   window.history.replaceState({}, "", url);
 };
+
+const setLobbyLocation = (lobbyId: string, playerId: PlayerId): void => {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("matchId");
+  url.searchParams.set("lobbyId", lobbyId);
+  url.searchParams.set("seat", String(playerId));
+  window.history.replaceState({}, "", url);
+};
+
+const isMatchClientState = (
+  state: MatchClientSessionState | undefined,
+): state is MatchClientState =>
+  state !== undefined && "matchId" in state && "snapshot" in state;
 
 const createController = (): MatchClientController =>
   createMatchClientController({
@@ -88,7 +108,7 @@ const visibleErrors = (errors: readonly string[]): string[] => [...errors];
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
   const [clientState, setClientState] = useState<
-    MatchClientState | undefined
+    MatchClientSessionState | undefined
   >();
   const [selectedCardInstanceId, setSelectedCardInstanceId] = useState<
     string | undefined
@@ -100,18 +120,17 @@ export const useMatchClient = (): MatchClientUi => {
   const [errors, setErrors] = useState<string[]>([]);
 
   const currentPlayerId = clientState?.seat.playerId;
-  const board =
-    clientState === undefined
-      ? undefined
-      : createBoardViewModel({
-          snapshot: clientState.snapshot,
-          catalog: clientState.cards,
-          playerId: clientState.seat.playerId,
-        });
+  const board = !isMatchClientState(clientState)
+    ? undefined
+    : createBoardViewModel({
+        snapshot: clientState.snapshot,
+        catalog: clientState.cards,
+        playerId: clientState.seat.playerId,
+      });
   const playerSnapshot =
-    currentPlayerId === undefined
+    currentPlayerId === undefined || !isMatchClientState(clientState)
       ? undefined
-      : clientState?.snapshot.players[currentPlayerId];
+      : clientState.snapshot.players[currentPlayerId];
   const pendingDecision = playerSnapshot?.view.pendingDecision;
   const activeDecisionDraft =
     pendingDecision === undefined
@@ -129,18 +148,28 @@ export const useMatchClient = (): MatchClientUi => {
     const load = async (): Promise<void> => {
       try {
         const urlMatchId = matchIdFromUrl();
+        const urlLobbyId = lobbyIdFromUrl();
         const seatId = seatIdFromUrl();
         const loaded =
-          urlMatchId === undefined
-            ? await controller.startNewLocalMatch("p1" as PlayerId)
-            : await controller.joinLocalMatch({
+          urlMatchId !== undefined
+            ? await controller.joinLocalMatch({
                 matchId: urlMatchId,
                 playerId: seatId,
-              });
+              })
+            : urlLobbyId !== undefined
+              ? await controller.joinLocalLobby({
+                  lobbyId: urlLobbyId,
+                  playerId: seatId,
+                })
+              : await controller.startNewLocalLobby("p1" as PlayerId);
         if (cancelled) {
           return;
         }
-        setMatchLocation(loaded.matchId, loaded.seat.playerId);
+        if (isMatchClientState(loaded)) {
+          setMatchLocation(loaded.matchId, loaded.seat.playerId);
+        } else {
+          setLobbyLocation(loaded.lobbyId, loaded.seat.playerId);
+        }
         setClientState(loaded);
         setErrors([]);
       } catch (error) {
@@ -157,12 +186,19 @@ export const useMatchClient = (): MatchClientUi => {
 
   const refresh = useCallback(async (): Promise<void> => {
     const refreshed = await controller.refresh();
+    if (isMatchClientState(refreshed)) {
+      setMatchLocation(refreshed.matchId, refreshed.seat.playerId);
+    }
     setClientState(refreshed);
   }, [controller]);
 
   const createNewMatch = useCallback(async (): Promise<void> => {
-    const created = await controller.startNewLocalMatch("p1" as PlayerId);
-    setMatchLocation(created.matchId, created.seat.playerId);
+    const created = await controller.startNewLocalLobby("p1" as PlayerId);
+    if (isMatchClientState(created)) {
+      setMatchLocation(created.matchId, created.seat.playerId);
+    } else {
+      setLobbyLocation(created.lobbyId, created.seat.playerId);
+    }
     setSelectedCardInstanceId(undefined);
     setDecisionDraft(undefined);
     setClientState(created);

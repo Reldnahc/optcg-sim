@@ -22,6 +22,12 @@ interface ClaimedDevSeatBody {
   };
 }
 
+interface CreatedDevLobbyBody {
+  lobbyId?: string;
+  matchId?: string;
+  seats: Record<string, { playerId?: string; claimed?: boolean }>;
+}
+
 const createDevMatch = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
@@ -78,7 +84,65 @@ const claimDevSeat = async (
   return token;
 };
 
+const createDevLobby = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+): Promise<CreatedDevLobbyBody> => {
+  const response = await fetch(`${server.url()}/api/lobbies`, {
+    method: "POST",
+  });
+  assert.equal(response.status, 201);
+  return (await response.json()) as CreatedDevLobbyBody;
+};
+
+const claimDevLobbySeat = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  lobbyId: string,
+  playerId: "p1" | "p2",
+): Promise<CreatedDevLobbyBody> => {
+  const response = await fetch(
+    `${server.url()}/api/lobbies/${lobbyId}/seats/${playerId}/claim`,
+    { method: "POST" },
+  );
+  assert.equal(response.status, 200);
+  return (await response.json()) as CreatedDevLobbyBody;
+};
+
 describe("dev HTTP server", () => {
+  test("keeps primitive lobbies separate from match creation until both seats are claimed", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+      assert.equal(created.matchId, undefined);
+      assert.equal(created.seats["p1"]?.claimed, false);
+      assert.equal(created.seats["p2"]?.claimed, false);
+
+      const oneSeat = await claimDevLobbySeat(server, lobbyId, "p1");
+      assert.equal(oneSeat.matchId, undefined);
+      assert.equal(oneSeat.seats["p1"]?.claimed, true);
+      assert.equal(oneSeat.seats["p2"]?.claimed, false);
+
+      const ready = await claimDevLobbySeat(server, lobbyId, "p2");
+      const matchId = ready.matchId;
+      if (matchId === undefined) {
+        throw new Error("Ready lobby response did not include a match id.");
+      }
+      assert.equal(ready.seats["p1"]?.claimed, true);
+      assert.equal(ready.seats["p2"]?.claimed, true);
+
+      const matchState = await fetch(
+        `${server.url()}/api/matches/${matchId}/state`,
+      );
+      assert.equal(matchState.status, 200);
+    } finally {
+      await server.close();
+    }
+  });
+
   test("creates independent local anonymous dev matches keyed by matchId", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");

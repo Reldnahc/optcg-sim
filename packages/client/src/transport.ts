@@ -62,6 +62,12 @@ export interface ClaimedSeat {
   };
 }
 
+export interface LocalLobby {
+  lobbyId: string;
+  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  matchId?: MatchId;
+}
+
 export interface SubmitVisibleActionInput {
   matchId: MatchId;
   playerId: PlayerId;
@@ -84,6 +90,12 @@ export interface MatchActionResult {
 }
 
 export interface MatchTransport {
+  createLobby: () => Promise<LocalLobby>;
+  claimLobbySeat: (input: {
+    lobbyId: string;
+    playerId: PlayerId;
+  }) => Promise<LocalLobby>;
+  loadLobby: (lobbyId: string) => Promise<LocalLobby>;
   createMatch: () => Promise<CreatedMatch>;
   claimSeat: (input: {
     matchId: MatchId;

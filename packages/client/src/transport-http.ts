@@ -3,6 +3,7 @@ import type { MatchId } from "@optcg/types";
 import type {
   ClaimedSeat,
   CreatedMatch,
+  LocalLobby,
   MatchActionResult,
   MatchCardCatalog,
   MatchSnapshot,
@@ -44,6 +45,8 @@ export const createDevHttpMatchTransport = ({
   const root = trimTrailingSlash(baseUrl);
   const matchPath = (matchId: MatchId, path: string): string =>
     `${root}/api/matches/${encodeURIComponent(String(matchId))}${path}`;
+  const lobbyPath = (lobbyId: string, path = ""): string =>
+    `${root}/api/lobbies/${encodeURIComponent(lobbyId)}${path}`;
 
   const postJson = async <T>(
     url: string,
@@ -59,6 +62,22 @@ export const createDevHttpMatchTransport = ({
   };
 
   return {
+    async createLobby() {
+      return postJson<LocalLobby>(`${root}/api/lobbies`, {});
+    },
+    async claimLobbySeat(input) {
+      return postJson<LocalLobby>(
+        lobbyPath(
+          input.lobbyId,
+          `/seats/${encodeURIComponent(String(input.playerId))}/claim`,
+        ),
+        {},
+      );
+    },
+    async loadLobby(lobbyId) {
+      const response = await fetchImpl(lobbyPath(lobbyId));
+      return readJson<LocalLobby>(response);
+    },
     async createMatch() {
       return postJson<CreatedMatch>(`${root}/api/matches`, {});
     },
