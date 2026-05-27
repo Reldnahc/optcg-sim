@@ -107,6 +107,31 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses disjunctive named-or-category search filters independently from reveal wording", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 [Sanji] or Event card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        anyOf: [{ names: ["Sanji"] }, { categories: ["event"] }],
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:anyOf",
+        "filter:name",
+        "filter:category:event",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses add up-to any-card selection as private search to hand", () => {
     expect(
       parseSearchSelectionToHand({

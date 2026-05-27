@@ -250,6 +250,7 @@ export type Target =
   | SavedFieldObjectTarget;
 
 export interface CardFilter {
+  anyOf?: CardFilter[];
   cardIds?: CardId[];
   names?: string[];
   nameContains?: string;

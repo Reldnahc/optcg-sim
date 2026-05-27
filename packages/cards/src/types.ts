@@ -92,6 +92,7 @@ export type PrimitiveEvidence =
   | "zone:characterArea"
   | "zone:costArea"
   | "filter:name"
+  | "filter:anyOf"
   | "filter:nameNot"
   | "filter:color"
   | "filter:type"

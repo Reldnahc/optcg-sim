@@ -36,6 +36,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "anyOf": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cardFilter" },
+          "minItems": 1
+        },
         "cardIds": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -178,6 +183,16 @@
       "additionalProperties": false,
       "minProperties": 1,
       "properties": {
+        "anyOf": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/scopedTopNSearchPublicFilter" },
+          "minItems": 1
+        },
+        "names": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
         "categories": {
           "type": "array",
           "items": { "$ref": "#/$defs/cardCategory" },

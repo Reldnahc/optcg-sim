@@ -38,7 +38,47 @@ const predicateParsers: readonly PredicateParser[] = [
 export function parseCardFilterPredicates(
   input: ParseInput,
 ): CardFilterPredicateParseResult | undefined {
-  let rest = input.text.trim();
+  const first = parseConjunctiveCardFilterPredicates(input.text);
+  if (first === undefined) {
+    return undefined;
+  }
+
+  const filters: CardFilter[] = [first.filter];
+  const evidence: PrimitiveEvidence[] = [...first.evidence];
+  let rest = first.rest.trim();
+
+  while (rest.length > 0) {
+    const orMatch = /^or\s+(?<right>.+)$/i.exec(rest);
+    const rightText = orMatch?.groups?.["right"];
+    if (rightText === undefined) {
+      break;
+    }
+
+    const right = parseConjunctiveCardFilterPredicates(rightText);
+    if (right === undefined) {
+      break;
+    }
+
+    filters.push(right.filter);
+    evidence.push(...right.evidence);
+    rest = right.rest.trim();
+  }
+
+  if (filters.length === 1) {
+    return first;
+  }
+
+  return {
+    filter: { anyOf: filters },
+    evidence: ["filter:anyOf", ...evidence],
+    rest,
+  };
+}
+
+function parseConjunctiveCardFilterPredicates(
+  text: string,
+): CardFilterPredicateParseResult | undefined {
+  let rest = text.trim();
   let filter: CardFilter = {};
   const evidence: PrimitiveEvidence[] = [];
   let parsedAny = false;
@@ -205,7 +245,7 @@ function parseEventCategoryPredicate(
   text: string,
   current: CardFilter,
 ): ReturnType<PredicateParser> {
-  const match = /^Events?\b\s*(?<rest>.*)$/i.exec(text);
+  const match = /^Events?(?: cards?)?\b\s*(?<rest>.*)$/i.exec(text);
   if (match === null) {
     return undefined;
   }

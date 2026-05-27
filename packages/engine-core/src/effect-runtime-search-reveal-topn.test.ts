@@ -275,6 +275,43 @@ test("top-N filter varies look count color type and excluded name", () => {
   );
 });
 
+test("top-N filter supports exact-name and disjunctive category search predicates", () => {
+  const state = createActiveState();
+  const looked = setDeck(state, [
+    "topn-or-sanji",
+    "topn-or-event",
+    "topn-or-other",
+    "topn-or-outside",
+  ]);
+  state.cardManifest.cards[must(looked[0], "sanji card").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[0], "sanji card").cardId],
+      "sanji manifest",
+    ),
+    name: "Sanji",
+    category: "character",
+  };
+
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 3,
+      filter: {
+        anyOf: [{ names: ["Sanji"] }, { categories: ["event"] }],
+      },
+    }),
+  );
+
+  assert.deepEqual(
+    selectDecision(opened).candidates.map(
+      (candidate) => candidate.card.instanceId,
+    ),
+    [must(looked[0], "name match"), must(looked[1], "event match")].map(
+      (card) => card.instanceId,
+    ),
+  );
+});
+
 test("zero eligible and no-selection paths bottom-order looked cards and resolve effect causality", () => {
   const state = createActiveState();
   setDeck(state, ["topn-zero-event", "topn-zero-blue", "topn-zero-other"]);

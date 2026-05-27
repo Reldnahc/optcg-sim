@@ -102,17 +102,22 @@ export const reindexZoneCards = (
   }));
 
 const supportedSearchFilterKeys = new Set([
+  "anyOf",
   "categories",
   "colorsAny",
+  "names",
   "typesAny",
   "nameNot",
 ]);
 const supportedHandSelectionFilterKeys = new Set([
-  ...supportedSearchFilterKeys,
+  "categories",
+  "colorsAny",
   "custom",
   "cost",
+  "nameNot",
   "power",
   "state",
+  "typesAny",
 ]);
 const supportedHandSelectionStates = new Set(["active", "rested", "attached"]);
 
@@ -144,8 +149,12 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
     if (!supportedSearchFilterKeys.has(key)) return false;
   }
   return (
+    (filter.anyOf === undefined ||
+      (filter.anyOf.length > 0 &&
+        filter.anyOf.every(isSupportedSearchCardFilter))) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot))
   );
@@ -180,6 +189,12 @@ const cardMatchesBaseFilter = (
 ): boolean => {
   if (card === undefined) return false;
   if (
+    filter.anyOf !== undefined &&
+    !filter.anyOf.some((candidate) => cardMatchesBaseFilter(card, candidate))
+  ) {
+    return false;
+  }
+  if (
     filter.categories !== undefined &&
     !filter.categories.includes(card.category)
   ) {
@@ -195,6 +210,9 @@ const cardMatchesBaseFilter = (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => card.types.includes(type))
   ) {
+    return false;
+  }
+  if (filter.names !== undefined && !filter.names.includes(card.name)) {
     return false;
   }
   if (filter.cost !== undefined) {

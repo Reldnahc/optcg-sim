@@ -229,7 +229,7 @@ test("SUP-002I schema authorizes only scoped top-N deck search request variants"
   assert.equal(schema.$defs.scopedTopNSearchPublicFilter.minProperties, 1);
   assert.deepEqual(
     Object.keys(schema.$defs.scopedTopNSearchPublicFilter.properties),
-    ["categories", "colorsAny", "typesAny", "nameNot"],
+    ["anyOf", "names", "categories", "colorsAny", "typesAny", "nameNot"],
   );
   assert.deepEqual(schema.$defs.scopedTopNSearchChooserOnlyFilter, {
     type: "object",
