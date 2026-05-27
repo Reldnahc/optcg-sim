@@ -23,6 +23,7 @@ import {
   createDevWebSocketMatchTransport,
   ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
+  createCanonicalDonPaymentModalActions,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
   isSelectableCostAreaDon,
@@ -274,6 +275,10 @@ export const useMatchClient = (): MatchClientUi => {
           pendingDecision,
           pendingDecisionResponseActions,
         );
+  const canonicalDonPaymentActions =
+    pendingDecision?.type === "payCost" && optionalCardCostChoice === undefined
+      ? createCanonicalDonPaymentModalActions(pendingDecisionResponseActions)
+      : undefined;
   const activeCardCostGroup =
     activeCardCostChoice === undefined ||
     optionalCardCostChoice === undefined ||
@@ -287,7 +292,7 @@ export const useMatchClient = (): MatchClientUi => {
   const cardCostChoiceActive = activeCardCostGroup !== undefined;
   const modalResponseActions =
     optionalCardCostChoice === undefined || cardCostChoiceActive
-      ? pendingDecisionResponseActions
+      ? (canonicalDonPaymentActions ?? pendingDecisionResponseActions)
       : createOptionalCardCostModalActions(optionalCardCostChoice);
   const activeDecisionDraft =
     pendingDecision === undefined

@@ -9,6 +9,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  createCanonicalDonPaymentModalActions,
   optionalCardCostActionForInstance,
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
@@ -233,5 +234,41 @@ describe("optional card-cost interaction", () => {
       optionalCardCostActionForInstance(trashGroup, "character-1"),
       3,
     );
+  });
+});
+
+describe("DON payment interaction", () => {
+  test("collapses equivalent DON payment combinations to the first canonical action", () => {
+    const actions: readonly ClientActionModel[] = [
+      { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+      { index: 5, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+      { index: 6, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+    ];
+
+    assert.deepEqual(createCanonicalDonPaymentModalActions(actions), [
+      { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+    ]);
+  });
+
+  test("keeps distinct DON payment counts as distinct canonical actions", () => {
+    const actions: readonly ClientActionModel[] = [
+      { index: 4, type: "respondToDecision", label: "Pay cost with 2 DON!!" },
+      { index: 5, type: "respondToDecision", label: "Pay cost with 2 DON!!" },
+      { index: 6, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+    ];
+
+    assert.deepEqual(createCanonicalDonPaymentModalActions(actions), [
+      { index: 4, type: "respondToDecision", label: "Pay cost with 2 DON!!" },
+      { index: 6, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+    ]);
+  });
+
+  test("does not collapse mixed non-DON payment actions", () => {
+    const actions: readonly ClientActionModel[] = [
+      { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+      { index: 5, type: "respondToDecision", label: "Choose 1 card" },
+    ];
+
+    assert.equal(createCanonicalDonPaymentModalActions(actions), undefined);
   });
 });

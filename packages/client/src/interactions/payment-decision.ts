@@ -129,6 +129,29 @@ export const optionalCardCostInstanceIds = (
   choice: OptionalCardCostGroup | undefined,
 ): string[] => choice?.cardActions.map((action) => action.instanceId) ?? [];
 
+const donPaymentLabelPattern = /^Pay cost with (?<count>[1-9]\d*) DON!!$/u;
+
+export const createCanonicalDonPaymentModalActions = (
+  actions: readonly ClientActionModel[],
+): ClientActionModel[] | undefined => {
+  const canonicalByLabel = new Map<string, ClientActionModel>();
+  for (const action of actions) {
+    if (
+      action.type !== "respondToDecision" ||
+      action.decisionPayment !== undefined ||
+      donPaymentLabelPattern.exec(action.label) === null
+    ) {
+      return undefined;
+    }
+    if (!canonicalByLabel.has(action.label)) {
+      canonicalByLabel.set(action.label, action);
+    }
+  }
+  return canonicalByLabel.size === 0
+    ? undefined
+    : [...canonicalByLabel.values()];
+};
+
 const chooseLabelForCardCostOperation = (
   operation: "trash" | "returnToHand",
   fallback: string,
