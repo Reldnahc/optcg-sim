@@ -166,6 +166,46 @@ const selectCandidateIds = (
     ),
   );
 
+const selectedDifferentNameGroups = (
+  decision: PublicSelectCardsDecision,
+  draft: Extract<DecisionDraft, { kind: "selectCards" }>,
+): ReadonlySet<string> => {
+  if (decision.selectionConstraint?.type !== "differentNames") {
+    return new Set();
+  }
+  const groups = decision.selectionConstraint.groupKeysByInstanceId;
+  return new Set(
+    draft.selectedInstanceIds.flatMap((instanceId) => {
+      const group = groups[instanceKey(instanceId)];
+      return group === undefined ? [] : [group];
+    }),
+  );
+};
+
+const isSelectableSelectCardChoice = (
+  decision: PublicSelectCardsDecision,
+  draft: Extract<DecisionDraft, { kind: "selectCards" }>,
+  instanceId: InstanceId,
+): boolean => {
+  const instance = instanceKey(instanceId);
+  if (!selectCandidateIds(decision).has(instance)) {
+    return false;
+  }
+  if (
+    draft.selectedInstanceIds.some((selectedId) => selectedId === instanceId)
+  ) {
+    return true;
+  }
+  if (decision.selectionConstraint?.type !== "differentNames") {
+    return true;
+  }
+  const group = decision.selectionConstraint.groupKeysByInstanceId[instance];
+  return (
+    group === undefined ||
+    !selectedDifferentNameGroups(decision, draft).has(group)
+  );
+};
+
 const orderCardIds = (
   decision: PublicOrderCardsDecision,
 ): ReadonlySet<string> =>
@@ -295,7 +335,16 @@ export const toggleDecisionSelectedCard = (
   if (draft.kind !== "selectCards") {
     throw new Error("Decision draft is not a selectCards draft.");
   }
-  if (!selectCandidateIds(decision).has(instanceKey(instanceId))) {
+  if (
+    decision.type === "selectCards" &&
+    !isSelectableSelectCardChoice(decision, draft, instanceId)
+  ) {
+    return draft;
+  }
+  if (
+    decision.type === "selectTargets" &&
+    !selectCandidateIds(decision).has(instanceKey(instanceId))
+  ) {
     return draft;
   }
   if (
@@ -390,7 +439,12 @@ export const createDecisionModalModel = (
       max: decision.max,
       canConfirm,
       selectedInstanceIds: draft.selectedInstanceIds,
-      cards: decision.choices,
+      cards: decision.choices.map((choice) => ({
+        ...choice,
+        selectable:
+          choice.selectable &&
+          isSelectableSelectCardChoice(decision, draft, choice.card.instanceId),
+      })),
       confirmLabel:
         decision.min === 0 && draft.selectedInstanceIds.length === 0
           ? "Take none"

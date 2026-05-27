@@ -53,6 +53,10 @@ export const createOnPlayTriggerQueueing = (
     if (acceptedCardPlayed.length === 0) {
       return undefined;
     }
+    const sharedTimingWindowId =
+      acceptedCardPlayed.length > 1
+        ? (`timing-window:${String(acceptedCardPlayed[0]?.id)}:onPlay` as EffectQueueEntry["timingWindowId"])
+        : undefined;
 
     const appended: EffectQueueEntry[] = [];
     const events: EngineEvent[] = [];
@@ -167,7 +171,8 @@ export const createOnPlayTriggerQueueing = (
         const queueId =
           `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
         const timingWindowId =
-          `timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"];
+          sharedTimingWindowId ??
+          (`timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"]);
         const entry: EffectQueueEntry = {
           id: queueId,
           state: "pending",

@@ -112,6 +112,10 @@ export interface PublicSelectCardsDecision extends PublicDecision<"selectCards">
   choices: Array<
     Pick<CardSelectionCandidate, "card"> & { selectable: boolean }
   >;
+  selectionConstraint?: {
+    type: "differentNames";
+    groupKeysByInstanceId: Record<string, string>;
+  };
 }
 
 export interface PublicSelectTargetsDecision extends PublicDecision<"selectTargets"> {

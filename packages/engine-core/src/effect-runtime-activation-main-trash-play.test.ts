@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { SelectionId } from "@optcg/types";
+import type { CardInstance, SelectionId } from "@optcg/types";
 
 import { applyAction } from "./actions.js";
 import {
@@ -16,8 +16,19 @@ import {
   p1,
   resolvedCard,
 } from "./action-test-fixtures.js";
+import { reviewedOnPlayDrawDefinition } from "./effect-runtime-queue-processing-test-support.js";
 
-test("activate main supports leader-gated rest and hand-trash cost before trash-all and trash playSelected", () => {
+const setupActivateMainTrashAllPlayFromTrashState = (params: {
+  sameTrashNames?: boolean;
+  supportedOnPlayCount?: number;
+}): {
+  effectId: ReturnType<typeof toEffectId>;
+  fieldCharacter: CardInstance;
+  state: ReturnType<typeof makeMainPhaseLegalActionState>;
+  trashCards: ReturnType<
+    typeof makeMainPhaseLegalActionState
+  >["players"][typeof p1]["trash"];
+} => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");
   const leader = p1State.leader;
@@ -61,18 +72,44 @@ test("activate main supports leader-gated rest and hand-trash cost before trash-
   }));
   p1State.trash = trashCards;
   for (const [index, card] of trashCards.entries()) {
-    state.cardManifest.cards[card.cardId] = resolvedCard({
+    const support =
+      index < (params.supportedOnPlayCount ?? 0)
+        ? {
+            status: "implemented-dsl" as const,
+            effectDefinitionId: `def:${String(card.cardId)}:on-play-draw`,
+            rulesVersion: "play-selected-on-play-rules",
+            sourceTextHash: `play-selected-on-play-source-${String(index)}`,
+          }
+        : undefined;
+    const supportCard = resolvedCard({
       cardId: card.cardId,
       category: "character",
       cost: 5,
       power: 5000,
+      ...(support === undefined ? {} : { support }),
     });
+    state.cardManifest.cards[card.cardId] = supportCard;
     const trashMetadata = must(
       state.cardManifest.cards[card.cardId],
       "trash metadata",
     );
-    trashMetadata.name = `Elder ${String(index + 1)}`;
+    trashMetadata.name =
+      params.sameTrashNames === true
+        ? "Same Elder"
+        : `Elder ${String(index + 1)}`;
     trashMetadata.types = ["Five Elders"];
+    if (
+      supportCard.support.status === "implemented-dsl" &&
+      supportCard.support.effectDefinitionId !== undefined
+    ) {
+      state.cardManifest.effectDefinitions = {
+        ...state.cardManifest.effectDefinitions,
+        [supportCard.support.effectDefinitionId]: reviewedOnPlayDrawDefinition(
+          card.cardId,
+          supportCard.support,
+        ),
+      };
+    }
   }
   const effectBlock = must(definition.effects[0], "effect");
   effectBlock.condition = {
@@ -154,14 +191,21 @@ test("activate main supports leader-gated rest and hand-trash cost before trash-
       },
     ],
   };
+  return { effectId, fieldCharacter, state, trashCards };
+};
 
+const payActivateMainTrashAllPlayCost = (
+  state: ReturnType<typeof makeMainPhaseLegalActionState>,
+  effectId: ReturnType<typeof toEffectId>,
+) => {
+  const p1State = must(state.players[p1], "p1");
   const activated = applyAction(state, {
     type: "activateEffect",
     source: {
-      instanceId: leader.instanceId,
-      cardId: leader.cardId,
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
       playerId: p1,
-      zone: leader.zone,
+      zone: p1State.leader.zone,
     },
     effectId,
   });
@@ -194,6 +238,19 @@ test("activate main supports leader-gated rest and hand-trash cost before trash-
       selectedCardInstanceIds: [handCard.instanceId],
     },
   });
+
+  assert.equal(paidDon.errors, undefined);
+  assert.equal(paidHand.errors, undefined);
+  assert.equal(restDonDecision.type, "payCost");
+  assert.equal(trashHandDecision.type, "payCost");
+  return { paidDon, paidHand, restDonDecision, trashHandDecision };
+};
+
+test("activate main supports leader-gated rest and hand-trash cost before trash-all and trash playSelected", () => {
+  const { effectId, fieldCharacter, state, trashCards } =
+    setupActivateMainTrashAllPlayFromTrashState({});
+  const { paidDon, paidHand, restDonDecision, trashHandDecision } =
+    payActivateMainTrashAllPlayCost(state, effectId);
   const trashSelection = must(
     paidHand.state.pendingDecision,
     "trash selection",
@@ -230,4 +287,67 @@ test("activate main supports leader-gated rest and hand-trash cost before trash-
     afterP1.characters.map((card) => card.instanceId),
     trashCards.slice(0, 2).map((card) => card.instanceId),
   );
+});
+
+test("activate main trash playSelected rejects same-name Five Elders selections", () => {
+  const { effectId, state } = setupActivateMainTrashAllPlayFromTrashState({
+    sameTrashNames: true,
+  });
+  const { paidHand } = payActivateMainTrashAllPlayCost(state, effectId);
+  const trashSelection = must(
+    paidHand.state.pendingDecision,
+    "trash selection",
+  );
+  assert.equal(trashSelection.type, "selectCards");
+  const before = JSON.stringify(paidHand.state);
+
+  const selected = applyAction(paidHand.state, {
+    type: "respondToDecision",
+    decisionId: trashSelection.id,
+    response: {
+      type: "cards",
+      cards: trashSelection.candidates
+        .slice(0, 2)
+        .map((candidate) => candidate.card),
+    },
+  });
+
+  assert.deepEqual(selected.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Selected cards must have different names.",
+    },
+  ]);
+  assert.equal(JSON.stringify(selected.state), before);
+});
+
+test("activate main trash playSelected queues simultaneous On Play triggers for order choice", () => {
+  const { effectId, state } = setupActivateMainTrashAllPlayFromTrashState({
+    supportedOnPlayCount: 2,
+  });
+  const { paidHand } = payActivateMainTrashAllPlayCost(state, effectId);
+  const trashSelection = must(
+    paidHand.state.pendingDecision,
+    "trash selection",
+  );
+  assert.equal(trashSelection.type, "selectCards");
+
+  const selected = applyAction(paidHand.state, {
+    type: "respondToDecision",
+    decisionId: trashSelection.id,
+    response: {
+      type: "cards",
+      cards: trashSelection.candidates
+        .slice(0, 2)
+        .map((candidate) => candidate.card),
+    },
+  });
+
+  assert.equal(selected.errors, undefined);
+  const triggerOrder = must(
+    selected.state.pendingDecision,
+    "trigger order decision",
+  );
+  assert.equal(triggerOrder.type, "chooseTriggerOrder");
+  assert.equal(triggerOrder.triggerIds.length, 2);
 });

@@ -124,6 +124,44 @@ describe("headless decision modal models", () => {
     assert.deepEqual(model.selectedInstanceIds, ["1", "2"]);
   });
 
+  test("selectCards draft prevents selecting another card from the same different-name group", () => {
+    const decision: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      max: 2,
+      candidates: [
+        { card: cardRef("1") },
+        { card: cardRef("2") },
+        { card: cardRef("3") },
+      ],
+      choices: [
+        { card: cardRef("1"), selectable: true },
+        { card: cardRef("2"), selectable: true },
+        { card: cardRef("3"), selectable: true },
+      ],
+      selectionConstraint: {
+        type: "differentNames",
+        groupKeysByInstanceId: {
+          "1": "Elder A",
+          "2": "Elder A",
+          "3": "Elder B",
+        },
+      },
+    };
+    let draft = createDecisionDraft(decision);
+    draft = toggleDecisionSelectedCard(decision, draft, "1" as InstanceId);
+    draft = toggleDecisionSelectedCard(decision, draft, "2" as InstanceId);
+    draft = toggleDecisionSelectedCard(decision, draft, "3" as InstanceId);
+
+    const model = createDecisionModalModel(decision, draft);
+
+    assert.equal(model.kind, "selectCards");
+    assert.deepEqual(model.selectedInstanceIds, ["1", "3"]);
+    assert.deepEqual(
+      model.cards.map((choice) => choice.selectable),
+      [true, false, true],
+    );
+  });
+
   test("selectCards draft replaces the selected card when max is one", () => {
     const decision = selectDecision();
     let draft = createDecisionDraft(decision);

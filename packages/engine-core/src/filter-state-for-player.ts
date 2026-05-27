@@ -17,6 +17,7 @@ import type {
   PublicLegalAction,
   PublicPendingDecision,
   PublicRevealRecord,
+  PublicSelectCardsDecision,
   VisiblePlayerState,
 } from "@optcg/types";
 
@@ -251,6 +252,30 @@ const toPublicCardChoices = (
   );
 };
 
+const toPublicSelectCardsSelectionConstraint = (
+  state: GameState,
+  playerId: PlayerId,
+  pending: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "selectCards" }
+  >,
+): PublicSelectCardsDecision["selectionConstraint"] | undefined => {
+  if (pending.request.filter?.custom !== "differentNames") {
+    return undefined;
+  }
+  return {
+    type: "differentNames",
+    groupKeysByInstanceId: Object.fromEntries(
+      visibleChoiceCardsForSelectDecision(state, playerId, pending).map(
+        (card) => [
+          String(card.instanceId),
+          state.cardManifest.cards[card.cardId]?.name ?? String(card.cardId),
+        ],
+      ),
+    ),
+  };
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
@@ -455,6 +480,14 @@ const toPublicDecision = (
       max: pending.request.max,
       candidates: toPublicCardCandidates(pending.candidates, playerId),
       choices: toPublicCardChoices(state, playerId, pending),
+      ...(() => {
+        const selectionConstraint = toPublicSelectCardsSelectionConstraint(
+          state,
+          playerId,
+          pending,
+        );
+        return selectionConstraint === undefined ? {} : { selectionConstraint };
+      })(),
     };
   }
   if (pending.type === "selectTargets") {
