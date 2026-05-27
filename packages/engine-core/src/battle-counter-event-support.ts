@@ -2,6 +2,7 @@ import type {
   CardInstance,
   CardRef,
   CardSnapshot,
+  Effect,
   EffectDefinition,
   EffectQueueEntry,
   GameState,
@@ -18,6 +19,7 @@ export interface SupportedCounterEventPower {
   printedCost: number;
   target: CardRef;
   usesBattleCounterPower: boolean;
+  trailingEffect?: Extract<Effect, { type: "sequence" }>;
 }
 
 const sameCardRef = (left: CardRef, right: CardRef): boolean =>
@@ -159,16 +161,56 @@ const counterPowerTargetCanApplyToSelectedTarget = (
   );
 };
 
-const supportedCounterEventPowerValue = (
+const counterPowerEffect = (
+  effect: EffectDefinition["effects"][number],
+): {
+  power: Extract<Effect, { type: "modifyPower" }>;
+  trailingEffect?: Extract<Effect, { type: "sequence" }>;
+} | null => {
+  if (effect.effect.type === "modifyPower") {
+    return { power: effect.effect };
+  }
+  if (effect.effect.type !== "sequence") {
+    return null;
+  }
+  const [first, ...rest] = effect.effect.effects;
+  if (
+    first === undefined ||
+    first.connector !== "always" ||
+    first.optional === true ||
+    first.effect.type !== "modifyPower"
+  ) {
+    return null;
+  }
+  if (rest.length === 0) {
+    return { power: first.effect };
+  }
+  return {
+    power: first.effect,
+    trailingEffect: {
+      type: "sequence",
+      effects: rest.map((segment, index) =>
+        index === 0 ? { ...segment, connector: "always" } : segment,
+      ),
+    },
+  };
+};
+
+const supportedCounterEventPower = (
   state: GameState,
   card: CardInstance,
   metadata: ResolvedCard,
   effect: EffectDefinition["effects"][number],
   target: CardRef,
   battleTarget: CardRef | undefined,
-): number | null => {
+): {
+  value: number;
+  trailingEffect?: Extract<Effect, { type: "sequence" }>;
+} | null => {
   const controllerId = target.playerId;
+  const parsed = counterPowerEffect(effect);
   if (
+    parsed === null ||
     effect.category !== "auto" ||
     effect.optional === true ||
     effect.oncePerTurn === true ||
@@ -176,22 +218,26 @@ const supportedCounterEventPowerValue = (
     effect.cost !== undefined ||
     effect.failurePolicy !== undefined ||
     effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
-    effect.effect.type !== "modifyPower" ||
-    effect.effect.duration.type !== "thisBattle" ||
-    !Number.isInteger(effect.effect.value) ||
-    effect.effect.value <= 0 ||
+    parsed.power.duration.type !== "thisBattle" ||
+    !Number.isInteger(parsed.power.value) ||
+    parsed.power.value <= 0 ||
     !counterEventConditionPasses(state, card, metadata, effect, controllerId) ||
     !counterPowerTargetCanApplyToSelectedTarget(
       state,
       controllerId,
-      effect.effect.target,
+      parsed.power.target,
       target,
       battleTarget,
     )
   ) {
     return null;
   }
-  return effect.effect.value;
+  return {
+    value: parsed.power.value,
+    ...(parsed.trailingEffect === undefined
+      ? {}
+      : { trailingEffect: parsed.trailingEffect }),
+  };
 };
 
 export const getSupportedCounterEventPower = (
@@ -222,8 +268,9 @@ export const getSupportedCounterEventPower = (
     return null;
   }
   let value = 0;
+  let trailingEffect: Extract<Effect, { type: "sequence" }> | undefined;
   for (const counterEffect of counterEffects) {
-    const counterValue = supportedCounterEventPowerValue(
+    const counterValue = supportedCounterEventPower(
       state,
       card,
       metadata,
@@ -234,7 +281,13 @@ export const getSupportedCounterEventPower = (
     if (counterValue === null) {
       return null;
     }
-    value += counterValue;
+    value += counterValue.value;
+    if (counterValue.trailingEffect !== undefined) {
+      if (trailingEffect !== undefined) {
+        return null;
+      }
+      trailingEffect = counterValue.trailingEffect;
+    }
   }
   const printedCost = metadata.cost ?? 0;
   if (!Number.isInteger(printedCost) || printedCost < 0) {
@@ -246,6 +299,7 @@ export const getSupportedCounterEventPower = (
     target,
     usesBattleCounterPower:
       battleTarget !== undefined && sameCardRef(target, battleTarget),
+    ...(trailingEffect === undefined ? {} : { trailingEffect }),
   };
 };
 

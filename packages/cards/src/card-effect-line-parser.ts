@@ -15,6 +15,7 @@ import {
 import { parseExpression } from "./expression-parser.js";
 import {
   parseActivateReferencedEffectInstruction,
+  parseAddFromTrashToHandInstruction,
   parseDrawInstruction,
   parseKoInstruction,
   parseModifyCostInstruction,
@@ -58,6 +59,7 @@ import type {
 const instructionParsers = [
   parseDrawInstruction,
   parseActivateReferencedEffectInstruction,
+  parseAddFromTrashToHandInstruction,
   parseTrashFromHandInstruction,
   parseTrashAllYourCharactersInstruction,
   parsePlayFromHandInstruction,

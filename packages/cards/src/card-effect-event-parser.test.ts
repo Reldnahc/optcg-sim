@@ -142,6 +142,94 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses Counter power followed by conditional trash-to-hand selection", () => {
+    const result = parseCardEffectLine(
+      "[Counter] Up to 1 of your Leader or Character cards gains +1000 power during this battle. Then, if you have 10 or more cards in your trash, add up to 1 black Character card with a cost of 3 or less from your trash to your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "counter" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: { type: "chooseFromZones" },
+                value: 1000,
+                duration: { type: "thisBattle" },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "trashCount",
+                  player: "self",
+                  op: "gte",
+                  value: 10,
+                },
+                then: {
+                  type: "sequence",
+                  effects: [
+                    {
+                      connector: "always",
+                      effect: {
+                        type: "selectCards",
+                        zone: "trash",
+                        player: "self",
+                        chooser: "self",
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          colorsAny: ["black"],
+                          categories: ["character"],
+                          cost: { max: 3 },
+                        },
+                        saveAs: "trashSelection:addToHand",
+                        visibility: "bothPlayers",
+                      },
+                    },
+                    {
+                      connector: "then",
+                      effect: {
+                        type: "moveSelected",
+                        selection: "trashSelection:addToHand",
+                        from: "trash",
+                        to: "hand",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventCounter",
+        "instruction:modifyPower",
+        "target:yourLeaderOrCharacters",
+        "expression:conditional",
+        "condition:trashCount",
+        "condition:comparator:gte",
+        "instruction:moveSelected",
+        "zone:trash",
+        "destination:hand",
+        "filter:color",
+        "filter:category:character",
+        "filter:cost",
+      ]),
+    );
+  });
+
   it("parses Main Event only-matching Characters condition into reusable condition evidence", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 5 of your DON!! cards: If the only Characters on your field are {Celestial Dragons} type Characters, K.O. up to 1 of your opponent's Characters with a base cost of 6 or less.",

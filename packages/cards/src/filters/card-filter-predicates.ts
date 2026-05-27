@@ -173,7 +173,7 @@ function parseCharacterCategoryPredicate(
   text: string,
   current: CardFilter,
 ): ReturnType<PredicateParser> {
-  const match = /^Characters?\b\s*(?<rest>.*)$/i.exec(text);
+  const match = /^Characters?(?: cards?)?\b\s*(?<rest>.*)$/i.exec(text);
   if (match === null) {
     return undefined;
   }

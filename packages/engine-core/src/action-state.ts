@@ -110,6 +110,7 @@ const supportedSearchFilterKeys = new Set([
 const supportedHandSelectionFilterKeys = new Set([
   ...supportedSearchFilterKeys,
   "custom",
+  "cost",
 ]);
 
 const supportedHandSelectionCustomFilters = new Set([
@@ -118,6 +119,21 @@ const supportedHandSelectionCustomFilters = new Set([
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const isSupportedNumericFilter = (
+  value: CardFilter["cost"] | undefined,
+): boolean => {
+  if (value === undefined) {
+    return true;
+  }
+  if ("op" in value) {
+    return Number.isInteger(value.value);
+  }
+  return (
+    (value.min === undefined || Number.isInteger(value.min)) &&
+    (value.max === undefined || Number.isInteger(value.max))
+  );
+};
 
 export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
   for (const key of Object.keys(filter)) {
@@ -145,6 +161,7 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
+    isSupportedNumericFilter(filter.cost) &&
     (filter.custom === undefined ||
       supportedHandSelectionCustomFilters.has(filter.custom))
   );
@@ -172,6 +189,23 @@ const cardMatchesBaseFilter = (
     !filter.typesAny.some((type) => card.types.includes(type))
   ) {
     return false;
+  }
+  if (filter.cost !== undefined) {
+    const cost = card.cost;
+    if (cost === undefined) {
+      return false;
+    }
+    if ("op" in filter.cost) {
+      if (filter.cost.op === "eq" && cost !== filter.cost.value) return false;
+      if (filter.cost.op === "neq" && cost === filter.cost.value) return false;
+      if (filter.cost.op === "gt" && cost <= filter.cost.value) return false;
+      if (filter.cost.op === "gte" && cost < filter.cost.value) return false;
+      if (filter.cost.op === "lt" && cost >= filter.cost.value) return false;
+      if (filter.cost.op === "lte" && cost > filter.cost.value) return false;
+    } else {
+      if (filter.cost.min !== undefined && cost < filter.cost.min) return false;
+      if (filter.cost.max !== undefined && cost > filter.cost.max) return false;
+    }
   }
   return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
 };

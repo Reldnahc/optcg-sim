@@ -27,7 +27,14 @@ import {
   counterPayCostDecisionId,
   parseCounterPayCostDecisionId,
 } from "./battle-counter-event-payment-context.js";
+import { getCounterEventPaymentLegalActions } from "./battle-counter-event-payment-actions.js";
 import { createCounterEventPowerRecord } from "./battle-counter-event-power-record.js";
+import {
+  applyCounterEventTrashToHandResponse,
+  createCounterEventTrashToHandDecision,
+  getCounterEventTrashToHandLegalActions,
+  isCounterEventTrashToHandDecision,
+} from "./battle-counter-event-trash-to-hand.js";
 import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
@@ -41,7 +48,6 @@ import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
-import { chooseDonCombos } from "./play-card-legal-actions.js";
 import { getActiveDonCount } from "./play-card-support.js";
 
 export const createCounterStepPassDecision = (
@@ -105,6 +111,13 @@ export const getCounterStepDecisionLegalActions = (
 ): LegalAction[] => {
   const decision = state.pendingDecision;
   const battle = state.battle;
+  if (
+    decision !== undefined &&
+    isCounterEventTrashToHandDecision(decision) &&
+    decision.playerId === playerId
+  ) {
+    return getCounterEventTrashToHandLegalActions(state, playerId);
+  }
   if (
     decision !== undefined &&
     decision.type === "payCost" &&
@@ -336,6 +349,9 @@ export const applyUseCounter = (
   let counterValue: number | undefined;
   let printedCost = 0;
   let usesBattleCounterPower = true;
+  let trailingEffect: NonNullable<
+    ReturnType<typeof getSupportedCounterEventPower>
+  >["trailingEffect"];
   if (
     metadata?.category === "character" &&
     metadata.counter !== undefined &&
@@ -366,6 +382,7 @@ export const applyUseCounter = (
     counterValue = supportedCounterEvent.value;
     printedCost = supportedCounterEvent.printedCost;
     usesBattleCounterPower = supportedCounterEvent.usesBattleCounterPower;
+    trailingEffect = supportedCounterEvent.trailingEffect;
   }
   if (
     metadata?.category === "event" &&
@@ -423,6 +440,7 @@ export const applyUseCounter = (
     target: action.target,
     counterValue,
     usesBattleCounterPower,
+    trailingEffect,
     costArea: defender.costArea,
     decisionResolvedId: undefined,
     pendingDecision: state.pendingDecision,
@@ -440,6 +458,9 @@ const resolveCounterCardUse = (params: {
   target: CardRef;
   counterValue: number;
   usesBattleCounterPower: boolean;
+  trailingEffect?: NonNullable<
+    ReturnType<typeof getSupportedCounterEventPower>
+  >["trailingEffect"];
   costArea: GameState["players"][PlayerId]["costArea"];
   decisionResolvedId: string | undefined;
   pendingDecision: GameState["pendingDecision"] | undefined;
@@ -454,6 +475,7 @@ const resolveCounterCardUse = (params: {
     target,
     counterValue,
     usesBattleCounterPower,
+    trailingEffect,
     costArea,
     decisionResolvedId,
     pendingDecision,
@@ -579,6 +601,23 @@ const resolveCounterCardUse = (params: {
   } else {
     delete nextState.pendingDecision;
   }
+  if (trailingEffect !== undefined) {
+    const trailing = createCounterEventTrashToHandDecision(
+      nextState,
+      decisionPlayerId,
+      trashedCard,
+      trailingEffect,
+    );
+    if (trailing === null) {
+      return illegalAction(state, "Unsupported Counter Event trailing effect.");
+    }
+    assertGameStateInvariants(trailing.state);
+    return toEngineResult(trailing.state, [
+      ...priorEvents,
+      ...events,
+      ...trailing.events,
+    ]);
+  }
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, [...priorEvents, ...events]);
 };
@@ -596,6 +635,16 @@ export const applyCounterStepDecisionResponse = (
     battle.step !== "counter"
   ) {
     return null;
+  }
+  if (isCounterEventTrashToHandDecision(decision)) {
+    return applyCounterEventTrashToHandResponse(
+      state,
+      action,
+      (nextState) =>
+        createCounterStepPassDecision(nextState, {
+          requirePotentialCounterActions: false,
+        }) ?? undefined,
+    );
   }
   if (decision.type === "payCost") {
     if (action.response.type !== "payment") {
@@ -700,6 +749,7 @@ export const applyCounterStepDecisionResponse = (
       target: selectedTarget.target,
       counterValue: supportedCounterEvent.value,
       usesBattleCounterPower: supportedCounterEvent.usesBattleCounterPower,
+      trailingEffect: supportedCounterEvent.trailingEffect,
       costArea: nextCostArea,
       decisionResolvedId: decision.id,
       pendingDecision:
@@ -788,68 +838,6 @@ const hasCounterTriggerDefinition = (
       definition.cardId === cardId &&
       definition.effects.some((effect) => effect.trigger.type === "counter"),
   );
-
-const getCounterEventPaymentLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): LegalAction[] => {
-  const decision = state.pendingDecision;
-  const battle = state.battle;
-  const player = state.players[playerId];
-  if (
-    decision === undefined ||
-    decision.type !== "payCost" ||
-    decision.playerId !== playerId ||
-    battle === undefined ||
-    player === undefined
-  ) {
-    return [];
-  }
-  const context = parseCounterPayCostDecisionId(String(decision.id));
-  if (context === null) {
-    return [];
-  }
-  const handCard = player.hand.find(
-    (card) => String(card.instanceId) === context.counterEventInstanceId,
-  );
-  if (handCard === undefined) {
-    return [];
-  }
-  const supportedTargets = getSupportedCounterEventPowerTargets(
-    state,
-    handCard,
-    playerId,
-    battle.currentTarget,
-  );
-  const selectedTarget = supportedTargets.find(
-    (supportedTarget) =>
-      String(supportedTarget.target.instanceId) === context.targetInstanceId,
-  );
-  if (selectedTarget === undefined) {
-    return [];
-  }
-  const supported = getSupportedCounterEventPower(
-    state,
-    handCard,
-    selectedTarget.target,
-    battle.currentTarget,
-  );
-  if (supported === null || supported.printedCost <= 0) {
-    return [];
-  }
-  const activeDonIds = player.costArea
-    .filter((card) => card.state === "active")
-    .map((card) => card.instanceId);
-  return chooseDonCombos(activeDonIds, supported.printedCost).map((combo) => ({
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: {
-      type: "payment",
-      optionId: decision.paymentOptions[0]?.id ?? "restDon",
-      selectedDonInstanceIds: combo,
-    },
-  }));
-};
 
 const isUnsupportedCounterEventCandidate = (
   state: GameState,

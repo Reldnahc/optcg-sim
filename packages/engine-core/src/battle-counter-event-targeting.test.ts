@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardInstance, EffectDefinition } from "@optcg/types";
+import type { CardInstance, EffectDefinition, SelectionId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
@@ -68,6 +68,123 @@ const installChooseLeaderOrCharacterCounterEvent = (
           },
         } satisfies EffectDefinition["effects"][number],
       ],
+    },
+  };
+};
+
+const addTrashCards = (
+  state: ReturnType<typeof setupAttackState>,
+  count: number,
+): CardInstance => {
+  const p2State = must(state.players[p2], "p2");
+  const selectedCardId = "trash-black-character" as CardInstance["cardId"];
+  state.cardManifest.cards[selectedCardId] = resolvedCard({
+    cardId: selectedCardId,
+    category: "character",
+    cost: 3,
+    power: 3000,
+  });
+  state.cardManifest.cards[selectedCardId].colors = ["black"];
+  p2State.trash = Array.from({ length: count }, (_, index) => {
+    const cardId =
+      index === 0
+        ? selectedCardId
+        : (`trash-filler-${String(index)}` as CardInstance["cardId"]);
+    if (index > 0) {
+      state.cardManifest.cards[cardId] = resolvedCard({
+        cardId,
+        category: "character",
+        cost: 5,
+        power: 3000,
+      });
+      state.cardManifest.cards[cardId].colors = ["red"];
+    }
+    return {
+      instanceId: `p2:trash:${String(index)}` as CardInstance["instanceId"],
+      cardId,
+      owner: p2,
+      controller: p2,
+      zone: { zone: "trash", playerId: p2, slot: "trash", index },
+      state: "active",
+      attachedDon: [],
+    };
+  });
+  return must(p2State.trash[0], "selected trash card");
+};
+
+const installCounterPowerThenTrashToHandEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  counterEvent: CardInstance,
+): void => {
+  installChooseLeaderOrCharacterCounterEvent(state, counterEvent);
+  const definitionId = `${String(counterEvent.cardId)}:counter`;
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[definitionId],
+    "counter definition",
+  );
+  const first = must(definition.effects[0], "first counter effect");
+  const powerEffect = first.effect;
+  assert.equal(powerEffect.type, "modifyPower");
+  const trashSelection = "trashSelection:addToHand" as SelectionId;
+  const counterBlock: EffectDefinition["effects"][number] = {
+    ...first,
+    effect: {
+      type: "sequence",
+      effects: [
+        { connector: "always", effect: { ...powerEffect, value: 1000 } },
+        {
+          connector: "then",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "trashCount",
+              player: "self",
+              op: "gte",
+              value: 10,
+            },
+            then: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: trashSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "trash",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      colorsAny: ["black"],
+                      categories: ["character"],
+                      cost: { max: 3 },
+                    },
+                    saveAs: trashSelection,
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "moveSelected",
+                    selection: trashSelection,
+                    from: "trash",
+                    to: "hand",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      ...definition,
+      effects: [counterBlock],
     },
   };
 };
@@ -166,4 +283,57 @@ test("nonzero-cost Counter Event preserves a chosen non-battle target through pa
   const view = computeView(paid.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 7000);
   assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
+});
+
+test("Counter Event resolves selected power then conditional trash-to-hand sequence", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  const defenderCharacter = must(p2State.characters[0], "defender character");
+  const selectedTrashCard = addTrashCards(state, 10);
+  installCounterPowerThenTrashToHandEvent(state, counterEvent);
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const used = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: cardRef(defenderCharacter, p2),
+  });
+
+  assert.equal(used.errors, undefined);
+  assert.equal(used.state.pendingDecision?.type, "selectCards");
+  const decision = must(used.state.pendingDecision, "trash selection");
+  const selected = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.instanceId === selectedTrashCard.instanceId,
+    ),
+    "selected trash candidate",
+  ).card;
+  const resolved = applyAction(used.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    must(resolved.state.players[p2], "p2").hand.some(
+      (card) => card.instanceId === selectedTrashCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    must(resolved.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === selectedTrashCard.instanceId,
+    ),
+    false,
+  );
+  const view = computeView(resolved.state);
+  assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 4000);
 });

@@ -55,6 +55,7 @@ export type PrimitiveEvidence =
   | "instruction:setBasePower"
   | "instruction:search"
   | "instruction:playSelected"
+  | "instruction:moveSelected"
   | "instruction:trash"
   | "instruction:ko"
   | "instruction:giveProtection"
