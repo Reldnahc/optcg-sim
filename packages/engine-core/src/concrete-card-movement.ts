@@ -23,6 +23,7 @@ type CardMovedPayloadShape = "publicZoneNames" | "zoneRefs";
 
 type ConcreteTrashMovementReason =
   | "counter"
+  | "effectTrash"
   | "playCard"
   | "lifeTriggerResolved"
   | "moveCards"

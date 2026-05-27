@@ -157,3 +157,21 @@ test("start-of-game stage replacement delegates concrete movement", () => {
     "start-of-game stage replacement must not construct trash-zone cards directly",
   );
 });
+
+test("sequence effect trash delegates concrete movement", () => {
+  const source = readSource(
+    "packages/engine-core/src/effect-runtime-sequence-frames.ts",
+  );
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "sequence effect trash must not hand-roll cardTrashed",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "sequence effect trash must not construct trash-zone cards directly",
+  );
+});

@@ -24,6 +24,7 @@ import {
   reindexZoneCards,
 } from "./action-state.js";
 import { appendEvent } from "./action-results.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { createSupportedHandSelectionChoiceDecision } from "./effect-runtime-hand-selection.js";
 import {
   createChooseQuantityDecisionForSequenceSegment,
@@ -315,8 +316,29 @@ const applyAllTargetTrashSequenceSegment = (params: {
       state: params.state,
     };
   }
+  const sourceZone =
+    params.effect.target.zone === "characterArea" ||
+    params.effect.target.zone === "stageArea"
+      ? params.effect.target.zone
+      : null;
+  if (sourceZone === null) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
   const sourceCards =
-    params.effect.target.zone === "characterArea"
+    sourceZone === "characterArea"
       ? player.characters
       : player.stage === undefined
         ? []
@@ -329,95 +351,50 @@ const applyAllTargetTrashSequenceSegment = (params: {
       params.effect.target.filter,
     ),
   );
-  const selectedIds = new Set(selectedCards.map((card) => card.instanceId));
-  const trashedCards = selectedCards.map((card, index) => ({
-    ...card,
-    attachedDon: [],
-    zone: {
-      zone: "trash" as const,
-      playerId: targetPlayerId,
-      slot: "trash" as const,
-      index,
-    },
-  }));
   const attachedDonIds = new Set(
     selectedCards.flatMap((card) => card.attachedDon),
   );
-  const nextStage =
-    params.effect.target.zone === "stageArea" &&
-    player.stage !== undefined &&
-    selectedIds.has(player.stage.instanceId)
-      ? undefined
-      : player.stage;
-  const { stage: _stage, ...playerWithoutStage } = player;
-  void _stage;
+  const events: EngineEvent[] = [];
+  const movement = moveConcreteCardsToTrash(
+    params.state,
+    events,
+    selectedCards,
+    {
+      cardMovedPayloadShape: "zoneRefs",
+      cardMovedVisibility: { type: "public" },
+      cardTrashedVisibility: { type: "public" },
+      clearAttachedDon: true,
+      emitCardTrashed: true,
+      includeCardIdentityInCardMoved: true,
+      insertPosition: "top",
+      playerId: targetPlayerId,
+      reason: "effectTrash",
+      sourceZone,
+    },
+  );
+  const movedPlayer = movement.state.players[targetPlayerId];
+  if (movedPlayer === undefined) {
+    return {
+      events,
+      ledgers: params.ledgers,
+      state: params.state,
+    };
+  }
   const nextPlayer = {
-    ...playerWithoutStage,
-    characters:
-      params.effect.target.zone === "characterArea"
-        ? reindexZoneCards(
-            player.characters.filter(
-              (card) => !selectedIds.has(card.instanceId),
-            ),
-            "characterArea",
-            targetPlayerId,
-            "character",
-          )
-        : player.characters,
-    ...(nextStage === undefined ? {} : { stage: nextStage }),
+    ...movedPlayer,
     costArea: player.costArea.map((card) =>
       attachedDonIds.has(card.instanceId)
         ? { ...card, state: "rested" as const }
         : card,
     ),
-    trash: reindexZoneCards(
-      [...trashedCards, ...player.trash],
-      "trash",
-      targetPlayerId,
-      "trash",
-    ),
   };
   const eventBaseState: GameState = {
-    ...params.state,
+    ...movement.state,
     players: {
-      ...params.state.players,
+      ...movement.state.players,
       [targetPlayerId]: nextPlayer,
     },
   };
-  const events: EngineEvent[] = [];
-  for (const originalCard of selectedCards) {
-    const movedCard = trashedCards.find(
-      (card) => card.instanceId === originalCard.instanceId,
-    );
-    if (movedCard === undefined) {
-      continue;
-    }
-    appendEvent(
-      eventBaseState,
-      events,
-      "cardMoved",
-      {
-        instanceId: movedCard.instanceId,
-        cardId: movedCard.cardId,
-        from: originalCard.zone,
-        to: movedCard.zone,
-        reason: "effectTrash",
-      },
-      { type: "public" },
-    );
-    appendEvent(
-      eventBaseState,
-      events,
-      "cardTrashed",
-      {
-        playerId: targetPlayerId,
-        instanceId: movedCard.instanceId,
-        cardId: movedCard.cardId,
-        reason: "effectTrash",
-      },
-      { type: "public" },
-    );
-  }
   for (const donId of attachedDonIds) {
     appendEvent(
       eventBaseState,
