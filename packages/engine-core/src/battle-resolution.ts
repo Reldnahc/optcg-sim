@@ -41,6 +41,10 @@ import {
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
 import {
+  KO_TRASH_MOVEMENT_REASON,
+  moveConcreteCardsToTrash,
+} from "./concrete-card-movement.js";
+import {
   detectPendingRuntimeWork,
   isSupportedDamageDeferredEffectQueueState,
   processDefenderOpponentAttackTiming,
@@ -398,28 +402,6 @@ export const resolveSupportedVanillaBattle = (
       if (koCard === undefined) {
         return illegalAction(state, "K.O. target not found.");
       }
-      const nextCharacters = reindexZoneCards(
-        defender.characters.filter((_, index) => index !== koIndex),
-        "characterArea",
-        target.playerId,
-        "character",
-      );
-      const trashedCard: CardInstance = {
-        ...koCard,
-        attachedDon: [],
-        zone: {
-          zone: "trash",
-          playerId: target.playerId,
-          slot: "trash",
-          index: 0,
-        },
-      };
-      const nextTrash = reindexZoneCards(
-        [trashedCard, ...defender.trash],
-        "trash",
-        target.playerId,
-        "trash",
-      );
       const attachedDonIds = new Set(koCard.attachedDon);
       const nextCostArea = defender.costArea.map((card) =>
         attachedDonIds.has(card.instanceId)
@@ -432,8 +414,6 @@ export const resolveSupportedVanillaBattle = (
           ...nextState.players,
           [target.playerId]: {
             ...defender,
-            characters: nextCharacters,
-            trash: nextTrash,
             costArea: nextCostArea,
           },
         },
@@ -451,23 +431,23 @@ export const resolveSupportedVanillaBattle = (
         state,
         target.card,
       );
-      const koMovePayload = {
-        from: target.card.zone,
-        to: trashedCard.zone,
-        reason: "ko",
-      };
-      appendEvent(
-        state,
+      const movedResult = moveConcreteCardsToTrash(
+        nextState,
         events,
-        "cardMoved",
-        shouldDetectBattleKOTriggers
-          ? {
-              instanceId: trashedCard.instanceId,
-              cardId: trashedCard.cardId,
-              ...koMovePayload,
-            }
-          : koMovePayload,
+        [koCard],
+        {
+          cardMovedPayloadShape: "zoneRefs",
+          clearAttachedDon: true,
+          emitCardTrashed: false,
+          eventBaseState: state,
+          includeCardIdentityInCardMoved: shouldDetectBattleKOTriggers,
+          insertPosition: "top",
+          playerId: target.playerId,
+          reason: KO_TRASH_MOVEMENT_REASON,
+          sourceZone: "characterArea",
+        },
       );
+      nextState = movedResult.state;
       for (const donId of koCard.attachedDon) {
         appendEvent(
           state,

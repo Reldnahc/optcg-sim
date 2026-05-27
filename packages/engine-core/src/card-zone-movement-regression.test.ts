@@ -1,0 +1,53 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { test } from "vitest";
+import assert from "node:assert/strict";
+
+const repoRoot = join(import.meta.dirname, "..", "..", "..");
+
+const readSource = (path: string): string =>
+  readFileSync(join(repoRoot, path), "utf8");
+
+test("trash front doors delegate concrete movement to the shared zone movement helper", () => {
+  const frontDoors = [
+    "packages/engine-core/src/effect-runtime-move-cards.ts",
+    "packages/engine-core/src/effect-runtime-trash-from-hand.ts",
+    "packages/engine-core/src/effect-runtime-target-ko-primitives.ts",
+  ];
+
+  for (const path of frontDoors) {
+    const source = readSource(path);
+    assert.match(
+      source,
+      /\bmoveConcreteCardsToTrash\b/,
+      `${path} must use shared concrete card-to-trash movement`,
+    );
+    assert.doesNotMatch(
+      source,
+      /appendEvent\([^)]*"cardMoved"/s,
+      `${path} must not hand-roll cardMoved for trash movement`,
+    );
+    assert.doesNotMatch(
+      source,
+      /appendEvent\([^)]*"cardTrashed"/s,
+      `${path} must not hand-roll cardTrashed for trash movement`,
+    );
+    assert.doesNotMatch(
+      source,
+      /reindexZoneCards\([^)]*"trash"/s,
+      `${path} must not hand-roll trash-zone reindexing`,
+    );
+  }
+});
+
+test("battle K.O. keeps K.O. semantics but delegates concrete trash movement", () => {
+  const source = readSource("packages/engine-core/src/battle-resolution.ts");
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.match(source, /appendEvent\([^)]*"cardKOd"/s);
+  assert.doesNotMatch(
+    source,
+    /reason:\s*"ko"/,
+    "battle K.O. movement reason must be owned by the shared movement helper",
+  );
+});

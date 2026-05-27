@@ -1,5 +1,4 @@
 import type {
-  CardInstance,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -7,11 +6,10 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
-  PlayerId,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { reindexZoneCards } from "./action-state.js";
+import { toEngineResult, toStateSeq } from "./action-results.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
@@ -70,43 +68,6 @@ export const resolveSupportedQueuedMoveCardsEffect = (
     ? effect.effect
     : undefined;
 
-const moveTopDeckCardsToTrash = (
-  player: NonNullable<GameState["players"][PlayerId]>,
-  playerId: PlayerId,
-  count: number,
-): {
-  moved: CardInstance[];
-  player: NonNullable<GameState["players"][PlayerId]>;
-} => {
-  const moved = player.deck.slice(0, count).map((card, index) => ({
-    ...card,
-    zone: {
-      zone: "trash" as const,
-      playerId,
-      slot: "trash" as const,
-      index: player.trash.length + index,
-    },
-  }));
-  return {
-    moved,
-    player: {
-      ...player,
-      deck: reindexZoneCards(
-        player.deck.slice(count),
-        "deck",
-        playerId,
-        "deck",
-      ),
-      trash: reindexZoneCards(
-        [...player.trash, ...moved],
-        "trash",
-        playerId,
-        "trash",
-      ),
-    },
-  };
-};
-
 export const executeMoveCardsPrimitive = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -159,46 +120,29 @@ export const executeMoveCardsPrimitive = (
   if (movedCount === 0) {
     return toEngineResult(state, []);
   }
-  const movedResult = moveTopDeckCardsToTrash(player, fromPlayerId, movedCount);
   const events: EngineEvent[] = [];
-  for (const moved of movedResult.moved) {
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      {
-        from: "deck",
-        to: "trash",
-        playerId: fromPlayerId,
-        reason: "moveCards",
-        instanceId: moved.instanceId,
-        cardId: moved.cardId,
-      },
-      { type: "public" },
-    );
-    appendEvent(
-      state,
-      events,
-      "cardTrashed",
-      {
-        playerId: fromPlayerId,
-        instanceId: moved.instanceId,
-        cardId: moved.cardId,
-        reason: "moveCards",
-      },
-      { type: "public" },
-    );
-  }
+  const movedResult = moveConcreteCardsToTrash(
+    state,
+    events,
+    player.deck.slice(0, movedCount),
+    {
+      cardMovedPayloadShape: "publicZoneNames",
+      cardMovedVisibility: { type: "public" },
+      cardTrashedVisibility: { type: "public" },
+      emitCardTrashed: true,
+      includeCardIdentityInCardMoved: true,
+      insertPosition: "bottom",
+      playerId: fromPlayerId,
+      reason: "moveCards",
+      sourceZone: "deck",
+    },
+  );
 
   const shouldIncrementStateSeq = options.incrementStateSeq ?? true;
   return toEngineResult(
     {
-      ...state,
+      ...movedResult.state,
       ...(shouldIncrementStateSeq ? { seq: toStateSeq(state.seq + 1) } : {}),
-      players: {
-        ...state.players,
-        [fromPlayerId]: movedResult.player,
-      },
       eventJournal: [...state.eventJournal, ...events],
     },
     events,

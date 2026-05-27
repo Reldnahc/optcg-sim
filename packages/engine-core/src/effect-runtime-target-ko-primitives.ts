@@ -18,7 +18,10 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { getOpponentId } from "./action-state.js";
-import { reindexZoneCards } from "./action-state.js";
+import {
+  KO_TRASH_MOVEMENT_REASON,
+  moveConcreteCardsToTrash,
+} from "./concrete-card-movement.js";
 import {
   buildSelectedTargetKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
@@ -303,31 +306,6 @@ export const executeUnreplacedSelectedTargetKoProcess = (
     return { state };
   }
 
-  const trashedCard: CardInstance = {
-    ...koCard,
-    attachedDon: [],
-    zone: {
-      zone: "trash",
-      playerId: located.playerId,
-      slot: "trash",
-      index: 0,
-    },
-  };
-  const nextCharacters =
-    located.zone === "characterArea"
-      ? reindexZoneCards(
-          player.characters.filter((_, index) => index !== targetIndex),
-          "characterArea",
-          located.playerId,
-          "character",
-        )
-      : player.characters;
-  const nextTrash = reindexZoneCards(
-    [trashedCard, ...player.trash],
-    "trash",
-    located.playerId,
-    "trash",
-  );
   const attachedDonIds = new Set(koCard.attachedDon);
   const nextCostArea = player.costArea.map((card) =>
     attachedDonIds.has(card.instanceId)
@@ -337,15 +315,9 @@ export const executeUnreplacedSelectedTargetKoProcess = (
 
   const nextPlayer = {
     ...player,
-    characters: nextCharacters,
-    trash: nextTrash,
     costArea: nextCostArea,
   };
-  if (located.zone === "stageArea") {
-    delete nextPlayer.stage;
-  }
-
-  const nextState = {
+  const stateWithRestedAttachedDon = {
     ...state,
     players: {
       ...state.players,
@@ -353,20 +325,28 @@ export const executeUnreplacedSelectedTargetKoProcess = (
     },
   };
 
-  appendEvent(nextState, events, "cardKOd", {
+  appendEvent(stateWithRestedAttachedDon, events, "cardKOd", {
     playerId: located.playerId,
     instanceId: koCard.instanceId,
   });
-  appendEvent(nextState, events, "cardMoved", {
-    instanceId: koCard.instanceId,
-    cardId: koCard.cardId,
-    from: koCard.zone,
-    to: trashedCard.zone,
-    reason: "ko",
-  });
+  const movedResult = moveConcreteCardsToTrash(
+    stateWithRestedAttachedDon,
+    events,
+    [koCard],
+    {
+      cardMovedPayloadShape: "zoneRefs",
+      clearAttachedDon: true,
+      emitCardTrashed: false,
+      includeCardIdentityInCardMoved: true,
+      insertPosition: "top",
+      playerId: located.playerId,
+      reason: KO_TRASH_MOVEMENT_REASON,
+      sourceZone: located.zone,
+    },
+  );
   for (const donId of koCard.attachedDon) {
     appendEvent(
-      nextState,
+      movedResult.state,
       events,
       "donReturned",
       { playerId: located.playerId, donInstanceId: donId, state: "rested" },
@@ -374,7 +354,7 @@ export const executeUnreplacedSelectedTargetKoProcess = (
     );
   }
 
-  return { state: nextState };
+  return { state: movedResult.state };
 };
 
 const executeSelectedTargetKoReplacementProcess = (

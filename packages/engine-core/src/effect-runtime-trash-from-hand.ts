@@ -19,7 +19,8 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reindexZoneCards, toCardRef, zonesEqual } from "./action-state.js";
+import { toCardRef, zonesEqual } from "./action-state.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 import { resumeSequenceFrameAfterTrashFromHand } from "./effect-runtime-sequence-frames.js";
 
@@ -352,16 +353,6 @@ const findDecisionQueueEntry = (
   );
 };
 
-const toTrashCard = (
-  card: CardInstance,
-  playerId: EffectQueueEntry["controllerId"],
-  index: number,
-): CardInstance => ({
-  ...card,
-  attachedDon: [],
-  zone: { zone: "trash", playerId, slot: "trash", index },
-});
-
 export const applySupportedTrashFromHandChoiceResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -417,28 +408,6 @@ export const applySupportedTrashFromHandChoiceResponse = (
     return fail("trashFromHand decision is stale for current effect queue.");
   }
 
-  const player = state.players[decision.playerId];
-  if (player === undefined) {
-    return fail("Player does not match current trashFromHand decision.");
-  }
-
-  const selectedIds = new Set(selectedCards.map((card) => card.instanceId));
-  const trashedCards = selectedCards.map((card, index) =>
-    toTrashCard(card, decision.playerId, index),
-  );
-  const nextHand = reindexZoneCards(
-    player.hand.filter((card) => !selectedIds.has(card.instanceId)),
-    "hand",
-    decision.playerId,
-    "hand",
-  );
-  const nextTrash = reindexZoneCards(
-    [...trashedCards, ...player.trash],
-    "trash",
-    decision.playerId,
-    "trash",
-  );
-
   const events: EngineEvent[] = [];
   appendEvent(
     state,
@@ -458,61 +427,23 @@ export const applySupportedTrashFromHandChoiceResponse = (
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
 
-  for (const selectedCard of selectedCards) {
-    const trashedCard = nextTrash.find(
-      (card) => card.instanceId === selectedCard.instanceId,
-    );
-    if (trashedCard === undefined) {
-      return fail(
-        "Selected cards must be active cards in the choosing player's hand.",
-      );
-    }
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      {
-        from: "hand",
-        to: "trash",
-        playerId: decision.playerId,
-        reason: "trashFromHand",
-      },
-      { type: "public" },
-    );
-    const cardMoved = events[events.length - 1];
-    if (cardMoved !== undefined) {
-      cardMoved.causedBy = { type: "decision", decisionId: decision.id };
-    }
-    appendEvent(
-      state,
-      events,
-      "cardTrashed",
-      {
-        playerId: decision.playerId,
-        instanceId: selectedCard.instanceId,
-        cardId: selectedCard.cardId,
-        reason: "trashFromHand",
-      },
-      { type: "public" },
-    );
-    const cardTrashed = events[events.length - 1];
-    if (cardTrashed !== undefined) {
-      cardTrashed.causedBy = { type: "decision", decisionId: decision.id };
-    }
-  }
+  const movedResult = moveConcreteCardsToTrash(state, events, selectedCards, {
+    cardMovedPayloadShape: "publicZoneNames",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    causedBy: { type: "decision", decisionId: decision.id },
+    clearAttachedDon: true,
+    emitCardTrashed: true,
+    insertPosition: "top",
+    playerId: decision.playerId,
+    reason: "trashFromHand",
+    sourceZone: "hand",
+  });
 
   let nextState: GameState = {
-    ...state,
+    ...movedResult.state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    players: {
-      ...state.players,
-      [decision.playerId]: {
-        ...player,
-        hand: nextHand,
-        trash: nextTrash,
-      },
-    },
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
