@@ -3,6 +3,7 @@ import type { ClientActionModel, ClientCardModel } from "../view-model.js";
 export interface CardTileProps {
   card: ClientCardModel;
   label?: string | undefined;
+  selectionOrderLabel?: string | undefined;
   selected?: boolean;
   pendingChoice?: boolean | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
@@ -16,6 +17,7 @@ export interface CardTileProps {
 export const CardTile = ({
   card,
   label,
+  selectionOrderLabel,
   selected = false,
   pendingChoice = false,
   selectedDonInstanceIds = [],
@@ -56,6 +58,9 @@ export const CardTile = ({
       >
         {image}
         {label === undefined ? null : <span className="card-tag">{label}</span>}
+        {selectionOrderLabel === undefined ? null : (
+          <span className="selection-order-badge">{selectionOrderLabel}</span>
+        )}
         {powerDeltaText === undefined ? null : (
           <span
             className={`power-delta ${

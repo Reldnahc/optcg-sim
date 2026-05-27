@@ -192,6 +192,10 @@ export const useMatchClient = (): MatchClientUi => {
           selectedInstanceIds: activeCardCostSelectedInstanceIds,
           canConfirm: selectedCardCostActionIndex !== undefined,
           confirmLabel: "Pay cost",
+          ...(activeCardCostGroup.operation === "moveCards" &&
+          activeCardCostGroup.source?.zone === "trash"
+            ? { orderHint: "1 is highest, last is bottom-most." }
+            : {}),
         };
   const modalResponseActions =
     optionalCardCostChoice === undefined || cardCostChoiceActive

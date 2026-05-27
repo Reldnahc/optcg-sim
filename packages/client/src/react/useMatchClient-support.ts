@@ -25,6 +25,7 @@ export interface MatchClientUiState {
     selectedInstanceIds: string[];
     canConfirm: boolean;
     confirmLabel: string;
+    orderHint?: string | undefined;
   };
   pendingChoiceInstanceIds: string[];
   decisionSelectedInstanceIds: string[];

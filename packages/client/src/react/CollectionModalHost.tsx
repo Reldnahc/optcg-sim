@@ -11,6 +11,7 @@ export interface CollectionModalModel {
         selectableInstanceIds: readonly string[];
         canConfirm: boolean;
         confirmLabel: string;
+        orderHint?: string | undefined;
       }
     | undefined;
 }
@@ -35,6 +36,7 @@ export const CollectionModalHost = ({
   }
   const selectedIds = new Set(model.selection?.selectedInstanceIds ?? []);
   const selectableIds = new Set(model.selection?.selectableInstanceIds ?? []);
+  const orderedSelectionIds = model.selection?.selectedInstanceIds ?? [];
 
   return (
     <ModalFrame
@@ -52,6 +54,12 @@ export const CollectionModalHost = ({
               key={instanceId}
               card={card}
               selected={selectedIds.has(instanceId)}
+              selectionOrderLabel={
+                model.selection?.orderHint === undefined ||
+                !selectedIds.has(instanceId)
+                  ? undefined
+                  : String(orderedSelectionIds.indexOf(instanceId) + 1)
+              }
               pendingChoice={selectable}
               disabled={disabled || !selectable}
               onClick={
@@ -66,14 +74,21 @@ export const CollectionModalHost = ({
         })}
       </div>
       {model.selection === undefined ? null : (
-        <button
-          className="action-button primary-action"
-          type="button"
-          disabled={disabled || !model.selection.canConfirm}
-          onClick={onConfirm}
-        >
-          {model.selection.confirmLabel}
-        </button>
+        <div className="collection-modal-actions">
+          {model.selection.orderHint === undefined ? null : (
+            <p className="collection-modal-order-hint">
+              {model.selection.orderHint}
+            </p>
+          )}
+          <button
+            className="action-button primary-action"
+            type="button"
+            disabled={disabled || !model.selection.canConfirm}
+            onClick={onConfirm}
+          >
+            {model.selection.confirmLabel}
+          </button>
+        </div>
       )}
     </ModalFrame>
   );

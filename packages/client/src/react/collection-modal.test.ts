@@ -140,6 +140,35 @@ describe("collection modal", () => {
     assert.equal(markup.includes("Confirm"), true);
   });
 
+  test("collection modal can number ordered selections", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Choose cards from trash",
+          cards: [
+            card("first", "Highest Card"),
+            card("second", "Lowest Card"),
+            card("available", "Available Trash"),
+          ],
+          selection: {
+            selectedInstanceIds: ["second", "first"],
+            selectableInstanceIds: ["first", "second", "available"],
+            canConfirm: true,
+            confirmLabel: "Pay cost",
+            orderHint: "1 is highest, last is bottom-most.",
+          },
+        },
+        disabled: false,
+        onToggleCard: () => undefined,
+        onConfirm: () => undefined,
+      }),
+    );
+
+    assert.equal(markup.includes("1 is highest, last is bottom-most."), true);
+    assert.match(markup, /selection-order-badge[^>]*>2</u);
+    assert.match(markup, /selection-order-badge[^>]*>1</u);
+  });
+
   test("collection modal body scrolls for large collections", async () => {
     const styles = await readFile(collectionStylesPath, "utf8");
 

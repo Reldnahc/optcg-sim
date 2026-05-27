@@ -103,6 +103,9 @@ export const MatchApp = (): React.JSX.Element => {
             selectableInstanceIds: cardCostSelection.selectableInstanceIds,
             canConfirm: cardCostSelection.canConfirm,
             confirmLabel: cardCostSelection.confirmLabel,
+            ...(cardCostSelection.orderHint === undefined
+              ? {}
+              : { orderHint: cardCostSelection.orderHint }),
           },
         };
 
