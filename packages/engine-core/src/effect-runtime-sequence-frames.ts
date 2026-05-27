@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import type {
+  CardInstance,
   CardRef,
   ChooseOptionalActivationDecision,
   Effect,
@@ -16,6 +17,8 @@ import type {
   SequenceSegmentResult,
 } from "@optcg/types";
 
+import { reindexZoneCards } from "./action-state.js";
+import { appendEvent } from "./action-results.js";
 import { createSupportedHandSelectionChoiceDecision } from "./effect-runtime-hand-selection.js";
 import {
   createChooseQuantityDecisionForSequenceSegment,
@@ -76,6 +79,7 @@ type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
+type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -114,6 +118,131 @@ const createUnsupportedTrashDecision: CreateTrashFromHandSequenceDecision = (
   ok: false,
   state,
 });
+
+const selectedCardRefsForMove = (
+  ledgers: SegmentLedgers,
+  effect: MoveSelectedEffect,
+): readonly CardRef[] | null => {
+  const selected = ledgers.savedReferences[effect.selection];
+  return selected?.kind === "selectedCards" ? selected.cards : null;
+};
+
+const applyTrashToHandMoveSelectedSegment = (params: {
+  effect: MoveSelectedEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  if (
+    params.effect.from !== "trash" ||
+    params.effect.to !== "hand" ||
+    params.effect.position !== undefined
+  ) {
+    return { ok: false };
+  }
+  const selected = selectedCardRefsForMove(params.ledgers, params.effect);
+  const player = params.state.players[params.entry.controllerId];
+  if (selected === null || player === undefined) {
+    return { ok: false };
+  }
+  const selectedIds = new Set(selected.map((card) => card.instanceId));
+  const movedCards: CardInstance[] = [];
+  for (const selectedCard of selected) {
+    const current = player.trash.find(
+      (card) =>
+        card.instanceId === selectedCard.instanceId &&
+        card.cardId === selectedCard.cardId,
+    );
+    if (current === undefined) {
+      return { ok: false };
+    }
+    movedCards.push(current);
+  }
+  const nextTrash = reindexZoneCards(
+    player.trash.filter((card) => !selectedIds.has(card.instanceId)),
+    "trash",
+    params.entry.controllerId,
+    "trash",
+  );
+  const nextHand = reindexZoneCards(
+    [...player.hand, ...movedCards],
+    "hand",
+    params.entry.controllerId,
+    "hand",
+  );
+  const eventBaseState: GameState = {
+    ...params.state,
+    players: {
+      ...params.state.players,
+      [params.entry.controllerId]: {
+        ...player,
+        hand: nextHand,
+        trash: nextTrash,
+      },
+    },
+  };
+  const events: EngineEvent[] = [];
+  for (const card of movedCards) {
+    appendEvent(
+      eventBaseState,
+      events,
+      "cardMoved",
+      {
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        from: card.zone,
+        to: nextHand.find(
+          (candidate) => candidate.instanceId === card.instanceId,
+        )?.zone,
+        reason: "effect",
+      },
+      { type: "public" },
+    );
+    const event = events[events.length - 1];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: params.entry.id,
+        effectId: params.entry.effectBlockId,
+      };
+    }
+  }
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: movedCards.length > 0,
+          selectedCards: [...selected],
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...eventBaseState,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
 
 export type SequenceFrameDecisionResult =
   | {
@@ -625,6 +754,25 @@ const continueNoDecisionSegments = (
       nextLedgers = played.ledgers;
       continue;
     }
+    if (segment.effect.type === "moveSelected") {
+      const moved = applyTrashToHandMoveSelectedSegment({
+        effect: segment.effect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      if (!moved.ok) {
+        return { ok: false };
+      }
+      nextState = moved.state;
+      nextLedgers = moved.ledgers;
+      events.push(...moved.events);
+      continue;
+    }
     if (segment.effect.type === "ko") {
       const resolvedKo = applySavedFieldObjectKoSequenceSegment({
         emptySegmentResult,
@@ -864,6 +1012,67 @@ export const createSupportedSequenceFrameDecision = (
     };
   }
   return { events: run.events, ok: true, state: run.state };
+};
+
+export const continueSupportedSequenceFrameFromSegment = (params: {
+  completedSegmentResults: EffectExecutionFrame["segmentResults"];
+  effectBlock: EffectDefinition["effects"][number];
+  entry: EffectQueueEntry;
+  startIndex: number;
+  state: GameState;
+}): SequenceFrameResumeResult => {
+  const supportedBlock = toSupportedSequenceBlock(
+    params.entry,
+    params.effectBlock,
+  );
+  if (supportedBlock === undefined) {
+    return {
+      error: sequenceRuntimeError(
+        params.entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+  const stateWithEntry = params.state.effectQueue.some(
+    (candidate) => candidate.id === params.entry.id,
+  )
+    ? params.state
+    : {
+        ...params.state,
+        effectQueue: [...params.state.effectQueue, params.entry],
+      };
+  const resolvingEntry = resolvingEntryFor(params.entry);
+  const run = continueNoDecisionSegments(
+    replaceQueueEntry(stateWithEntry, resolvingEntry),
+    resolvingEntry,
+    supportedBlock.effect,
+    params.startIndex,
+    { savedReferences: {}, segmentResults: params.completedSegmentResults },
+    createUnsupportedTrashDecision,
+    false,
+  );
+  if (!run.ok) {
+    return {
+      error: sequenceRuntimeError(
+        params.entry.effectBlockId,
+        "segment-execution-failed",
+      ),
+      ok: false,
+    };
+  }
+  if (run.kind === "paused") {
+    return { events: run.events, ok: true, state: run.state };
+  }
+  return {
+    events: run.events,
+    ok: true,
+    state: appendEffectResolvedForCompletedSequence(
+      run.state,
+      resolvingEntry,
+      run.events,
+    ),
+  };
 };
 
 export const resumeSequenceFrameAfterTrashFromHand = (

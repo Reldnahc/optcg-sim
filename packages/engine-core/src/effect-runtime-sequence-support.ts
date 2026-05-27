@@ -24,6 +24,8 @@ type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
+type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
+type CounterPowerEffect = Extract<Effect, { type: "modifyPower" }>;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
@@ -56,6 +58,8 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SearchEffect
     | PayCostEffect
     | SelectCardsEffect
+    | MoveSelectedEffect
+    | CounterPowerEffect
     | SelectTargetsEffect
     | PlaySelectedEffect
     | RestEffect
@@ -314,20 +318,40 @@ const isSupportedPayCostSegment = (
   );
 };
 
-const isSupportedSequenceHandSelectCardsSegment = (
+const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SelectCardsEffect =>
   effect.type === "selectCards" &&
-  effect.zone === "hand" &&
   effect.player === "self" &&
   effect.chooser === "self" &&
-  effect.visibility === "chooserOnly" &&
-  String(effect.saveAs).startsWith("handSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
   Number.isInteger(effect.min) &&
   Number.isInteger(effect.max) &&
   effect.min >= 0 &&
-  effect.max >= effect.min;
+  effect.max >= effect.min &&
+  ((effect.zone === "hand" &&
+    effect.visibility === "chooserOnly" &&
+    String(effect.saveAs).startsWith("handSelection:")) ||
+    (effect.zone === "trash" &&
+      effect.visibility === "bothPlayers" &&
+      String(effect.saveAs).startsWith("trashSelection:")));
+
+const isSupportedTrashToHandMoveSelectedSegment = (
+  effect: SequenceSegmentEffect,
+): effect is MoveSelectedEffect =>
+  effect.type === "moveSelected" &&
+  effect.from === "trash" &&
+  effect.to === "hand" &&
+  effect.position === undefined &&
+  String(effect.selection).startsWith("trashSelection:");
+
+const isSupportedPreResolvedCounterPowerSegment = (
+  effect: SequenceSegmentEffect,
+): effect is CounterPowerEffect =>
+  effect.type === "modifyPower" &&
+  effect.duration.type === "thisBattle" &&
+  Number.isInteger(effect.value) &&
+  effect.value > 0;
 
 const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
@@ -435,6 +459,12 @@ const isSupportedConditionalSequenceSegment = (
     if (isSupportedTrashFromHandSegment(segment.effect)) {
       return true;
     }
+    if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+      return true;
+    }
     return false;
   }) === true;
 
@@ -531,11 +561,17 @@ export const toSupportedSequenceBlock = (
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
-      if (isSupportedSequenceHandSelectCardsSegment(segment.effect)) {
+      if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
         if (index === 0) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedPreResolvedCounterPowerSegment(segment.effect)) {
         return true;
       }
       if (segment.effect.type === "selectTargets") {

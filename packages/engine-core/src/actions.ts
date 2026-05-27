@@ -875,6 +875,15 @@ const applyRespondToDecision = (
     }
     return playCardResult;
   }
+  if (isHandSelectionSelectCardsDecision(decision)) {
+    const handSelection = applySupportedHandSelectionChoiceResponse(
+      state,
+      action,
+    );
+    if (handSelection !== null) {
+      return handSelection;
+    }
+  }
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
     return battleResult;
@@ -958,15 +967,6 @@ const applyRespondToDecision = (
       ...continued,
       events: [...finalized.events, ...continued.events],
     };
-  }
-  if (isHandSelectionSelectCardsDecision(decision)) {
-    const handSelection = applySupportedHandSelectionChoiceResponse(
-      state,
-      action,
-    );
-    if (handSelection !== null) {
-      return handSelection;
-    }
   }
   const setupStartOfGame = applyStartOfGameSetupDecisionResponse(state, action);
   if (setupStartOfGame !== null) {

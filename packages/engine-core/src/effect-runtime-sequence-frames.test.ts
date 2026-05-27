@@ -9,6 +9,7 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -196,6 +197,58 @@ const drawUpToThenPauseSequence = (): Extract<
   ],
 });
 
+const conditionalTrashToHandSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const selection = "trashSelection:test" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "conditional",
+          if: { type: "trashCount", player: "self", op: "gte", value: 1 },
+          then: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                saveResultAs: selection,
+                effect: {
+                  type: "selectCards",
+                  zone: "trash",
+                  player: "self",
+                  chooser: "self",
+                  min: 0,
+                  max: 1,
+                  filter: {
+                    colorsAny: ["black"],
+                    categories: ["character"],
+                    cost: { max: 3 },
+                  },
+                  saveAs: selection,
+                  visibility: "bothPlayers",
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "moveSelected",
+                  selection,
+                  from: "trash",
+                  to: "hand",
+                },
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+};
+
 const drawUpToThenDrawThenPauseSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -342,6 +395,31 @@ const sequenceQueueState = (
   return { state, definition };
 };
 
+const addP1BlackCharacterToTrash = (state: GameState): CardInstance => {
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "trash card source");
+  const trashCard: CardInstance = {
+    ...card,
+    zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+  };
+  state.cardManifest.cards[trashCard.cardId] = {
+    ...resolvedCard({
+      cardId: trashCard.cardId,
+      category: "character",
+      cost: 3,
+      power: 3000,
+    }),
+    colors: ["black"],
+  };
+  p1State.trash = [trashCard];
+  p1State.hand = reindexHand(
+    p1State.hand.filter(
+      (candidate) => candidate.instanceId !== card.instanceId,
+    ),
+  );
+  return trashCard;
+};
+
 const respondWithCards = (
   state: GameState,
   cards: readonly CardRef[],
@@ -461,6 +539,40 @@ test("sequence pause stores a resumable execution frame with segment results and
     ),
     false,
   );
+});
+
+test("generic sequence selects matching cards from trash and moves them to hand", () => {
+  const { state } = sequenceQueueState(conditionalTrashToHandSequence());
+  const selectedTrashCard = addP1BlackCharacterToTrash(state);
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "trash decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.request.zone, "trash");
+  const selected = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.instanceId === selectedTrashCard.instanceId,
+    ),
+    "trash candidate",
+  ).card;
+
+  const resolved = respondWithCards(paused.state, [selected]);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    must(resolved.state.players[p1], "p1").hand.some(
+      (card) => card.instanceId === selectedTrashCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    must(resolved.state.players[p1], "p1").trash.some(
+      (card) => card.instanceId === selectedTrashCard.instanceId,
+    ),
+    false,
+  );
+  assert.equal(resolved.state.effectQueue.length, 0);
 });
 
 test("sequence response resumes after the paused segment without replaying completed segments", () => {

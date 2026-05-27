@@ -19,7 +19,10 @@ export interface SupportedCounterEventPower {
   printedCost: number;
   target: CardRef;
   usesBattleCounterPower: boolean;
-  trailingEffect?: Extract<Effect, { type: "sequence" }>;
+  trailingSequence?: {
+    effectBlockId: EffectDefinition["effects"][number]["id"];
+    startIndex: number;
+  };
 }
 
 const sameCardRef = (left: CardRef, right: CardRef): boolean =>
@@ -165,7 +168,7 @@ const counterPowerEffect = (
   effect: EffectDefinition["effects"][number],
 ): {
   power: Extract<Effect, { type: "modifyPower" }>;
-  trailingEffect?: Extract<Effect, { type: "sequence" }>;
+  trailingStartIndex?: number;
 } | null => {
   if (effect.effect.type === "modifyPower") {
     return { power: effect.effect };
@@ -187,12 +190,7 @@ const counterPowerEffect = (
   }
   return {
     power: first.effect,
-    trailingEffect: {
-      type: "sequence",
-      effects: rest.map((segment, index) =>
-        index === 0 ? { ...segment, connector: "always" } : segment,
-      ),
-    },
+    trailingStartIndex: 1,
   };
 };
 
@@ -205,7 +203,7 @@ const supportedCounterEventPower = (
   battleTarget: CardRef | undefined,
 ): {
   value: number;
-  trailingEffect?: Extract<Effect, { type: "sequence" }>;
+  trailingSequence?: SupportedCounterEventPower["trailingSequence"];
 } | null => {
   const controllerId = target.playerId;
   const parsed = counterPowerEffect(effect);
@@ -234,9 +232,14 @@ const supportedCounterEventPower = (
   }
   return {
     value: parsed.power.value,
-    ...(parsed.trailingEffect === undefined
+    ...(parsed.trailingStartIndex === undefined
       ? {}
-      : { trailingEffect: parsed.trailingEffect }),
+      : {
+          trailingSequence: {
+            effectBlockId: effect.id,
+            startIndex: parsed.trailingStartIndex,
+          },
+        }),
   };
 };
 
@@ -268,7 +271,7 @@ export const getSupportedCounterEventPower = (
     return null;
   }
   let value = 0;
-  let trailingEffect: Extract<Effect, { type: "sequence" }> | undefined;
+  let trailingSequence: SupportedCounterEventPower["trailingSequence"];
   for (const counterEffect of counterEffects) {
     const counterValue = supportedCounterEventPower(
       state,
@@ -282,11 +285,11 @@ export const getSupportedCounterEventPower = (
       return null;
     }
     value += counterValue.value;
-    if (counterValue.trailingEffect !== undefined) {
-      if (trailingEffect !== undefined) {
+    if (counterValue.trailingSequence !== undefined) {
+      if (trailingSequence !== undefined) {
         return null;
       }
-      trailingEffect = counterValue.trailingEffect;
+      trailingSequence = counterValue.trailingSequence;
     }
   }
   const printedCost = metadata.cost ?? 0;
@@ -299,7 +302,7 @@ export const getSupportedCounterEventPower = (
     target,
     usesBattleCounterPower:
       battleTarget !== undefined && sameCardRef(target, battleTarget),
-    ...(trailingEffect === undefined ? {} : { trailingEffect }),
+    ...(trailingSequence === undefined ? {} : { trailingSequence }),
   };
 };
 

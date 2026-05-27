@@ -30,11 +30,9 @@ import {
 import { getCounterEventPaymentLegalActions } from "./battle-counter-event-payment-actions.js";
 import { createCounterEventPowerRecord } from "./battle-counter-event-power-record.js";
 import {
-  applyCounterEventTrashToHandResponse,
-  createCounterEventTrashToHandDecision,
-  getCounterEventTrashToHandLegalActions,
-  isCounterEventTrashToHandDecision,
-} from "./battle-counter-event-trash-to-hand.js";
+  continueCounterEventTrailingSequence,
+  type CounterEventTrailingSequence,
+} from "./battle-counter-event-trailing-sequence.js";
 import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
@@ -111,13 +109,6 @@ export const getCounterStepDecisionLegalActions = (
 ): LegalAction[] => {
   const decision = state.pendingDecision;
   const battle = state.battle;
-  if (
-    decision !== undefined &&
-    isCounterEventTrashToHandDecision(decision) &&
-    decision.playerId === playerId
-  ) {
-    return getCounterEventTrashToHandLegalActions(state, playerId);
-  }
   if (
     decision !== undefined &&
     decision.type === "payCost" &&
@@ -349,9 +340,7 @@ export const applyUseCounter = (
   let counterValue: number | undefined;
   let printedCost = 0;
   let usesBattleCounterPower = true;
-  let trailingEffect: NonNullable<
-    ReturnType<typeof getSupportedCounterEventPower>
-  >["trailingEffect"];
+  let trailingSequence: CounterEventTrailingSequence | undefined;
   if (
     metadata?.category === "character" &&
     metadata.counter !== undefined &&
@@ -382,7 +371,7 @@ export const applyUseCounter = (
     counterValue = supportedCounterEvent.value;
     printedCost = supportedCounterEvent.printedCost;
     usesBattleCounterPower = supportedCounterEvent.usesBattleCounterPower;
-    trailingEffect = supportedCounterEvent.trailingEffect;
+    trailingSequence = supportedCounterEvent.trailingSequence;
   }
   if (
     metadata?.category === "event" &&
@@ -440,7 +429,7 @@ export const applyUseCounter = (
     target: action.target,
     counterValue,
     usesBattleCounterPower,
-    trailingEffect,
+    ...(trailingSequence === undefined ? {} : { trailingSequence }),
     costArea: defender.costArea,
     decisionResolvedId: undefined,
     pendingDecision: state.pendingDecision,
@@ -458,9 +447,7 @@ const resolveCounterCardUse = (params: {
   target: CardRef;
   counterValue: number;
   usesBattleCounterPower: boolean;
-  trailingEffect?: NonNullable<
-    ReturnType<typeof getSupportedCounterEventPower>
-  >["trailingEffect"];
+  trailingSequence?: CounterEventTrailingSequence;
   costArea: GameState["players"][PlayerId]["costArea"];
   decisionResolvedId: string | undefined;
   pendingDecision: GameState["pendingDecision"] | undefined;
@@ -475,7 +462,7 @@ const resolveCounterCardUse = (params: {
     target,
     counterValue,
     usesBattleCounterPower,
-    trailingEffect,
+    trailingSequence,
     costArea,
     decisionResolvedId,
     pendingDecision,
@@ -601,12 +588,12 @@ const resolveCounterCardUse = (params: {
   } else {
     delete nextState.pendingDecision;
   }
-  if (trailingEffect !== undefined) {
-    const trailing = createCounterEventTrashToHandDecision(
+  if (trailingSequence !== undefined) {
+    const trailing = continueCounterEventTrailingSequence(
       nextState,
       decisionPlayerId,
       trashedCard,
-      trailingEffect,
+      trailingSequence,
     );
     if (trailing === null) {
       return illegalAction(state, "Unsupported Counter Event trailing effect.");
@@ -635,16 +622,6 @@ export const applyCounterStepDecisionResponse = (
     battle.step !== "counter"
   ) {
     return null;
-  }
-  if (isCounterEventTrashToHandDecision(decision)) {
-    return applyCounterEventTrashToHandResponse(
-      state,
-      action,
-      (nextState) =>
-        createCounterStepPassDecision(nextState, {
-          requirePotentialCounterActions: false,
-        }) ?? undefined,
-    );
   }
   if (decision.type === "payCost") {
     if (action.response.type !== "payment") {
@@ -749,7 +726,9 @@ export const applyCounterStepDecisionResponse = (
       target: selectedTarget.target,
       counterValue: supportedCounterEvent.value,
       usesBattleCounterPower: supportedCounterEvent.usesBattleCounterPower,
-      trailingEffect: supportedCounterEvent.trailingEffect,
+      ...(supportedCounterEvent.trailingSequence === undefined
+        ? {}
+        : { trailingSequence: supportedCounterEvent.trailingSequence }),
       costArea: nextCostArea,
       decisionResolvedId: decision.id,
       pendingDecision:

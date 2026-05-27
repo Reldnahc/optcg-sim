@@ -53,6 +53,65 @@ type SequenceRuntimeError = (
     | "segment-execution-failed",
 ) => EngineError;
 
+const rootSequenceEffectPath = ["effect", "sequence"] as const;
+
+const isRootSequencePath = (effectPath: readonly string[]): boolean =>
+  effectPath.length === rootSequenceEffectPath.length &&
+  effectPath.every((part, index) => part === rootSequenceEffectPath[index]);
+
+const resolveSequenceForPath = (
+  effect: SequenceEffect,
+  effectPath: readonly string[],
+): SequenceEffect | undefined => {
+  if (!isRootSequencePath(effectPath)) {
+    if (
+      effectPath.length < rootSequenceEffectPath.length ||
+      !isRootSequencePath(effectPath.slice(0, rootSequenceEffectPath.length))
+    ) {
+      return undefined;
+    }
+  }
+  let current: SequenceEffect = effect;
+  let index = rootSequenceEffectPath.length;
+  while (index < effectPath.length) {
+    const segmentIndex = Number(effectPath[index]);
+    const thenToken = effectPath[index + 1];
+    const sequenceToken = effectPath[index + 2];
+    if (
+      !Number.isSafeInteger(segmentIndex) ||
+      thenToken !== "then" ||
+      sequenceToken !== "sequence"
+    ) {
+      return undefined;
+    }
+    const segment = current.effects[segmentIndex];
+    if (
+      segment === undefined ||
+      segment.effect.type !== "conditional" ||
+      segment.effect.then.type !== "sequence"
+    ) {
+      return undefined;
+    }
+    current = segment.effect.then;
+    index += 3;
+  }
+  return current;
+};
+
+const segmentKeyForPath = (
+  effectPath: readonly string[],
+  segment: SequenceEffect["effects"][number],
+  index: number,
+): string =>
+  isRootSequencePath(effectPath)
+    ? paramsSegmentKey(segment, index)
+    : `${effectPath.join(".")}:${paramsSegmentKey(segment, index)}`;
+
+const paramsSegmentKey = (
+  _segment: SequenceEffect["effects"][number],
+  index: number,
+): string => String(index);
+
 export const resumeSequenceFrameAfterTrashFromHand = (params: {
   createUnsupportedTrashDecision: unknown;
   decision: SelectCardsDecision;
@@ -103,8 +162,10 @@ export const resumeSequenceFrameAfterTrashFromHand = (params: {
       ok: false,
     };
   }
-  const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  const pausedSegment = resolveSequenceForPath(
+    effectBlock.effect,
+    frame.effectPath,
+  )?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     pausedSegment.effect.type !== "trashFromHand"
@@ -134,7 +195,8 @@ export const resumeSequenceFrameAfterTrashFromHand = (params: {
     ledgers: {
       segmentResults: {
         ...frame.segmentResults,
-        [params.segmentKey(
+        [segmentKeyForPath(
+          frame.effectPath,
           pausedSegment,
           frame.pendingDecision.resumeAtSegmentIndex,
         )]: completedPausedResult,
@@ -198,12 +260,13 @@ export const resumeSequenceFrameAfterHandSelection = (params: {
       ok: false,
     };
   }
-  const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  const pausedSegment = resolveSequenceForPath(
+    effectBlock.effect,
+    frame.effectPath,
+  )?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
-    pausedSegment.effect.type !== "selectCards" ||
-    pausedSegment.effect.zone !== "hand"
+    pausedSegment.effect.type !== "selectCards"
   ) {
     return {
       error: params.sequenceRuntimeError(
@@ -230,7 +293,8 @@ export const resumeSequenceFrameAfterHandSelection = (params: {
     ledgers: {
       segmentResults: {
         ...frame.segmentResults,
-        [params.segmentKey(
+        [segmentKeyForPath(
+          frame.effectPath,
           pausedSegment,
           frame.pendingDecision.resumeAtSegmentIndex,
         )]: completedPausedResult,

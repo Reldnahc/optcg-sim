@@ -25,9 +25,10 @@ import {
 } from "./action-state.js";
 import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence-frames.js";
 
-type HandSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
+type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
 
-const decisionIdPrefix = "decision:selectCards:hand-selection:";
+const handDecisionIdPrefix = "decision:selectCards:hand-selection:";
+const trashDecisionIdPrefix = "decision:selectCards:trash-selection:";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -35,7 +36,7 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
 
 export const isSupportedSequenceHandSelectCardsEffect = (
   effect: Effect,
-): effect is HandSelectCardsEffect =>
+): effect is SequenceSelectCardsEffect =>
   effect.type === "selectCards" &&
   effect.zone === "hand" &&
   effect.player === "self" &&
@@ -47,6 +48,27 @@ export const isSupportedSequenceHandSelectCardsEffect = (
   Number.isInteger(effect.max) &&
   effect.min >= 0 &&
   effect.max >= effect.min;
+
+const isSupportedSequenceTrashSelectCardsEffect = (
+  effect: Effect,
+): effect is SequenceSelectCardsEffect =>
+  effect.type === "selectCards" &&
+  effect.zone === "trash" &&
+  effect.player === "self" &&
+  effect.chooser === "self" &&
+  effect.visibility === "bothPlayers" &&
+  String(effect.saveAs).startsWith("trashSelection:") &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
+export const isSupportedSequenceSelectCardsEffect = (
+  effect: Effect,
+): effect is SequenceSelectCardsEffect =>
+  isSupportedSequenceHandSelectCardsEffect(effect) ||
+  isSupportedSequenceTrashSelectCardsEffect(effect);
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -74,20 +96,25 @@ const cardRefMatches = (left: CardRef, right: CardRef): boolean =>
 const hasDuplicateInstanceIds = (cards: readonly CardRef[]): boolean =>
   new Set(cards.map((card) => card.instanceId)).size !== cards.length;
 
-const isSupportedHandSelectCardsDecision = (
+const isSupportedSelectCardsDecision = (
   decision: SelectCardsDecision,
 ): boolean =>
-  String(decision.id).startsWith(decisionIdPrefix) &&
   decision.request.timing === "onResolution" &&
   decision.request.chooser === "self" &&
   decision.request.player === "self" &&
-  decision.request.zone === "hand" &&
   decision.request.set === undefined &&
-  !decision.request.allowFewerIfUnavailable &&
-  decision.request.visibility === "privateToChooser" &&
   isSupportedHandSelectionCardFilter(decision.request.filter) &&
-  decision.visibility.type === "private" &&
-  decision.visibility.playerId === decision.playerId;
+  ((String(decision.id).startsWith(handDecisionIdPrefix) &&
+    decision.request.zone === "hand" &&
+    !decision.request.allowFewerIfUnavailable &&
+    decision.request.visibility === "privateToChooser" &&
+    decision.visibility.type === "private" &&
+    decision.visibility.playerId === decision.playerId) ||
+    (String(decision.id).startsWith(trashDecisionIdPrefix) &&
+      decision.request.zone === "trash" &&
+      decision.request.allowFewerIfUnavailable &&
+      decision.request.visibility === "public" &&
+      decision.visibility.type === "public"));
 
 const hasMalformedRespondToDecisionPlayerId = (
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -111,51 +138,26 @@ const getRespondingPlayerId = (
 export const isHandSelectionSelectCardsDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
 ): decision is SelectCardsDecision =>
-  decision.type === "selectCards" &&
-  isSupportedHandSelectCardsDecision(decision);
+  decision.type === "selectCards" && isSupportedSelectCardsDecision(decision);
 
-const hasCurrentCandidateEnvelope = (
+const cardRefsInZone = (
   state: GameState,
   decision: SelectCardsDecision,
-): boolean => {
-  const player = state.players[decision.playerId];
-  if (player === undefined) {
-    return false;
-  }
-  const filteredHand = player.hand
-    .filter((card) =>
-      cardMatchesHandSelectionFilter(
-        state,
-        decision.playerId,
-        card,
-        decision.request.filter,
-      ),
-    )
-    .map((card) => toCardRef(card, decision.playerId));
-  if (decision.candidates.length !== filteredHand.length) {
-    return false;
-  }
-  return decision.candidates.every((candidate, index) => {
-    const current = filteredHand[index];
-    return (
-      current !== undefined &&
-      candidate.visibility.type === "private" &&
-      candidate.visibility.playerId === decision.playerId &&
-      cardRefMatches(candidate.card, current)
-    );
-  });
-};
-
-const findCurrentHandCards = (
-  state: GameState,
-  decision: SelectCardsDecision,
-  selected: readonly CardRef[],
 ): CardRef[] | null => {
   const player = state.players[decision.playerId];
   if (player === undefined) {
     return null;
   }
-  const candidateRefs = player.hand
+  const cards =
+    decision.request.zone === "hand"
+      ? player.hand
+      : decision.request.zone === "trash"
+        ? player.trash
+        : undefined;
+  if (cards === undefined) {
+    return null;
+  }
+  return cards
     .filter((card) =>
       cardMatchesHandSelectionFilter(
         state,
@@ -165,6 +167,50 @@ const findCurrentHandCards = (
       ),
     )
     .map((card) => toCardRef(card, decision.playerId));
+};
+
+const candidateVisibilityForDecision = (
+  decision: SelectCardsDecision,
+): SelectCardsDecision["candidates"][number]["visibility"] =>
+  decision.request.zone === "trash"
+    ? { type: "public" }
+    : { type: "private", playerId: decision.playerId };
+
+const hasCurrentCandidateEnvelope = (
+  state: GameState,
+  decision: SelectCardsDecision,
+): boolean => {
+  const filteredCards = cardRefsInZone(state, decision);
+  if (filteredCards === null) {
+    return false;
+  }
+  if (decision.candidates.length !== filteredCards.length) {
+    return false;
+  }
+  const expectedVisibility = candidateVisibilityForDecision(decision);
+  return decision.candidates.every((candidate, index) => {
+    const current = filteredCards[index];
+    return (
+      current !== undefined &&
+      candidate.visibility.type === expectedVisibility.type &&
+      ("playerId" in expectedVisibility
+        ? "playerId" in candidate.visibility &&
+          candidate.visibility.playerId === expectedVisibility.playerId
+        : !("playerId" in candidate.visibility)) &&
+      cardRefMatches(candidate.card, current)
+    );
+  });
+};
+
+const findCurrentCards = (
+  state: GameState,
+  decision: SelectCardsDecision,
+  selected: readonly CardRef[],
+): CardRef[] | null => {
+  const candidateRefs = cardRefsInZone(state, decision);
+  if (candidateRefs === null) {
+    return null;
+  }
   const selectedRefs: CardRef[] = [];
   for (const ref of selected) {
     const match = candidateRefs.find((candidate) =>
@@ -181,7 +227,7 @@ const findCurrentHandCards = (
 export const createSupportedHandSelectionChoiceDecision = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: HandSelectCardsEffect,
+  effect: SequenceSelectCardsEffect,
   segmentIndex: number,
 ):
   | {
@@ -195,14 +241,7 @@ export const createSupportedHandSelectionChoiceDecision = (
       ok: false;
       state: GameState;
     } => {
-  if (
-    effect.zone !== "hand" ||
-    effect.player !== "self" ||
-    effect.chooser !== "self" ||
-    effect.visibility !== "chooserOnly" ||
-    !isSupportedHandSelectionCardFilter(effect.filter) ||
-    !String(effect.saveAs).startsWith("handSelection:")
-  ) {
+  if (!isSupportedSequenceSelectCardsEffect(effect)) {
     return {
       error: {
         type: "effectRuntimeError",
@@ -246,7 +285,13 @@ export const createSupportedHandSelectionChoiceDecision = (
     };
   }
 
-  const candidates = player.hand
+  const cards = effect.zone === "hand" ? player.hand : player.trash;
+  const candidateVisibility =
+    effect.zone === "trash"
+      ? { type: "public" as const }
+      : ({ type: "private" as const, playerId: entry.controllerId } as const);
+
+  const candidates = cards
     .filter((card) =>
       cardMatchesHandSelectionFilter(
         state,
@@ -257,10 +302,7 @@ export const createSupportedHandSelectionChoiceDecision = (
     )
     .map((card) => ({
       card: toCardRef(card, entry.controllerId),
-      visibility: {
-        type: "private" as const,
-        playerId: entry.controllerId,
-      },
+      visibility: candidateVisibility,
     }));
 
   if (candidates.length < effect.min) {
@@ -281,25 +323,31 @@ export const createSupportedHandSelectionChoiceDecision = (
     queueEntryId: entry.id,
     effectId: entry.effectBlockId,
   } as const;
-  const visibility = { type: "private", playerId: entry.controllerId } as const;
+  const visibility =
+    effect.zone === "trash"
+      ? ({ type: "public" } as const)
+      : ({ type: "private", playerId: entry.controllerId } as const);
   const pendingDecision: SelectCardsDecision = {
     id: toDecisionId(
-      `${decisionIdPrefix}${String(entry.id)}:${String(segmentIndex)}`,
+      `${effect.zone === "trash" ? trashDecisionIdPrefix : handDecisionIdPrefix}${String(entry.id)}:${String(segmentIndex)}`,
     ),
     type: "selectCards",
     playerId: entry.controllerId,
-    prompt: "Choose cards from hand.",
+    prompt:
+      effect.zone === "trash"
+        ? "Choose cards from trash."
+        : "Choose cards from hand.",
     causedBy,
     visibility,
     request: {
       timing: "onResolution",
       chooser: "self",
       player: "self",
-      zone: "hand",
+      zone: effect.zone,
       min: effect.min,
       max: effect.max,
-      allowFewerIfUnavailable: false,
-      visibility: "privateToChooser",
+      allowFewerIfUnavailable: effect.zone === "trash",
+      visibility: effect.zone === "trash" ? "public" : "privateToChooser",
       ...(resolvedFilter === undefined ? {} : { filter: resolvedFilter }),
     },
     candidates,
@@ -341,7 +389,7 @@ export const getHandSelectionDecisionLegalActions = (
     decision === undefined ||
     decision.type !== "selectCards" ||
     decision.playerId !== playerId ||
-    !isSupportedHandSelectCardsDecision(decision)
+    !isSupportedSelectCardsDecision(decision)
   ) {
     return [];
   }
@@ -365,7 +413,7 @@ export const applySupportedHandSelectionChoiceResponse = (
   if (
     decision === undefined ||
     decision.type !== "selectCards" ||
-    !isSupportedHandSelectCardsDecision(decision)
+    !isSupportedSelectCardsDecision(decision)
   ) {
     return null;
   }
@@ -437,13 +485,13 @@ export const applySupportedHandSelectionChoiceResponse = (
       ),
     );
   }
-  const selectedCards = findCurrentHandCards(state, decision, responseCards);
+  const selectedCards = findCurrentCards(state, decision, responseCards);
   if (selectedCards === null) {
     return toEngineResult(
       state,
       [],
       invalidDecision(
-        "Selected cards must be active cards in the choosing player's hand.",
+        `Selected cards must be active cards in the choosing player's ${String(decision.request.zone)}.`,
       ),
     );
   }
