@@ -13,9 +13,15 @@ interface CreateDefaultDevMatchSetupInput {
   readonly firstPlayerId: PlayerId;
   readonly playerOrder: readonly [PlayerId, PlayerId];
   readonly createdAt: string;
+  readonly devDonCount?: number;
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
+}
+
+interface ResolveDevDonCountInput {
+  readonly devDonCount?: number;
+  readonly env: Partial<Record<string, string | undefined>>;
 }
 
 export interface DevDeckCardEntry {
@@ -94,11 +100,34 @@ export const parseDevDecklistText = (text: string): DevDecklist => {
   };
 };
 
-const donDeck = (): CardId[] =>
+export const createDevDonDeckCardIds = (count: number): CardId[] =>
   Array.from(
-    { length: 10 },
+    { length: count },
     (_, index) => `dev-don-${String(index + 1)}` as CardId,
   );
+
+const defaultDevDonCount = 10;
+
+const assertValidDevDonCount = (value: number): number => {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error("DEV_DON_DECK_COUNT must be a positive integer.");
+  }
+  return value;
+};
+
+export const resolveDevDonCount = (input: ResolveDevDonCountInput): number => {
+  if (input.devDonCount !== undefined) {
+    return assertValidDevDonCount(input.devDonCount);
+  }
+  const envValue = input.env["DEV_DON_DECK_COUNT"];
+  if (envValue === undefined || envValue.length === 0) {
+    return defaultDevDonCount;
+  }
+  if (!/^[1-9]\d*$/u.test(envValue)) {
+    throw new Error("DEV_DON_DECK_COUNT must be a positive integer.");
+  }
+  return assertValidDevDonCount(Number.parseInt(envValue, 10));
+};
 
 export const createDevPlayerSetupFromDecklist = (
   playerId: PlayerId,
@@ -144,7 +173,13 @@ export const createDefaultDevMatchSetup = async (
 ): Promise<DevMatchSetup> => {
   const firstPlayerDecklist = await readDefaultDevDecklist("deck1.txt");
   const secondPlayerDecklist = await readDefaultDevDecklist("deck2.txt");
-  const sharedDonDeck = donDeck();
+  const devDonCount = resolveDevDonCount({
+    ...(input.devDonCount === undefined
+      ? {}
+      : { devDonCount: input.devDonCount }),
+    env: process.env,
+  });
+  const sharedDonDeck = createDevDonDeckCardIds(devDonCount);
   const cache =
     input.fetchCard === undefined
       ? await createRedisCardDataCache({
@@ -157,7 +192,7 @@ export const createDefaultDevMatchSetup = async (
       secondPlayerDecklist,
     ),
     createdAt: input.createdAt,
-    devDonCount: 10,
+    devDonCount,
     versions: {
       cardDataVersion: "live-poneglyph-dev-v1",
       effectDefinitionsVersion: "generated-dev-v2",

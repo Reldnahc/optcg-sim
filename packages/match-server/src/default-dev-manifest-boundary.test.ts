@@ -5,9 +5,11 @@ import type { CardId, PlayerId } from "@optcg/types";
 
 import {
   createDevDeckCardIds,
+  createDevDonDeckCardIds,
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
   parseDevDecklistText,
+  resolveDevDonCount,
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
 
@@ -65,6 +67,39 @@ describe("default dev manifest boundary", () => {
         },
       ),
       ["OP13-079", "OP13-080", "OP13-082", "OP13-091", "OP13-084"],
+    );
+  });
+
+  test("dev DON deck count is configurable for fake legality-layer setup", () => {
+    assert.deepEqual(createDevDonDeckCardIds(6), [
+      "dev-don-1",
+      "dev-don-2",
+      "dev-don-3",
+      "dev-don-4",
+      "dev-don-5",
+      "dev-don-6",
+    ]);
+    assert.equal(resolveDevDonCount({ devDonCount: 6, env: {} }), 6);
+    assert.equal(
+      resolveDevDonCount({
+        env: { DEV_DON_DECK_COUNT: "6" },
+      }),
+      6,
+    );
+  });
+
+  test("rejects invalid dev DON deck count overrides", () => {
+    assert.throws(
+      () => resolveDevDonCount({ devDonCount: 0, env: {} }),
+      /DEV_DON_DECK_COUNT must be a positive integer/u,
+    );
+    assert.throws(
+      () => resolveDevDonCount({ env: { DEV_DON_DECK_COUNT: "six" } }),
+      /DEV_DON_DECK_COUNT must be a positive integer/u,
+    );
+    assert.throws(
+      () => resolveDevDonCount({ env: { DEV_DON_DECK_COUNT: "6extra" } }),
+      /DEV_DON_DECK_COUNT must be a positive integer/u,
     );
   });
 

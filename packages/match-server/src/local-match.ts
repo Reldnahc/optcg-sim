@@ -67,6 +67,7 @@ export interface CreatePremadeDevMatchSetupOptions {
   readonly baseUrl?: string;
   readonly redisUrl?: string;
   readonly matchId?: MatchId;
+  readonly devDonCount?: number;
 }
 
 export interface ApplyLocalDevActionInput {
@@ -252,6 +253,9 @@ export const createPremadeDevMatchSetup = async (
       : { fetchCard: options.fetchCard }),
     ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
     ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
+    ...(options.devDonCount === undefined
+      ? {}
+      : { devDonCount: options.devDonCount }),
   });
 };
 
