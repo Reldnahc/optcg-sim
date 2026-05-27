@@ -29,70 +29,16 @@ import type {
 } from "@optcg/types";
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
-
-export interface DevVisibleAction {
-  index: number;
-  type: LegalAction["type"] | "advanceToMainPhase";
-  label: string;
-  decisionPayment?:
-    | { kind: "paymentDeclined" }
-    | {
-        kind: "cardCost";
-        operation: "trash" | "returnToHand";
-        chooseLabel: string;
-        selectedCardInstanceIds: CardInstance["instanceId"][];
-      };
-  attack?: {
-    attackerInstanceId: CardInstance["instanceId"];
-    targetInstanceId: CardInstance["instanceId"];
-  };
-  counter?: {
-    cardInstanceId: CardInstance["instanceId"];
-    targetInstanceId: CardInstance["instanceId"];
-  };
-  placement?: {
-    instanceId: CardInstance["instanceId"];
-  };
-  attachment?: {
-    donInstanceId: CardInstance["instanceId"];
-    targetInstanceId: CardInstance["instanceId"];
-  };
-}
-
-export interface DevPlayerSnapshot {
-  view: PlayerView;
-  actions: DevVisibleAction[];
-}
-
-export interface DevMatchSnapshot {
-  stateSeq: number;
-  actionSeq: number;
-  stateHash: string;
-  status: GameState["status"]["type"];
-  turn: GameState["turn"];
-  activePlayerId: PlayerId;
-  players: Record<PlayerId, DevPlayerSnapshot>;
-}
-
-export interface DevCardCatalogEntry {
-  cardId: CardId;
-  name: string;
-  category: string;
-  cost?: number;
-  power?: number;
-  life?: number;
-  effectText?: string;
-  triggerText?: string;
-  imageUrl?: string;
-}
-
-export interface DevPlayerCardCatalog {
-  cards: Record<CardId, DevCardCatalogEntry>;
-}
-
-export interface DevVisibleCardCatalog {
-  players: Record<PlayerId, DevPlayerCardCatalog>;
-}
+import { actionDecisionPayment } from "./dev-action-payment.js";
+import { allPlayerCards, cardName } from "./dev-card-utils.js";
+import type {
+  DevCardCatalogEntry,
+  DevMatchSnapshot,
+  DevPlayerCardCatalog,
+  DevPlayerSnapshot,
+  DevVisibleAction,
+  DevVisibleCardCatalog,
+} from "./dev-snapshot-types.js";
 
 export interface DevMatchPlayerSetup {
   playerId: PlayerId;
@@ -431,23 +377,6 @@ const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
   return combinedEngineResult(started, [...result.events, ...started.events]);
 };
 
-const cardName = (state: GameState, cardId: CardId): string =>
-  state.cardManifest.cards[cardId]?.name ?? String(cardId);
-
-const allPlayerCards = (
-  player: GameState["players"][PlayerId],
-): CardInstance[] => [
-  player.leader,
-  ...player.deck,
-  ...player.hand,
-  ...player.trash,
-  ...player.characters,
-  ...player.costArea,
-  ...player.donDeck,
-  ...player.life.map((lifeCard) => lifeCard.card),
-  ...(player.stage === undefined ? [] : [player.stage]),
-];
-
 const instanceName = (
   state: GameState,
   instanceId: CardInstance["instanceId"],
@@ -517,52 +446,6 @@ const responseLabel = (
     case "chooseQuantity":
       return `Choose ${String(action.response.quantity)}`;
   }
-};
-
-const actionDecisionPayment = (
-  state: GameState,
-  action: LegalAction,
-): DevVisibleAction["decisionPayment"] | undefined => {
-  if (action.type !== "respondToDecision") {
-    return undefined;
-  }
-  const response = action.response;
-  if (response.type === "paymentDeclined") {
-    return { kind: "paymentDeclined" };
-  }
-  if (response.type !== "payment") {
-    return undefined;
-  }
-  const pending = state.pendingDecision;
-  if (
-    pending === undefined ||
-    pending.type !== "payCost" ||
-    pending.id !== action.decisionId
-  ) {
-    return undefined;
-  }
-  const option = pending.paymentOptions.find(
-    (candidate) => candidate.id === response.optionId,
-  );
-  if (option?.type !== "trashFromHand" && option?.type !== "trashFromField") {
-    return undefined;
-  }
-  const selectedCardInstanceIds = response.selectedCardInstanceIds;
-  if (
-    selectedCardInstanceIds === undefined ||
-    selectedCardInstanceIds.length === 0
-  ) {
-    return undefined;
-  }
-  return {
-    kind: "cardCost",
-    operation: "trash",
-    chooseLabel:
-      option.type === "trashFromField"
-        ? "Choose Character to trash"
-        : "Choose card to trash",
-    selectedCardInstanceIds: [...selectedCardInstanceIds],
-  };
 };
 
 const actionLabel = (state: GameState, action: LegalAction): string => {

@@ -4,11 +4,18 @@ import type { ClientActionModel } from "../view-model.js";
 
 export const CHOOSE_CARD_COST_ACTION_INDEX = -5;
 
+type CardCostPayment = Extract<
+  NonNullable<ClientActionModel["decisionPayment"]>,
+  { kind: "cardCost" }
+>;
+
 export interface OptionalCardCostGroup {
   chooseActionIndex: number;
-  operation: "trash" | "returnToHand";
+  operation: CardCostPayment["operation"];
   chooseLabel: string;
-  cardActions: Array<{ instanceId: string; actionIndex: number }>;
+  requiredCount: number;
+  source?: CardCostPayment["source"] | undefined;
+  cardActions: Array<{ instanceIds: string[]; actionIndex: number }>;
 }
 
 export interface OptionalCardCostChoice {
@@ -37,7 +44,9 @@ export const createOptionalCardCostChoice = (
     }
     return !(
       payment?.kind === "cardCost" &&
-      payment.selectedCardInstanceIds.length === 1
+      payment.selectedCardInstanceIds.length > 0 &&
+      (payment.selectedCardInstanceIds.length === 1 ||
+        payment.source !== undefined)
     );
   });
   if (invalidPaymentAction) {
@@ -45,42 +54,54 @@ export const createOptionalCardCostChoice = (
   }
 
   const groupedActions = new Map<
-    "trash" | "returnToHand",
+    string,
     {
+      operation: CardCostPayment["operation"];
       chooseLabel: string;
-      cardActions: Array<{ instanceId: string; actionIndex: number }>;
+      requiredCount: number;
+      source?: CardCostPayment["source"] | undefined;
+      cardActions: Array<{ instanceIds: string[]; actionIndex: number }>;
     }
   >();
   for (const action of actions) {
     const payment = action.decisionPayment;
-    if (
-      payment?.kind !== "cardCost" ||
-      payment.selectedCardInstanceIds.length !== 1
-    ) {
+    if (payment?.kind !== "cardCost") {
       continue;
     }
-    const instanceId = payment.selectedCardInstanceIds[0];
-    if (instanceId === undefined) {
+    const instanceIds = payment.selectedCardInstanceIds.map(String);
+    if (instanceIds.length === 0) {
       continue;
     }
-    const current = groupedActions.get(payment.operation) ?? {
+    const groupKey = cardCostGroupKey(payment);
+    const current = groupedActions.get(groupKey) ?? {
+      operation: payment.operation,
       chooseLabel: chooseLabelForCardCostOperation(
         payment.operation,
         payment.chooseLabel,
       ),
+      requiredCount: instanceIds.length,
+      ...(payment.source === undefined ? {} : { source: payment.source }),
       cardActions: [],
     };
+    if (current.requiredCount !== instanceIds.length) {
+      return undefined;
+    }
     current.cardActions.push({
-      instanceId: String(instanceId),
+      instanceIds,
       actionIndex: action.index,
     });
-    groupedActions.set(payment.operation, current);
+    groupedActions.set(groupKey, current);
   }
-  const groups = [...groupedActions.entries()].map(
-    ([operation, { chooseLabel, cardActions }], index) => ({
+  const groups = [...groupedActions.values()].map(
+    (
+      { operation, chooseLabel, requiredCount, source, cardActions },
+      index,
+    ) => ({
       chooseActionIndex: CHOOSE_CARD_COST_ACTION_INDEX - index,
       operation,
       chooseLabel,
+      requiredCount,
+      ...(source === undefined ? {} : { source }),
       cardActions,
     }),
   );
@@ -127,12 +148,33 @@ export const optionalCardCostActionForInstance = (
   choice: OptionalCardCostGroup | undefined,
   instanceId: string,
 ): number | undefined =>
-  choice?.cardActions.find((action) => action.instanceId === instanceId)
-    ?.actionIndex;
+  choice?.requiredCount === 1
+    ? optionalCardCostActionForSelection(choice, [instanceId])
+    : undefined;
+
+export const optionalCardCostActionForSelection = (
+  choice: OptionalCardCostGroup | undefined,
+  instanceIds: readonly string[],
+): number | undefined => {
+  if (choice === undefined || instanceIds.length !== choice.requiredCount) {
+    return undefined;
+  }
+  const selected = [...instanceIds].map(String).sort();
+  return choice.cardActions.find((action) => {
+    const candidate = [...action.instanceIds].sort();
+    return (
+      candidate.length === selected.length &&
+      candidate.every((instanceId, index) => instanceId === selected[index])
+    );
+  })?.actionIndex;
+};
 
 export const optionalCardCostInstanceIds = (
   choice: OptionalCardCostGroup | undefined,
-): string[] => choice?.cardActions.map((action) => action.instanceId) ?? [];
+): string[] =>
+  choice === undefined
+    ? []
+    : [...new Set(choice.cardActions.flatMap((action) => action.instanceIds))];
 
 const donPaymentLabelPattern = /^Pay cost with (?<count>[1-9]\d*) DON!!$/u;
 
@@ -225,13 +267,22 @@ export const autoPayCostActionIndex = (
 };
 
 const chooseLabelForCardCostOperation = (
-  operation: "trash" | "returnToHand",
+  operation: CardCostPayment["operation"],
   fallback: string,
 ): string => {
   switch (operation) {
     case "trash":
       return "Choose card to trash";
+    case "moveCards":
+      return fallback;
     case "returnToHand":
       return fallback;
   }
 };
+
+const cardCostGroupKey = (payment: CardCostPayment): string =>
+  [
+    payment.operation,
+    payment.source?.zone ?? "",
+    payment.source?.playerId ?? "",
+  ].join(":");

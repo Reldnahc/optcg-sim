@@ -11,15 +11,18 @@ export {
 export type {
   ApplyLocalDevActionInput,
   ApplyLocalDevActionResult,
-  DevCardCatalogEntry,
-  DevMatchSnapshot,
   DevMatchPlayerSetup,
   DevMatchSetup,
-  DevPlayerSnapshot,
-  DevVisibleAction,
   LocalDevMatch,
   CreatePremadeDevMatchSetupOptions,
 } from "./local-match.js";
+export type {
+  DevCardCatalogEntry,
+  DevMatchSnapshot,
+  DevPlayerSnapshot,
+  DevVisibleAction,
+  DevVisibleCardCatalog,
+} from "./dev-snapshot-types.js";
 export { createDevHttpServer } from "./dev-http-server.js";
 export type {
   CreateDevHttpServerOptions,

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { CardRef, InstanceId } from "@optcg/types";
 
 import { createCollectionDecisionSurface } from "../interactions/decision-surface.js";
-import type { ClientCardModel } from "../view-model.js";
+import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import { BoardLayout } from "./BoardLayout.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
@@ -18,6 +18,7 @@ export const MatchApp = (): React.JSX.Element => {
   >(undefined);
   const {
     board,
+    cardCostSelection,
     clientState,
     decisionModal,
     pendingChoiceInstanceIds,
@@ -91,6 +92,19 @@ export const MatchApp = (): React.JSX.Element => {
             confirmLabel: collectionDecisionSurface.model.confirmLabel,
           },
         };
+  const cardCostCollectionModal =
+    board === undefined || cardCostSelection === undefined
+      ? undefined
+      : {
+          title: cardCostSelection.title,
+          cards: sourceZoneCards(board, cardCostSelection.source),
+          selection: {
+            selectedInstanceIds: cardCostSelection.selectedInstanceIds,
+            selectableInstanceIds: cardCostSelection.selectableInstanceIds,
+            canConfirm: cardCostSelection.canConfirm,
+            confirmLabel: cardCostSelection.confirmLabel,
+          },
+        };
 
   return (
     <main className="match-app">
@@ -162,7 +176,9 @@ export const MatchApp = (): React.JSX.Element => {
         }}
       />
       <CollectionModalHost
-        model={decisionCollectionModal ?? collectionModal}
+        model={
+          cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal
+        }
         disabled={client.state.actionInFlight}
         onToggleCard={(instanceId) => {
           client.toggleDecisionCard(instanceId as InstanceId);
@@ -171,6 +187,7 @@ export const MatchApp = (): React.JSX.Element => {
           void client.confirmDecision();
         }}
         onClose={
+          cardCostCollectionModal === undefined &&
           decisionCollectionModal === undefined
             ? () => {
                 setCollectionModal(undefined);
@@ -180,4 +197,37 @@ export const MatchApp = (): React.JSX.Element => {
       />
     </main>
   );
+};
+
+const sourceZoneCards = (
+  board: BoardViewModel,
+  source: NonNullable<
+    NonNullable<ReturnType<typeof useMatchClient>["state"]["cardCostSelection"]>
+  >["source"],
+): readonly ClientCardModel[] => {
+  if (source === undefined) {
+    return [];
+  }
+  const selfSource =
+    source.playerId === undefined || source.playerId === board.playerId;
+  const zones = selfSource ? board.self : board.opponent;
+  switch (source.zone) {
+    case "characterArea":
+      return zones.characters;
+    case "costArea":
+      return zones.costArea;
+    case "hand":
+      return selfSource ? board.self.hand : [];
+    case "leaderArea":
+      return [zones.leader];
+    case "stageArea":
+      return zones.stage === undefined ? [] : [zones.stage];
+    case "trash":
+      return zones.trash;
+    case "deck":
+    case "donDeck":
+    case "life":
+    case "noZone":
+      return [];
+  }
 };

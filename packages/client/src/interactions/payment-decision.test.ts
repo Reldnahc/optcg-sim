@@ -6,6 +6,7 @@ import type {
   InstanceId,
   PlayerId,
   PublicPendingDecision,
+  Zone,
 } from "@optcg/types";
 
 import {
@@ -72,9 +73,10 @@ describe("optional card-cost interaction", () => {
           chooseActionIndex: -5,
           operation: "trash",
           chooseLabel: "Choose card to trash",
+          requiredCount: 1,
           cardActions: [
-            { instanceId: "hand-1", actionIndex: 2 },
-            { instanceId: "hand-2", actionIndex: 3 },
+            { instanceIds: ["hand-1"], actionIndex: 2 },
+            { instanceIds: ["hand-2"], actionIndex: 3 },
           ],
         },
       ],
@@ -150,6 +152,60 @@ describe("optional card-cost interaction", () => {
       createOptionalCardCostChoice(payCostDecision, actions),
       undefined,
     );
+  });
+
+  test("collapses multi-card same-source payments into one selectable group", () => {
+    const source = { zone: "trash" as Zone, playerId: "p1" as PlayerId };
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 2 card",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "moveCards",
+          chooseLabel: "Choose cards from trash",
+          selectedCardInstanceIds: [
+            "trash-1" as InstanceId,
+            "trash-2" as InstanceId,
+          ],
+          source,
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Pay cost with 2 card",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "moveCards",
+          chooseLabel: "Choose cards from trash",
+          selectedCardInstanceIds: [
+            "trash-1" as InstanceId,
+            "trash-3" as InstanceId,
+          ],
+          source,
+        },
+      },
+    ];
+
+    const choice = createOptionalCardCostChoice(payCostDecision, actions);
+    const group = autoOptionalCardCostGroup(choice);
+
+    assert.deepEqual(optionalCardCostInstanceIds(group), [
+      "trash-1",
+      "trash-2",
+      "trash-3",
+    ]);
+    assert.ok(group);
+    assert.equal(group.requiredCount, 2);
+    assert.deepEqual(group.source, source);
   });
 
   test("does not collapse mixed payment families", () => {
@@ -266,7 +322,8 @@ describe("optional card-cost interaction", () => {
       chooseActionIndex: -5,
       operation: "trash",
       chooseLabel: "Choose card to trash",
-      cardActions: [{ instanceId: "hand-1", actionIndex: 2 }],
+      requiredCount: 1,
+      cardActions: [{ instanceIds: ["hand-1"], actionIndex: 2 }],
     });
   });
 

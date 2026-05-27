@@ -6,6 +6,7 @@ import type {
   MatchId,
   PlayerId,
   PlayerView,
+  Zone,
 } from "@optcg/types";
 
 export interface ClientVisibleAction {
@@ -16,9 +17,10 @@ export interface ClientVisibleAction {
     | { kind: "paymentDeclined" }
     | {
         kind: "cardCost";
-        operation: "trash" | "returnToHand";
+        operation: "trash" | "returnToHand" | "moveCards";
         chooseLabel: string;
         selectedCardInstanceIds: InstanceId[];
+        source?: { zone: Zone; playerId?: PlayerId } | undefined;
       };
   attack?: {
     attackerInstanceId: InstanceId;
