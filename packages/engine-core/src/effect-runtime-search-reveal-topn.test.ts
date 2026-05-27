@@ -20,6 +20,7 @@ import {
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
+import { toCardRefForPlayer } from "./effect-runtime-search-reveal-remainder.js";
 import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
 import {
   processEffectRuntime,
@@ -309,6 +310,62 @@ test("top-N filter supports exact-name and disjunctive category search predicate
     [must(looked[0], "name match"), must(looked[1], "event match")].map(
       (card) => card.instanceId,
     ),
+  );
+});
+
+test("top-N disjunctive search selections resolve for each matching filter branch", () => {
+  const state = createActiveState();
+  const looked = setDeck(state, [
+    "topn-select-or-sanji",
+    "topn-select-or-event",
+    "topn-select-or-other",
+    "topn-select-or-outside",
+  ]);
+  state.cardManifest.cards[must(looked[0], "sanji card").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[0], "sanji card").cardId],
+      "sanji manifest",
+    ),
+    name: "Sanji",
+    category: "character",
+  };
+  const effect = search({
+    lookCount: 3,
+    filter: {
+      anyOf: [{ names: ["Sanji"] }, { categories: ["event"] }],
+    },
+  });
+  const opened = openSearch(state, effect);
+  const select = selectDecision(opened);
+
+  assert.deepEqual(
+    select.candidates.map((candidate) => candidate.card.instanceId),
+    [must(looked[0], "name match"), must(looked[1], "event match")].map(
+      (card) => card.instanceId,
+    ),
+  );
+
+  const selectedEvent = applyAction(
+    opened,
+    choose(select.id, [must(select.candidates[1], "event candidate").card]),
+  );
+
+  assert.equal(selectedEvent.errors, undefined);
+  assert.equal(
+    must(selectedEvent.state.players[p1], "p1").hand.at(-1)?.instanceId,
+    must(looked[1], "event match").instanceId,
+  );
+
+  const rejectedOther = applyAction(
+    opened,
+    choose(select.id, [toCardRefForPlayer(must(looked[2], "other"), p1)]),
+  );
+  const rejectedError = must(rejectedOther.errors?.[0], "rejected error");
+
+  assert.equal(rejectedError.type, "invalidDecisionResponse");
+  assert.equal(
+    rejectedError.reason,
+    "Selected card must be an active search candidate.",
   );
 });
 
