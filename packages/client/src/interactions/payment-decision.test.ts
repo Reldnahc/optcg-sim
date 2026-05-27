@@ -12,6 +12,7 @@ import {
   createCanonicalDonPaymentActions,
   createCanonicalDonPaymentModalActions,
   autoOptionalCardCostGroup,
+  autoPayCostActionIndex,
   optionalCardCostActionForInstance,
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
@@ -368,5 +369,50 @@ describe("DON payment interaction", () => {
     ];
 
     assert.equal(createCanonicalDonPaymentModalActions(actions), undefined);
+  });
+});
+
+describe("generic no-choice payment interaction", () => {
+  test("auto-submits the generic no-choice pay-cost action", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      { index: 2, type: "respondToDecision", label: "Pay cost" },
+    ];
+
+    assert.equal(autoPayCostActionIndex(payCostDecision, actions), 2);
+  });
+
+  test("does not auto-submit specific DON payment choices", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      { index: 2, type: "respondToDecision", label: "Pay cost with 1 DON!!" },
+    ];
+
+    assert.equal(autoPayCostActionIndex(payCostDecision, actions), undefined);
+  });
+
+  test("does not auto-submit when there is more than one payment action", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      { index: 2, type: "respondToDecision", label: "Pay cost" },
+      { index: 3, type: "respondToDecision", label: "Pay cost" },
+    ];
+
+    assert.equal(autoPayCostActionIndex(payCostDecision, actions), undefined);
   });
 });

@@ -196,6 +196,34 @@ export const createCanonicalDonPaymentModalActions = (
     : [...canonicalByLabel.values()];
 };
 
+export const autoPayCostActionIndex = (
+  decision: PublicPendingDecision | undefined,
+  actions: readonly ClientActionModel[],
+): number | undefined => {
+  if (decision?.type !== "payCost") {
+    return undefined;
+  }
+
+  const paymentActions = actions.filter(
+    (action) => action.decisionPayment?.kind !== "paymentDeclined",
+  );
+  if (paymentActions.length !== 1) {
+    return undefined;
+  }
+
+  const [paymentAction] = paymentActions;
+  if (
+    paymentAction === undefined ||
+    paymentAction.type !== "respondToDecision" ||
+    paymentAction.label !== "Pay cost" ||
+    paymentAction.decisionPayment !== undefined
+  ) {
+    return undefined;
+  }
+
+  return paymentAction.index;
+};
+
 const chooseLabelForCardCostOperation = (
   operation: "trash" | "returnToHand",
   fallback: string,

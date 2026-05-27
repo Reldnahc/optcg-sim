@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   DecisionResponse,
@@ -23,6 +23,7 @@ import {
   createDevWebSocketMatchTransport,
   ATTACH_SELECTED_DON_ACTION_INDEX,
   autoOptionalCardCostGroup,
+  autoPayCostActionIndex,
   findAttachDonActionIndex,
   createCanonicalDonPaymentActions,
   createOptionalCardCostChoice,
@@ -222,6 +223,7 @@ export const useMatchClient = (): MatchClientUi => {
   const [activeCounterTargetChoice, setActiveCounterTargetChoice] = useState<
     CounterTargetChoice | undefined
   >();
+  const autoSubmittedPayCostDecisionId = useRef<string | undefined>(undefined);
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -280,6 +282,10 @@ export const useMatchClient = (): MatchClientUi => {
     pendingDecision?.type === "payCost" && optionalCardCostChoice === undefined
       ? createCanonicalDonPaymentActions(pendingDecisionResponseActions)
       : undefined;
+  const automaticPayCostActionIndex = autoPayCostActionIndex(
+    pendingDecision,
+    pendingDecisionResponseActions,
+  );
   const explicitCardCostGroup =
     activeCardCostChoice === undefined ||
     optionalCardCostChoice === undefined ||
@@ -311,6 +317,7 @@ export const useMatchClient = (): MatchClientUi => {
     pendingDecision === undefined ||
     activeDecisionDraft === undefined ||
     cardCostChoiceActive ||
+    automaticPayCostActionIndex !== undefined ||
     pendingDecisionInteractionMode !== "modal" ||
     isDecisionModalSuppressed(pendingDecision)
       ? undefined
@@ -436,6 +443,7 @@ export const useMatchClient = (): MatchClientUi => {
     setActiveCardCostChoice(undefined);
     setActiveAttackTargetChoice(undefined);
     setActiveCounterTargetChoice(undefined);
+    autoSubmittedPayCostDecisionId.current = undefined;
     setClientState(created);
     setErrors([]);
   }, [controller]);
@@ -643,7 +651,23 @@ export const useMatchClient = (): MatchClientUi => {
       submitDecisionDraft,
     ],
   );
-
+  useEffect(() => {
+    if (
+      pendingDecision === undefined ||
+      automaticPayCostActionIndex === undefined ||
+      actionInFlight ||
+      autoSubmittedPayCostDecisionId.current === String(pendingDecision.id)
+    ) {
+      return;
+    }
+    autoSubmittedPayCostDecisionId.current = String(pendingDecision.id);
+    void submitAction(automaticPayCostActionIndex);
+  }, [
+    actionInFlight,
+    automaticPayCostActionIndex,
+    pendingDecision,
+    submitAction,
+  ]);
   const selectCard = useCallback(
     (instanceId: string | undefined): void => {
       if (instanceId === undefined) {
