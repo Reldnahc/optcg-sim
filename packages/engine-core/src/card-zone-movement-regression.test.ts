@@ -121,3 +121,21 @@ test("life trigger cleanup delegates concrete movement", () => {
     "life trigger cleanup must not construct trash-zone cards directly",
   );
 });
+
+test("optional activation trash costs delegate concrete movement", () => {
+  const source = readSource(
+    "packages/engine-core/src/optional-activation-actions.ts",
+  );
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "optional activation trash costs must not hand-roll cardTrashed",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "optional activation trash costs must not construct trash-zone cards directly",
+  );
+});

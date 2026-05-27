@@ -27,6 +27,7 @@ type ConcreteTrashMovementReason =
   | "lifeTriggerResolved"
   | "moveCards"
   | "searchRevealRemainder"
+  | "trashFromField"
   | "trashFromHand"
   | "ruleProcessCharacterOverflow"
   | "ruleProcessStageReplacement"

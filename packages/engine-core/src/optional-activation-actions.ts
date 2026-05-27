@@ -15,6 +15,7 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { reindexZoneCards, zonesEqual } from "./action-state.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import {
   processEffectRuntimeAfterOptionalActivationAccept,
   processEffectRuntimeAfterOptionalActivationDecline,
@@ -62,16 +63,6 @@ const orderedCurrentChoiceGroupIds = (
     .map((entry) => entry.id);
   return groupIds.length > 1 ? groupIds : undefined;
 };
-
-const toTrashCard = (
-  card: CardInstance,
-  playerId: PlayerId,
-  index: number,
-): CardInstance => ({
-  ...card,
-  attachedDon: [],
-  zone: { zone: "trash", playerId, slot: "trash", index },
-});
 
 const restSourceCard = (
   player: PlayerState,
@@ -389,96 +380,55 @@ export const applyOptionalActivationDecisionResponse = (
           }
           selectedCards.push(card);
         }
-        const selectedSet = new Set(selected);
         const returnedDonIds =
           selectedOption.type === "trashFromField"
             ? selectedCards.flatMap((card) => card.attachedDon)
             : [];
         const returnedDonIdSet = new Set(returnedDonIds);
-        const trashedCards = selectedCards.map((card, index) =>
-          toTrashCard(card, decision.playerId, index),
+        const reason =
+          selectedOption.type === "trashFromHand"
+            ? "trashFromHand"
+            : "trashFromField";
+        const movement = moveConcreteCardsToTrash(
+          state,
+          events,
+          selectedCards,
+          {
+            cardMovedPayloadShape: "publicZoneNames",
+            cardMovedVisibility: { type: "public" },
+            cardTrashedVisibility: { type: "public" },
+            causedBy: { type: "decision", decisionId: decision.id },
+            clearAttachedDon: true,
+            emitCardTrashed: true,
+            insertPosition: "top",
+            playerId: decision.playerId,
+            reason,
+            sourceZone:
+              selectedOption.type === "trashFromHand"
+                ? "hand"
+                : "characterArea",
+          },
         );
-        nextPlayer = {
-          ...player,
-          hand:
-            selectedOption.type === "trashFromHand"
-              ? reindexZoneCards(
-                  player.hand.filter(
-                    (card) => !selectedSet.has(card.instanceId),
-                  ),
-                  "hand",
-                  decision.playerId,
-                  "hand",
-                )
-              : player.hand,
-          characters:
-            selectedOption.type === "trashFromField"
-              ? reindexZoneCards(
-                  player.characters.filter(
-                    (card) => !selectedSet.has(card.instanceId),
-                  ),
-                  "characterArea",
-                  decision.playerId,
-                  "character",
-                )
-              : player.characters,
-          costArea:
-            selectedOption.type === "trashFromField"
-              ? player.costArea.map((card) =>
+        const movedPlayer = movement.state.players[decision.playerId];
+        if (movedPlayer === undefined) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection is invalid."),
+          );
+        }
+        nextPlayer =
+          selectedOption.type === "trashFromField"
+            ? {
+                ...movedPlayer,
+                costArea: movedPlayer.costArea.map((card) =>
                   returnedDonIdSet.has(card.instanceId)
                     ? { ...card, state: "rested" as const }
                     : card,
-                )
-              : player.costArea,
-          trash: reindexZoneCards(
-            [...trashedCards, ...player.trash],
-            "trash",
-            decision.playerId,
-            "trash",
-          ),
-        };
+                ),
+              }
+            : movedPlayer;
         for (const selectedCard of selectedCards) {
-          appendEvent(
-            state,
-            events,
-            "cardMoved",
-            {
-              from:
-                selectedOption.type === "trashFromHand"
-                  ? "hand"
-                  : "characterArea",
-              to: "trash",
-              playerId: decision.playerId,
-              reason:
-                selectedOption.type === "trashFromHand"
-                  ? "trashFromHand"
-                  : "trashFromField",
-            },
-            { type: "public" },
-          );
-          const moved = events[events.length - 1];
-          if (moved !== undefined) {
-            moved.causedBy = { type: "decision", decisionId: decision.id };
-          }
-          appendEvent(
-            state,
-            events,
-            "cardTrashed",
-            {
-              playerId: decision.playerId,
-              instanceId: selectedCard.instanceId,
-              cardId: selectedCard.cardId,
-              reason:
-                selectedOption.type === "trashFromHand"
-                  ? "trashFromHand"
-                  : "trashFromField",
-            },
-            { type: "public" },
-          );
-          const trashed = events[events.length - 1];
-          if (trashed !== undefined) {
-            trashed.causedBy = { type: "decision", decisionId: decision.id };
-          }
           if (selectedOption.type === "trashFromField") {
             for (const donId of selectedCard.attachedDon) {
               appendEvent(
