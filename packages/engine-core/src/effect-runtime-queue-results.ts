@@ -21,15 +21,16 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import type { EffectQueueGroup } from "./effect-queue-ordering.js";
+import { findFirstNoChoiceEffectQueueEntryBeforeChoiceGroup } from "./effect-queue-ordering.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
   evaluateQueueOrdering,
   orderNoChoiceQueueEntries,
 } from "./effect-runtime-queue-ordering.js";
-import { hasExactQueueEntryIds } from "./effect-runtime-queue-id-matching.js";
+import { hasUniqueQueueEntryIdsWithin } from "./effect-runtime-queue-id-matching.js";
 import { evaluateQueuedEffectSourcePresence } from "./effect-runtime-queue-source-presence.js";
+import { createChooseTriggerOrderDecision } from "./effect-runtime-trigger-order-decision.js";
 import type {
   CreateUnsupportedPendingRuntimeWorkError,
   EffectRuntimeQueueTargetDecisions,
@@ -855,54 +856,6 @@ export const createEffectRuntimeQueueResults = (
     return toEngineResult(nextState, allEvents);
   };
 
-  const createChooseTriggerOrderDecision = (
-    state: GameState,
-    earliestChoiceGroup: EffectQueueGroup,
-  ): EngineResult => {
-    const triggerIds = earliestChoiceGroup.entries.map((entry) => entry.id);
-    const decisionId =
-      `decision:chooseTriggerOrder:${earliestChoiceGroup.timingWindowId}:${String(
-        earliestChoiceGroup.generation,
-      )}:${earliestChoiceGroup.orderingGroup}:${earliestChoiceGroup.controllerId}` as DecisionId;
-    const causedBy = {
-      type: "ruleProcess",
-      name: "effectRuntime:chooseTriggerOrder",
-    } as const;
-    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
-      id: decisionId,
-      type: "chooseTriggerOrder",
-      playerId: earliestChoiceGroup.controllerId,
-      prompt: "Choose trigger resolution order.",
-      causedBy,
-      visibility: { type: "public" },
-      triggerIds,
-      constraints: { mustUseAll: true },
-    };
-    const events: EngineEvent[] = [];
-    appendEvent(
-      state,
-      events,
-      "decisionCreated",
-      {
-        decisionId: pendingDecision.id,
-        decisionType: pendingDecision.type,
-        playerId: pendingDecision.playerId,
-      },
-      { type: "public" },
-    );
-    const created = events[0];
-    if (created !== undefined) {
-      created.causedBy = causedBy;
-    }
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      pendingDecision,
-      eventJournal: [...state.eventJournal, ...events],
-    };
-    return toEngineResult(nextState, events);
-  };
-
   const processNoChoiceEffectQueue = (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
@@ -958,7 +911,12 @@ export const createEffectRuntimeQueueResults = (
         const expectedIds = earliestChoiceGroup.entries.map(
           (entry) => entry.id,
         );
-        if (!hasExactQueueEntryIds(expectedIds, orderedCurrentChoiceGroupIds)) {
+        if (
+          !hasUniqueQueueEntryIdsWithin(
+            expectedIds,
+            orderedCurrentChoiceGroupIds,
+          )
+        ) {
           return unsupportedEffectQueueResult(state);
         }
         const selectedById = new Map(
@@ -976,6 +934,29 @@ export const createEffectRuntimeQueueResults = (
           state,
           selectedEntries,
           acceptedOptionalIds,
+        );
+        if (
+          resolved.errors !== undefined ||
+          resolved.state.status.type !== "active"
+        ) {
+          return resolved;
+        }
+        const continued = processNoChoiceEffectQueue(resolved.state);
+        return {
+          ...continued,
+          events: [...resolved.events, ...continued.events],
+        };
+      }
+      const noChoiceBeforeChoice =
+        findFirstNoChoiceEffectQueueEntryBeforeChoiceGroup(
+          ordering.groups,
+          earliestChoiceGroup,
+        );
+      if (noChoiceBeforeChoice !== undefined) {
+        const resolved = resolveQueueEntriesInOrder(
+          state,
+          [noChoiceBeforeChoice],
+          new Set(acceptedOptionalQueueEntryIds),
         );
         if (
           resolved.errors !== undefined ||

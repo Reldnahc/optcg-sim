@@ -934,7 +934,7 @@ test("accepted optional once-per-turn fails closed before resolving a same-key o
     decisionId: triggerOrderDecision.id,
     response: {
       type: "orderedIds",
-      ids: [entry.id, repeatedEntry.id],
+      ids: [entry.id],
     },
   });
   const optionalDecision = must(
@@ -950,14 +950,14 @@ test("accepted optional once-per-turn fails closed before resolving a same-key o
   });
 
   assert.ok(blocked.errors !== undefined);
-  assert.deepEqual(blocked.state.oncePerTurn, []);
+  assert.equal(blocked.state.oncePerTurn.length, 1);
   assert.deepEqual(
     blocked.state.effectQueue.map((queued) => queued.id),
-    [entry.id, repeatedEntry.id],
+    [repeatedEntry.id],
   );
   assert.equal(
     blocked.events.some((event) => event.type === "effectResolved"),
-    false,
+    true,
   );
 });
 

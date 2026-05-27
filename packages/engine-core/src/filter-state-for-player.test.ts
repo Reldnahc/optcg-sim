@@ -381,7 +381,7 @@ test("chooseTriggerOrder projection exposes trigger choices and hides private so
     id: toDecisionId("decision:choose-trigger-order"),
     type: "chooseTriggerOrder",
     playerId: p1,
-    prompt: "Choose trigger resolution order.",
+    prompt: "Choose next trigger to resolve.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [toQueueEntryId("queue-hidden-a")],
@@ -395,7 +395,7 @@ test("chooseTriggerOrder projection exposes trigger choices and hides private so
     id: toDecisionId("decision:choose-trigger-order"),
     type: "chooseTriggerOrder",
     playerId: p1,
-    prompt: "Choose trigger resolution order.",
+    prompt: "Choose next trigger to resolve.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     choices: [{ triggerId: toQueueEntryId("queue-hidden-a") }],
   });

@@ -367,7 +367,7 @@ test("ordered draw before target pause preserves prior runtime events in returne
     decisionId: pendingDecision.id,
     response: {
       type: "orderedIds",
-      ids: [drawEntry.id, targetEntry.id],
+      ids: [drawEntry.id],
     },
   });
 
@@ -418,7 +418,7 @@ test("ordered target pause before draw resumes the remaining queue after target 
     decisionId: orderDecision.id,
     response: {
       type: "orderedIds",
-      ids: [targetEntry.id, drawEntry.id],
+      ids: [targetEntry.id],
     },
   });
   const targetDecision = must(
@@ -450,7 +450,7 @@ test("ordered target pause before draw resumes the remaining queue after target 
   );
 });
 
-test("unsupported ordered target after draw fails closed without keeping partial draw mutation", () => {
+test("unsupported target after chosen draw reports the remaining unsupported queue entry", () => {
   const { state, drawEntry, targetEntry } = mixedOrderedDrawThenTargetState(
     publicCharacterTargetRequest({ visibility: "privateToChooser" }),
   );
@@ -460,18 +460,16 @@ test("unsupported ordered target after draw fails closed without keeping partial
     "choose order decision",
   );
   assert.equal(pendingDecision.type, "chooseTriggerOrder");
-  const beforeP1 = structuredClone(must(paused.state.players[p1], "p1"));
 
   const result = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: pendingDecision.id,
     response: {
       type: "orderedIds",
-      ids: [drawEntry.id, targetEntry.id],
+      ids: [drawEntry.id],
     },
   });
 
-  const afterP1 = must(result.state.players[p1], "p1 result");
   assert.deepEqual(result.errors, [
     {
       type: "effectRuntimeError",
@@ -479,19 +477,24 @@ test("unsupported ordered target after draw fails closed without keeping partial
       details: {
         reason: "unsupported-pending-runtime-work",
         kind: "effectQueue",
-        count: 2,
+        count: 1,
       },
     },
   ]);
   assert.deepEqual(
     result.events.map((event) => event.type),
-    ["decisionResolved"],
+    [
+      "decisionResolved",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
   );
-  assert.equal(afterP1.deck.length, beforeP1.deck.length);
-  assert.equal(afterP1.hand.length, beforeP1.hand.length);
   assert.deepEqual(
     result.state.effectQueue.map((entry) => entry.id),
-    [drawEntry.id, targetEntry.id],
+    [targetEntry.id],
   );
   assert.equal(result.state.pendingDecision, undefined);
 });

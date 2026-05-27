@@ -289,7 +289,7 @@ test("respondToDecision rejects stale decision id for pending chooseTriggerOrder
     id: toDecisionId("decision:choose-trigger-order"),
     type: "chooseTriggerOrder",
     playerId: p1,
-    prompt: "Choose trigger resolution order.",
+    prompt: "Choose next trigger to resolve.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [toQueueEntryId("queue-a"), toQueueEntryId("queue-b")],
@@ -320,7 +320,7 @@ test("getLegalActions exposes chooseTriggerOrder response only for the decision 
     id: toDecisionId("decision:choose-trigger-order"),
     type: "chooseTriggerOrder",
     playerId: p1,
-    prompt: "Choose trigger resolution order.",
+    prompt: "Choose next trigger to resolve.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [toQueueEntryId("queue-a"), toQueueEntryId("queue-b")],
@@ -332,7 +332,7 @@ test("getLegalActions exposes chooseTriggerOrder response only for the decision 
     {
       type: "respondToDecision",
       decisionId: toDecisionId("decision:choose-trigger-order"),
-      response: { type: "orderedIds", ids: ["queue-a", "queue-b"] },
+      response: { type: "orderedIds", ids: ["queue-a"] },
     },
   ]);
   assert.deepEqual(getLegalActions(state, p2), [

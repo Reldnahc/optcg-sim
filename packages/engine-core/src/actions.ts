@@ -773,7 +773,7 @@ export const getLegalActions = (
         decisionId: state.pendingDecision.id,
         response: {
           type: "orderedIds",
-          ids: [...state.pendingDecision.triggerIds],
+          ids: state.pendingDecision.triggerIds.slice(0, 1),
         },
       });
     }

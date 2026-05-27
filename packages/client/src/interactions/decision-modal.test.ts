@@ -237,7 +237,7 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "orderedIds", ids: ["3", "1", "2"] });
   });
 
-  test("chooseTriggerOrder draft uses card-choice selection order and builds orderedIds response", () => {
+  test("chooseTriggerOrder draft uses a card-choice selection for the next trigger", () => {
     const decision = {
       ...baseDecision,
       type: "chooseTriggerOrder",
@@ -249,18 +249,12 @@ describe("headless decision modal models", () => {
     } satisfies PublicChooseTriggerOrderDecision;
     let draft = createDecisionDraft(decision);
     draft = chooseDecisionTrigger(decision, draft, "trigger-3");
-    draft = chooseDecisionTrigger(decision, draft, "trigger-1");
-    draft = chooseDecisionTrigger(decision, draft, "trigger-2");
 
     const model = createDecisionModalModel(decision, draft);
     const response = buildDecisionResponse(decision, draft);
 
     assert.equal(model.kind, "orderTriggers");
-    assert.deepEqual(model.orderedTriggerIds, [
-      "trigger-3",
-      "trigger-1",
-      "trigger-2",
-    ]);
+    assert.deepEqual(model.orderedTriggerIds, ["trigger-3"]);
     assert.deepEqual(
       model.choices.map((choice) => ({
         triggerId: choice.triggerId,
@@ -268,15 +262,12 @@ describe("headless decision modal models", () => {
         orderIndex: choice.orderIndex,
       })),
       [
-        { triggerId: "trigger-1", selected: true, orderIndex: 1 },
-        { triggerId: "trigger-2", selected: true, orderIndex: 2 },
+        { triggerId: "trigger-1", selected: false, orderIndex: undefined },
+        { triggerId: "trigger-2", selected: false, orderIndex: undefined },
         { triggerId: "trigger-3", selected: true, orderIndex: 0 },
       ],
     );
-    assert.deepEqual(response, {
-      type: "orderedIds",
-      ids: ["trigger-3", "trigger-1", "trigger-2"],
-    });
+    assert.deepEqual(response, { type: "orderedIds", ids: ["trigger-3"] });
   });
 
   test("chooseQuantity draft builds a quantity response only inside bounds", () => {

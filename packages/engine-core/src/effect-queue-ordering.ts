@@ -259,6 +259,19 @@ export const findEarliestChoiceRequiredEffectQueueGroup = (
     .sort(compareEffectQueueGroups)
     .find((group) => group.requiresChooseTriggerOrder);
 
+export const findFirstNoChoiceEffectQueueEntryBeforeChoiceGroup = (
+  groups: readonly EffectQueueGroup[],
+  choiceGroup: EffectQueueGroup,
+): EffectQueueEntry | undefined =>
+  groups
+    .filter(
+      (group) =>
+        !group.requiresChooseTriggerOrder &&
+        compareEffectQueueGroups(group, choiceGroup) < 0,
+    )
+    .flatMap((group) => group.entries)
+    .at(0);
+
 const compareNoChoiceEntries = (
   left: { group: EffectQueueGroup; entry: EffectQueueEntry },
   right: { group: EffectQueueGroup; entry: EffectQueueEntry },

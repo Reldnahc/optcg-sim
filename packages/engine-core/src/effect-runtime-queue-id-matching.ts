@@ -13,3 +13,17 @@ export const hasExactQueueEntryIds = (
   const expected = new Set(expectedIds);
   return receivedIds.every((id) => expected.has(id));
 };
+
+export const hasUniqueQueueEntryIdsWithin = (
+  expectedIds: readonly QueueEntryId[],
+  receivedIds: readonly QueueEntryId[],
+): boolean => {
+  if (receivedIds.length === 0) {
+    return false;
+  }
+  if (new Set(receivedIds).size !== receivedIds.length) {
+    return false;
+  }
+  const expected = new Set(expectedIds);
+  return receivedIds.every((id) => expected.has(id));
+};

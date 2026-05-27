@@ -142,7 +142,7 @@ const eventPayloadHasQueueEntryId = (
   "queueEntryId" in event.payload &&
   event.payload.queueEntryId === queueEntryId;
 
-test("optional activation decline resumes remaining ordered suffix without re-prompting", () => {
+test("optional activation decline asks again when multiple triggers remain in the group", () => {
   const { state, optionalEntry, requiredEntry } =
     optionalThenRequiredDrawState();
   const sameGroupRequiredEntryOne: EffectQueueEntry = {
@@ -175,11 +175,7 @@ test("optional activation decline resumes remaining ordered suffix without re-pr
     decisionId: triggerOrderDecision.id,
     response: {
       type: "orderedIds",
-      ids: [
-        optionalEntry.id,
-        sameGroupRequiredEntryTwo.id,
-        sameGroupRequiredEntryOne.id,
-      ],
+      ids: [optionalEntry.id],
     },
   });
   const optionalDecision = must(
@@ -195,22 +191,18 @@ test("optional activation decline resumes remaining ordered suffix without re-pr
   });
 
   assert.equal(declined.errors, undefined);
-  assert.equal(declined.state.pendingDecision, undefined);
-  assert.deepEqual(declined.state.effectQueue, []);
-  assert.equal(
-    declined.events.some((event) => {
-      if (event.type !== "decisionCreated") {
-        return false;
-      }
-      const payload = event.payload;
-      return (
-        typeof payload === "object" &&
-        payload !== null &&
-        "decisionType" in payload &&
-        payload.decisionType === "chooseTriggerOrder"
-      );
-    }),
-    false,
+  const nextDecision = must(
+    declined.state.pendingDecision,
+    "next trigger order decision",
+  );
+  assert.equal(nextDecision.type, "chooseTriggerOrder");
+  assert.deepEqual(nextDecision.triggerIds, [
+    sameGroupRequiredEntryOne.id,
+    sameGroupRequiredEntryTwo.id,
+  ]);
+  assert.deepEqual(
+    declined.state.effectQueue.map((entry) => entry.id),
+    [sameGroupRequiredEntryOne.id, sameGroupRequiredEntryTwo.id],
   );
   const resolvedIds = declined.events
     .filter(
@@ -225,9 +217,6 @@ test("optional activation decline resumes remaining ordered suffix without re-pr
           : undefined,
     )
     .filter((id): id is EffectQueueEntry["id"] => id !== undefined);
-  assert.deepEqual(resolvedIds, [
-    sameGroupRequiredEntryTwo.id,
-    sameGroupRequiredEntryOne.id,
-  ]);
+  assert.deepEqual(resolvedIds, []);
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
 });

@@ -459,14 +459,12 @@ export const chooseDecisionTrigger = (
   if (draft.orderedTriggerIds.includes(triggerId)) {
     return {
       ...draft,
-      orderedTriggerIds: draft.orderedTriggerIds.filter(
-        (orderedId) => orderedId !== triggerId,
-      ),
+      orderedTriggerIds: [],
     };
   }
   return {
     ...draft,
-    orderedTriggerIds: [...draft.orderedTriggerIds, triggerId],
+    orderedTriggerIds: [triggerId],
   };
 };
 
@@ -562,7 +560,7 @@ export const createDecisionModalModel = (
       kind: "orderTriggers",
       decisionId: decision.id,
       prompt: decision.prompt,
-      canConfirm: draft.orderedTriggerIds.length === decision.choices.length,
+      canConfirm: draft.orderedTriggerIds.length === 1,
       orderedTriggerIds: draft.orderedTriggerIds,
       choices: decision.choices.map((choice) => {
         const triggerId = choice.triggerId;
@@ -574,7 +572,7 @@ export const createDecisionModalModel = (
           ...(orderIndex === undefined ? {} : { orderIndex }),
         };
       }),
-      confirmLabel: "Confirm order",
+      confirmLabel: "Choose trigger",
     };
   }
   if (decision.type === "chooseQuantity") {

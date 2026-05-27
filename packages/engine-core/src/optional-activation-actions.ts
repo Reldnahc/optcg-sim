@@ -63,18 +63,6 @@ const orderedCurrentChoiceGroupIds = (
   return groupIds.length > 1 ? groupIds : undefined;
 };
 
-const orderedRemainingChoiceGroupIdsAfterDecline = (
-  state: GameState,
-  selected: GameState["effectQueue"][number],
-): readonly QueueEntryId[] | undefined => {
-  const ordered = orderedCurrentChoiceGroupIds(state, selected);
-  if (ordered === undefined) {
-    return undefined;
-  }
-  const remaining = ordered.filter((id) => id !== selected.id);
-  return remaining.length > 1 ? remaining : undefined;
-};
-
 const toTrashCard = (
   card: CardInstance,
   playerId: PlayerId,
@@ -819,12 +807,11 @@ export const applyOptionalActivationDecisionResponse = (
     ? processEffectRuntimeAfterOptionalActivationAccept(
         nextState,
         selected.id,
-        orderedCurrentChoiceGroupIds(state, selected),
+        orderedCurrentChoiceGroupIds(state, selected) === undefined
+          ? undefined
+          : [selected.id],
       )
-    : processEffectRuntimeAfterOptionalActivationDecline(
-        nextState,
-        orderedRemainingChoiceGroupIdsAfterDecline(state, selected),
-      );
+    : processEffectRuntimeAfterOptionalActivationDecline(nextState);
   return {
     ...resumed,
     events: [...events, ...resumed.events],

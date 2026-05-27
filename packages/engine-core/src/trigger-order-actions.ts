@@ -27,6 +27,14 @@ const hasExactIds = (
   return receivedIds.every((id) => expected.has(id));
 };
 
+const hasExactlyOneSelectedTriggerId = (
+  expectedIds: readonly string[],
+  receivedIds: readonly string[],
+): boolean =>
+  receivedIds.length === 1 &&
+  new Set(receivedIds).size === 1 &&
+  expectedIds.includes(receivedIds[0] ?? "");
+
 const resolveCurrentGroupEntries = (
   state: GameState,
   ids: readonly string[],
@@ -130,11 +138,13 @@ export const applyChooseTriggerOrderDecisionResponse = (
     );
   }
 
-  if (!hasExactIds(decision.triggerIds, action.response.ids)) {
+  if (
+    !hasExactlyOneSelectedTriggerId(decision.triggerIds, action.response.ids)
+  ) {
     return toEngineResult(
       state,
       [],
-      invalidDecision("orderedIds must exactly match triggerIds."),
+      invalidDecision("orderedIds must choose exactly one triggerId."),
     );
   }
   const currentGroupEntries = resolveCurrentGroupEntries(
@@ -161,7 +171,7 @@ export const applyChooseTriggerOrderDecisionResponse = (
       return toEngineResult(
         state,
         [],
-        invalidDecision("orderedIds must exactly match triggerIds."),
+        invalidDecision("orderedIds must choose exactly one triggerId."),
       );
     }
     orderedIds.push(queueEntryId);

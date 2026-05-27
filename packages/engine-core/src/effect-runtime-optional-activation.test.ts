@@ -373,7 +373,7 @@ test("optional activation accept resumes prior trigger order group without re-pr
     decisionId: triggerOrderDecision.id,
     response: {
       type: "orderedIds",
-      ids: [optionalEntry.id, sameGroupRequiredEntry.id],
+      ids: [optionalEntry.id],
     },
   });
   const optionalDecision = must(
@@ -455,7 +455,7 @@ test("optional activation accept resolves single ordered entry before later trig
     decisionId: triggerOrderDecision.id,
     response: {
       type: "orderedIds",
-      ids: [firstRequiredEntry.id, optionalEntry.id],
+      ids: [firstRequiredEntry.id],
     },
   });
   const optionalDecision = must(

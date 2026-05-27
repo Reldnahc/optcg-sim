@@ -58,7 +58,7 @@ test("chooseTriggerOrder projection includes visible trigger source cards for th
     id: toDecisionId("decision:choose-trigger-order-visible"),
     type: "chooseTriggerOrder",
     playerId: p1,
-    prompt: "Choose trigger resolution order.",
+    prompt: "Choose next trigger to resolve.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [triggerId],

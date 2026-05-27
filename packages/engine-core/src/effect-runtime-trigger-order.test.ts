@@ -422,7 +422,7 @@ test("valid chooseTriggerOrder response resumes queue and preserves chosen order
     decisionId: pendingDecision.id,
     response: {
       type: "orderedIds",
-      ids: [toQueueEntryId("queue-entry-b"), toQueueEntryId("queue-entry-a")],
+      ids: [toQueueEntryId("queue-entry-b")],
     },
   });
   const resolvedPayloads = resumed.events
@@ -598,7 +598,7 @@ test("resume pauses again when a later same-player bucket still needs chooseTrig
     decisionId: must(paused.state.pendingDecision, "first decision").id,
     response: {
       type: "orderedIds",
-      ids: [toQueueEntryId("queue-entry-b"), toQueueEntryId("queue-entry-a")],
+      ids: [toQueueEntryId("queue-entry-b")],
     },
   });
 

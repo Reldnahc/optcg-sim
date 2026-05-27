@@ -83,7 +83,7 @@ const setupChoiceState = () => {
     id: toDecisionId("decision:choose-trigger-order"),
     type: "chooseTriggerOrder",
     playerId: p1,
-    prompt: "Choose trigger resolution order.",
+    prompt: "Choose next trigger to resolve.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [toQueueEntryId("queue-a"), toQueueEntryId("queue-b")],
@@ -92,7 +92,7 @@ const setupChoiceState = () => {
   return state;
 };
 
-test("valid orderedIds response clears pending decision and reorders only selected trigger group", () => {
+test("valid orderedIds response chooses only the next trigger from the selected trigger group", () => {
   const state = setupChoiceState();
   const before = structuredClone(state);
 
@@ -101,7 +101,7 @@ test("valid orderedIds response clears pending decision and reorders only select
     decisionId: toDecisionId("decision:choose-trigger-order"),
     response: {
       type: "orderedIds",
-      ids: [toQueueEntryId("queue-b"), toQueueEntryId("queue-a")],
+      ids: [toQueueEntryId("queue-b")],
     },
   });
 
@@ -120,8 +120,8 @@ test("valid orderedIds response clears pending decision and reorders only select
   assert.deepEqual(
     result.state.effectQueue.map((entry) => entry.id),
     [
-      toQueueEntryId("queue-b"),
       toQueueEntryId("queue-a"),
+      toQueueEntryId("queue-b"),
       toQueueEntryId("queue-c"),
       toQueueEntryId("queue-d"),
     ],
@@ -165,14 +165,14 @@ test("invalid chooseTriggerOrder responses fail closed with no mutation or hash 
           toQueueEntryId("queue-b"),
         ],
       } satisfies DecisionResponse,
-      reason: "orderedIds must exactly match triggerIds.",
+      reason: "orderedIds must choose exactly one triggerId.",
     },
     {
       response: {
         type: "orderedIds",
-        ids: [toQueueEntryId("queue-a")],
+        ids: [],
       } satisfies DecisionResponse,
-      reason: "orderedIds must exactly match triggerIds.",
+      reason: "orderedIds must choose exactly one triggerId.",
     },
     {
       response: {
@@ -183,14 +183,21 @@ test("invalid chooseTriggerOrder responses fail closed with no mutation or hash 
           toQueueEntryId("queue-c"),
         ],
       } satisfies DecisionResponse,
-      reason: "orderedIds must exactly match triggerIds.",
+      reason: "orderedIds must choose exactly one triggerId.",
     },
     {
       response: {
         type: "orderedIds",
         ids: [toQueueEntryId("queue-a"), toQueueEntryId("queue-z")],
       } satisfies DecisionResponse,
-      reason: "orderedIds must exactly match triggerIds.",
+      reason: "orderedIds must choose exactly one triggerId.",
+    },
+    {
+      response: {
+        type: "orderedIds",
+        ids: [toQueueEntryId("queue-z")],
+      } satisfies DecisionResponse,
+      reason: "orderedIds must choose exactly one triggerId.",
     },
   ];
 
@@ -226,7 +233,7 @@ test("stale chooseTriggerOrder ids absent from current queue fail closed without
     decisionId: toDecisionId("decision:choose-trigger-order"),
     response: {
       type: "orderedIds",
-      ids: [toQueueEntryId("queue-b"), toQueueEntryId("queue-a")],
+      ids: [toQueueEntryId("queue-b")],
     },
   });
 
@@ -257,7 +264,7 @@ test("stale chooseTriggerOrder group membership drift fails closed without mutat
     decisionId: toDecisionId("decision:choose-trigger-order"),
     response: {
       type: "orderedIds",
-      ids: [toQueueEntryId("queue-b"), toQueueEntryId("queue-a")],
+      ids: [toQueueEntryId("queue-b")],
     },
   });
 
