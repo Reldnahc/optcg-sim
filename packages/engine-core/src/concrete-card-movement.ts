@@ -17,8 +17,11 @@ type TrashInsertPosition = "bottom" | "top";
 type CardMovedPayloadShape = "publicZoneNames" | "zoneRefs";
 
 type ConcreteTrashMovementReason =
+  | "playCard"
   | "moveCards"
   | "trashFromHand"
+  | "ruleProcessCharacterOverflow"
+  | "ruleProcessStageReplacement"
   | typeof KO_TRASH_MOVEMENT_REASON;
 
 export interface ConcreteTrashMovementOptions {

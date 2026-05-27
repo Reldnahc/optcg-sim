@@ -49,6 +49,7 @@ import {
   type SupportedPlayMetadata,
 } from "./play-card-support.js";
 import { processEffectRuntime } from "./effect-runtime.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { findRuntimePlaySelectedOverflowEnterRested } from "./runtime-play-selected-overflow-entry-state.js";
 
@@ -488,48 +489,26 @@ const placePlayedCardResult = (params: {
       : player.trash;
   let nextCostArea = costArea;
   if (supported.category === "event") {
-    const trashedEvent: CardInstance = {
-      ...sourceCard,
-      attachedDon: [],
-      zone: { zone: "trash", playerId, slot: "trash", index: 0 },
-    };
-    nextTrash = reindexZoneCards(
-      [trashedEvent, ...nextTrash],
-      "trash",
+    const movedResult = moveConcreteCardsToTrash(state, events, [sourceCard], {
+      cardMovedPayloadShape: "zoneRefs",
+      cardMovedVisibility: { type: "public" },
+      cardTrashedVisibility: { type: "public" },
+      clearAttachedDon: true,
+      emitCardTrashed: true,
+      includeCardIdentityInCardMoved: true,
+      insertPosition: "top",
       playerId,
-      "trash",
-    );
+      reason: "playCard",
+      sourceZone: "hand",
+    });
+    const movedPlayer = movedResult.state.players[playerId];
+    if (movedPlayer === undefined) {
+      return illegalAction(state, "playCard player does not exist.");
+    }
     const nextPlayer = {
-      ...player,
+      ...movedPlayer,
       costArea: nextCostArea,
-      hand: nextHand,
-      trash: nextTrash,
     };
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      {
-        instanceId: sourceCard.instanceId,
-        cardId: sourceCard.cardId,
-        from: sourceCard.zone,
-        to: trashedEvent.zone,
-        reason: "playCard",
-      },
-      { type: "public" },
-    );
-    appendEvent(
-      state,
-      events,
-      "cardTrashed",
-      {
-        playerId,
-        instanceId: sourceCard.instanceId,
-        cardId: sourceCard.cardId,
-        reason: "playCard",
-      },
-      { type: "public" },
-    );
     appendEvent(
       state,
       events,
@@ -543,7 +522,7 @@ const placePlayedCardResult = (params: {
       { type: "public" },
     );
     const nextStateBase: GameState = {
-      ...state,
+      ...movedResult.state,
       seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
       players: { ...state.players, [playerId]: nextPlayer },
@@ -575,44 +554,46 @@ const placePlayedCardResult = (params: {
     if (overflowCharacter === undefined) {
       return illegalAction(state, "Overflow Character selection is stale.");
     }
-    const trashedCard: CardInstance = {
-      ...overflowCharacter,
-      attachedDon: [],
-      zone: { zone: "trash", playerId, slot: "trash", index: 0 },
-    };
-    nextCharacters = reindexZoneCards(
-      player.characters.filter(
-        (_, index) => index !== selectedOverflowCharacterIndex,
-      ),
-      "characterArea",
-      playerId,
-      "character",
-    );
-    nextTrash = reindexZoneCards(
-      [trashedCard, ...nextTrash],
-      "trash",
-      playerId,
-      "trash",
-    );
     const attachedDonIds = new Set(overflowCharacter.attachedDon);
     nextCostArea = costArea.map((card) =>
       attachedDonIds.has(card.instanceId)
         ? { ...card, state: "rested" as const }
         : card,
     );
-    appendEvent(state, events, "cardMoved", {
-      instanceId: overflowCharacter.instanceId,
-      cardId: overflowCharacter.cardId,
-      from: overflowCharacter.zone,
-      to: trashedCard.zone,
-      reason: "ruleProcessCharacterOverflow",
-    });
-    appendEvent(state, events, "cardTrashed", {
-      playerId,
-      instanceId: overflowCharacter.instanceId,
-      cardId: overflowCharacter.cardId,
-      reason: "ruleProcessCharacterOverflow",
-    });
+    const movedResult = moveConcreteCardsToTrash(
+      {
+        ...state,
+        players: {
+          ...state.players,
+          [playerId]: {
+            ...player,
+            costArea: nextCostArea,
+            hand: nextHand,
+            trash: nextTrash,
+          },
+        },
+      },
+      events,
+      [overflowCharacter],
+      {
+        cardMovedPayloadShape: "zoneRefs",
+        cardMovedVisibility: { type: "public" },
+        cardTrashedVisibility: { type: "public" },
+        clearAttachedDon: true,
+        emitCardTrashed: true,
+        includeCardIdentityInCardMoved: true,
+        insertPosition: "top",
+        playerId,
+        reason: "ruleProcessCharacterOverflow",
+        sourceZone: "characterArea",
+      },
+    );
+    const movedPlayer = movedResult.state.players[playerId];
+    if (movedPlayer === undefined) {
+      return illegalAction(state, "Overflow player does not exist.");
+    }
+    nextCharacters = movedPlayer.characters;
+    nextTrash = movedPlayer.trash;
     for (const donId of overflowCharacter.attachedDon) {
       appendEvent(
         state,
@@ -631,29 +612,38 @@ const placePlayedCardResult = (params: {
         "Stage replacement with attached DON!! is unsupported.",
       );
     }
-    const trashedStage: CardInstance = {
-      ...player.stage,
-      zone: { zone: "trash", playerId, slot: "trash", index: 0 },
-    };
-    nextTrash = reindexZoneCards(
-      [trashedStage, ...nextTrash],
-      "trash",
-      playerId,
-      "trash",
+    const movedResult = moveConcreteCardsToTrash(
+      {
+        ...state,
+        players: {
+          ...state.players,
+          [playerId]: {
+            ...player,
+            costArea: nextCostArea,
+            hand: nextHand,
+            trash: nextTrash,
+          },
+        },
+      },
+      events,
+      [player.stage],
+      {
+        cardMovedPayloadShape: "zoneRefs",
+        cardMovedVisibility: { type: "public" },
+        cardTrashedVisibility: { type: "public" },
+        emitCardTrashed: true,
+        includeCardIdentityInCardMoved: true,
+        insertPosition: "top",
+        playerId,
+        reason: "ruleProcessStageReplacement",
+        sourceZone: "stageArea",
+      },
     );
-    appendEvent(state, events, "cardMoved", {
-      instanceId: player.stage.instanceId,
-      cardId: player.stage.cardId,
-      from: player.stage.zone,
-      to: trashedStage.zone,
-      reason: "ruleProcessStageReplacement",
-    });
-    appendEvent(state, events, "cardTrashed", {
-      playerId,
-      instanceId: player.stage.instanceId,
-      cardId: player.stage.cardId,
-      reason: "ruleProcessStageReplacement",
-    });
+    const movedPlayer = movedResult.state.players[playerId];
+    if (movedPlayer === undefined) {
+      return illegalAction(state, "Stage replacement player does not exist.");
+    }
+    nextTrash = movedPlayer.trash;
   }
 
   const playedCard = createPlayedCard({

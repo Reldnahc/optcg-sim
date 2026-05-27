@@ -51,3 +51,19 @@ test("battle K.O. keeps K.O. semantics but delegates concrete trash movement", (
     "battle K.O. movement reason must be owned by the shared movement helper",
   );
 });
+
+test("play-card trash front doors delegate concrete movement", () => {
+  const source = readSource("packages/engine-core/src/play-card.ts");
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "play-card must not hand-roll cardTrashed for event cleanup, overflow, or stage replacement",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "play-card must not construct trash-zone cards directly",
+  );
+});
