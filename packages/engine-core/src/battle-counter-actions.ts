@@ -583,7 +583,7 @@ const resolveCounterCardUse = (params: {
         : [...state.continuousEffects, counterEventPowerRecord],
     eventJournal: [...state.eventJournal, ...events],
   };
-  if (pendingDecision !== undefined) {
+  if (pendingDecision !== undefined && trailingSequence === undefined) {
     nextState.pendingDecision = pendingDecision;
   } else {
     delete nextState.pendingDecision;
@@ -597,6 +597,12 @@ const resolveCounterCardUse = (params: {
     );
     if (trailing === null) {
       return illegalAction(state, "Unsupported Counter Event trailing effect.");
+    }
+    if (
+      trailing.state.pendingDecision === undefined &&
+      pendingDecision !== undefined
+    ) {
+      trailing.state.pendingDecision = pendingDecision;
     }
     assertGameStateInvariants(trailing.state);
     return toEngineResult(trailing.state, [

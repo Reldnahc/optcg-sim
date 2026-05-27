@@ -62,12 +62,19 @@ const isSupportedTrashFromHandBody = (
 
 const isQueuedAutoSequenceTriggerType = (
   triggerType: Trigger["type"],
-): triggerType is "onPlay" | "whenAttacking" | "onKO" | "main" | "trigger" =>
+): triggerType is
+  | "onPlay"
+  | "whenAttacking"
+  | "onKO"
+  | "main"
+  | "trigger"
+  | "counter" =>
   triggerType === "onPlay" ||
   triggerType === "whenAttacking" ||
   triggerType === "onKO" ||
   triggerType === "main" ||
-  triggerType === "trigger";
+  triggerType === "trigger" ||
+  triggerType === "counter";
 
 const isSupportedSequenceBody = (
   block: EffectBlock,

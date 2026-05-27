@@ -651,7 +651,13 @@ export const isSupportedSequenceBlock = (
 
 export const isSupportedQueuedAutoSequenceForEntryPoint = (
   effect: EffectDefinition["effects"][number],
-  triggerType: "onPlay" | "whenAttacking" | "onKO" | "main" | "trigger",
+  triggerType:
+    | "onPlay"
+    | "whenAttacking"
+    | "onKO"
+    | "main"
+    | "trigger"
+    | "counter",
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions = {},
 ): effect is SupportedSequenceBlock =>
