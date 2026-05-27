@@ -131,7 +131,7 @@ export const optionalCardCostInstanceIds = (
 
 const donPaymentLabelPattern = /^Pay cost with (?<count>[1-9]\d*) DON!!$/u;
 
-export const createCanonicalDonPaymentModalActions = (
+export const createCanonicalDonPaymentActions = (
   actions: readonly ClientActionModel[],
 ): ClientActionModel[] | undefined => {
   const canonicalByLabel = new Map<string, ClientActionModel>();
@@ -151,6 +151,9 @@ export const createCanonicalDonPaymentModalActions = (
     ? undefined
     : [...canonicalByLabel.values()];
 };
+
+export const createCanonicalDonPaymentModalActions =
+  createCanonicalDonPaymentActions;
 
 const chooseLabelForCardCostOperation = (
   operation: "trash" | "returnToHand",

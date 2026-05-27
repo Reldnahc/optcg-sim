@@ -23,7 +23,7 @@ import {
   createDevWebSocketMatchTransport,
   ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
-  createCanonicalDonPaymentModalActions,
+  createCanonicalDonPaymentActions,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
   isSelectableCostAreaDon,
@@ -277,7 +277,7 @@ export const useMatchClient = (): MatchClientUi => {
         );
   const canonicalDonPaymentActions =
     pendingDecision?.type === "payCost" && optionalCardCostChoice === undefined
-      ? createCanonicalDonPaymentModalActions(pendingDecisionResponseActions)
+      ? createCanonicalDonPaymentActions(pendingDecisionResponseActions)
       : undefined;
   const activeCardCostGroup =
     activeCardCostChoice === undefined ||
@@ -838,13 +838,16 @@ export const useMatchClient = (): MatchClientUi => {
       }
       return actions;
     }
-    return playerSnapshot.actions
+    const globalActions = playerSnapshot.actions
       .filter((action) => action.placement === undefined)
       .map((action) => ({
         index: action.index,
         label: action.label,
         type: action.type,
       }));
+    return pendingDecision?.type === "payCost"
+      ? (createCanonicalDonPaymentActions(globalActions) ?? globalActions)
+      : globalActions;
   }, [
     activeDecisionDraft,
     activeAttackTargetChoice,
