@@ -78,6 +78,30 @@ test("runtime admission accepts deck-top card movement as a reusable auto body",
   );
 });
 
+test("runtime admission accepts DON deck movement as a reusable auto body", () => {
+  const effect = {
+    type: "moveCards",
+    min: 0,
+    count: 1,
+    from: { player: "self", zone: "donDeck", position: "top" },
+    to: { player: "self", zone: "costArea" },
+    order: "original",
+    destinationState: "active",
+  } as const;
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "noSourceRequired",
+        trigger: { type: "trigger" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
 test("runtime admission rejects parsed unsupported entry adapters", () => {
   assert.deepEqual(
     evaluateEffectBlockRuntimeSupport(

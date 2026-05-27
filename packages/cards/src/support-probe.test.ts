@@ -33,6 +33,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for trigger DON deck movement", async () => {
+    const report = await createSupportProbeReport({
+      text: "[Trigger] Add up to 1 DON!! card from your DON!! deck and set it as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports raw keyword reminder lines as metadata-supported", async () => {
     const report = await createSupportProbeReport({
       text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",

@@ -71,7 +71,7 @@ export const isSupportedMoveCardsEffect = (
   isSupportedDeckTopToTrashEffect(effect) ||
   isSupportedDonDeckToCostAreaEffect(effect);
 
-export const isSupportedDeckTopToTrashEffectBlock = (
+export const isSupportedMoveCardsEffectBlock = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
@@ -82,7 +82,7 @@ export const isSupportedDeckTopToTrashEffectBlock = (
   effect.cost === undefined &&
   effect.conditionTiming === undefined &&
   effect.failurePolicy === undefined &&
-  isSupportedDeckTopToTrashEffect(effect.effect);
+  isSupportedMoveCardsEffect(effect.effect);
 
 export const resolveSupportedQueuedMoveCardsEffect = (
   effect: EffectDefinition["effects"][number] | undefined,
@@ -90,7 +90,7 @@ export const resolveSupportedQueuedMoveCardsEffect = (
 ): MoveCardsEffect | undefined =>
   effect !== undefined &&
   effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
-  isSupportedDeckTopToTrashEffectBlock(effect)
+  isSupportedMoveCardsEffectBlock(effect)
     ? effect.effect
     : undefined;
 

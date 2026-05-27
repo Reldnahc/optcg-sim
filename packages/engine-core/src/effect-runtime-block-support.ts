@@ -8,7 +8,7 @@ import type {
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import { isSupportedMainEventTargetKoEffectAllowingOncePerTurn } from "./effect-runtime-primitives.js";
-import { isSupportedDeckTopToTrashEffect } from "./effect-runtime-move-cards.js";
+import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 
@@ -64,7 +64,7 @@ const isSupportedTrashFromHandBody = (
 const isSupportedMoveCardsBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "moveCards" }> =>
-  isSupportedDeckTopToTrashEffect(effect);
+  isSupportedMoveCardsEffect(effect);
 
 const isQueuedAutoSequenceTriggerType = (
   triggerType: Trigger["type"],

@@ -40,6 +40,16 @@ const deckTopTrashEffect = (count: number): Effect => ({
   order: "original",
 });
 
+const addActiveDonFromDonDeckEffect = (): Effect => ({
+  type: "moveCards",
+  min: 0,
+  count: 1,
+  from: { player: "self", zone: "donDeck", position: "top" },
+  to: { player: "self", zone: "costArea" },
+  order: "original",
+  destinationState: "active",
+});
+
 const setupDeckTopTrashDefinition = (
   state: GameState,
   source: CardInstance,
@@ -64,6 +74,45 @@ const setupDeckTopTrashDefinition = (
         ...must(base.effects[0], "base effect"),
         id: toEffectId("effect-deck-top-trash"),
         effect,
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const setupMoveCardsDefinition = (
+  state: GameState,
+  source: CardInstance,
+  effect: Effect,
+): EffectDefinition => {
+  const effectDefinitionId = "def-move-cards";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "event",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "move-cards-rules",
+      sourceTextHash: "move-cards-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base effect"),
+        id: toEffectId("effect-move-cards"),
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "noSourceRequired",
+        trigger: { type: "trigger" },
       },
     ],
   };
@@ -112,6 +161,41 @@ const deckTopTrashQueueState = (
     },
   ];
   return { state, source, topCards };
+};
+
+const triggerDonMoveQueueState = (): {
+  state: GameState;
+  movedDon: CardInstance;
+} => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const movedDon = must(p1State.donDeck[0], "top DON");
+  const definition = setupMoveCardsDefinition(
+    state,
+    source,
+    addActiveDonFromDonDeckEffect(),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-trigger-don-move"),
+      timingWindowId: toTimingWindowId("window-trigger-don-move"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "DON move effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "trigger-don-move-test" },
+    },
+  ];
+  return { state, movedDon };
 };
 
 test("moveCards deck top to trash resolves without a decision and preserves top-card order", () => {
@@ -182,4 +266,22 @@ test("moveCards deck top to trash fails closed for unsupported zone movement", (
 
   assert.notEqual(result.errors, undefined);
   assert.equal(must(result.state.players[p1], "p1 result").trash.length, 0);
+});
+
+test("moveCards DON deck to cost area resolves from a trigger body", () => {
+  const { state, movedDon } = triggerDonMoveQueueState();
+  const originalDonDeckSize = must(state.players[p1], "p1").donDeck.length;
+
+  const result = processEffectRuntime(state);
+  const player = must(result.state.players[p1], "p1 result");
+  const moved = must(player.costArea.at(-1), "moved DON");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(player.donDeck.length, originalDonDeckSize - 1);
+  assert.equal(moved.instanceId, movedDon.instanceId);
+  assert.equal(moved.state, "active");
+  assert.equal(moved.zone.zone, "costArea");
+  assert.equal(moved.zone.slot, "cost");
 });
