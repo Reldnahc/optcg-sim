@@ -33,6 +33,7 @@ import {
   getRuntimePlaySelectedOverflowDecisionId,
   parseRuntimePlaySelectedOverflowDecisionInstanceId,
 } from "./play-card-legal-actions.js";
+import { findPlayCardOverflowSource } from "./play-card-overflow-source.js";
 import {
   createPlayCardPaymentDecisionResult,
   getPlayCardPaymentContext,
@@ -49,6 +50,7 @@ import {
 } from "./play-card-support.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
+import { findRuntimePlaySelectedOverflowEnterRested } from "./runtime-play-selected-overflow-entry-state.js";
 
 export const getPlayCardLegalActions = (
   state: GameState,
@@ -825,39 +827,6 @@ export const applyRuntimePlaySelectedFromHand = (params: {
   causedBy?: CausalityRef;
 }): EngineResult => applyRuntimePlaySelected({ ...params, sourceZone: "hand" });
 
-type PlayCardOverflowSource = {
-  sourceCard: CardInstance;
-  sourceIndex: number;
-  sourceZone: "hand" | "trash";
-};
-
-const findPlayCardOverflowSource = (
-  player: GameState["players"][PlayerId],
-  instanceId: CardInstance["instanceId"],
-): PlayCardOverflowSource | null => {
-  const handIndex = player.hand.findIndex(
-    (card) => card.instanceId === instanceId,
-  );
-  if (handIndex >= 0) {
-    const sourceCard = player.hand[handIndex];
-    return sourceCard === undefined
-      ? null
-      : { sourceCard, sourceIndex: handIndex, sourceZone: "hand" };
-  }
-
-  const trashIndex = player.trash.findIndex(
-    (card) => card.instanceId === instanceId,
-  );
-  if (trashIndex >= 0) {
-    const sourceCard = player.trash[trashIndex];
-    return sourceCard === undefined
-      ? null
-      : { sourceCard, sourceIndex: trashIndex, sourceZone: "trash" };
-  }
-
-  return null;
-};
-
 const applyCharacterOverflowResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -927,6 +896,9 @@ const applyCharacterOverflowResponse = (
   if (selectedIndex < 0) {
     return illegalAction(state, "Overflow Character selection is invalid.");
   }
+  const runtimeEnterRested = runtimeOverflow
+    ? (findRuntimePlaySelectedOverflowEnterRested(state, decision.id) ?? true)
+    : null;
 
   const events: EngineEvent[] = [];
   appendEvent(
@@ -947,7 +919,7 @@ const applyCharacterOverflowResponse = (
     supported,
     costArea: player.costArea,
     selectedOverflowCharacterIndex: selectedIndex,
-    ...(runtimeOverflow ? { enterRested: true } : {}),
+    ...(runtimeEnterRested === null ? {} : { enterRested: runtimeEnterRested }),
     resolveOnPlayRuntime: !runtimeOverflow,
     incrementActionSeq: true,
   });
