@@ -190,15 +190,6 @@ export const applyPlayCard = (
         { type: "public" },
       );
       const paidPlayer = { ...player, costArea: payment.nextCostArea };
-      if (supported.category === "character" && player.characters.length >= 5) {
-        return createCharacterOverflowDecisionResult({
-          state,
-          events,
-          playerId,
-          player: paidPlayer,
-          handCard,
-        });
-      }
       return placePlayedCardResult({
         state,
         events,
@@ -216,16 +207,6 @@ export const applyPlayCard = (
       playerId,
       handCard,
       playCost,
-    });
-  }
-
-  if (supported.category === "character" && player.characters.length >= 5) {
-    return createCharacterOverflowDecisionResult({
-      state,
-      events,
-      playerId,
-      player,
-      handCard,
     });
   }
 
@@ -331,7 +312,7 @@ const createCharacterOverflowDecisionResult = (params: {
   events: EngineEvent[];
   playerId: PlayerId;
   player: GameState["players"][PlayerId];
-  handCard: CardInstance;
+  enteringCard: CardInstance;
   incrementActionSeq?: boolean;
   decisionIdOverride?: NonNullable<GameState["pendingDecision"]>["id"];
   causedBy?: CausalityRef;
@@ -341,7 +322,7 @@ const createCharacterOverflowDecisionResult = (params: {
     events,
     playerId,
     player,
-    handCard,
+    enteringCard,
     incrementActionSeq = true,
     decisionIdOverride,
     causedBy = {
@@ -350,12 +331,12 @@ const createCharacterOverflowDecisionResult = (params: {
     },
   } = params;
   const decisionId =
-    decisionIdOverride ?? getCharacterOverflowDecisionId(state, handCard);
+    decisionIdOverride ?? getCharacterOverflowDecisionId(state, enteringCard);
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: decisionId,
     type: "selectCards",
     playerId,
-    prompt: `Choose a Character to trash for ${String(handCard.cardId)}`,
+    prompt: `Choose a Character to trash for ${String(enteringCard.cardId)}`,
     causedBy,
     visibility: { type: "public" },
     request: {
@@ -437,6 +418,10 @@ const placePlayedCardResult = (params: {
   supported: SupportedPlayMetadata;
   costArea: CardInstance[];
   selectedOverflowCharacterIndex?: number;
+  characterOverflowDecisionIdOverride?: NonNullable<
+    GameState["pendingDecision"]
+  >["id"];
+  characterOverflowCausedBy?: CausalityRef;
   enterRested?: boolean;
   resolveOnPlayRuntime?: boolean;
   incrementActionSeq?: boolean;
@@ -452,10 +437,33 @@ const placePlayedCardResult = (params: {
     supported,
     costArea,
     selectedOverflowCharacterIndex,
+    characterOverflowDecisionIdOverride,
+    characterOverflowCausedBy,
     enterRested,
     resolveOnPlayRuntime = true,
     incrementActionSeq = true,
   } = params;
+  if (
+    supported.category === "character" &&
+    selectedOverflowCharacterIndex === undefined &&
+    player.characters.length >= 5
+  ) {
+    return createCharacterOverflowDecisionResult({
+      state,
+      events,
+      playerId,
+      player,
+      enteringCard: sourceCard,
+      incrementActionSeq,
+      ...(characterOverflowDecisionIdOverride === undefined
+        ? {}
+        : { decisionIdOverride: characterOverflowDecisionIdOverride }),
+      ...(characterOverflowCausedBy === undefined
+        ? {}
+        : { causedBy: characterOverflowCausedBy }),
+    });
+  }
+
   const nextHand =
     sourceZone === "hand"
       ? reindexZoneCards(
@@ -782,24 +790,6 @@ export const applyRuntimePlaySelected = (params: {
       "playSelected destination conflict is invalid.",
     );
   }
-  if (supported.category === "character" && player.characters.length >= 5) {
-    return createCharacterOverflowDecisionResult({
-      state,
-      events: [],
-      playerId,
-      player,
-      handCard: sourceCard,
-      incrementActionSeq: false,
-      decisionIdOverride: getRuntimePlaySelectedOverflowDecisionId(
-        state,
-        sourceCard,
-      ),
-      causedBy: causedBy ?? {
-        type: "ruleProcess",
-        name: "effectRuntime:playSelectedOverflow",
-      },
-    });
-  }
   return placePlayedCardResult({
     state,
     events: [],
@@ -813,6 +803,16 @@ export const applyRuntimePlaySelected = (params: {
     enterRested,
     resolveOnPlayRuntime: false,
     incrementActionSeq: false,
+    ...(supported.category === "character"
+      ? {
+          characterOverflowDecisionIdOverride:
+            getRuntimePlaySelectedOverflowDecisionId(state, sourceCard),
+          characterOverflowCausedBy: causedBy ?? {
+            type: "ruleProcess" as const,
+            name: "effectRuntime:playSelectedOverflow",
+          },
+        }
+      : {}),
   });
 };
 
@@ -1004,22 +1004,11 @@ const applyPlayCardPaymentResponse = (
     { type: "public" },
   );
 
-  if (supported.category === "character" && player.characters.length >= 5) {
-    const paidPlayer = { ...player, costArea: payment.nextCostArea };
-    return createCharacterOverflowDecisionResult({
-      state,
-      events,
-      playerId: decision.playerId,
-      player: paidPlayer,
-      handCard,
-    });
-  }
-
   return placePlayedCardResult({
     state,
     events,
     playerId: decision.playerId,
-    player,
+    player: { ...player, costArea: payment.nextCostArea },
     sourceIndex: handIndex,
     sourceCard: handCard,
     supported,
