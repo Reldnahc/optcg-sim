@@ -523,6 +523,15 @@ const evaluateCondition = (
         condition.op,
         (playerId) => state.players[playerId]?.life.length ?? 0,
       );
+    case "turnCount":
+      return evaluateCountCondition(
+        state,
+        entry,
+        condition.player,
+        condition.value,
+        condition.op,
+        (playerId) => state.turn.playerTurnCounts[playerId] ?? 0,
+      );
     case "trashCount":
       if (condition.filter !== undefined) {
         return { supported: false };
@@ -625,6 +634,7 @@ export const isSupportedQueuedEffectConditionShape = (
     case "leaderColorCount":
     case "handCount":
     case "lifeCount":
+    case "turnCount":
       return (
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&

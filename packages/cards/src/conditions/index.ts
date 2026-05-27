@@ -6,3 +6,4 @@ export { parseOnlyMatchingFieldCardsCondition } from "./only-matching-field-card
 export { parseOpponentRestedCharactersCondition } from "./opponent-rested-characters.js";
 export { syntheticConditionParser } from "./synthetic.js";
 export { parseTrashCountCondition } from "./trash-count.js";
+export { parseTurnCountCondition } from "./turn-count.js";

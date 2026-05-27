@@ -429,6 +429,7 @@ const buildEffectDefinition = (
 } => {
   const blocks: EffectBlock[] = [];
   const diagnostics: string[] = [];
+  let parsedLineCount = 0;
 
   for (const [index, line] of lines.entries()) {
     const parsed = parseCardEffectLineDetailed(line);
@@ -436,6 +437,10 @@ const buildEffectDefinition = (
       diagnostics.push(
         `line ${String(index + 1)} parse failed: ${parsed.diagnostic.reason}`,
       );
+      continue;
+    }
+    parsedLineCount += 1;
+    if (parsed.value.kind === "metadata") {
       continue;
     }
     const block: EffectBlock = {
@@ -457,7 +462,7 @@ const buildEffectDefinition = (
     return { runtimeSupported: true, diagnostics };
   }
   const runtimeSupported =
-    blocks.length === lines.length &&
+    parsedLineCount === lines.length &&
     blocks.every((block) => evaluateEffectBlockRuntimeSupport(block).supported);
   if (!runtimeSupported) {
     return { runtimeSupported: false, diagnostics };

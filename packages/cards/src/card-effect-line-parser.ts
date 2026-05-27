@@ -7,6 +7,7 @@ import {
   parseOnlyMatchingFieldCardsCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
+  parseTurnCountCondition,
 } from "./conditions/index.js";
 import {
   parseImplicitPermanentEntryPoint,
@@ -17,7 +18,10 @@ import {
 import { parseExpression } from "./expression-parser.js";
 import {
   parseActivateReferencedEffectInstruction,
+  parseAddActiveDonFromDonDeckInstruction,
   parseAddFromTrashToHandInstruction,
+  parseAddRestedDonFromDonDeckInstruction,
+  parseAttachRestedDonInstruction,
   parseDrawInstruction,
   parseInvalidateEffectsInstruction,
   parseKoInstruction,
@@ -37,6 +41,7 @@ import {
   parsePlayFromHandInstruction,
 } from "./instructions/index.js";
 import { parseOncePerTurnMarker } from "./markers/index.js";
+import { parseDonDeckSizeRuleLine } from "./metadata-lines/index.js";
 import {
   parseEffectLine,
   parseEffectLineDetailed,
@@ -64,6 +69,9 @@ const instructionParsers = [
   parseDrawInstruction,
   parseActivateReferencedEffectInstruction,
   parseAddFromTrashToHandInstruction,
+  parseAddActiveDonFromDonDeckInstruction,
+  parseAddRestedDonFromDonDeckInstruction,
+  parseAttachRestedDonInstruction,
   parseInvalidateEffectsInstruction,
   parseTrashFromHandInstruction,
   parseTrashFromDeckTopInstruction,
@@ -86,6 +94,7 @@ const conditionParsers = [
   parseLifeCountCondition,
   parseLeaderNameCondition,
   parseOnlyMatchingFieldCardsCondition,
+  parseTurnCountCondition,
 ] as const;
 
 const continuousInstructionParsers = [
@@ -126,6 +135,7 @@ export function parseCardEffectLineDetailed(
 }
 
 const defaultRegistry = {
+  metadataLines: [parseDonDeckSizeRuleLine],
   entryPoints: [
     parseRulesStartOfGameEntryPoint,
     parseSupportedEntryPoint,

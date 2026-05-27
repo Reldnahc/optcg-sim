@@ -15,7 +15,7 @@ import type {
 import { isSupportedHandSelectionCardFilter } from "./action-state.js";
 import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
-import { isSupportedDeckTopToTrashEffect } from "./effect-runtime-move-cards.js";
+import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -27,6 +27,7 @@ type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
+type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
 type CounterPowerEffect = Extract<Effect, { type: "modifyPower" }>;
 type TrashEffect = Extract<Effect, { type: "trash" }>;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
@@ -66,6 +67,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | PayCostEffect
     | SelectCardsEffect
     | MoveSelectedEffect
+    | AttachSelectedDonEffect
     | CounterPowerEffect
     | TrashEffect
     | SelectTargetsEffect
@@ -267,7 +269,7 @@ const isSupportedTrashFromHandSegment = (
 const isSupportedMoveCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is MoveCardsEffect =>
-  effect.type === "moveCards" && isSupportedDeckTopToTrashEffect(effect);
+  effect.type === "moveCards" && isSupportedMoveCardsEffect(effect);
 
 const isSupportedSearchSegment = (
   effect: SequenceSegmentEffect,
@@ -362,7 +364,10 @@ const isSupportedSequenceSelectCardsSegment = (
     String(effect.saveAs).startsWith("handSelection:")) ||
     (effect.zone === "trash" &&
       effect.visibility === "bothPlayers" &&
-      String(effect.saveAs).startsWith("trashSelection:")));
+      String(effect.saveAs).startsWith("trashSelection:")) ||
+    (effect.zone === "costArea" &&
+      effect.visibility === "bothPlayers" &&
+      String(effect.saveAs).startsWith("donSelection:")));
 
 const isSupportedTrashToHandMoveSelectedSegment = (
   effect: SequenceSegmentEffect,
@@ -372,6 +377,19 @@ const isSupportedTrashToHandMoveSelectedSegment = (
   effect.to === "hand" &&
   effect.position === undefined &&
   String(effect.selection).startsWith("trashSelection:");
+
+const isSupportedAttachSelectedDonSegment = (
+  effect: SequenceSegmentEffect,
+): effect is AttachSelectedDonEffect =>
+  effect.type === "attachSelectedDon" &&
+  String(effect.selection).startsWith("donSelection:") &&
+  effect.target.type === "savedFieldObject" &&
+  effect.target.player === "self" &&
+  effect.target.zone === "characterArea" &&
+  effect.target.controller === undefined &&
+  effect.target.binding.family === "selectedTargets" &&
+  effect.target.filter?.categories?.length === 1 &&
+  effect.target.filter.categories[0] === "character";
 
 const isSupportedPreResolvedCounterPowerSegment = (
   effect: SequenceSegmentEffect,
@@ -625,6 +643,9 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedAttachSelectedDonSegment(segment.effect)) {
         return true;
       }
       if (isSupportedAllFieldTrashSegment(segment.effect)) {

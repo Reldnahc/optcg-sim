@@ -165,6 +165,20 @@ const createTextLineReport = (text: string): SupportProbeReport => {
       errors: [],
     };
   }
+  if (lineReport.kind === "metadata") {
+    lines.push("Kind: metadata");
+    lines.push("Engine runtime: not applicable");
+    lines.push("Evidence:");
+    for (const evidence of lineReport.value.evidence) {
+      lines.push(`- ${evidence}`);
+    }
+    return {
+      exitCode: 0,
+      lines,
+      errors: [],
+    };
+  }
+
   lines.push(`Trigger: ${lineReport.value.block.trigger.type}`);
   lines.push(`Category: ${lineReport.value.block.category}`);
   lines.push(`Source presence: ${lineReport.value.block.sourcePresencePolicy}`);
@@ -193,9 +207,15 @@ type ParsedLineReport =
   | {
       readonly kind: "effect";
       readonly parseOk: true;
-      readonly value: ParsedEffectLine;
+      readonly value: Extract<ParsedEffectLine, { readonly block: unknown }>;
       readonly runtimeSupported: boolean;
       readonly runtimeReason?: string;
+    }
+  | {
+      readonly kind: "metadata";
+      readonly parseOk: true;
+      readonly value: Extract<ParsedEffectLine, { readonly kind: "metadata" }>;
+      readonly runtimeSupported: true;
     }
   | {
       readonly kind: "rawKeyword";
@@ -233,6 +253,14 @@ const evaluateParsedLine = (
       text: parsed.diagnostic.text,
     };
   }
+  if (parsed.value.kind === "metadata") {
+    return {
+      kind: "metadata",
+      parseOk: true,
+      value: parsed.value,
+      runtimeSupported: true,
+    };
+  }
 
   const runtimeSupport = evaluateEffectBlockRuntimeSupport(
     toEffectBlock(parsed.value, effectId),
@@ -249,7 +277,7 @@ const evaluateParsedLine = (
 };
 
 const toEffectBlock = (
-  line: ParsedEffectLine,
+  line: Extract<ParsedEffectLine, { readonly block: unknown }>,
   effectId: string,
 ): EffectBlock => ({
   id: effectId as EffectBlock["id"],

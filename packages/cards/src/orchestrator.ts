@@ -4,6 +4,7 @@ import type {
   EffectBlockPatch,
   MarkerParser,
   ParsedEffectLine,
+  ParsedMetadataLine,
   ParseInput,
   ParseFailureDiagnostic,
   PrimitiveEvidence,
@@ -17,7 +18,12 @@ export type ExpressionParser = (
   input: ParseInput,
 ) => ExpressionParseResult | undefined;
 
+export type MetadataLineParser = (
+  input: ParseInput,
+) => ParsedMetadataLine | undefined;
+
 export interface EffectLineParserRegistry {
+  readonly metadataLines?: readonly MetadataLineParser[];
   readonly entryPoints: readonly EntryPointParser[];
   readonly markers?: readonly MarkerParser[];
   readonly expressions: readonly ExpressionParser[];
@@ -39,6 +45,13 @@ export function parseEffectLineDetailed(
   text: string,
   registry: EffectLineParserRegistry,
 ): EffectLineParseResult {
+  const metadataLine = firstMetadataLineParse(registry.metadataLines ?? [], {
+    text,
+  });
+  if (metadataLine !== undefined) {
+    return { ok: true, value: metadataLine };
+  }
+
   const entryPoint = firstEntryPointParse(registry.entryPoints, { text });
   if (entryPoint === undefined) {
     return {
@@ -94,6 +107,20 @@ export function parseEffectLineDetailed(
       ],
     },
   };
+}
+
+function firstMetadataLineParse(
+  parsers: readonly MetadataLineParser[],
+  input: ParseInput,
+): ParsedMetadataLine | undefined {
+  for (const parser of parsers) {
+    const result = parser(input);
+    if (result !== undefined) {
+      return result;
+    }
+  }
+
+  return undefined;
 }
 
 function parseMarkers(

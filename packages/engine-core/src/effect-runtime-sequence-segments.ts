@@ -79,6 +79,72 @@ export const applyMoveCardsSegment = (
   };
 };
 
+export const applyResolvedQuantityMoveCardsSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SupportedSequenceSegment & { effect: MoveCardsEffect },
+  index: number,
+  quantity: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  if (
+    !Number.isInteger(quantity) ||
+    quantity < 0 ||
+    quantity > segment.effect.count
+  ) {
+    return { ok: false };
+  }
+  if (quantity === 0) {
+    return {
+      events: [],
+      ledgers: {
+        segmentResults: {
+          ...ledgers.segmentResults,
+          [segmentKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+          },
+        },
+        savedReferences: ledgers.savedReferences,
+      },
+      ok: true,
+      state,
+    };
+  }
+  const resolvedEffect: MoveCardsEffect = {
+    type: "moveCards",
+    count: quantity,
+    from: segment.effect.from,
+    to: segment.effect.to,
+    order: segment.effect.order,
+    ...(segment.effect.destinationState === undefined
+      ? {}
+      : { destinationState: segment.effect.destinationState }),
+  };
+  return applyMoveCardsSegment(
+    state,
+    entry,
+    { ...segment, effect: resolvedEffect },
+    index,
+    ledgers,
+    emptySegmentResult,
+    segmentKey,
+  );
+};
+
 export const resolvingEntryFor = (
   entry: EffectQueueEntry,
 ): EffectQueueEntry => ({

@@ -6,8 +6,19 @@ import type {
   ExpressionParseResult,
   EntryPointParseResult,
   ParseInput,
+  ParsedRuntimeEffectLine,
   PrimitiveEvidence,
 } from "./types.js";
+
+function expectRuntimeLine(
+  result: ReturnType<typeof parseEffectLine>,
+): ParsedRuntimeEffectLine {
+  expect(result).toBeDefined();
+  if (result === undefined || result.kind === "metadata") {
+    throw new Error("Expected runtime effect line parse result.");
+  }
+  return result;
+}
 
 function entryPointParserFor(
   expectedText: string,
@@ -146,8 +157,9 @@ describe("engine-shaped expression orchestration contract", () => {
       ],
     });
 
-    expect(result?.block.effect).toEqual(effect);
-    expect(result?.evidence).toEqual([
+    const runtimeLine = expectRuntimeLine(result);
+    expect(runtimeLine.block.effect).toEqual(effect);
+    expect(runtimeLine.evidence).toEqual([
       "entry:onPlay",
       "sourcePresence:mustRemain",
       "expression:sequence",
@@ -203,10 +215,14 @@ describe("engine-shaped expression orchestration contract", () => {
     ];
 
     expect(
-      parseEffectLine("[E1] A.", { entryPoints, expressions })?.block.trigger,
+      expectRuntimeLine(
+        parseEffectLine("[E1] A.", { entryPoints, expressions }),
+      ).block.trigger,
     ).toEqual({ type: "onPlay" });
     expect(
-      parseEffectLine("[E2] A.", { entryPoints, expressions })?.block.trigger,
+      expectRuntimeLine(
+        parseEffectLine("[E2] A.", { entryPoints, expressions }),
+      ).block.trigger,
     ).toEqual({ type: "onKO" });
   });
 });

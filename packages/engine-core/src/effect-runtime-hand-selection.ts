@@ -29,6 +29,7 @@ type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
 
 const handDecisionIdPrefix = "decision:selectCards:hand-selection:";
 const trashDecisionIdPrefix = "decision:selectCards:trash-selection:";
+const costAreaDecisionIdPrefix = "decision:selectCards:cost-area-selection:";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -64,11 +65,27 @@ const isSupportedSequenceTrashSelectCardsEffect = (
   effect.min >= 0 &&
   effect.max >= effect.min;
 
+const isSupportedSequenceCostAreaSelectCardsEffect = (
+  effect: Effect,
+): effect is SequenceSelectCardsEffect =>
+  effect.type === "selectCards" &&
+  effect.zone === "costArea" &&
+  effect.player === "self" &&
+  effect.chooser === "self" &&
+  effect.visibility === "bothPlayers" &&
+  String(effect.saveAs).startsWith("donSelection:") &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
 export const isSupportedSequenceSelectCardsEffect = (
   effect: Effect,
 ): effect is SequenceSelectCardsEffect =>
   isSupportedSequenceHandSelectCardsEffect(effect) ||
-  isSupportedSequenceTrashSelectCardsEffect(effect);
+  isSupportedSequenceTrashSelectCardsEffect(effect) ||
+  isSupportedSequenceCostAreaSelectCardsEffect(effect);
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -114,6 +131,11 @@ const isSupportedSelectCardsDecision = (
       decision.request.zone === "trash" &&
       decision.request.allowFewerIfUnavailable &&
       decision.request.visibility === "public" &&
+      decision.visibility.type === "public") ||
+    (String(decision.id).startsWith(costAreaDecisionIdPrefix) &&
+      decision.request.zone === "costArea" &&
+      decision.request.allowFewerIfUnavailable &&
+      decision.request.visibility === "public" &&
       decision.visibility.type === "public"));
 
 const hasMalformedRespondToDecisionPlayerId = (
@@ -153,7 +175,9 @@ const cardRefsInZone = (
       ? player.hand
       : decision.request.zone === "trash"
         ? player.trash
-        : undefined;
+        : decision.request.zone === "costArea"
+          ? player.costArea
+          : undefined;
   if (cards === undefined) {
     return null;
   }
@@ -174,7 +198,9 @@ const candidateVisibilityForDecision = (
 ): SelectCardsDecision["candidates"][number]["visibility"] =>
   decision.request.zone === "trash"
     ? { type: "public" }
-    : { type: "private", playerId: decision.playerId };
+    : decision.request.zone === "costArea"
+      ? { type: "public" }
+      : { type: "private", playerId: decision.playerId };
 
 const hasCurrentCandidateEnvelope = (
   state: GameState,
@@ -298,9 +324,14 @@ export const createSupportedHandSelectionChoiceDecision = (
     };
   }
 
-  const cards = effect.zone === "hand" ? player.hand : player.trash;
+  const cards =
+    effect.zone === "hand"
+      ? player.hand
+      : effect.zone === "trash"
+        ? player.trash
+        : player.costArea;
   const candidateVisibility =
-    effect.zone === "trash"
+    effect.zone === "trash" || effect.zone === "costArea"
       ? { type: "public" as const }
       : ({ type: "private" as const, playerId: entry.controllerId } as const);
 
@@ -337,19 +368,25 @@ export const createSupportedHandSelectionChoiceDecision = (
     effectId: entry.effectBlockId,
   } as const;
   const visibility =
-    effect.zone === "trash"
+    effect.zone === "trash" || effect.zone === "costArea"
       ? ({ type: "public" } as const)
       : ({ type: "private", playerId: entry.controllerId } as const);
+  const idPrefix =
+    effect.zone === "trash"
+      ? trashDecisionIdPrefix
+      : effect.zone === "costArea"
+        ? costAreaDecisionIdPrefix
+        : handDecisionIdPrefix;
   const pendingDecision: SelectCardsDecision = {
-    id: toDecisionId(
-      `${effect.zone === "trash" ? trashDecisionIdPrefix : handDecisionIdPrefix}${String(entry.id)}:${String(segmentIndex)}`,
-    ),
+    id: toDecisionId(`${idPrefix}${String(entry.id)}:${String(segmentIndex)}`),
     type: "selectCards",
     playerId: entry.controllerId,
     prompt:
       effect.zone === "trash"
         ? "Choose cards from trash."
-        : "Choose cards from hand.",
+        : effect.zone === "costArea"
+          ? "Choose DON!! cards."
+          : "Choose cards from hand.",
     causedBy,
     visibility,
     request: {
@@ -359,8 +396,12 @@ export const createSupportedHandSelectionChoiceDecision = (
       zone: effect.zone,
       min: effect.min,
       max: effect.max,
-      allowFewerIfUnavailable: effect.zone === "trash",
-      visibility: effect.zone === "trash" ? "public" : "privateToChooser",
+      allowFewerIfUnavailable:
+        effect.zone === "trash" || effect.zone === "costArea",
+      visibility:
+        effect.zone === "trash" || effect.zone === "costArea"
+          ? "public"
+          : "privateToChooser",
       ...(resolvedFilter === undefined ? {} : { filter: resolvedFilter }),
     },
     candidates,

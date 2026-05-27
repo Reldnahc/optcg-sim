@@ -112,7 +112,9 @@ const supportedHandSelectionFilterKeys = new Set([
   "custom",
   "cost",
   "power",
+  "state",
 ]);
+const supportedHandSelectionStates = new Set(["active", "rested", "attached"]);
 
 const supportedHandSelectionCustomFilters = new Set([
   "costLteSelfDonFieldCount",
@@ -163,6 +165,8 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
+    (filter.state === undefined ||
+      supportedHandSelectionStates.has(filter.state)) &&
     isSupportedNumericFilter(filter.cost) &&
     isSupportedNumericFilter(filter.power) &&
     (filter.custom === undefined ||
@@ -250,6 +254,9 @@ export const cardMatchesHandSelectionFilter = (
   }
   const resolved = state.cardManifest.cards[card.cardId];
   if (!cardMatchesBaseFilter(resolved, filter)) {
+    return false;
+  }
+  if (filter.state !== undefined && card.state !== filter.state) {
     return false;
   }
   if (filter.custom === "costLteSelfDonFieldCount") {

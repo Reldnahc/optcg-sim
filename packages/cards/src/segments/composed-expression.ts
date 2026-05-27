@@ -36,7 +36,7 @@ export function conditionalExpressionSegmentParser(options: {
   readonly instructions: readonly InstructionParser[];
 }): SegmentParser {
   return (input: ParseInput) => {
-    const match = /^if (?<condition>.+), (?<then>.+)$/i.exec(input.text);
+    const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
     const conditionText = match?.groups?.["condition"];
     const thenText = match?.groups?.["then"];
     if (conditionText === undefined || thenText === undefined) {
@@ -51,7 +51,13 @@ export function conditionalExpressionSegmentParser(options: {
 
       const then = parseExpression(thenText, {
         connectors: options.connectors,
-        segments: [syntheticInstructionSegmentParser(options.instructions)],
+        segments: [
+          instructionExpressionSegmentParser({
+            connectors: options.connectors,
+            instructions: options.instructions,
+          }),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
       });
       if (then === undefined || then.rest.length > 0) {
         continue;
@@ -81,7 +87,7 @@ export function conditionalBlockExpressionParser(options: {
   readonly instructions: readonly InstructionParser[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
-    const match = /^if (?<condition>.+), (?<then>.+)$/i.exec(input.text);
+    const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
     const conditionText = match?.groups?.["condition"];
     const thenText = match?.groups?.["then"];
     if (conditionText === undefined || thenText === undefined) {
@@ -96,7 +102,13 @@ export function conditionalBlockExpressionParser(options: {
 
       const then = parseExpression(thenText, {
         connectors: options.connectors,
-        segments: [syntheticInstructionSegmentParser(options.instructions)],
+        segments: [
+          instructionExpressionSegmentParser({
+            connectors: options.connectors,
+            instructions: options.instructions,
+          }),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
       });
       if (then === undefined || then.rest.length > 0) {
         continue;
@@ -127,7 +139,7 @@ export function conditionalCostedBlockExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
-    const match = /^if (?<condition>.+), (?<then>.+)$/i.exec(input.text);
+    const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
     const conditionText = match?.groups?.["condition"];
     const thenText = match?.groups?.["then"];
     if (conditionText === undefined || thenText === undefined) {

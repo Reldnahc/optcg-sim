@@ -9,11 +9,15 @@ import type {
   SequenceSegmentResult,
 } from "@optcg/types";
 
-import { applyResolvedQuantityDrawSegment } from "./effect-runtime-sequence-segments.js";
+import {
+  applyResolvedQuantityDrawSegment,
+  applyResolvedQuantityMoveCardsSegment,
+} from "./effect-runtime-sequence-segments.js";
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
+type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -122,7 +126,11 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
   }
   const pausedSegment =
     effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (pausedSegment === undefined || pausedSegment.effect.type !== "drawUpTo") {
+  if (
+    pausedSegment === undefined ||
+    (pausedSegment.effect.type !== "drawUpTo" &&
+      pausedSegment.effect.type !== "moveCards")
+  ) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
@@ -140,22 +148,39 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
       ok: false,
     };
   }
-  const drawn = applyResolvedQuantityDrawSegment(
-    params.state,
-    entry,
-    pausedSegment as SequenceEffect["effects"][number] & {
-      effect: DrawUpToEffect;
-    },
-    frame.pendingDecision.resumeAtSegmentIndex,
-    quantity,
-    {
-      savedReferences: frame.savedReferences,
-      segmentResults: frame.segmentResults,
-    },
-    params.emptySegmentResult,
-    params.segmentKey,
-  );
-  if (!drawn.ok) {
+  const resolved =
+    pausedSegment.effect.type === "drawUpTo"
+      ? applyResolvedQuantityDrawSegment(
+          params.state,
+          entry,
+          pausedSegment as SequenceEffect["effects"][number] & {
+            effect: DrawUpToEffect;
+          },
+          frame.pendingDecision.resumeAtSegmentIndex,
+          quantity,
+          {
+            savedReferences: frame.savedReferences,
+            segmentResults: frame.segmentResults,
+          },
+          params.emptySegmentResult,
+          params.segmentKey,
+        )
+      : applyResolvedQuantityMoveCardsSegment(
+          params.state,
+          entry,
+          pausedSegment as SequenceEffect["effects"][number] & {
+            effect: MoveCardsEffect;
+          },
+          frame.pendingDecision.resumeAtSegmentIndex,
+          quantity,
+          {
+            savedReferences: frame.savedReferences,
+            segmentResults: frame.segmentResults,
+          },
+          params.emptySegmentResult,
+          params.segmentKey,
+        );
+  if (!resolved.ok) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
@@ -170,7 +195,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     entry,
     finalizeCompleted: true,
     frame,
-    ledgers: drawn.ledgers,
-    state: drawn.state,
+    ledgers: resolved.ledgers,
+    state: resolved.state,
   });
 };

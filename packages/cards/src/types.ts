@@ -87,8 +87,10 @@ export type PrimitiveEvidence =
   | "zone:deck"
   | "zone:hand"
   | "zone:trash"
+  | "zone:donDeck"
   | "zone:leaderArea"
   | "zone:characterArea"
+  | "zone:costArea"
   | "filter:name"
   | "filter:nameNot"
   | "filter:color"
@@ -109,8 +111,10 @@ export type PrimitiveEvidence =
   | "destination:deck"
   | "destination:trash"
   | "destination:stageArea"
+  | "destination:costArea"
   | "deckRestriction:ignored"
   | "deckRestriction:eventCostGte"
+  | "deckRestriction:donDeckSize"
   | "reveal:bothPlayers"
   | "reveal:chooserOnly"
   | "remaining:rest"
@@ -125,6 +129,11 @@ export type PrimitiveEvidence =
   | "chooser:self:upTo"
   | "chooser:opponent"
   | "target:yourDonCards"
+  | "state:active"
+  | "state:rested"
+  | "instruction:selectCards"
+  | "instruction:attachDon"
+  | "condition:turnCount"
   | "position:top"
   | "target:thisCard"
   | "target:opponentCharacters"
@@ -259,10 +268,25 @@ export interface ParsedEffectBlock {
   readonly effect: Effect;
 }
 
-export interface ParsedEffectLine {
+export interface ParsedRuntimeEffectLine {
+  readonly kind?: "effect";
   readonly block: ParsedEffectBlock;
   readonly evidence: readonly PrimitiveEvidence[];
 }
+
+export interface ParsedMetadataLine {
+  readonly kind: "metadata";
+  readonly metadata: {
+    readonly type: "deckRestriction";
+    readonly restriction: {
+      readonly type: "donDeckSize";
+      readonly count: number;
+    };
+  };
+  readonly evidence: readonly PrimitiveEvidence[];
+}
+
+export type ParsedEffectLine = ParsedRuntimeEffectLine | ParsedMetadataLine;
 
 export type ParseFailureStage = "entryPoint" | "expression";
 

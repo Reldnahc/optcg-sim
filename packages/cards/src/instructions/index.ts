@@ -6,6 +6,11 @@ export {
   parseYourLeaderConditionalPowerInstruction,
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
+export {
+  parseAddActiveDonFromDonDeckInstruction,
+  parseAddRestedDonFromDonDeckInstruction,
+  parseAttachRestedDonInstruction,
+} from "./don-movement.js";
 export { parseInvalidateEffectsInstruction } from "./invalidate-effects.js";
 export { parseKoInstruction } from "./ko.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
