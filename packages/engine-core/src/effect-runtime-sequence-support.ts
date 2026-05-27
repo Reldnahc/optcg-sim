@@ -15,12 +15,14 @@ import type {
 import { isSupportedHandSelectionCardFilter } from "./action-state.js";
 import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
+import { isSupportedDeckTopToTrashEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
+type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
@@ -58,6 +60,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
     | DrawUpToEffect
+    | MoveCardsEffect
     | TrashFromHandEffect
     | SearchEffect
     | PayCostEffect
@@ -260,6 +263,11 @@ const isSupportedTrashFromHandSegment = (
   effect.filter === undefined &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
+
+const isSupportedMoveCardsSegment = (
+  effect: SequenceSegmentEffect,
+): effect is MoveCardsEffect =>
+  effect.type === "moveCards" && isSupportedDeckTopToTrashEffect(effect);
 
 const isSupportedSearchSegment = (
   effect: SequenceSegmentEffect,
@@ -503,6 +511,9 @@ const isSupportedConditionalSegment = (
     if (isSupportedTrashFromHandSegment(segment.effect)) {
       return true;
     }
+    if (isSupportedMoveCardsSegment(segment.effect)) {
+      return true;
+    }
     if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
       return true;
     }
@@ -593,6 +604,9 @@ export const toSupportedSequenceBlock = (
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedMoveCardsSegment(segment.effect)) {
         return true;
       }
       if (isSupportedSearchSegment(segment.effect)) {

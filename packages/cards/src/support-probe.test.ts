@@ -23,6 +23,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for deck-top trash movement", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] Trash 1 card from the top of your deck.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports parser success separately from unsupported engine runtime entry points", async () => {
     const report = await createSupportProbeReport({
       text: "[On Block] Draw 1 card.",

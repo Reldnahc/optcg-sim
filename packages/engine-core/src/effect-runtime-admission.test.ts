@@ -56,6 +56,28 @@ test("runtime admission accepts reusable auto bodies through supported entry ada
   );
 });
 
+test("runtime admission accepts deck-top card movement as a reusable auto body", () => {
+  const effect = {
+    type: "moveCards",
+    count: 1,
+    from: { player: "self", zone: "deck", position: "top" },
+    to: { player: "self", zone: "trash" },
+    order: "original",
+  } as const;
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
 test("runtime admission rejects parsed unsupported entry adapters", () => {
   assert.deepEqual(
     evaluateEffectBlockRuntimeSupport(

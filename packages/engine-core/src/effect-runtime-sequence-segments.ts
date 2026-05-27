@@ -16,9 +16,11 @@ import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
 } from "./effect-runtime-primitives.js";
+import { executeMoveCardsPrimitive } from "./effect-runtime-move-cards.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawEffect = Extract<Effect, { type: "draw" }>;
+type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 
 export type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -28,9 +30,53 @@ export type SegmentLedgers = {
 export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
+    | MoveCardsEffect
     | Extract<Effect, { type: "trashFromHand" }>
     | Extract<SequenceEffect["effects"][number]["effect"], { type: "payCost" }>
     | Extract<Effect, { type: "selectCards" }>;
+};
+
+export const applyMoveCardsSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SupportedSequenceSegment & { effect: MoveCardsEffect },
+  index: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const resolution = executeMoveCardsPrimitive(state, entry, segment.effect);
+  if (resolution.errors !== undefined) {
+    return { ok: false };
+  }
+  const result: SequenceSegmentResult = {
+    ...emptySegmentResult(),
+    attempted: true,
+    succeeded: true,
+    changedState: resolution.events.length > 0,
+  };
+  return {
+    events: resolution.events,
+    ledgers: {
+      segmentResults: {
+        ...ledgers.segmentResults,
+        [segmentKey(segment, index)]: result,
+      },
+      savedReferences: ledgers.savedReferences,
+    },
+    ok: true,
+    state: resolution.state,
+  };
 };
 
 export const resolvingEntryFor = (

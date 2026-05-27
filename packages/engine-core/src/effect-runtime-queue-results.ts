@@ -53,6 +53,10 @@ import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
 } from "./effect-runtime-continuous.js";
+import {
+  executeMoveCardsPrimitive,
+  resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
+} from "./effect-runtime-move-cards.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
 import {
@@ -653,6 +657,7 @@ export const createEffectRuntimeQueueResults = (
             ])
           : unsupportedEffectQueueResult(originalState);
       }
+      const moveCardsEffect = resolveMoveCardsEffect(queuedEffect, selected);
       const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
       const queuedContinuousEffect = resolveQueuedContinuousEffect(
         nextState,
@@ -703,7 +708,11 @@ export const createEffectRuntimeQueueResults = (
         }
       } else {
         drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
-        if (drawEffect === undefined && queuedContinuousEffect === undefined) {
+        if (
+          drawEffect === undefined &&
+          moveCardsEffect === undefined &&
+          queuedContinuousEffect === undefined
+        ) {
           return unsupportedEffectQueueResult(originalState);
         }
       }
@@ -737,6 +746,19 @@ export const createEffectRuntimeQueueResults = (
           nextState,
           resolvingEntry,
           drawEffect,
+        );
+        if (resolution.errors !== undefined) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (moveCardsEffect !== undefined) {
+        const resolution = executeMoveCardsPrimitive(
+          nextState,
+          resolvingEntry,
+          moveCardsEffect,
         );
         if (resolution.errors !== undefined) {
           return unsupportedEffectQueueResult(originalState);

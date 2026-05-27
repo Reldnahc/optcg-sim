@@ -559,6 +559,13 @@ export type Effect =
       position?: "top" | "bottom";
     }
   | {
+      type: "moveCards";
+      count: number;
+      from: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+      to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+      order: "original";
+    }
+  | {
       type: "putRemaining";
       zone: Zone;
       position: "top" | "bottom";

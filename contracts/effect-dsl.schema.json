@@ -601,6 +601,36 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "count", "from", "to", "order"],
+          "properties": {
+            "type": { "const": "moveCards" },
+            "count": { "type": "integer", "minimum": 0 },
+            "from": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["player", "zone"],
+              "properties": {
+                "player": { "$ref": "#/$defs/playerRef" },
+                "zone": { "$ref": "#/$defs/zone" },
+                "position": { "type": "string", "enum": ["top", "bottom"] }
+              }
+            },
+            "to": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["player", "zone"],
+              "properties": {
+                "player": { "$ref": "#/$defs/playerRef" },
+                "zone": { "$ref": "#/$defs/zone" },
+                "position": { "type": "string", "enum": ["top", "bottom"] }
+              }
+            },
+            "order": { "const": "original" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": [
             "type",
             "zone",

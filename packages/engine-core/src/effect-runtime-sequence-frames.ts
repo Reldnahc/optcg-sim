@@ -62,6 +62,7 @@ import {
 } from "./effect-runtime-sequence-search-reveal.js";
 import {
   applyDrawSegment,
+  applyMoveCardsSegment,
   removeFrame,
   replaceQueueEntry,
   resolvingEntryFor,
@@ -82,6 +83,7 @@ import {
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
+type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
@@ -781,6 +783,24 @@ const continueNoDecisionSegments = (
       nextState = drawn.state;
       nextLedgers = drawn.ledgers;
       events.push(...drawn.events);
+      continue;
+    }
+    if (segment.effect.type === "moveCards") {
+      const moved = applyMoveCardsSegment(
+        nextState,
+        entry,
+        segment as SupportedSequenceSegment & { effect: MoveCardsEffect },
+        index,
+        nextLedgers,
+        emptySegmentResult,
+        ledgerKey,
+      );
+      if (!moved.ok) {
+        return { ok: false };
+      }
+      nextState = moved.state;
+      nextLedgers = moved.ledgers;
+      events.push(...moved.events);
       continue;
     }
     if (segment.effect.type === "drawUpTo") {

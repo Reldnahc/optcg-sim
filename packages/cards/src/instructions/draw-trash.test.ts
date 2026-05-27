@@ -8,6 +8,10 @@ import { parseEffectLine } from "../orchestrator.js";
 import { syntheticInstructionSegmentParser } from "../segments/index.js";
 import { drawPrimitive, parseDrawInstruction } from "./draw.js";
 import {
+  parseTrashFromDeckTopInstruction,
+  trashFromDeckTopPrimitive,
+} from "./trash-from-deck-top.js";
+import {
   parseTrashFromHandInstruction,
   trashFromHandPrimitive,
 } from "./trash-from-hand.js";
@@ -15,6 +19,7 @@ import {
 const drawTrashInstructions = [
   parseDrawInstruction,
   parseTrashFromHandInstruction,
+  parseTrashFromDeckTopInstruction,
 ] as const;
 
 describe("draw and trash-from-hand instruction parsers", () => {
@@ -35,6 +40,14 @@ describe("draw and trash-from-hand instruction parsers", () => {
         },
         {
           id: "opponent-trashes-n-cards-from-their-hand",
+        },
+      ],
+    });
+    expect(trashFromDeckTopPrimitive).toMatchObject({
+      primitiveId: "instruction:moveCards",
+      matches: [
+        {
+          id: "trash-n-cards-from-top-of-your-deck",
         },
       ],
     });
@@ -101,6 +114,45 @@ describe("draw and trash-from-hand instruction parsers", () => {
     "Trash cards from your hand.",
   ])("rejects unsupported trash-from-hand wording: %s", (text) => {
     expect(parseTrashFromHandInstruction({ text })).toBeUndefined();
+  });
+
+  it.each([
+    {
+      text: "Trash 1 card from the top of your deck.",
+      count: 1,
+    },
+    {
+      text: "trash 2 cards from the top of your deck",
+      count: 2,
+    },
+  ])("parses $text as deck-top movement to trash", ({ text, count }) => {
+    expect(parseTrashFromDeckTopInstruction({ text })).toEqual({
+      effect: {
+        type: "moveCards",
+        count,
+        from: { player: "self", zone: "deck", position: "top" },
+        to: { player: "self", zone: "trash" },
+        order: "original",
+      },
+      evidence: [
+        "instruction:moveCards",
+        "count:positiveInteger",
+        "player:self",
+        "zone:deck",
+        "position:top",
+        "destination:trash",
+        "order:original",
+      ],
+      rest: "",
+    });
+  });
+
+  it.each([
+    "Trash 0 cards from the top of your deck.",
+    "Trash 1 card from your deck.",
+    "Trash cards from the top of your deck.",
+  ])("rejects unsupported deck-top trash wording: %s", (text) => {
+    expect(parseTrashFromDeckTopInstruction({ text })).toBeUndefined();
   });
 
   it("composes draw and trash through the and connector", () => {
@@ -192,5 +244,42 @@ describe("draw and trash-from-hand instruction parsers", () => {
     expect(result?.evidence).toContain("connector:andOrdered");
     expect(result?.evidence).toContain("instruction:draw");
     expect(result?.evidence).toContain("instruction:trashFromHand");
+  });
+
+  it("integrates deck-top trash through reusable entry-point orchestration", () => {
+    const result = parseEffectLine(
+      "[On Play] Trash 1 card from the top of your deck.",
+      {
+        entryPoints: [parseSupportedEntryPoint],
+        expressions: [
+          (input) =>
+            parseExpression(input.text, {
+              connectors: [parseAndConnector],
+              segments: [
+                syntheticInstructionSegmentParser(drawTrashInstructions),
+              ],
+            }),
+        ],
+      },
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "trash" },
+          order: "original",
+        },
+      },
+    });
+    expect(result?.evidence).toContain("entry:onPlay");
+    expect(result?.evidence).toContain("instruction:moveCards");
+    expect(result?.evidence).toContain("zone:deck");
+    expect(result?.evidence).toContain("destination:trash");
   });
 });
