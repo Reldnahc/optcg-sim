@@ -21,6 +21,7 @@ import {
   toCardRef,
   zonesEqual,
 } from "./action-state.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
 
@@ -280,59 +281,29 @@ const applyStageSelection = (
   if (selectedCard === undefined) {
     return { error: invalidDecision("start-of-game selected card missing") };
   }
-  let nextPlayer: PlayerState = {
-    ...player,
-    trash: [...player.trash],
-  };
+  let nextPlayer: PlayerState = player;
   if (player.stage !== undefined) {
     if (player.stage.attachedDon.length > 0) {
       return {
         error: invalidDecision("start-of-game stage replacement is unsafe"),
       };
     }
-    const movedStage = {
-      ...player.stage,
-      zone: {
-        zone: "trash" as const,
-        playerId: player.playerId,
-        slot: "trash" as const,
-        index: 0,
-      },
-    };
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      {
-        instanceId: player.stage.instanceId,
-        cardId: player.stage.cardId,
-        from: player.stage.zone,
-        to: movedStage.zone,
-        reason: "ruleProcessStageReplacement",
-      },
-      { type: "public" },
-    );
-    appendEvent(
-      state,
-      events,
-      "cardTrashed",
-      {
-        playerId: player.playerId,
-        instanceId: player.stage.instanceId,
-        cardId: player.stage.cardId,
-        reason: "ruleProcessStageReplacement",
-      },
-      { type: "public" },
-    );
-    nextPlayer = {
-      ...nextPlayer,
-      trash: reindexZoneCards(
-        [movedStage, ...nextPlayer.trash],
-        "trash",
-        player.playerId,
-        "trash",
-      ),
-    };
+    const movement = moveConcreteCardsToTrash(state, events, [player.stage], {
+      cardMovedPayloadShape: "zoneRefs",
+      cardMovedVisibility: { type: "public" },
+      cardTrashedVisibility: { type: "public" },
+      emitCardTrashed: true,
+      includeCardIdentityInCardMoved: true,
+      insertPosition: "top",
+      playerId: player.playerId,
+      reason: "ruleProcessStageReplacement",
+      sourceZone: "stageArea",
+    });
+    const movedPlayer = movement.state.players[player.playerId];
+    if (movedPlayer === undefined) {
+      return { error: invalidDecision("start-of-game player missing") };
+    }
+    nextPlayer = movedPlayer;
   }
 
   const nextDeck = reindexZoneCards(

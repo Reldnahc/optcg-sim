@@ -139,3 +139,21 @@ test("optional activation trash costs delegate concrete movement", () => {
     "optional activation trash costs must not construct trash-zone cards directly",
   );
 });
+
+test("start-of-game stage replacement delegates concrete movement", () => {
+  const source = readSource(
+    "packages/engine-core/src/start-of-game-effects.ts",
+  );
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "start-of-game stage replacement must not hand-roll cardTrashed",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "start-of-game stage replacement must not construct trash-zone cards directly",
+  );
+});
