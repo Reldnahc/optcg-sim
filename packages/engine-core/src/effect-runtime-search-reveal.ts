@@ -27,17 +27,14 @@ import {
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 import {
-  appendSearchRevealRemainderTrashEvents,
   createSearchRevealOrderCardsDecision,
-  deckAfterTrashingLookedCards,
   hasSupportedDeckBottomRemainingCardsPolicy,
   hasSupportedRemainingCardsPolicy,
   hasSupportedTrashRemainingCardsPolicy,
   isExactCharacterCategoryFilter,
+  moveSearchRevealRemainderToTrash,
   toCardRefForPlayer,
   toDeckCard,
-  toTrashCards,
-  trashAfterTrashingLookedCards,
 } from "./effect-runtime-search-reveal-remainder.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
@@ -510,36 +507,19 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
         return failChoiceClosed(state, entry, "unsupported-player-ref");
       }
       const lookedDeckCards = player.deck.slice(0, cards.length);
-      const trashedCards = toTrashCards(lookedDeckCards, supported.playerId);
-      appendSearchRevealRemainderTrashEvents(state, events, {
+      const movement = moveSearchRevealRemainderToTrash(state, events, {
+        cards: lookedDeckCards,
         causedBy,
-        originalCards: lookedDeckCards,
         playerId: supported.playerId,
         selectionSetId: transientSet.id,
-        trashedCards,
       });
       for (const event of events) {
         event.causedBy = causedBy;
       }
       const nextSeq = toStateSeq(state.seq + 1);
       const nextState: GameState = {
-        ...state,
+        ...movement.state,
         seq: nextSeq,
-        players: {
-          ...state.players,
-          [supported.playerId]: {
-            ...player,
-            deck: deckAfterTrashingLookedCards(
-              supported.playerId,
-              player.deck.slice(cards.length),
-            ),
-            trash: trashAfterTrashingLookedCards(
-              supported.playerId,
-              trashedCards,
-              player.trash,
-            ),
-          },
-        },
         eventJournal: [...state.eventJournal, ...events],
       };
       return {
@@ -990,50 +970,46 @@ export const applySupportedSearchRevealChoiceResponse = (
     return toEngineResult(nextState, events);
   }
 
-  const trashedRemainderCards = hasSupportedTrashRemainingCardsPolicy(
+  const shouldTrashRemainder = hasSupportedTrashRemainingCardsPolicy(
     decision.request,
-  )
-    ? toTrashCards(remainingOriginalLookedCards, decision.playerId)
-    : [];
-  appendSearchRevealRemainderTrashEvents(state, events, {
-    causedBy: { type: "decision", decisionId: decision.id },
-    originalCards: remainingOriginalLookedCards,
-    playerId: decision.playerId,
-    selectionSetId: String(decision.request.set),
-    trashedCards: trashedRemainderCards,
-  });
-
+  );
   const finalDeck = reindexZoneCards(
-    hasSupportedTrashRemainingCardsPolicy(decision.request)
-      ? tail
-      : [...tail, ...remainingLookedCards],
+    shouldTrashRemainder ? tail : [...tail, ...remainingLookedCards],
     "deck",
     decision.playerId,
     "deck",
   );
-  const finalTrash = trashAfterTrashingLookedCards(
-    decision.playerId,
-    trashedRemainderCards,
-    player.trash,
-  );
+  const deckBeforeRemainderTrash = shouldTrashRemainder
+    ? deckWhileOrdering
+    : finalDeck;
+  const stateBeforeRemainderTrash: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [decision.playerId]: {
+        ...player,
+        deck: deckBeforeRemainderTrash,
+        hand:
+          movedCard === undefined ? player.hand : [...player.hand, movedCard],
+      },
+    },
+  };
+  const remainderTrashResult = shouldTrashRemainder
+    ? moveSearchRevealRemainderToTrash(stateBeforeRemainderTrash, events, {
+        cards: remainingOriginalLookedCards,
+        causedBy: { type: "decision", decisionId: decision.id },
+        playerId: decision.playerId,
+        selectionSetId: String(decision.request.set),
+      })
+    : { state: stateBeforeRemainderTrash };
   if (queuedEntry !== undefined && options.deferQueueResolution !== true) {
     appendEffectResolvedEvent(state, events, queuedEntry);
   }
 
   const nextState: GameState = {
-    ...state,
+    ...remainderTrashResult.state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    players: {
-      ...state.players,
-      [decision.playerId]: {
-        ...player,
-        deck: finalDeck,
-        trash: finalTrash,
-        hand:
-          movedCard === undefined ? player.hand : [...player.hand, movedCard],
-      },
-    },
     effectQueue:
       queuedEntry === undefined || options.deferQueueResolution === true
         ? state.effectQueue

@@ -85,3 +85,21 @@ test("counter card trash front door delegates concrete movement", () => {
     "counter card use must not construct trash-zone cards directly",
   );
 });
+
+test("search reveal trash remainder delegates concrete movement", () => {
+  const source = readSource(
+    "packages/engine-core/src/effect-runtime-search-reveal-remainder.ts",
+  );
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "search reveal trash remainder must not hand-roll cardTrashed",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "search reveal trash remainder must not construct trash-zone cards directly",
+  );
+});

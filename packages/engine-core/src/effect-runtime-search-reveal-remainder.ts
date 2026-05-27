@@ -9,8 +9,8 @@ import type {
   SelectCardsDecision,
 } from "@optcg/types";
 
-import { appendEvent, toDecisionId } from "./action-results.js";
-import { reindexZoneCards } from "./action-state.js";
+import { toDecisionId } from "./action-results.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type SearchRemainingCardsPolicyCarrier = {
@@ -69,87 +69,29 @@ export const toCardRefForPlayer = (
   zone: card.zone,
 });
 
-const toTrashCard = (
-  card: CardInstance,
-  playerId: CardInstance["controller"],
-  index: number,
-): CardInstance => ({
-  ...card,
-  zone: { zone: "trash", playerId, slot: "trash", index },
-});
-
-export const toTrashCards = (
-  cards: readonly CardInstance[],
-  playerId: CardInstance["controller"],
-): CardInstance[] =>
-  cards.map((card, index) => toTrashCard(card, playerId, index));
-
-export const appendSearchRevealRemainderTrashEvents = (
+export const moveSearchRevealRemainderToTrash = (
   state: GameState,
   events: EngineEvent[],
   params: {
     readonly causedBy: CausalityRef;
-    readonly originalCards: readonly CardInstance[];
+    readonly cards: readonly CardInstance[];
     readonly playerId: EffectQueueEntry["controllerId"];
     readonly selectionSetId: string;
-    readonly trashedCards: readonly CardInstance[];
   },
-): void => {
-  for (const [index, trashedCard] of params.trashedCards.entries()) {
-    const originalCard = params.originalCards[index];
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      {
-        instanceId: trashedCard.instanceId,
-        cardId: trashedCard.cardId,
-        from: originalCard?.zone,
-        to: trashedCard.zone,
-        reason: "searchRevealRemainder",
-        selectionSetId: params.selectionSetId,
-      },
-      { type: "public" },
-    );
-    const cardMoved = events[events.length - 1];
-    if (cardMoved !== undefined) {
-      cardMoved.causedBy = params.causedBy;
-    }
-    appendEvent(
-      state,
-      events,
-      "cardTrashed",
-      {
-        playerId: params.playerId,
-        instanceId: trashedCard.instanceId,
-        cardId: trashedCard.cardId,
-        reason: "searchRevealRemainder",
-      },
-      { type: "public" },
-    );
-    const cardTrashed = events[events.length - 1];
-    if (cardTrashed !== undefined) {
-      cardTrashed.causedBy = params.causedBy;
-    }
-  }
-};
-
-export const deckAfterTrashingLookedCards = (
-  playerId: EffectQueueEntry["controllerId"],
-  cards: readonly CardInstance[],
-): CardInstance[] => reindexZoneCards([...cards], "deck", playerId, "deck");
-
-export const trashAfterTrashingLookedCards = (
-  playerId: EffectQueueEntry["controllerId"],
-  trashedCards: readonly CardInstance[],
-  existingTrash: readonly CardInstance[],
-): CardInstance[] =>
-  reindexZoneCards(
-    [...trashedCards, ...existingTrash],
-    "trash",
-    playerId,
-    "trash",
-  );
+): { movedCards: CardInstance[]; state: GameState } =>
+  moveConcreteCardsToTrash(state, events, params.cards, {
+    cardMovedPayloadExtra: { selectionSetId: params.selectionSetId },
+    cardMovedPayloadShape: "zoneRefs",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    causedBy: params.causedBy,
+    emitCardTrashed: true,
+    includeCardIdentityInCardMoved: true,
+    insertPosition: "top",
+    playerId: params.playerId,
+    reason: "searchRevealRemainder",
+    sourceZone: "deck",
+  });
 
 const orderDecisionIdForQueueEntryId = (queueEntryId: string) =>
   toDecisionId(`decision:orderCards:search-reveal:${queueEntryId}`);

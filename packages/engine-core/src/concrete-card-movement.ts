@@ -20,6 +20,7 @@ type ConcreteTrashMovementReason =
   | "counter"
   | "playCard"
   | "moveCards"
+  | "searchRevealRemainder"
   | "trashFromHand"
   | "ruleProcessCharacterOverflow"
   | "ruleProcessStageReplacement"
@@ -27,6 +28,7 @@ type ConcreteTrashMovementReason =
 
 export interface ConcreteTrashMovementOptions {
   cardMovedPayloadShape: CardMovedPayloadShape;
+  cardMovedPayloadExtra?: Record<string, unknown>;
   cardMovedVisibility?: EventVisibility;
   cardTrashedVisibility?: EventVisibility;
   causedBy?: CausalityRef;
@@ -105,6 +107,7 @@ const cardMovedPayload = (
       playerId: options.playerId,
       reason: options.reason,
       ...identity,
+      ...options.cardMovedPayloadExtra,
     };
   }
   return {
@@ -112,6 +115,7 @@ const cardMovedPayload = (
     from: original.zone,
     to: moved.zone,
     reason: options.reason,
+    ...options.cardMovedPayloadExtra,
   };
 };
 
