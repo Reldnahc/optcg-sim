@@ -252,6 +252,21 @@ describe("DON payment interaction", () => {
     ]);
   });
 
+  test("collapses DON payment combinations while preserving unrelated global actions", () => {
+    const actions: readonly ClientActionModel[] = [
+      { index: 0, type: "concede", label: "Concede" },
+      { index: 4, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+      { index: 5, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+      { index: 6, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+      { index: 7, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+    ];
+
+    assert.deepEqual(createCanonicalDonPaymentActions(actions), [
+      { index: 0, type: "concede", label: "Concede" },
+      { index: 4, type: "respondToDecision", label: "Pay cost with 3 DON!!" },
+    ]);
+  });
+
   test("collapses equivalent DON payment combinations to the first canonical action", () => {
     const actions: readonly ClientActionModel[] = [
       { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },

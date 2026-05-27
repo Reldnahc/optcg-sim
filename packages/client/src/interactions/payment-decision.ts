@@ -135,6 +135,45 @@ export const createCanonicalDonPaymentActions = (
   actions: readonly ClientActionModel[],
 ): ClientActionModel[] | undefined => {
   const canonicalByLabel = new Map<string, ClientActionModel>();
+  let sawDonPayment = false;
+  let collapsedDonPayment = false;
+  const result: ClientActionModel[] = [];
+  for (const action of actions) {
+    const isDonPayment =
+      action.type === "respondToDecision" &&
+      action.decisionPayment === undefined &&
+      donPaymentLabelPattern.exec(action.label) !== null;
+    if (!isDonPayment) {
+      result.push(action);
+      continue;
+    }
+    sawDonPayment = true;
+    if (canonicalByLabel.has(action.label)) {
+      collapsedDonPayment = true;
+      continue;
+    }
+    canonicalByLabel.set(action.label, action);
+    result.push(action);
+  }
+  if (!sawDonPayment) {
+    return undefined;
+  }
+  const nonDonPaymentAction = actions.some(
+    (action) =>
+      action.type === "respondToDecision" &&
+      action.decisionPayment === undefined &&
+      donPaymentLabelPattern.exec(action.label) === null,
+  );
+  if (nonDonPaymentAction) {
+    return undefined;
+  }
+  return collapsedDonPayment ? result : undefined;
+};
+
+export const createCanonicalDonPaymentModalActions = (
+  actions: readonly ClientActionModel[],
+): ClientActionModel[] | undefined => {
+  const canonicalByLabel = new Map<string, ClientActionModel>();
   for (const action of actions) {
     if (
       action.type !== "respondToDecision" ||
@@ -151,9 +190,6 @@ export const createCanonicalDonPaymentActions = (
     ? undefined
     : [...canonicalByLabel.values()];
 };
-
-export const createCanonicalDonPaymentModalActions =
-  createCanonicalDonPaymentActions;
 
 const chooseLabelForCardCostOperation = (
   operation: "trash" | "returnToHand",
