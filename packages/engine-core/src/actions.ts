@@ -45,6 +45,7 @@ import {
   finalizeSelectedTargetEffectResolution,
   processEffectRuntime,
 } from "./effect-runtime.js";
+import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import { resumeSequenceFrameAfterPlaySelectedOverflow } from "./effect-runtime-sequence-frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
@@ -86,6 +87,10 @@ import {
   applyStartOfGameSetupDecisionResponse,
   isStartOfGameSetupDecision,
 } from "./start-of-game-effects.js";
+import {
+  getRespondingPlayerId,
+  hasMalformedRespondToDecisionPlayerId,
+} from "./respond-to-decision-player.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -94,25 +99,6 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
 const isSupportedChooseQuantityMode = (
   mode: unknown,
 ): mode is "exact" | "upTo" => mode === "exact" || mode === "upTo";
-
-const hasMalformedRespondToDecisionPlayerId = (
-  action: Extract<Action, { type: "respondToDecision" }>,
-): boolean =>
-  "playerId" in action &&
-  typeof (action as { playerId?: unknown }).playerId !== "string";
-
-const getRespondingPlayerId = (
-  action: Extract<Action, { type: "respondToDecision" }>,
-  decisionPlayerId: PlayerId,
-): PlayerId => {
-  if (
-    "playerId" in action &&
-    typeof (action as { playerId?: unknown }).playerId === "string"
-  ) {
-    return (action as { playerId: PlayerId }).playerId;
-  }
-  return decisionPlayerId;
-};
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -867,10 +853,13 @@ const applyRespondToDecision = (
         if (!resumed.ok) {
           return toEngineResult(state, [], [resumed.error]);
         }
-        return toEngineResult(resumed.state, [
-          ...playCardResult.events,
-          ...resumed.events,
-        ]);
+        return continueRuntimeAfterDecisionResult(
+          state,
+          toEngineResult(resumed.state, [
+            ...playCardResult.events,
+            ...resumed.events,
+          ]),
+        );
       }
     }
     return playCardResult;
@@ -881,7 +870,7 @@ const applyRespondToDecision = (
       action,
     );
     if (handSelection !== null) {
-      return handSelection;
+      return continueRuntimeAfterDecisionResult(state, handSelection);
     }
   }
   const battleResult = applyBattleDecisionResponse(state, action);

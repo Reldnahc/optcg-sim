@@ -277,6 +277,33 @@ const markHandCharactersSupported = (state: GameState, cost = 1): void => {
   }
 };
 
+const markCardWithOnPlayDraw = (state: GameState, card: CardInstance): void => {
+  const effectDefinitionId = `def:${String(card.cardId)}:on-play-draw`;
+  const supportCard = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 1,
+    power: 1000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "play-selected-on-play-rules",
+      sourceTextHash: "play-selected-on-play-source",
+    },
+  });
+  state.cardManifest.cards[card.cardId] = supportCard;
+  const definition = reviewedOnPlayDrawDefinition(
+    card.cardId,
+    supportCard.support,
+  );
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+};
+
 const moveSupportedStageToTrash = (state: GameState): CardInstance => {
   const player = must(state.players[p1], "p1");
   const card = must(player.hand[0], "stage source");
@@ -388,6 +415,47 @@ test("Character playSelected plays selected hand card rested without cost paymen
     false,
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("Character playSelected triggers its On Play after the parent sequence resolves", () => {
+  const state = sequenceQueueState(playSelectedSequence({ min: 0, max: 1 }));
+  markHandCharactersSupported(state, 10);
+  const selectedBefore = must(
+    must(state.players[p1], "p1 before").hand[0],
+    "selected hand card",
+  );
+  markCardWithOnPlayDraw(state, selectedBefore);
+  const startingHandCount = must(state.players[p1], "p1 before count").hand
+    .length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selection");
+  assert.equal(decision.type, "selectCards");
+  const selected = must(decision.candidates[0], "candidate").card;
+  assert.equal(selected.instanceId, selectedBefore.instanceId);
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    eventTypes(resolved).filter((type) => type === "cardPlayed").length,
+    1,
+  );
+  assert.equal(
+    eventTypes(resolved).filter((type) => type === "effectQueued").length,
+    1,
+  );
+  assert.equal(
+    eventTypes(resolved).filter((type) => type === "cardDrawn").length,
+    1,
+  );
+  assert.equal(
+    must(resolved.state.players[p1], "p1 after").hand.length,
+    startingHandCount + 1,
+  );
 });
 
 test("Character playSelected allows zero-card up-to selection", () => {

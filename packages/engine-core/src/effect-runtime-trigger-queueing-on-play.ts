@@ -34,9 +34,21 @@ export const createOnPlayTriggerQueueing = (
     if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
       return undefined;
     }
+    const queuedTriggerEventIds = new Set(
+      state.eventJournal.flatMap((event) => {
+        if (event.type !== "effectQueued") {
+          return [];
+        }
+        const payload = event.payload as { triggerEventId?: unknown };
+        return typeof payload.triggerEventId === "string"
+          ? [payload.triggerEventId]
+          : [];
+      }),
+    );
     const acceptedCardPlayed = state.eventJournal.filter(
       (event) =>
-        event.type === "cardPlayed" && event.createdAtStateSeq === state.seq,
+        event.type === "cardPlayed" &&
+        !queuedTriggerEventIds.has(String(event.id)),
     );
     if (acceptedCardPlayed.length === 0) {
       return undefined;
@@ -77,20 +89,26 @@ export const createOnPlayTriggerQueueing = (
         source.cardId !== payload.cardId ||
         source.zone.playerId !== payload.playerId
       ) {
-        return toEngineResult(
-          state,
-          [],
-          [onPlayTriggerQueueingError("source-presence-failed")],
-        );
+        if (event.createdAtStateSeq === state.seq) {
+          return toEngineResult(
+            state,
+            [],
+            [onPlayTriggerQueueingError("source-presence-failed")],
+          );
+        }
+        continue;
       }
       const expectedZone =
         payload.category === "character" ? "characterArea" : "stageArea";
       if (source.zone.zone !== expectedZone) {
-        return toEngineResult(
-          state,
-          [],
-          [onPlayTriggerQueueingError("source-presence-failed")],
-        );
+        if (event.createdAtStateSeq === state.seq) {
+          return toEngineResult(
+            state,
+            [],
+            [onPlayTriggerQueueingError("source-presence-failed")],
+          );
+        }
+        continue;
       }
       if (isCardEffectInvalidated(state, source)) {
         continue;
@@ -102,6 +120,9 @@ export const createOnPlayTriggerQueueing = (
           [],
           [onPlayTriggerQueueingError("missing-card-definition")],
         );
+      }
+      if (resolved.support.status !== "implemented-dsl") {
+        continue;
       }
 
       const lookup = dependencies.resolveImplementedDslEffectDefinition(
