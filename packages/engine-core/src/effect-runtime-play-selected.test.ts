@@ -146,6 +146,43 @@ const playStageFromTrashSequence = (): Extract<
   ],
 });
 
+const playCharacterFromTrashSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select-character-from-trash",
+      connector: "always",
+      saveResultAs: "trashSelection:play",
+      effect: {
+        type: "selectCards",
+        zone: "trash",
+        player: "self",
+        chooser: "self",
+        min: 1,
+        max: 1,
+        filter: {
+          categories: ["character"],
+        },
+        saveAs: "trashSelection:play" as SelectionId,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      id: "play-character-from-trash",
+      connector: "ifPossible",
+      effect: {
+        type: "playSelected",
+        selection: "trashSelection:play" as SelectionId,
+        enterRested: true,
+        ignoreCost: true,
+      },
+    },
+  ],
+});
+
 const setupSequenceDefinition = (
   state: GameState,
   source: CardInstance,
@@ -261,6 +298,27 @@ const moveSupportedStageToTrash = (state: GameState): CardInstance => {
     types: ["Mary Geoise"],
   };
   return trashStage;
+};
+
+const moveSupportedCharacterToTrash = (state: GameState): CardInstance => {
+  const player = must(state.players[p1], "p1");
+  const card = must(player.hand[0], "character source");
+  const trashCharacter: CardInstance = {
+    ...card,
+    cardId: "trash-character-play-selected" as CardId,
+    zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+    state: "active",
+    attachedDon: [],
+  };
+  player.hand = reindexHand(player.hand.slice(1));
+  player.trash = [trashCharacter, ...player.trash];
+  state.cardManifest.cards[trashCharacter.cardId] = resolvedCard({
+    cardId: trashCharacter.cardId,
+    category: "character",
+    cost: 1,
+    power: 1000,
+  });
+  return trashCharacter;
 };
 
 const fillCharacterAreaToFive = (state: GameState): void => {
@@ -380,6 +438,53 @@ test("playSelected plays selected Stage card from trash without cost payment", (
     false,
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("trash-origin Character playSelected resolves overflow then resumes play", () => {
+  const state = sequenceQueueState(playCharacterFromTrashSequence());
+  const trashCharacter = moveSupportedCharacterToTrash(state);
+  fillCharacterAreaToFive(state);
+  const originalCharacters = [
+    ...must(state.players[p1], "p1").characters.map((card) => card.instanceId),
+  ];
+
+  const paused = processEffectRuntime(state);
+  const selection = must(paused.state.pendingDecision, "selection");
+  assert.equal(selection.type, "selectCards");
+  const selected = must(selection.candidates[0], "candidate").card;
+  const opened = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selection.id,
+    response: { type: "cards", cards: [selected] },
+  });
+  const overflow = must(opened.state.pendingDecision, "overflow");
+  assert.equal(overflow.type, "selectCards");
+  const overflowTarget = must(overflow.candidates[0], "overflow target").card;
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: overflow.id,
+    response: { type: "cards", cards: [overflowTarget] },
+  });
+  const player = must(resolved.state.players[p1], "p1");
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    player.characters.some(
+      (card) => card.instanceId === trashCharacter.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    player.trash.some((card) => card.instanceId === trashCharacter.instanceId),
+    false,
+  );
+  assert.equal(
+    player.trash.some((card) => card.instanceId === overflowTarget.instanceId),
+    true,
+  );
+  assert.equal(player.characters.length, 5);
+  assert.equal(originalCharacters.includes(overflowTarget.instanceId), true);
 });
 
 test("Character playSelected supports multiple selected Characters in order", () => {

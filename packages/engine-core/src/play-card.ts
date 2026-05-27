@@ -579,7 +579,7 @@ const placePlayedCardResult = (params: {
       "character",
     );
     nextTrash = reindexZoneCards(
-      [trashedCard, ...player.trash],
+      [trashedCard, ...nextTrash],
       "trash",
       playerId,
       "trash",
@@ -783,12 +783,6 @@ export const applyRuntimePlaySelected = (params: {
     );
   }
   if (supported.category === "character" && player.characters.length >= 5) {
-    if (sourceZone !== "hand") {
-      return illegalAction(
-        state,
-        "playSelected Character overflow from trash is unsupported.",
-      );
-    }
     return createCharacterOverflowDecisionResult({
       state,
       events: [],
@@ -831,6 +825,39 @@ export const applyRuntimePlaySelectedFromHand = (params: {
   causedBy?: CausalityRef;
 }): EngineResult => applyRuntimePlaySelected({ ...params, sourceZone: "hand" });
 
+type PlayCardOverflowSource = {
+  sourceCard: CardInstance;
+  sourceIndex: number;
+  sourceZone: "hand" | "trash";
+};
+
+const findPlayCardOverflowSource = (
+  player: GameState["players"][PlayerId],
+  instanceId: CardInstance["instanceId"],
+): PlayCardOverflowSource | null => {
+  const handIndex = player.hand.findIndex(
+    (card) => card.instanceId === instanceId,
+  );
+  if (handIndex >= 0) {
+    const sourceCard = player.hand[handIndex];
+    return sourceCard === undefined
+      ? null
+      : { sourceCard, sourceIndex: handIndex, sourceZone: "hand" };
+  }
+
+  const trashIndex = player.trash.findIndex(
+    (card) => card.instanceId === instanceId,
+  );
+  if (trashIndex >= 0) {
+    const sourceCard = player.trash[trashIndex];
+    return sourceCard === undefined
+      ? null
+      : { sourceCard, sourceIndex: trashIndex, sourceZone: "trash" };
+  }
+
+  return null;
+};
+
 const applyCharacterOverflowResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -862,22 +889,17 @@ const applyCharacterOverflowResponse = (
   if (playCardInstanceId === null) {
     return illegalAction(state, "Unsupported overflow decision context.");
   }
-  const handIndex = player.hand.findIndex(
-    (card) => card.instanceId === playCardInstanceId,
-  );
-  if (handIndex < 0) {
-    return illegalAction(state, "Decision card reference is stale.");
-  }
-  const handCard = player.hand[handIndex];
-  if (handCard === undefined) {
+  const source = findPlayCardOverflowSource(player, playCardInstanceId);
+  if (source === null) {
     return illegalAction(state, "Decision card not found.");
   }
-  const supported = getSupportedPlayMetadata(state, handCard);
+  const supported = getSupportedPlayMetadata(state, source.sourceCard);
   if (supported === null || supported.category !== "character") {
     return illegalAction(state, "Decision card is unsupported.");
   }
   if (
-    shouldResolveOnPlayRuntime(state, handCard, supported) &&
+    !runtimeOverflow &&
+    shouldResolveOnPlayRuntime(state, source.sourceCard, supported) &&
     hasPendingRuntimeWork(state)
   ) {
     return illegalAction(state, "playCard requires no pending runtime work.");
@@ -919,8 +941,9 @@ const applyCharacterOverflowResponse = (
     events,
     playerId: decision.playerId,
     player,
-    sourceIndex: handIndex,
-    sourceCard: handCard,
+    sourceIndex: source.sourceIndex,
+    sourceCard: source.sourceCard,
+    sourceZone: source.sourceZone,
     supported,
     costArea: player.costArea,
     selectedOverflowCharacterIndex: selectedIndex,
