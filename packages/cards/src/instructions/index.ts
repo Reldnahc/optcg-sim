@@ -6,6 +6,7 @@ export {
   parseYourLeaderConditionalPowerInstruction,
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
+export { parseInvalidateEffectsInstruction } from "./invalidate-effects.js";
 export { parseKoInstruction } from "./ko.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
 export { parseModifyCostInstruction } from "./modify-cost.js";

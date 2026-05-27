@@ -112,6 +112,89 @@ test("applyAction accepts valid activate main action and resolves draw through r
   );
 });
 
+test("effect invalidation suppresses activate main legal actions and activation", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.characters[0], "character");
+  const effectId = toEffectId("activate-main-character-invalidated");
+  installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(character.cardId),
+    category: "character",
+    definitionId: "def-activate-main-character-invalidated",
+    effectId,
+  });
+  const resolved = must(
+    state.cardManifest.cards[character.cardId],
+    "resolved invalidated card",
+  );
+  state.continuousEffects.push({
+    id: "continuous:invalidate-character-effects",
+    source: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+      zone: p1State.leader.zone,
+    },
+    sourceSnapshot: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: p1State.leader.zone,
+      category: "leader",
+      colors: [],
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "effectInvalidation",
+      target: {
+        type: "exactCard",
+        card: {
+          instanceId: character.instanceId,
+          cardId: character.cardId,
+          playerId: p1,
+          zone: character.zone,
+        },
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:invalidate-effects-target",
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "invalidateEffects" },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-effect-invalidation" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const legal = getLegalActions(state, p1);
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      playerId: p1,
+      zone: character.zone,
+    },
+    effectId,
+  });
+
+  assert.equal(resolved.support.status, "implemented-dsl");
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === character.instanceId,
+    ),
+    false,
+  );
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(result.state, state);
+});
+
 test("activate main supports sequence body with optional choose-one payCost and pauses on private payment decision", () => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");

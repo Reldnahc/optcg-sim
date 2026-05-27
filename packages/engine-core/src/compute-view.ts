@@ -18,6 +18,7 @@ import {
   isSupportedQueuedEffectConditionShape,
 } from "./effect-runtime-conditions.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
+import { isSupportedEffectInvalidationModifier } from "./effect-invalidation.js";
 import {
   fieldRemovalProtectionsForCard,
   isFieldRemovalProtectionModifier,
@@ -230,6 +231,11 @@ const assertSupportedContinuousEffects = (state: GameState): void => {
       throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
     }
     if (isSupportedContinuousCostModifier(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
+    }
+    if (isSupportedEffectInvalidationModifier(effect)) {
       if (!durationIsActive(state, effect)) continue;
       recordConditionPasses(state, effect);
       continue;

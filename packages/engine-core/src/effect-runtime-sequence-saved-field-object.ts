@@ -107,9 +107,30 @@ const continuousRecordForSavedObject = (
   if (
     segment.effect.type !== "cannotBecomeActive" &&
     segment.effect.type !== "cannotAttack" &&
-    segment.effect.type !== "cannotBlock"
+    segment.effect.type !== "cannotBlock" &&
+    segment.effect.type !== "invalidateEffects"
   ) {
     return undefined;
+  }
+  if (segment.effect.type === "invalidateEffects") {
+    return {
+      id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
+      source: entry.source,
+      sourceSnapshot: entry.sourceSnapshot,
+      controller: entry.controllerId,
+      modifier: {
+        layer: "effectInvalidation",
+        target: exactTargetForSavedObject(entry, target, state, objectIndex),
+        operation: { type: "invalidateEffects" },
+      },
+      duration: segment.effect.duration,
+      createdBy: {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    };
   }
   return {
     id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
@@ -331,7 +352,8 @@ export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
   if (
     params.segment.effect.type !== "cannotBecomeActive" &&
     params.segment.effect.type !== "cannotAttack" &&
-    params.segment.effect.type !== "cannotBlock"
+    params.segment.effect.type !== "cannotBlock" &&
+    params.segment.effect.type !== "invalidateEffects"
   ) {
     return { ledgers: params.ledgers, state: params.state };
   }

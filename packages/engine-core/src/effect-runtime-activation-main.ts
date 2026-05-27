@@ -16,6 +16,7 @@ import type {
 import { appendEvent, illegalAction, toStateSeq } from "./action-results.js";
 import { isMatchActive, zonesEqual } from "./action-state.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
@@ -247,6 +248,9 @@ export const getActivateMainLegalActions = (
       live.card,
       live.resolved,
     );
+    if (isCardEffectInvalidated(state, live.card)) {
+      continue;
+    }
     for (const effect of supported) {
       const queueEntry = createActivateMainQueueEntry({
         state,
@@ -314,6 +318,9 @@ export const applyActivateMainAction = (
       state,
       "activateEffect source is stale or not controller-owned.",
     );
+  }
+  if (isCardEffectInvalidated(state, live.card)) {
+    return illegalAction(state, "activateEffect source effects are negated.");
   }
   const supportedEffects = findSupportedActivateMainEffects(
     state,

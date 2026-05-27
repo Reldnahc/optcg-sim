@@ -11,6 +11,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
 import {
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
@@ -138,6 +139,9 @@ export const createAttackTriggerQueueing = (
           [],
           [whenAttackingTriggerQueueingError("missing-card-definition")],
         );
+      }
+      if (isCardEffectInvalidated(state, source)) {
+        continue;
       }
       if (resolved.support.effectDefinitionId === undefined) {
         continue;
@@ -370,6 +374,9 @@ export const createAttackTriggerQueueing = (
             [],
             [onOpponentAttackTriggerQueueingError("missing-card-definition")],
           );
+        }
+        if (isCardEffectInvalidated(state, source)) {
+          continue;
         }
         if (resolved.support.effectDefinitionId === undefined) {
           continue;

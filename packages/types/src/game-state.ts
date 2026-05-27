@@ -152,6 +152,7 @@ export type ModifierLayer =
   | "baseCostSet"
   | "powerAdd"
   | "costAdd"
+  | "effectInvalidation"
   | "keywordAdd"
   | "keywordRemove"
   | "restriction"
@@ -162,6 +163,7 @@ export type ModifierOperation =
   | { type: "setBaseCost"; value: number }
   | { type: "addPower"; value: number }
   | { type: "addCost"; value: number }
+  | { type: "invalidateEffects" }
   | { type: "addKeyword"; keyword: Keyword }
   | { type: "removeKeyword"; keyword: Keyword }
   | { type: "restriction"; restriction: string }

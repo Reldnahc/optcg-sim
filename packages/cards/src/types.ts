@@ -52,6 +52,7 @@ export type PrimitiveEvidence =
   | "instruction:rest"
   | "instruction:preventActivation"
   | "instruction:modifyPower"
+  | "instruction:invalidateEffects"
   | "instruction:setBasePower"
   | "instruction:search"
   | "instruction:playSelected"

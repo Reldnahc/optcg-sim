@@ -32,6 +32,7 @@ type RestEffect = Extract<Effect, { type: "rest" }> & {
 type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
   then:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>;
@@ -43,6 +44,7 @@ type SavedTargetContinuousEffect = (
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
   | Extract<Effect, { type: "cannotBlock" }>
+  | Extract<Effect, { type: "invalidateEffects" }>
 ) & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
@@ -417,7 +419,8 @@ const isSupportedSavedTargetContinuousSegment = (
 ): effect is SavedTargetContinuousEffect =>
   (effect.type === "cannotBecomeActive" ||
     effect.type === "cannotAttack" ||
-    effect.type === "cannotBlock") &&
+    effect.type === "cannotBlock" ||
+    effect.type === "invalidateEffects") &&
   isSupportedSavedFieldObjectKoTarget(effect.target) &&
   isSupportedSequenceContinuousDuration(effect.duration);
 

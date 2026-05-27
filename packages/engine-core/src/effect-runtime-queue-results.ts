@@ -208,6 +208,7 @@ export const createEffectRuntimeQueueResults = (
   ):
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "modifyCost" }>
+    | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>

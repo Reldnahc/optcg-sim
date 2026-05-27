@@ -17,6 +17,7 @@ import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "./effect-runtime-conditions.js";
+import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import {
   isSupportedFieldRemovalProtection,
   malformedFieldRemovalProtectionMessage,
@@ -180,12 +181,14 @@ export const isSupportedContinuousQueueEffect = (
 ): effect is
   | Extract<Effect, { type: "modifyPower" }>
   | Extract<Effect, { type: "modifyCost" }>
+  | Extract<Effect, { type: "invalidateEffects" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
   | Extract<Effect, { type: "cannotBlock" }> => {
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "modifyCost" &&
+    effect.type !== "invalidateEffects" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
     effect.type !== "cannotBlock"
@@ -209,7 +212,18 @@ export const isSupportedContinuousQueueEffect = (
       isSupportedCostModifierFilter(effect.filter)
     );
   }
-  if (effect.type !== "modifyPower" && !isSupportedTarget(effect.target)) {
+  if (
+    effect.type === "invalidateEffects" &&
+    effect.target.type !== "myLeader" &&
+    !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (
+    effect.type !== "modifyPower" &&
+    effect.type !== "invalidateEffects" &&
+    !isSupportedTarget(effect.target)
+  ) {
     return false;
   }
   if (
@@ -241,6 +255,7 @@ const mapEffectToModifier = (
   effect:
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "modifyCost" }>
+    | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
@@ -260,6 +275,13 @@ const mapEffectToModifier = (
       operation: { type: "addCost", value: effect.value },
     };
   }
+  if (effect.type === "invalidateEffects") {
+    return {
+      layer: "effectInvalidation",
+      target,
+      operation: { type: "invalidateEffects" },
+    };
+  }
   return {
     layer: "restriction",
     target,
@@ -273,6 +295,7 @@ const createRecord = (
   effect:
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "modifyCost" }>
+    | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
@@ -309,6 +332,7 @@ export const createContinuousRecordsForResolvedEffect = (
   effect:
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "modifyCost" }>
+    | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
@@ -678,6 +702,9 @@ export const deriveImplementedDslPermanentContinuousEffects = (
       playerId: card.controller,
       zone: card.zone,
     };
+    if (isCardEffectInvalidated(state, card)) {
+      continue;
+    }
     const sourceSnapshot: EffectQueueEntry["sourceSnapshot"] = {
       instanceId: card.instanceId,
       cardId: card.cardId,

@@ -302,6 +302,91 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses Main Event rest-DON cost and opponent Character effect negation primitives", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may rest 2 of your DON!! cards: Negate the effect of up to 1 of your opponent's Characters with a cost of 5 or less during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "restDon",
+                  count: 2,
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        timing: "onResolution",
+                        chooser: "self",
+                        player: "opponent",
+                        zone: "characterArea",
+                        min: 0,
+                        max: 1,
+                        allowFewerIfUnavailable: true,
+                        visibility: "public",
+                        filter: {
+                          categories: ["character"],
+                          cost: { max: 5 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "invalidateEffects",
+                      target: {
+                        type: "savedFieldObject",
+                        zone: "characterArea",
+                        player: "opponent",
+                      },
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "composition:optionalCostedEffect",
+        "cost:restDon",
+        "instruction:invalidateEffects",
+        "cardinality:upTo",
+        "target:opponentCharacters",
+        "filter:cost",
+        "condition:comparator:lte",
+        "duration:thisTurn",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
+
   it("parses simple Counter Leader power for this battle", () => {
     const result = parseCardEffectLine(
       "[Counter] Your Leader gains +3000 power during this battle.",

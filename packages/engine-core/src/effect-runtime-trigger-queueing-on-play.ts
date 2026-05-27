@@ -8,6 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
@@ -90,6 +91,9 @@ export const createOnPlayTriggerQueueing = (
           [],
           [onPlayTriggerQueueingError("source-presence-failed")],
         );
+      }
+      if (isCardEffectInvalidated(state, source)) {
+        continue;
       }
       const resolved = state.cardManifest.cards[source.cardId];
       if (resolved === undefined) {

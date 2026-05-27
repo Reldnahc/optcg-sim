@@ -809,7 +809,8 @@ const continueNoDecisionSegments = (
     if (
       segment.effect.type === "cannotBecomeActive" ||
       segment.effect.type === "cannotAttack" ||
-      segment.effect.type === "cannotBlock"
+      segment.effect.type === "cannotBlock" ||
+      segment.effect.type === "invalidateEffects"
     ) {
       const restricted = applySavedFieldObjectRestrictionSequenceSegment({
         emptySegmentResult,
@@ -819,7 +820,13 @@ const continueNoDecisionSegments = (
         segment: segment as SupportedSequenceSegment & {
           effect: Extract<
             SequenceSegmentEffect,
-            { type: "cannotBecomeActive" | "cannotAttack" | "cannotBlock" }
+            {
+              type:
+                | "cannotBecomeActive"
+                | "cannotAttack"
+                | "cannotBlock"
+                | "invalidateEffects";
+            }
           >;
         },
         segmentKey: ledgerKey,
@@ -888,6 +895,7 @@ const continueNoDecisionSegments = (
               type:
                 | "modifyPower"
                 | "modifyCost"
+                | "invalidateEffects"
                 | "cannotBecomeActive"
                 | "cannotAttack"
                 | "cannotBlock";
