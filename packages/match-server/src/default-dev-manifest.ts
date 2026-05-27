@@ -13,20 +13,14 @@ interface CreateDefaultDevMatchSetupInput {
   readonly firstPlayerId: PlayerId;
   readonly playerOrder: readonly [PlayerId, PlayerId];
   readonly createdAt: string;
-  readonly devDonCounts?: DevDonCountOverrides;
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
 }
 
-export interface DevDonCountOverrides {
-  readonly firstPlayer?: number;
-  readonly secondPlayer?: number;
-}
-
-interface ResolveDevDonCountsInput {
-  readonly devDonCounts?: DevDonCountOverrides;
-  readonly env: Partial<Record<string, string | undefined>>;
+export interface DevDonCounts {
+  readonly firstPlayer: number;
+  readonly secondPlayer: number;
 }
 
 export interface DevDeckCardEntry {
@@ -111,7 +105,10 @@ export const createDevDonDeckCardIds = (count: number): CardId[] =>
     (_, index) => `dev-don-${String(index + 1)}` as CardId,
   );
 
-const defaultDevDonCount = 10;
+export const defaultDevDonCounts: DevDonCounts = {
+  firstPlayer: 6,
+  secondPlayer: 10,
+};
 
 const assertValidDevDonCount = (value: number, label: string): number => {
   if (!Number.isInteger(value) || value <= 0) {
@@ -120,39 +117,11 @@ const assertValidDevDonCount = (value: number, label: string): number => {
   return value;
 };
 
-const resolveDevDonCount = (params: {
-  readonly override: number | undefined;
-  readonly envValue: string | undefined;
-  readonly label: string;
-}): number => {
-  if (params.override !== undefined) {
-    return assertValidDevDonCount(params.override, params.label);
-  }
-  if (params.envValue === undefined || params.envValue.length === 0) {
-    return defaultDevDonCount;
-  }
-  if (!/^[1-9]\d*$/u.test(params.envValue)) {
-    throw new Error(`${params.label} must be a positive integer.`);
-  }
-  return assertValidDevDonCount(
-    Number.parseInt(params.envValue, 10),
-    params.label,
-  );
-};
-
 export const resolveDevDonCounts = (
-  input: ResolveDevDonCountsInput,
+  input: DevDonCounts,
 ): readonly [number, number] => [
-  resolveDevDonCount({
-    override: input.devDonCounts?.firstPlayer,
-    envValue: input.env["DEV_DECK1_DON_DECK_COUNT"],
-    label: "DEV_DECK1_DON_DECK_COUNT",
-  }),
-  resolveDevDonCount({
-    override: input.devDonCounts?.secondPlayer,
-    envValue: input.env["DEV_DECK2_DON_DECK_COUNT"],
-    label: "DEV_DECK2_DON_DECK_COUNT",
-  }),
+  assertValidDevDonCount(input.firstPlayer, "deck1 DON deck count"),
+  assertValidDevDonCount(input.secondPlayer, "deck2 DON deck count"),
 ];
 
 export const createDevPlayerSetupFromDecklist = (
@@ -199,12 +168,8 @@ export const createDefaultDevMatchSetup = async (
 ): Promise<DevMatchSetup> => {
   const firstPlayerDecklist = await readDefaultDevDecklist("deck1.txt");
   const secondPlayerDecklist = await readDefaultDevDecklist("deck2.txt");
-  const [firstPlayerDonCount, secondPlayerDonCount] = resolveDevDonCounts({
-    ...(input.devDonCounts === undefined
-      ? {}
-      : { devDonCounts: input.devDonCounts }),
-    env: process.env,
-  });
+  const [firstPlayerDonCount, secondPlayerDonCount] =
+    resolveDevDonCounts(defaultDevDonCounts);
   const firstPlayerDonDeck = createDevDonDeckCardIds(firstPlayerDonCount);
   const secondPlayerDonDeck = createDevDonDeckCardIds(secondPlayerDonCount);
   const devDonCount = Math.max(firstPlayerDonCount, secondPlayerDonCount);

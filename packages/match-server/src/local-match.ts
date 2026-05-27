@@ -29,7 +29,6 @@ import type {
 } from "@optcg/types";
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
-import type { DevDonCountOverrides } from "./default-dev-manifest.js";
 import { actionDecisionPayment } from "./dev-action-payment.js";
 import { allPlayerCards, cardName } from "./dev-card-utils.js";
 import type {
@@ -68,7 +67,6 @@ export interface CreatePremadeDevMatchSetupOptions {
   readonly baseUrl?: string;
   readonly redisUrl?: string;
   readonly matchId?: MatchId;
-  readonly devDonCounts?: DevDonCountOverrides;
 }
 
 export interface ApplyLocalDevActionInput {
@@ -254,9 +252,6 @@ export const createPremadeDevMatchSetup = async (
       : { fetchCard: options.fetchCard }),
     ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
     ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
-    ...(options.devDonCounts === undefined
-      ? {}
-      : { devDonCounts: options.devDonCounts }),
   });
 };
 

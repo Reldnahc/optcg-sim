@@ -8,6 +8,7 @@ import {
   createDevDonDeckCardIds,
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
+  defaultDevDonCounts,
   parseDevDecklistText,
   resolveDevDonCounts,
   type DevDeckCardEntry,
@@ -70,7 +71,7 @@ describe("default dev manifest boundary", () => {
     );
   });
 
-  test("dev DON deck counts are configurable per submitted player setup", () => {
+  test("dev DON deck counts come from the dev manifest player setup", () => {
     assert.deepEqual(createDevDonDeckCardIds(6), [
       "dev-don-1",
       "dev-don-2",
@@ -79,46 +80,29 @@ describe("default dev manifest boundary", () => {
       "dev-don-5",
       "dev-don-6",
     ]);
-    assert.deepEqual(
-      resolveDevDonCounts({
-        devDonCounts: { firstPlayer: 6, secondPlayer: 10 },
-        env: {},
-      }),
-      [6, 10],
-    );
-    assert.deepEqual(
-      resolveDevDonCounts({
-        env: {
-          DEV_DECK1_DON_DECK_COUNT: "6",
-          DEV_DECK2_DON_DECK_COUNT: "10",
-        },
-      }),
-      [6, 10],
-    );
+    assert.deepEqual(defaultDevDonCounts, {
+      firstPlayer: 6,
+      secondPlayer: 10,
+    });
+    assert.deepEqual(resolveDevDonCounts(defaultDevDonCounts), [6, 10]);
   });
 
   test("rejects invalid dev DON deck count overrides", () => {
     assert.throws(
       () =>
         resolveDevDonCounts({
-          devDonCounts: { firstPlayer: 0 },
-          env: {},
+          ...defaultDevDonCounts,
+          firstPlayer: 0,
         }),
-      /DEV_DECK1_DON_DECK_COUNT must be a positive integer/u,
+      /deck1 DON deck count must be a positive integer/u,
     );
     assert.throws(
       () =>
         resolveDevDonCounts({
-          env: { DEV_DECK2_DON_DECK_COUNT: "six" },
+          ...defaultDevDonCounts,
+          secondPlayer: 0,
         }),
-      /DEV_DECK2_DON_DECK_COUNT must be a positive integer/u,
-    );
-    assert.throws(
-      () =>
-        resolveDevDonCounts({
-          env: { DEV_DECK1_DON_DECK_COUNT: "6extra" },
-        }),
-      /DEV_DECK1_DON_DECK_COUNT must be a positive integer/u,
+      /deck2 DON deck count must be a positive integer/u,
     );
   });
 
