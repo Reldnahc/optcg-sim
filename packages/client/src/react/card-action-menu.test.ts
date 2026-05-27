@@ -67,6 +67,7 @@ describe("card action menu", () => {
       }),
     );
     assert.equal(railMarkup.includes("Selected card"), false);
+    assert.equal(railMarkup.includes("Concede"), true);
 
     const boardMarkup = renderToStaticMarkup(
       createElement(BoardLayout, {
@@ -125,6 +126,46 @@ describe("card action menu", () => {
       false,
     );
     assert.equal(source.includes("cardActions={client.cardActions}"), true);
+  });
+
+  test("match app removes concede from global action menu", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.equal(source.includes('action.type !== "concede"'), true);
+  });
+
+  test("control rail shows confirm concede label when pending confirmation", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+        concedeDisabled: false,
+        concedeConfirming: true,
+        onConcede: () => undefined,
+      }),
+    );
+
+    assert.equal(markup.includes("Confirm concede"), true);
+    assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
+  });
+
+  test("concede button uses dedicated red styles", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.match(styles, /\.concede-button\s*\{[^}]*background:\s*#8b232b;/u);
+    assert.match(
+      styles,
+      /\.concede-button\.is-confirming\s*\{[^}]*background:\s*#b12d36;/u,
+    );
   });
 
   test("attached DON cards render under their target card", () => {

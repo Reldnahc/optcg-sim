@@ -12,6 +12,9 @@ export interface ControlRailProps {
   disabled: boolean;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
+  concedeDisabled?: boolean | undefined;
+  concedeConfirming?: boolean | undefined;
+  onConcede?: (() => void) | undefined;
 }
 
 export const ControlRail = ({
@@ -25,6 +28,9 @@ export const ControlRail = ({
   disabled,
   onAction,
   onNewMatch,
+  concedeDisabled = true,
+  concedeConfirming = false,
+  onConcede,
 }: ControlRailProps): React.JSX.Element => (
   <aside className="control-rail">
     <section className="summary-panel opponent-summary">
@@ -34,6 +40,16 @@ export const ControlRail = ({
       <div className="control-actions">
         <button className="action-button" type="button" onClick={onNewMatch}>
           New match
+        </button>
+        <button
+          className={`action-button concede-button ${
+            concedeConfirming ? "is-confirming" : ""
+          }`}
+          type="button"
+          disabled={concedeDisabled}
+          onClick={onConcede}
+        >
+          {concedeConfirming ? "Confirm concede" : "Concede"}
         </button>
       </div>
       <dl className="match-facts">

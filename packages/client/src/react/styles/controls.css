@@ -55,6 +55,14 @@
   background: #275f3e;
 }
 
+.concede-button {
+  background: #8b232b;
+}
+
+.concede-button.is-confirming {
+  background: #b12d36;
+}
+
 .match-facts {
   display: grid;
   gap: 4px;

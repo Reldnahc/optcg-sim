@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { CardRef, InstanceId } from "@optcg/types";
 
@@ -36,6 +36,28 @@ export const MatchApp = (): React.JSX.Element => {
       : undefined;
   const globalActions =
     decisionModal === undefined ? client.globalActions() : [];
+  const concedeAction = useMemo(
+    () => client.globalActions().find((action) => action.type === "concede"),
+    [client],
+  );
+  const [concedeConfirming, setConcedeConfirming] = useState(false);
+  useEffect(() => {
+    if (concedeAction === undefined) {
+      setConcedeConfirming(false);
+    }
+  }, [concedeAction]);
+  const visibleGlobalActions = globalActions.filter(
+    (action) => action.type !== "concede",
+  );
+  const concedeDisabled =
+    client.state.actionInFlight ||
+    concedeAction === undefined ||
+    matchState?.snapshot.status !== "active";
+  useEffect(() => {
+    if (concedeDisabled) {
+      setConcedeConfirming(false);
+    }
+  }, [concedeDisabled]);
   const cardDisplay = (card: CardRef): { name: string; imageUrl?: string } => {
     const catalogEntry =
       matchState?.cards.players[card.playerId]?.cards[card.cardId];
@@ -154,13 +176,28 @@ export const MatchApp = (): React.JSX.Element => {
             .phase
         }
         errors={client.state.errors}
-        globalActions={globalActions}
+        globalActions={visibleGlobalActions}
         disabled={client.state.actionInFlight}
         onAction={(actionIndex) => {
+          setConcedeConfirming(false);
           void client.submitAction(actionIndex);
         }}
         onNewMatch={() => {
+          setConcedeConfirming(false);
           void client.createNewMatch();
+        }}
+        concedeDisabled={concedeDisabled}
+        concedeConfirming={concedeConfirming}
+        onConcede={() => {
+          if (concedeAction === undefined || concedeDisabled) {
+            return;
+          }
+          if (!concedeConfirming) {
+            setConcedeConfirming(true);
+            return;
+          }
+          setConcedeConfirming(false);
+          void client.submitAction(concedeAction.index);
         }}
       />
       <DecisionModalHost
