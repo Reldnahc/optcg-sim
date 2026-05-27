@@ -40,6 +40,7 @@ import {
 } from "./battle-support.js";
 import {
   getSupportedCounterEventPower,
+  getSupportedCounterEventPowerShapeTargets,
   getSupportedCounterEventPowerTargets,
 } from "./battle-counter-event-support.js";
 import { computeView } from "./compute-view.js";
@@ -831,8 +832,12 @@ const isUnsupportedCounterEventCandidate = (
   battleTarget: CardRef | undefined,
 ): boolean => {
   if (
-    getSupportedCounterEventPowerTargets(state, card, defenderId, battleTarget)
-      .length > 0
+    getSupportedCounterEventPowerShapeTargets(
+      state,
+      card,
+      defenderId,
+      battleTarget,
+    ).length > 0
   ) {
     return false;
   }
@@ -864,7 +869,7 @@ export const getUnsupportedCounterWindowReason = (
       return unsupportedCounterEventReason;
     }
     if (
-      getSupportedCounterEventPowerTargets(state, card, defenderId, target)
+      getSupportedCounterEventPowerShapeTargets(state, card, defenderId, target)
         .length === 0 &&
       hasCounterTriggerDefinition(state, card.cardId)
     ) {

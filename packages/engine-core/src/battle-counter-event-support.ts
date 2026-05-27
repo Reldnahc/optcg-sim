@@ -201,6 +201,7 @@ const supportedCounterEventPower = (
   effect: EffectDefinition["effects"][number],
   target: CardRef,
   battleTarget: CardRef | undefined,
+  options: { evaluateCondition: boolean },
 ): {
   value: number;
   trailingSequence?: SupportedCounterEventPower["trailingSequence"];
@@ -219,7 +220,14 @@ const supportedCounterEventPower = (
     parsed.power.duration.type !== "thisBattle" ||
     !Number.isInteger(parsed.power.value) ||
     parsed.power.value <= 0 ||
-    !counterEventConditionPasses(state, card, metadata, effect, controllerId) ||
+    (options.evaluateCondition &&
+      !counterEventConditionPasses(
+        state,
+        card,
+        metadata,
+        effect,
+        controllerId,
+      )) ||
     !counterPowerTargetCanApplyToSelectedTarget(
       state,
       controllerId,
@@ -248,6 +256,7 @@ export const getSupportedCounterEventPower = (
   card: CardInstance,
   target: CardRef | undefined,
   battleTarget = target,
+  options: { evaluateCondition?: boolean } = {},
 ): SupportedCounterEventPower | null => {
   const metadata = state.cardManifest.cards[card.cardId];
   if (
@@ -280,6 +289,7 @@ export const getSupportedCounterEventPower = (
       counterEffect,
       target,
       battleTarget,
+      { evaluateCondition: options.evaluateCondition ?? true },
     );
     if (counterValue === null) {
       return null;
@@ -325,6 +335,7 @@ export const getSupportedCounterEventPowerTargets = (
   card: CardInstance,
   defenderId: PlayerId,
   battleTarget: CardRef | undefined,
+  options: { evaluateCondition?: boolean } = {},
 ): SupportedCounterEventPower[] =>
   counterEventPowerCandidateTargets(state, defenderId).flatMap((target) => {
     const supported = getSupportedCounterEventPower(
@@ -332,6 +343,17 @@ export const getSupportedCounterEventPowerTargets = (
       card,
       target,
       battleTarget,
+      options,
     );
     return supported === null ? [] : [supported];
+  });
+
+export const getSupportedCounterEventPowerShapeTargets = (
+  state: GameState,
+  card: CardInstance,
+  defenderId: PlayerId,
+  battleTarget: CardRef | undefined,
+): SupportedCounterEventPower[] =>
+  getSupportedCounterEventPowerTargets(state, card, defenderId, battleTarget, {
+    evaluateCondition: false,
   });

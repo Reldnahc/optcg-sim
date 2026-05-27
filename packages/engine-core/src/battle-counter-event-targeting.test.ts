@@ -189,6 +189,36 @@ const installCounterPowerThenTrashToHandEvent = (
   };
 };
 
+const installConditionCurrentlyFalseCounterEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  counterEvent: CardInstance,
+): void => {
+  installChooseLeaderOrCharacterCounterEvent(state, counterEvent);
+  const definitionId = `${String(counterEvent.cardId)}:counter`;
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[definitionId],
+    "conditional counter definition",
+  );
+  const first = must(definition.effects[0], "conditional counter effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      ...definition,
+      effects: [
+        {
+          ...first,
+          condition: {
+            type: "trashCount",
+            player: "self",
+            op: "gte",
+            value: 10,
+          },
+        },
+      ],
+    },
+  };
+};
+
 test("conditional Counter Event can apply choose-from-leader-or-character power to another defender card", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -336,4 +366,46 @@ test("Counter Event resolves selected power then conditional trash-to-hand seque
   );
   const view = computeView(resolved.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 4000);
+});
+
+test("condition-failed Counter Event in hand does not poison another legal Counter Event", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const legalCounterEvent = must(p2State.hand[0], "legal counter event");
+  const conditionFailedCounterEvent = must(
+    p2State.hand[1],
+    "condition-failed counter event",
+  );
+  const defenderCharacter = must(p2State.characters[0], "defender character");
+  installCounterPowerThenTrashToHandEvent(state, legalCounterEvent);
+  installConditionCurrentlyFalseCounterEvent(
+    state,
+    conditionFailedCounterEvent,
+  );
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === legalCounterEvent.instanceId &&
+        action.target.instanceId === defenderCharacter.instanceId,
+    ),
+    true,
+  );
+
+  const used = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: legalCounterEvent.instanceId,
+    target: cardRef(defenderCharacter, p2),
+  });
+
+  assert.equal(used.errors, undefined);
+  assert.equal(used.state.pendingDecision?.type, "selectCards");
 });
