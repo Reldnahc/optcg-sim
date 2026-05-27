@@ -9,7 +9,7 @@ import {
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
   parseDevDecklistText,
-  resolveDevDonCount,
+  resolveDevDonCounts,
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
 
@@ -70,7 +70,7 @@ describe("default dev manifest boundary", () => {
     );
   });
 
-  test("dev DON deck count is configurable for fake legality-layer setup", () => {
+  test("dev DON deck counts are configurable per submitted player setup", () => {
     assert.deepEqual(createDevDonDeckCardIds(6), [
       "dev-don-1",
       "dev-don-2",
@@ -79,27 +79,46 @@ describe("default dev manifest boundary", () => {
       "dev-don-5",
       "dev-don-6",
     ]);
-    assert.equal(resolveDevDonCount({ devDonCount: 6, env: {} }), 6);
-    assert.equal(
-      resolveDevDonCount({
-        env: { DEV_DON_DECK_COUNT: "6" },
+    assert.deepEqual(
+      resolveDevDonCounts({
+        devDonCounts: { firstPlayer: 6, secondPlayer: 10 },
+        env: {},
       }),
-      6,
+      [6, 10],
+    );
+    assert.deepEqual(
+      resolveDevDonCounts({
+        env: {
+          DEV_DECK1_DON_DECK_COUNT: "6",
+          DEV_DECK2_DON_DECK_COUNT: "10",
+        },
+      }),
+      [6, 10],
     );
   });
 
   test("rejects invalid dev DON deck count overrides", () => {
     assert.throws(
-      () => resolveDevDonCount({ devDonCount: 0, env: {} }),
-      /DEV_DON_DECK_COUNT must be a positive integer/u,
+      () =>
+        resolveDevDonCounts({
+          devDonCounts: { firstPlayer: 0 },
+          env: {},
+        }),
+      /DEV_DECK1_DON_DECK_COUNT must be a positive integer/u,
     );
     assert.throws(
-      () => resolveDevDonCount({ env: { DEV_DON_DECK_COUNT: "six" } }),
-      /DEV_DON_DECK_COUNT must be a positive integer/u,
+      () =>
+        resolveDevDonCounts({
+          env: { DEV_DECK2_DON_DECK_COUNT: "six" },
+        }),
+      /DEV_DECK2_DON_DECK_COUNT must be a positive integer/u,
     );
     assert.throws(
-      () => resolveDevDonCount({ env: { DEV_DON_DECK_COUNT: "6extra" } }),
-      /DEV_DON_DECK_COUNT must be a positive integer/u,
+      () =>
+        resolveDevDonCounts({
+          env: { DEV_DECK1_DON_DECK_COUNT: "6extra" },
+        }),
+      /DEV_DECK1_DON_DECK_COUNT must be a positive integer/u,
     );
   });
 

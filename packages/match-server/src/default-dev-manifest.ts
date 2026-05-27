@@ -13,14 +13,19 @@ interface CreateDefaultDevMatchSetupInput {
   readonly firstPlayerId: PlayerId;
   readonly playerOrder: readonly [PlayerId, PlayerId];
   readonly createdAt: string;
-  readonly devDonCount?: number;
+  readonly devDonCounts?: DevDonCountOverrides;
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
 }
 
-interface ResolveDevDonCountInput {
-  readonly devDonCount?: number;
+export interface DevDonCountOverrides {
+  readonly firstPlayer?: number;
+  readonly secondPlayer?: number;
+}
+
+interface ResolveDevDonCountsInput {
+  readonly devDonCounts?: DevDonCountOverrides;
   readonly env: Partial<Record<string, string | undefined>>;
 }
 
@@ -108,26 +113,47 @@ export const createDevDonDeckCardIds = (count: number): CardId[] =>
 
 const defaultDevDonCount = 10;
 
-const assertValidDevDonCount = (value: number): number => {
+const assertValidDevDonCount = (value: number, label: string): number => {
   if (!Number.isInteger(value) || value <= 0) {
-    throw new Error("DEV_DON_DECK_COUNT must be a positive integer.");
+    throw new Error(`${label} must be a positive integer.`);
   }
   return value;
 };
 
-export const resolveDevDonCount = (input: ResolveDevDonCountInput): number => {
-  if (input.devDonCount !== undefined) {
-    return assertValidDevDonCount(input.devDonCount);
+const resolveDevDonCount = (params: {
+  readonly override: number | undefined;
+  readonly envValue: string | undefined;
+  readonly label: string;
+}): number => {
+  if (params.override !== undefined) {
+    return assertValidDevDonCount(params.override, params.label);
   }
-  const envValue = input.env["DEV_DON_DECK_COUNT"];
-  if (envValue === undefined || envValue.length === 0) {
+  if (params.envValue === undefined || params.envValue.length === 0) {
     return defaultDevDonCount;
   }
-  if (!/^[1-9]\d*$/u.test(envValue)) {
-    throw new Error("DEV_DON_DECK_COUNT must be a positive integer.");
+  if (!/^[1-9]\d*$/u.test(params.envValue)) {
+    throw new Error(`${params.label} must be a positive integer.`);
   }
-  return assertValidDevDonCount(Number.parseInt(envValue, 10));
+  return assertValidDevDonCount(
+    Number.parseInt(params.envValue, 10),
+    params.label,
+  );
 };
+
+export const resolveDevDonCounts = (
+  input: ResolveDevDonCountsInput,
+): readonly [number, number] => [
+  resolveDevDonCount({
+    override: input.devDonCounts?.firstPlayer,
+    envValue: input.env["DEV_DECK1_DON_DECK_COUNT"],
+    label: "DEV_DECK1_DON_DECK_COUNT",
+  }),
+  resolveDevDonCount({
+    override: input.devDonCounts?.secondPlayer,
+    envValue: input.env["DEV_DECK2_DON_DECK_COUNT"],
+    label: "DEV_DECK2_DON_DECK_COUNT",
+  }),
+];
 
 export const createDevPlayerSetupFromDecklist = (
   playerId: PlayerId,
@@ -173,13 +199,15 @@ export const createDefaultDevMatchSetup = async (
 ): Promise<DevMatchSetup> => {
   const firstPlayerDecklist = await readDefaultDevDecklist("deck1.txt");
   const secondPlayerDecklist = await readDefaultDevDecklist("deck2.txt");
-  const devDonCount = resolveDevDonCount({
-    ...(input.devDonCount === undefined
+  const [firstPlayerDonCount, secondPlayerDonCount] = resolveDevDonCounts({
+    ...(input.devDonCounts === undefined
       ? {}
-      : { devDonCount: input.devDonCount }),
+      : { devDonCounts: input.devDonCounts }),
     env: process.env,
   });
-  const sharedDonDeck = createDevDonDeckCardIds(devDonCount);
+  const firstPlayerDonDeck = createDevDonDeckCardIds(firstPlayerDonCount);
+  const secondPlayerDonDeck = createDevDonDeckCardIds(secondPlayerDonCount);
+  const devDonCount = Math.max(firstPlayerDonCount, secondPlayerDonCount);
   const cache =
     input.fetchCard === undefined
       ? await createRedisCardDataCache({
@@ -211,13 +239,13 @@ export const createDefaultDevMatchSetup = async (
         input.playerOrder[0],
         firstPlayerDecklist,
         cardManifest,
-        sharedDonDeck,
+        firstPlayerDonDeck,
       ),
       createDevPlayerSetupFromDecklist(
         input.playerOrder[1],
         secondPlayerDecklist,
         cardManifest,
-        sharedDonDeck,
+        secondPlayerDonDeck,
       ),
     ],
     cardManifest,
