@@ -41,6 +41,7 @@ type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
 type ConditionalSequenceEffect = Extract<Effect, { type: "conditional" }> & {
   then: SequenceEffect;
 };
+type ConditionalEffect = Extract<Effect, { type: "conditional" }>;
 type SavedTargetContinuousEffect = (
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
@@ -70,6 +71,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SavedTargetContinuousEffect
     | ConditionalContinuousEffect
     | ConditionalSequenceEffect
+    | ConditionalEffect
     | KoEffect;
 };
 
@@ -165,6 +167,11 @@ export const flattenSequenceEffect = (
   }
   return { ...effect, effects };
 };
+
+const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
+  type: "sequence",
+  effects: [{ connector: "always", effect }],
+});
 
 const toFlattenedSequenceBlock = (
   effectBlock: EffectDefinition["effects"][number] | undefined,
@@ -453,15 +460,25 @@ const isSupportedConditionalContinuousSegment = (
   isSupportedQueuedEffectConditionShape(effect.if) &&
   isSupportedContinuousQueueEffect(effect.then);
 
-const isSupportedConditionalSequenceSegment = (
+const isSupportedConditionalSegment = (
   effect: SequenceSegmentEffect,
-): effect is ConditionalSequenceEffect =>
-  effect.type === "conditional" &&
-  effect.else === undefined &&
-  effect.then.type === "sequence" &&
-  isSupportedQueuedEffectConditionShape(effect.if) &&
-  flattenSequenceEffect(effect.then) !== null &&
-  flattenSequenceEffect(effect.then)?.effects.every((segment, index) => {
+): effect is ConditionalEffect => {
+  if (
+    effect.type !== "conditional" ||
+    effect.else !== undefined ||
+    !isSupportedQueuedEffectConditionShape(effect.if)
+  ) {
+    return false;
+  }
+  const thenSequence =
+    effect.then.type === "sequence"
+      ? effect.then
+      : toSingleEffectSequence(effect.then);
+  const flattenedThen = flattenSequenceEffect(thenSequence);
+  if (flattenedThen === null) {
+    return false;
+  }
+  return flattenedThen.effects.every((segment, index) => {
     if (index === 0 && segment.connector !== "always") {
       return false;
     }
@@ -493,7 +510,8 @@ const isSupportedConditionalSequenceSegment = (
       return true;
     }
     return false;
-  }) === true;
+  });
+};
 
 const isActivateMainAreaZone = (
   zone: EffectQueueEntry["source"]["zone"],
@@ -618,7 +636,7 @@ export const toSupportedSequenceBlock = (
       if (isSupportedConditionalContinuousSegment(segment.effect)) {
         return true;
       }
-      if (isSupportedConditionalSequenceSegment(segment.effect)) {
+      if (isSupportedConditionalSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return true;
       }

@@ -88,6 +88,18 @@ type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type TrashEffect = Extract<Effect, { type: "trash" }> & {
   target: Extract<Target, { type: "all" }>;
 };
+type ContinuousResolvedEffect = Extract<
+  Effect,
+  {
+    type:
+      | "modifyPower"
+      | "modifyCost"
+      | "invalidateEffects"
+      | "cannotBecomeActive"
+      | "cannotAttack"
+      | "cannotBlock";
+  }
+>;
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -126,6 +138,16 @@ const createUnsupportedTrashDecision: CreateTrashFromHandSequenceDecision = (
   ok: false,
   state,
 });
+
+const isContinuousResolvedEffect = (
+  effect: Effect,
+): effect is ContinuousResolvedEffect =>
+  effect.type === "modifyPower" ||
+  effect.type === "modifyCost" ||
+  effect.type === "invalidateEffects" ||
+  effect.type === "cannotBecomeActive" ||
+  effect.type === "cannotAttack" ||
+  effect.type === "cannotBlock";
 
 const selectedCardRefsForMove = (
   ledgers: SegmentLedgers,
@@ -516,6 +538,16 @@ const conditionalThenSequencePath = (
   index: number,
 ): string[] => [...effectPath, String(index), "then", "sequence"];
 
+const conditionalThenSingleEffectPath = (
+  effectPath: readonly string[],
+  index: number,
+): string[] => [...effectPath, String(index), "then", "single"];
+
+const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
+  type: "sequence",
+  effects: [{ connector: "always", effect }],
+});
+
 const resolveSequenceForPath = (
   effect: SequenceEffect,
   effectPath: readonly string[],
@@ -534,22 +566,26 @@ const resolveSequenceForPath = (
     const segmentIndex = Number(effectPath[index]);
     const thenToken = effectPath[index + 1];
     const sequenceToken = effectPath[index + 2];
-    if (
-      !Number.isSafeInteger(segmentIndex) ||
-      thenToken !== "then" ||
-      sequenceToken !== "sequence"
-    ) {
+    if (!Number.isSafeInteger(segmentIndex) || thenToken !== "then") {
       return undefined;
     }
     const segment = current.effects[segmentIndex];
-    if (
-      segment === undefined ||
-      segment.effect.type !== "conditional" ||
-      segment.effect.then.type !== "sequence"
-    ) {
+    if (segment === undefined || segment.effect.type !== "conditional") {
       return undefined;
     }
-    current = segment.effect.then;
+    if (sequenceToken === "sequence") {
+      if (segment.effect.then.type !== "sequence") {
+        return undefined;
+      }
+      current = segment.effect.then;
+    } else if (sequenceToken === "single") {
+      if (segment.effect.then.type === "sequence") {
+        return undefined;
+      }
+      current = toSingleEffectSequence(segment.effect.then);
+    } else {
+      return undefined;
+    }
     index += 3;
   }
   return current;
@@ -1058,16 +1094,27 @@ const continueNoDecisionSegments = (
         continue;
       }
       let changedState = false;
-      if (segment.effect.then.type === "sequence") {
+      if (
+        segment.effect.then.type === "sequence" ||
+        !isContinuousResolvedEffect(segment.effect.then)
+      ) {
+        const thenSequence =
+          segment.effect.then.type === "sequence"
+            ? segment.effect.then
+            : toSingleEffectSequence(segment.effect.then);
+        const thenPath =
+          segment.effect.then.type === "sequence"
+            ? conditionalThenSequencePath(effectPath, index)
+            : conditionalThenSingleEffectPath(effectPath, index);
         const nested = continueNoDecisionSegments(
           nextState,
           entry,
-          segment.effect.then,
+          thenSequence,
           0,
           nextLedgers,
           createTrashDecision,
           incrementStateSeqForDraw,
-          conditionalThenSequencePath(effectPath, index),
+          thenPath,
         );
         if (!nested.ok) {
           return { ok: false };
@@ -1088,18 +1135,7 @@ const continueNoDecisionSegments = (
         const records = createContinuousRecordsForResolvedEffect(
           nextState,
           entry,
-          segment.effect.then as Extract<
-            Effect,
-            {
-              type:
-                | "modifyPower"
-                | "modifyCost"
-                | "invalidateEffects"
-                | "cannotBecomeActive"
-                | "cannotAttack"
-                | "cannotBlock";
-            }
-          >,
+          segment.effect.then,
         );
         if (records === null) {
           return { ok: false };

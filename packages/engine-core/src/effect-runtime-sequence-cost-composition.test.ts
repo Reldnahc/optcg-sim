@@ -278,19 +278,10 @@ const restSelfMoveCardsThenOpponentTrashSequence = (): Extract<
         type: "conditional",
         if: { type: "handCount", player: "opponent", op: "gte", value: 6 },
         then: {
-          type: "sequence",
-          effects: [
-            {
-              id: "opponent-trash-from-hand",
-              connector: "always",
-              effect: {
-                type: "trashFromHand",
-                player: "opponent",
-                chooser: "opponent",
-                count: 1,
-              },
-            },
-          ],
+          type: "trashFromHand",
+          player: "opponent",
+          chooser: "opponent",
+          count: 1,
         },
       },
     },
