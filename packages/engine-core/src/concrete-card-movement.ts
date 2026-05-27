@@ -12,13 +12,19 @@ import { reindexZoneCards } from "./action-state.js";
 
 export const KO_TRASH_MOVEMENT_REASON = "ko";
 
-type TrashSourceZone = "characterArea" | "deck" | "hand" | "stageArea";
+type TrashSourceZone =
+  | "characterArea"
+  | "deck"
+  | "hand"
+  | "noZone"
+  | "stageArea";
 type TrashInsertPosition = "bottom" | "top";
 type CardMovedPayloadShape = "publicZoneNames" | "zoneRefs";
 
 type ConcreteTrashMovementReason =
   | "counter"
   | "playCard"
+  | "lifeTriggerResolved"
   | "moveCards"
   | "searchRevealRemainder"
   | "trashFromHand"
@@ -52,11 +58,14 @@ const sourceCollection = (
   if (sourceZone === "stageArea") {
     return player.stage === undefined ? [] : [player.stage];
   }
+  if (sourceZone === "noZone") {
+    return [];
+  }
   return player[sourceZone];
 };
 
 const sourceSlot = (
-  sourceZone: Exclude<TrashSourceZone, "stageArea">,
+  sourceZone: Exclude<TrashSourceZone, "noZone" | "stageArea">,
 ): NonNullable<CardInstance["zone"]["slot"]> =>
   sourceZone === "characterArea" ? "character" : sourceZone;
 
@@ -156,6 +165,8 @@ export const moveConcreteCardsToTrash = (
     if (player.stage !== undefined && movedIds.has(player.stage.instanceId)) {
       delete nextPlayer.stage;
     }
+  } else if (options.sourceZone === "noZone") {
+    // No source collection owns this card at cleanup time.
   } else if (options.sourceZone === "characterArea") {
     nextPlayer.characters = reindexZoneCards(
       [...remainingSourceCards],

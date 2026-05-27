@@ -103,3 +103,21 @@ test("search reveal trash remainder delegates concrete movement", () => {
     "search reveal trash remainder must not construct trash-zone cards directly",
   );
 });
+
+test("life trigger cleanup delegates concrete movement", () => {
+  const source = readSource(
+    "packages/engine-core/src/effect-runtime-life-trigger-cleanup.ts",
+  );
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "life trigger cleanup must not hand-roll cardTrashed",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "life trigger cleanup must not construct trash-zone cards directly",
+  );
+});
