@@ -38,6 +38,7 @@ describe("modal frame", () => {
         },
         disabled: false,
         onToggleCard: () => undefined,
+        onChooseTrigger: () => undefined,
         onQuantity: () => undefined,
         onOption: () => undefined,
         onActionOption: () => undefined,

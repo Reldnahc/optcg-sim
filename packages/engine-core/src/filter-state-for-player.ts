@@ -13,6 +13,7 @@ import type {
   PlayerState,
   PlayerView,
   PublicCardView,
+  PublicChooseTriggerOrderDecision,
   PublicDecision,
   PublicLegalAction,
   PublicPendingDecision,
@@ -506,6 +507,34 @@ const toPublicDecision = (
       cards: [...pending.cards],
       destination: pending.destination,
     };
+  }
+  if (pending.type === "chooseTriggerOrder") {
+    const visibleByInstanceId = new Map(
+      visibleCardsForPlayer(state, playerId).map((visible) => [
+        visible.card.instanceId,
+        visible,
+      ]),
+    );
+    const queueById = new Map(
+      state.effectQueue.map((entry) => [String(entry.id), entry]),
+    );
+    return {
+      ...base,
+      type: "chooseTriggerOrder",
+      choices: pending.triggerIds.map((triggerId) => {
+        const entry = queueById.get(triggerId);
+        const visible =
+          entry === undefined
+            ? undefined
+            : visibleByInstanceId.get(entry.source.instanceId);
+        return {
+          triggerId,
+          ...(visible === undefined
+            ? {}
+            : { source: toCardRef(visible.card, visible.playerId) }),
+        };
+      }),
+    } satisfies PublicChooseTriggerOrderDecision;
   }
   return { ...base, type: pending.type };
 };

@@ -3,6 +3,7 @@ import type {
   DecisionId,
   DecisionResponse,
   InstanceId,
+  PublicChooseTriggerOrderDecision,
   PublicChooseQuantityDecision,
   PublicOrderCardsDecision,
   PublicPendingDecision,
@@ -22,6 +23,11 @@ export type DecisionDraft =
       kind: "orderCards";
       decisionId: DecisionId;
       orderedInstanceIds: InstanceId[];
+    }
+  | {
+      kind: "orderTriggers";
+      decisionId: DecisionId;
+      orderedTriggerIds: string[];
     }
   | {
       kind: "chooseQuantity";
@@ -65,6 +71,20 @@ export type DecisionModalModel =
       cards: PublicOrderCardsDecision["cards"];
     }
   | {
+      kind: "orderTriggers";
+      decisionId: DecisionId;
+      prompt: string;
+      canConfirm: boolean;
+      orderedTriggerIds: string[];
+      choices: Array<{
+        triggerId: string;
+        source?: CardRef;
+        selected: boolean;
+        orderIndex?: number;
+      }>;
+      confirmLabel: string;
+    }
+  | {
       kind: "chooseQuantity";
       decisionId: DecisionId;
       prompt: string;
@@ -101,6 +121,7 @@ type CardDecision =
   | PublicSelectCardsDecision
   | PublicSelectTargetsDecision
   | PublicOrderCardsDecision
+  | PublicChooseTriggerOrderDecision
   | PublicChooseQuantityDecision;
 
 const suppressedDecisionIdPrefixes = ["decision:counterStep:pass:"] as const;
@@ -151,7 +172,8 @@ const assertDraftForDecision = (
 ): void => {
   const kindMatches =
     draft.kind === decision.type ||
-    (decision.type === "selectTargets" && draft.kind === "selectCards");
+    (decision.type === "selectTargets" && draft.kind === "selectCards") ||
+    (decision.type === "chooseTriggerOrder" && draft.kind === "orderTriggers");
   if (draft.decisionId !== decision.id || !kindMatches) {
     throw new Error("Decision draft does not match the active decision.");
   }
@@ -210,6 +232,11 @@ const orderCardIds = (
   decision: PublicOrderCardsDecision,
 ): ReadonlySet<string> =>
   new Set(decision.cards.map((card) => instanceKey(card.instanceId)));
+
+const triggerChoiceIds = (
+  decision: PublicChooseTriggerOrderDecision,
+): ReadonlySet<string> =>
+  new Set(decision.choices.map((choice) => choice.triggerId));
 
 const isSelectConfirmable = (
   decision: PublicSelectCardsDecision | PublicSelectTargetsDecision,
@@ -272,6 +299,13 @@ export const createDecisionDraft = (
       kind: "orderCards",
       decisionId: decision.id,
       orderedInstanceIds: decision.cards.map((card) => card.instanceId),
+    };
+  }
+  if (decision.type === "chooseTriggerOrder") {
+    return {
+      kind: "orderTriggers",
+      decisionId: decision.id,
+      orderedTriggerIds: [],
     };
   }
   if (decision.type === "chooseQuantity") {
@@ -410,6 +444,32 @@ export const moveOrderedCardNear = (
   };
 };
 
+export const chooseDecisionTrigger = (
+  decision: PublicChooseTriggerOrderDecision,
+  draft: DecisionDraft,
+  triggerId: string,
+): DecisionDraft => {
+  assertDraftForDecision(decision, draft);
+  if (draft.kind !== "orderTriggers") {
+    throw new Error("Decision draft is not an orderTriggers draft.");
+  }
+  if (!triggerChoiceIds(decision).has(triggerId)) {
+    return draft;
+  }
+  if (draft.orderedTriggerIds.includes(triggerId)) {
+    return {
+      ...draft,
+      orderedTriggerIds: draft.orderedTriggerIds.filter(
+        (orderedId) => orderedId !== triggerId,
+      ),
+    };
+  }
+  return {
+    ...draft,
+    orderedTriggerIds: [...draft.orderedTriggerIds, triggerId],
+  };
+};
+
 export const setDecisionQuantity = (
   draft: DecisionDraft,
   quantity: number,
@@ -488,6 +548,33 @@ export const createDecisionModalModel = (
       canConfirm: true,
       orderedInstanceIds: draft.orderedInstanceIds,
       cards: decision.cards,
+    };
+  }
+  if (decision.type === "chooseTriggerOrder") {
+    assertDraftForDecision(decision, draft);
+    if (draft.kind !== "orderTriggers") {
+      throw new Error("Decision draft is not an orderTriggers draft.");
+    }
+    const orderedIndexes = new Map(
+      draft.orderedTriggerIds.map((triggerId, index) => [triggerId, index]),
+    );
+    return {
+      kind: "orderTriggers",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      canConfirm: draft.orderedTriggerIds.length === decision.choices.length,
+      orderedTriggerIds: draft.orderedTriggerIds,
+      choices: decision.choices.map((choice) => {
+        const triggerId = choice.triggerId;
+        const orderIndex = orderedIndexes.get(triggerId);
+        return {
+          triggerId,
+          ...(choice.source === undefined ? {} : { source: choice.source }),
+          selected: orderIndex !== undefined,
+          ...(orderIndex === undefined ? {} : { orderIndex }),
+        };
+      }),
+      confirmLabel: "Confirm order",
     };
   }
   if (decision.type === "chooseQuantity") {
@@ -594,6 +681,15 @@ export const buildDecisionResponse = (
       throw new Error("Decision draft is not an orderCards draft.");
     }
     return { type: "orderedIds", ids: draft.orderedInstanceIds.map(String) };
+  }
+  if (decision.type === "chooseTriggerOrder") {
+    if (!model.canConfirm) {
+      throw new Error("Decision draft is not confirmable.");
+    }
+    if (draft.kind !== "orderTriggers") {
+      throw new Error("Decision draft is not an orderTriggers draft.");
+    }
+    return { type: "orderedIds", ids: draft.orderedTriggerIds };
   }
   if (decision.type === "chooseQuantity") {
     if (!model.canConfirm) {

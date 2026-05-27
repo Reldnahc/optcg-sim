@@ -22,6 +22,7 @@
 }
 
 .decision-choice.decision-card-choice {
+  position: relative;
   width: auto;
   height: var(--card-height);
   aspect-ratio: 5 / 7;
@@ -29,6 +30,21 @@
   padding: 0;
   overflow: hidden;
   background: transparent;
+}
+
+.decision-order-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffdc62;
+  color: #211d1b;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .decision-card-choice.is-disabled {

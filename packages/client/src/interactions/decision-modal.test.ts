@@ -7,6 +7,7 @@ import type {
   DecisionId,
   InstanceId,
   PlayerId,
+  PublicChooseTriggerOrderDecision,
   PublicChooseQuantityDecision,
   PublicOrderCardsDecision,
   PublicPendingDecision,
@@ -20,6 +21,7 @@ import {
   createDecisionModalModel,
   getPendingDecisionInteractionMode,
   isDecisionModalSuppressed,
+  chooseDecisionTrigger,
   moveOrderedCardNear,
   setDecisionActionOption,
   setDecisionQuantity,
@@ -233,6 +235,48 @@ describe("headless decision modal models", () => {
     assert.equal(model.kind, "orderCards");
     assert.deepEqual(model.orderedInstanceIds, ["3", "1", "2"]);
     assert.deepEqual(response, { type: "orderedIds", ids: ["3", "1", "2"] });
+  });
+
+  test("chooseTriggerOrder draft uses card-choice selection order and builds orderedIds response", () => {
+    const decision = {
+      ...baseDecision,
+      type: "chooseTriggerOrder",
+      choices: [
+        { triggerId: "trigger-1", source: cardRef("1") },
+        { triggerId: "trigger-2", source: cardRef("2") },
+        { triggerId: "trigger-3" },
+      ],
+    } satisfies PublicChooseTriggerOrderDecision;
+    let draft = createDecisionDraft(decision);
+    draft = chooseDecisionTrigger(decision, draft, "trigger-3");
+    draft = chooseDecisionTrigger(decision, draft, "trigger-1");
+    draft = chooseDecisionTrigger(decision, draft, "trigger-2");
+
+    const model = createDecisionModalModel(decision, draft);
+    const response = buildDecisionResponse(decision, draft);
+
+    assert.equal(model.kind, "orderTriggers");
+    assert.deepEqual(model.orderedTriggerIds, [
+      "trigger-3",
+      "trigger-1",
+      "trigger-2",
+    ]);
+    assert.deepEqual(
+      model.choices.map((choice) => ({
+        triggerId: choice.triggerId,
+        selected: choice.selected,
+        orderIndex: choice.orderIndex,
+      })),
+      [
+        { triggerId: "trigger-1", selected: true, orderIndex: 1 },
+        { triggerId: "trigger-2", selected: true, orderIndex: 2 },
+        { triggerId: "trigger-3", selected: true, orderIndex: 0 },
+      ],
+    );
+    assert.deepEqual(response, {
+      type: "orderedIds",
+      ids: ["trigger-3", "trigger-1", "trigger-2"],
+    });
   });
 
   test("chooseQuantity draft builds a quantity response only inside bounds", () => {

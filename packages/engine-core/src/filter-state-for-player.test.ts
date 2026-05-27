@@ -337,7 +337,7 @@ test("search selectCards projection includes visible nonselectable choices witho
   );
 });
 
-test("chooseTriggerOrder projection stays metadata-only and hides private ids from non-recipient", () => {
+test("chooseTriggerOrder projection exposes trigger choices and hides private source cards", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
@@ -397,6 +397,7 @@ test("chooseTriggerOrder projection stays metadata-only and hides private ids fr
     playerId: p1,
     prompt: "Choose trigger resolution order.",
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
+    choices: [{ triggerId: toQueueEntryId("queue-hidden-a") }],
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(

@@ -37,6 +37,7 @@ import {
   COUNTER_TARGET_CHOICE_ACTION_INDEX,
   createCollapsedCounterActions,
   createCounterTargetChoice,
+  chooseDecisionTrigger,
   selectedDonAttachmentMenuAction,
   moveOrderedCardNear,
   setDecisionActionOption,
@@ -87,6 +88,7 @@ export interface MatchClientUi {
   setDecisionQuantityValue: (quantity: number) => void;
   setDecisionOptionValue: (option: string) => void;
   setDecisionActionOptionValue: (actionIndex: number) => void;
+  chooseDecisionTriggerValue: (triggerId: string) => void;
   confirmDecision: () => Promise<void>;
   createNewMatch: () => Promise<void>;
 }
@@ -940,6 +942,24 @@ export const useMatchClient = (): MatchClientUi => {
     [modalResponseActions, pendingDecision],
   );
 
+  const chooseDecisionTriggerValue = useCallback(
+    (triggerId: string): void => {
+      if (pendingDecision?.type !== "chooseTriggerOrder") {
+        return;
+      }
+      setDecisionDraft((draft) =>
+        chooseDecisionTrigger(
+          pendingDecision,
+          draft?.decisionId === pendingDecision.id
+            ? draft
+            : createDecisionDraft(pendingDecision, modalResponseActions),
+          triggerId,
+        ),
+      );
+    },
+    [modalResponseActions, pendingDecision],
+  );
+
   return {
     state: {
       ...(clientState === undefined ? {} : { clientState }),
@@ -967,6 +987,7 @@ export const useMatchClient = (): MatchClientUi => {
     setDecisionQuantityValue,
     setDecisionOptionValue,
     setDecisionActionOptionValue,
+    chooseDecisionTriggerValue,
     confirmDecision,
     createNewMatch,
   };

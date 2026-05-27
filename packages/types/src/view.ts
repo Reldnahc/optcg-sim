@@ -131,17 +131,30 @@ export interface PublicOrderCardsDecision extends PublicDecision<"orderCards"> {
   destination: Zone;
 }
 
+export interface PublicChooseTriggerOrderDecision extends PublicDecision<"chooseTriggerOrder"> {
+  type: "chooseTriggerOrder";
+  choices: Array<{
+    triggerId: string;
+    source?: CardRef;
+  }>;
+}
+
 export type PublicPendingDecision =
   | PublicDecision<
       Exclude<
         PendingDecision["type"],
-        "chooseQuantity" | "selectCards" | "selectTargets" | "orderCards"
+        | "chooseQuantity"
+        | "selectCards"
+        | "selectTargets"
+        | "orderCards"
+        | "chooseTriggerOrder"
       >
     >
   | PublicChooseQuantityDecision
   | PublicSelectCardsDecision
   | PublicSelectTargetsDecision
-  | PublicOrderCardsDecision;
+  | PublicOrderCardsDecision
+  | PublicChooseTriggerOrderDecision;
 
 export type PublicLegalAction =
   | { type: "playCard"; card: CardRef; costPaymentRequired?: boolean }

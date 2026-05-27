@@ -24,12 +24,18 @@ import {
 import { advanceEndPhase, advanceRefreshPhase } from "./phases.js";
 
 const removeFieldCardsFromHands = (state: {
-  players: Record<string, { hand: CardInstance[]; characters: CardInstance[] }>;
+  players: Record<
+    string,
+    { hand: CardInstance[]; characters: CardInstance[]; deck?: CardInstance[] }
+  >;
 }): void => {
   for (const player of Object.values(state.players)) {
-    const fieldIds = new Set(player.characters.map((card) => card.instanceId));
+    const nonHandIds = new Set([
+      ...player.characters.map((card) => card.instanceId),
+      ...(player.deck ?? []).map((card) => card.instanceId),
+    ]);
     player.hand = player.hand
-      .filter((card) => !fieldIds.has(card.instanceId))
+      .filter((card) => !nonHandIds.has(card.instanceId))
       .map((card, index) => ({
         ...card,
         zone: {
@@ -395,6 +401,52 @@ test("ordered draw before target pause preserves prior runtime events in returne
   assert.deepEqual(
     result.state.eventJournal.slice(beforeJournalLength),
     result.events,
+  );
+});
+
+test("ordered target pause before draw resumes the remaining queue after target selection", () => {
+  const { state, drawEntry, targetEntry } = mixedOrderedDrawThenTargetState();
+  removeFieldCardsFromHands(state);
+  const paused = processEffectRuntime(state);
+  const orderDecision = must(
+    paused.state.pendingDecision,
+    "choose order decision",
+  );
+  assert.equal(orderDecision.type, "chooseTriggerOrder");
+  const targetPaused = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: orderDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [targetEntry.id, drawEntry.id],
+    },
+  });
+  const targetDecision = must(
+    targetPaused.state.pendingDecision,
+    "target decision",
+  );
+  assert.equal(targetDecision.type, "selectTargets");
+
+  const result = applyAction(targetPaused.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: {
+      type: "targets",
+      targets: [must(targetDecision.candidates[0], "first target").card],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "effectResolved")
+      .map(
+        (event) =>
+          (event.payload as { queueEntryId: QueueEntryId }).queueEntryId,
+      ),
+    [targetEntry.id, drawEntry.id],
   );
 });
 

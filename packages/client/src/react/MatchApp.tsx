@@ -106,6 +106,7 @@ export const MatchApp = (): React.JSX.Element => {
         disabled={client.state.actionInFlight}
         cardDisplay={cardDisplay}
         onToggleCard={client.toggleDecisionCard}
+        onChooseTrigger={client.chooseDecisionTriggerValue}
         onQuantity={client.setDecisionQuantityValue}
         onOption={client.setDecisionOptionValue}
         onActionOption={client.setDecisionActionOptionValue}

@@ -10,6 +10,7 @@ export interface DecisionModalHostProps {
     | ((card: CardRef) => { name: string; imageUrl?: string })
     | undefined;
   onToggleCard: (instanceId: InstanceId) => void;
+  onChooseTrigger: (triggerId: string) => void;
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
   onActionOption: (actionIndex: number) => void;
@@ -21,6 +22,7 @@ export const DecisionModalHost = ({
   disabled,
   cardDisplay,
   onToggleCard,
+  onChooseTrigger,
   onQuantity,
   onOption,
   onActionOption,
@@ -75,6 +77,48 @@ export const DecisionModalHost = ({
               <span>{index + 1}</span>
             </div>
           ))}
+        </div>
+      ) : null}
+      {model.kind === "orderTriggers" ? (
+        <div className="decision-card-grid">
+          {model.choices.map((choice) => {
+            const display =
+              choice.source === undefined
+                ? { name: choice.triggerId }
+                : (cardDisplay?.(choice.source) ?? {
+                    name: String(choice.source.cardId),
+                  });
+            return (
+              <button
+                key={choice.triggerId}
+                className={`decision-choice decision-card-choice ${
+                  choice.selected ? "is-selected" : ""
+                }`}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onChooseTrigger(choice.triggerId);
+                }}
+              >
+                {display.imageUrl === undefined ? (
+                  <span className="decision-card-placeholder">
+                    {display.name}
+                  </span>
+                ) : (
+                  <img
+                    className="decision-card-face"
+                    src={display.imageUrl}
+                    alt={display.name}
+                  />
+                )}
+                {choice.orderIndex === undefined ? null : (
+                  <span className="decision-order-badge">
+                    {choice.orderIndex + 1}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       ) : null}
       {model.kind === "chooseQuantity" ? (
@@ -136,7 +180,7 @@ export const DecisionModalHost = ({
         disabled={disabled || !model.canConfirm}
         onClick={onConfirm}
       >
-        Confirm
+        {"confirmLabel" in model ? model.confirmLabel : "Confirm"}
       </button>
     </ModalFrame>
   );
