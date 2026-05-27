@@ -1,1 +1,1 @@
-export { parseKeyword } from "./keyword.js";
+export { parseKeyword, parseRawKeywordLine } from "./keyword.js";

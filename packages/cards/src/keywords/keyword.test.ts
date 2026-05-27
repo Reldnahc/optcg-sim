@@ -23,4 +23,16 @@ describe("keyword parser", () => {
       rest: "",
     });
   });
+
+  it("ignores parenthetical reminder text after a raw keyword", () => {
+    expect(
+      parseKeyword({
+        text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+      }),
+    ).toEqual({
+      keyword: "blocker",
+      evidence: ["keyword:anySupported"],
+      rest: "",
+    });
+  });
 });

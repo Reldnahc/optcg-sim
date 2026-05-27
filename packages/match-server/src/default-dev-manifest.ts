@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
   createRedisCardDataCache,
@@ -17,35 +18,27 @@ interface CreateDefaultDevMatchSetupInput {
   readonly redisUrl?: string;
 }
 
-const devLeaderCardId = "OP13-079" as CardId;
-
 export interface DevDeckCardEntry {
   readonly cardId: CardId;
   readonly count: number;
 }
 
-const firstPlayerDevDeckEntries = [
-  { cardId: "OP13-080" as CardId, count: 4 },
-  { cardId: "OP13-082" as CardId, count: 4 },
-  { cardId: "OP13-083" as CardId, count: 4 },
-  { cardId: "OP13-084" as CardId, count: 4 },
-  { cardId: "OP13-089" as CardId, count: 4 },
-  { cardId: "OP13-091" as CardId, count: 4 },
-  { cardId: "OP13-099" as CardId, count: 1 },
-  { cardId: "OP13-086" as CardId, count: 4 },
-  { cardId: "OP05-097" as CardId, count: 1 },
-  { cardId: "OP13-096" as CardId, count: 4 },
-  { cardId: "OP13-097" as CardId, count: 4 },
-  { cardId: "OP13-098" as CardId, count: 4 },
-  { cardId: "OP11-097" as CardId, count: 3 },
-  { cardId: "OP14-096" as CardId, count: 3 },
-  { cardId: "OP05-082" as CardId, count: 3 },
-  { cardId: "OP13-092" as CardId, count: 3 },
-] as const;
+export interface DevDecklist {
+  readonly leaderCardId: CardId;
+  readonly deckEntries: readonly DevDeckCardEntry[];
+}
 
-const secondPlayerDevDeckEntries: readonly DevDeckCardEntry[] = [
-  ...firstPlayerDevDeckEntries,
-];
+interface DevLeaderManifest {
+  readonly cards: Partial<
+    Record<
+      CardId,
+      {
+        readonly category?: string;
+        readonly life?: number;
+      }
+    >
+  >;
+}
 
 export const createDevDeckCardIds = (
   entries: readonly DevDeckCardEntry[],
@@ -55,18 +48,51 @@ export const createDevDeckCardIds = (
   );
 
 export const createDevManifestCardIds = (
-  leaderCardId: CardId,
-  ...entryGroups: readonly (readonly DevDeckCardEntry[])[]
+  ...decklists: readonly DevDecklist[]
 ): CardId[] => {
-  const cardIds = [
-    leaderCardId,
-    ...entryGroups.flatMap((entries) => entries.map((entry) => entry.cardId)),
-  ];
+  const cardIds = decklists.flatMap((decklist) => [
+    decklist.leaderCardId,
+    ...decklist.deckEntries.map((entry) => entry.cardId),
+  ]);
   return [...new Set(cardIds)];
 };
 
-const repeatedDeck = (entries: readonly DevDeckCardEntry[]): CardId[] =>
-  createDevDeckCardIds(entries);
+const decklistLinePattern = /^(?<count>[1-9]\d*)x(?<cardId>[A-Z0-9-]+)$/u;
+
+export const parseDevDecklistText = (text: string): DevDecklist => {
+  const lines = text
+    .split(/\r?\n/u)
+    .map((line, index) => ({ line: line.trim(), lineNumber: index + 1 }))
+    .filter((entry) => entry.line.length > 0);
+  const first = lines[0];
+  if (first === undefined) {
+    throw new Error("Dev decklist must include a leader line.");
+  }
+  const entries = lines.map(({ line, lineNumber }) => {
+    const match = decklistLinePattern.exec(line);
+    if (match?.groups === undefined) {
+      throw new Error(
+        `invalid dev decklist line ${String(lineNumber)}: ${line}`,
+      );
+    }
+    return {
+      cardId: match.groups["cardId"] as CardId,
+      count: Number.parseInt(match.groups["count"] ?? "", 10),
+      lineNumber,
+    };
+  });
+  const leader = entries[0];
+  if (leader === undefined || leader.count !== 1) {
+    throw new Error("Dev decklist first line must be the leader as 1xCARDID.");
+  }
+  return {
+    leaderCardId: leader.cardId,
+    deckEntries: entries.slice(1).map((entry) => ({
+      cardId: entry.cardId,
+      count: entry.count,
+    })),
+  };
+};
 
 const donDeck = (): CardId[] =>
   Array.from(
@@ -74,23 +100,50 @@ const donDeck = (): CardId[] =>
     (_, index) => `dev-don-${String(index + 1)}` as CardId,
   );
 
-const playerSetup = (
+export const createDevPlayerSetupFromDecklist = (
   playerId: PlayerId,
-  deckCardIds: CardId[],
+  decklist: DevDecklist,
+  manifest: DevLeaderManifest,
   donDeckCardIds: CardId[],
-): DevMatchPlayerSetup => ({
-  playerId,
-  leaderCardId: devLeaderCardId,
-  leaderLifeCount: 4,
-  deckCardIds,
-  donDeckCardIds,
-});
+): DevMatchPlayerSetup => {
+  const leader = manifest.cards[decklist.leaderCardId];
+  if (leader?.category !== "leader") {
+    throw new Error(
+      `Dev decklist leader ${String(decklist.leaderCardId)} must resolve to a Leader card.`,
+    );
+  }
+  const leaderLife = leader.life;
+  if (
+    typeof leaderLife !== "number" ||
+    !Number.isInteger(leaderLife) ||
+    leaderLife < 0
+  ) {
+    throw new Error(
+      `Dev decklist leader ${String(decklist.leaderCardId)} must have a life count.`,
+    );
+  }
+  return {
+    playerId,
+    leaderCardId: decklist.leaderCardId,
+    leaderLifeCount: leaderLife,
+    deckCardIds: createDevDeckCardIds(decklist.deckEntries),
+    donDeckCardIds,
+  };
+};
+
+const readDefaultDevDecklist = async (fileName: "deck1.txt" | "deck2.txt") =>
+  parseDevDecklistText(
+    await readFile(
+      new URL(`../dev-decks/${fileName}`, import.meta.url),
+      "utf8",
+    ),
+  );
 
 export const createDefaultDevMatchSetup = async (
   input: CreateDefaultDevMatchSetupInput,
 ): Promise<DevMatchSetup> => {
-  const firstPlayerDeck = repeatedDeck(firstPlayerDevDeckEntries);
-  const secondPlayerDeck = repeatedDeck(secondPlayerDevDeckEntries);
+  const firstPlayerDecklist = await readDefaultDevDecklist("deck1.txt");
+  const secondPlayerDecklist = await readDefaultDevDecklist("deck2.txt");
   const sharedDonDeck = donDeck();
   const cache =
     input.fetchCard === undefined
@@ -98,31 +151,41 @@ export const createDefaultDevMatchSetup = async (
           url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
         })
       : undefined;
+  const cardManifest = await buildDevMatchCardManifestFromPoneglyphIds({
+    cardIds: createDevManifestCardIds(
+      firstPlayerDecklist,
+      secondPlayerDecklist,
+    ),
+    createdAt: input.createdAt,
+    devDonCount: 10,
+    versions: {
+      cardDataVersion: "live-poneglyph-dev-v1",
+      effectDefinitionsVersion: "generated-dev-v2",
+    },
+    ...(cache === undefined ? {} : { cache }),
+    ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
+    ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+  });
   return {
     matchId: input.matchId,
     firstPlayerId: input.firstPlayerId,
     rngSeed: "op13-dev-local-seed",
     playerOrder: input.playerOrder,
     players: [
-      playerSetup(input.playerOrder[0], firstPlayerDeck, sharedDonDeck),
-      playerSetup(input.playerOrder[1], secondPlayerDeck, sharedDonDeck),
-    ],
-    cardManifest: await buildDevMatchCardManifestFromPoneglyphIds({
-      cardIds: createDevManifestCardIds(
-        devLeaderCardId,
-        firstPlayerDevDeckEntries,
-        secondPlayerDevDeckEntries,
+      createDevPlayerSetupFromDecklist(
+        input.playerOrder[0],
+        firstPlayerDecklist,
+        cardManifest,
+        sharedDonDeck,
       ),
-      createdAt: input.createdAt,
-      devDonCount: 10,
-      versions: {
-        cardDataVersion: "live-poneglyph-dev-v1",
-        effectDefinitionsVersion: "generated-dev-v2",
-      },
-      ...(cache === undefined ? {} : { cache }),
-      ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
-      ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
-    }),
+      createDevPlayerSetupFromDecklist(
+        input.playerOrder[1],
+        secondPlayerDecklist,
+        cardManifest,
+        sharedDonDeck,
+      ),
+    ],
+    cardManifest,
     shuffleDecks: true,
   };
 };

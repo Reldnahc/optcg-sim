@@ -17,6 +17,7 @@ import type {
 } from "@optcg/types";
 
 import { parseCardEffectLineDetailed } from "./card-effect-line-parser.js";
+import { parseRawKeywordLine } from "./keywords/index.js";
 
 export interface CardDataCache {
   getJson(key: string): Promise<unknown>;
@@ -328,6 +329,10 @@ const buildResolvedCard = (
 ): BuiltCard => {
   const cardId = detail.card_number as CardId;
   const lines = gameplayLines(detail);
+  const printedKeywords = rawKeywordsFromLines(lines);
+  const effectLines = lines.filter(
+    (line) => parseRawKeywordLine({ text: line }) === undefined,
+  );
   const sourceTextHash = sha256({
     effect: detail.effect,
     trigger: detail.trigger,
@@ -335,7 +340,7 @@ const buildResolvedCard = (
   });
   const builtDefinition = buildEffectDefinition(
     cardId,
-    lines,
+    effectLines,
     sourceTextHash,
     versions,
   );
@@ -369,7 +374,7 @@ const buildResolvedCard = (
     colors: detail.color.map(normalizeColor),
     attributes: (detail.attribute ?? []).map(normalizeAttribute),
     types: detail.types,
-    printedKeywords: [],
+    printedKeywords,
     variants: normalized.variants,
     legality: detail.legality,
     officialFaq: detail.official_faq,
@@ -484,6 +489,22 @@ const gameplayLines = (detail: PoneglyphCardDetail): string[] =>
     .flatMap((text) => (text ?? "").split(/\r?\n/u))
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+
+const rawKeywordsFromLines = (
+  lines: readonly string[],
+): ResolvedCard["printedKeywords"] => {
+  const keywords: ResolvedCard["printedKeywords"] = [];
+  for (const line of lines) {
+    const keyword = parseRawKeywordLine({ text: line });
+    if (
+      keyword !== undefined &&
+      !keywords.some((candidate) => candidate === keyword.keyword)
+    ) {
+      keywords.push(keyword.keyword);
+    }
+  }
+  return keywords;
+};
 
 const devDonCards = (
   count: number,

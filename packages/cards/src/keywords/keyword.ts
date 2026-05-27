@@ -25,9 +25,21 @@ export function parseKeyword(
   return {
     keyword,
     evidence: ["keyword:anySupported"],
-    rest: match?.groups?.["rest"]?.trim() ?? "",
+    rest: reminderlessRest(match?.groups?.["rest"]?.trim() ?? ""),
   };
 }
+
+export function parseRawKeywordLine(
+  input: ParseInput,
+): KeywordParseResult | undefined {
+  const keyword = parseKeyword(input);
+  return keyword !== undefined && keyword.rest.length === 0
+    ? keyword
+    : undefined;
+}
+
+const reminderlessRest = (rest: string): string =>
+  /^\([^)]*\)\.?$/u.test(rest) ? "" : rest;
 
 function parseSupportedKeyword(
   printed: string | undefined,

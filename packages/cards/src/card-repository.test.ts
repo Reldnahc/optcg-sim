@@ -81,6 +81,29 @@ describe("card repository", () => {
     assert.equal(cachedDefinition.cardId, cardId);
   });
 
+  test("resolves raw keyword lines as printed keywords without generated effect blocks", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard(
+        "OP01-001",
+        "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+      ),
+    });
+    const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.deepEqual(resolved.printedKeywords, ["blocker"]);
+    assert.equal(resolved.support.status, "implemented-dsl");
+    assert.equal(resolved.support.effectDefinitionId, undefined);
+  });
+
   test("fetches only uncached cards and returns results in caller order", async () => {
     const cache = new FakeCardCache();
     const cachedId = "OP01-001" as CardId;

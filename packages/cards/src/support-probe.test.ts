@@ -33,6 +33,18 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports raw keyword reminder lines as metadata-supported", async () => {
+    const report = await createSupportProbeReport({
+      text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Kind: raw keyword");
+    expect(report.lines).toContain("Keyword: blocker");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports parser success separately from unsupported engine runtime entry points", async () => {
     const report = await createSupportProbeReport({
       text: "[On Block] Draw 1 card.",

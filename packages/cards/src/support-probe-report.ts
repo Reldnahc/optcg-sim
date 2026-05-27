@@ -2,6 +2,7 @@ import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type { CardId, EffectBlock } from "@optcg/types";
 
 import { parseCardEffectLineDetailed } from "./card-effect-line-parser.js";
+import { parseRawKeywordLine } from "./keywords/index.js";
 import type { ParsedEffectLine } from "./types.js";
 
 export interface SupportProbeRequest {
@@ -154,6 +155,16 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   }
 
   lines.push("Parse: passed");
+  if (lineReport.kind === "rawKeyword") {
+    lines.push("Kind: raw keyword");
+    lines.push(`Keyword: ${lineReport.keyword}`);
+    lines.push("Engine runtime: passed");
+    return {
+      exitCode: 0,
+      lines,
+      errors: [],
+    };
+  }
   lines.push(`Trigger: ${lineReport.value.block.trigger.type}`);
   lines.push(`Category: ${lineReport.value.block.category}`);
   lines.push(`Source presence: ${lineReport.value.block.sourcePresencePolicy}`);
@@ -180,10 +191,17 @@ const createTextLineReport = (text: string): SupportProbeReport => {
 
 type ParsedLineReport =
   | {
+      readonly kind: "effect";
       readonly parseOk: true;
       readonly value: ParsedEffectLine;
       readonly runtimeSupported: boolean;
       readonly runtimeReason?: string;
+    }
+  | {
+      readonly kind: "rawKeyword";
+      readonly parseOk: true;
+      readonly keyword: string;
+      readonly runtimeSupported: true;
     }
   | {
       readonly parseOk: false;
@@ -196,6 +214,16 @@ const evaluateParsedLine = (
   text: string,
   effectId: string,
 ): ParsedLineReport => {
+  const rawKeyword = parseRawKeywordLine({ text });
+  if (rawKeyword !== undefined) {
+    return {
+      kind: "rawKeyword",
+      parseOk: true,
+      keyword: rawKeyword.keyword,
+      runtimeSupported: true,
+    };
+  }
+
   const parsed = parseCardEffectLineDetailed(text);
   if (!parsed.ok) {
     return {
@@ -210,6 +238,7 @@ const evaluateParsedLine = (
     toEffectBlock(parsed.value, effectId),
   );
   return {
+    kind: "effect",
     parseOk: true,
     value: parsed.value,
     runtimeSupported: runtimeSupport.supported,
@@ -236,7 +265,10 @@ const toEffectBlock = (
 });
 
 const runtimeReason = (
-  lineReport: Extract<ParsedLineReport, { readonly parseOk: true }>,
+  lineReport: Extract<
+    ParsedLineReport,
+    { readonly parseOk: true; readonly kind: "effect" }
+  >,
 ): string => lineReport.runtimeReason ?? "unsupported runtime effect shape";
 
 const fetchPoneglyphCard: PoneglyphFetch = async (url) => fetch(url);

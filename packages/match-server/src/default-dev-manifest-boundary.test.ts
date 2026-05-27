@@ -1,11 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { CardId } from "@optcg/types";
+import type { CardId, PlayerId } from "@optcg/types";
 
 import {
   createDevDeckCardIds,
   createDevManifestCardIds,
+  createDevPlayerSetupFromDecklist,
+  parseDevDecklistText,
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
 
@@ -23,7 +25,6 @@ describe("default dev manifest boundary", () => {
   });
 
   test("dev deck entries support custom quantities and derive manifest ids", () => {
-    const leaderCardId = "OP13-079" as CardId;
     const firstPlayerEntries: readonly DevDeckCardEntry[] = [
       { cardId: "OP13-080" as CardId, count: 4 },
       { cardId: "OP13-082" as CardId, count: 2 },
@@ -54,11 +55,94 @@ describe("default dev manifest boundary", () => {
     ]);
     assert.deepEqual(
       createDevManifestCardIds(
-        leaderCardId,
-        firstPlayerEntries,
-        secondPlayerEntries,
+        {
+          leaderCardId: "OP13-079" as CardId,
+          deckEntries: firstPlayerEntries,
+        },
+        {
+          leaderCardId: "OP13-079" as CardId,
+          deckEntries: secondPlayerEntries,
+        },
       ),
       ["OP13-079", "OP13-080", "OP13-082", "OP13-091", "OP13-084"],
+    );
+  });
+
+  test("parses dev decklists with a required first-line one-copy leader", () => {
+    const decklist = parseDevDecklistText(
+      ["1xOP13-079", "4xOP13-080", "2xOP13-082", "1xOP13-099"].join("\n"),
+    );
+
+    assert.equal(decklist.leaderCardId, "OP13-079");
+    assert.deepEqual(decklist.deckEntries, [
+      { cardId: "OP13-080", count: 4 },
+      { cardId: "OP13-082", count: 2 },
+      { cardId: "OP13-099", count: 1 },
+    ]);
+    assert.deepEqual(createDevDeckCardIds(decklist.deckEntries), [
+      "OP13-080",
+      "OP13-080",
+      "OP13-080",
+      "OP13-080",
+      "OP13-082",
+      "OP13-082",
+      "OP13-099",
+    ]);
+  });
+
+  test("rejects decklists whose first entry is not exactly one leader copy", () => {
+    assert.throws(
+      () => parseDevDecklistText("4xOP13-079\n4xOP13-080"),
+      /first line must be the leader as 1xCARDID/u,
+    );
+  });
+
+  test("rejects malformed dev decklist lines", () => {
+    assert.throws(
+      () => parseDevDecklistText("1xOP13-079\n4 x OP13-080"),
+      /invalid dev decklist line 2/u,
+    );
+  });
+
+  test("derives player leader life count from the resolved leader metadata", () => {
+    const setup = createDevPlayerSetupFromDecklist(
+      "p1" as PlayerId,
+      {
+        leaderCardId: "OP13-079" as CardId,
+        deckEntries: [{ cardId: "OP13-080" as CardId, count: 2 }],
+      },
+      {
+        cards: {
+          ["OP13-079" as CardId]: {
+            category: "leader",
+            life: 4,
+          },
+        },
+      },
+      ["dev-don-1" as CardId],
+    );
+
+    assert.equal(setup.leaderCardId, "OP13-079");
+    assert.equal(setup.leaderLifeCount, 4);
+    assert.deepEqual(setup.deckCardIds, ["OP13-080", "OP13-080"]);
+  });
+
+  test("rejects dev decklists whose leader metadata is missing life", () => {
+    assert.throws(
+      () =>
+        createDevPlayerSetupFromDecklist(
+          "p1" as PlayerId,
+          { leaderCardId: "OP13-079" as CardId, deckEntries: [] },
+          {
+            cards: {
+              ["OP13-079" as CardId]: {
+                category: "leader",
+              },
+            },
+          },
+          [],
+        ),
+      /leader OP13-079 must have a life count/u,
     );
   });
 });
