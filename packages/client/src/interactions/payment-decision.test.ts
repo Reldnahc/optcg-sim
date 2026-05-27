@@ -11,6 +11,7 @@ import type {
 import {
   createCanonicalDonPaymentActions,
   createCanonicalDonPaymentModalActions,
+  autoOptionalCardCostGroup,
   optionalCardCostActionForInstance,
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
@@ -235,6 +236,74 @@ describe("optional card-cost interaction", () => {
       optionalCardCostActionForInstance(trashGroup, "character-1"),
       3,
     );
+  });
+
+  test("auto-enters card selection when there is only one payment family", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 1 card",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "trash",
+          chooseLabel: "Choose card to trash",
+          selectedCardInstanceIds: ["hand-1" as InstanceId],
+        },
+      },
+    ];
+
+    const choice = createOptionalCardCostChoice(payCostDecision, actions);
+
+    assert.deepEqual(autoOptionalCardCostGroup(choice), {
+      chooseActionIndex: -5,
+      operation: "trash",
+      chooseLabel: "Choose card to trash",
+      cardActions: [{ instanceId: "hand-1", actionIndex: 2 }],
+    });
+  });
+
+  test("keeps the payment-family modal when multiple card-cost families exist", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 1 card",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "trash",
+          chooseLabel: "Choose card to trash",
+          selectedCardInstanceIds: ["hand-1" as InstanceId],
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Return 1 Character",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "returnToHand",
+          chooseLabel: "Choose Character to return to hand",
+          selectedCardInstanceIds: ["character-1" as InstanceId],
+        },
+      },
+    ];
+
+    const choice = createOptionalCardCostChoice(payCostDecision, actions);
+
+    assert.equal(autoOptionalCardCostGroup(choice), undefined);
   });
 });
 

@@ -112,6 +112,11 @@ export const createOptionalCardCostModalActions = (
         })),
       ];
 
+export const autoOptionalCardCostGroup = (
+  choice: OptionalCardCostChoice | undefined,
+): OptionalCardCostGroup | undefined =>
+  choice?.groups.length === 1 ? choice.groups[0] : undefined;
+
 export const optionalCardCostGroupForActionIndex = (
   choice: OptionalCardCostChoice | undefined,
   actionIndex: number,

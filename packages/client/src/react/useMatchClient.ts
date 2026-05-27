@@ -22,6 +22,7 @@ import {
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
   ATTACH_SELECTED_DON_ACTION_INDEX,
+  autoOptionalCardCostGroup,
   findAttachDonActionIndex,
   createCanonicalDonPaymentActions,
   createOptionalCardCostChoice,
@@ -279,7 +280,7 @@ export const useMatchClient = (): MatchClientUi => {
     pendingDecision?.type === "payCost" && optionalCardCostChoice === undefined
       ? createCanonicalDonPaymentActions(pendingDecisionResponseActions)
       : undefined;
-  const activeCardCostGroup =
+  const explicitCardCostGroup =
     activeCardCostChoice === undefined ||
     optionalCardCostChoice === undefined ||
     activeCardCostChoice.decisionId !==
@@ -289,6 +290,12 @@ export const useMatchClient = (): MatchClientUi => {
           optionalCardCostChoice,
           activeCardCostChoice.actionIndex,
         );
+  const autoCardCostGroup =
+    explicitCardCostGroup === undefined
+      ? autoOptionalCardCostGroup(optionalCardCostChoice)
+      : undefined;
+  const activeCardCostGroup = explicitCardCostGroup ?? autoCardCostGroup;
+  const explicitCardCostChoiceActive = explicitCardCostGroup !== undefined;
   const cardCostChoiceActive = activeCardCostGroup !== undefined;
   const modalResponseActions =
     optionalCardCostChoice === undefined || cardCostChoiceActive
@@ -791,18 +798,21 @@ export const useMatchClient = (): MatchClientUi => {
       activeCardCostGroup !== undefined &&
       optionalCardCostChoice !== undefined
     ) {
-      return [
+      const actions: ClientActionModel[] = [
         {
           index: optionalCardCostChoice.declineActionIndex,
           label: "Decline cost",
           type: "respondToDecision",
         },
-        {
+      ];
+      if (explicitCardCostChoiceActive) {
+        actions.push({
           index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
           label: "Cancel card choice",
           type: "clearDecisionSelection",
-        },
-      ];
+        });
+      }
+      return actions;
     }
     if (
       pendingDecisionInteractionMode === "zoneClick" &&
@@ -853,6 +863,7 @@ export const useMatchClient = (): MatchClientUi => {
     activeAttackTargetChoice,
     activeCounterTargetChoice,
     activeCardCostGroup,
+    explicitCardCostChoiceActive,
     optionalCardCostChoice,
     pendingDecision,
     pendingDecisionInteractionMode,
