@@ -24,16 +24,24 @@ export interface DevDeckCardEntry {
   readonly count: number;
 }
 
-const devDeckEntries = [
+const firstPlayerDevDeckEntries = [
   { cardId: "OP13-080" as CardId, count: 4 },
   { cardId: "OP13-082" as CardId, count: 4 },
   { cardId: "OP13-083" as CardId, count: 4 },
   { cardId: "OP13-084" as CardId, count: 4 },
   { cardId: "OP13-089" as CardId, count: 4 },
   { cardId: "OP13-091" as CardId, count: 4 },
-  { cardId: "OP13-099" as CardId, count: 4 },
+  { cardId: "OP13-099" as CardId, count: 1 },
   { cardId: "OP13-086" as CardId, count: 4 },
+  { cardId: "OP05-097" as CardId, count: 1 },
+  { cardId: "OP13-096" as CardId, count: 4 },
+  { cardId: "OP13-097" as CardId, count: 4 },
+  { cardId: "OP13-098" as CardId, count: 4 },
 ] as const;
+
+const secondPlayerDevDeckEntries: readonly DevDeckCardEntry[] = [
+  ...firstPlayerDevDeckEntries,
+];
 
 export const createDevDeckCardIds = (
   entries: readonly DevDeckCardEntry[],
@@ -44,13 +52,17 @@ export const createDevDeckCardIds = (
 
 export const createDevManifestCardIds = (
   leaderCardId: CardId,
-  entries: readonly DevDeckCardEntry[],
+  ...entryGroups: readonly (readonly DevDeckCardEntry[])[]
 ): CardId[] => {
-  const cardIds = [leaderCardId, ...entries.map((entry) => entry.cardId)];
+  const cardIds = [
+    leaderCardId,
+    ...entryGroups.flatMap((entries) => entries.map((entry) => entry.cardId)),
+  ];
   return [...new Set(cardIds)];
 };
 
-const repeatedDeck = (): CardId[] => createDevDeckCardIds(devDeckEntries);
+const repeatedDeck = (entries: readonly DevDeckCardEntry[]): CardId[] =>
+  createDevDeckCardIds(entries);
 
 const donDeck = (): CardId[] =>
   Array.from(
@@ -73,7 +85,8 @@ const playerSetup = (
 export const createDefaultDevMatchSetup = async (
   input: CreateDefaultDevMatchSetupInput,
 ): Promise<DevMatchSetup> => {
-  const sharedDeck = repeatedDeck();
+  const firstPlayerDeck = repeatedDeck(firstPlayerDevDeckEntries);
+  const secondPlayerDeck = repeatedDeck(secondPlayerDevDeckEntries);
   const sharedDonDeck = donDeck();
   const cache =
     input.fetchCard === undefined
@@ -87,11 +100,15 @@ export const createDefaultDevMatchSetup = async (
     rngSeed: "op13-dev-local-seed",
     playerOrder: input.playerOrder,
     players: [
-      playerSetup(input.playerOrder[0], sharedDeck, sharedDonDeck),
-      playerSetup(input.playerOrder[1], sharedDeck, sharedDonDeck),
+      playerSetup(input.playerOrder[0], firstPlayerDeck, sharedDonDeck),
+      playerSetup(input.playerOrder[1], secondPlayerDeck, sharedDonDeck),
     ],
     cardManifest: await buildDevMatchCardManifestFromPoneglyphIds({
-      cardIds: createDevManifestCardIds(devLeaderCardId, devDeckEntries),
+      cardIds: createDevManifestCardIds(
+        devLeaderCardId,
+        firstPlayerDevDeckEntries,
+        secondPlayerDevDeckEntries,
+      ),
       createdAt: input.createdAt,
       devDonCount: 10,
       versions: {
