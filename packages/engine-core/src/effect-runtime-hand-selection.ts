@@ -224,6 +224,19 @@ const findCurrentCards = (
   return selectedRefs;
 };
 
+const selectedCardsHaveDifferentNames = (
+  state: GameState,
+  selected: readonly CardRef[],
+): boolean => {
+  const names = selected.map(
+    (card) => state.cardManifest.cards[card.cardId]?.name,
+  );
+  return (
+    names.every((name): name is string => name !== undefined) &&
+    new Set(names).size === names.length
+  );
+};
+
 export const createSupportedHandSelectionChoiceDecision = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -493,6 +506,16 @@ export const applySupportedHandSelectionChoiceResponse = (
       invalidDecision(
         `Selected cards must be active cards in the choosing player's ${String(decision.request.zone)}.`,
       ),
+    );
+  }
+  if (
+    decision.request.filter?.custom === "differentNames" &&
+    !selectedCardsHaveDifferentNames(state, selectedCards)
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Selected cards must have different names."),
     );
   }
 

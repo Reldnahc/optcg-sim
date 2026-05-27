@@ -111,17 +111,19 @@ const supportedHandSelectionFilterKeys = new Set([
   ...supportedSearchFilterKeys,
   "custom",
   "cost",
+  "power",
 ]);
 
 const supportedHandSelectionCustomFilters = new Set([
   "costLteSelfDonFieldCount",
+  "differentNames",
 ]);
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
 const isSupportedNumericFilter = (
-  value: CardFilter["cost"] | undefined,
+  value: CardFilter["cost"] | CardFilter["power"] | undefined,
 ): boolean => {
   if (value === undefined) {
     return true;
@@ -162,6 +164,7 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
     isSupportedNumericFilter(filter.cost) &&
+    isSupportedNumericFilter(filter.power) &&
     (filter.custom === undefined ||
       supportedHandSelectionCustomFilters.has(filter.custom))
   );
@@ -207,6 +210,27 @@ const cardMatchesBaseFilter = (
       if (filter.cost.max !== undefined && cost > filter.cost.max) return false;
     }
   }
+  if (filter.power !== undefined) {
+    const power = card.power;
+    if (power === undefined) {
+      return false;
+    }
+    if ("op" in filter.power) {
+      if (filter.power.op === "eq" && power !== filter.power.value)
+        return false;
+      if (filter.power.op === "neq" && power === filter.power.value)
+        return false;
+      if (filter.power.op === "gt" && power <= filter.power.value) return false;
+      if (filter.power.op === "gte" && power < filter.power.value) return false;
+      if (filter.power.op === "lt" && power >= filter.power.value) return false;
+      if (filter.power.op === "lte" && power > filter.power.value) return false;
+    } else {
+      if (filter.power.min !== undefined && power < filter.power.min)
+        return false;
+      if (filter.power.max !== undefined && power > filter.power.max)
+        return false;
+    }
+  }
   return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
 };
 
@@ -233,5 +257,5 @@ export const cardMatchesHandSelectionFilter = (
     const donFieldCount = state.players[playerId]?.costArea.length ?? 0;
     return cost !== undefined && cost <= donFieldCount;
   }
-  return filter.custom === undefined;
+  return filter.custom === undefined || filter.custom === "differentNames";
 };

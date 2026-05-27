@@ -15,9 +15,14 @@ import type {
   SelectTargetsDecision,
   SelectCardsDecision,
   SequenceSegmentResult,
+  Target,
 } from "@optcg/types";
 
-import { reindexZoneCards } from "./action-state.js";
+import {
+  cardMatchesHandSelectionFilter,
+  getOpponentId,
+  reindexZoneCards,
+} from "./action-state.js";
 import { appendEvent } from "./action-results.js";
 import { createSupportedHandSelectionChoiceDecision } from "./effect-runtime-hand-selection.js";
 import {
@@ -80,6 +85,9 @@ type DrawEffect = Extract<Effect, { type: "draw" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
+type TrashEffect = Extract<Effect, { type: "trash" }> & {
+  target: Extract<Target, { type: "all" }>;
+};
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -237,6 +245,178 @@ const applyTrashToHandMoveSelectedSegment = (params: {
       },
     },
     ok: true,
+    state: {
+      ...eventBaseState,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
+
+const applyAllTargetTrashSequenceSegment = (params: {
+  effect: TrashEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  const targetPlayerId =
+    params.effect.target.player === "self"
+      ? params.entry.controllerId
+      : getOpponentId(params.state, params.entry.controllerId);
+  const player =
+    targetPlayerId === null ? undefined : params.state.players[targetPlayerId];
+  if (targetPlayerId === null || player === undefined) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  const sourceCards =
+    params.effect.target.zone === "characterArea"
+      ? player.characters
+      : player.stage === undefined
+        ? []
+        : [player.stage];
+  const selectedCards = sourceCards.filter((card) =>
+    cardMatchesHandSelectionFilter(
+      params.state,
+      targetPlayerId,
+      card,
+      params.effect.target.filter,
+    ),
+  );
+  const selectedIds = new Set(selectedCards.map((card) => card.instanceId));
+  const trashedCards = selectedCards.map((card, index) => ({
+    ...card,
+    attachedDon: [],
+    zone: {
+      zone: "trash" as const,
+      playerId: targetPlayerId,
+      slot: "trash" as const,
+      index,
+    },
+  }));
+  const attachedDonIds = new Set(
+    selectedCards.flatMap((card) => card.attachedDon),
+  );
+  const nextStage =
+    params.effect.target.zone === "stageArea" &&
+    player.stage !== undefined &&
+    selectedIds.has(player.stage.instanceId)
+      ? undefined
+      : player.stage;
+  const { stage: _stage, ...playerWithoutStage } = player;
+  void _stage;
+  const nextPlayer = {
+    ...playerWithoutStage,
+    characters:
+      params.effect.target.zone === "characterArea"
+        ? reindexZoneCards(
+            player.characters.filter(
+              (card) => !selectedIds.has(card.instanceId),
+            ),
+            "characterArea",
+            targetPlayerId,
+            "character",
+          )
+        : player.characters,
+    ...(nextStage === undefined ? {} : { stage: nextStage }),
+    costArea: player.costArea.map((card) =>
+      attachedDonIds.has(card.instanceId)
+        ? { ...card, state: "rested" as const }
+        : card,
+    ),
+    trash: reindexZoneCards(
+      [...trashedCards, ...player.trash],
+      "trash",
+      targetPlayerId,
+      "trash",
+    ),
+  };
+  const eventBaseState: GameState = {
+    ...params.state,
+    players: {
+      ...params.state.players,
+      [targetPlayerId]: nextPlayer,
+    },
+  };
+  const events: EngineEvent[] = [];
+  for (const originalCard of selectedCards) {
+    const movedCard = trashedCards.find(
+      (card) => card.instanceId === originalCard.instanceId,
+    );
+    if (movedCard === undefined) {
+      continue;
+    }
+    appendEvent(
+      eventBaseState,
+      events,
+      "cardMoved",
+      {
+        instanceId: movedCard.instanceId,
+        cardId: movedCard.cardId,
+        from: originalCard.zone,
+        to: movedCard.zone,
+        reason: "effectTrash",
+      },
+      { type: "public" },
+    );
+    appendEvent(
+      eventBaseState,
+      events,
+      "cardTrashed",
+      {
+        playerId: targetPlayerId,
+        instanceId: movedCard.instanceId,
+        cardId: movedCard.cardId,
+        reason: "effectTrash",
+      },
+      { type: "public" },
+    );
+  }
+  for (const donId of attachedDonIds) {
+    appendEvent(
+      eventBaseState,
+      events,
+      "donReturned",
+      { playerId: targetPlayerId, donInstanceId: donId, state: "rested" },
+      { type: "replayOnly" },
+    );
+  }
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          changedState: selectedCards.length > 0,
+          succeeded: true,
+        },
+      },
+    },
     state: {
       ...eventBaseState,
       eventJournal: [...params.state.eventJournal, ...events],
@@ -788,6 +968,25 @@ const continueNoDecisionSegments = (
       nextState = resolvedKo.state;
       nextLedgers = resolvedKo.ledgers;
       events.push(...resolvedKo.events);
+      continue;
+    }
+    if (
+      segment.effect.type === "trash" &&
+      segment.effect.target.type === "all"
+    ) {
+      const trashed = applyAllTargetTrashSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        effect: segment.effect as TrashEffect,
+        state: nextState,
+      });
+      nextState = trashed.state;
+      nextLedgers = trashed.ledgers;
+      events.push(...trashed.events);
       continue;
     }
     if (segment.effect.type === "rest") {

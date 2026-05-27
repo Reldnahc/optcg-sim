@@ -26,6 +26,7 @@ type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type CounterPowerEffect = Extract<Effect, { type: "modifyPower" }>;
+type TrashEffect = Extract<Effect, { type: "trash" }>;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
@@ -62,6 +63,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SelectCardsEffect
     | MoveSelectedEffect
     | CounterPowerEffect
+    | TrashEffect
     | SelectTargetsEffect
     | PlaySelectedEffect
     | RestEffect
@@ -409,6 +411,16 @@ const isSupportedSequenceTargetRequest = (
   request.max <= 5 &&
   isSupportedPublicFieldTargetFilter(request.filter);
 
+const isSupportedAllFieldTrashSegment = (
+  effect: SequenceSegmentEffect,
+): effect is TrashEffect =>
+  effect.type === "trash" &&
+  effect.target.type === "all" &&
+  (effect.target.zone === "characterArea" ||
+    effect.target.zone === "stageArea") &&
+  (effect.target.player === "self" || effect.target.player === "opponent") &&
+  isSupportedPublicFieldTargetFilter(effect.target.filter);
+
 const isSupportedRestSegment = (
   effect: SequenceSegmentEffect,
 ): effect is RestEffect =>
@@ -460,6 +472,9 @@ const isSupportedConditionalSequenceSegment = (
       return isSupportedSequenceTargetRequest(segment.effect.request);
     }
     if (isSupportedKoSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedAllFieldTrashSegment(segment.effect)) {
       return true;
     }
     if (isSupportedSearchSegment(segment.effect)) {
@@ -578,6 +593,9 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedAllFieldTrashSegment(segment.effect)) {
         return true;
       }
       if (isSupportedPreResolvedCounterPowerSegment(segment.effect)) {
