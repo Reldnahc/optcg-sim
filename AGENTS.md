@@ -2,130 +2,210 @@
 
 ## Purpose
 
-This repository uses a spec-driven delivery workflow. Agents must implement one approved story at a time against the authoritative spec, not against chat memory or issue-body drift.
+This repository now uses direct spec/code/test delivery. Agents should solve the
+current user request against the authoritative specs and the existing codebase,
+without story files, agent packets, packet cleanup, or generated workflow state.
 
 ## Authority Order
 
-For execution in this repo, use this order:
+Use this order when making changes:
 
 1. cited specification sections under `specs/`
-2. approved story file under `stories/approved/`
-3. generated story packet under `agent-packets/`
-4. this `AGENTS.md`
-5. linked workflow procedure docs under `docs/workflow/`
-6. local code reality
-7. proposed patch
+2. the current user request and any explicit constraints in the active thread
+3. mandatory implementation guidance in `docs/code-standard.md`
+4. local code reality and existing tests
+5. the proposed patch
 
-If a lower layer conflicts with a higher layer, the higher layer wins.
+If a lower layer conflicts with a higher layer, the higher layer wins. If the
+spec is missing or contradicted by current code, surface that clearly and make
+the smallest defensible change that preserves safety.
 
-## Repo Locations
+## Working Rules
 
-- Specification bundle: `specs/`
-- Epics: `epics/`
-- Generated stories: `stories/generated/`
-- Approved stories: `stories/approved/`
-- Blocked stories: `stories/blocked/`
-- Done stories: `stories/done/`
-- Ambiguities: `stories/ambiguities/`
-- Story sync metadata: `stories/.sync/`
-- Agent packets: `agent-packets/`
-- Workflow procedures: `docs/workflow/`
+- Inspect the relevant code before editing it.
+- Keep changes scoped to the requested concern.
+- Do not silently absorb adjacent engine, card, server, client, UI, replay, or
+  tooling work just because it is nearby.
+- Preserve user changes already present in the worktree. Do not revert files you
+  did not intentionally change.
+- Prefer repo patterns and shared helpers over new one-off abstractions.
+- Add or update tests with behavior changes unless the request is explicitly
+  docs-only or cleanup-only.
+- Record assumptions, skipped checks, and residual risks in the final response.
 
-Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or vague file-level references when exact section refs exist.
+## Scaling Invariant
 
-## Active Story Checklist
+The most important engineering constraint in this repo is scalable effect
+support. Do not make a card work by recognizing one full printed line, one card
+ID, one exact template, or one exact wrapper/body pair. A supported card should
+work because its text is parsed into reusable primitive boundaries and the
+engine can execute those reusable primitives.
 
-For any implementation or review handoff:
+When adding or changing card support, ask this before writing production code:
 
-1. Read `AGENTS.md`, the approved story, and the active packet.
-2. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. Each required row must have a distinct story-review assignment identity and a distinct durable artifact identity for that row. One story-review assignment, one reviewer run, one matrix, or one durable artifact covering multiple stories satisfies at most one required row. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
-3. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
-4. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
-5. Treat the story as `worker-ready` only after steps 1-4 are complete.
-6. Before assigning implementation or code-review agents, run role packet extraction for the assigned role and include that output in the handoff. Implementation handoffs must include explicit file ownership and test ownership. Use one implementation worker per active child story by default; split the child story first unless multiple workers have clearly disjoint, reviewable write scopes.
-7. Assign implementation workers only after `worker-ready`.
-8. Stay inside the story boundary and `allowed_touch_points`.
-9. Implement the story with its required tests.
-10. Run the story-specific tests and `pnpm verify`.
-11. Open the PR before reviewer-subagent review; in approved parent integration workflows, this is the final parent PR to `main`, while substories are represented by reviewed commit evidence on that parent PR or durable handoff comment.
-12. Run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence, not a copied example or reconstructed local text; the metadata source must use exact `Post-merge cleanup:` syntax with no markdown fence and no `cleanup:` wrapper.
-13. Confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer handoff or human review request; the remote guard validates cleanup metadata source and shape from the PR body or durable handoff comments, but it does not by itself prove full reviewed-scope binding.
-14. Post the AI review record or equivalent human-review fallback.
-15. Post or update the revision response when reviewer-subagent review was used.
-16. Request human review only after review records and cleanup metadata handoff checks are current.
-17. Merge only after the required human review gate is satisfied.
-18. Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`, or run manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable.
+- Would the same body primitive work under another valid entry point?
+- Would the same entry point work with another supported body primitive?
+- Can the target, condition, cost, duration, filter, and quantity vary without
+  adding another exact full-line branch?
+- Does support fail closed when primitive evidence is missing, even if the
+  parser rule name, shape label, runtime capability, card ID, or DSL happens to
+  look familiar?
 
-## Mandatory Procedures
+If the answer is no, the shape is not scalable enough for this repo.
 
-The procedure docs below are part of this repo's agent contract. Read the one that matches the current phase before acting.
+## Card Parsing Layer Pattern
 
-- Story execution, packet, ambiguity, and lifecycle procedure: `docs/workflow/story-execution.md`
-- PR review, AI review records, fallback review, and human review procedure: `docs/workflow/review-gate.md`
-- Parent integration branch procedure: `docs/workflow/parent-integration-branches.md`
-- Reporting and GitHub/board sync procedure: `docs/workflow/reporting-and-github-sync.md`
-- Card fixture capture workflow for relevant CARD/card-fixture stories: `docs/workflow/card-fixture-capture.md`. Agents must read it when a story touches fixture capture, CARD source integrity, generated support, overlays, or real-card fixture evidence.
-- Code standard and implementation-quality guidance: `docs/code-standard.md`
+The card layer parses printed text into typed primitive data and primitive
+parser evidence. The parser is allowed to recognize printed syntax literals, but
+only primitive parser evidence may certify support.
 
-## Non-Negotiable Rules
+Required decomposition:
 
-- Implement only one approved story at a time.
-- Approved stories may exist without packets until they become active.
-- `agent-packets/active.json` may contain zero active stories or exactly one active story.
-- Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership.
-- Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside approved story implementation bodies.
-- Do not silently absorb adjacent contract, engine, server, client, replay, or UI work just because it is nearby.
-- If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
-- Use stable `SECTION_REF` citations from `specs/`.
-- GitHub Issues and board items are projections of local story files, not the authority.
+- Entry points and wrappers: `[On Play]`, `[When Attacking]`, `[Counter]`,
+  `[Main]`, `[Activate: Main]`, `[On K.O.]`, `[Trigger]`, start-of-game,
+  continuous turn windows, and similar timing wrappers are parsed separately
+  from effect bodies.
+- Markers and modifiers: `[Once Per Turn]`, DON markers, optionality, and
+  activation commitment are separate from the body primitive.
+- Costs: resting DON, trashing from hand, resting this card, moving cards, and
+  choose-one costs are parsed as reusable cost primitives. Do not bind a cost to
+  one effect body.
+- Conditions: condition family, comparator, threshold, owner, zone, card filter,
+  and subject are separate reusable data. Do not emit bundles such as
+  `condition:block-level` when the parts can be represented independently.
+- Targets and filters: owner, zone, object kind, chooser, cardinality, color,
+  type, name exclusion, cost/power predicates, saved-reference behavior, and
+  duration are separate reusable data. Do not emit pseudo-primitives such as
+  `target:select-opponent-character` when those boundaries are needed.
+- Body primitives: draw, trash, move, rest, K.O., play, search, reveal, bottom,
+  return, power modify, base-power set, keyword grant, protection, negate,
+  attach DON, and cost modification are independent body primitives.
+- Composition: sequence, conditional, optional cost, conjunction, saved
+  reference, and line-separated effects are generic composers that merge child
+  primitive evidence. A composer does not replace missing child evidence.
 
-## Packet Lifecycle Snapshot
+Forbidden support-authority shapes:
 
-Before implementation starts, before a worker or reviewer subagent is assigned, and before PR handoff begins, generate a current checked-in packet for the active story under `agent-packets/`.
+- card IDs, fixture IDs, external card lists, or manual per-card allowlists
+- exact full-line parser rules
+- exact wrapper/body parser rules
+- exact shape IDs or component labels used as parser certification
+- generated-support inventory rows used as parser certification
+- runtime capability IDs used as parser certification
+- parser-rule-to-certification maps
+- shape/component-to-certification maps
+- template-named certification arrays
+- wrapper gates outside primitive wrapper parsing, such as exact `[On Play]`
+  prefix checks in higher-level support logic
 
-Use `pnpm run packets:generate --story <stories/approved/...yaml> --activate` to build or refresh the packet for the story you are activating.
+Diagnostics may keep parser rule names, shape IDs, and component labels for
+human reporting, grouping, or migration notes. They must not be the authority
+that makes a generated card playable.
 
-Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges. Cleanup metadata is a reviewed request, not standalone authority.
+## Engine Primitive Pattern
 
-Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged only as the operational fallback when automation fails or is unavailable. For parent cleanup fallback, use `pnpm run packets:complete-many` with one or more child `--story <stories/approved/...yaml>` arguments. When validated parent-mode cleanup evidence binds a non-packetized parent story, the parent closeout must be produced by the multi-story packet completion command with the bound parent-story evidence from the cleanup plan. Do not run manual packet completion after automation has already completed the listed story cleanup.
+The engine executes reusable primitives and generic compositions. Entry-point
+adapters expose legal actions or queue effects; body executors perform reusable
+game mutations. These concerns must remain separate.
 
-A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many` with one or more child `--story <stories/approved/...yaml>` arguments does not require a separate reviewer subagent run. For validated parent-mode cleanup, exact packet-completion command output may also include command-owned bound parent story closeout from the cleanup plan.
+Required engine shape:
 
-Automation-created cleanup pull requests are not created.
+- Entry-point adapters handle timing, source-presence policy, once-per-turn
+  commitment, legal-action exposure, and queue insertion. They do not whitelist
+  exact body shapes.
+- Body primitive executors handle one reusable behavior family. Draw does not
+  care which wrapper produced it. Trash from hand, trash from deck top, and
+  trash selected cards enter shared movement behavior through distinct doors
+  that preserve game semantics.
+- Conditions, filters, and target selection are data consumed by generic
+  evaluators. Do not hardcode one condition into one effect executor when it can
+  be expressed as reusable condition/filter data.
+- Costs are paid through reusable cost handling and then resume the body. Do not
+  create one executor per cost/body pair.
+- Continuous effects materialize from reusable modifier primitives. Unsupported
+  modifier families should fail closed as unsupported primitives, not because a
+  whole effect definition has an unfamiliar size or exact metadata shape.
+- K.O., trash, discard, return, play, and move are not all the same game event.
+  Share concrete movement helpers where behavior is genuinely common, but keep
+  semantic entry doors distinct so triggers and replacement effects remain
+  correct.
+- Multi-effect definitions are normal. Do not authorize or reject support based
+  on `definition.effects.length` or similar full-definition-size checks.
 
-If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
+If the parser can emit a primitive that the engine cannot execute yet, preserve
+the correct parsed primitive and fail closed at the engine capability/runtime
+layer. Do not reshape parser output to fit a weaker current engine shortcut.
+
+## Testing For Scalability
+
+Tests must prove the scalable shape, not just one card success.
+
+For card parsing and generated support:
+
+- Test primitives independently from entry points when possible.
+- Test at least two wrappers for reusable body primitives when claiming
+  cross-entry-point reuse.
+- Test composition separately from child primitives.
+- Add negative authority tests proving exact parser rule, shape/component ID,
+  runtime capability, valid DSL, or known card metadata cannot make support pass
+  without emitted primitive parser evidence.
+- Add anti-shape tests or source scans when a past failure mode can reappear as
+  a whitelist, exact template, full-line branch, or full-definition-size gate.
+
+For engine primitives:
+
+- Test the primitive executor directly with minimal synthetic state.
+- Test entry-point routing separately from body execution.
+- Test composition/resume behavior for sequence, optional cost, conditional,
+  selection, and simultaneous trigger/order flows.
+- Test hidden-information filtering for any decision, reveal, search, or private
+  zone behavior.
+- Test that unsupported primitives fail closed with useful diagnostics.
+
+Passing broad test suites is useful, but it is not enough when the concern is
+scalability. A patch that only proves one real card or one exact printed line
+works can still be wrong.
 
 ## Safety Boundaries
 
-Fail closed on ambiguity for gameplay rules, hidden-information behavior, replay behavior, fairness and timer behavior, persistence and account safety, and security-sensitive filtering or projection behavior.
+Fail closed on ambiguity for gameplay rules, hidden-information behavior, replay
+behavior, fairness and timer behavior, persistence and account safety, and
+security-sensitive filtering or projection behavior.
 
-Until stricter tooling is in place, preserve these boundaries:
+Preserve these package boundaries:
 
-- `engine-core` must stay free of React, browser code, WebSocket transport, Redis, Postgres, and live HTTP clients.
+- `engine-core` must stay free of React, browser code, WebSocket transport,
+  Redis, Postgres, and live HTTP clients.
 - client code must not import server-only modules.
-- view/filtering code must not leak hidden state into public or player-facing outputs.
+- view/filtering code must not leak hidden state into public or player-facing
+  outputs.
 - replay validation code must not depend on client rendering code.
 - hidden-state test helpers must not enter production client bundles.
 
 ## Code Standards
 
-The repo is intentionally strict. Prefer enforcement over convention. `docs/code-standard.md` is mandatory implementation guidance for coding quality, architecture boundaries, testing, story scope, and PR review expectations.
+`docs/code-standard.md` is mandatory implementation guidance.
 
 - TypeScript must remain strict.
 - Do not weaken `tsconfig` strictness to make a patch pass.
-- Do not introduce `any` without a narrow, documented trust-boundary justification.
+- Do not introduce `any` without a narrow, documented trust-boundary
+  justification.
 - Do not use non-null assertions (`!`) as a routine escape hatch.
-- Do not use `@ts-ignore` or `@ts-nocheck` unless explicitly approved for a narrow reason.
+- Do not use `@ts-ignore` or `@ts-nocheck` unless explicitly approved for a
+  narrow reason.
 - Avoid unchecked type assertions across trust boundaries.
-- Prefer named exports. Do not introduce default exports unless the repo later adopts them explicitly.
-- Do not use `console` in production packages; use an approved logger abstraction.
-- Keep files focused.
+- Prefer named exports. Do not introduce default exports unless the repo later
+  adopts them explicitly.
+- Do not use `console` in production packages; use an approved logger
+  abstraction.
+- Keep files focused and cohesive.
 - Tests are part of the change, not a follow-up task.
 - Prettier formatting and ESLint compliance are required, not optional.
 
 ## Verification
 
-Before claiming completion, run the canonical repo commands when they exist:
+Before claiming completion, run the relevant narrow checks and the canonical repo
+commands when feasible:
 
 - `pnpm lint`
 - `pnpm typecheck`
@@ -133,6 +213,6 @@ Before claiming completion, run the canonical repo commands when they exist:
 - `pnpm coverage`
 - `pnpm verify`
 
-If a required command does not exist yet, say so explicitly. Do not claim full verification when the command contract is still missing.
-
-For story-scoped work, also run the story's required tests and report the exact commands used.
+If a required command does not exist, is too broad for the current change, or
+cannot be run in the environment, say so explicitly. Do not claim full
+verification when the command contract is missing, skipped, or failed.

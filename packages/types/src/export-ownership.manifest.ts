@@ -95,6 +95,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   SpectatorVisiblePlayerState: "TYP-002A",
   PublicDecision: "TYP-002A",
   PublicChooseQuantityDecision: "TYP-007A",
+  PublicChooseTriggerOrderDecision: "TYP-007A",
   PublicSelectCardsDecision: "TYP-007A",
   PublicSelectTargetsDecision: "TYP-007A",
   PublicOrderCardsDecision: "TYP-007A",

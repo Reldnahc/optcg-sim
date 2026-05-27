@@ -59,7 +59,7 @@ test("type authority strategy doc exists and names the selected model", async ()
   );
   assert.ok(
     doc.includes(
-      "Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later approved story explicitly includes them",
+      "Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later explicit change includes them",
     ),
     "doc must explicitly exclude tests/manifests/support files from generated canonical projections",
   );

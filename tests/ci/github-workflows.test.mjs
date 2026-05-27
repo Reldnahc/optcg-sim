@@ -86,34 +86,14 @@ test("package.json exposes the canonical contract lane for CI", async () => {
     "missing test:contracts script",
   );
   assert.equal(
-    typeof packageJson.scripts?.["test:cleanup-contracts"],
-    "string",
-    "missing test:cleanup-contracts script",
-  );
-  assert.equal(
     typeof packageJson.scripts?.["test:hidden-info"],
     "string",
     "missing test:hidden-info script",
-  );
-  assert.equal(
-    typeof packageJson.scripts?.["stories:validate"],
-    "string",
-    "missing stories:validate script",
-  );
-  assert.match(
-    packageJson.scripts.contracts,
-    /pnpm run stories:validate/i,
-    "contracts should include committed story schema validation",
   );
   assert.match(
     packageJson.scripts.verify,
     /pnpm run contracts/i,
     "verify should include the root contracts lane once it exists",
-  );
-  assert.match(
-    packageJson.scripts.contracts,
-    /pnpm run test:cleanup-contracts/i,
-    "contracts should include the cleanup-heavy contract lane",
   );
   assert.match(
     packageJson.scripts.verify,
@@ -180,7 +160,6 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
 
   const forbiddenContractsJobCommands = [
     "pnpm test:contracts",
-    "pnpm test:cleanup-contracts",
     "pnpm run contracts:compile",
     "pnpm run contracts:validate-effects",
     "pnpm run contracts:validate-db-schema",
@@ -204,25 +183,4 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
   assert.match(workflow, /pnpm\/action-setup@v4/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.match(workflow, /coverage-artifact/);
-});
-
-test("post-merge cleanup workflow delegates cleanup evidence construction to checked-in tooling", async () => {
-  const workflow = await readText(
-    ".github/workflows/post-merge-packet-cleanup.yml",
-  );
-
-  assert.match(workflow, /cleanup-workflow-input\.json/);
-  assert.match(
-    workflow,
-    /--workflow-evidence-json-file cleanup-workflow-input\.json/,
-  );
-  assert.match(workflow, /--metadata-source-output-file cleanup-metadata\.md/);
-  assert.match(workflow, /--evidence-json-output-file cleanup-evidence\.json/);
-  assert.match(workflow, /authorAssociation:\s*comment\.author_association/);
-  assert.match(workflow, /mergedAt:\s*pr\.merged_at/);
-  assert.doesNotMatch(workflow, /mergedAt:\s*pr\.updated_at/);
-  assert.doesNotMatch(workflow, /const parseMetadata =/);
-  assert.doesNotMatch(workflow, /const buildParentLifecycle =/);
-  assert.doesNotMatch(workflow, /const sourceRefsInBody =/);
-  assert.doesNotMatch(workflow, /const storyIdFromPath =/);
 });

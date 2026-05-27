@@ -16,11 +16,6 @@ async function readJson(relativePath) {
   return JSON.parse(contents);
 }
 
-const githubCleanupLaneFiles = [
-  "tests/github/post-merge-cleanup-closeout.test.mjs",
-  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
-];
-
 test("package.json defines vitest-based test and coverage scripts", async () => {
   const packageJson = await readJson("package.json");
 
@@ -61,7 +56,7 @@ test("package.json defines vitest-based test and coverage scripts", async () => 
   );
 });
 
-test("root vitest lane excludes cleanup-heavy workflow contracts", async () => {
+test("root vitest lane excludes contract and tooling lanes", async () => {
   const packageJson = await readJson("package.json");
 
   assert.match(
@@ -69,15 +64,6 @@ test("root vitest lane excludes cleanup-heavy workflow contracts", async () => {
     /--exclude\s+tests\/contracts\/\*\*\/\*\.test\.mjs\b/,
     "root test lane must exclude broad tests/contracts suites",
   );
-  for (const githubCleanupFile of githubCleanupLaneFiles) {
-    assert.match(
-      packageJson.scripts.test,
-      new RegExp(
-        `--exclude\\s+${githubCleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-      ),
-      `root test lane must explicitly exclude ${githubCleanupFile}`,
-    );
-  }
   assert.match(
     packageJson.scripts.test,
     /--exclude\s+packages\/cli\/src\/\*\*\/\*\.test\.ts\b/,

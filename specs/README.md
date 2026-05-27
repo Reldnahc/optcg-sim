@@ -19,12 +19,12 @@ Section Ref: `README.s001`
 Use this index only to find the authoritative files. It does not replace the
 stable `SECTION_REF` citations inside each spec document.
 
-| Concern                    | Canonical files                                                                                                                                                                            |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GameState/events/decisions | `03-game-state-events-decisions.md`; `contracts/canonical-types.ts` for compile-ready TypeScript                                                                                           |
-| Effect DSL                 | `05-effect-dsl-reference.md`; `contracts/effect-dsl.schema.json` for JSON fixture validation; `contracts/canonical-types.ts` for TypeScript types                                          |
-| terminal engine milestone  | `12-roadmap.md`; `15-implementation-kickoff.md`; `18-acceptance-tests.md`                                                                                                                  |
-| workflow                   | `AGENTS.md`; `docs/workflow/`; `24-story-schema.md`; `25-story-template.md`; `26-agent-packet-template.md`; `27-spec-driven-story-generation-workflow.md`; `32-codex-agent-integration.md` |
+| Concern                    | Canonical files                                                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GameState/events/decisions | `03-game-state-events-decisions.md`; `contracts/canonical-types.ts` for compile-ready TypeScript                                                  |
+| Effect DSL                 | `05-effect-dsl-reference.md`; `contracts/effect-dsl.schema.json` for JSON fixture validation; `contracts/canonical-types.ts` for TypeScript types |
+| terminal engine milestone  | `12-roadmap.md`; `15-implementation-kickoff.md`; `18-acceptance-tests.md`                                                                         |
+| repo process               | `AGENTS.md`; `docs/code-standard.md`; `23-repo-tooling-and-enforcement.md`                                                                        |
 
 ## Historical/explanatory files
 

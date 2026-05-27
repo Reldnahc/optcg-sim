@@ -15,12 +15,9 @@
     "canonicalTypeContract": "contracts/canonical-types.ts",
     "canonicalDslSchema": "contracts/effect-dsl.schema.json",
     "canonicalDatabaseContract": "contracts/database-schema-v6.sql",
-    "canonicalStorySchema": "contracts/story.schema.json",
     "implementationPatchLog": "22-v6-implementation-tightening.md",
     "machineReadableManifest": "spec-manifest.json",
-    "machineReadableConventions": "28-machine-readable-conventions.md",
-    "githubBoardGuide": "31-github-board-and-story-ops.md",
-    "codexIntegrationGuide": "32-codex-agent-integration.md"
+    "machineReadableConventions": "28-machine-readable-conventions.md"
   },
   "canonical_document_order": [
     "SPEC_VERSION.md",
@@ -50,19 +47,12 @@
     "21-v3-tightening-notes.md",
     "22-v6-implementation-tightening.md",
     "23-repo-tooling-and-enforcement.md",
-    "24-story-schema.md",
-    "25-story-template.md",
-    "26-agent-packet-template.md",
-    "27-spec-driven-story-generation-workflow.md",
     "28-machine-readable-conventions.md",
     "29-game-types-queues-and-lobbies.md",
     "30-formats-and-ranked-competition.md",
-    "31-github-board-and-story-ops.md",
-    "32-codex-agent-integration.md",
     "contracts/canonical-types.ts",
     "contracts/effect-dsl.schema.json",
-    "contracts/database-schema-v6.sql",
-    "contracts/story.schema.json"
+    "contracts/database-schema-v6.sql"
   ],
   "documents": [
     {
@@ -274,38 +264,6 @@
       "machine_readable": true
     },
     {
-      "path": "24-story-schema.md",
-      "doc_id": "24-story-schema",
-      "doc_title": "Story Schema",
-      "doc_type": "spec-section",
-      "status": "canonical",
-      "machine_readable": true
-    },
-    {
-      "path": "25-story-template.md",
-      "doc_id": "25-story-template",
-      "doc_title": "Story Template",
-      "doc_type": "spec-section",
-      "status": "canonical",
-      "machine_readable": true
-    },
-    {
-      "path": "26-agent-packet-template.md",
-      "doc_id": "26-agent-packet-template",
-      "doc_title": "Agent Packet Template",
-      "doc_type": "spec-section",
-      "status": "canonical",
-      "machine_readable": true
-    },
-    {
-      "path": "27-spec-driven-story-generation-workflow.md",
-      "doc_id": "27-spec-driven-story-generation-workflow",
-      "doc_title": "Spec Driven Story Generation Workflow",
-      "doc_type": "spec-section",
-      "status": "canonical",
-      "machine_readable": true
-    },
-    {
       "path": "28-machine-readable-conventions.md",
       "doc_id": "28-machine-readable-conventions",
       "doc_title": "Machine Readable Conventions",
@@ -325,22 +283,6 @@
       "path": "30-formats-and-ranked-competition.md",
       "doc_id": "30-formats-and-ranked-competition",
       "doc_title": "Formats And Ranked Competition",
-      "doc_type": "spec-section",
-      "status": "canonical",
-      "machine_readable": true
-    },
-    {
-      "path": "31-github-board-and-story-ops.md",
-      "doc_id": "31-github-board-and-story-ops",
-      "doc_title": "GitHub Board And Story Operations",
-      "doc_type": "spec-section",
-      "status": "canonical",
-      "machine_readable": true
-    },
-    {
-      "path": "32-codex-agent-integration.md",
-      "doc_id": "32-codex-agent-integration",
-      "doc_title": "Codex Agent Integration",
       "doc_type": "spec-section",
       "status": "canonical",
       "machine_readable": true

@@ -36,12 +36,9 @@ poneglyphFixtureCards:
 canonicalTypeContract: contracts/canonical-types.ts
 canonicalDslSchema: contracts/effect-dsl.schema.json
 canonicalDatabaseContract: contracts/database-schema-v6.sql
-canonicalStorySchema: contracts/story.schema.json
 implementationPatchLog: 22-v6-implementation-tightening.md
 machineReadableManifest: spec-manifest.json
 machineReadableConventions: 28-machine-readable-conventions.md
-githubBoardGuide: 31-github-board-and-story-ops.md
-codexIntegrationGuide: 32-codex-agent-integration.md
 ```
 
 ## Package guarantees
@@ -52,9 +49,8 @@ Section Ref: `SPEC_VERSION.s003`
 
 - Every Markdown document in this package includes YAML front matter.
 - `SPEC_VERSION.md` and `spec-manifest.json` are the package identity sources of truth.
-- Section references, not renderer-specific anchor slugs, are the canonical citation keys for derived stories, packets, board cards, and reviews.
-- The canonical contract artifacts remain the highest-precision implementation sources inside this package. For story-driven delivery, `contracts/story.schema.json` is also canonical.
-- Derived stories, packets, board exports, and automation outputs should record `specVersion: v6` and the story schema version when applicable.
+- Section references, not renderer-specific anchor slugs, are the canonical citation keys for implementation notes, tests, and review records.
+- The canonical contract artifacts remain the highest-precision implementation sources inside this package.
 
 ## Authority order for implementation
 
@@ -102,19 +98,12 @@ Section Ref: `SPEC_VERSION.s005`
 25. `21-v3-tightening-notes.md`
 26. `22-v6-implementation-tightening.md`
 27. `23-repo-tooling-and-enforcement.md`
-28. `24-story-schema.md`
-29. `25-story-template.md`
-30. `26-agent-packet-template.md`
-31. `27-spec-driven-story-generation-workflow.md`
-32. `28-machine-readable-conventions.md`
-33. `29-game-types-queues-and-lobbies.md`
-34. `30-formats-and-ranked-competition.md`
-35. `31-github-board-and-story-ops.md`
-36. `32-codex-agent-integration.md`
-37. `contracts/canonical-types.ts`
-38. `contracts/effect-dsl.schema.json`
-39. `contracts/database-schema-v6.sql`
-40. `contracts/story.schema.json`
+28. `28-machine-readable-conventions.md`
+29. `29-game-types-queues-and-lobbies.md`
+30. `30-formats-and-ranked-competition.md`
+31. `contracts/canonical-types.ts`
+32. `contracts/effect-dsl.schema.json`
+33. `contracts/database-schema-v6.sql`
 
 ## Supersession rule
 

@@ -12,6 +12,7 @@ import type {
   TimingWindowId,
 } from "./primitives.js";
 import type { CardRef, Keyword, ZoneRef } from "./card-metadata.js";
+import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent, EventVisibility } from "./events.js";
 import type {
   Duration,
@@ -303,4 +304,5 @@ export interface EffectExecutionFrame {
   savedReferences: SequenceSavedResultReferenceMap;
   transientSets: Record<SelectionSetId, TransientCardSet>;
   pendingDecision: EffectExecutionPendingDecisionContinuation;
+  resumePendingDecision?: PendingDecision;
 }

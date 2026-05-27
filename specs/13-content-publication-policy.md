@@ -176,4 +176,4 @@ Source repository publication is not a public simulator launch, public alpha, pu
 
 Neither the MIT source license nor making the repository public grants rights to redistribute, add, license, or use third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content.
 
-A follow-up license implementation story must use an explicitly human-confirmed copyright holder and year.
+A follow-up license implementation must use an explicitly human-confirmed copyright holder and year.

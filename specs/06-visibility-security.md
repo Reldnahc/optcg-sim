@@ -215,7 +215,7 @@ Initial `SpectatorView` has no `pendingDecision` or `legalActions` field.
 It does not include either player's hand card IDs, deck order, face-down life
 card IDs, private reveal records, non-public events, RNG state, effect queue
 internals, or audit entries. Full-information live spectating is deferred to a
-future explicit policy story.
+future explicit policy work.
 
 ## Temporary visibility
 

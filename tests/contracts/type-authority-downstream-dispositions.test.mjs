@@ -40,19 +40,14 @@ const allowedSpecRefs = new Set([
   "22-v6-implementation-tightening.s006",
   "23-repo-tooling-and-enforcement.s006",
   "23-repo-tooling-and-enforcement.s011",
-  "24-story-schema.s016",
-  "24-story-schema.s025",
-  "24-story-schema.s031",
-  "24-story-schema.s032",
 ]);
 
-function isValidFollowUpStory(value) {
+function isValidFollowUpWork(value) {
   return (
     value === "TYP-005D" ||
     value === "TYP-005E" ||
     value === "TYP-005F" ||
-    value.startsWith("stories/ambiguities/") ||
-    value.startsWith("stories/approved/")
+    value === "TYP-005C ambiguity record"
   );
 }
 
@@ -70,8 +65,6 @@ function extractDispositionJson(doc) {
 test("downstream disposition record exists and enforces per-field TYP-005C authority evidence", async () => {
   const doc = await readFile(typeAuthorityDocPath, "utf8");
   const record = extractDispositionJson(doc);
-  const ambiguityFileCache = new Map();
-
   assert.equal(record.storyId, "TYP-005C");
   assert.ok(
     Array.isArray(record.dispositions),
@@ -90,44 +83,32 @@ test("downstream disposition record exists and enforces per-field TYP-005C autho
       /^(canonical_contract_omission|package_drift_or_engine_internal|behavior_ambiguity)$/,
       `invalid disposition for ${field}`,
     );
-    assert.equal(typeof disposition.followUpStory, "string");
+    assert.equal(typeof disposition.followUpWork, "string");
     assert.ok(
-      isValidFollowUpStory(disposition.followUpStory),
-      `${field} followUpStory must be TYP-005D/TYP-005E/TYP-005F or a story path`,
+      isValidFollowUpWork(disposition.followUpWork),
+      `${field} followUpWork must be TYP-005D/TYP-005E/TYP-005F or the ambiguity record`,
     );
     if (disposition.disposition === "behavior_ambiguity") {
-      assert.ok(
-        disposition.followUpStory.startsWith("stories/ambiguities/") ||
-          disposition.followUpStory.startsWith("stories/approved/"),
-        `${field} behavior_ambiguity must route to an ambiguity/story path`,
+      assert.equal(
+        disposition.followUpWork,
+        "TYP-005C ambiguity record",
+        `${field} behavior_ambiguity must route to the recorded ambiguity evidence`,
       );
       assert.notEqual(
-        disposition.followUpStory,
+        disposition.followUpWork,
         "TYP-005D",
         `${field} behavior_ambiguity cannot route directly to TYP-005D`,
       );
       assert.notEqual(
-        disposition.followUpStory,
+        disposition.followUpWork,
         "TYP-005E",
         `${field} behavior_ambiguity cannot route directly to TYP-005E`,
       );
       assert.notEqual(
-        disposition.followUpStory,
+        disposition.followUpWork,
         "TYP-005F",
         `${field} behavior_ambiguity cannot route directly to TYP-005F`,
       );
-      if (disposition.followUpStory.startsWith("stories/ambiguities/")) {
-        const ambiguityPath = path.join(repoRoot, disposition.followUpStory);
-        let ambiguityDoc = ambiguityFileCache.get(ambiguityPath);
-        if (typeof ambiguityDoc !== "string") {
-          ambiguityDoc = await readFile(ambiguityPath, "utf8");
-          ambiguityFileCache.set(ambiguityPath, ambiguityDoc);
-        }
-        assert.ok(
-          ambiguityDoc.includes(field),
-          `${field} behavior_ambiguity must be explicitly listed in ${disposition.followUpStory}`,
-        );
-      }
     }
     assert.ok(
       Array.isArray(disposition.specRefs) && disposition.specRefs.length > 0,

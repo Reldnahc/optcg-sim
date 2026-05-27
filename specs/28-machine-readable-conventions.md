@@ -126,7 +126,7 @@ Fallback format when a section ref is unavailable should be:
 doc_id#Exact Heading Text
 ```
 
-Do not rely on renderer-specific generated anchor slugs as the sole reference key. In v6, derived story files, issue bodies, board cards, and agent packets should default to `doc_id.sNNN (Heading)` citations.
+Do not rely on renderer-specific generated anchor slugs as the sole reference key. In v6, derived implementation notes, tests, and review records should default to `doc_id.sNNN (Heading)` citations.
 
 ## Section index
 
@@ -136,18 +136,16 @@ Section Ref: `28-machine-readable-conventions.s009`
 
 This package includes a generated `section-index.json` file containing the canonical section list for every Markdown document. Consumers that need fast lookup should prefer `section-index.json` over scraping headings at runtime, while still treating the in-document `SECTION_REF` markers as the body-level source of truth.
 
-## Story generation rules
+## Work item generation rules
 
 <!-- SECTION_REF: 28-machine-readable-conventions.s010 -->
 
 Section Ref: `28-machine-readable-conventions.s010`
 
-When generating stories from this package:
+When generating work items from this package:
 
-- use `24-story-schema.md` as the output contract
-- use `25-story-template.md` for approved human-facing stories
-- use `26-agent-packet-template.md` for execution packets
-- use `27-spec-driven-story-generation-workflow.md` for the process contract
+- cite stable `SECTION_REF` values for every behavior or architecture claim
+- keep implementation scope tied to a single coherent concern
 - fail closed on ambiguity instead of inventing missing rules
 
 ## Change-management rules
@@ -164,7 +162,7 @@ A spec change is machine-significant if it changes any of:
 - acceptance criteria, invariants, or explicit non-goals
 - any normative `must` or `must not` statement
 
-When those change, downstream generated stories and packets should be treated as stale and re-generated or re-reviewed.
+When those change, downstream implementation notes, tests, or review records that cite the changed sections should be treated as stale and rechecked.
 
 ## Recommended downstream tooling behavior
 
@@ -178,10 +176,9 @@ Scripts that consume this spec should:
 - validate that referenced docs exist
 - validate that canonical contract file names match the manifest
 - surface ambiguous or conflicting requirements as errors
-- preserve exact cited text ranges when building story packets
-- record the `spec_version` and story schema version used for each generated artifact
-- preserve section-ref citations when exporting stories to GitHub Issues, Projects, or agent packets
-- validate approved story files against `contracts/story.schema.json` before creating or updating board items
+- preserve exact cited text ranges when building implementation summaries or review records
+- record the `spec_version` used for each generated artifact
+- preserve section-ref citations when exporting work items or review notes
 
 ## Backward-compatibility policy
 

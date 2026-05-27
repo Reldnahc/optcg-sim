@@ -283,30 +283,28 @@ Section Ref: `15-implementation-kickoff.s014`
 
 When platform persistence is added, store account-level `loadouts`, not browser-local saved decks.
 
-## Spec-driven backlog and agent delivery
+## Spec-driven implementation delivery
 
 <!-- SECTION_REF: 15-implementation-kickoff.s015 -->
 
 Section Ref: `15-implementation-kickoff.s015`
 
-Before parallel feature implementation begins, the repo should adopt the planning contract defined in:
-
-- [`24-story-schema.md`](24-story-schema.md)
-- [`25-story-template.md`](25-story-template.md)
-- [`26-agent-packet-template.md`](26-agent-packet-template.md)
-- [`27-spec-driven-story-generation-workflow.md`](27-spec-driven-story-generation-workflow.md)
+Before parallel feature implementation begins, the repo should keep delivery
+grounded in the canonical specs and enforce it through tests, review, and
+package boundaries.
 
 Required kickoff outcome:
 
-1. spec sections are mapped into candidate epics and stories,
-2. approved implementation stories exist in a canonical schema,
-3. each assigned story is converted into a constrained agent packet,
-4. implementation/review agents are instructed to escalate ambiguity instead of inventing behavior,
-5. completed work cites the spec sections it implemented.
+1. spec sections are mapped into coherent implementation slices,
+2. patches cite the spec sections they implement when behavior or architecture changes,
+3. implementation/review agents are instructed to escalate ambiguity instead of inventing behavior,
+4. completed work includes focused tests and verification evidence.
 
-The spec is the authority. Stories and agent packets are delivery artifacts derived from that authority. If a story packet conflicts with the cited spec, the cited spec wins and the packet must be corrected.
+The spec is the authority. If implementation notes, review records, or chat
+context conflict with cited specs, the cited specs win and the lower-authority
+material must be corrected.
 
-The first post-foundation platform backlog should also reserve explicit stories for:
+The first post-foundation platform backlog should also reserve explicit work for:
 
 - queue-backed `ranked` and `unranked` session entry,
 - custom lobby creation/join flows with optional password support,

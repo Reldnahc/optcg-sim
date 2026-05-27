@@ -37,6 +37,10 @@ const firstPlayerDevDeckEntries = [
   { cardId: "OP13-096" as CardId, count: 4 },
   { cardId: "OP13-097" as CardId, count: 4 },
   { cardId: "OP13-098" as CardId, count: 4 },
+  { cardId: "OP11-097" as CardId, count: 3 },
+  { cardId: "OP14-096" as CardId, count: 3 },
+  { cardId: "OP05-082" as CardId, count: 3 },
+  { cardId: "OP13-092" as CardId, count: 3 },
 ] as const;
 
 const secondPlayerDevDeckEntries: readonly DevDeckCardEntry[] = [
@@ -113,7 +117,7 @@ export const createDefaultDevMatchSetup = async (
       devDonCount: 10,
       versions: {
         cardDataVersion: "live-poneglyph-dev-v1",
-        effectDefinitionsVersion: "generated-dev-v1",
+        effectDefinitionsVersion: "generated-dev-v2",
       },
       ...(cache === undefined ? {} : { cache }),
       ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),

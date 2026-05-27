@@ -144,17 +144,17 @@ export type PublicPendingDecision =
       Exclude<
         PendingDecision["type"],
         | "chooseQuantity"
+        | "chooseTriggerOrder"
         | "selectCards"
         | "selectTargets"
         | "orderCards"
-        | "chooseTriggerOrder"
       >
     >
   | PublicChooseQuantityDecision
+  | PublicChooseTriggerOrderDecision
   | PublicSelectCardsDecision
   | PublicSelectTargetsDecision
-  | PublicOrderCardsDecision
-  | PublicChooseTriggerOrderDecision;
+  | PublicOrderCardsDecision;
 
 export type PublicLegalAction =
   | { type: "playCard"; card: CardRef; costPaymentRequired?: boolean }

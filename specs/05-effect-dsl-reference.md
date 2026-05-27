@@ -514,7 +514,7 @@ type Effect =
   | { type: "custom"; handler: string };
 ```
 
-Cardinality fields such as `min` and `max` use the exact-N and up-to-N semantics from `03-game-state-events-decisions.s017`. `drawUpTo` is a planned `chooseQuantity`-backed primitive: it must pause through a `chooseQuantity` pending decision, validate the selected whole integer against public min/max bounds, and draw only the chosen amount when a future runtime story makes it executable.
+Cardinality fields such as `min` and `max` use the exact-N and up-to-N semantics from `03-game-state-events-decisions.s017`. `drawUpTo` is a planned `chooseQuantity`-backed primitive: it must pause through a `chooseQuantity` pending decision, validate the selected whole integer against public min/max bounds, and draw only the chosen amount when future runtime work makes it executable.
 
 `drawUpTo` short-deck resolution is do-as-much-as-possible. If the chosen quantity is greater than the number of cards remaining in that player's deck, the runtime must draw every remaining card and emit draw and card-movement events only for cards actually drawn. The next rule-processing checkpoint detects deck-out under `02-engine-mechanics.s035`; the effect does not fail closed before drawing the remaining cards solely because the chosen quantity exceeded the remaining deck size.
 
@@ -578,7 +578,7 @@ Those fields drive later connector decisions and replay determinism. Runtime fra
 
 Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
 
-A saved field-object reference is a same-frame saved-reference family for later text such as "that Character". The supported field-object families are `selectedTargets` and `producedObjects`; `selectedCards`, `paidCost`, `SelectionSetId`, `SelectionId`, and saved hand-selection references are separate families and are not field-object target references. A segment with `saveResultAs` may expose `selectedTargets` when it legally selected field objects through a target request, and may expose `producedObjects` when a supported runtime story later creates or moves a public field object and records that object as produced by the segment.
+A saved field-object reference is a same-frame saved-reference family for later text such as "that Character". The supported field-object families are `selectedTargets` and `producedObjects`; `selectedCards`, `paidCost`, `SelectionSetId`, `SelectionId`, and saved hand-selection references are separate families and are not field-object target references. A segment with `saveResultAs` may expose `selectedTargets` when it legally selected field objects through a target request, and may expose `producedObjects` when supported runtime work later creates or moves a public field object and records that object as produced by the segment.
 
 A later segment consumes a saved field-object reference with `{ type: "savedFieldObject", binding: { family: "selectedTargets" | "producedObjects", saveResultAs, objectIndex?, sourceSegmentId? }, zone, player, controller?, filter?, visibility: "publicOnly", onFailure: "failClosed" }`. The reference is valid only inside the same effect execution frame, only for the named `saveResultAs` ledger entry, and only while the referenced object remains a public legal object for the later instruction. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities or the private saved-reference failure reason. State hashes include the frame saved-reference ledger and the failed segment result so replay, event order, and connector decisions remain deterministic.
 
@@ -1055,7 +1055,7 @@ TypeScript/spec primitives outside that JSON schema are planned/not
 fixture-authorable until schema validation and fixtures exist.
 This list is the fixture-authorability boundary, not generated playable support.
 Schema authorability alone does not imply runtime-executable,
-parser-certified, or generated-support playable status. New TYP schema stories
+parser-certified, or generated-support playable status. New schema work
 may move primitives into the schema-supported fixture subset only when they also
 add schema coverage and validation fixtures; generated playable support still
 requires complete parser support and runtime capability evidence.
@@ -1230,4 +1230,4 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: repeat
 - effect: replacement
 
-new fixture-authorable primitives must add schema coverage and validation fixtures in the same story that makes the primitive authorable.
+new fixture-authorable primitives must add schema coverage and validation fixtures in the same change that makes the primitive authorable.

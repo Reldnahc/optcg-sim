@@ -65,7 +65,7 @@ Every primitive has tests independent of specific cards:
 
 Primitive tests should assert events, state, decisions, and visibility where applicable.
 
-For generated-support parser/certification stories, primitive-boundary parser tests
+For generated-support parser/certification changes, primitive-boundary parser tests
 must prove wrapper or entry-point handling, markers, conditions, costs, effect
 body behavior, targets or filters, cardinality, durations, source-presence
 policy, and decision/visibility behavior when applicable. Do not treat exact
@@ -101,12 +101,12 @@ Minimum assertions:
 
 This per-card requirement applies to implemented non-vanilla cards and does not
 reintroduce a manual per-card allowlist requirement for complete-parse
-common-template generated support. Generated-support stories must still include
+common-template generated support. Generated-support changes must still include
 representative synthetic proof tests for reusable primitive/composition support,
 runtime capability matrix coverage checks, generated-support decision/reporting
 path checks, at least one positive modular example, and at least one negative
 anti-shape regression proving non-modular exact full-line, wrapper-body-only, or
-sample-shaped paths are rejected. When a generated-support story claims
+sample-shaped paths are rejected. When generated-support work claims
 cross-entry-point reuse, it must include at least one regression proving the
 supported reusable body works under more than one supported entry point.
 
@@ -400,7 +400,6 @@ Add these checks to CI before broad card implementation:
 tsc -p contracts/tsconfig.json
 # validate each card effect fixture against contracts/effect-dsl.schema.json
 # run a SQL parser/linter against contracts/database-schema-v6.sql
-# validate approved story files against contracts/story.schema.json
 ```
 
 The fixture validator must reject deprecated DSL aliases such as `costOp`, `costValue`, `typeIncludes`, `cardNameNot`, and `colorIncludes` in committed canonical definitions. A migration script may accept them only when converting legacy examples.

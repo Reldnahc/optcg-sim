@@ -289,8 +289,6 @@ CONTRACT-001 canonical TypeScript contract compiles with tsc -p contracts/tsconf
 CONTRACT-002 all committed effect fixtures validate against contracts/effect-dsl.schema.json
 CONTRACT-003 all canonical DSL fixtures use cost/typesAny/colorsAny/nameNot fields instead of deprecated aliases
 CONTRACT-004 database-schema-v6.sql contains no nullable variant uniqueness constraint
-CONTRACT-007 approved story files validate against contracts/story.schema.json
-CONTRACT-008 story and packet examples use section-ref citations instead of heading-anchor examples
 CONTRACT-005 database-schema-v6.sql requires replay reconstruction source
 CONTRACT-006 README, SPEC_VERSION, and contracts agree on specVersion v6
 ```

@@ -112,6 +112,10 @@ export interface PublicSelectCardsDecision extends PublicDecision<"selectCards">
   choices: Array<
     Pick<CardSelectionCandidate, "card"> & { selectable: boolean }
   >;
+  selectionConstraint?: {
+    type: "differentNames";
+    groupKeysByInstanceId: Record<string, string>;
+  };
 }
 
 export interface PublicSelectTargetsDecision extends PublicDecision<"selectTargets"> {
@@ -127,14 +131,27 @@ export interface PublicOrderCardsDecision extends PublicDecision<"orderCards"> {
   destination: Zone;
 }
 
+export interface PublicChooseTriggerOrderDecision extends PublicDecision<"chooseTriggerOrder"> {
+  type: "chooseTriggerOrder";
+  choices: Array<{
+    triggerId: string;
+    source?: CardRef;
+  }>;
+}
+
 export type PublicPendingDecision =
   | PublicDecision<
       Exclude<
         PendingDecision["type"],
-        "chooseQuantity" | "selectCards" | "selectTargets" | "orderCards"
+        | "chooseQuantity"
+        | "chooseTriggerOrder"
+        | "selectCards"
+        | "selectTargets"
+        | "orderCards"
       >
     >
   | PublicChooseQuantityDecision
+  | PublicChooseTriggerOrderDecision
   | PublicSelectCardsDecision
   | PublicSelectTargetsDecision
   | PublicOrderCardsDecision;

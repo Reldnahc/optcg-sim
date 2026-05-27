@@ -347,24 +347,9 @@ Recommended CI jobs:
 
 For protected branches, require at least one human review plus passing CI.
 
-Ordinary protected-branch changes still require a pull request, at least one
-human review, and passing required checks. The only allowed packet-lifecycle
-exception is a dedicated GitHub App actor `optcg-packet-cleanup[bot]` running
-workflow `.github/workflows/post-merge-packet-cleanup.yml` with token
-`POST_MERGE_PACKET_CLEANUP_TOKEN`, and that exception exists only to push exact
-packet-completion command output to `main` after a reviewed pull request has
-merged. The cleanup actor and token must not be available to arbitrary GitHub
-Actions workflows, human users, broad admin roles, implementation changes, docs
-changes, tooling changes, or ordinary development pushes.
-
-Exact packet-completion cleanup may use cleanup-scoped lifecycle verification
-instead of full repo verification before the direct cleanup push. Cleanup-scoped
-lifecycle verification must prove metadata binding, packet-completion output,
-story lifecycle state, active packet state, and committed story metadata remain
-valid. Normal main-branch CI remains the broad post-cleanup safety net after
-the cleanup commit is pushed. Cleanup that includes any manual edit beyond
-packet-completion output still requires full repo verification and the normal
-reviewer-subagent path before push or merge.
+Ordinary protected-branch changes require a pull request, at least one human
+review, and passing required checks. Direct pushes to protected branches should
+be reserved for explicit emergency operations outside normal development.
 
 ## Coverage policy
 

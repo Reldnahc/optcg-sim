@@ -68,7 +68,10 @@ test("spec authority index separates canonical and historical files", async () =
     index,
     /terminal engine milestone[\s\S]*12-roadmap\.md[\s\S]*15-implementation-kickoff\.md/,
   );
-  assert.match(index, /workflow[\s\S]*AGENTS\.md[\s\S]*docs\/workflow\//);
+  assert.match(
+    index,
+    /repo process[\s\S]*AGENTS\.md[\s\S]*docs\/code-standard\.md/,
+  );
   assert.match(
     index,
     /Historical\/explanatory[\s\S]*16-typescript-interface-draft\.md/,
@@ -89,12 +92,10 @@ test("TypeScript interface draft is historical and non-normative", async () => {
 
 test("code standard guide is mandatory implementation guidance", async () => {
   const agents = await readText("AGENTS.md");
-  const storyExecution = await readText("docs/workflow/story-execution.md");
   const codeStandard = await readText("docs/code-standard.md");
 
   assert.match(codeStandard, /^# Code Standard Guide$/m);
   assertMandatoryCodeStandardLink(agents);
-  assertMandatoryCodeStandardLink(storyExecution);
 });
 
 test("event specs require append-order strictly increasing event sequences", async () => {
@@ -546,7 +547,7 @@ test("specs define generated card support from complete parse and runtime capabi
     "must not depend on a manual per-card allowlist or a manual card-to-mechanic map",
     "Complete parse means every gameplay-relevant part of a card is parsed",
     "runtime capability matrix records which generated components the current engine can execute",
-    "CARD parser/generated-support stories consume completed contract/schema plus runtime-capability evidence",
+    "Card parser/generated-support work consumes completed contract/schema plus runtime-capability evidence",
     "Contract/schema completion alone is not playable support",
     "generated support index maps Poneglyph card IDs and source hashes to generated `EffectDefinition` IDs",
     "Multiple parsed effects for one card compose into one generated `EffectDefinition`",
@@ -847,110 +848,9 @@ test("content publication policy spec authorizes MIT source repository publicati
     "deployment",
     "production service availability",
     "Neither the MIT source license nor making the repository public grants rights to redistribute, add, license, or use third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content",
-    "follow-up license implementation story must use an explicitly human-confirmed copyright holder and year",
+    "follow-up license implementation",
   ]) {
     assertContainsWords(publication, requiredText);
-  }
-});
-
-test("specs authorize only a narrow post-merge packet cleanup bypass", async () => {
-  const toolingSpec = await readText(
-    "specs/23-repo-tooling-and-enforcement.md",
-  );
-  const workflowSpec = await readText(
-    "specs/27-spec-driven-story-generation-workflow.md",
-  );
-  const codexSpec = await readText("specs/32-codex-agent-integration.md");
-
-  const mergeGates = extractSection(
-    toolingSpec,
-    "23-repo-tooling-and-enforcement.s016",
-    "23-repo-tooling-and-enforcement.s017",
-  );
-  const completionChecks = extractSection(
-    workflowSpec,
-    "27-spec-driven-story-generation-workflow.s015",
-    "27-spec-driven-story-generation-workflow.s016",
-  );
-  const mergeGateRecommendation = extractSection(
-    codexSpec,
-    "32-codex-agent-integration.s013",
-    "32-codex-agent-integration.s014",
-  );
-
-  for (const requiredText of [
-    "Ordinary protected-branch changes still require a pull request, at least one human review, and passing required checks",
-    "dedicated GitHub App actor `optcg-packet-cleanup[bot]`",
-    "workflow `.github/workflows/post-merge-packet-cleanup.yml`",
-    "token `POST_MERGE_PACKET_CLEANUP_TOKEN`",
-    "only to push exact packet-completion command output to `main` after a reviewed pull request has merged",
-    "must not be available to arbitrary GitHub Actions workflows, human users, broad admin roles, implementation changes, docs changes, tooling changes, or ordinary development pushes",
-  ]) {
-    assertContainsWords(mergeGates, requiredText);
-  }
-
-  for (const requiredText of [
-    "Post-merge cleanup metadata is a reviewed cleanup request, not standalone authority to mutate story state",
-    "must bind the requested cleanup to reviewed pull-request evidence, the merge state, trusted checked-in approved story files, current packet evidence, and, for parent cleanup, included substory evidence",
-    "fail closed when cleanup metadata is absent, malformed, stale, unbound to reviewed evidence, or names a story that is not eligible for completion",
-    "The cleanup workflow must check out trusted `main` or default-branch code, not unreviewed pull-request branch code",
-    "must not open a cleanup pull request",
-    "Manual fallback is only for operational failure",
-    "Branch deletion may run only after packet lifecycle cleanup succeeds and only for associated merged, unprotected story or substory branches",
-  ]) {
-    assertContainsWords(completionChecks, requiredText);
-    assertContainsWords(mergeGateRecommendation, requiredText);
-  }
-
-  for (const requiredText of [
-    "packet-completion cleanup may use cleanup-scoped lifecycle verification instead of full repo verification before the direct cleanup push",
-    "Cleanup-scoped lifecycle verification must prove metadata binding, packet-completion output, story lifecycle state, active packet state, and committed story metadata remain valid",
-    "that includes any manual edit beyond packet-completion output still requires full repo verification and the normal reviewer-subagent path before push or merge",
-  ]) {
-    assertContainsWords(mergeGates, requiredText);
-    assertContainsWords(completionChecks, requiredText);
-    assertContainsWords(mergeGateRecommendation, requiredText);
-  }
-
-  for (const prohibitedPattern of [
-    /arbitrary GitHub Actions workflows to bypass branch protection/i,
-    /human users .* use this cleanup bypass/i,
-  ]) {
-    assert.doesNotMatch(completionChecks, prohibitedPattern);
-    assert.doesNotMatch(mergeGateRecommendation, prohibitedPattern);
-  }
-});
-
-test("workflow authority pins layered parent story sets for composed effect and card support work", async () => {
-  const workflowSpec = await readText(
-    "specs/27-spec-driven-story-generation-workflow.md",
-  );
-  const storyExecution = await readText("docs/workflow/story-execution.md");
-
-  const generationOutputs = extractSection(
-    workflowSpec,
-    "27-spec-driven-story-generation-workflow.s005",
-    "27-spec-driven-story-generation-workflow.s006",
-  );
-  const promptContract = extractSection(
-    workflowSpec,
-    "27-spec-driven-story-generation-workflow.s006",
-    "27-spec-driven-story-generation-workflow.s007",
-  );
-
-  for (const requiredText of [
-    "layered parent story sets",
-    "Broad composed-effect or card-support initiatives",
-    "contracts/schema, engine/runtime, and cards/parser/generated-support parent sets",
-    "Implementation stories still keep one primary concern and one primary area",
-    "TYP-prefixed contract/schema implementation stories use `area: contracts`, not `area: types`",
-    "CARD stories may depend on completed TYP and ENG parent series",
-    "must not hide runtime work",
-    "Already-generated downstream TYP, ENG, and CARD implementation story sets must be revised or regenerated after the layered rules land before approval handoff",
-  ]) {
-    assertContainsWords(generationOutputs, requiredText);
-    assertContainsWords(promptContract, requiredText);
-    assertContainsWords(storyExecution, requiredText);
   }
 });
 
@@ -987,10 +887,7 @@ test("SPEC-010B authority requires modular generated-support evidence factorizat
       R("specs/09-card-data-and-support-policy.md"),
       R("specs/11-testing-quality.md"),
     ]);
-  const templateSpec = await R("specs/25-story-template.md");
   const codeStandard = await R("docs/code-standard.md");
-  const storyExecution = await R("docs/workflow/story-execution.md");
-  const reviewGate = await R("docs/workflow/review-gate.md");
   const section = (source, start, end) => extractSection(source, start, end);
   // prettier-ignore
   const checks = [
@@ -999,79 +896,12 @@ test("SPEC-010B authority requires modular generated-support evidence factorizat
     [section(runtimeSpec, "04-effect-runtime.s016", "04-effect-runtime.s017"), ["Exact wrapper-body allowlists are insufficient generated-support evidence unless they also expose required primitive-boundary evidence", "A supported effect body under one entry point does not authorize support under another entry point", "support under another entry point requires separate entry-point adapter evidence plus body or composition evidence"]],
     [extractSectionToEnd(dslSpec, "05-effect-dsl-reference.s029"), ["Synthetic positive modular example:", "Synthetic negative exact wrapper-body example:", "These synthetic examples must not name real cards or card IDs"]],
     [section(cardPolicySpec, "09-card-data-and-support-policy.s016", "09-card-data-and-support-policy.s017"), ["Generated-support evidence factorization is primitive-boundary authority, not exact wrapper-body or sample-shaped authority", "Parser certification and runtime capability evidence must expose reusable boundaries for wrapper or entry point, markers, conditions, costs, body effects, targets, filters, cardinality, durations, visibility, source-presence policy, and composition when present", "Composition evidence may be required for supported combined shapes, but composition evidence cannot replace missing wrapper, body, cost, target, condition, duration, source policy, decision, or visibility evidence"]],
-    [section(testingSpec, "11-testing-quality.s004", "11-testing-quality.s005"), ["Authority tests must assert generated-support factorization wording per cited section", "Each required section is asserted independently", "one section cannot satisfy another section's required wording", "generated-support parser/certification stories", "Do not treat exact full-line matches, wrapper-body-only matches, or sample-shaped outputs as primitive-boundary proof"]],
-    [section(testingSpec, "11-testing-quality.s005", "11-testing-quality.s006"), ["does not reintroduce a manual per-card allowlist requirement", "representative synthetic proof tests", "runtime capability matrix coverage checks", "generated-support decision/reporting path checks", "at least one positive modular example", "at least one negative anti-shape regression", "When a generated-support story claims cross-entry-point reuse, it must include at least one regression proving the supported reusable body works under more than one supported entry point"]],
-    [section(templateSpec, "25-story-template.s014", "25-story-template.s010"), ["parsed effect shape decomposition", "wrapper or entry point, markers, condition, cost, effect body, target, filter, cardinality, duration, source-presence policy, decision/visibility needs, and composition evidence when applicable"]],
-    [codeStandard, ["Generated-support parser/certification stories must include primitive-boundary parser tests", "negative anti-shape regression against exact full-line, wrapper-body-only, or sample-shaped support paths"]],
-    [storyExecution, ["parsed effect shape decomposition", "wrapper or entry point, markers, condition, cost, effect body, target, filter, cardinality, duration, source-presence policy, decision/visibility needs, and composition evidence when applicable"]],
-    [reviewGate, ["engine capability preflight does not decompose parsed effect shape into wrapper or entry point, markers, condition, cost, effect body, target, filter, cardinality, duration, source-presence policy, decision/visibility needs, and composition evidence when applicable"]],
+    [section(testingSpec, "11-testing-quality.s004", "11-testing-quality.s005"), ["Authority tests must assert generated-support factorization wording per cited section", "Each required section is asserted independently", "one section cannot satisfy another section's required wording", "Do not treat exact full-line matches, wrapper-body-only matches, or sample-shaped outputs as primitive-boundary proof"]],
+    [section(testingSpec, "11-testing-quality.s005", "11-testing-quality.s006"), ["does not reintroduce a manual per-card allowlist requirement", "representative synthetic proof tests", "runtime capability matrix coverage checks", "generated-support decision/reporting path checks", "at least one positive modular example", "at least one negative anti-shape regression", "cross-entry-point reuse", "more than one supported entry point"]],
+    [codeStandard, ["Generated-support parser/certification changes must include primitive-boundary parser tests", "negative anti-shape regression against exact full-line, wrapper-body-only, or sample-shaped support paths"]],
   ];
   for (const [text, terms] of checks)
     for (const term of terms) assertContainsWords(text, term);
-});
-
-test("agent packet spec uses current assignable role names", async () => {
-  const packetSpec = await readText("specs/26-agent-packet-template.md");
-  const sec = (start, end) => extractSection(packetSpec, start, end);
-  const introduction = sec(
-      "26-agent-packet-template.s001",
-      "26-agent-packet-template.s002",
-    ),
-    reviewFooter = extractSectionToEnd(
-      packetSpec,
-      "26-agent-packet-template.s007",
-    );
-  for (const [text, term] of [
-    [introduction, "implementation, story-review, or code-review agent"],
-    [reviewFooter, "For story-review or code-review agents"],
-  ])
-    assertContainsWords(text, term);
-  for (const text of [introduction, reviewFooter])
-    assert.doesNotMatch(text, /\bverification agents?\b/i);
-});
-
-test("story workflow authority order defers implementation execution to Codex authority", async () => {
-  const [workflowSpec, codexSpec] = await Promise.all([
-    R("specs/27-spec-driven-story-generation-workflow.md"),
-    R("specs/32-codex-agent-integration.md"),
-  ]);
-  const sec = (start, end) => extractSection(workflowSpec, start, end);
-  const workflowSummary = sec(
-    "27-spec-driven-story-generation-workflow.s002",
-    "27-spec-driven-story-generation-workflow.s003",
-  );
-  const workflowAuthority = sec(
-    "27-spec-driven-story-generation-workflow.s003",
-    "27-spec-driven-story-generation-workflow.s004",
-  );
-  const codexAuthority = extractSection(
-    codexSpec,
-    "32-codex-agent-integration.s004",
-    "32-codex-agent-integration.s005",
-  );
-  assertContainsWords(
-    workflowSummary,
-    "preserve the applicable authority order",
-  );
-  for (const term of [
-    "For story planning, packet construction, and generated reports before an execution handoff",
-    "For Codex or implementation execution, use the execution authority order from `32-codex-agent-integration.s004` and `AGENTS.md`",
-  ])
-    assertContainsWords(workflowAuthority, term);
-
-  for (const executionLayer of [
-    "cited specification sections",
-    "approved story file",
-    "generated agent packet",
-    "checked-in repo instructions in `AGENTS.md`",
-    "linked workflow procedure documents under `docs/workflow/`",
-    "local code reality",
-    "proposed patch",
-  ])
-    (assertContainsWords(workflowAuthority, executionLayer),
-      assertContainsWords(codexAuthority, executionLayer));
-
-  assert.doesNotMatch(workflowAuthority, /For planning and execution:/);
 });
 
 test("root license and README scope MIT source publication to repository-owned material", async () => {

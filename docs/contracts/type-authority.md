@@ -27,7 +27,7 @@ Under current repository constraints, direct re-export from `contracts/*` into t
 - `rootDir`: `src`
 - `include`: `["src/**/*.ts"]`
 
-These constraints keep `@optcg/types` centered on `packages/types/src/*` and prevent adopting cross-package direct re-export as a narrow story-local change.
+These constraints keep `@optcg/types` centered on `packages/types/src/*` and prevent adopting cross-package direct re-export as a narrow local change.
 
 ## Canonical-To-Package Module Mapping
 
@@ -55,7 +55,7 @@ Canonical module to package module mapping is one-to-one by filename:
   - `packages/types/src/effects.ts`
   - `packages/types/src/decisions.ts`
   - `packages/types/src/runtime.ts`
-- Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later approved story explicitly includes them (for example `*.test.ts` and `export-ownership.manifest.ts`).
+- Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later explicit change includes them (for example `*.test.ts` and `export-ownership.manifest.ts`).
 - Manual edits to generated canonical projection files are non-authoritative.
 - Later sync verification must overwrite or reject manual-only drift in package outputs.
 - Sync write entrypoint: `corepack pnpm run types:sync:write`
@@ -75,7 +75,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "Action.respondToDecision.playerId",
       "disposition": "package_drift_or_engine_internal",
-      "followUpStory": "TYP-005E",
+      "followUpWork": "TYP-005E",
       "specRefs": [
         "03-game-state-events-decisions.s016",
         "22-v6-implementation-tightening.s006"
@@ -87,7 +87,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "PublicCardView.currentPower",
       "disposition": "package_drift_or_engine_internal",
-      "followUpStory": "TYP-005E",
+      "followUpWork": "TYP-005E",
       "specRefs": [
         "03-game-state-events-decisions.s003",
         "06-visibility-security.s004"
@@ -99,7 +99,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "BattleState.counterPower",
       "disposition": "package_drift_or_engine_internal",
-      "followUpStory": "TYP-005E",
+      "followUpWork": "TYP-005E",
       "specRefs": [
         "03-game-state-events-decisions.s002",
         "06-visibility-security.s004"
@@ -111,7 +111,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "BattleState.damageProcess",
       "disposition": "package_drift_or_engine_internal",
-      "followUpStory": "TYP-005E",
+      "followUpWork": "TYP-005E",
       "specRefs": [
         "03-game-state-events-decisions.s002",
         "03-game-state-events-decisions.s003"
@@ -123,7 +123,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "TransientCardSet.ownerId",
       "disposition": "package_drift_or_engine_internal",
-      "followUpStory": "TYP-005E",
+      "followUpWork": "TYP-005E",
       "specRefs": [
         "03-game-state-events-decisions.s002",
         "06-visibility-security.s021"
@@ -135,7 +135,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "TransientCardSet.controllerId",
       "disposition": "package_drift_or_engine_internal",
-      "followUpStory": "TYP-005E",
+      "followUpWork": "TYP-005E",
       "specRefs": [
         "03-game-state-events-decisions.s002",
         "06-visibility-security.s021"
@@ -147,7 +147,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "ReplacementAppliedEventPayload",
       "disposition": "behavior_ambiguity",
-      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
+      "followUpWork": "TYP-005C ambiguity record",
       "specRefs": [
         "03-game-state-events-decisions.s002",
         "22-v6-implementation-tightening.s006"
@@ -159,7 +159,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "PublicDecision.processId",
       "disposition": "behavior_ambiguity",
-      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
+      "followUpWork": "TYP-005C ambiguity record",
       "specRefs": [
         "06-visibility-security.s004",
         "06-visibility-security.s007"
@@ -171,7 +171,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "PublicDecision.replacementIds",
       "disposition": "behavior_ambiguity",
-      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
+      "followUpWork": "TYP-005C ambiguity record",
       "specRefs": [
         "06-visibility-security.s004",
         "06-visibility-security.s007"
@@ -183,7 +183,7 @@ Contract shape changes require edits in canonical contract modules under separat
     {
       "field": "PublicDecision.mandatory",
       "disposition": "behavior_ambiguity",
-      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
+      "followUpWork": "TYP-005C ambiguity record",
       "specRefs": [
         "06-visibility-security.s004",
         "06-visibility-security.s007"
@@ -212,10 +212,7 @@ behavior semantics into shared contracts.
 
 TYP-005E implemented the required engine-core migration for every TYP-005C
 `package_drift_or_engine_internal` disposition before package projection sync.
-Because TYP-005 is using the parent integration branch workflow, the TYP-005E
-story file remains in `stories/approved/` until the parent branch lands on
-`main`; this section records the checked-in substory prerequisite evidence for
-TYP-005F.
+This section records the checked-in prerequisite evidence for TYP-005F.
 
 Reviewed branch commit:
 
@@ -242,7 +239,6 @@ verification evidence includes:
 - `corepack pnpm exec vitest run packages/engine-core/src`
 - `corepack pnpm exec vitest run tests/hidden-info`
 - `corepack pnpm run typecheck`
-- `corepack pnpm run stories:validate`
 - `corepack pnpm verify`
 
 No canonical contract fields were added by TYP-005E. No package projection files

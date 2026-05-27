@@ -1,8 +1,9 @@
 # Code Standard Guide
 
 This guide is mandatory implementation guidance for workers and reviewers. The
-specification and approved story still win when they are more specific. Use this
-guide to decide whether a patch is shaped well enough to review and maintain.
+specification and explicit user request still win when they are more specific.
+Use this guide to decide whether a patch is shaped well enough to review and
+maintain.
 
 ## TypeScript And Module Style
 
@@ -57,7 +58,7 @@ Good split examples:
   effect definitions because primitive behavior has synthetic regression tests
   while card definitions have real-card behavior tests (`11-testing-quality.s004`,
   `11-testing-quality.s005`).
-- Split shared type changes from engine, protocol, and UI changes when a story
+- Split shared type changes from engine, protocol, and UI changes when a change
   crosses package boundaries, then land package-specific work deliberately
   (`01-system-architecture.s021`).
 
@@ -68,9 +69,9 @@ Bad split examples:
 - Moving hidden-information filtering into client helpers because the UI needs a
   convenient shape. The client-safe view engine operates only on `PlayerView`
   (`06-visibility-security.s019`).
-- Adding a card-data fixture update inside an engine-rule story because the
+- Adding a card-data fixture update inside an engine-rule patch because the
   failing test is nearby. Fixture/card-data coverage is separate unless the
-  approved story explicitly owns it.
+  requested change explicitly owns it.
 
 ## Package Boundaries
 
@@ -96,7 +97,7 @@ Respect package authority before local convenience (`01-system-architecture.s003
   import server-only modules or receive raw `GameState` (`01-system-architecture.s011`,
   `06-visibility-security.s002`).
 
-For cross-package stories, land shared type changes first, then engine/effect,
+For cross-package changes, land shared type changes first, then engine/effect,
 protocol/server, and client/view changes in reviewable slices. Avoid one PR that
 rewrites multiple boundaries unless it is a mechanical migration with explicit
 compatibility notes and integration tests (`01-system-architecture.s021`).
@@ -163,7 +164,7 @@ Engine synthetic/unit/regression behavior tests:
 
 - Use minimal synthetic states, fixtures, or builders to prove engine primitives,
   rule paths, decisions, event order, determinism, visibility, and invariants.
-- Do not depend on real card catalog ingestion unless the story is specifically
+- Do not depend on real card catalog ingestion unless the change is specifically
   about card data or card fixtures.
 - Primitive tests assert state, events, decisions, and visibility for behavior
   such as draw, KO, trash, search, power/cost modification, replacement, damage,
@@ -180,46 +181,40 @@ Real-card fixture integration/card-data tests:
   optional decline, legal targets, resolution, moved sources, once-per-turn
   state, edge cases, and expected events (`11-testing-quality.s005`).
 - Poneglyph schema handling or source-card adapter changes require card-data
-  validation tests; do not silently absorb them into engine behavior stories.
-- Generated-support parser/certification stories must include primitive-boundary
+  validation tests; do not silently absorb them into engine behavior changes.
+- Generated-support parser/certification changes must include primitive-boundary
   parser tests, runtime capability matrix coverage checks, generated-support
   decision/reporting-path checks, representative synthetic modular proof tests,
   and at least one negative anti-shape regression against exact full-line,
   wrapper-body-only, or sample-shaped support paths.
 
-All story work:
+All implementation work:
 
-- Add or update tests in the same patch unless the approved story is explicitly
-  docs-only or test-only.
-- Run the story-required tests and the relevant package/root verification.
+- Add or update tests in the same patch unless the request is explicitly
+  docs-only, tooling-only, or cleanup-only.
+- Run the relevant package/root verification.
   `pnpm verify` is the canonical local pre-push command
   (`23-repo-tooling-and-enforcement.s005`).
 - Do not claim full verification when a required command was skipped, missing,
   or failed.
 
-## Story And Scope Standards
+## Scope Standards
 
-Implement one approved story at a time. The authoritative order is spec
-sections, approved story, packet, repo instructions, workflow docs, local code,
-then patch.
+Keep changes scoped to the requested concern and the applicable spec sections.
 
-- Stay within `allowed_touch_points`. If the needed fix requires another file or
-  another concern, stop and raise the ambiguity or split the story.
-- Story size is governed by concern boundary, not raw diff size
-  (`24-story-schema.s025`). Tests, docs, fixtures, and snapshots that directly
-  prove the same concern do not automatically create a second concern.
-- Do not broaden a story because adjacent code is weak. Record the weakness or
-  create a follow-up story unless it blocks the approved acceptance criteria.
+- If the needed fix crosses another package or concern, name that boundary
+  explicitly and keep the patch reviewable.
+- Change size is governed by concern boundary, not raw diff size. Tests, docs,
+  fixtures, and snapshots that directly prove the same concern do not
+  automatically create a second concern.
+- Do not broaden a patch because adjacent code is weak. Record the weakness or
+  leave it for follow-up unless it blocks the requested outcome.
 - Fail closed on gameplay rules, hidden-information behavior, replay behavior,
   fairness/timer behavior, persistence/account safety, and security-sensitive
   filtering.
-- Parent/substory workflows keep each substory reviewable and preserve packet
-  lifecycle evidence until the parent PR lands. `agent-packets/active.json` is a
-  single active handoff pointer, not a full parent progress report
-  (`32-codex-agent-integration.s013`).
-- Avoid silent fixture/card-data absorption into engine stories. If an engine
-  behavior test needs synthetic data, keep it synthetic unless the approved story
-  also owns real-card fixture or card-data integration.
+- Avoid silent fixture/card-data absorption into engine patches. If an engine
+  behavior test needs synthetic data, keep it synthetic unless the change also
+  owns real-card fixture or card-data integration.
 
 ## Review And PR Standards
 
@@ -229,16 +224,12 @@ A PR should make scope, evidence, and risk easy to verify.
 - Record exact tests and verification commands run. Include skipped commands and
   why they were skipped.
 - State assumptions, blockers, and any ambiguity resolved by spec citation.
-- Explain scope fit against the approved story, including any touched file that
-  might look outside the main concern.
+- Explain scope fit, including any touched file that might look outside the main
+  concern.
 - For files above the size thresholds, explain why the file remains cohesive or
-  include the focused split that keeps the story within scope.
+  include the focused split that keeps the change within scope.
 - Include compatibility notes for protocol/shared type changes and integration
   evidence for cross-package changes (`01-system-architecture.s021`).
-- Preserve durable review trails: AI review record or human-review fallback,
-  revision response when reviewer-subagent review was used, and parent/substory
-  records when applicable (`32-codex-agent-integration.s010`,
-  `32-codex-agent-integration.s013`).
 - Reviewers should lead with correctness, hidden-information safety, determinism,
-  package-boundary violations, missing tests, and story-scope drift. Style-only
+  package-boundary violations, missing tests, and scope drift. Style-only
   comments are secondary unless they block enforcement.

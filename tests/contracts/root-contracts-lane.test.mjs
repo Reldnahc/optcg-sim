@@ -10,20 +10,6 @@ const repoRoot = path.resolve(
   "..",
 );
 
-const cleanupContractFiles = [
-  "tests/contracts/post-merge-cleanup-contract.test.mjs",
-  "tests/contracts/post-merge-cleanup-parent-contract.test.mjs",
-  "tests/contracts/post-merge-cleanup-preflight-contract.test.mjs",
-  "tests/contracts/post-merge-cleanup-executor-contract.test.mjs",
-  "tests/contracts/post-merge-branch-cleanup-contract.test.mjs",
-  "tests/github/post-merge-cleanup-closeout.test.mjs",
-  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
-];
-
-const githubCleanupLaneFiles = [
-  "tests/github/post-merge-cleanup-closeout.test.mjs",
-  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
-];
 const toolingLaneFiles = ["packages/cli/src", "tests/lint"];
 
 async function readJson(relativePath) {
@@ -42,10 +28,8 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
     "corepack pnpm run contracts:compile",
     "corepack pnpm run contracts:validate-effects",
     "corepack pnpm run contracts:validate-db-schema",
-    "corepack pnpm run stories:validate",
     "corepack pnpm run types:sync:check",
     "corepack pnpm run test:contracts",
-    "corepack pnpm run test:cleanup-contracts",
   ];
 
   const actualSubcommands = contractsLane
@@ -69,11 +53,10 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
   );
 });
 
-test("root test lanes separate cleanup-heavy contracts without dropping coverage", async () => {
+test("root test lanes separate contracts and tooling without dropping coverage", async () => {
   const packageJson = await readJson("package.json");
   const rootTestLane = packageJson.scripts?.test;
   const contractsTestLane = packageJson.scripts?.["test:contracts"];
-  const cleanupLane = packageJson.scripts?.["test:cleanup-contracts"];
   const toolingLane = packageJson.scripts?.["test:tooling"];
 
   assert.equal(typeof rootTestLane, "string", "missing root test lane");
@@ -81,11 +64,6 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
     typeof contractsTestLane,
     "string",
     "missing test:contracts lane",
-  );
-  assert.equal(
-    typeof cleanupLane,
-    "string",
-    "missing test:cleanup-contracts lane",
   );
   assert.equal(typeof toolingLane, "string", "missing test:tooling lane");
 
@@ -110,45 +88,10 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
     /--exclude\s+tests\/lint\/\*\*\/\*\.test\.mjs\b/,
     "root test lane must exclude lint-config suites owned by tooling lane",
   );
-  for (const githubCleanupFile of githubCleanupLaneFiles) {
-    assert.match(
-      rootTestLane,
-      new RegExp(
-        `--exclude\\s+${githubCleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-      ),
-      `root test lane must explicitly exclude cleanup-heavy file ${githubCleanupFile}`,
-    );
-  }
-
-  for (const cleanupFile of cleanupContractFiles) {
-    assert.match(
-      cleanupLane,
-      new RegExp(cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-      `cleanup lane must include cleanup-heavy file ${cleanupFile}`,
-    );
-  }
-
-  for (const cleanupFile of cleanupContractFiles.filter((file) =>
-    file.startsWith("tests/contracts/"),
-  )) {
-    assert.match(
-      contractsTestLane,
-      new RegExp(
-        `--exclude\\s+${cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-      ),
-      `contract test lane must exclude cleanup-heavy file ${cleanupFile}`,
-    );
-  }
-
-  assert.match(
-    cleanupLane,
-    /--no-file-parallelism\b/,
-    "cleanup lane should isolate git-heavy cleanup suites from file-level parallelism",
-  );
   assert.doesNotMatch(
-    cleanupLane,
+    contractsTestLane,
     /\|\|\s*true\b/i,
-    "cleanup lane must not bypass failures with fallback clauses",
+    "contracts lane must not bypass failures with fallback clauses",
   );
 
   for (const toolingTarget of toolingLaneFiles) {

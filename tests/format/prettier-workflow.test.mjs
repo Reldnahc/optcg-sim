@@ -72,19 +72,3 @@ test("ignored fixture paths are excluded by prettier ignore rules", async () => 
     "ignored fixture should be excluded by Prettier",
   );
 });
-
-test("cleanup workflow scratch artifacts are excluded by prettier ignore rules", async () => {
-  const cleanupPlanPath = path.join(
-    repoRoot,
-    ".cleanup/bound-cleanup-plan.json",
-  );
-  const fileInfo = await getFileInfo(cleanupPlanPath, {
-    ignorePath: path.join(repoRoot, ".prettierignore"),
-  });
-
-  assert.equal(
-    fileInfo.ignored,
-    true,
-    "cleanup workflow scratch artifacts should be excluded by Prettier",
-  );
-});

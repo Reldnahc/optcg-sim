@@ -345,20 +345,18 @@ Implementation is not considered ready for multi-contributor expansion until the
 
 This closes the remaining gap between architecture and mechanical enforcement.
 
-### 13. Spec-driven delivery artifacts are now defined
+### 13. Spec-driven delivery is direct
 
 <!-- SECTION_REF: 22-v6-implementation-tightening.s019 -->
 
 Section Ref: `22-v6-implementation-tightening.s019`
 
-The package now defines concrete planning artifacts for turning the specification into implementation work:
+The repo uses the canonical specs, code standards, tests, and review evidence
+directly for implementation work. Parallel planning artifacts are not part of
+the current delivery contract.
 
-- a canonical story schema in [`24-story-schema.md`](24-story-schema.md),
-- a copy-ready approved story template in [`25-story-template.md`](25-story-template.md),
-- a standard agent assignment packet in [`26-agent-packet-template.md`](26-agent-packet-template.md),
-- and the generation workflow and prompts in [`27-spec-driven-story-generation-workflow.md`](27-spec-driven-story-generation-workflow.md).
-
-This closes another implementation-readiness gap: the spec no longer depends on ad hoc human translation into tickets before agent-based delivery can begin.
+This keeps implementation authority close to the specs and package code instead
+of adding a parallel planning layer.
 
 ### 14. Game types and session entry
 
@@ -414,8 +412,6 @@ v6 adds a delivery-governance pass on top of the gameplay/runtime tightening wor
 
 Required tightening outcomes:
 
-- approved story files should validate against [`contracts/story.schema.json`](contracts/story.schema.json),
-- story examples and templates should cite stable `SECTION_REF` identifiers instead of heading-anchor examples,
-- GitHub board exports should preserve story ID, priority, status, type, area, dependencies, and authoritative spec refs,
-- Codex-facing repo instructions should live in checked-in `AGENTS.md` and skill files under [`.agents/skills/`](.agents/skills/),
-- ambiguity handling should create explicit backlog items instead of being lost in chat history.
+- implementation notes and review records should cite stable `SECTION_REF` identifiers instead of heading-anchor examples,
+- Codex-facing repo instructions should live in checked-in `AGENTS.md`,
+- ambiguity handling should be recorded explicitly instead of being lost in chat history.
