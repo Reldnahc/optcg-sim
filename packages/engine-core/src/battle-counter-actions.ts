@@ -595,15 +595,10 @@ const resolveCounterCardUse = (params: {
       decisionPlayerId,
       trashedCard,
       trailingSequence,
+      pendingDecision,
     );
     if (trailing === null) {
       return illegalAction(state, "Unsupported Counter Event trailing effect.");
-    }
-    if (
-      trailing.state.pendingDecision === undefined &&
-      pendingDecision !== undefined
-    ) {
-      trailing.state.pendingDecision = pendingDecision;
     }
     assertGameStateInvariants(trailing.state);
     return toEngineResult(trailing.state, [

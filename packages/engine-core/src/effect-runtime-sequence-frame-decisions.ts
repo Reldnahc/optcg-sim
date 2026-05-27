@@ -44,24 +44,30 @@ export const frameForPausedSequenceDecision = (params: {
   entry: EffectQueueEntry;
   effectPath?: string[];
   index: number;
+  resumePendingDecision?: NonNullable<GameState["pendingDecision"]>;
   segmentResults: EffectExecutionFrame["segmentResults"];
   savedReferences: EffectExecutionFrame["savedReferences"];
   state: GameState;
-}): EffectExecutionFrame => ({
-  queueEntryId: params.entry.id,
-  effectBlockId: params.entry.effectBlockId,
-  effectPath: params.effectPath ?? ["effect", "sequence"],
-  nextSegmentIndex: params.index + 1,
-  segmentResults: params.segmentResults,
-  savedReferences: params.savedReferences,
-  transientSets: {},
-  pendingDecision: {
-    decisionId: params.decision.id,
-    causedBy: params.decision.causedBy,
-    createdAtStateSeq: params.state.seq,
-    resumeAtSegmentIndex: params.index,
-  },
-});
+}): EffectExecutionFrame => {
+  const frame: EffectExecutionFrame = {
+    queueEntryId: params.entry.id,
+    effectBlockId: params.entry.effectBlockId,
+    effectPath: params.effectPath ?? ["effect", "sequence"],
+    nextSegmentIndex: params.index + 1,
+    segmentResults: params.segmentResults,
+    savedReferences: params.savedReferences,
+    transientSets: {},
+    pendingDecision: {
+      decisionId: params.decision.id,
+      causedBy: params.decision.causedBy,
+      createdAtStateSeq: params.state.seq,
+      resumeAtSegmentIndex: params.index,
+    },
+  };
+  return params.resumePendingDecision === undefined
+    ? frame
+    : { ...frame, resumePendingDecision: params.resumePendingDecision };
+};
 
 export const stateWithPausedSequenceFrame = (
   state: GameState,

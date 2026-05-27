@@ -22,7 +22,7 @@ import {
 import { isMatchActive, reindexZoneCards, zonesEqual } from "./action-state.js";
 import {
   applyBattleDecisionResponse,
-  continueAttackTimingBattleIfReady,
+  continueAttackTimingDecisionResultIfReady,
   applyDeclareAttack,
   applyUseCounter,
   getBattleDecisionLegalActions,
@@ -900,7 +900,7 @@ const applyRespondToDecision = (
     action,
   );
   if (targetSelectionResult !== null) {
-    return targetSelectionResult;
+    return continueAttackTimingDecisionResultIfReady(targetSelectionResult);
   }
   if (
     decision.type === "selectCards" &&
@@ -942,20 +942,7 @@ const applyRespondToDecision = (
       trashResult.allEvents,
       trashResult.resolutionEvents,
     );
-    if (
-      finalized.errors !== undefined ||
-      finalized.state.status.type !== "active"
-    ) {
-      return finalized;
-    }
-    const continued = continueAttackTimingBattleIfReady(finalized.state);
-    if (continued === null) {
-      return finalized;
-    }
-    return {
-      ...continued,
-      events: [...finalized.events, ...continued.events],
-    };
+    return continueAttackTimingDecisionResultIfReady(finalized);
   }
   const setupStartOfGame = applyStartOfGameSetupDecisionResponse(state, action);
   if (setupStartOfGame !== null) {

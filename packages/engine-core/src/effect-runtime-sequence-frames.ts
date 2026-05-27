@@ -664,6 +664,15 @@ const resumeSequenceFrameFromLedgers = (params: {
       events,
     );
   }
+  if (
+    completedState.pendingDecision === undefined &&
+    params.frame.resumePendingDecision !== undefined
+  ) {
+    completedState = {
+      ...completedState,
+      pendingDecision: params.frame.resumePendingDecision,
+    };
+  }
   return {
     events,
     ok: true,
@@ -1261,6 +1270,7 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
   completedSegmentResults: EffectExecutionFrame["segmentResults"];
   effectBlock: EffectDefinition["effects"][number];
   entry: EffectQueueEntry;
+  resumePendingDecision?: NonNullable<GameState["pendingDecision"]>;
   startIndex: number;
   state: GameState;
 }): SequenceFrameResumeResult => {
@@ -1305,16 +1315,40 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
     };
   }
   if (run.kind === "paused") {
-    return { events: run.events, ok: true, state: run.state };
+    const pendingDecision = run.state.pendingDecision;
+    const entry = resolvingEntry;
+    const resumePendingDecision = params.resumePendingDecision;
+    const state =
+      pendingDecision === undefined || resumePendingDecision === undefined
+        ? run.state
+        : {
+            ...run.state,
+            effectExecutionFrames: run.state.effectExecutionFrames.map(
+              (frame) =>
+                frame.queueEntryId === entry.id &&
+                frame.pendingDecision.decisionId === pendingDecision.id
+                  ? {
+                      ...frame,
+                      resumePendingDecision,
+                    }
+                  : frame,
+            ),
+          };
+    return { events: run.events, ok: true, state };
   }
+  const completed = appendEffectResolvedForCompletedSequence(
+    run.state,
+    resolvingEntry,
+    run.events,
+  );
   return {
     events: run.events,
     ok: true,
-    state: appendEffectResolvedForCompletedSequence(
-      run.state,
-      resolvingEntry,
-      run.events,
-    ),
+    state:
+      completed.pendingDecision === undefined &&
+      params.resumePendingDecision !== undefined
+        ? { ...completed, pendingDecision: params.resumePendingDecision }
+        : completed,
   };
 };
 

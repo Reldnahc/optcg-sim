@@ -46,6 +46,10 @@ export interface DevVisibleAction {
     attackerInstanceId: CardInstance["instanceId"];
     targetInstanceId: CardInstance["instanceId"];
   };
+  counter?: {
+    cardInstanceId: CardInstance["instanceId"];
+    targetInstanceId: CardInstance["instanceId"];
+  };
   placement?: {
     instanceId: CardInstance["instanceId"];
   };
@@ -147,6 +151,7 @@ const visibleAction = (
   const placement = actionPlacement(action);
   const attachment = actionAttachment(action);
   const attack = actionAttack(action);
+  const counter = actionCounter(action);
   const decisionPayment = actionDecisionPayment(state, action);
   return {
     type: action.type,
@@ -157,6 +162,7 @@ const visibleAction = (
       : { placement: { instanceId: placement } }),
     ...(attachment === undefined ? {} : { attachment }),
     ...(attack === undefined ? {} : { attack }),
+    ...(counter === undefined ? {} : { counter }),
   };
 };
 
@@ -631,6 +637,18 @@ const actionAttack = (
   };
 };
 
+const actionCounter = (
+  action: LegalAction,
+): DevVisibleAction["counter"] | undefined => {
+  if (action.type !== "useCounter") {
+    return undefined;
+  }
+  return {
+    cardInstanceId: action.cardInstanceId,
+    targetInstanceId: action.target.instanceId,
+  };
+};
+
 const mulliganActions = (
   state: GameState,
   playerId: PlayerId,
@@ -764,6 +782,7 @@ const devPlayerSnapshot = (
       label,
       decisionPayment,
       attack,
+      counter,
       placement,
       attachment,
     }) => ({
@@ -772,6 +791,7 @@ const devPlayerSnapshot = (
       label,
       ...(decisionPayment === undefined ? {} : { decisionPayment }),
       ...(attack === undefined ? {} : { attack }),
+      ...(counter === undefined ? {} : { counter }),
       ...(placement === undefined ? {} : { placement }),
       ...(attachment === undefined ? {} : { attachment }),
     }),

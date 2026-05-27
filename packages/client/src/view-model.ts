@@ -47,12 +47,14 @@ export interface ClientActionModel {
     | PublicLegalAction["type"]
     | "advanceToMainPhase"
     | "chooseAttackTarget"
+    | "chooseCounterTarget"
     | "confirmDecisionSelection"
     | "clearDecisionSelection"
     | "chooseNoDecisionCards";
   label: string;
   decisionPayment?: ClientVisibleAction["decisionPayment"];
   attack?: ClientVisibleAction["attack"];
+  counter?: ClientVisibleAction["counter"];
 }
 
 export interface BoardViewModel {
@@ -220,6 +222,7 @@ const addAction = (
       ? {}
       : { decisionPayment: action.decisionPayment }),
     ...(action.attack === undefined ? {} : { attack: action.attack }),
+    ...(action.counter === undefined ? {} : { counter: action.counter }),
   });
   actions[key] = current;
 };

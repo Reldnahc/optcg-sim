@@ -76,6 +76,7 @@ export const continueCounterEventTrailingSequence = (
   controllerId: PlayerId,
   source: CardInstance,
   trailingSequence: CounterEventTrailingSequence,
+  resumePendingDecision?: NonNullable<GameState["pendingDecision"]>,
 ): { events: EngineEvent[]; state: GameState } | null => {
   const effectBlock = findCounterEventEffectBlock(
     state,
@@ -115,6 +116,7 @@ export const continueCounterEventTrailingSequence = (
     },
     effectBlock,
     entry,
+    ...(resumePendingDecision === undefined ? {} : { resumePendingDecision }),
     startIndex: trailingSequence.startIndex,
     state,
   });

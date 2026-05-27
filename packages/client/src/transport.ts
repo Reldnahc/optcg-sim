@@ -24,6 +24,10 @@ export interface ClientVisibleAction {
     attackerInstanceId: InstanceId;
     targetInstanceId: InstanceId;
   };
+  counter?: {
+    cardInstanceId: InstanceId;
+    targetInstanceId: InstanceId;
+  };
   placement?: {
     instanceId: InstanceId;
   };

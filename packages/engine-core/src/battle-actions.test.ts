@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { EffectDefinition } from "@optcg/types";
+
+import { applyAction } from "./actions.js";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
@@ -12,7 +15,99 @@ import {
   resolvedCard,
   toCardId,
 } from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import { cardRef, setupAttackState } from "./battle-actions-test-fixtures.js";
+
+const addTrashCards = (
+  state: ReturnType<typeof setupAttackState>,
+  count: number,
+): void => {
+  const player = must(state.players[p1], "p1");
+  player.trash = Array.from({ length: count }, (_, index) => {
+    const cardId = toCardId(`p1-trash-${String(index)}`);
+    state.cardManifest.cards[cardId] = resolvedCard({
+      cardId,
+      category: "character",
+      power: 1000,
+    });
+    return {
+      instanceId: `p1:trash:${String(index)}` as never,
+      cardId,
+      owner: p1,
+      controller: p1,
+      zone: { zone: "trash", playerId: p1, slot: "trash", index },
+      state: "active" as const,
+      attachedDon: [],
+    };
+  });
+};
+
+const installWhenAttackingConditionalPowerReduction = (
+  state: ReturnType<typeof setupAttackState>,
+): void => {
+  const p1State = must(state.players[p1], "p1");
+  const cardId = p1State.leader.cardId;
+  const definition: EffectDefinition = {
+    cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "when-attacking-power-reduction" as never,
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        condition: { type: "trashCount", player: "self", op: "gte", value: 10 },
+        optional: false,
+        oncePerTurn: false,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "choose",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { categories: ["character"] },
+            },
+          },
+          value: -2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "when-attacking-power-reduction-source",
+      rulesVersion: "r1",
+      effectDefinitionsVersion: "test",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-when-attacking-power-reduction": definition,
+  };
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "[When Attacking] If you have 10 or more cards in your trash, give up to 1 of your opponent's Characters -2000 power during this turn.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-when-attacking-power-reduction",
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+};
+
 test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   const state = setupAttackState();
   const before = JSON.stringify(state);
@@ -127,4 +222,57 @@ test("banish combined with doubleAttack fails closed without mutation", () => {
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
   assert.deepEqual(result.events, []);
+});
+
+test("When Attacking target selection resumes battle after selecting no target", () => {
+  const state = setupAttackState();
+  installWhenAttackingConditionalPowerReduction(state);
+  addTrashCards(state, 10);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "selectTargets");
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "pending decision").id,
+    response: { type: "targets", targets: [] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
+});
+
+test("When Attacking target selection resumes battle after selecting a target", () => {
+  const state = setupAttackState();
+  installWhenAttackingConditionalPowerReduction(state);
+  addTrashCards(state, 10);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const powerTarget = must(p2State.characters[0], "power target");
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "selectTargets");
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "pending decision").id,
+    response: { type: "targets", targets: [cardRef(powerTarget, p2)] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
 });

@@ -734,3 +734,15 @@ export const continueAttackTimingBattleIfReady = (
     state,
   );
 };
+
+export const continueAttackTimingDecisionResultIfReady = (
+  result: EngineResult,
+): EngineResult => {
+  if (result.errors !== undefined || result.state.status.type !== "active") {
+    return result;
+  }
+  const continued = continueAttackTimingBattleIfReady(result.state);
+  return continued === null
+    ? result
+    : { ...continued, events: [...result.events, ...continued.events] };
+};

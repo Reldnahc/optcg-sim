@@ -364,6 +364,14 @@ test("Counter Event resolves selected power then conditional trash-to-hand seque
     ),
     false,
   );
+  assert.equal(resolved.state.battle?.step, "counter");
+  assert.equal(resolved.state.pendingDecision?.prompt, "Pass Counter Step.");
+  assert.equal(
+    getLegalActions(resolved.state, p2).some(
+      (action) => action.type === "respondToDecision",
+    ),
+    true,
+  );
   const view = computeView(resolved.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 4000);
 });
