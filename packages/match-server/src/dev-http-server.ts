@@ -368,8 +368,18 @@ const createLocalDevMatchRegistry = async (
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
-  const defaultSetup =
-    initialSetup ?? (await createDefaultSetup("dev-local-match" as MatchId));
+  const createTemplateSetup = async (
+    matchId: MatchId,
+  ): Promise<Parameters<typeof createLocalDevMatch>[0]> => {
+    if (initialSetup === undefined) {
+      return createDefaultSetup(matchId);
+    }
+    return {
+      ...structuredClone(initialSetup),
+      matchId,
+    };
+  };
+  const defaultSetup = await createTemplateSetup("dev-local-match" as MatchId);
   const defaultMatchId = defaultSetup.matchId;
   sessions.set(defaultMatchId, {
     match: createLocalDevMatch(defaultSetup),
@@ -390,7 +400,7 @@ const createLocalDevMatchRegistry = async (
     async createMatch(setup) {
       const actualSetup =
         setup ??
-        (await createDefaultSetup(
+        (await createTemplateSetup(
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
       const session = {
@@ -401,7 +411,7 @@ const createLocalDevMatchRegistry = async (
       return buildCreatedResponse(actualSetup, session);
     },
     async resetMatch(matchId, setup) {
-      const actualSetup = setup ?? (await createDefaultSetup(matchId));
+      const actualSetup = setup ?? (await createTemplateSetup(matchId));
       const normalizedSetup = { ...actualSetup, matchId };
       const session = {
         match: createLocalDevMatch(normalizedSetup),

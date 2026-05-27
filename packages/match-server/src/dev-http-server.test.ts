@@ -3,11 +3,16 @@ import { describe, test } from "vitest";
 
 import { createDevHttpServer } from "./dev-http-server.js";
 import { websocketTextFrame } from "./dev-http-server.js";
-import { createPremadeDevMatchSetup } from "./local-match.js";
-import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
+import {
+  createDefaultDevFixtureFetch,
+  createFixtureDevMatchSetup,
+} from "./default-dev-fixture-fetch.test-support.js";
 
-const createFixtureDevHttpServer = () =>
-  createDevHttpServer({ fetchCard: createDefaultDevFixtureFetch() });
+const createFixtureDevHttpServer = async () =>
+  createDevHttpServer({
+    setup: await createFixtureDevMatchSetup(),
+    fetchCard: createDefaultDevFixtureFetch(),
+  });
 
 interface CreatedDevMatchBody {
   matchId?: string;
@@ -750,9 +755,7 @@ describe("dev HTTP server", () => {
 
   test("accepts an explicit premade match setup through reset", async () => {
     const server = await createFixtureDevHttpServer();
-    const setup = await createPremadeDevMatchSetup({
-      fetchCard: createDefaultDevFixtureFetch(),
-    });
+    const setup = await createFixtureDevMatchSetup();
     const custom = {
       ...setup,
       matchId: "dev-http-custom-match",

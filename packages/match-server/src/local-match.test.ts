@@ -6,12 +6,11 @@ import {
   applyLocalDevAction,
   applyLocalDevDecision,
   createLocalDevMatch,
-  createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
   getLocalDevSnapshot,
   type DevMatchSetup,
 } from "./local-match.js";
-import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
+import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -21,9 +20,7 @@ const op13099 = "OP13-099" as CardId;
 let premadeSetup: DevMatchSetup;
 
 beforeAll(async () => {
-  premadeSetup = await createPremadeDevMatchSetup({
-    fetchCard: createDefaultDevFixtureFetch(),
-  });
+  premadeSetup = await createFixtureDevMatchSetup();
 });
 
 const setupClone = (): DevMatchSetup => structuredClone(premadeSetup);
