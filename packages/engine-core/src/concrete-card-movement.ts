@@ -17,6 +17,7 @@ type TrashInsertPosition = "bottom" | "top";
 type CardMovedPayloadShape = "publicZoneNames" | "zoneRefs";
 
 type ConcreteTrashMovementReason =
+  | "counter"
   | "playCard"
   | "moveCards"
   | "trashFromHand"

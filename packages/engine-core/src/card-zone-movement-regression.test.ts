@@ -67,3 +67,21 @@ test("play-card trash front doors delegate concrete movement", () => {
     "play-card must not construct trash-zone cards directly",
   );
 });
+
+test("counter card trash front door delegates concrete movement", () => {
+  const source = readSource(
+    "packages/engine-core/src/battle-counter-actions.ts",
+  );
+
+  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardTrashed"/s,
+    "counter card use must not hand-roll cardTrashed",
+  );
+  assert.doesNotMatch(
+    source,
+    /zone:\s*\{\s*zone:\s*"trash"/s,
+    "counter card use must not construct trash-zone cards directly",
+  );
+});

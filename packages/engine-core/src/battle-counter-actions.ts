@@ -19,7 +19,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reifyCardRef, reindexZoneCards } from "./action-state.js";
+import { reifyCardRef } from "./action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import { getUnsupportedCombatViewMetadataReason } from "./battle-combat-view-support.js";
 import { getUnsupportedDamageStepContinuationReason } from "./battle-damage-step-continuation.js";
@@ -44,6 +44,7 @@ import {
   getSupportedCounterEventPowerTargets,
 } from "./battle-counter-event-support.js";
 import { computeView } from "./compute-view.js";
+import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
@@ -426,7 +427,6 @@ export const applyUseCounter = (
     decisionPlayerId: decision.playerId,
     battle,
     handCard,
-    handIndex,
     target: action.target,
     counterValue,
     usesBattleCounterPower,
@@ -444,7 +444,6 @@ const resolveCounterCardUse = (params: {
   decisionPlayerId: PlayerId;
   battle: NonNullable<GameState["battle"]>;
   handCard: CardInstance;
-  handIndex: number;
   target: CardRef;
   counterValue: number;
   usesBattleCounterPower: boolean;
@@ -459,7 +458,6 @@ const resolveCounterCardUse = (params: {
     decisionPlayerId,
     battle,
     handCard,
-    handIndex,
     target,
     counterValue,
     usesBattleCounterPower,
@@ -473,28 +471,6 @@ const resolveCounterCardUse = (params: {
   if (defender === undefined) {
     return illegalAction(state, "Decision player mismatch.");
   }
-  const trashedCard: CardInstance = {
-    ...handCard,
-    attachedDon: [],
-    zone: {
-      zone: "trash",
-      playerId: decisionPlayerId,
-      slot: "trash",
-      index: 0,
-    },
-  };
-  const nextHand = reindexZoneCards(
-    defender.hand.filter((_, index) => index !== handIndex),
-    "hand",
-    decisionPlayerId,
-    "hand",
-  );
-  const nextTrash = reindexZoneCards(
-    [trashedCard, ...defender.trash],
-    "trash",
-    decisionPlayerId,
-    "trash",
-  );
   const events: EngineEvent[] = [];
   if (decisionResolvedId !== undefined) {
     appendEvent(
@@ -512,19 +488,28 @@ const resolveCounterCardUse = (params: {
     target,
     value: counterValue,
   });
-  appendEvent(state, events, "cardMoved", {
-    instanceId: handCard.instanceId,
-    cardId: handCard.cardId,
-    from: handCard.zone,
-    to: trashedCard.zone,
-    reason: "counter",
-  });
-  appendEvent(state, events, "cardTrashed", {
+  const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
+    cardMovedPayloadShape: "zoneRefs",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    clearAttachedDon: true,
+    emitCardTrashed: true,
+    includeCardIdentityInCardMoved: true,
+    insertPosition: "top",
     playerId: decisionPlayerId,
-    instanceId: handCard.instanceId,
-    cardId: handCard.cardId,
     reason: "counter",
+    sourceZone: "hand",
   });
+  const movedDefender = movedResult.state.players[decisionPlayerId];
+  if (movedDefender === undefined) {
+    return illegalAction(state, "Decision player mismatch.");
+  }
+  const trashedCard = movedDefender.trash.find(
+    (card) => card.instanceId === handCard.instanceId,
+  );
+  if (trashedCard === undefined) {
+    return illegalAction(state, "Counter card movement failed.");
+  }
   if (state.cardManifest.cards[handCard.cardId]?.category === "event") {
     appendEvent(
       state,
@@ -565,16 +550,14 @@ const resolveCounterCardUse = (params: {
     return illegalAction(state, "Unsupported Counter Event target.");
   }
   const nextState: GameState = {
-    ...state,
+    ...movedResult.state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     players: {
-      ...state.players,
+      ...movedResult.state.players,
       [decisionPlayerId]: {
-        ...defender,
+        ...movedDefender,
         costArea,
-        hand: nextHand,
-        trash: nextTrash,
       },
     },
     battle: nextBattle,
@@ -724,7 +707,6 @@ export const applyCounterStepDecisionResponse = (
       decisionPlayerId: decision.playerId,
       battle,
       handCard,
-      handIndex,
       target: selectedTarget.target,
       counterValue: supportedCounterEvent.value,
       usesBattleCounterPower: supportedCounterEvent.usesBattleCounterPower,
