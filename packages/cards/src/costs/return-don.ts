@@ -1,6 +1,7 @@
 import type { EffectBlockCost } from "@optcg/types";
 
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
+import type { CostParseResult as SequenceCostParseResult } from "./rest-don.js";
 
 type ReturnDonCost = Extract<EffectBlockCost, { type: "returnDon" }>;
 
@@ -18,7 +19,7 @@ export const returnDonCostPrimitive = {
 export function parseReturnDonCost(
   input: ParseInput,
 ): CostParseResult | undefined {
-  const match = /^DON!!\s*[-−](?<count>[1-9]\d*):\s*(?<rest>.*)$/i.exec(
+  const match = /^DON!!\s*[-\u2212](?<count>[1-9]\d*):\s*(?<rest>.*)$/iu.exec(
     input.text,
   );
   const countText = match?.groups?.["count"];
@@ -31,5 +32,25 @@ export function parseReturnDonCost(
     cost: { type: "returnDon", count: Number.parseInt(countText, 10) },
     evidence: ["cost:returnDon", "count:positiveInteger"],
     rest: restText?.trim() ?? "",
+  };
+}
+
+export function parseReturnDonSequenceCost(
+  input: ParseInput,
+): SequenceCostParseResult | undefined {
+  const match = /^DON!!\s*[-\u2212](?<count>[1-9]\d*)$/iu.exec(input.text);
+  const countText = match?.groups?.["count"];
+  if (countText === undefined) {
+    return undefined;
+  }
+
+  return {
+    cost: {
+      type: "returnDon",
+      count: Number.parseInt(countText, 10),
+      optional: true,
+    },
+    evidence: ["cost:returnDon", "count:positiveInteger"],
+    rest: "",
   };
 }

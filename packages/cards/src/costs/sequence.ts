@@ -8,9 +8,11 @@ import {
 } from "./rest-don.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseRestSelfCost } from "./rest-self.js";
+import { parseReturnDonSequenceCost } from "./return-don.js";
 import { parseTrashFromHandCost } from "./trash-from-hand.js";
 
 const costParsers = [
+  parseReturnDonSequenceCost,
   parseRestSelfCost,
   parseRestDonCost,
   parseMoveCardsCost,
@@ -27,7 +29,8 @@ export function parseOptionalCostSequence(
   input: ParseInput,
 ): OptionalCostSequenceParseResult | undefined {
   const parts = input.text
-    .split(/\s+and\s+/i)
+    .split(/\s*(?:,|\band\b)\s*/i)
+    .map(stripOptionalCostPrefix)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 
@@ -84,6 +87,13 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
         optional: true,
       };
+    case "returnDon":
+      return {
+        type: "returnDon",
+        count: cost.count,
+        ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
+        optional: true,
+      };
     case "restSelf":
       return { type: "restSelf", optional: true };
     case "trashFromHand":
@@ -109,6 +119,12 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
       };
     case "restSelf":
       return { type: "restSelf" };
+    case "returnDon":
+      return {
+        type: "returnDon",
+        count: cost.count,
+        ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
+      };
     case "trashFromHand":
       return {
         type: "trashFromHand",
@@ -137,6 +153,10 @@ function applyInheritedAction(
   }
 
   return `${inheritedAction} ${text}`;
+}
+
+function stripOptionalCostPrefix(text: string): string {
+  return text.replace(/^You may\s+/i, "");
 }
 
 function parseCostPart(text: string): CostParseResult | undefined {

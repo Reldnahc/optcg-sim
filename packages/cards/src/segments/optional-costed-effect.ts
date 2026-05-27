@@ -63,25 +63,27 @@ export function optionalCostedEffectExpressionParser(options: {
 function parseOptionalCostSequenceFromOptionalText(
   input: ParseInput,
 ): OptionalCostSequenceParseResult | undefined {
-  const prefixMatch = /^You may\s+(?<rest>.+)$/i.exec(input.text);
-  const afterOptional = prefixMatch?.groups?.["rest"];
-  if (afterOptional === undefined) {
-    return undefined;
-  }
-
-  const separatorIndex = afterOptional.indexOf(":");
+  const separatorIndex = input.text.indexOf(":");
   if (separatorIndex < 0) {
     return undefined;
   }
 
-  const costText = afterOptional.slice(0, separatorIndex).trim();
-  const bodyText = afterOptional.slice(separatorIndex + 1).trim();
+  const costText = input.text.slice(0, separatorIndex).trim();
+  if (!hasOptionalCostMarker(costText)) {
+    return undefined;
+  }
+
+  const bodyText = input.text.slice(separatorIndex + 1).trim();
   if (costText.length === 0 || bodyText.length === 0) {
     return undefined;
   }
 
   const cost = parseOptionalCostSequence({ text: costText });
   return cost === undefined ? undefined : { ...cost, rest: bodyText };
+}
+
+function hasOptionalCostMarker(text: string): boolean {
+  return /^(?:You may\b|.*(?:,|\band\b)\s*You may\b)/i.test(text);
 }
 
 function parseOptionalCostedBody(

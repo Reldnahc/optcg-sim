@@ -288,6 +288,36 @@ const restSelfMoveCardsThenOpponentTrashSequence = (): Extract<
   ],
 });
 
+const returnDonTrashFromHandThenDrawSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-return-don-and-trash-from-hand",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "sequence",
+          optional: true,
+          costs: [
+            { type: "returnDon", count: 2 },
+            { type: "trashFromHand", count: 1, chooser: "self" },
+          ],
+        },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "draw-if-paid",
+      connector: "ifYouDo",
+      effect: { type: "draw", player: "self", count: 2 },
+    },
+  ],
+});
+
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
   return applyAction(state, {
@@ -315,6 +345,48 @@ const payWithFirstActiveDon = (state: GameState): EngineResult => {
       optionId: "restDon",
       selectedDonInstanceIds: [don.instanceId],
     },
+  });
+};
+
+const payReturnDonWithFirstCostDon = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "returnDon");
+  const player = must(state.players[decision.playerId], "decision player");
+  const don = player.costArea.slice(0, decision.cost.count);
+  assert.equal(don.length, decision.cost.count);
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: don.map((card) => card.instanceId),
+    },
+  });
+};
+
+const payTrashFromHandWithFirstHandCard = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "pending decision");
+  const player = must(state.players[decision.playerId], "decision player");
+  const card = must(player.hand[0], "hand card");
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [card.instanceId],
+    },
+  });
+};
+
+const declinePayment = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "pending decision");
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "paymentDeclined" },
   });
 };
 
@@ -401,6 +473,64 @@ test("optional cost sequence rests source then DON before dependent effects", ()
     paidCost: false,
     playerDeclined: false,
   });
+});
+
+test("optional return-DON plus hand-trash cost sequence only runs body after every child cost is paid", () => {
+  const state = sequenceQueueState(returnDonTrashFromHandThenDrawSequence());
+  placeActiveDon(state, 2);
+  const beforeP1 = must(state.players[p1], "before p1");
+  const beforeDeckCount = beforeP1.deck.length;
+  const returnedDon = must(beforeP1.costArea[0], "returned DON");
+
+  const returnDonPaused = processEffectRuntime(state);
+  const returnDonDecision = must(
+    returnDonPaused.state.pendingDecision,
+    "return DON decision",
+  );
+  const paidReturnDon = payReturnDonWithFirstCostDon(returnDonPaused.state);
+  const trashDecision = must(
+    paidReturnDon.state.pendingDecision,
+    "trash-from-hand decision",
+  );
+  const declinedTrash = declinePayment(paidReturnDon.state);
+  const afterDeclineP1 = must(declinedTrash.state.players[p1], "after decline");
+
+  assert.equal(returnDonPaused.errors, undefined);
+  assert.equal(returnDonDecision.type, "payCost");
+  assert.equal(returnDonDecision.cost.type, "returnDon");
+  assert.equal(paidReturnDon.errors, undefined);
+  assert.equal(trashDecision.type, "payCost");
+  assert.equal(trashDecision.cost.type, "trashFromHand");
+  assert.equal(declinedTrash.errors, undefined);
+  assert.equal(declinedTrash.state.pendingDecision, undefined);
+  assert.equal(afterDeclineP1.deck.length, beforeDeckCount);
+  assert.equal(
+    afterDeclineP1.donDeck.some(
+      (card) => card.instanceId === returnedDon.instanceId,
+    ),
+    true,
+  );
+
+  const paidState = sequenceQueueState(
+    returnDonTrashFromHandThenDrawSequence(),
+  );
+  placeActiveDon(paidState, 2);
+  const paidBeforeP1 = must(paidState.players[p1], "paid before p1");
+  const paidBeforeDeckCount = paidBeforeP1.deck.length;
+  const paidBeforeHandCount = paidBeforeP1.hand.length;
+  const paidReturnDonPaused = processEffectRuntime(paidState);
+  const paidReturnDonResult = payReturnDonWithFirstCostDon(
+    paidReturnDonPaused.state,
+  );
+  const paidTrashResult = payTrashFromHandWithFirstHandCard(
+    paidReturnDonResult.state,
+  );
+  const paidAfterP1 = must(paidTrashResult.state.players[p1], "paid after p1");
+
+  assert.equal(paidTrashResult.errors, undefined);
+  assert.equal(paidTrashResult.state.pendingDecision, undefined);
+  assert.equal(paidAfterP1.deck.length, paidBeforeDeckCount - 2);
+  assert.equal(paidAfterP1.hand.length, paidBeforeHandCount + 1);
 });
 
 test("hand play sequence filters candidates by color, type, and dynamic DON-field cost", () => {

@@ -76,4 +76,30 @@ describe("optional cost sequence parser", () => {
       rest: "",
     });
   });
+
+  it("parses return-DON and hand-trash as one optional cost sequence", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "DON!! -2, trash 1 card from your hand",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "returnDon", count: 2 },
+          { type: "trashFromHand", count: 1, chooser: "self" },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:returnDon",
+        "count:positiveInteger",
+        "cost:trashFromHand",
+        "count:positiveInteger",
+        "chooser:self",
+      ],
+      rest: "",
+    });
+  });
 });
