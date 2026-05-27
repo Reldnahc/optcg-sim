@@ -912,9 +912,12 @@ const applyRespondToDecision = (
       action,
     );
     if (sequenceSearchResult !== null) {
-      return sequenceSearchResult;
+      return continueRuntimeAfterDecisionResult(state, sequenceSearchResult);
     }
-    return applySupportedSearchRevealChoiceResponse(state, action);
+    return continueRuntimeAfterDecisionResult(
+      state,
+      applySupportedSearchRevealChoiceResponse(state, action),
+    );
   }
   const searchRevealOrderResult = applySearchRevealOrderResponse(state, action);
   if (searchRevealOrderResult !== null) {
@@ -923,9 +926,9 @@ const applyRespondToDecision = (
       searchRevealOrderResult,
     );
     if (sequenceOrderResult !== null) {
-      return sequenceOrderResult;
+      return continueRuntimeAfterDecisionResult(state, sequenceOrderResult);
     }
-    return searchRevealOrderResult;
+    return continueRuntimeAfterDecisionResult(state, searchRevealOrderResult);
   }
   if (isTrashFromHandSelectCardsDecision(decision)) {
     const trashResult = applySupportedTrashFromHandChoiceResponse(
