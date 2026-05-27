@@ -565,9 +565,6 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
-        if (index === 0) {
-          return false;
-        }
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
@@ -603,7 +600,8 @@ export const toSupportedSequenceBlock = (
           segment.effect.ignoreCost === true &&
           (segment.effect.enterRested === undefined ||
             typeof segment.effect.enterRested === "boolean") &&
-          String(segment.effect.selection).startsWith("handSelection:")
+          (String(segment.effect.selection).startsWith("handSelection:") ||
+            String(segment.effect.selection).startsWith("trashSelection:"))
         );
       }
       if (isSupportedKoSegment(segment.effect)) {

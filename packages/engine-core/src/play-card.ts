@@ -204,8 +204,8 @@ export const applyPlayCard = (
         events,
         playerId,
         player: paidPlayer,
-        handIndex,
-        handCard,
+        sourceIndex: handIndex,
+        sourceCard: handCard,
         supported,
         costArea: payment.nextCostArea,
       });
@@ -234,8 +234,8 @@ export const applyPlayCard = (
     events,
     playerId,
     player,
-    handIndex,
-    handCard,
+    sourceIndex: handIndex,
+    sourceCard: handCard,
     supported,
     costArea: player.costArea,
   });
@@ -431,8 +431,9 @@ const placePlayedCardResult = (params: {
   events: EngineEvent[];
   playerId: PlayerId;
   player: GameState["players"][PlayerId];
-  handIndex: number;
-  handCard: CardInstance;
+  sourceIndex: number;
+  sourceCard: CardInstance;
+  sourceZone?: "hand" | "trash";
   supported: SupportedPlayMetadata;
   costArea: CardInstance[];
   selectedOverflowCharacterIndex?: number;
@@ -445,8 +446,9 @@ const placePlayedCardResult = (params: {
     events,
     playerId,
     player,
-    handIndex,
-    handCard,
+    sourceIndex,
+    sourceCard,
+    sourceZone = "hand",
     supported,
     costArea,
     selectedOverflowCharacterIndex,
@@ -454,19 +456,30 @@ const placePlayedCardResult = (params: {
     resolveOnPlayRuntime = true,
     incrementActionSeq = true,
   } = params;
-  const nextHand = reindexZoneCards(
-    player.hand.filter((_, index) => index !== handIndex),
-    "hand",
-    playerId,
-    "hand",
-  );
+  const nextHand =
+    sourceZone === "hand"
+      ? reindexZoneCards(
+          player.hand.filter((_, index) => index !== sourceIndex),
+          "hand",
+          playerId,
+          "hand",
+        )
+      : player.hand;
 
   let nextCharacters = player.characters;
-  let nextTrash = player.trash;
+  let nextTrash =
+    sourceZone === "trash"
+      ? reindexZoneCards(
+          player.trash.filter((_, index) => index !== sourceIndex),
+          "trash",
+          playerId,
+          "trash",
+        )
+      : player.trash;
   let nextCostArea = costArea;
   if (supported.category === "event") {
     const trashedEvent: CardInstance = {
-      ...handCard,
+      ...sourceCard,
       attachedDon: [],
       zone: { zone: "trash", playerId, slot: "trash", index: 0 },
     };
@@ -487,9 +500,9 @@ const placePlayedCardResult = (params: {
       events,
       "cardMoved",
       {
-        instanceId: handCard.instanceId,
-        cardId: handCard.cardId,
-        from: handCard.zone,
+        instanceId: sourceCard.instanceId,
+        cardId: sourceCard.cardId,
+        from: sourceCard.zone,
         to: trashedEvent.zone,
         reason: "playCard",
       },
@@ -501,8 +514,8 @@ const placePlayedCardResult = (params: {
       "cardTrashed",
       {
         playerId,
-        instanceId: handCard.instanceId,
-        cardId: handCard.cardId,
+        instanceId: sourceCard.instanceId,
+        cardId: sourceCard.cardId,
         reason: "playCard",
       },
       { type: "public" },
@@ -513,8 +526,8 @@ const placePlayedCardResult = (params: {
       "cardPlayed",
       {
         playerId,
-        instanceId: handCard.instanceId,
-        cardId: handCard.cardId,
+        instanceId: sourceCard.instanceId,
+        cardId: sourceCard.cardId,
         category: supported.category,
       },
       { type: "public" },
@@ -539,7 +552,7 @@ const placePlayedCardResult = (params: {
       state,
       nextState,
       events,
-      handCard,
+      sourceCard,
       supported,
     );
   }
@@ -635,7 +648,7 @@ const placePlayedCardResult = (params: {
 
   const playedCard = createPlayedCard({
     state,
-    handCard,
+    handCard: sourceCard,
     playerId,
     category: supported.category,
     characterIndex: nextCharacters.length,
@@ -662,9 +675,9 @@ const placePlayedCardResult = (params: {
     events,
     "cardMoved",
     {
-      instanceId: handCard.instanceId,
-      cardId: handCard.cardId,
-      from: handCard.zone,
+      instanceId: sourceCard.instanceId,
+      cardId: sourceCard.cardId,
+      from: sourceCard.zone,
       to: playedCard.zone,
       reason: "playCard",
     },
@@ -676,8 +689,8 @@ const placePlayedCardResult = (params: {
     "cardPlayed",
     {
       playerId,
-      instanceId: handCard.instanceId,
-      cardId: handCard.cardId,
+      instanceId: sourceCard.instanceId,
+      cardId: sourceCard.cardId,
       category: supported.category,
     },
     { type: "public" },
@@ -705,46 +718,61 @@ const placePlayedCardResult = (params: {
     state,
     nextState,
     events,
-    handCard,
+    sourceCard,
     supported,
   );
 };
 
-export const applyRuntimePlaySelectedFromHand = (params: {
+export const applyRuntimePlaySelected = (params: {
   state: GameState;
   playerId: PlayerId;
   cardInstanceId: CardInstance["instanceId"];
+  sourceZone: "hand" | "trash";
   enterRested: boolean;
   ignoreCost: boolean;
   causedBy?: CausalityRef;
 }): EngineResult => {
-  const { state, playerId, cardInstanceId, enterRested, ignoreCost, causedBy } =
-    params;
+  const {
+    state,
+    playerId,
+    cardInstanceId,
+    sourceZone,
+    enterRested,
+    ignoreCost,
+    causedBy,
+  } = params;
   const player = state.players[playerId];
   if (player === undefined) {
     return illegalAction(state, "playSelected requires an existing player.");
   }
-  const handIndex = player.hand.findIndex(
+  const sourceCards = sourceZone === "hand" ? player.hand : player.trash;
+  const sourceIndex = sourceCards.findIndex(
     (card) => card.instanceId === cardInstanceId,
   );
-  if (handIndex < 0) {
-    return illegalAction(state, "playSelected requires a card in hand.");
+  if (sourceIndex < 0) {
+    return illegalAction(
+      state,
+      `playSelected requires a card in ${sourceZone}.`,
+    );
   }
-  const handCard = player.hand[handIndex];
-  if (handCard === undefined) {
-    return illegalAction(state, "playSelected hand card not found.");
+  const sourceCard = sourceCards[sourceIndex];
+  if (sourceCard === undefined) {
+    return illegalAction(state, `playSelected ${sourceZone} card not found.`);
   }
-  const supported = getSupportedPlayMetadata(state, handCard);
+  const supported = getSupportedPlayMetadata(state, sourceCard);
   if (supported === null) {
     return illegalAction(state, "playSelected card is unsupported.");
   }
-  if (supported.category !== "character") {
-    return illegalAction(state, "playSelected supports only Character cards.");
+  if (supported.category !== "character" && supported.category !== "stage") {
+    return illegalAction(
+      state,
+      "playSelected supports only Character and Stage cards.",
+    );
   }
   if (
     !ignoreCost &&
     getActiveDonCount(player.costArea) <
-      getEffectivePlayCost(state, playerId, handCard, supported)
+      getEffectivePlayCost(state, playerId, sourceCard, supported)
   ) {
     return illegalAction(state, "playSelected requires enough active DON!!.");
   }
@@ -754,17 +782,23 @@ export const applyRuntimePlaySelectedFromHand = (params: {
       "playSelected destination conflict is invalid.",
     );
   }
-  if (player.characters.length >= 5) {
+  if (supported.category === "character" && player.characters.length >= 5) {
+    if (sourceZone !== "hand") {
+      return illegalAction(
+        state,
+        "playSelected Character overflow from trash is unsupported.",
+      );
+    }
     return createCharacterOverflowDecisionResult({
       state,
       events: [],
       playerId,
       player,
-      handCard,
+      handCard: sourceCard,
       incrementActionSeq: false,
       decisionIdOverride: getRuntimePlaySelectedOverflowDecisionId(
         state,
-        handCard,
+        sourceCard,
       ),
       causedBy: causedBy ?? {
         type: "ruleProcess",
@@ -777,8 +811,9 @@ export const applyRuntimePlaySelectedFromHand = (params: {
     events: [],
     playerId,
     player,
-    handIndex,
-    handCard,
+    sourceIndex,
+    sourceCard,
+    sourceZone,
     supported,
     costArea: player.costArea,
     enterRested,
@@ -786,6 +821,15 @@ export const applyRuntimePlaySelectedFromHand = (params: {
     incrementActionSeq: false,
   });
 };
+
+export const applyRuntimePlaySelectedFromHand = (params: {
+  state: GameState;
+  playerId: PlayerId;
+  cardInstanceId: CardInstance["instanceId"];
+  enterRested: boolean;
+  ignoreCost: boolean;
+  causedBy?: CausalityRef;
+}): EngineResult => applyRuntimePlaySelected({ ...params, sourceZone: "hand" });
 
 const applyCharacterOverflowResponse = (
   state: GameState,
@@ -875,8 +919,8 @@ const applyCharacterOverflowResponse = (
     events,
     playerId: decision.playerId,
     player,
-    handIndex,
-    handCard,
+    sourceIndex: handIndex,
+    sourceCard: handCard,
     supported,
     costArea: player.costArea,
     selectedOverflowCharacterIndex: selectedIndex,
@@ -953,8 +997,8 @@ const applyPlayCardPaymentResponse = (
     events,
     playerId: decision.playerId,
     player,
-    handIndex,
-    handCard,
+    sourceIndex: handIndex,
+    sourceCard: handCard,
     supported,
     costArea: payment.nextCostArea,
   });

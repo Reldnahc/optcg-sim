@@ -15,7 +15,7 @@ describe("play from trash instruction parser", () => {
           {
             id: "select:trash-play",
             connector: "always",
-            saveResultAs: "selected:trash-play",
+            saveResultAs: "trashSelection:play",
             effect: {
               type: "selectCards",
               zone: "trash",
@@ -29,7 +29,7 @@ describe("play from trash instruction parser", () => {
                 power: { op: "eq", value: 5000 },
                 custom: "differentNames",
               },
-              saveAs: "selected:trash-play",
+              saveAs: "trashSelection:play",
               visibility: "bothPlayers",
             },
           },
@@ -38,7 +38,7 @@ describe("play from trash instruction parser", () => {
             connector: "ifPossible",
             effect: {
               type: "playSelected",
-              selection: "selected:trash-play",
+              selection: "trashSelection:play",
               ignoreCost: true,
             },
           },

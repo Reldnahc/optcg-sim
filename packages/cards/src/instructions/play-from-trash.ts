@@ -4,7 +4,7 @@ import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { InstructionParser } from "../types.js";
 
-const trashPlaySelection = "selected:trash-play" as SelectionId;
+const trashPlaySelection = "trashSelection:play" as SelectionId;
 
 export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
   const playMatch = /^play\s+(?<rest>.+)$/i.exec(input.text);

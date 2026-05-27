@@ -25,7 +25,7 @@ import {
   parseCharacterOverflowDecisionInstanceId,
   parseRuntimePlaySelectedOverflowDecisionInstanceId,
 } from "./play-card-legal-actions.js";
-import { applyRuntimePlaySelectedFromHand } from "./play-card.js";
+import { applyRuntimePlaySelected } from "./play-card.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegment = SequenceEffect["effects"][number];
@@ -192,7 +192,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
   for (const selected of selectedCards) {
     if (
       selected.playerId !== entry.controllerId ||
-      selected.zone?.zone !== "hand"
+      (selected.zone?.zone !== "hand" && selected.zone?.zone !== "trash")
     ) {
       nextLedgers = {
         ...nextLedgers,
@@ -213,10 +213,11 @@ export const applyPlaySelectedSequenceSegment = (params: {
         state: nextState,
       };
     }
-    const played = applyRuntimePlaySelectedFromHand({
+    const played = applyRuntimePlaySelected({
       state: nextState,
       playerId: entry.controllerId,
       cardInstanceId: selected.instanceId,
+      sourceZone: selected.zone.zone,
       enterRested: segment.effect.enterRested === true,
       ignoreCost: true,
       causedBy: {

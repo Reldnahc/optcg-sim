@@ -2,6 +2,7 @@ import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
   parseLeaderNameCondition,
+  parseLifeCountCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
@@ -78,6 +79,7 @@ const conditionParsers = [
   parseDonFieldCountCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
+  parseLifeCountCondition,
   parseLeaderNameCondition,
   parseOnlyMatchingFieldCardsCondition,
 ] as const;

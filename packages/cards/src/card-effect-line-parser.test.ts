@@ -700,7 +700,7 @@ describe("card effect line parser", () => {
                       effects: [
                         {
                           connector: "always",
-                          saveResultAs: "selected:trash-play",
+                          saveResultAs: "trashSelection:play",
                           effect: {
                             type: "selectCards",
                             zone: "trash",
@@ -714,7 +714,7 @@ describe("card effect line parser", () => {
                               power: { op: "eq", value: 5000 },
                               custom: "differentNames",
                             },
-                            saveAs: "selected:trash-play",
+                            saveAs: "trashSelection:play",
                             visibility: "bothPlayers",
                           },
                         },
@@ -722,7 +722,7 @@ describe("card effect line parser", () => {
                           connector: "ifPossible",
                           effect: {
                             type: "playSelected",
-                            selection: "selected:trash-play",
+                            selection: "trashSelection:play",
                             ignoreCost: true,
                           },
                         },

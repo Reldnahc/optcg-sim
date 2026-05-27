@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardId,
   CardInstance,
   Effect,
   EffectDefinition,
   EngineResult,
   GameState,
   HandSelectionId,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -41,6 +43,7 @@ const playSelectedSequence = (params: {
   max: number;
   min: number;
   pauseAfter?: boolean;
+  sourceZone?: "hand" | "trash";
 }): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
@@ -54,7 +57,7 @@ const playSelectedSequence = (params: {
       connector: "then",
       effect: {
         type: "selectCards",
-        zone: "hand",
+        zone: params.sourceZone ?? "hand",
         player: "self",
         chooser: "self",
         min: params.min,
@@ -102,6 +105,44 @@ const playSelectedSequence = (params: {
           },
         ]
       : []),
+  ],
+});
+
+const playStageFromTrashSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select-stage-from-trash",
+      connector: "always",
+      saveResultAs: "trashSelection:play",
+      effect: {
+        type: "selectCards",
+        zone: "trash",
+        player: "self",
+        chooser: "self",
+        min: 0,
+        max: 1,
+        filter: {
+          categories: ["stage"],
+          typesAny: ["Mary Geoise"],
+          cost: { op: "eq", value: 1 },
+        },
+        saveAs: "trashSelection:play" as SelectionId,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      id: "play-stage-from-trash",
+      connector: "ifPossible",
+      effect: {
+        type: "playSelected",
+        selection: "trashSelection:play" as SelectionId,
+        ignoreCost: true,
+      },
+    },
   ],
 });
 
@@ -199,6 +240,29 @@ const markHandCharactersSupported = (state: GameState, cost = 1): void => {
   }
 };
 
+const moveSupportedStageToTrash = (state: GameState): CardInstance => {
+  const player = must(state.players[p1], "p1");
+  const card = must(player.hand[0], "stage source");
+  const trashStage: CardInstance = {
+    ...card,
+    cardId: "trash-mary-stage" as CardId,
+    zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+    state: "active",
+    attachedDon: [],
+  };
+  player.hand = reindexHand(player.hand.slice(1));
+  player.trash = [trashStage, ...player.trash];
+  state.cardManifest.cards[trashStage.cardId] = {
+    ...resolvedCard({
+      cardId: trashStage.cardId,
+      category: "stage",
+      cost: 1,
+    }),
+    types: ["Mary Geoise"],
+  };
+  return trashStage;
+};
+
 const fillCharacterAreaToFive = (state: GameState): void => {
   const player = must(state.players[p1], "p1");
   const nextCharacters = [...player.characters];
@@ -287,6 +351,35 @@ test("Character playSelected allows zero-card up-to selection", () => {
     eventTypes(resolved).filter((type) => type === "cardPlayed"),
     [],
   );
+});
+
+test("playSelected plays selected Stage card from trash without cost payment", () => {
+  const state = sequenceQueueState(playStageFromTrashSequence());
+  const trashStage = moveSupportedStageToTrash(state);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selection");
+  assert.equal(decision.type, "selectCards");
+  const selected = must(decision.candidates[0], "candidate").card;
+  assert.equal(selected.instanceId, trashStage.instanceId);
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+  const player = must(resolved.state.players[p1], "p1");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(player.stage?.instanceId, trashStage.instanceId);
+  assert.equal(
+    player.trash.some((card) => card.instanceId === trashStage.instanceId),
+    false,
+  );
+  assert.equal(
+    resolved.events.some((event) => event.type === "costPaid"),
+    false,
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
 test("Character playSelected supports multiple selected Characters in order", () => {
@@ -546,48 +639,44 @@ test("full Character area creates forced-trash decision before play completion a
   assert.equal(first.stateHash, second.stateHash);
 });
 
-test("Stage and Event playSelected fail closed without play or hand-to-field move", () => {
-  for (const category of ["stage", "event"] as const) {
-    const state = createActiveState();
-    state.turn.turnPlayerId = p1;
-    const handCard = must(must(state.players[p1], "p1").hand[0], "hand card");
-    state.cardManifest.cards[handCard.cardId] = resolvedCard({
-      cardId: handCard.cardId,
-      category,
-      cost: 0,
-      ...(category === "event" ? { effectText: "[Main]" } : {}),
-    });
+test("Event playSelected fails closed without play or hand-to-field move", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const handCard = must(must(state.players[p1], "p1").hand[0], "hand card");
+  state.cardManifest.cards[handCard.cardId] = resolvedCard({
+    cardId: handCard.cardId,
+    category: "event",
+    cost: 0,
+    effectText: "[Main]",
+  });
 
-    const result = applyRuntimePlaySelectedFromHand({
-      state,
-      playerId: p1,
-      cardInstanceId: handCard.instanceId,
-      enterRested: true,
-      ignoreCost: true,
-    });
+  const result = applyRuntimePlaySelectedFromHand({
+    state,
+    playerId: p1,
+    cardInstanceId: handCard.instanceId,
+    enterRested: true,
+    ignoreCost: true,
+  });
 
-    assert.equal(result.errors?.[0]?.type, "illegalAction", category);
-    assert.equal(
-      result.events.some((event) => event.type === "cardPlayed"),
-      false,
-    );
-    assert.equal(
-      result.events.some(
-        (event) =>
-          event.type === "cardMoved" &&
-          (event.payload as { reason?: string }).reason === "playCard",
-      ),
-      false,
-      category,
-    );
-    assert.equal(
-      filterStateForPlayer(result.state, p2).legalActions.some(
-        (action) => action.type === "respondToDecision",
-      ),
-      false,
-      category,
-    );
-  }
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(
+    result.events.some((event) => event.type === "cardPlayed"),
+    false,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "cardMoved" &&
+        (event.payload as { reason?: string }).reason === "playCard",
+    ),
+    false,
+  );
+  assert.equal(
+    filterStateForPlayer(result.state, p2).legalActions.some(
+      (action) => action.type === "respondToDecision",
+    ),
+    false,
+  );
 });
 
 test("stale, non-hand, and no-longer-legal playSelected references fail closed deterministically", () => {

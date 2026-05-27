@@ -42,6 +42,7 @@ export type PrimitiveEvidence =
   | "condition:leaderIdentity"
   | "condition:opponentFieldCount"
   | "condition:trashCount"
+  | "condition:lifeCount"
   | "condition:donFieldCount"
   | "condition:comparator:eq"
   | "condition:comparator:lte"
