@@ -58,6 +58,7 @@ export type Condition =
   | { type: "donCount"; target?: Target; min: number }
   | { type: "attachedDonCount"; target: Target; op: Comparator; value: number }
   | { type: "yourTurn" }
+  | { type: "turnCount"; player: PlayerRef; op: Comparator; value: number }
   | { type: "opponentTurn" }
   | { type: "lifeCount"; player: PlayerRef; op: Comparator; value: number }
   | {
@@ -561,9 +562,11 @@ export type Effect =
   | {
       type: "moveCards";
       count: number;
+      min?: number;
       from: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "original";
+      destinationState?: "active" | "rested";
     }
   | {
       type: "putRemaining";
@@ -636,6 +639,7 @@ export type Effect =
     }
   | { type: "addDon"; count: number; player: PlayerRef }
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
+  | { type: "attachSelectedDon"; selection: SelectionId; target: Target }
   | { type: "returnDon"; count: number; player: PlayerRef }
   | {
       type: "addLife";
