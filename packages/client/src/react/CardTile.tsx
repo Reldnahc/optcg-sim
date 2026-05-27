@@ -48,6 +48,7 @@ export const CardTile = ({
         } ${pendingChoice ? "is-pending-choice" : ""}`}
         type="button"
         title={card.name}
+        disabled={disabled}
         onClick={(event) => {
           event.stopPropagation();
           onClick?.();

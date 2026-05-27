@@ -110,6 +110,36 @@ describe("collection modal", () => {
     assert.equal(markup.includes("Three"), true);
   });
 
+  test("collection modal can render selectable decision cards with confirm control", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Player trash",
+          cards: [
+            card("selected", "Selected Trash"),
+            card("available", "Available Trash"),
+            card("disabled", "Disabled Trash"),
+          ],
+          selection: {
+            selectedInstanceIds: ["selected"],
+            selectableInstanceIds: ["selected", "available"],
+            canConfirm: true,
+            confirmLabel: "Confirm",
+          },
+        },
+        disabled: false,
+        onToggleCard: () => undefined,
+        onConfirm: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /collection-modal/u);
+    assert.match(markup, /is-selected/u);
+    assert.match(markup, /is-pending-choice/u);
+    assert.match(markup, /disabled=""/u);
+    assert.equal(markup.includes("Confirm"), true);
+  });
+
   test("collection modal body scrolls for large collections", async () => {
     const styles = await readFile(collectionStylesPath, "utf8");
 

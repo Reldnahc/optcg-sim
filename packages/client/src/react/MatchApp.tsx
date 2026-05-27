@@ -1,7 +1,9 @@
 import { useState } from "react";
 
-import type { CardRef } from "@optcg/types";
+import type { CardRef, InstanceId } from "@optcg/types";
 
+import { createCollectionDecisionSurface } from "../interactions/decision-surface.js";
+import type { ClientCardModel } from "../view-model.js";
 import { BoardLayout } from "./BoardLayout.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
@@ -46,6 +48,49 @@ export const MatchApp = (): React.JSX.Element => {
         : { imageUrl: catalogEntry.imageUrl }),
     };
   };
+  const cardModel = (card: CardRef): ClientCardModel => {
+    const catalogEntry =
+      matchState?.cards.players[card.playerId]?.cards[card.cardId];
+    return {
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      name: catalogEntry?.name ?? String(card.cardId),
+      category: catalogEntry?.category ?? "unknown",
+      ...(catalogEntry?.effectText === undefined
+        ? {}
+        : { effectText: catalogEntry.effectText }),
+      ...(catalogEntry?.triggerText === undefined
+        ? {}
+        : { triggerText: catalogEntry.triggerText }),
+      ...(catalogEntry?.imageUrl === undefined
+        ? {}
+        : { imageUrl: catalogEntry.imageUrl }),
+      attachedDonCount: 0,
+      attachedDonCards: [],
+    };
+  };
+  const collectionDecisionSurface = createCollectionDecisionSurface(
+    decisionModal,
+    client.currentPlayerId,
+  );
+  const decisionCollectionModal =
+    collectionDecisionSurface === undefined
+      ? undefined
+      : {
+          title: collectionDecisionSurface.title,
+          cards: collectionDecisionSurface.model.cards.map((choice) =>
+            cardModel(choice.card),
+          ),
+          selection: {
+            selectedInstanceIds:
+              collectionDecisionSurface.model.selectedInstanceIds.map(String),
+            selectableInstanceIds: collectionDecisionSurface.model.cards
+              .filter((choice) => choice.selectable)
+              .map((choice) => String(choice.card.instanceId)),
+            canConfirm: collectionDecisionSurface.model.canConfirm,
+            confirmLabel: collectionDecisionSurface.model.confirmLabel,
+          },
+        };
 
   return (
     <main className="match-app">
@@ -102,7 +147,9 @@ export const MatchApp = (): React.JSX.Element => {
         }}
       />
       <DecisionModalHost
-        model={decisionModal}
+        model={
+          collectionDecisionSurface === undefined ? decisionModal : undefined
+        }
         disabled={client.state.actionInFlight}
         cardDisplay={cardDisplay}
         onToggleCard={client.toggleDecisionCard}
@@ -115,10 +162,21 @@ export const MatchApp = (): React.JSX.Element => {
         }}
       />
       <CollectionModalHost
-        model={collectionModal}
-        onClose={() => {
-          setCollectionModal(undefined);
+        model={decisionCollectionModal ?? collectionModal}
+        disabled={client.state.actionInFlight}
+        onToggleCard={(instanceId) => {
+          client.toggleDecisionCard(instanceId as InstanceId);
         }}
+        onConfirm={() => {
+          void client.confirmDecision();
+        }}
+        onClose={
+          decisionCollectionModal === undefined
+            ? () => {
+                setCollectionModal(undefined);
+              }
+            : undefined
+        }
       />
     </main>
   );

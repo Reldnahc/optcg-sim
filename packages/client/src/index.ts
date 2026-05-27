@@ -7,5 +7,6 @@ export * from "./view-model.js";
 export * from "./interactions/attack-targeting.js";
 export * from "./interactions/counter-targeting.js";
 export * from "./interactions/decision-modal.js";
+export * from "./interactions/decision-surface.js";
 export * from "./interactions/don-selection.js";
 export * from "./interactions/payment-decision.js";
