@@ -24,11 +24,19 @@ import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import { getUnsupportedCombatViewMetadataReason } from "./battle-combat-view-support.js";
 import { getUnsupportedDamageStepContinuationReason } from "./battle-damage-step-continuation.js";
 import {
+  counterPayCostDecisionId,
+  parseCounterPayCostDecisionId,
+} from "./battle-counter-event-payment-context.js";
+import { createCounterEventPowerRecord } from "./battle-counter-event-power-record.js";
+import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
 } from "./battle-support.js";
-import { getSupportedCounterEventPower } from "./battle-counter-event-support.js";
+import {
+  getSupportedCounterEventPower,
+  getSupportedCounterEventPowerTargets,
+} from "./battle-counter-event-support.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
@@ -195,9 +203,10 @@ const getLegalCharacterCounterActions = (
   }
   return defender.hand.flatMap((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const supportedEvent = getSupportedCounterEventPower(
+    const supportedEvents = getSupportedCounterEventPowerTargets(
       state,
       card,
+      defenderId,
       battle.currentTarget,
     );
     if (
@@ -205,11 +214,20 @@ const getLegalCharacterCounterActions = (
         (metadata?.category === "character" &&
           metadata.counter !== undefined &&
           metadata.counter > 0) ||
-        (supportedEvent !== null &&
-          getActiveDonCount(defender.costArea) >= supportedEvent.printedCost)
+        supportedEvents.some(
+          (supportedEvent) =>
+            getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,
+        )
       )
     ) {
       return [];
+    }
+    if (metadata?.category === "event") {
+      return supportedEvents.map((supportedEvent) => ({
+        type: "useCounter" as const,
+        cardInstanceId: card.instanceId,
+        target: supportedEvent.target,
+      }));
     }
     return [
       {
@@ -251,15 +269,10 @@ export const applyUseCounter = (
   if (unsupportedCounterWindowReason !== undefined) {
     return illegalAction(state, unsupportedCounterWindowReason);
   }
-  if (!sameCardRef(action.target, battle.currentTarget)) {
-    return illegalAction(
-      state,
-      "Counter target must be current battle target.",
-    );
-  }
   const attacker = reifyCardRef(state, battle.attacker);
   const target = reifyCardRef(state, battle.currentTarget);
-  if (attacker === null || target === null) {
+  const selectedTarget = reifyCardRef(state, action.target);
+  if (attacker === null || target === null || selectedTarget === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
   }
   if (target.playerId !== decision.playerId) {
@@ -322,16 +335,24 @@ export const applyUseCounter = (
   const metadata = state.cardManifest.cards[handCard.cardId];
   let counterValue: number | undefined;
   let printedCost = 0;
+  let usesBattleCounterPower = true;
   if (
     metadata?.category === "character" &&
     metadata.counter !== undefined &&
     metadata.counter > 0
   ) {
+    if (!sameCardRef(action.target, battle.currentTarget)) {
+      return illegalAction(
+        state,
+        "Character Counter target must be current battle target.",
+      );
+    }
     counterValue = metadata.counter;
   } else {
     const supportedCounterEvent = getSupportedCounterEventPower(
       state,
       handCard,
+      action.target,
       battle.currentTarget,
     );
     if (supportedCounterEvent === null) {
@@ -344,6 +365,7 @@ export const applyUseCounter = (
     }
     counterValue = supportedCounterEvent.value;
     printedCost = supportedCounterEvent.printedCost;
+    usesBattleCounterPower = supportedCounterEvent.usesBattleCounterPower;
   }
   if (
     metadata?.category === "event" &&
@@ -353,7 +375,11 @@ export const applyUseCounter = (
   }
   if (printedCost > 0) {
     const decisionId = toDecisionId(
-      `decision:counterStep:payCost:${String(handCard.instanceId)}:${String(state.seq + 1)}`,
+      counterPayCostDecisionId(
+        String(handCard.instanceId),
+        String(action.target.instanceId),
+        state.seq + 1,
+      ),
     );
     const events: EngineEvent[] = [];
     appendEvent(
@@ -394,7 +420,9 @@ export const applyUseCounter = (
     battle,
     handCard,
     handIndex,
+    target: action.target,
     counterValue,
+    usesBattleCounterPower,
     costArea: defender.costArea,
     decisionResolvedId: undefined,
     pendingDecision: state.pendingDecision,
@@ -409,7 +437,9 @@ const resolveCounterCardUse = (params: {
   battle: NonNullable<GameState["battle"]>;
   handCard: CardInstance;
   handIndex: number;
+  target: CardRef;
   counterValue: number;
+  usesBattleCounterPower: boolean;
   costArea: GameState["players"][PlayerId]["costArea"];
   decisionResolvedId: string | undefined;
   pendingDecision: GameState["pendingDecision"] | undefined;
@@ -421,7 +451,9 @@ const resolveCounterCardUse = (params: {
     battle,
     handCard,
     handIndex,
+    target,
     counterValue,
+    usesBattleCounterPower,
     costArea,
     decisionResolvedId,
     pendingDecision,
@@ -467,7 +499,7 @@ const resolveCounterCardUse = (params: {
     playerId: decisionPlayerId,
     instanceId: handCard.instanceId,
     cardId: handCard.cardId,
-    target: battle.currentTarget,
+    target,
     value: counterValue,
   });
   appendEvent(state, events, "cardMoved", {
@@ -495,7 +527,7 @@ const resolveCounterCardUse = (params: {
           playerId: decisionPlayerId,
         },
         effectId: `${String(handCard.cardId)}:counter`,
-        target: battle.currentTarget,
+        target,
       },
       { type: "public" },
     );
@@ -503,9 +535,25 @@ const resolveCounterCardUse = (params: {
 
   const nextBattle: EngineInternalBattleState = {
     ...battle,
-    counterPower:
-      ((battle as EngineInternalBattleState).counterPower ?? 0) + counterValue,
   };
+  if (usesBattleCounterPower) {
+    nextBattle.counterPower =
+      ((battle as EngineInternalBattleState).counterPower ?? 0) + counterValue;
+  }
+  const counterEventPowerRecord =
+    !usesBattleCounterPower &&
+    state.cardManifest.cards[handCard.cardId]?.category === "event"
+      ? createCounterEventPowerRecord(
+          state,
+          decisionPlayerId,
+          handCard,
+          target,
+          counterValue,
+        )
+      : null;
+  if (!usesBattleCounterPower && counterEventPowerRecord === null) {
+    return illegalAction(state, "Unsupported Counter Event target.");
+  }
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
@@ -520,6 +568,10 @@ const resolveCounterCardUse = (params: {
       },
     },
     battle: nextBattle,
+    continuousEffects:
+      counterEventPowerRecord === null
+        ? state.continuousEffects
+        : [...state.continuousEffects, counterEventPowerRecord],
     eventJournal: [...state.eventJournal, ...events],
   };
   if (pendingDecision !== undefined) {
@@ -549,11 +601,8 @@ export const applyCounterStepDecisionResponse = (
     if (action.response.type !== "payment") {
       return illegalAction(state, "Unsupported decision response.");
     }
-    const match = /^decision:counterStep:payCost:(.*):\d+$/.exec(
-      String(decision.id),
-    );
-    const instanceIdSegment = match?.[1];
-    if (instanceIdSegment === undefined) {
+    const context = parseCounterPayCostDecisionId(String(decision.id));
+    if (context === null) {
       return illegalAction(state, "Unsupported payCost decision context.");
     }
     const defender = state.players[decision.playerId];
@@ -561,7 +610,7 @@ export const applyCounterStepDecisionResponse = (
       return illegalAction(state, "Decision player mismatch.");
     }
     const handIndex = defender.hand.findIndex(
-      (card) => String(card.instanceId) === instanceIdSegment,
+      (card) => String(card.instanceId) === context.counterEventInstanceId,
     );
     if (handIndex < 0) {
       return illegalAction(state, "Decision card reference is stale.");
@@ -570,9 +619,23 @@ export const applyCounterStepDecisionResponse = (
     if (handCard === undefined) {
       return illegalAction(state, "Decision card not found.");
     }
+    const supportedTargets = getSupportedCounterEventPowerTargets(
+      state,
+      handCard,
+      decision.playerId,
+      battle.currentTarget,
+    );
+    const selectedTarget = supportedTargets.find(
+      (supportedTarget) =>
+        String(supportedTarget.target.instanceId) === context.targetInstanceId,
+    );
+    if (selectedTarget === undefined) {
+      return illegalAction(state, "Unsupported payCost decision context.");
+    }
     const supportedCounterEvent = getSupportedCounterEventPower(
       state,
       handCard,
+      selectedTarget.target,
       battle.currentTarget,
     );
     if (
@@ -634,7 +697,9 @@ export const applyCounterStepDecisionResponse = (
       battle,
       handCard,
       handIndex,
+      target: selectedTarget.target,
       counterValue: supportedCounterEvent.value,
+      usesBattleCounterPower: supportedCounterEvent.usesBattleCounterPower,
       costArea: nextCostArea,
       decisionResolvedId: decision.id,
       pendingDecision:
@@ -740,24 +805,33 @@ const getCounterEventPaymentLegalActions = (
   ) {
     return [];
   }
-  const match = /^decision:counterStep:payCost:(.*):\d+$/.exec(
-    String(decision.id),
-  );
-  const counterEventInstanceId = match?.[1] as
-    | CardInstance["instanceId"]
-    | undefined;
-  if (counterEventInstanceId === undefined) {
+  const context = parseCounterPayCostDecisionId(String(decision.id));
+  if (context === null) {
     return [];
   }
   const handCard = player.hand.find(
-    (card) => card.instanceId === counterEventInstanceId,
+    (card) => String(card.instanceId) === context.counterEventInstanceId,
   );
   if (handCard === undefined) {
+    return [];
+  }
+  const supportedTargets = getSupportedCounterEventPowerTargets(
+    state,
+    handCard,
+    playerId,
+    battle.currentTarget,
+  );
+  const selectedTarget = supportedTargets.find(
+    (supportedTarget) =>
+      String(supportedTarget.target.instanceId) === context.targetInstanceId,
+  );
+  if (selectedTarget === undefined) {
     return [];
   }
   const supported = getSupportedCounterEventPower(
     state,
     handCard,
+    selectedTarget.target,
     battle.currentTarget,
   );
   if (supported === null || supported.printedCost <= 0) {
@@ -780,9 +854,13 @@ const getCounterEventPaymentLegalActions = (
 const isUnsupportedCounterEventCandidate = (
   state: GameState,
   card: CardInstance,
-  target: CardRef | undefined,
+  defenderId: PlayerId,
+  battleTarget: CardRef | undefined,
 ): boolean => {
-  if (getSupportedCounterEventPower(state, card, target) !== null) {
+  if (
+    getSupportedCounterEventPowerTargets(state, card, defenderId, battleTarget)
+      .length > 0
+  ) {
     return false;
   }
   const metadata = state.cardManifest.cards[card.cardId];
@@ -809,11 +887,12 @@ export const getUnsupportedCounterWindowReason = (
     if (metadata === undefined) {
       return "Battle requires unsupported counter window handling.";
     }
-    if (isUnsupportedCounterEventCandidate(state, card, target)) {
+    if (isUnsupportedCounterEventCandidate(state, card, defenderId, target)) {
       return unsupportedCounterEventReason;
     }
     if (
-      getSupportedCounterEventPower(state, card, target) === null &&
+      getSupportedCounterEventPowerTargets(state, card, defenderId, target)
+        .length === 0 &&
       hasCounterTriggerDefinition(state, card.cardId)
     ) {
       return "Battle requires unsupported counter window handling.";
@@ -839,13 +918,20 @@ const hasPotentialCharacterCounterActions = (
   }
   return defender.hand.some((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const supportedEvent = getSupportedCounterEventPower(state, card, target);
+    const supportedEvents = getSupportedCounterEventPowerTargets(
+      state,
+      card,
+      defenderId,
+      target,
+    );
     return (
       (metadata?.category === "character" &&
         metadata.counter !== undefined &&
         metadata.counter > 0) ||
-      (supportedEvent !== null &&
-        getActiveDonCount(defender.costArea) >= supportedEvent.printedCost)
+      supportedEvents.some(
+        (supportedEvent) =>
+          getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,
+      )
     );
   });
 };
