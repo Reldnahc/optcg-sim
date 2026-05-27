@@ -183,6 +183,7 @@ export const applyOptionalActivationDecisionResponse = (
       (decision.cost.type !== "restDon" &&
         decision.cost.type !== "restSelf" &&
         decision.cost.type !== "returnDon" &&
+        decision.cost.type !== "moveCards" &&
         decision.cost.type !== "trashFromHand" &&
         decision.cost.type !== "chooseOne")
     ) {
@@ -227,8 +228,117 @@ export const applyOptionalActivationDecisionResponse = (
             selectedCardInstanceIds: NonNullable<
               typeof action.response.selectedCardInstanceIds
             >;
+          }
+        | {
+            playerId: PlayerId;
+            optionId: "moveCards";
+            selectedCardInstanceIds: NonNullable<
+              typeof action.response.selectedCardInstanceIds
+            >;
           };
-      if (
+      if (selectedOption.type === "moveCards") {
+        if (
+          selectedOption.from.player !== "self" ||
+          selectedOption.from.zone !== "trash" ||
+          selectedOption.to.player !== "self" ||
+          selectedOption.to.zone !== "deck" ||
+          selectedOption.to.position !== "bottom"
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment move-card route is unsupported."),
+          );
+        }
+        if (paymentResponse.selectedDonInstanceIds !== undefined) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection must not include DON!!."),
+          );
+        }
+        const selected = paymentResponse.selectedCardInstanceIds;
+        if (
+          selected === undefined ||
+          selected.length !== selectedOption.count
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection count mismatch."),
+          );
+        }
+        if (new Set(selected).size !== selected.length) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection contains duplicates."),
+          );
+        }
+        const selectedCards: CardInstance[] = [];
+        for (const selectedId of selected) {
+          const card = player.trash.find(
+            (candidate) => candidate.instanceId === selectedId,
+          );
+          if (card === undefined) {
+            return toEngineResult(
+              state,
+              [],
+              invalidDecision("Payment card selection is invalid."),
+            );
+          }
+          selectedCards.push(card);
+        }
+        const selectedSet = new Set(selected);
+        const movedCards = selectedCards.map((card, index) => ({
+          ...card,
+          attachedDon: [],
+          zone: {
+            zone: "deck" as const,
+            playerId: decision.playerId,
+            slot: "deck" as const,
+            index: player.deck.length + index,
+          },
+        }));
+        nextPlayer = {
+          ...player,
+          trash: reindexZoneCards(
+            player.trash.filter((card) => !selectedSet.has(card.instanceId)),
+            "trash",
+            decision.playerId,
+            "trash",
+          ),
+          deck: reindexZoneCards(
+            [...player.deck, ...movedCards],
+            "deck",
+            decision.playerId,
+            "deck",
+          ),
+        };
+        for (let index = 0; index < selectedCards.length; index += 1) {
+          appendEvent(
+            state,
+            events,
+            "cardMoved",
+            {
+              from: "trash",
+              to: "deck",
+              playerId: decision.playerId,
+              reason: "moveCardsCost",
+            },
+            { type: "public" },
+          );
+          const moved = events[events.length - 1];
+          if (moved !== undefined) {
+            moved.causedBy = { type: "decision", decisionId: decision.id };
+          }
+        }
+        costPaidPayload = {
+          playerId: decision.playerId,
+          optionId: "moveCards",
+          selectedCardInstanceIds: selected,
+        };
+      } else if (
         selectedOption.type === "trashFromHand" ||
         selectedOption.type === "trashFromField"
       ) {

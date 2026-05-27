@@ -48,4 +48,32 @@ describe("optional cost sequence parser", () => {
       rest: "",
     });
   });
+
+  it("parses generic move-cards costs as source and destination primitives", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "place 2 cards from your trash at the bottom of your deck in any order",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "moveCards",
+        count: 2,
+        chooser: "self",
+        from: { player: "self", zone: "trash" },
+        to: { player: "self", zone: "deck", position: "bottom" },
+        order: "chooserChoice",
+        optional: true,
+      },
+      evidence: [
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:trash",
+        "destination:deck",
+        "order:anyOrder",
+      ],
+      rest: "",
+    });
+  });
 });

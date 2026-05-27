@@ -1,4 +1,5 @@
 export { parseDonFieldCountCondition } from "./don-field-count.js";
+export { parseHandCountCondition } from "./hand-count.js";
 export { parseLeaderNameCondition } from "./leader-name.js";
 export { parseLifeCountCondition } from "./life-count.js";
 export { parseOnlyMatchingFieldCardsCondition } from "./only-matching-field-cards.js";

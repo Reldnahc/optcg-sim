@@ -2,6 +2,7 @@ import type {
   DecisionId,
   EffectId,
   InstanceId,
+  PlayerRef,
   PlayerId,
   Zone,
 } from "./primitives.js";
@@ -30,6 +31,13 @@ export type PaymentOption =
   | { id: string; type: "returnDon"; count: number }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
+  | {
+      id: string;
+      type: "moveCards";
+      count: number;
+      from: { player: PlayerRef; zone: Zone };
+      to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+    }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
   | { id: string; type: "custom"; action: string };
 

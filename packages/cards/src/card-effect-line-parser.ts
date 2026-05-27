@@ -1,6 +1,7 @@
 import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
+  parseHandCountCondition,
   parseLeaderNameCondition,
   parseLifeCountCondition,
   parseOnlyMatchingFieldCardsCondition,
@@ -77,6 +78,7 @@ const instructionParsers = [
 
 const conditionParsers = [
   parseDonFieldCountCondition,
+  parseHandCountCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
   parseLifeCountCondition,

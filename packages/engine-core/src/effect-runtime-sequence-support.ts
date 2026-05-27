@@ -112,6 +112,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { ...cost, optional: true };
     case "trashFromHand":
       return { ...cost, optional: true };
+    case "moveCards":
+      return { ...cost, optional: true };
     case "sequence":
     case "trashSelf":
     case "discard":
@@ -244,8 +246,8 @@ const isSupportedTrashFromHandSegment = (
   effect: SequenceSegmentEffect,
 ): effect is TrashFromHandEffect =>
   effect.type === "trashFromHand" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  effect.chooser === effect.player &&
   effect.filter === undefined &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
@@ -312,9 +314,16 @@ const isSupportedPayCostSegment = (
   return (
     (cost.type === "restDon" ||
       cost.type === "returnDon" ||
-      cost.type === "trashFromHand") &&
+      cost.type === "trashFromHand" ||
+      cost.type === "moveCards") &&
     (cost.chooser === undefined || cost.chooser === "self") &&
     (cost.type !== "trashFromHand" || cost.filter === undefined) &&
+    (cost.type !== "moveCards" ||
+      (cost.from.player === "self" &&
+        cost.from.zone === "trash" &&
+        cost.to.player === "self" &&
+        cost.to.zone === "deck" &&
+        cost.to.position === "bottom")) &&
     Number.isInteger(cost.count) &&
     cost.count > 0
   );

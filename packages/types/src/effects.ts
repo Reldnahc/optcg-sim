@@ -112,6 +112,15 @@ export type Cost =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
+  | {
+      type: "moveCards";
+      count: number;
+      chooser: PlayerRef;
+      from: { player: PlayerRef; zone: Zone };
+      to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+      order: "chooserChoice";
+      optional?: boolean;
+    }
   | { type: "trashSelf" }
   | {
       type: "discard";
@@ -127,6 +136,16 @@ export type OptionalTrashFromHandCost = {
   count: number;
   filter?: CardFilter;
   chooser: PlayerRef;
+  optional: true;
+};
+
+export type OptionalMoveCardsCost = {
+  type: "moveCards";
+  count: number;
+  chooser: PlayerRef;
+  from: { player: PlayerRef; zone: Zone };
+  to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+  order: "chooserChoice";
   optional: true;
 };
 
@@ -161,6 +180,7 @@ export type OptionalCost =
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
   | OptionalTrashFromHandCost
+  | OptionalMoveCardsCost
   | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
 

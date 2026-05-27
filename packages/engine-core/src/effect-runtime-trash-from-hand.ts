@@ -141,12 +141,19 @@ const validateSupportedTrashFromHandEffect = (
   entry: EffectQueueEntry,
   effect: TrashFromHandEffect,
 ):
-  | { ok: true; playerId: EffectQueueEntry["controllerId"] }
+  | {
+      chooserId: EffectQueueEntry["controllerId"];
+      ok: true;
+      playerId: EffectQueueEntry["controllerId"];
+    }
   | { ok: false; reason: TrashFromHandFailureReason } => {
-  if (effect.player !== "self") {
+  if (effect.player !== "self" && effect.player !== "opponent") {
     return { ok: false, reason: "unsupported-player-ref" };
   }
-  if (effect.chooser !== "self") {
+  if (effect.chooser !== "self" && effect.chooser !== "opponent") {
+    return { ok: false, reason: "unsupported-chooser-ref" };
+  }
+  if (effect.chooser !== effect.player) {
     return { ok: false, reason: "unsupported-chooser-ref" };
   }
   if (effect.filter !== undefined) {
@@ -158,7 +165,7 @@ const validateSupportedTrashFromHandEffect = (
 
   const playerId = resolvePlayerId(state, entry, effect.player);
   const chooserId = resolvePlayerId(state, entry, effect.chooser);
-  if (playerId === undefined || playerId !== entry.controllerId) {
+  if (playerId === undefined) {
     return { ok: false, reason: "unsupported-player-ref" };
   }
   if (chooserId === undefined || chooserId !== playerId) {
@@ -168,7 +175,7 @@ const validateSupportedTrashFromHandEffect = (
   if (player === undefined || player.hand.length < effect.count) {
     return { ok: false, reason: "insufficient-hand-cards" };
   }
-  return { ok: true, playerId };
+  return { chooserId, ok: true, playerId };
 };
 
 export const isSupportedQueuedTrashFromHandEffect = (
@@ -184,8 +191,8 @@ export const isSupportedQueuedTrashFromHandEffect = (
   effect.conditionTiming === undefined &&
   effect.failurePolicy === undefined &&
   effect.effect.type === "trashFromHand" &&
-  effect.effect.player === "self" &&
-  effect.effect.chooser === "self" &&
+  (effect.effect.player === "self" || effect.effect.player === "opponent") &&
+  effect.effect.chooser === effect.effect.player &&
   effect.effect.filter === undefined &&
   Number.isInteger(effect.effect.count) &&
   effect.effect.count > 0;
@@ -209,18 +216,21 @@ export const createSupportedTrashFromHandChoiceDecision = (
     queueEntryId: entry.id,
     effectId: entry.effectBlockId,
   } as const;
-  const visibility = { type: "private", playerId: supported.playerId } as const;
+  const visibility = {
+    type: "private",
+    playerId: supported.chooserId,
+  } as const;
   const pendingDecision: SelectCardsDecision = {
     id: decisionIdForEntry(entry),
     type: "selectCards",
-    playerId: supported.playerId,
+    playerId: supported.chooserId,
     prompt: "Choose cards from hand to trash.",
     causedBy,
     visibility,
     request: {
       timing: "onResolution",
-      chooser: "self",
-      player: "self",
+      chooser: effect.chooser,
+      player: effect.player,
       zone: "hand",
       min: effect.count,
       max: effect.count,
@@ -265,8 +275,9 @@ export const createSupportedTrashFromHandChoiceDecision = (
 const isTrashFromHandDecision = (decision: SelectCardsDecision): boolean =>
   String(decision.id).startsWith(decisionIdPrefix) &&
   decision.request.timing === "onResolution" &&
-  decision.request.chooser === "self" &&
-  decision.request.player === "self" &&
+  (decision.request.chooser === "self" ||
+    decision.request.chooser === "opponent") &&
+  decision.request.chooser === decision.request.player &&
   decision.request.zone === "hand" &&
   decision.request.set === undefined &&
   decision.request.filter === undefined &&

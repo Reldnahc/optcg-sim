@@ -390,6 +390,30 @@ export const getSequencePayCostLegalActions = (
       );
       continue;
     }
+    if (option.type === "moveCards") {
+      if (
+        option.from.player !== "self" ||
+        option.from.zone !== "trash" ||
+        option.to.player !== "self" ||
+        option.to.zone !== "deck" ||
+        option.to.position !== "bottom"
+      ) {
+        continue;
+      }
+      const selectableCardIds = player.trash.map((card) => card.instanceId);
+      legalPayments.push(
+        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+            selectedCardInstanceIds: combo,
+          },
+        })),
+      );
+      continue;
+    }
     if (option.type === "restDon" || option.type === "returnDon") {
       const selectableDonIds =
         option.type === "returnDon"
@@ -434,7 +458,8 @@ export const getSequenceOptionalPayCostOptions = (
         | "restDon"
         | "returnDon"
         | "trashFromHand"
-        | "trashFromField";
+        | "trashFromField"
+        | "moveCards";
     }
   >
 > => {
@@ -447,7 +472,8 @@ export const getSequenceOptionalPayCostOptions = (
           | "restDon"
           | "returnDon"
           | "trashFromHand"
-          | "trashFromField";
+          | "trashFromField"
+          | "moveCards";
       }
     >
   > = [];
@@ -491,6 +517,28 @@ export const getSequenceOptionalPayCostOptions = (
         id: "trashFromHand",
         type: "trashFromHand",
         count: cost.count,
+      });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "moveCards") {
+    if (
+      cost.chooser === "self" &&
+      cost.from.player === "self" &&
+      cost.from.zone === "trash" &&
+      cost.to.player === "self" &&
+      cost.to.zone === "deck" &&
+      cost.to.position === "bottom" &&
+      Number.isInteger(cost.count) &&
+      cost.count > 0 &&
+      (currentPlayer?.trash.length ?? 0) >= cost.count
+    ) {
+      paymentOptions.push({
+        id: "moveCards",
+        type: "moveCards",
+        count: cost.count,
+        from: cost.from,
+        to: cost.to,
       });
     }
     return paymentOptions;

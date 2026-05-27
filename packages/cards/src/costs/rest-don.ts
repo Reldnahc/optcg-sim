@@ -6,7 +6,8 @@ import { parseYourDonCardsCostTarget } from "../targets/index.js";
 export type SequenceCostPrimitive =
   | Extract<OptionalCost, { type: "restDon" }>
   | Extract<OptionalCost, { type: "restSelf" }>
-  | Extract<OptionalCost, { type: "trashFromHand" }>;
+  | Extract<OptionalCost, { type: "trashFromHand" }>
+  | Extract<OptionalCost, { type: "moveCards" }>;
 
 export interface CostParseResult {
   readonly cost: SequenceCostPrimitive;

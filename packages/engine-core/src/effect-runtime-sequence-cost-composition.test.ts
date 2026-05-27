@@ -15,6 +15,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
@@ -241,6 +242,61 @@ const restSelfDonThenPlayFromHandSequence = (): Extract<
   ],
 });
 
+const restSelfMoveCardsThenOpponentTrashSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-rest-self-and-move-cards",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "sequence",
+          optional: true,
+          costs: [
+            { type: "restSelf" },
+            {
+              type: "moveCards",
+              count: 2,
+              chooser: "self",
+              from: { player: "self", zone: "trash" },
+              to: { player: "self", zone: "deck", position: "bottom" },
+              order: "chooserChoice",
+            },
+          ],
+        },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "opponent-hand-count-discard",
+      connector: "ifYouDo",
+      effect: {
+        type: "conditional",
+        if: { type: "handCount", player: "opponent", op: "gte", value: 6 },
+        then: {
+          type: "sequence",
+          effects: [
+            {
+              id: "opponent-trash-from-hand",
+              connector: "always",
+              effect: {
+                type: "trashFromHand",
+                player: "opponent",
+                chooser: "opponent",
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    },
+  ],
+});
+
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
   return applyAction(state, {
@@ -267,6 +323,22 @@ const payWithFirstActiveDon = (state: GameState): EngineResult => {
       type: "payment",
       optionId: "restDon",
       selectedDonInstanceIds: [don.instanceId],
+    },
+  });
+};
+
+const payMoveCardsFromTrash = (
+  state: GameState,
+  selectedCardIds: readonly CardInstance["instanceId"][],
+): EngineResult => {
+  const decision = must(state.pendingDecision, "pending decision");
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "moveCards",
+      selectedCardInstanceIds: [...selectedCardIds],
     },
   });
 };
@@ -418,6 +490,94 @@ test("hand play sequence filters candidates by color, type, and dynamic DON-fiel
   );
   assert.equal(
     afterP1.hand.some((card) => card.instanceId === tooExpensive.instanceId),
+    true,
+  );
+});
+
+test("optional move-cards cost moves chosen trash cards to bottom deck before opponent hand discard", () => {
+  const state = sequenceQueueState(
+    restSelfMoveCardsThenOpponentTrashSequence(),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const trashCards = p1State.hand.slice(0, 2).map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "trash" as const,
+      playerId: p1,
+      slot: "trash" as const,
+      index,
+    },
+  }));
+  p1State.hand = reindexHand(p1State.hand.slice(2));
+  p1State.trash = trashCards;
+  const extraOpponentHand = must(p2State.deck[0], "extra p2 hand");
+  p2State.deck = p2State.deck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "deck", playerId: p2, slot: "deck", index },
+  }));
+  p2State.hand = reindexHand(
+    [
+      ...p2State.hand,
+      {
+        ...extraOpponentHand,
+        zone: {
+          zone: "hand",
+          playerId: p2,
+          slot: "hand",
+          index: p2State.hand.length,
+        },
+      },
+    ],
+    p2,
+  );
+  const bottomOrder = [
+    must(trashCards[1], "second trash card").instanceId,
+    must(trashCards[0], "first trash card").instanceId,
+  ];
+
+  const restSelfPaused = processEffectRuntime(state);
+  const restedSelf = payRestSelf(restSelfPaused.state);
+  const moveCardsDecision = must(
+    restedSelf.state.pendingDecision,
+    "move cards decision",
+  );
+  const paidMoveCards = payMoveCardsFromTrash(restedSelf.state, bottomOrder);
+  const opponentTrashDecision = must(
+    paidMoveCards.state.pendingDecision,
+    "opponent trash decision",
+  );
+  const opponentSelected = must(
+    opponentTrashDecision.type === "selectCards"
+      ? opponentTrashDecision.candidates[0]
+      : undefined,
+    "opponent trash candidate",
+  ).card;
+  const resolved = applyAction(paidMoveCards.state, {
+    type: "respondToDecision",
+    decisionId: opponentTrashDecision.id,
+    response: { type: "cards", cards: [opponentSelected] },
+  });
+  const afterP1 = must(resolved.state.players[p1], "after p1");
+  const afterP2 = must(resolved.state.players[p2], "after p2");
+
+  assert.equal(restSelfPaused.errors, undefined);
+  assert.equal(restedSelf.errors, undefined);
+  assert.equal(moveCardsDecision.type, "payCost");
+  assert.equal(paidMoveCards.errors, undefined);
+  assert.equal(opponentTrashDecision.type, "selectCards");
+  assert.equal(opponentTrashDecision.playerId, p2);
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(
+    afterP1.deck.slice(-2).map((card) => card.instanceId),
+    bottomOrder,
+  );
+  assert.equal(afterP1.trash.length, 0);
+  assert.equal(afterP2.hand.length, 5);
+  assert.equal(
+    afterP2.trash.some(
+      (card) => card.instanceId === opponentSelected.instanceId,
+    ),
     true,
   );
 });

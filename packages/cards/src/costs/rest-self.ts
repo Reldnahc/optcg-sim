@@ -11,13 +11,20 @@ export interface RestSelfCostParseResult {
 export function parseRestSelfCost(
   input: ParseInput,
 ): RestSelfCostParseResult | undefined {
-  if (!/^rest this card$/i.test(input.text)) {
+  const match = /^rest this (?<target>card|Character)$/i.exec(input.text);
+  const target = match?.groups?.["target"];
+  if (target === undefined) {
     return undefined;
   }
 
   return {
     cost: { type: "restSelf", optional: true },
-    evidence: ["cost:restSelf", "target:thisCard"],
+    evidence: [
+      "cost:restSelf",
+      target.toLowerCase() === "character"
+        ? "target:thisCharacter"
+        : "target:thisCard",
+    ],
     rest: "",
   };
 }
