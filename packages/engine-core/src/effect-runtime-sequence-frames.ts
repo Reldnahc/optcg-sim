@@ -366,7 +366,6 @@ const applyAllTargetTrashSequenceSegment = (params: {
       clearAttachedDon: true,
       emitCardTrashed: true,
       includeCardIdentityInCardMoved: true,
-      insertPosition: "top",
       playerId: targetPlayerId,
       reason: "effectTrash",
       sourceZone,

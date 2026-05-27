@@ -87,7 +87,6 @@ export const moveSearchRevealRemainderToTrash = (
     causedBy: params.causedBy,
     emitCardTrashed: true,
     includeCardIdentityInCardMoved: true,
-    insertPosition: "top",
     playerId: params.playerId,
     reason: "searchRevealRemainder",
     sourceZone: "deck",

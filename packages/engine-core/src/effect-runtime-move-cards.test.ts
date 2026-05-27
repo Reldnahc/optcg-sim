@@ -144,6 +144,31 @@ test("moveCards deck top to trash resolves without a decision and preserves top-
   );
 });
 
+test("moveCards deck top to trash places moved cards on top of existing trash", () => {
+  const { state, topCards } = deckTopTrashQueueState(deckTopTrashEffect(2));
+  const player = must(state.players[p1], "p1");
+  const existingTrash = reindexCards(player.hand.slice(0, 1), "trash");
+  player.hand = reindexCards(player.hand.slice(1), "hand");
+  player.trash = existingTrash;
+
+  const result = processEffectRuntime(state);
+  const nextPlayer = must(result.state.players[p1], "p1 result");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    nextPlayer.trash.map((card) => card.instanceId),
+    [
+      ...topCards.slice(0, 2).map((card) => card.instanceId),
+      must(existingTrash[0], "existing trash").instanceId,
+    ],
+  );
+  nextPlayer.trash.forEach((card, index) => {
+    assert.equal(card.zone.zone, "trash");
+    assert.equal(card.zone.slot, "trash");
+    assert.equal(card.zone.index, index);
+  });
+});
+
 test("moveCards deck top to trash fails closed for unsupported zone movement", () => {
   const { state } = deckTopTrashQueueState({
     type: "moveCards",

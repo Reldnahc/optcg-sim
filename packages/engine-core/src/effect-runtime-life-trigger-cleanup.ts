@@ -67,7 +67,6 @@ export const cleanupResolvedLifeTrigger = (
     emitCardTrashed: true,
     eventBaseState,
     includeCardIdentityInCardMoved: true,
-    insertPosition: "top",
     playerId: entry.controllerId,
     reason: "lifeTriggerResolved",
     sourceZone: "noZone",

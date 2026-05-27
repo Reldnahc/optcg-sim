@@ -294,7 +294,6 @@ const applyStageSelection = (
       cardTrashedVisibility: { type: "public" },
       emitCardTrashed: true,
       includeCardIdentityInCardMoved: true,
-      insertPosition: "top",
       playerId: player.playerId,
       reason: "ruleProcessStageReplacement",
       sourceZone: "stageArea",

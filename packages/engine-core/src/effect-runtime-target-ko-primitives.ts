@@ -338,7 +338,6 @@ export const executeUnreplacedSelectedTargetKoProcess = (
       clearAttachedDon: true,
       emitCardTrashed: false,
       includeCardIdentityInCardMoved: true,
-      insertPosition: "top",
       playerId: located.playerId,
       reason: KO_TRASH_MOVEMENT_REASON,
       sourceZone: located.zone,

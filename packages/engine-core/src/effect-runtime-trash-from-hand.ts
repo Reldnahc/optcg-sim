@@ -434,7 +434,6 @@ export const applySupportedTrashFromHandChoiceResponse = (
     causedBy: { type: "decision", decisionId: decision.id },
     clearAttachedDon: true,
     emitCardTrashed: true,
-    insertPosition: "top",
     playerId: decision.playerId,
     reason: "trashFromHand",
     sourceZone: "hand",

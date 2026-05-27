@@ -131,7 +131,6 @@ export const executeMoveCardsPrimitive = (
       cardTrashedVisibility: { type: "public" },
       emitCardTrashed: true,
       includeCardIdentityInCardMoved: true,
-      insertPosition: "bottom",
       playerId: fromPlayerId,
       reason: "moveCards",
       sourceZone: "deck",

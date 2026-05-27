@@ -441,7 +441,6 @@ export const resolveSupportedVanillaBattle = (
           emitCardTrashed: false,
           eventBaseState: state,
           includeCardIdentityInCardMoved: shouldDetectBattleKOTriggers,
-          insertPosition: "top",
           playerId: target.playerId,
           reason: KO_TRASH_MOVEMENT_REASON,
           sourceZone: "characterArea",

@@ -400,7 +400,6 @@ export const applyOptionalActivationDecisionResponse = (
             causedBy: { type: "decision", decisionId: decision.id },
             clearAttachedDon: true,
             emitCardTrashed: true,
-            insertPosition: "top",
             playerId: decision.playerId,
             reason,
             sourceZone:

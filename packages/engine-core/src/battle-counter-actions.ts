@@ -495,7 +495,6 @@ const resolveCounterCardUse = (params: {
     clearAttachedDon: true,
     emitCardTrashed: true,
     includeCardIdentityInCardMoved: true,
-    insertPosition: "top",
     playerId: decisionPlayerId,
     reason: "counter",
     sourceZone: "hand",

@@ -18,7 +18,6 @@ type TrashSourceZone =
   | "hand"
   | "noZone"
   | "stageArea";
-type TrashInsertPosition = "bottom" | "top";
 type CardMovedPayloadShape = "publicZoneNames" | "zoneRefs";
 
 type ConcreteTrashMovementReason =
@@ -44,7 +43,6 @@ export interface ConcreteTrashMovementOptions {
   emitCardTrashed: boolean;
   eventBaseState?: GameState;
   includeCardIdentityInCardMoved?: boolean;
-  insertPosition: TrashInsertPosition;
   playerId: PlayerId;
   reason: ConcreteTrashMovementReason;
   sourceZone: TrashSourceZone;
@@ -147,20 +145,12 @@ export const moveConcreteCardsToTrash = (
   const remainingSourceCards = currentSourceCards.filter(
     (card) => !movedIds.has(card.instanceId),
   );
-  const nextTrash =
-    options.insertPosition === "top"
-      ? reindexZoneCards(
-          [...movedCards, ...player.trash],
-          "trash",
-          options.playerId,
-          "trash",
-        )
-      : reindexZoneCards(
-          [...player.trash, ...movedCards],
-          "trash",
-          options.playerId,
-          "trash",
-        );
+  const nextTrash = reindexZoneCards(
+    [...movedCards, ...player.trash],
+    "trash",
+    options.playerId,
+    "trash",
+  );
 
   const nextPlayer = { ...player, trash: nextTrash };
   if (options.sourceZone === "stageArea") {
