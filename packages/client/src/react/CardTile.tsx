@@ -74,6 +74,10 @@ export const CardTile = ({
     card.powerDelta === undefined
       ? undefined
       : `${card.powerDelta > 0 ? "+" : ""}${String(card.powerDelta)}`;
+  const costDeltaText =
+    card.costDelta === undefined
+      ? undefined
+      : `${card.costDelta > 0 ? "+" : ""}${String(card.costDelta)}`;
   const pointerDragStyle =
     pointerDrag?.moved === true
       ? ({
@@ -213,6 +217,17 @@ export const CardTile = ({
             }`}
           >
             {powerDeltaText}
+          </span>
+        )}
+        {costDeltaText === undefined ? null : (
+          <span
+            className={`cost-delta ${
+              card.costDelta === undefined || card.costDelta > 0
+                ? "cost-delta-positive"
+                : "cost-delta-negative"
+            }`}
+          >
+            {costDeltaText}
           </span>
         )}
       </button>

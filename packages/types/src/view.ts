@@ -49,6 +49,8 @@ export interface PublicCardView {
   turnPlayed?: number;
   printedPower?: number;
   currentPower?: number;
+  printedCost?: number;
+  currentCost?: number;
 }
 
 export interface PublicLifeView {

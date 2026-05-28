@@ -126,10 +126,9 @@
   line-height: 1;
 }
 
-.power-delta {
+.power-delta,
+.cost-delta {
   position: absolute;
-  top: 12px;
-  right: 2px;
   border-radius: 3px;
   padding: 1px 3px;
   color: #ffffff;
@@ -140,11 +139,23 @@
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
 }
 
-.power-delta-positive {
+.power-delta {
+  top: 12px;
+  right: 2px;
+}
+
+.cost-delta {
+  top: 12px;
+  left: 2px;
+}
+
+.power-delta-positive,
+.cost-delta-positive {
   color: #42e67c;
 }
 
-.power-delta-negative {
+.power-delta-negative,
+.cost-delta-negative {
   color: #ff5f68;
 }
 

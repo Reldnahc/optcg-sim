@@ -283,6 +283,41 @@ describe("card action menu", () => {
     assert.equal(markup.includes("-1000"), true);
   });
 
+  test("renders positive and negative cost deltas on modified cards", () => {
+    const layout = board();
+    layout.self.leader = {
+      ...layout.self.leader,
+      printedCost: 5,
+      currentCost: 4,
+      costDelta: -1,
+    };
+    layout.self.characters = [
+      {
+        ...card("self-character", "Increased Cost Character"),
+        printedCost: 3,
+        currentCost: 5,
+        costDelta: 2,
+      },
+    ];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedCardInstanceId: undefined,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*cost-delta-positive/u);
+    assert.match(markup, /class="[^"]*cost-delta-negative/u);
+    assert.equal(markup.includes("+2"), true);
+    assert.equal(markup.includes("-1"), true);
+  });
+
   test("power delta badge sits near the top-right power area", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "card.css"),
@@ -292,6 +327,17 @@ describe("card action menu", () => {
     assert.match(styles, /\.power-delta\s*\{[^}]*right:\s*2px;/u);
     assert.match(styles, /\.power-delta\s*\{[^}]*top:\s*12px;/u);
     assert.equal(/\.power-delta\s*\{[^}]*left:\s*2px;/u.test(styles), false);
+  });
+
+  test("cost delta badge sits near the top-left cost area", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(styles, /\.cost-delta\s*\{[^}]*left:\s*2px;/u);
+    assert.match(styles, /\.cost-delta\s*\{[^}]*top:\s*12px;/u);
+    assert.equal(/\.cost-delta\s*\{[^}]*right:\s*2px;/u.test(styles), false);
   });
 
   test("selected cost-area DON cards use the selected card styling", () => {

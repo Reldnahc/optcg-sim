@@ -24,6 +24,9 @@ export interface ClientCardModel {
   printedPower?: number;
   currentPower?: number;
   powerDelta?: number;
+  printedCost?: number;
+  currentCost?: number;
+  costDelta?: number;
   state?: PublicCardView["state"];
   attachedDonCount: number;
   attachedDonCards: ClientCardModel[];
@@ -93,12 +96,19 @@ const cardModel = (
 ): ClientCardModel => {
   const entry = catalogEntry(catalog, card.owner, card.cardId);
   const printedPower = card.printedPower ?? entry.power;
+  const printedCost = card.printedCost ?? entry.cost;
   const powerDelta =
     printedPower === undefined ||
     card.currentPower === undefined ||
     printedPower === card.currentPower
       ? undefined
       : card.currentPower - printedPower;
+  const costDelta =
+    printedCost === undefined ||
+    card.currentCost === undefined ||
+    printedCost === card.currentCost
+      ? undefined
+      : card.currentCost - printedCost;
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
@@ -117,6 +127,11 @@ const cardModel = (
       ? {}
       : { currentPower: card.currentPower }),
     ...(powerDelta === undefined ? {} : { powerDelta }),
+    ...(printedCost === undefined ? {} : { printedCost }),
+    ...(card.currentCost === undefined
+      ? {}
+      : { currentCost: card.currentCost }),
+    ...(costDelta === undefined ? {} : { costDelta }),
     attachedDonCount: card.attachedDonCount,
     attachedDonCards: [],
   };

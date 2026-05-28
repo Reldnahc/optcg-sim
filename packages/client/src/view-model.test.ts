@@ -67,12 +67,16 @@ const minimalView = (): PlayerView => ({
       attachedDonIds: ["don-1" as InstanceId],
       printedPower: 5000,
       currentPower: 7000,
+      printedCost: 5,
+      currentCost: 4,
     },
     characters: [
       {
         ...card("char-1", "OP13-089", "characterArea"),
         printedPower: 5000,
         currentPower: 4000,
+        printedCost: 3,
+        currentCost: 5,
       },
     ],
     costArea: [
@@ -201,6 +205,9 @@ describe("board view model", () => {
     assert.equal(model.self.leader.printedPower, 5000);
     assert.equal(model.self.leader.currentPower, 7000);
     assert.equal(model.self.leader.powerDelta, 2000);
+    assert.equal(model.self.leader.printedCost, 5);
+    assert.equal(model.self.leader.currentCost, 4);
+    assert.equal(model.self.leader.costDelta, -1);
     const character = model.self.characters[0];
     if (character === undefined) {
       throw new Error("Expected the character in the view model.");
@@ -208,6 +215,9 @@ describe("board view model", () => {
     assert.equal(character.printedPower, 5000);
     assert.equal(character.currentPower, 4000);
     assert.equal(character.powerDelta, -1000);
+    assert.equal(character.printedCost, 3);
+    assert.equal(character.currentCost, 5);
+    assert.equal(character.costDelta, 2);
     assert.equal(JSON.stringify(model).includes("deckOrder"), false);
   });
 

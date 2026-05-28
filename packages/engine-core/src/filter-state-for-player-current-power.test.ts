@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { ContinuousEffectRecord } from "@optcg/types";
+
 import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
 import {
   cardRef,
@@ -160,4 +162,59 @@ test("projects setBasePower modifiers as current power in public board card view
     must(view.opponent.characters[0], "opponent char").currentPower,
     3000,
   );
+});
+
+test("projects computed current cost only for public board card views", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  const character = must(p1State.characters[0], "p1 character");
+  const metadata = must(
+    state.cardManifest.cards[character.cardId],
+    "character metadata",
+  );
+  state.cardManifest.cards[character.cardId] = {
+    ...metadata,
+    cost: 3,
+    power: 5000,
+  };
+  const record: ContinuousEffectRecord = {
+    id: "player-view-cost-add",
+    source: cardRef(p1State.leader, p1),
+    sourceSnapshot: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: p1State.leader.zone,
+      category: "leader",
+      colors: ["red"],
+      power: 5000,
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "costAdd",
+      target: {
+        type: "exactCard",
+        card: cardRef(character, p1),
+        binding: { family: "selectedTargets", saveResultAs: "costTarget" },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "addCost", value: 2 },
+    },
+    duration: { type: "permanent" },
+    createdBy: { type: "ruleProcess", name: "player-view-cost-test" },
+    createdAtStateSeq: state.seq,
+  };
+  state.continuousEffects = [record];
+
+  const view = filterStateForPlayer(state, p1);
+
+  const selfCharacter = must(view.self.characters[0], "self char");
+  assert.equal(selfCharacter.printedCost, 3);
+  assert.equal(selfCharacter.currentCost, 5);
+  assert.equal("currentCost" in must(view.self.hand[0], "self hand"), false);
+  if (view.self.costArea[0] !== undefined) {
+    assert.equal("currentCost" in view.self.costArea[0], false);
+  }
 });
