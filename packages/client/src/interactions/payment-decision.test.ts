@@ -16,7 +16,6 @@ import {
   autoPayCostActionIndex,
   directReturnDonCostClick,
   optionalCardCostActionForInstance,
-  optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
@@ -362,6 +361,7 @@ describe("optional card-cost interaction", () => {
           operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
+          source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
         },
       },
       {
@@ -373,22 +373,18 @@ describe("optional card-cost interaction", () => {
           operation: "trash",
           chooseLabel: "Choose Character to trash",
           selectedCardInstanceIds: ["character-1" as InstanceId],
+          source: {
+            zone: "characterArea" as Zone,
+            playerId: "p1" as PlayerId,
+          },
         },
       },
     ];
 
     const choice = createOptionalCardCostChoice(payCostDecision, actions);
+    const trashGroup = autoOptionalCardCostGroup(choice);
 
-    assert.deepEqual(createOptionalCardCostModalActions(choice), [
-      { index: 1, type: "respondToDecision", label: "Decline cost" },
-      {
-        index: -5,
-        type: "respondToDecision",
-        label: "Choose card to trash",
-      },
-    ]);
-
-    const trashGroup = optionalCardCostGroupForActionIndex(choice, -5);
+    assert.deepEqual(trashGroup?.source, undefined);
     assert.deepEqual(optionalCardCostInstanceIds(trashGroup), [
       "hand-1",
       "character-1",

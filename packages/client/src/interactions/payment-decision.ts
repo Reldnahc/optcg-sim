@@ -72,6 +72,7 @@ export const createOptionalCardCostChoice = (
     if (instanceIds.length === 0) {
       continue;
     }
+    const directVisibleCardCost = isDirectVisibleSingleCardCost(payment);
     const groupKey = cardCostGroupKey(payment);
     const current = groupedActions.get(groupKey) ?? {
       operation: payment.operation,
@@ -80,7 +81,9 @@ export const createOptionalCardCostChoice = (
         payment.chooseLabel,
       ),
       requiredCount: instanceIds.length,
-      ...(payment.source === undefined ? {} : { source: payment.source }),
+      ...(payment.source === undefined || directVisibleCardCost
+        ? {}
+        : { source: payment.source }),
       cardActions: [],
     };
     if (current.requiredCount !== instanceIds.length) {
@@ -319,8 +322,18 @@ const chooseLabelForCardCostOperation = (
 };
 
 const cardCostGroupKey = (payment: CardCostPayment): string =>
-  [
-    payment.operation,
-    payment.source?.zone ?? "",
-    payment.source?.playerId ?? "",
-  ].join(":");
+  isDirectVisibleSingleCardCost(payment)
+    ? [payment.operation, "direct-visible-card"].join(":")
+    : [
+        payment.operation,
+        payment.source?.zone ?? "",
+        payment.source?.playerId ?? "",
+      ].join(":");
+
+const isDirectVisibleSingleCardCost = (payment: CardCostPayment): boolean =>
+  payment.selectedCardInstanceIds.length === 1 &&
+  (payment.source === undefined ||
+    payment.source.zone === "hand" ||
+    payment.source.zone === "characterArea" ||
+    payment.source.zone === "leaderArea" ||
+    payment.source.zone === "stageArea");
