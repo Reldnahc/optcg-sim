@@ -259,6 +259,26 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-tile[^"]*is-selected/u);
   });
 
+  test("selected card styling hugs the card face without a visible white card border", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.card-face\s*\{[^}]*border:\s*1px solid transparent;/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile\.is-selected \.card-face\s*\{[^}]*outline-offset:\s*0;/u,
+    );
+    assert.equal(
+      /\.card-face\s*\{[^}]*border:\s*2px solid #f4eee7;/u.test(styles),
+      false,
+    );
+  });
+
   test("selected DON attachment is rendered as a selected-card menu action", () => {
     const layout = board();
     const attachActions: readonly ClientActionModel[] = [
