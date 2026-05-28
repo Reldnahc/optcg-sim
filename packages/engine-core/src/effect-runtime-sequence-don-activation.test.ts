@@ -16,6 +16,7 @@ import {
   p1,
   processEffectRuntime,
   resolvedCard,
+  toInstanceId,
   reviewedOnPlayDrawDefinition,
   toEffectId,
   toQueueEntryId,
@@ -99,10 +100,9 @@ const sequenceQueueState = (
   return { state, source };
 };
 
-const selectRestedDonThenActivateSavedTargetSequence = (): Extract<
-  Effect,
-  { type: "sequence" }
-> => ({
+const selectRestedDonThenActivateSavedTargetSequence = (
+  max = 1,
+): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
     {
@@ -117,7 +117,7 @@ const selectRestedDonThenActivateSavedTargetSequence = (): Extract<
           zone: "costArea",
           player: "self",
           min: 0,
-          max: 1,
+          max,
           allowFewerIfUnavailable: true,
           visibility: "public",
           filter: { categories: ["don"], state: "rested" },
@@ -185,4 +185,36 @@ test("selectTargets saved reference can feed activate for rested DON in cost are
   );
   assert.equal(afterDon?.state, "active");
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("sequence support admits selecting up to 10 DON in cost area", () => {
+  const { state } = sequenceQueueState(
+    selectRestedDonThenActivateSavedTargetSequence(10),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const donTemplate = must(p1State.donDeck[0], "don template");
+  const restedDon = Array.from({ length: 10 }, (_, index) => ({
+    ...donTemplate,
+    instanceId: toInstanceId(`don-activation:${String(index)}`),
+  }));
+  p1State.donDeck = [];
+  p1State.costArea = restedDon.map((card, index) => {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "don",
+    });
+    return {
+      ...card,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+      state: "rested" as const,
+    };
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "selectTargets");
+  assert.equal(decision.candidates.length, 10);
+  assert.equal(decision.request.max, 10);
 });

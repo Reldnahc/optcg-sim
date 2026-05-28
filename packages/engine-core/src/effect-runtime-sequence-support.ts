@@ -436,19 +436,23 @@ const isSupportedPublicFieldTargetFilter = (
 
 const isSupportedSequenceTargetRequest = (
   request: SelectTargetsEffect["request"],
-): boolean =>
-  request.timing === "onResolution" &&
-  request.chooser === "self" &&
-  (request.zone === "characterArea" ||
-    request.zone === "stageArea" ||
-    request.zone === "costArea") &&
-  (request.player === "self" || request.player === "opponent") &&
-  Number.isInteger(request.min) &&
-  Number.isInteger(request.max) &&
-  request.min >= 0 &&
-  request.min <= request.max &&
-  request.max <= 5 &&
-  isSupportedPublicFieldTargetFilter(request.filter);
+): boolean => {
+  const maxSupportedTargetCount = request.zone === "costArea" ? 10 : 5;
+  return (
+    request.timing === "onResolution" &&
+    request.chooser === "self" &&
+    (request.zone === "characterArea" ||
+      request.zone === "stageArea" ||
+      request.zone === "costArea") &&
+    (request.player === "self" || request.player === "opponent") &&
+    Number.isInteger(request.min) &&
+    Number.isInteger(request.max) &&
+    request.min >= 0 &&
+    request.min <= request.max &&
+    request.max <= maxSupportedTargetCount &&
+    isSupportedPublicFieldTargetFilter(request.filter)
+  );
+};
 
 const isSupportedAllFieldTrashSegment = (
   effect: SequenceSegmentEffect,
