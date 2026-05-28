@@ -12,9 +12,9 @@
 
 .action-log-entry {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr) 24px;
   gap: 8px;
-  align-items: start;
+  align-items: center;
   padding: 6px;
   border: 1px solid rgba(244, 238, 231, 0.18);
   border-radius: 4px;
@@ -30,4 +30,27 @@
 
 .action-log-text {
   min-width: 0;
+}
+
+.action-log-rollback {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(248, 246, 243, 0.72);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.action-log-rollback:hover,
+.action-log-rollback:focus-visible {
+  background: rgba(114, 233, 169, 0.16);
+  color: #72e9a9;
+  outline: none;
 }

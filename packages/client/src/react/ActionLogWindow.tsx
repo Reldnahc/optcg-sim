@@ -41,12 +41,13 @@ export const ActionLogWindow = ({
                 <button
                   className="action-log-rollback"
                   type="button"
+                  aria-label="Request rollback"
                   title={rollback.label}
                   onClick={() => {
                     onRequestRollback(rollback.rollbackPointId);
                   }}
                 >
-                  Request rollback
+                  <span aria-hidden="true">↶</span>
                 </button>
               )}
             </li>
