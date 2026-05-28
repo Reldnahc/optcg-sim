@@ -147,6 +147,22 @@ describe("hand layout", () => {
     assert.doesNotMatch(source, /draggable=/u);
   });
 
+  test("card pointer reorder keeps normal card clicks available until movement starts", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardTile.tsx"),
+      "utf8",
+    );
+    const pointerDownStart = source.indexOf("onPointerDown={(event) => {");
+    const pointerMoveStart = source.indexOf("onPointerMove={(event) => {");
+    assert.notEqual(pointerDownStart, -1);
+    assert.notEqual(pointerMoveStart, -1);
+    const pointerDownSource = source.slice(pointerDownStart, pointerMoveStart);
+
+    assert.doesNotMatch(pointerDownSource, /stopPropagation\(\)/u);
+    assert.doesNotMatch(pointerDownSource, /setPointerCapture/u);
+    assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
+  });
+
   test("board layout wires hand rearranging only to the player hand", async () => {
     const source = await readFile(
       join(sourceDirectory, "BoardLayout.tsx"),

@@ -110,8 +110,6 @@ export const CardTile = ({
         ) {
           return;
         }
-        event.stopPropagation();
-        event.currentTarget.setPointerCapture(event.pointerId);
         setPointerDrag({
           pointerId: event.pointerId,
           originX: event.clientX,
@@ -122,7 +120,10 @@ export const CardTile = ({
         });
       }}
       onPointerMove={(event) => {
-        if (pointerDrag === undefined || pointerDrag.pointerId !== event.pointerId) {
+        if (
+          pointerDrag === undefined ||
+          pointerDrag.pointerId !== event.pointerId
+        ) {
           return;
         }
         const deltaX = event.clientX - pointerDrag.originX;
@@ -131,6 +132,10 @@ export const CardTile = ({
           pointerDrag.moved || Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4;
         if (moved) {
           event.preventDefault();
+          event.stopPropagation();
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }
         }
         setPointerDrag({
           ...pointerDrag,
@@ -140,10 +145,15 @@ export const CardTile = ({
         });
       }}
       onPointerUp={(event) => {
-        if (pointerDrag === undefined || pointerDrag.pointerId !== event.pointerId) {
+        if (
+          pointerDrag === undefined ||
+          pointerDrag.pointerId !== event.pointerId
+        ) {
           return;
         }
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
         setPointerDrag(undefined);
         suppressClickRef.current = pointerDrag.moved;
         if (!pointerDrag.moved || !pointerReorderEnabled) {
