@@ -259,7 +259,7 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-tile[^"]*is-selected/u);
   });
 
-  test("selected card styling hugs the card face without a visible white card border", async () => {
+  test("selected card styling uses a tiny border and hugs the card face", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "card.css"),
       "utf8",
@@ -267,7 +267,7 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.card-face\s*\{[^}]*border:\s*1px solid transparent;/u,
+      /\.card-face\s*\{[^}]*border:\s*1px solid rgba\(244,\s*238,\s*231,\s*0\.45\);/u,
     );
     assert.match(
       styles,
