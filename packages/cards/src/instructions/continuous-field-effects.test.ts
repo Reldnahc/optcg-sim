@@ -286,4 +286,32 @@ describe("continuous field-effect instruction parsers", () => {
       rest: "",
     });
   });
+
+  it("parses implicit this Character power gain inside composed continuous text", () => {
+    expect(
+      parseYourLeaderConditionalPowerInstruction(
+        {
+          text: "gains +2000 power.",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: 2000,
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "modifier:positivePower",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
 });

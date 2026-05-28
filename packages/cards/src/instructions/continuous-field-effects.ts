@@ -360,7 +360,7 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
 ) => {
   const target = parseThisCharacterTarget({
     text: input.text,
-    allowImplicit: false,
+    allowImplicit: true,
   });
   if (target === undefined) {
     return undefined;
