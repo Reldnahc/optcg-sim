@@ -6,7 +6,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
-import { FloatingWindow } from "./FloatingWindow.js";
+import {
+  FloatingWindow,
+  resolveOffscreenDropAction,
+} from "./FloatingWindow.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const floatingWindowStylesPath = join(
@@ -51,6 +54,39 @@ describe("floating window", () => {
     assert.match(
       styles,
       /\.floating-window-resize-handle\s*\{[^}]*cursor:\s*nwse-resize;/u,
+    );
+  });
+
+  test("off-screen drops prefer minimize when a window supports minimize", () => {
+    assert.equal(
+      resolveOffscreenDropAction(
+        { x: 1280, y: 120, width: 320, height: 220 },
+        { width: 1280, height: 800 },
+        { canMinimize: true, canClose: true },
+      ),
+      "minimize",
+    );
+  });
+
+  test("off-screen drops close close-only windows", () => {
+    assert.equal(
+      resolveOffscreenDropAction(
+        { x: 320, y: 800, width: 320, height: 220 },
+        { width: 1280, height: 800 },
+        { canMinimize: false, canClose: true },
+      ),
+      "close",
+    );
+  });
+
+  test("partly visible drops stay open", () => {
+    assert.equal(
+      resolveOffscreenDropAction(
+        { x: 1000, y: 120, width: 320, height: 220 },
+        { width: 1280, height: 800 },
+        { canMinimize: true, canClose: true },
+      ),
+      undefined,
     );
   });
 });

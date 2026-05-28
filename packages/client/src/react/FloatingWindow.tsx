@@ -1,11 +1,23 @@
 import { useCallback, useRef, useState } from "react";
 
-interface WindowRect {
+export interface WindowRect {
   x: number;
   y: number;
   width: number;
   height: number;
 }
+
+export interface WindowViewport {
+  width: number;
+  height: number;
+}
+
+export interface OffscreenDropCapabilities {
+  canMinimize: boolean;
+  canClose: boolean;
+}
+
+export type OffscreenDropAction = "minimize" | "close";
 
 interface PointerStart {
   pointerId: number;
@@ -44,6 +56,45 @@ const clampRect = (
   height: Math.max(minHeight, rect.height),
 });
 
+const dragRect = (
+  start: PointerStart,
+  clientX: number,
+  clientY: number,
+  minWidth: number,
+  minHeight: number,
+): WindowRect =>
+  clampRect(
+    {
+      ...start.rect,
+      x: start.rect.x + clientX - start.clientX,
+      y: start.rect.y + clientY - start.clientY,
+    },
+    minWidth,
+    minHeight,
+  );
+
+export const resolveOffscreenDropAction = (
+  rect: WindowRect,
+  viewport: WindowViewport,
+  capabilities: OffscreenDropCapabilities,
+): OffscreenDropAction | undefined => {
+  const offscreen =
+    rect.x >= viewport.width ||
+    rect.y >= viewport.height ||
+    rect.x + rect.width <= 0 ||
+    rect.y + rect.height <= 0;
+  if (!offscreen) {
+    return undefined;
+  }
+  if (capabilities.canMinimize) {
+    return "minimize";
+  }
+  if (capabilities.canClose) {
+    return "close";
+  }
+  return undefined;
+};
+
 export const FloatingWindow = ({
   title,
   className,
@@ -69,6 +120,43 @@ export const FloatingWindow = ({
       resizeStart.current = undefined;
     }
   }, []);
+
+  const completeDrag = useCallback(
+    (pointerId: number, clientX: number, clientY: number) => {
+      const start = dragStart.current;
+      if (start !== undefined && start.pointerId === pointerId) {
+        const droppedRect = dragRect(
+          start,
+          clientX,
+          clientY,
+          minWidth,
+          minHeight,
+        );
+        const action =
+          typeof window === "undefined"
+            ? undefined
+            : resolveOffscreenDropAction(
+                droppedRect,
+                {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                },
+                {
+                  canMinimize: onToggleMinimized !== undefined,
+                  canClose: onClose !== undefined,
+                },
+              );
+        if (action === "minimize") {
+          onToggleMinimized?.();
+        }
+        if (action === "close") {
+          onClose?.();
+        }
+      }
+      stopInteraction(pointerId);
+    },
+    [minHeight, minWidth, onClose, onToggleMinimized, stopInteraction],
+  );
 
   return (
     <section
@@ -108,19 +196,11 @@ export const FloatingWindow = ({
               return;
             }
             setRect(
-              clampRect(
-                {
-                  ...start.rect,
-                  x: start.rect.x + event.clientX - start.clientX,
-                  y: start.rect.y + event.clientY - start.clientY,
-                },
-                minWidth,
-                minHeight,
-              ),
+              dragRect(start, event.clientX, event.clientY, minWidth, minHeight),
             );
           }}
           onPointerUp={(event) => {
-            stopInteraction(event.pointerId);
+            completeDrag(event.pointerId, event.clientX, event.clientY);
           }}
           onPointerCancel={(event) => {
             stopInteraction(event.pointerId);
