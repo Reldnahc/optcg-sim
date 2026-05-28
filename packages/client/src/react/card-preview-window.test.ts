@@ -133,5 +133,7 @@ describe("card preview window", () => {
     assert.match(matchApp, /setPreviewCard/u);
     assert.match(matchApp, /previewControl=/u);
     assert.match(matchApp, /CardPreviewWindow/u);
+    assert.match(matchApp, /collectionViewerMinimized/u);
+    assert.match(matchApp, /onToggleMinimized/u);
   });
 });

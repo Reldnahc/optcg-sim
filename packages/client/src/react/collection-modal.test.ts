@@ -170,6 +170,43 @@ describe("collection modal", () => {
     assert.equal(markup.includes("Three"), true);
   });
 
+  test("collection viewer can minimize through the floating window controls", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Player trash",
+          cards: [card("one", "One")],
+        },
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /floating-window-collection collection-modal/u);
+    assert.match(markup, /floating-window-minimize/u);
+    assert.match(markup, />Minimize</u);
+  });
+
+  test("minimized collection viewer keeps only the floating window header", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Player trash",
+          cards: [card("one", "One")],
+        },
+        minimized: true,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /floating-window-collection collection-modal/u);
+    assert.match(markup, /is-minimized/u);
+    assert.match(markup, />Show</u);
+    assert.equal(markup.includes("One"), false);
+  });
+
   test("collection modal can render selectable decision cards with confirm control", () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {
