@@ -31,14 +31,18 @@
   padding-top: 58px;
 }
 
-.control-preview-slot {
+.control-tool-strip {
   position: absolute;
   top: 10px;
   left: 10px;
   z-index: 1;
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
-.card-preview-toggle {
+.card-preview-toggle,
+.action-log-toggle {
   display: grid;
   width: 32px;
   height: 32px;
@@ -51,12 +55,15 @@
 }
 
 .card-preview-toggle:hover,
-.card-preview-toggle.is-enabled {
+.card-preview-toggle.is-enabled,
+.action-log-toggle:hover,
+.action-log-toggle.is-open {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.14);
 }
 
-.card-preview-toggle svg {
+.card-preview-toggle svg,
+.action-log-toggle svg {
   width: 21px;
   height: 21px;
   fill: none;

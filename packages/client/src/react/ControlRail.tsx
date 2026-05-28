@@ -13,6 +13,7 @@ export interface ControlRailProps {
   concedeConfirming?: boolean | undefined;
   onConcede?: (() => void) | undefined;
   previewControl?: ReactNode | undefined;
+  actionLogControl?: ReactNode | undefined;
 }
 
 export const ControlRail = ({
@@ -25,14 +26,22 @@ export const ControlRail = ({
   concedeConfirming = false,
   onConcede,
   previewControl,
+  actionLogControl,
 }: ControlRailProps): React.JSX.Element => (
   <aside className="control-rail">
     <section className="summary-panel opponent-summary">
       <h2>Opponent</h2>
     </section>
     <section className="controls-panel">
-      {previewControl === undefined ? null : (
-        <div className="control-preview-slot">{previewControl}</div>
+      {previewControl === undefined && actionLogControl === undefined ? null : (
+        <div className="control-tool-strip">
+          {previewControl === undefined ? null : (
+            <div className="control-preview-slot">{previewControl}</div>
+          )}
+          {actionLogControl === undefined ? null : (
+            <div className="control-action-log-slot">{actionLogControl}</div>
+          )}
+        </div>
       )}
       <div className="control-actions">
         <button className="action-button" type="button" onClick={onNewMatch}>

@@ -62,6 +62,7 @@ export interface BoardViewModel {
   self: ClientPlayerZonesModel;
   opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
+  activeCardInstanceIds?: readonly string[] | undefined;
   battleArrow?: {
     attackerInstanceId: string;
     targetInstanceId: string;
@@ -246,10 +247,12 @@ export const createBoardViewModel = ({
   snapshot,
   catalog,
   playerId,
+  activeCardInstanceIds = [],
 }: {
   snapshot: MatchSnapshot;
   catalog: MatchCardCatalog;
   playerId: PlayerId;
+  activeCardInstanceIds?: readonly string[] | undefined;
 }): BoardViewModel => {
   const player = snapshot.players[playerId];
   if (player === undefined) {
@@ -262,6 +265,7 @@ export const createBoardViewModel = ({
     self: selfZones(player.view, catalog),
     opponent: opponentZones(player.view, catalog),
     actionsByCardInstanceId: actionMenusByCard(player.actions),
+    activeCardInstanceIds: [...activeCardInstanceIds],
     ...(player.view.battle === undefined
       ? {}
       : {

@@ -197,15 +197,16 @@ describe("card action menu", () => {
       "utf8",
     );
 
+    assert.match(markup, /control-tool-strip/u);
     assert.match(markup, /control-preview-slot/u);
     assert.match(markup, /card-preview-minimized-button/u);
     assert.match(styles, /\.controls-panel\s*\{[^}]*position:\s*relative;/u);
     assert.match(
       styles,
-      /\.control-preview-slot\s*\{[^}]*position:\s*absolute;/u,
+      /\.control-tool-strip\s*\{[^}]*position:\s*absolute;/u,
     );
-    assert.match(styles, /\.control-preview-slot\s*\{[^}]*top:\s*10px;/u);
-    assert.match(styles, /\.control-preview-slot\s*\{[^}]*left:\s*10px;/u);
+    assert.match(styles, /\.control-tool-strip\s*\{[^}]*top:\s*10px;/u);
+    assert.match(styles, /\.control-tool-strip\s*\{[^}]*left:\s*10px;/u);
   });
 
   test("concede button uses dedicated red styles", async () => {
@@ -358,6 +359,25 @@ describe("card action menu", () => {
 
     assert.match(markup, /class="[^"]*card-tile[^"]*is-active/u);
     assert.equal(markup.includes("is-selected"), false);
+  });
+
+  test("board layout passes active card ids to card tiles", () => {
+    const layout = board();
+    layout.self.characters = [card("active-character", "Resolving Character")];
+    layout.activeCardInstanceIds = ["active-character"];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*card-tile[^"]*is-active/u);
   });
 
   test("selected DON attachment is rendered as a selected-card menu action", () => {

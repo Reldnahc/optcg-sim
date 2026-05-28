@@ -19,6 +19,7 @@ export interface ZoneProps {
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
+  activeCardInstanceIds?: readonly string[] | undefined;
   cardActions?:
     | ((instanceId: string) => readonly ClientActionModel[])
     | undefined;
@@ -40,6 +41,7 @@ export const Zone = ({
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
   selectedDonInstanceIds = [],
+  activeCardInstanceIds = [],
   cardActions,
   actionDisabled = false,
   onCardClick,
@@ -166,6 +168,7 @@ export const Zone = ({
                   }
                   pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
                   selectedDonInstanceIds={selectedDonInstanceIds}
+                  active={activeCardInstanceIds.includes(instanceId)}
                   actions={cardActions?.(instanceId) ?? []}
                   disabled={actionDisabled}
                   onAction={onCardAction}
@@ -208,6 +211,7 @@ export const Zone = ({
                 }
                 pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
                 selectedDonInstanceIds={selectedDonInstanceIds}
+                active={activeCardInstanceIds.includes(instanceId)}
                 actions={cardActions?.(instanceId) ?? []}
                 disabled={actionDisabled}
                 onAction={onCardAction}

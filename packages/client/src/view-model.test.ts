@@ -270,6 +270,28 @@ describe("board view model", () => {
     });
   });
 
+  test("preserves active card ids separately from selection state", () => {
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view: minimalView(),
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+      activeCardInstanceIds: ["char-1"],
+    });
+
+    assert.deepEqual(model.activeCardInstanceIds, ["char-1"]);
+  });
+
   test("trash cards stay newest-first and render upright even if engine state was rested", () => {
     const view = minimalView();
     view.self.trash = [

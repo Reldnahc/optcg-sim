@@ -1,0 +1,33 @@
+.action-log-window .floating-window-body {
+  padding: 8px;
+}
+
+.action-log-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.action-log-entry {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 6px;
+  border: 1px solid rgba(244, 238, 231, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8f6f3;
+  font-size: 12px;
+}
+
+.action-log-seq {
+  color: rgba(248, 246, 243, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.action-log-text {
+  min-width: 0;
+}

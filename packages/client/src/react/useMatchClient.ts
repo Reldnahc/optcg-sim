@@ -97,12 +97,21 @@ export const useMatchClient = (): MatchClientUi => {
   const [errors, setErrors] = useState<string[]>([]);
 
   const currentPlayerId = clientState?.seat.playerId;
+  const activeCardInstanceIds = [
+    ...(activeAttackTargetChoice === undefined
+      ? []
+      : [activeAttackTargetChoice.attackerInstanceId]),
+    ...(activeCounterTargetChoice === undefined
+      ? []
+      : [activeCounterTargetChoice.counterCardInstanceId]),
+  ];
   const board = !isMatchClientState(clientState)
     ? undefined
     : createBoardViewModel({
         snapshot: clientState.snapshot,
         catalog: clientState.cards,
         playerId: clientState.seat.playerId,
+        activeCardInstanceIds,
       });
   const playerSnapshot =
     currentPlayerId === undefined || !isMatchClientState(clientState)

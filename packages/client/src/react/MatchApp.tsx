@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { CardRef, InstanceId } from "@optcg/types";
 
+import { createActionLogEntries } from "../action-log.js";
 import {
   createCollectionDecisionSurface,
   usesCollectionCardCostSurface,
 } from "../interactions/decision-surface.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+import { ActionLogToggle } from "./ActionLogToggle.js";
+import { ActionLogWindow } from "./ActionLogWindow.js";
 import { BoardLayout } from "./BoardLayout.js";
 import { createBrowserPersistentStorage } from "./browser-storage.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
@@ -48,6 +51,8 @@ export const MatchApp = (): React.JSX.Element => {
   >(undefined);
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [previewMinimized, setPreviewMinimized] = useState(false);
+  const [actionLogOpen, setActionLogOpen] = useState(false);
+  const [actionLogMinimized, setActionLogMinimized] = useState(false);
   const {
     board,
     cardCostSelection,
@@ -274,6 +279,16 @@ export const MatchApp = (): React.JSX.Element => {
       cards: reveal.cards.map((card) => cardModel(card)),
     },
   }));
+  const actionLogEntries = useMemo(
+    () =>
+      playerSnapshot === undefined || matchState === undefined
+        ? []
+        : createActionLogEntries({
+            events: playerSnapshot.view.events,
+            catalog: matchState.cards,
+          }),
+    [matchState, playerSnapshot],
+  );
 
   return (
     <main className="match-app">
@@ -327,6 +342,15 @@ export const MatchApp = (): React.JSX.Element => {
           <CardPreviewToggle
             enabled={previewEnabled}
             onToggle={togglePreviewEnabled}
+          />
+        }
+        actionLogControl={
+          <ActionLogToggle
+            open={actionLogOpen}
+            onToggle={() => {
+              setActionLogOpen((current) => !current);
+              setActionLogMinimized(false);
+            }}
           />
         }
         concedeDisabled={concedeDisabled}
@@ -412,6 +436,19 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ))}
+      {actionLogOpen ? (
+        <ActionLogWindow
+          entries={actionLogEntries}
+          minimized={actionLogMinimized}
+          onToggleMinimized={() => {
+            setActionLogMinimized((current) => !current);
+          }}
+          onClose={() => {
+            setActionLogOpen(false);
+            setActionLogMinimized(false);
+          }}
+        />
+      ) : null}
       <CardPreviewWindow
         card={previewCard}
         minimized={previewMinimized}

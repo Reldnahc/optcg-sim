@@ -57,13 +57,16 @@ export const BoardLayout = ({
   onPreviewCard,
   onViewCollection,
   onBackgroundClick,
-}: BoardLayoutProps): React.JSX.Element => (
-  <section
-    className="board-shell"
-    onClick={() => {
-      onBackgroundClick();
-    }}
-  >
+}: BoardLayoutProps): React.JSX.Element => {
+  const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
+
+  return (
+    <section
+      className="board-shell"
+      onClick={() => {
+        onBackgroundClick();
+      }}
+    >
     <div className="hand-rail">
       <HandRow
         label="Opponent hand"
@@ -80,6 +83,7 @@ export const BoardLayout = ({
         pendingChoiceInstanceIds={pendingChoiceInstanceIds}
         decisionSelectedInstanceIds={decisionSelectedInstanceIds}
         selectedDonInstanceIds={selectedDonInstanceIds}
+        activeCardInstanceIds={activeCardInstanceIds}
         cardActions={cardActions}
         actionDisabled={actionDisabled}
         onCardPreview={onPreviewCard}
@@ -95,6 +99,7 @@ export const BoardLayout = ({
           cards={board.opponent.costArea}
           size="mini"
           displayMode="overlap"
+          activeCardInstanceIds={activeCardInstanceIds}
           onCardPreview={onPreviewCard}
         />
       </div>
@@ -151,6 +156,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -169,6 +175,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -186,6 +193,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -207,6 +215,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -232,6 +241,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -248,6 +258,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           cardActions={cardActions}
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
@@ -296,10 +307,12 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
           onCardPreview={onPreviewCard}
           onCardClick={onCardClick}
         />
       </div>
     </div>
-  </section>
-);
+    </section>
+  );
+};
