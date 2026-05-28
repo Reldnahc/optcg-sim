@@ -16,24 +16,25 @@ const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 
 const revealEvent = (options: {
-  revealId: string;
+  revealId?: string;
   cardOwner: PlayerId;
+  origin?: string;
   visibility?: "public" | "private";
   seq?: number;
 }): EngineEvent => ({
-  id: `event:${options.revealId}` as EngineEventId,
+  id: `event:${options.revealId ?? "no-reveal-id"}` as EngineEventId,
   seq: options.seq ?? 1,
   type: "cardRevealed",
   payload: {
-    revealId: options.revealId,
+    ...(options.revealId === undefined ? {} : { revealId: options.revealId }),
     cards: [
       {
-        instanceId: `${options.revealId}:card` as InstanceId,
-        cardId: `${options.revealId}:card-id` as CardId,
+        instanceId: `${options.revealId ?? "no-reveal-id"}:card` as InstanceId,
+        cardId: `${options.revealId ?? "no-reveal-id"}:card-id` as CardId,
         playerId: options.cardOwner,
       },
     ],
-    origin: "topOfDeck",
+    origin: options.origin ?? "topOfDeck",
   },
   visibility:
     options.visibility === "private"
@@ -45,7 +46,12 @@ const revealEvent = (options: {
 describe("reveal viewer", () => {
   test("creates an opponent-only reveal view from public reveal events", () => {
     const reveal = opponentRevealFromEvents(
-      [revealEvent({ revealId: "search-selected", cardOwner: p1 })],
+      [
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:choice-1",
+          cardOwner: p1,
+        }),
+      ],
       p2,
       new Set(),
     );
@@ -53,13 +59,18 @@ describe("reveal viewer", () => {
     if (reveal === undefined) {
       throw new Error("Expected opponent reveal.");
     }
-    assert.equal(reveal.revealId, "search-selected");
+    assert.equal(reveal.revealId, "reveal:search-reveal:selected:choice-1");
     assert.equal(reveal.cards[0]?.playerId, p1);
   });
 
   test("does not show a reveal window to the player who revealed the card", () => {
     const reveal = opponentRevealFromEvents(
-      [revealEvent({ revealId: "own-search-selected", cardOwner: p1 })],
+      [
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:own-choice",
+          cardOwner: p1,
+        }),
+      ],
       p1,
       new Set(),
     );
@@ -69,29 +80,66 @@ describe("reveal viewer", () => {
 
   test("does not reshow a closed reveal", () => {
     const reveal = opponentRevealFromEvents(
-      [revealEvent({ revealId: "closed-reveal", cardOwner: p1 })],
+      [
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:closed-reveal",
+          cardOwner: p1,
+        }),
+      ],
       p2,
-      new Set(["closed-reveal"]),
+      new Set(["reveal:search-reveal:selected:closed-reveal"]),
     );
 
     assert.equal(reveal, undefined);
   });
 
-  test("ignores private reveal events and uses the newest public opponent reveal", () => {
+  test("does not open for ordinary public card reveals", () => {
     const reveal = opponentRevealFromEvents(
       [
         revealEvent({
-          revealId: "private",
+          revealId: "reveal:life-trigger:damage:1",
           cardOwner: p1,
-          visibility: "private",
+          origin: "lifeDamage",
         }),
-        revealEvent({ revealId: "older", cardOwner: p1, seq: 2 }),
-        revealEvent({ revealId: "newer", cardOwner: p1, seq: 3 }),
+        revealEvent({ cardOwner: p1, seq: 2 }),
       ],
       p2,
       new Set(),
     );
 
-    assert.equal(reveal?.revealId, "newer");
+    assert.equal(reveal, undefined);
+  });
+
+  test("ignores non-search reveals and uses the newest search-selected reveal", () => {
+    const reveal = opponentRevealFromEvents(
+      [
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:private",
+          cardOwner: p1,
+          visibility: "private",
+        }),
+        revealEvent({
+          revealId: "reveal:life-trigger:damage:1",
+          cardOwner: p1,
+          origin: "lifeDamage",
+          seq: 2,
+        }),
+        revealEvent({ cardOwner: p1, seq: 3 }),
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:older",
+          cardOwner: p1,
+          seq: 4,
+        }),
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:newer",
+          cardOwner: p1,
+          seq: 5,
+        }),
+      ],
+      p2,
+      new Set(),
+    );
+
+    assert.equal(reveal?.revealId, "reveal:search-reveal:selected:newer");
   });
 });

@@ -12,6 +12,7 @@ import "./styles/modal-frame.css";
 import "./styles/floating-window.css";
 import "./styles/decision-modal.css";
 import "./styles/collection-modal.css";
+import "./styles/reveal-window.css";
 
 const root = document.getElementById("root");
 if (root === null) {

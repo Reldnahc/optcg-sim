@@ -50,13 +50,28 @@ const revealIdFromEvent = (event: EngineEvent): string => {
   return String(event.id);
 };
 
+const isOpponentSearchRevealEvent = (event: EngineEvent): boolean => {
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const revealId = event.payload["revealId"];
+  return (
+    typeof revealId === "string" &&
+    revealId.startsWith("reveal:search-reveal:selected:")
+  );
+};
+
 export const opponentRevealFromEvents = (
   events: readonly EngineEvent[],
   playerId: PlayerId,
   dismissedRevealIds: ReadonlySet<string>,
 ): OpponentRevealViewModel | undefined => {
   for (const event of [...events].reverse()) {
-    if (event.type !== "cardRevealed" || event.visibility.type !== "public") {
+    if (
+      event.type !== "cardRevealed" ||
+      event.visibility.type !== "public" ||
+      !isOpponentSearchRevealEvent(event)
+    ) {
       continue;
     }
     const revealId = revealIdFromEvent(event);

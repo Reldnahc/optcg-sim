@@ -205,7 +205,7 @@ describe("collection modal", () => {
     );
   });
 
-  test("match app renders a close-only opponent reveal collection window", async () => {
+  test("match app keeps opponent reveal out of the collection window", async () => {
     const source = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
@@ -214,6 +214,8 @@ describe("collection modal", () => {
     assert.match(source, /opponentRevealFromEvents/u);
     assert.match(source, /Opponent revealed/u);
     assert.match(source, /setDismissedRevealIds/u);
+    assert.match(source, /RevealWindowHost/u);
+    assert.doesNotMatch(source, /opponentRevealModal/u);
     assert.doesNotMatch(source, /onToggleMinimized=\{[^}]*opponentReveal/u);
   });
 

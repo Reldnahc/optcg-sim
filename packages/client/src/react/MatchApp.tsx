@@ -16,6 +16,7 @@ import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
+import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealFromEvents } from "./reveal-viewer.js";
 import { useMatchClient } from "./useMatchClient.js";
 
@@ -160,7 +161,7 @@ export const MatchApp = (): React.JSX.Element => {
           currentPlayerId,
           dismissedRevealIds,
         );
-  const opponentRevealModal =
+  const opponentRevealWindow =
     opponentReveal === undefined
       ? undefined
       : {
@@ -254,10 +255,7 @@ export const MatchApp = (): React.JSX.Element => {
       />
       <CollectionModalHost
         model={
-          cardCostCollectionModal ??
-          decisionCollectionModal ??
-          collectionModal ??
-          opponentRevealModal
+          cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal
         }
         disabled={client.state.actionInFlight}
         onToggleCard={(instanceId) => {
@@ -275,16 +273,24 @@ export const MatchApp = (): React.JSX.Element => {
             ? () => {
                 if (collectionModal !== undefined) {
                   setCollectionModal(undefined);
-                  return;
-                }
-                if (opponentReveal !== undefined) {
-                  setDismissedRevealIds(
-                    (current) => new Set([...current, opponentReveal.revealId]),
-                  );
                 }
               }
             : undefined
         }
+      />
+      <RevealWindowHost
+        model={opponentRevealWindow}
+        onPreviewCard={(card) => {
+          setPreviewCard(card);
+        }}
+        onClose={() => {
+          if (opponentReveal === undefined) {
+            return;
+          }
+          setDismissedRevealIds(
+            (current) => new Set([...current, opponentReveal.revealId]),
+          );
+        }}
       />
       <CardPreviewWindow
         card={previewCard}

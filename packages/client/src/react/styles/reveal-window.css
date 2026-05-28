@@ -1,0 +1,26 @@
+.floating-window-reveal {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.reveal-window .floating-window-body {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.reveal-window-card-spot {
+  --reveal-card-height: min(
+    58vh,
+    calc(var(--card-height) + var(--card-height) + (var(--card-height) / 2))
+  );
+
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+}
+
+.reveal-window-card-spot .card-tile-shell {
+  height: var(--reveal-card-height);
+}
