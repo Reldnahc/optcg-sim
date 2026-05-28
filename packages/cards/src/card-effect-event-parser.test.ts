@@ -142,6 +142,50 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses Counter power over a named self field card target", () => {
+    const result = parseCardEffectLine(
+      "[Counter] Up to 1 of your [Enel] cards gains +2000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "counter" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["leaderArea", "characterArea"],
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { names: ["Enel"] },
+            },
+          },
+          value: 2000,
+          duration: { type: "thisBattle" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventCounter",
+        "instruction:modifyPower",
+        "target:yourNamedCards",
+        "filter:name",
+        "cardinality:upTo",
+        "modifier:positivePower",
+        "duration:thisBattle",
+      ]),
+    );
+  });
+
   it("parses Counter power followed by conditional trash-to-hand selection", () => {
     const result = parseCardEffectLine(
       "[Counter] Up to 1 of your Leader or Character cards gains +1000 power during this battle. Then, if you have 10 or more cards in your trash, add up to 1 black Character card with a cost of 3 or less from your trash to your hand.",

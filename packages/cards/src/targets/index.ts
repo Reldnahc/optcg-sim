@@ -5,5 +5,6 @@ export {
   parseOpponentFieldTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
+  parseYourNamedCardsTarget,
 } from "./field-targets.js";
 export { parseThisCharacterTarget } from "./this-character.js";

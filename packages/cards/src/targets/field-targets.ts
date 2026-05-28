@@ -30,6 +30,11 @@ export const yourLeaderOrCharactersTargetPrimitive = {
   matches: [{ id: "of-your-leader-or-character-cards" }],
 } as const;
 
+export const yourNamedCardsTargetPrimitive = {
+  primitiveId: "target:yourNamedCards",
+  matches: [{ id: "of-your-bracketed-name-cards" }],
+} as const;
+
 export function parseOpponentCharactersTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
@@ -118,5 +123,36 @@ export function parseYourLeaderOrCharacterCardsTarget(
       "filter:category:character",
     ],
     rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
+
+export function parseYourNamedCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match = /^of your \[(?<name>[^\]]+)\] cards?\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  const nameText = match?.groups?.["name"]?.trim();
+  if (nameText === undefined || nameText.length === 0) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "self",
+        zones: ["leaderArea", "characterArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: { names: [nameText] },
+      },
+    },
+    evidence: ["target:yourNamedCards", "player:self", "filter:name"],
+    rest: match?.groups?.["rest"]?.trim() ?? "",
   };
 }

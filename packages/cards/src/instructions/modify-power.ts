@@ -13,6 +13,7 @@ import {
   parseOpponentCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
+  parseYourNamedCardsTarget,
 } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
@@ -21,6 +22,9 @@ export const modifyPowerInstructionPrimitive = {
   childPrimitiveIds: [
     "cardinality:upTo",
     "target:opponentCharacters",
+    "target:yourNamedCards",
+    "target:yourLeaderOrCharacters",
+    "target:yourLeader",
     "modifier:negativePower",
     "modifier:positivePower",
     "duration:thisBattle",
@@ -85,9 +89,10 @@ export const parseModifyPowerInstruction: InstructionParser = (input) => {
 const parsePowerGainInstruction: InstructionParser = (input) => {
   const cardinality = parseUpToCardinality(input);
   if (cardinality !== undefined) {
-    const target = parseYourLeaderOrCharacterCardsTarget({
-      text: cardinality.rest,
-    });
+    const target =
+      parseYourLeaderOrCharacterCardsTarget({
+        text: cardinality.rest,
+      }) ?? parseYourNamedCardsTarget({ text: cardinality.rest });
     if (target?.target !== undefined) {
       const parsed = parseGainsPositivePower(target.target, target.rest);
       if (parsed !== undefined) {

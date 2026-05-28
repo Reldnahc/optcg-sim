@@ -12,6 +12,9 @@ describe("modify power instruction parser", () => {
       childPrimitiveIds: [
         "cardinality:upTo",
         "target:opponentCharacters",
+        "target:yourNamedCards",
+        "target:yourLeaderOrCharacters",
+        "target:yourLeader",
         "modifier:negativePower",
         "modifier:positivePower",
         "duration:thisBattle",

@@ -147,6 +147,7 @@ export type PrimitiveEvidence =
   | "target:thatCharacter"
   | "target:triggerCard"
   | "target:yourLeader"
+  | "target:yourNamedCards"
   | "target:thisCharacter"
   | "reference:thatCharacter"
   | "duration:whileConditionTrue"
