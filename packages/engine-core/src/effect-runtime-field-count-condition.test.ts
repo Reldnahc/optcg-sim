@@ -107,7 +107,10 @@ const donFieldFilter = {
 } satisfies NonNullable<Extract<Condition, { type: "fieldCount" }>["filter"]>;
 
 const evaluateFieldCount = (
-  condition: Extract<Condition, { type: "fieldCount" }>,
+  condition: Extract<
+    Condition,
+    { type: "fieldCount" | "fieldCountDifference" }
+  >,
   counts: {
     selfCostArea: number;
     selfAttached: number;
@@ -222,6 +225,57 @@ test("fieldCount DON filter supports self and opponent eq/gte/lte comparators", 
       },
     ),
     { supported: true, passed: true },
+  );
+});
+
+test("fieldCountDifference compares reusable DON count operands", () => {
+  assert.deepEqual(
+    evaluateFieldCount(
+      {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: donFieldFilter,
+        },
+        subtrahend: {
+          player: "self",
+          filter: donFieldFilter,
+        },
+        op: "gte",
+        value: 2,
+      },
+      {
+        selfCostArea: 1,
+        selfAttached: 0,
+        opponentCostArea: 3,
+        opponentAttached: 0,
+      },
+    ),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateFieldCount(
+      {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: donFieldFilter,
+        },
+        subtrahend: {
+          player: "self",
+          filter: donFieldFilter,
+        },
+        op: "gte",
+        value: 2,
+      },
+      {
+        selfCostArea: 1,
+        selfAttached: 0,
+        opponentCostArea: 2,
+        opponentAttached: 0,
+      },
+    ),
+    { supported: true, passed: false },
   );
 });
 

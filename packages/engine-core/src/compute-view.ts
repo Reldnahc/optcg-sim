@@ -143,10 +143,11 @@ const isSupportedContinuousCostModifier = (
   effect.modifier.layer === "costAdd" &&
   effect.modifier.operation.type === "addCost" &&
   Number.isSafeInteger(effect.modifier.operation.value) &&
-  effect.modifier.target.type === "allMatching" &&
-  effect.modifier.target.zone === "hand" &&
-  (effect.modifier.target.player === "self" ||
-    effect.modifier.target.player === "opponent");
+  (effect.modifier.target.type === "self" ||
+    (effect.modifier.target.type === "allMatching" &&
+      effect.modifier.target.zone === "hand" &&
+      (effect.modifier.target.player === "self" ||
+        effect.modifier.target.player === "opponent")));
 
 const isSupportedContinuousKeywordModifier = (
   effect: ContinuousEffectRecord,

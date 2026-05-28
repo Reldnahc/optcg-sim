@@ -26,6 +26,7 @@ import {
   parseInvalidateEffectsInstruction,
   parseKoInstruction,
   parseModifyCostInstruction,
+  parseSelfHandModifyCostInstruction,
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseBasePowerBecomeInstruction,
@@ -105,6 +106,7 @@ const continuousInstructionParsers = [
   parseYourLeaderConditionalPowerInstruction,
   parseSetBasePowerInstruction,
   parseBasePowerBecomeInstruction,
+  parseSelfHandModifyCostInstruction,
 ] as const;
 
 const generalExpressionParser = (input: ParseInput) =>

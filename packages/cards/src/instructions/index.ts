@@ -15,7 +15,10 @@ export {
 export { parseInvalidateEffectsInstruction } from "./invalidate-effects.js";
 export { parseKoInstruction } from "./ko.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
-export { parseModifyCostInstruction } from "./modify-cost.js";
+export {
+  parseModifyCostInstruction,
+  parseSelfHandModifyCostInstruction,
+} from "./modify-cost.js";
 export { parsePlayFromHandInstruction } from "./play-from-hand.js";
 export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
 export {

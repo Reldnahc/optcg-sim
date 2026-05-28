@@ -8,7 +8,10 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
+import {
+  deriveImplementedDslPermanentContinuousEffects,
+  deriveImplementedDslPlayCostContinuousEffects,
+} from "./effect-runtime-continuous.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
@@ -87,6 +90,14 @@ const costModifierDurationIsActive = (
   if (effect.duration.type === "whileSourceOnField") {
     return isCardRefLive(state, effect.source);
   }
+  if (effect.duration.type === "whileConditionTrue") {
+    const result = evaluateQueuedEffectCondition(
+      state,
+      toConditionQueueEntry(effect),
+      effect.duration.condition,
+    );
+    return result.supported && result.passed;
+  }
   return true;
 };
 
@@ -133,6 +144,15 @@ const costModifierAppliesToCard = (
   if (!costModifierDurationIsActive(state, effect)) return false;
   if (!costModifierConditionPasses(state, effect)) return false;
   const target = effect.modifier.target;
+  if (target.type === "self") {
+    return (
+      card.zone.zone === "hand" &&
+      card.controller === playerId &&
+      card.instanceId === effect.source.instanceId &&
+      card.cardId === effect.source.cardId &&
+      card.controller === effect.controller
+    );
+  }
   if (target.type !== "allMatching") return false;
   if (target.zone !== "hand") return false;
   if (card.zone.zone !== "hand") return false;
@@ -281,6 +301,7 @@ export const getEffectivePlayCost = (
   const costDelta = [
     ...state.continuousEffects,
     ...deriveImplementedDslPermanentContinuousEffects(state),
+    ...deriveImplementedDslPlayCostContinuousEffects(state),
   ].reduce((total, effect) => {
     if (!costModifierAppliesToCard(state, playerId, card, effect)) {
       return total;

@@ -66,4 +66,36 @@ describe("DON field count condition parser", () => {
       ],
     });
   });
+
+  it("parses relative DON count differences as reusable field-count operands", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "the number of DON!! cards on your field is at least 2 less than the number on your opponent's field",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: { categories: ["don"] },
+        },
+        subtrahend: {
+          player: "self",
+          filter: { categories: ["don"] },
+        },
+        op: "gte",
+        value: 2,
+      },
+      evidence: [
+        "condition:fieldCountDifference",
+        "player:opponent",
+        "player:self",
+        "filter:category:don",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "valueOffset:fieldCountDifference",
+      ],
+      rest: "",
+    });
+  });
 });

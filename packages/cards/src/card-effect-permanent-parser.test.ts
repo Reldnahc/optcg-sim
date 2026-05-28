@@ -61,4 +61,52 @@ describe("permanent card effect line parser", () => {
       ]),
     );
   });
+
+  it("parses relative DON-count self hand cost reduction as reusable primitives", () => {
+    const result = parseCardEffectLine(
+      "If the number of DON!! cards on your field is at least 2 less than the number on your opponent's field, give this card in your hand −3 cost.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          sourceZone: "hand",
+          target: { type: "self" },
+          value: -3,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "fieldCountDifference",
+              minuend: {
+                player: "opponent",
+                filter: { categories: ["don"] },
+              },
+              subtrahend: {
+                player: "self",
+                filter: { categories: ["don"] },
+              },
+              op: "gte",
+              value: 2,
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "condition:fieldCountDifference",
+        "player:opponent",
+        "player:self",
+        "instruction:modifyCost",
+        "target:thisCard",
+        "zone:hand",
+        "modifier:costReduction",
+      ]),
+    );
+  });
 });

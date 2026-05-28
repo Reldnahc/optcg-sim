@@ -1,5 +1,6 @@
 import type {
   CardFilter,
+  CardInstance,
   CardRef,
   ContinuousEffectRecord,
   Duration,
@@ -151,6 +152,18 @@ const isSupportedCostModifierFilter = (
   isNonEmptyStringArray(filter.typesAny) &&
   hasSupportedNumericFilter(filter.cost);
 
+const isSupportedCostModifierEffect = (
+  effect: Extract<Effect, { type: "modifyCost" }>,
+): boolean =>
+  effect.player === "self" &&
+  effect.sourceZone === "hand" &&
+  Number.isSafeInteger(effect.value) &&
+  effect.value < 0 &&
+  isSupportedDuration(effect.duration) &&
+  ((effect.target?.type === "self" && effect.filter === undefined) ||
+    (effect.target === undefined &&
+      isSupportedCostModifierFilter(effect.filter)));
+
 const isSupportedChooseFromZonesTarget = (
   target: Extract<Target, { type: "chooseFromZones" }>,
 ): boolean =>
@@ -208,13 +221,7 @@ export const isSupportedContinuousQueueEffect = (
     return false;
   }
   if (effect.type === "modifyCost") {
-    return (
-      effect.player === "self" &&
-      effect.sourceZone === "hand" &&
-      Number.isSafeInteger(effect.value) &&
-      effect.value < 0 &&
-      isSupportedCostModifierFilter(effect.filter)
-    );
+    return isSupportedCostModifierEffect(effect);
   }
   if (
     effect.type === "invalidateEffects" &&
@@ -293,6 +300,20 @@ const mapEffectToModifier = (
   };
 };
 
+const costModifierTargetForEffect = (
+  effect: Extract<Effect, { type: "modifyCost" }>,
+): TargetSpec => {
+  if (effect.target?.type === "self") {
+    return { type: "self" };
+  }
+  return {
+    type: "allMatching",
+    zone: effect.sourceZone ?? "hand",
+    player: effect.player,
+    ...(effect.filter === undefined ? {} : { filter: effect.filter }),
+  };
+};
+
 const createRecord = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -348,12 +369,7 @@ export const createContinuousRecordsForResolvedEffect = (
         state,
         entry,
         effect,
-        {
-          type: "allMatching",
-          zone: effect.sourceZone ?? "hand",
-          player: effect.player,
-          filter: effect.filter,
-        },
+        costModifierTargetForEffect(effect),
         0,
       ),
     ];
@@ -574,26 +590,14 @@ const effectToDerivedModifier = (
     };
   }
   if (effect.type === "modifyCost") {
-    if (
-      effect.player !== "self" ||
-      effect.sourceZone !== "hand" ||
-      !isSupportedCostModifierFilter(effect.filter) ||
-      !isSupportedDuration(effect.duration) ||
-      !Number.isSafeInteger(effect.value) ||
-      effect.value >= 0
-    ) {
+    if (!isSupportedCostModifierEffect(effect)) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported cost modifier shape"),
       );
     }
     return {
       layer: "costAdd",
-      target: {
-        type: "allMatching",
-        zone: "hand",
-        player: effect.player,
-        filter: effect.filter,
-      },
+      target: costModifierTargetForEffect(effect),
       operation: { type: "addCost", value: effect.value },
     };
   }
@@ -648,19 +652,43 @@ const effectToDerivedModifier = (
 export const deriveImplementedDslPermanentContinuousEffects = (
   state: GameState,
 ): ContinuousEffectRecord[] => {
-  const derived: ContinuousEffectRecord[] = [];
   const liveCards = Object.values(state.players).flatMap((player) => [
     player.leader,
     ...player.characters,
     ...(player.stage === undefined ? [] : [player.stage]),
   ]);
+  return deriveImplementedDslContinuousEffectsForCards(state, liveCards, {
+    mode: "field",
+  });
+};
 
-  for (const card of liveCards) {
+export const deriveImplementedDslPlayCostContinuousEffects = (
+  state: GameState,
+): ContinuousEffectRecord[] => {
+  const handCards = Object.values(state.players).flatMap(
+    (player) => player.hand,
+  );
+  return deriveImplementedDslContinuousEffectsForCards(state, handCards, {
+    mode: "playCostHand",
+  });
+};
+
+const deriveImplementedDslContinuousEffectsForCards = (
+  state: GameState,
+  cards: readonly CardInstance[],
+  options: { mode: "field" | "playCostHand" },
+): ContinuousEffectRecord[] => {
+  const derived: ContinuousEffectRecord[] = [];
+
+  for (const card of cards) {
     const resolved = state.cardManifest.cards[card.cardId];
     if (resolved === undefined) continue;
     if (resolved.support.status !== "implemented-dsl") continue;
     const effectDefinitionId = resolved.support.effectDefinitionId;
     if (effectDefinitionId === undefined) {
+      if (options.mode === "playCostHand") {
+        continue;
+      }
       if (
         (resolved.effectText ?? "").trim().length > 0 ||
         (resolved.triggerText ?? "").trim().length > 0
@@ -674,6 +702,9 @@ export const deriveImplementedDslPermanentContinuousEffects = (
     const definition =
       state.cardManifest.effectDefinitions?.[effectDefinitionId];
     if (definition === undefined) {
+      if (options.mode === "playCostHand") {
+        continue;
+      }
       throw new TypeError(
         unsupportedDerivedMessage("missing effect definition"),
       );
@@ -684,6 +715,9 @@ export const deriveImplementedDslPermanentContinuousEffects = (
       !resolved.support.tested ||
       resolved.support.cardDataVersion !== state.cardManifest.cardDataVersion
     ) {
+      if (options.mode === "playCostHand") {
+        continue;
+      }
       throw new TypeError(
         unsupportedDerivedMessage("stale or missing support"),
       );
@@ -698,6 +732,9 @@ export const deriveImplementedDslPermanentContinuousEffects = (
         state.cardManifest.effectDefinitionsVersion ||
       !hasReviewMetadata(definition)
     ) {
+      if (options.mode === "playCostHand") {
+        continue;
+      }
       throw new TypeError(
         unsupportedDerivedMessage("stale or unreviewed definition"),
       );
@@ -709,7 +746,7 @@ export const deriveImplementedDslPermanentContinuousEffects = (
       playerId: card.controller,
       zone: card.zone,
     };
-    if (isCardEffectInvalidated(state, card)) {
+    if (options.mode === "field" && isCardEffectInvalidated(state, card)) {
       continue;
     }
     const sourceSnapshot: EffectQueueEntry["sourceSnapshot"] = {
@@ -719,11 +756,11 @@ export const deriveImplementedDslPermanentContinuousEffects = (
       controllerId: card.controller,
       zone: card.zone,
       category:
-        card.zone.zone === "leaderArea"
-          ? "leader"
-          : card.zone.zone === "stageArea"
-            ? "stage"
-            : "character",
+        card.zone.zone === "leaderArea" || card.zone.zone === "stageArea"
+          ? card.zone.zone === "leaderArea"
+            ? "leader"
+            : "stage"
+          : resolved.category,
       colors: [],
       keywords: [],
     };
@@ -758,6 +795,13 @@ export const deriveImplementedDslPermanentContinuousEffects = (
           : [{ connector: "always" as const, effect: block.effect }];
       for (const [index, part] of effects.entries()) {
         if (
+          options.mode === "playCostHand" &&
+          (part.effect.type !== "modifyCost" ||
+            part.effect.target?.type !== "self")
+        ) {
+          continue;
+        }
+        if (
           part.connector !== "always" ||
           part.optional === true ||
           part.saveResultAs !== undefined ||
@@ -769,9 +813,15 @@ export const deriveImplementedDslPermanentContinuousEffects = (
         }
         const modifier = effectToDerivedModifier(part.effect);
         if (modifier === null) {
+          if (options.mode === "playCostHand") {
+            continue;
+          }
           throw new TypeError(
             unsupportedDerivedMessage("unsupported permanent shape"),
           );
+        }
+        if (options.mode === "playCostHand" && modifier.layer !== "costAdd") {
+          continue;
         }
         derived.push(
           createDerivedRecord(

@@ -14,6 +14,39 @@ export const donFieldCountConditionPrimitive = {
 export const parseDonFieldCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const relativeMatch =
+    /^the number of DON!! cards on your field is at least (?<value>[1-9]\d*) less than the number on your opponent's field$/i.exec(
+      input.text,
+    );
+  const relativeValueText = relativeMatch?.groups?.["value"];
+  if (relativeValueText !== undefined) {
+    return {
+      condition: {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: { categories: ["don"] },
+        },
+        subtrahend: {
+          player: "self",
+          filter: { categories: ["don"] },
+        },
+        op: "gte",
+        value: Number.parseInt(relativeValueText, 10),
+      },
+      evidence: [
+        "condition:fieldCountDifference",
+        "player:opponent",
+        "player:self",
+        "filter:category:don",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "valueOffset:fieldCountDifference",
+      ],
+      rest: "",
+    };
+  }
+
   const subjectMatch = /^you have\s+(?<comparison>.+)$/i.exec(input.text);
   const comparisonText = subjectMatch?.groups?.["comparison"];
   if (comparisonText === undefined) {

@@ -68,6 +68,19 @@ export type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "fieldCountDifference";
+      minuend: {
+        player: PlayerRef;
+        filter?: CardFilter;
+      };
+      subtrahend: {
+        player: PlayerRef;
+        filter?: CardFilter;
+      };
+      op: Comparator;
+      value: number;
+    }
   | { type: "handCount"; player: PlayerRef; op: Comparator; value: number }
   | {
       type: "trashCount";
@@ -611,7 +624,8 @@ export type Effect =
   | { type: "setBasePower"; target: Target; value: number; duration: Duration }
   | {
       type: "modifyCost";
-      filter: CardFilter;
+      filter?: CardFilter;
+      target?: Target;
       value: number;
       duration: Duration;
       player: PlayerRef;

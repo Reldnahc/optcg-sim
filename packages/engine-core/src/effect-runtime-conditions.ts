@@ -451,6 +451,70 @@ const evaluateCountCondition = (
   return { supported: true, passed: compare(op, actual(playerId), value) };
 };
 
+const countSupportedFieldOperand = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  operand: {
+    player: PlayerRef;
+    filter?: CardFilter;
+  },
+): { supported: true; count: number } | { supported: false } => {
+  const playerId = resolveConditionPlayer(state, entry, operand.player);
+  if (playerId === undefined || state.players[playerId] === undefined) {
+    return { supported: false };
+  }
+  if (isSupportedDonFieldCountFilter(operand.filter)) {
+    return {
+      supported: true,
+      count: countPublicDonOnField(state, playerId, operand.filter.state),
+    };
+  }
+  if (isSupportedCharacterFieldCountFilter(operand.filter)) {
+    return {
+      supported: true,
+      count: countPublicCharactersOnField(
+        state,
+        playerId,
+        operand.filter.state,
+      ),
+    };
+  }
+  return { supported: false };
+};
+
+const evaluateFieldCountDifference = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  condition: Extract<Condition, { type: "fieldCountDifference" }>,
+): ConditionEvaluationResult => {
+  if (!isNonNegativeSafeInteger(condition.value)) {
+    return { supported: false };
+  }
+  if (!isComparator(condition.op)) {
+    return { supported: false };
+  }
+  const minuend = countSupportedFieldOperand(state, entry, condition.minuend);
+  if (!minuend.supported) {
+    return { supported: false };
+  }
+  const subtrahend = countSupportedFieldOperand(
+    state,
+    entry,
+    condition.subtrahend,
+  );
+  if (!subtrahend.supported) {
+    return { supported: false };
+  }
+  return {
+    supported: true,
+    passed: compare(
+      condition.op,
+      minuend.count - subtrahend.count,
+      condition.value,
+    ),
+  };
+};
+
 const evaluateHasCardInZone = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -575,6 +639,8 @@ const evaluateCondition = (
       }
       return { supported: false };
     }
+    case "fieldCountDifference":
+      return evaluateFieldCountDifference(state, entry, condition);
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
     case "onlyMatchingFieldCards":
@@ -659,6 +725,19 @@ export const isSupportedQueuedEffectConditionShape = (
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
+      );
+    case "fieldCountDifference":
+      return (
+        (isSupportedDonFieldCountFilter(condition.minuend.filter) ||
+          isSupportedCharacterFieldCountFilter(condition.minuend.filter)) &&
+        (isSupportedDonFieldCountFilter(condition.subtrahend.filter) ||
+          isSupportedCharacterFieldCountFilter(condition.subtrahend.filter)) &&
+        isNonNegativeSafeInteger(condition.value) &&
+        isComparator(condition.op) &&
+        (condition.minuend.player === "self" ||
+          condition.minuend.player === "opponent") &&
+        (condition.subtrahend.player === "self" ||
+          condition.subtrahend.player === "opponent")
       );
     case "hasCardInZone":
       return (

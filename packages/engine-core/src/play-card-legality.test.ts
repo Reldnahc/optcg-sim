@@ -150,6 +150,93 @@ const addStageDerivedCelestialDragonsHandCostReduction = (
     [support.effectDefinitionId]: definition,
   };
 };
+
+const addSelfHandRelativeDonCostReduction = (
+  state: GameState,
+  card: CardInstance,
+): void => {
+  const support = {
+    status: "implemented-dsl" as const,
+    effectDefinitionId: "test-self-hand-relative-don-cost-reduction",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "self-hand-relative-don-cost-reduction-source",
+    behaviorHash: "self-hand-relative-don-cost-reduction-behavior",
+  };
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 5,
+    power: 5000,
+    support,
+  });
+  const definition: EffectDefinition = {
+    cardId: card.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "self-hand-relative-don-cost-reduction" as EffectDefinition["effects"][number]["id"],
+        category: "permanent",
+        trigger: { type: "permanent" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          sourceZone: "hand",
+          target: { type: "self" },
+          value: -3,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "fieldCountDifference",
+              minuend: {
+                player: "opponent",
+                filter: { categories: ["don"] },
+              },
+              subtrahend: {
+                player: "self",
+                filter: { categories: ["don"] },
+              },
+              op: "gte",
+              value: 2,
+            },
+          },
+        },
+      },
+    ],
+    metadata: {
+      rulesVersion: support.rulesVersion,
+      sourceTextHash: support.sourceTextHash,
+      effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+      tested: true,
+      reviewedBy: "test",
+      reviewedAt: "2026-05-26T00:00:00.000Z",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [support.effectDefinitionId]: definition,
+  };
+};
+
+const extendOpponentCostAreaToFive = (state: GameState): void => {
+  const opponent = must(state.players[p2], "p2");
+  const source = must(opponent.costArea[0], "opponent DON source");
+  const moved = Array.from({ length: 2 }, (_, offset) => ({
+    ...source,
+    instanceId:
+      `${String(source.instanceId)}:extra:${String(offset)}` as CardInstance["instanceId"],
+    zone: {
+      zone: "costArea" as const,
+      playerId: p2,
+      slot: "cost" as const,
+      index: opponent.costArea.length + offset,
+    },
+    state: "active" as const,
+  }));
+  opponent.costArea = [...opponent.costArea, ...moved];
+};
 test("applyAction playCard rejects forged card instance references without mutation", () => {
   const state = setupMainPlayState();
   const before = JSON.stringify(state);
@@ -314,6 +401,36 @@ test("playCard uses derived stage cost reductions for cards in hand", () => {
   assert.ok(action !== undefined, "expected stage-reduced play action");
   assert.equal(action.type, "playCard");
   assert.equal(action.costPayment?.selectedDonInstanceIds?.length, 3);
+});
+
+test("playCard uses hand-sourced self cost reduction when relative DON condition passes", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "self cost reducer");
+  addSelfHandRelativeDonCostReduction(state, card);
+  extendOpponentCostAreaToFive(state);
+
+  const action = getPlayCardLegalActions(state, p1).find(
+    (candidate) =>
+      candidate.type === "playCard" &&
+      candidate.cardInstanceId === card.instanceId,
+  );
+
+  assert.ok(action !== undefined, "expected reduced-cost play action");
+  assert.equal(action.type, "playCard");
+  assert.equal(action.costPayment?.selectedDonInstanceIds?.length, 2);
+});
+
+test("playCard ignores hand-sourced self cost reduction when relative DON condition fails", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "self cost reducer");
+  addSelfHandRelativeDonCostReduction(state, card);
+
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), card),
+    false,
+  );
 });
 
 test("getLegalActions omits playCard when card play preconditions fail", () => {
