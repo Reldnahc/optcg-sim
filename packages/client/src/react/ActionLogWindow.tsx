@@ -32,6 +32,10 @@ export const ActionLogWindow = ({
       <ol className="action-log-list">
         {entries.map((entry) => {
           const rollback = entry.rollback;
+          const rollbackTitle =
+            rollback === undefined
+              ? undefined
+              : `Request rollback to ${rollback.label}`;
           return (
             <li key={entry.id} className="action-log-entry">
               <span className="action-log-seq">{entry.seq}</span>
@@ -41,13 +45,21 @@ export const ActionLogWindow = ({
                 <button
                   className="action-log-rollback"
                   type="button"
-                  aria-label="Request rollback"
-                  title={rollback.label}
+                  aria-label={rollbackTitle}
+                  title={rollbackTitle}
                   onClick={() => {
                     onRequestRollback(rollback.rollbackPointId);
                   }}
                 >
-                  <span aria-hidden="true">↶</span>
+                  <svg
+                    className="action-log-rollback-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M7.5 9.5H3.5V5.5" />
+                    <path d="M4 9.5A8 8 0 1 1 6.3 15" />
+                  </svg>
                 </button>
               )}
             </li>

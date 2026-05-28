@@ -54,7 +54,12 @@ describe("action log window", () => {
       }),
     );
 
-    assert.match(markup, /aria-label="Request rollback"/u);
+    assert.match(
+      markup,
+      /aria-label="Request rollback to Before Card played"/u,
+    );
+    assert.match(markup, /title="Request rollback to Before Card played"/u);
+    assert.match(markup, /action-log-rollback-icon/u);
     assert.doesNotMatch(markup, />Request rollback</u);
     assert.match(markup, /Before Card played/u);
   });

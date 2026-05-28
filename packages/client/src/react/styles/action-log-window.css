@@ -54,3 +54,13 @@
   color: #72e9a9;
   outline: none;
 }
+
+.action-log-rollback-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
