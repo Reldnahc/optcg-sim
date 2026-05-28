@@ -58,6 +58,10 @@ export const parseSelfHandModifyCostInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  if (context.condition === undefined) {
+    return undefined;
+  }
+
   const match =
     /^give this card in your hand\s+[−-](?<value>[1-9]\d*) cost\.?$/i.exec(
       input.text,

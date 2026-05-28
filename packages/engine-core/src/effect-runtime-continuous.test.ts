@@ -672,6 +672,67 @@ test("derived DSL continuous keyword is removed when source leaves field", () =>
   assert.equal(withoutSource.cards[source.instanceId], undefined);
 });
 
+test("derived DSL continuous keyword can target named cards and self separately", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  const named = withCharacter(p1, toCardId("Ohm"), 1);
+  const other = withCharacter(p1, toCardId("char-straw-hat"), 2);
+  p1State.characters = [source, named, other];
+  state.cardManifest.cards[toCardId("Ohm")] = resolvedCard({
+    cardId: toCardId("Ohm"),
+    category: "character",
+    power: 3000,
+  });
+  const definition = reviewedPermanentDefinition(source.cardId);
+  const block = must(definition.effects[0], "permanent block");
+  delete block.condition;
+  block.effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "giveKeyword",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: { categories: ["character"], names: ["Ohm"] },
+          },
+          keyword: "doubleAttack",
+          duration: { type: "permanent" },
+        },
+      },
+      {
+        connector: "always",
+        effect: {
+          type: "giveKeyword",
+          target: { type: "self" },
+          keyword: "doubleAttack",
+          duration: { type: "permanent" },
+        },
+      },
+    ],
+  };
+  installPermanentDslCandidate(state, source, definition);
+
+  const view = computeView(state);
+
+  assert.equal(
+    view.cards[source.instanceId]?.keywords.includes("doubleAttack"),
+    true,
+  );
+  assert.equal(
+    view.cards[named.instanceId]?.keywords.includes("doubleAttack"),
+    true,
+  );
+  assert.equal(
+    view.cards[other.instanceId]?.keywords.includes("doubleAttack"),
+    false,
+  );
+});
+
 test("fails closed for missing permanent definition", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");

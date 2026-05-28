@@ -65,7 +65,7 @@ export function entryConditionContinuousExpressionParser(options: {
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
     const condition = input.entryPoint?.condition;
-    if (condition === undefined || input.entryPoint?.category !== "permanent") {
+    if (input.entryPoint?.category !== "permanent") {
       return undefined;
     }
 
@@ -125,7 +125,7 @@ function normalizeContinuousEffect(
 }
 
 function continuousInstructionSegmentParser(options: {
-  readonly condition: Condition;
+  readonly condition: Condition | undefined;
   readonly instructions: readonly ContinuousInstructionParser[];
 }): SegmentParser {
   return (input) => {

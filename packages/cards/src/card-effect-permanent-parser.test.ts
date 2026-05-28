@@ -3,6 +3,57 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("permanent card effect line parser", () => {
+  it("parses implicit permanent named-card and self keyword grants as reusable primitives", () => {
+    const result = parseCardEffectLine(
+      "All of your [Ohm] cards and this Character gain [Double Attack].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "giveKeyword",
+                target: {
+                  type: "all",
+                  zone: "characterArea",
+                  player: "self",
+                  filter: { categories: ["character"], names: ["Ohm"] },
+                },
+                keyword: "doubleAttack",
+                duration: { type: "whileSourceOnField" },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "giveKeyword",
+                target: { type: "self" },
+                keyword: "doubleAttack",
+                duration: { type: "whileSourceOnField" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "instruction:giveKeyword",
+        "filter:name",
+        "filter:category:character",
+        "target:thisCharacter",
+        "keyword:anySupported",
+      ]),
+    );
+  });
+
   it("parses Opponent's Turn named-card and self base power as reusable continuous primitives", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] All of your [Ohm] cards' base power and this Character's base power become 6000.",

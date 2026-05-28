@@ -32,6 +32,7 @@ const supportedRestriction = new Set([
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "cost",
+  "names",
   "power",
 ]);
 const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
@@ -541,9 +542,11 @@ const effectToDerivedModifier = (
   }
   if (effect.type === "giveKeyword") {
     if (effect.target.type !== "self") {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported keyword target"),
-      );
+      if (!(effect.target.type === "all" && isSupportedTarget(effect.target))) {
+        throw new TypeError(
+          unsupportedDerivedMessage("unsupported keyword target"),
+        );
+      }
     }
     if (!isSupportedDuration(effect.duration)) {
       throw new TypeError(
@@ -555,7 +558,7 @@ const effectToDerivedModifier = (
     }
     return {
       layer: "keywordAdd",
-      target: { type: "self" },
+      target: effect.target,
       operation: { type: "addKeyword", keyword: effect.keyword },
     };
   }

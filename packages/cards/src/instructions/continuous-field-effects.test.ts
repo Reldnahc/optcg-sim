@@ -177,4 +177,62 @@ describe("continuous field-effect instruction parsers", () => {
       rest: "",
     });
   });
+
+  it("parses named cards plus this Character as separate reusable keyword targets", () => {
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "All of your [Ohm] cards and this Character gain [Double Attack].",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "giveKeyword",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "self",
+                filter: { categories: ["character"], names: ["Ohm"] },
+              },
+              keyword: "doubleAttack",
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "giveKeyword",
+              target: { type: "self" },
+              keyword: "doubleAttack",
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:name",
+        "filter:category:character",
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
 });

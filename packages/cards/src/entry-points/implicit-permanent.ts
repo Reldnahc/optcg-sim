@@ -3,7 +3,9 @@ import type { EntryPointParseResult, ParseInput } from "../types.js";
 export function parseImplicitPermanentEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
-  if (!/^If\b/i.test(input.text.trimStart())) {
+  if (
+    !/^(?:If\b|All of your\b|this Character\b)/i.test(input.text.trimStart())
+  ) {
     return undefined;
   }
 

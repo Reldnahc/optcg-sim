@@ -149,6 +149,7 @@ export type PrimitiveEvidence =
   | "target:thisCharacter"
   | "reference:thatCharacter"
   | "duration:whileConditionTrue"
+  | "duration:whileSourceOnField"
   | "duration:thisBattle"
   | "duration:thisTurn"
   | "duration:opponentNextRefreshPhase"

@@ -14,7 +14,7 @@ import type {
 } from "../types.js";
 
 export interface ContinuousInstructionContext {
-  readonly condition: Condition;
+  readonly condition: Condition | undefined;
 }
 
 export type ContinuousInstructionParser = (
@@ -59,16 +59,29 @@ type BasePowerTargetSubject = {
 const setBasePowerEffect = (
   target: Target,
   value: number,
-  condition: Condition,
+  condition: Condition | undefined,
 ): Extract<Effect, { type: "setBasePower" }> => ({
   type: "setBasePower",
   target,
   value,
-  duration: {
-    type: "whileConditionTrue",
-    condition,
-  },
+  duration:
+    condition === undefined
+      ? { type: "whileSourceOnField" }
+      : {
+          type: "whileConditionTrue",
+          condition,
+        },
 });
+
+const continuousDuration = (
+  condition: Condition | undefined,
+): Extract<
+  Effect,
+  { type: "modifyPower" | "giveKeyword" | "setBasePower" }
+>["duration"] =>
+  condition === undefined
+    ? { type: "whileSourceOnField" }
+    : { type: "whileConditionTrue", condition };
 
 const parseBasePowerSubject = (
   text: string,
@@ -183,10 +196,7 @@ export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
       type: "setBasePower",
       target: target.target,
       value: Number.parseInt(valueText, 10),
-      duration: {
-        type: "whileConditionTrue",
-        condition: context.condition,
-      },
+      duration: continuousDuration(context.condition),
     },
     evidence: [
       "instruction:setBasePower",
@@ -200,6 +210,67 @@ export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
 
 export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionParser =
   (input, context) => {
+    const namedAndSelfMatch =
+      /^All of your \[(?<name>[^\]]+)\] cards and this Character gain (?<keyword>\[[^\]]+\])\.?$/i.exec(
+        input.text,
+      );
+    const name = namedAndSelfMatch?.groups?.["name"]?.trim();
+    const namedKeywordText = namedAndSelfMatch?.groups?.["keyword"];
+    if (
+      name !== undefined &&
+      name.length > 0 &&
+      namedKeywordText !== undefined
+    ) {
+      const keyword = parseKeyword({ text: namedKeywordText });
+      if (keyword !== undefined && keyword.rest.length === 0) {
+        const duration = continuousDuration(context.condition);
+        return {
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "giveKeyword",
+                  target: {
+                    type: "all",
+                    zone: "characterArea",
+                    player: "self",
+                    filter: { categories: ["character"], names: [name] },
+                  },
+                  keyword: keyword.keyword,
+                  duration,
+                },
+              },
+              {
+                connector: "always",
+                effect: {
+                  type: "giveKeyword",
+                  target: { type: "self" },
+                  keyword: keyword.keyword,
+                  duration,
+                },
+              },
+            ],
+          },
+          evidence: [
+            "instruction:giveKeyword",
+            "cardinality:all",
+            "player:self",
+            "zone:characterArea",
+            "filter:name",
+            "filter:category:character",
+            "target:thisCharacter",
+            ...keyword.evidence,
+            context.condition === undefined
+              ? "duration:whileSourceOnField"
+              : "duration:whileConditionTrue",
+          ],
+          rest: "",
+        };
+      }
+    }
+
     const target = parseThisCharacterTarget({
       text: input.text,
       allowImplicit: true,
@@ -224,16 +295,15 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
         type: "giveKeyword",
         target: { type: "self" },
         keyword: keyword.keyword,
-        duration: {
-          type: "whileConditionTrue",
-          condition: context.condition,
-        },
+        duration: continuousDuration(context.condition),
       },
       evidence: [
         "instruction:giveKeyword",
         ...target.evidence,
         ...keyword.evidence,
-        "duration:whileConditionTrue",
+        context.condition === undefined
+          ? "duration:whileSourceOnField"
+          : "duration:whileConditionTrue",
       ],
       rest: "",
     };
@@ -265,16 +335,15 @@ export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionPa
         type: "modifyPower",
         target: target.target,
         value: modifier.value,
-        duration: {
-          type: "whileConditionTrue",
-          condition: context.condition,
-        },
+        duration: continuousDuration(context.condition),
       },
       evidence: [
         "instruction:modifyPower",
         ...target.evidence,
         ...modifier.evidence,
-        "duration:whileConditionTrue",
+        context.condition === undefined
+          ? "duration:whileSourceOnField"
+          : "duration:whileConditionTrue",
       ],
       rest: "",
     };

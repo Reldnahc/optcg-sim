@@ -71,14 +71,19 @@ function buildProtectionEffect(options: {
   readonly sourceKind: "battle" | "cardEffect";
   readonly sourceControllerRelation: "eitherController" | "opponentControlled";
 }): Effect {
+  const duration =
+    options.context.condition === undefined
+      ? { type: "whileSourceOnField" as const }
+      : {
+          type: "whileConditionTrue" as const,
+          condition: options.context.condition,
+        };
+
   if (options.process === "ko") {
     return {
       type: "protectFromKO",
       target: { type: "self" },
-      duration: {
-        type: "whileConditionTrue",
-        condition: options.context.condition,
-      },
+      duration,
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
     };
@@ -91,10 +96,7 @@ function buildProtectionEffect(options: {
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
     }),
-    duration: {
-      type: "whileConditionTrue",
-      condition: options.context.condition,
-    },
+    duration,
   };
 }
 
