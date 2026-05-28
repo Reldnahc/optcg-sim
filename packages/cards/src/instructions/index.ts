@@ -11,6 +11,7 @@ export {
   parseAddActiveDonFromDonDeckInstruction,
   parseAddRestedDonFromDonDeckInstruction,
   parseAttachRestedDonInstruction,
+  parseSetDonActiveInstruction,
 } from "./don-movement.js";
 export { parseInvalidateEffectsInstruction } from "./invalidate-effects.js";
 export { parseKoInstruction } from "./ko.js";

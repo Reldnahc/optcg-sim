@@ -54,6 +54,7 @@ export type PrimitiveEvidence =
   | "instruction:draw"
   | "instruction:trashFromHand"
   | "instruction:moveCards"
+  | "instruction:activate"
   | "instruction:rest"
   | "instruction:preventActivation"
   | "instruction:modifyPower"

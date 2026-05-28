@@ -44,6 +44,7 @@ const supportedZones = new Set<Zone>([
   "leaderArea",
   "characterArea",
   "stageArea",
+  "costArea",
 ]);
 
 const isValidTargetCount = (request: TargetRequest): boolean =>
@@ -208,6 +209,9 @@ const candidateCardsForZone = (
   }
   if (zone === "stageArea") {
     return player.stage === undefined ? [] : [player.stage];
+  }
+  if (zone === "costArea") {
+    return player.costArea;
   }
 
   return null;

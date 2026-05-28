@@ -45,6 +45,7 @@ import {
   resumeSequenceFrameAfterTrashFromHand as resumeSequenceFrameAfterTrashFromHandHelper,
 } from "./effect-runtime-sequence-select-cards.js";
 import {
+  applySavedFieldObjectActivateSequenceSegment,
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,
   applySavedFieldObjectRestrictionSequenceSegment,
@@ -1244,6 +1245,22 @@ const continueNoDecisionSegments = (
       });
       nextState = rested.state;
       nextLedgers = rested.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "activate") {
+      const activated = applySavedFieldObjectActivateSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<SequenceSegmentEffect, { type: "activate" }>;
+        },
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      nextState = activated.state;
+      nextLedgers = activated.ledgers;
       continue;
     }
     if (

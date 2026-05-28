@@ -81,6 +81,40 @@ const restFieldObject = (
   return { changed: false, state };
 };
 
+const activateFieldObject = (
+  state: GameState,
+  target: CardRef,
+): { changed: boolean; state: GameState } => {
+  const player = state.players[target.playerId];
+  if (player === undefined) {
+    return { changed: false, state };
+  }
+  if (target.zone?.zone === "costArea") {
+    let changed = false;
+    const costArea = player.costArea.map((card) => {
+      if (
+        card.instanceId !== target.instanceId ||
+        card.cardId !== target.cardId
+      ) {
+        return card;
+      }
+      changed = card.state !== "active";
+      return { ...card, state: "active" as const };
+    });
+    return {
+      changed,
+      state: {
+        ...state,
+        players: {
+          ...state.players,
+          [target.playerId]: { ...player, costArea },
+        },
+      },
+    };
+  }
+  return { changed: false, state };
+};
+
 const exactTargetForSavedObject = (
   entry: EffectQueueEntry,
   card: CardRef,
@@ -315,6 +349,71 @@ export const applySavedFieldObjectRestSequenceSegment = (params: {
     const rested = restFieldObject(nextState, target);
     nextState = rested.state;
     changedState ||= rested.changed;
+  }
+
+  return {
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState,
+          selectedTargets: [...resolvedSavedTarget.selectedTargets],
+        },
+      },
+    },
+    state: changedState
+      ? { ...nextState, seq: toStateSeq(nextState.seq + 1) }
+      : nextState,
+  };
+};
+
+export const applySavedFieldObjectActivateSequenceSegment = (params: {
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SupportedSequenceSegment;
+  segmentKey: (segment: SupportedSequenceSegment, index: number) => string;
+  state: GameState;
+}): {
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  if (params.segment.effect.type !== "activate") {
+    return { ledgers: params.ledgers, state: params.state };
+  }
+  const resolvedSavedTarget = resolveSavedFieldObjectKoSelection({
+    controllerId: params.entry.controllerId,
+    savedReferences: params.ledgers.savedReferences,
+    state: params.state,
+    target: params.segment.effect.target,
+  });
+  if (!resolvedSavedTarget.ok) {
+    return {
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+
+  let nextState = params.state;
+  let changedState = false;
+  for (const target of resolvedSavedTarget.selectedTargets) {
+    const activated = activateFieldObject(nextState, target);
+    nextState = activated.state;
+    changedState ||= activated.changed;
   }
 
   return {

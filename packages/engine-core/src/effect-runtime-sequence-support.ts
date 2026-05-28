@@ -33,6 +33,9 @@ type TrashEffect = Extract<Effect, { type: "trash" }>;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
+type ActivateEffect = Extract<Effect, { type: "activate" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
 type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
   then:
     | Extract<Effect, { type: "modifyPower" }>
@@ -73,6 +76,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SelectTargetsEffect
     | PlaySelectedEffect
     | RestEffect
+    | ActivateEffect
     | SavedTargetContinuousEffect
     | ConditionalContinuousEffect
     | ConditionalSequenceEffect
@@ -435,7 +439,9 @@ const isSupportedSequenceTargetRequest = (
 ): boolean =>
   request.timing === "onResolution" &&
   request.chooser === "self" &&
-  (request.zone === "characterArea" || request.zone === "stageArea") &&
+  (request.zone === "characterArea" ||
+    request.zone === "stageArea" ||
+    request.zone === "costArea") &&
   (request.player === "self" || request.player === "opponent") &&
   Number.isInteger(request.min) &&
   Number.isInteger(request.max) &&
@@ -458,6 +464,17 @@ const isSupportedRestSegment = (
   effect: SequenceSegmentEffect,
 ): effect is RestEffect =>
   effect.type === "rest" && isSupportedSavedFieldObjectKoTarget(effect.target);
+
+const isSupportedActivateSegment = (
+  effect: SequenceSegmentEffect,
+): effect is Extract<SequenceSegmentEffect, { type: "activate" }> =>
+  effect.type === "activate" &&
+  effect.target.type === "savedFieldObject" &&
+  effect.target.zone === "costArea" &&
+  (effect.target.player === "self" || effect.target.player === "opponent") &&
+  effect.target.controller === undefined &&
+  effect.target.filter === undefined &&
+  effect.target.binding.family === "selectedTargets";
 
 const isSupportedSequenceContinuousDuration = (duration: Duration): boolean =>
   duration.type === "thisBattle" ||
@@ -536,6 +553,9 @@ const isSupportedConditionalSegment = (
       return true;
     }
     if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedActivateSegment(segment.effect)) {
       return true;
     }
     return false;
@@ -663,6 +683,9 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedRestSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedActivateSegment(segment.effect)) {
         return true;
       }
       if (isSupportedSavedTargetContinuousSegment(segment.effect)) {

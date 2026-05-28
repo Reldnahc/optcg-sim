@@ -83,6 +83,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for DON return, filtered trash-to-hand, and DON activation sequence", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] DON!! \u22121 (You may return the specified number of DON!! cards from your field to your DON!! deck.): Add up to 1 purple Event with a cost of 5 or less from your trash to your hand. Then, set up to 1 of your DON!! cards as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports raw keyword reminder lines as metadata-supported", async () => {
     const report = await createSupportProbeReport({
       text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",

@@ -498,4 +498,136 @@ describe("card effect event parser", () => {
       ]),
     );
   });
+
+  it("parses On Play DON return reminder text, filtered trash-to-hand, and DON activation primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] DON!! \u22121 (You may return the specified number of DON!! cards from your field to your DON!! deck.): Add up to 1 purple Event with a cost of 5 or less from your trash to your hand. Then, set up to 1 of your DON!! cards as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          connector: "always",
+                          effect: {
+                            type: "selectCards",
+                            zone: "trash",
+                            player: "self",
+                            chooser: "self",
+                            min: 0,
+                            max: 1,
+                            filter: {
+                              colorsAny: ["purple"],
+                              categories: ["event"],
+                              cost: { max: 5 },
+                            },
+                            saveAs: "trashSelection:addToHand",
+                            visibility: "bothPlayers",
+                          },
+                        },
+                        {
+                          connector: "then",
+                          effect: {
+                            type: "moveSelected",
+                            selection: "trashSelection:addToHand",
+                            from: "trash",
+                            to: "hand",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          connector: "always",
+                          saveResultAs: "targetSelection:set-don-active",
+                          effect: {
+                            type: "selectTargets",
+                            request: {
+                              timing: "onResolution",
+                              chooser: "self",
+                              zone: "costArea",
+                              player: "self",
+                              min: 0,
+                              max: 1,
+                              allowFewerIfUnavailable: true,
+                              visibility: "public",
+                              filter: {
+                                categories: ["don"],
+                                state: "rested",
+                              },
+                            },
+                          },
+                        },
+                        {
+                          connector: "then",
+                          effect: {
+                            type: "activate",
+                            target: {
+                              type: "savedFieldObject",
+                              binding: {
+                                family: "selectedTargets",
+                                saveResultAs: "targetSelection:set-don-active",
+                              },
+                              zone: "costArea",
+                              player: "self",
+                              visibility: "publicOnly",
+                              onFailure: "failClosed",
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "composition:costedEffect",
+        "cost:returnDon",
+        "instruction:moveSelected",
+        "filter:color",
+        "filter:category:event",
+        "filter:cost",
+        "condition:comparator:lte",
+        "instruction:activate",
+        "zone:costArea",
+        "filter:category:don",
+        "filter:state:rested",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
 });
