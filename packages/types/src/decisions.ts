@@ -64,6 +64,7 @@ export interface PaymentDeclinedResponse {
 
 export type DecisionResponse =
   | { type: "orderedIds"; ids: string[] }
+  | { type: "topBottomPlacement"; topIds: string[]; bottomIds: string[] }
   | { type: "optionalActivation"; choice: "activate" | "decline" }
   | PaymentResponse
   | PaymentDeclinedResponse
@@ -146,6 +147,7 @@ export interface OrderCardsDecision extends BaseDecision {
   type: "orderCards";
   cards: CardRef[];
   destination: Zone;
+  placement?: { type: "topOrBottom" };
 }
 
 export interface MulliganDecision extends BaseDecision {

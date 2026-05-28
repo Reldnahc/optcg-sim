@@ -14,6 +14,7 @@ export interface DecisionModalHostProps {
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
   onActionOption: (actionIndex: number) => void;
+  onToggleBottomPlacement: (instanceId: InstanceId) => void;
   onConfirm: () => void;
 }
 
@@ -26,6 +27,7 @@ export const DecisionModalHost = ({
   onQuantity,
   onOption,
   onActionOption,
+  onToggleBottomPlacement,
   onConfirm,
 }: DecisionModalHostProps): React.JSX.Element | null => {
   if (model === undefined) {
@@ -71,12 +73,26 @@ export const DecisionModalHost = ({
       ) : null}
       {model.kind === "orderCards" ? (
         <div className="decision-order-list">
-          {model.orderedInstanceIds.map((instanceId, index) => (
-            <div key={String(instanceId)} className="decision-order-row">
-              <span>{String(instanceId)}</span>
-              <span>{index + 1}</span>
-            </div>
-          ))}
+          {model.orderedInstanceIds.map((instanceId, index) => {
+            const isBottom = model.bottomInstanceIds.includes(instanceId);
+            return (
+              <div key={String(instanceId)} className="decision-order-row">
+                <span>{String(instanceId)}</span>
+                <span>{index + 1}</span>
+                {model.placement?.type === "topOrBottom" ? (
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      onToggleBottomPlacement(instanceId);
+                    }}
+                  >
+                    {isBottom ? "Bottom" : "Top"}
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       ) : null}
       {model.kind === "orderTriggers" ? (

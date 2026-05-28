@@ -58,6 +58,7 @@ import {
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
+import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
 import {
   applySearchRevealSequenceChoiceResponse,
   resumeSequenceAfterSearchRevealOrderResponse,
@@ -929,6 +930,13 @@ const applyRespondToDecision = (
       return continueRuntimeAfterDecisionResult(state, sequenceOrderResult);
     }
     return continueRuntimeAfterDecisionResult(state, searchRevealOrderResult);
+  }
+  const topDeckPlacementResult = applyTopDeckPlacementDecisionResponse(
+    state,
+    action,
+  );
+  if (topDeckPlacementResult !== null) {
+    return continueRuntimeAfterDecisionResult(state, topDeckPlacementResult);
   }
   if (isTrashFromHandSelectCardsDecision(decision)) {
     const trashResult = applySupportedTrashFromHandChoiceResponse(

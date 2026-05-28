@@ -9,6 +9,7 @@ import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditio
 import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import { isSupportedMainEventTargetKoEffectAllowingOncePerTurn } from "./effect-runtime-primitives.js";
 import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
+import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 
@@ -65,6 +66,11 @@ const isSupportedMoveCardsBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "moveCards" }> =>
   isSupportedMoveCardsEffect(effect);
+
+const isSupportedPlaceTopDeckCardsBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "placeTopDeckCards" }> =>
+  isSupportedPlaceTopDeckCardsEffect(effect);
 
 const isQueuedAutoSequenceTriggerType = (
   triggerType: Trigger["type"],
@@ -140,6 +146,7 @@ const isSupportedNonOptionalBody = (
   isSupportedDrawUpToBody(block.effect) ||
   isSupportedTrashFromHandBody(block.effect) ||
   isSupportedMoveCardsBody(block.effect) ||
+  isSupportedPlaceTopDeckCardsBody(block.effect) ||
   isSupportedSearchBody(block) ||
   isSupportedContinuousBody(block) ||
   isSupportedActivateReferencedEffectBody(block.effect) ||

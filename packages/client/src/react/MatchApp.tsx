@@ -216,6 +216,7 @@ export const MatchApp = (): React.JSX.Element => {
         onQuantity={client.setDecisionQuantityValue}
         onOption={client.setDecisionOptionValue}
         onActionOption={client.setDecisionActionOptionValue}
+        onToggleBottomPlacement={client.toggleDecisionCardBottomPlacement}
         onConfirm={() => {
           void client.confirmDecision();
         }}

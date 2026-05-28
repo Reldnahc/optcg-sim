@@ -23,6 +23,7 @@ export type DecisionDraft =
       kind: "orderCards";
       decisionId: DecisionId;
       orderedInstanceIds: InstanceId[];
+      bottomInstanceIds: InstanceId[];
     }
   | {
       kind: "orderTriggers";
@@ -66,8 +67,10 @@ export type DecisionModalModel =
       decisionId: DecisionId;
       prompt: string;
       destination: PublicOrderCardsDecision["destination"];
+      placement?: PublicOrderCardsDecision["placement"];
       canConfirm: true;
       orderedInstanceIds: InstanceId[];
+      bottomInstanceIds: InstanceId[];
       cards: PublicOrderCardsDecision["cards"];
     }
   | {
@@ -299,6 +302,7 @@ export const createDecisionDraft = (
       kind: "orderCards",
       decisionId: decision.id,
       orderedInstanceIds: decision.cards.map((card) => card.instanceId),
+      bottomInstanceIds: [],
     };
   }
   if (decision.type === "chooseTriggerOrder") {
@@ -444,6 +448,30 @@ export const moveOrderedCardNear = (
   };
 };
 
+export const toggleOrderedCardBottomPlacement = (
+  decision: PublicOrderCardsDecision,
+  draft: DecisionDraft,
+  instanceId: InstanceId,
+): DecisionDraft => {
+  assertDraftForDecision(decision, draft);
+  if (draft.kind !== "orderCards") {
+    throw new Error("Decision draft is not an orderCards draft.");
+  }
+  if (decision.placement?.type !== "topOrBottom") {
+    return draft;
+  }
+  if (!orderCardIds(decision).has(instanceKey(instanceId))) {
+    return draft;
+  }
+  const isBottom = draft.bottomInstanceIds.includes(instanceId);
+  return {
+    ...draft,
+    bottomInstanceIds: isBottom
+      ? draft.bottomInstanceIds.filter((id) => id !== instanceId)
+      : [...draft.bottomInstanceIds, instanceId],
+  };
+};
+
 export const chooseDecisionTrigger = (
   decision: PublicChooseTriggerOrderDecision,
   draft: DecisionDraft,
@@ -543,8 +571,12 @@ export const createDecisionModalModel = (
       decisionId: decision.id,
       prompt: decision.prompt,
       destination: decision.destination,
+      ...(decision.placement === undefined
+        ? {}
+        : { placement: decision.placement }),
       canConfirm: true,
       orderedInstanceIds: draft.orderedInstanceIds,
+      bottomInstanceIds: draft.bottomInstanceIds,
       cards: decision.cards,
     };
   }
@@ -677,6 +709,18 @@ export const buildDecisionResponse = (
     }
     if (draft.kind !== "orderCards") {
       throw new Error("Decision draft is not an orderCards draft.");
+    }
+    if (decision.placement?.type === "topOrBottom") {
+      const bottom = new Set(draft.bottomInstanceIds.map(String));
+      return {
+        type: "topBottomPlacement",
+        topIds: draft.orderedInstanceIds
+          .map(String)
+          .filter((id) => !bottom.has(id)),
+        bottomIds: draft.orderedInstanceIds
+          .map(String)
+          .filter((id) => bottom.has(id)),
+      };
     }
     return { type: "orderedIds", ids: draft.orderedInstanceIds.map(String) };
   }

@@ -45,6 +45,7 @@ test("selectCards modal renders card images and disables nonselectable choices",
       onQuantity: () => undefined,
       onOption: () => undefined,
       onActionOption: () => undefined,
+      onToggleBottomPlacement: () => undefined,
       onConfirm: () => undefined,
     }),
   );

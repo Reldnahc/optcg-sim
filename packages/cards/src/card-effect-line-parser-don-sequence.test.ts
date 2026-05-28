@@ -253,3 +253,46 @@ it("parses main rest-DON cost with attached-DON condition and power reduction bo
     ]),
   );
 });
+
+it("parses conditional when-attacking top-deck top-or-bottom placement", () => {
+  const result = parseCardEffectLine(
+    "[When Attacking] If you have 6 or less DON!! cards on your field, look at 2 cards from the top of your deck and place them at the top or bottom of your deck in any order.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "whenAttacking" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"] },
+        op: "lte",
+        value: 6,
+      },
+      effect: {
+        type: "placeTopDeckCards",
+        player: "self",
+        count: 2,
+        destinations: ["top", "bottom"],
+        order: "ownerChoice",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "condition:donFieldCount",
+      "condition:comparator:lte",
+      "condition:threshold:positiveInteger",
+      "filter:category:don",
+      "instruction:placeTopDeckCards",
+      "look:topDeck",
+      "zone:deck",
+      "position:top",
+      "position:bottom",
+      "order:anyOrder",
+    ]),
+  );
+});

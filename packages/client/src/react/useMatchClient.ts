@@ -34,6 +34,7 @@ import {
   chooseDecisionTrigger,
   selectedDonAttachmentMenuAction,
   moveOrderedCardNear,
+  toggleOrderedCardBottomPlacement,
   setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
@@ -898,6 +899,24 @@ export const useMatchClient = (): MatchClientUi => {
     [modalResponseActions, pendingDecision],
   );
 
+  const toggleDecisionCardBottomPlacement = useCallback(
+    (instanceId: InstanceId): void => {
+      if (pendingDecision?.type !== "orderCards") {
+        return;
+      }
+      setDecisionDraft((draft) =>
+        toggleOrderedCardBottomPlacement(
+          pendingDecision,
+          draft?.decisionId === pendingDecision.id
+            ? draft
+            : createDecisionDraft(pendingDecision, modalResponseActions),
+          instanceId,
+        ),
+      );
+    },
+    [modalResponseActions, pendingDecision],
+  );
+
   const setDecisionQuantityValue = useCallback(
     (quantity: number): void => {
       if (pendingDecision === undefined) {
@@ -989,6 +1008,7 @@ export const useMatchClient = (): MatchClientUi => {
     submitAction,
     toggleDecisionCard,
     moveDecisionCard,
+    toggleDecisionCardBottomPlacement,
     setDecisionQuantityValue,
     setDecisionOptionValue,
     setDecisionActionOptionValue,

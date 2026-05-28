@@ -425,6 +425,8 @@ const responseLabel = (
       return `Choose ${String(action.response.targets.length)} target`;
     case "orderedIds":
       return "Confirm order";
+    case "topBottomPlacement":
+      return "Confirm top/bottom placement";
     case "optionalActivation":
       return action.response.choice === "activate"
         ? "Activate effect"

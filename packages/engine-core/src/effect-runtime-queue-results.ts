@@ -14,7 +14,6 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
     remainingDamagePoints: number;
   };
 };
-
 import {
   appendEvent,
   createEvent,
@@ -57,6 +56,7 @@ import {
   executeMoveCardsPrimitive,
   resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
 } from "./effect-runtime-move-cards.js";
+import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "./effect-runtime-top-deck-placement.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
 import {
@@ -69,7 +69,6 @@ import {
   toOncePerTurnKey,
 } from "./once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
-
 export type QueueEffectResolvedCustomTriggers = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -261,7 +260,7 @@ export const createEffectRuntimeQueueResults = (
     return match.effect;
   };
 
-  const resolveQueuedTrashFromHandEffect = (
+  const resolveTrashHand = (
     state: GameState,
     entry: EffectQueueEntry,
   ): Extract<Effect, { type: "trashFromHand" }> | undefined => {
@@ -640,10 +639,9 @@ export const createEffectRuntimeQueueResults = (
         }
         continue;
       }
-      const trashFromHandEffect = resolveQueuedTrashFromHandEffect(
-        nextState,
-        selected,
-      );
+      const placement = placeTopDeck(nextState, queuedEffect, selected);
+      if (placement !== undefined) return placement;
+      const trashFromHandEffect = resolveTrashHand(nextState, selected);
       if (trashFromHandEffect !== undefined) {
         const trashDecision = createSupportedTrashFromHandChoiceDecision(
           nextState,

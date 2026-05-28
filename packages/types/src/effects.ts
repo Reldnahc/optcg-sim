@@ -539,6 +539,13 @@ export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
   | { type: "search"; request: SearchRequest }
+  | {
+      type: "placeTopDeckCards";
+      player: PlayerRef;
+      count: number;
+      destinations: ["top", "bottom"];
+      order: "ownerChoice";
+    }
   | { type: "lookAtTop"; player: PlayerRef; count: number }
   | {
       type: "revealFromZone";

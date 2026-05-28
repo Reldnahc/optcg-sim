@@ -506,6 +506,9 @@ const toPublicDecision = (
       type: "orderCards",
       cards: [...pending.cards],
       destination: pending.destination,
+      ...(pending.placement === undefined
+        ? {}
+        : { placement: pending.placement }),
     };
   }
   if (pending.type === "chooseTriggerOrder") {

@@ -129,6 +129,7 @@ export interface PublicOrderCardsDecision extends PublicDecision<"orderCards"> {
   type: "orderCards";
   cards: CardRef[];
   destination: Zone;
+  placement?: { type: "topOrBottom" };
 }
 
 export interface PublicChooseTriggerOrderDecision extends PublicDecision<"chooseTriggerOrder"> {
