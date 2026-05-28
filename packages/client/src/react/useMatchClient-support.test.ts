@@ -74,6 +74,59 @@ const decision = (id: string): NonNullable<PlayerView["pendingDecision"]> => ({
   choices: [],
 });
 
+const targetDecision = (
+  id: string,
+): NonNullable<PlayerView["pendingDecision"]> => ({
+  id: id as DecisionId,
+  type: "selectTargets",
+  playerId: "p1" as PlayerId,
+  prompt: "Choose a target.",
+  causedBy: { type: "ruleProcess", name: "privateCausality" },
+  min: 0,
+  max: 1,
+  candidates: [],
+});
+
+const quantityDecision = (
+  id: string,
+): NonNullable<PlayerView["pendingDecision"]> => ({
+  id: id as DecisionId,
+  type: "chooseQuantity",
+  playerId: "p1" as PlayerId,
+  prompt: "Choose a number.",
+  causedBy: { type: "ruleProcess", name: "privateCausality" },
+  mode: "upTo",
+  min: 0,
+  max: 2,
+});
+
+const payCostDecision = (
+  id: string,
+): NonNullable<PlayerView["pendingDecision"]> => ({
+  id: id as DecisionId,
+  type: "payCost",
+  playerId: "p1" as PlayerId,
+  prompt: "Pay cost.",
+  causedBy: { type: "ruleProcess", name: "privateCausality" },
+});
+
+const activeSourceEvents = (decisionId: string): EngineEvent[] => [
+  event({
+    type: "effectQueued",
+    seq: 1,
+    source: {
+      instanceId: "active-source" as InstanceId,
+      cardId: "OP13-089" as CardId,
+      playerId: "p1" as PlayerId,
+    },
+  }),
+  event({
+    type: "decisionCreated",
+    seq: 2,
+    payload: { decisionId },
+  }),
+];
+
 describe("match client support helpers", () => {
   test("active card-cost selections expose global confirm and clear actions", () => {
     assert.deepEqual(
@@ -186,5 +239,24 @@ describe("match client support helpers", () => {
     });
 
     assert.deepEqual(activeSource, []);
+  });
+
+  test("effect source highlighting applies across pending decision shapes", () => {
+    const decisionCases = [
+      decision("decision:select-cards"),
+      targetDecision("decision:select-targets"),
+      quantityDecision("decision:quantity"),
+      payCostDecision("decision:pay-cost"),
+    ];
+
+    for (const currentDecision of decisionCases) {
+      assert.deepEqual(
+        resolvingEffectSourceInstanceIds({
+          pendingDecision: currentDecision,
+          events: activeSourceEvents(String(currentDecision.id)),
+        }),
+        ["active-source"],
+      );
+    }
   });
 });
