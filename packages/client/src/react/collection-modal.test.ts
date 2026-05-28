@@ -106,12 +106,12 @@ describe("collection modal", () => {
     assert.match(markup, /zone-cards-overlap/u);
   });
 
-  test("overlap zones cannot expand the playmat before measurement runs", async () => {
+  test("overlap zones contain width without clipping selected card outlines", async () => {
     const styles = await readFile(zoneStylesPath, "utf8");
 
-    assert.match(styles, /\.zone-overlap\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(styles, /\.zone-overlap\s*\{[^}]*contain:\s*inline-size;/u);
-    assert.match(styles, /\.zone-cards-overlap\s*\{[^}]*overflow:\s*hidden;/u);
+    assert.match(styles, /\.zone-overlap\s*\{[^}]*overflow:\s*visible;/u);
+    assert.match(styles, /\.zone-cards-overlap\s*\{[^}]*overflow:\s*visible;/u);
   });
 
   test("slot mode renders exactly the requested number of equal card slots", async () => {

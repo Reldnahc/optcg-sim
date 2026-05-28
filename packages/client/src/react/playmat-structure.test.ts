@@ -9,6 +9,7 @@ const playmatStylesPath = join(sourceDirectory, "styles", "playmat.css");
 const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
 const cardStylesPath = join(sourceDirectory, "styles", "card.css");
 const controlsStylesPath = join(sourceDirectory, "styles", "controls.css");
+const modalStylesPath = join(sourceDirectory, "styles", "modal-frame.css");
 
 describe("playmat structure", () => {
   test("board layout uses one physical table grid instead of mirrored player mats", async () => {
@@ -215,5 +216,18 @@ describe("playmat structure", () => {
       styles,
       /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
     );
+  });
+
+  test("battle arrow layer sits above the play field but below modals", async () => {
+    const [playmatStyles, modalStyles] = await Promise.all([
+      readFile(playmatStylesPath, "utf8"),
+      readFile(modalStylesPath, "utf8"),
+    ]);
+
+    assert.match(
+      playmatStyles,
+      /\.battle-arrow-overlay\s*\{[^}]*z-index:\s*5;/u,
+    );
+    assert.match(modalStyles, /\.modal-frame\s*\{[^}]*z-index:\s*10;/u);
   });
 });

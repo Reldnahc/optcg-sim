@@ -9,7 +9,7 @@
 }
 
 .zone-overlap {
-  overflow: hidden;
+  overflow: visible;
   contain: inline-size;
 }
 
@@ -43,7 +43,7 @@
   width: 100%;
   min-width: 0;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .zone-cards-overlap.is-edge-packed {
