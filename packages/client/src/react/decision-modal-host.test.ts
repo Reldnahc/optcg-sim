@@ -45,6 +45,7 @@ test("selectCards modal renders card images and disables nonselectable choices",
       onQuantity: () => undefined,
       onOption: () => undefined,
       onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
       onToggleBottomPlacement: () => undefined,
       onConfirm: () => undefined,
     }),
@@ -76,6 +77,7 @@ test("chooseQuantity modal renders a range slider over the legal range", () => {
       onQuantity: () => undefined,
       onOption: () => undefined,
       onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
       onToggleBottomPlacement: () => undefined,
       onConfirm: () => undefined,
     }),
@@ -87,6 +89,46 @@ test("chooseQuantity modal renders a range slider over the legal range", () => {
   assert.match(markup, /max="4"/u);
   assert.match(markup, /value="4"/u);
   assert.equal(markup.includes('type="number"'), false);
+});
+
+test("return-to-deck order modal renders card images with deck order badges", () => {
+  const model: DecisionModalModel = {
+    kind: "orderCards",
+    decisionId: "decision-order" as never,
+    prompt: "Return cards to the bottom of your deck.",
+    destination: "deck",
+    canConfirm: true,
+    orderedInstanceIds: ["top" as InstanceId, "bottom" as InstanceId],
+    bottomInstanceIds: [],
+    cards: [cardRef("top"), cardRef("bottom")],
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      cardDisplay: (card: CardRef) => ({
+        name: String(card.cardId),
+        imageUrl: `https://cdn.example/${String(card.cardId)}.png`,
+      }),
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onToggleBottomPlacement: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /decision-order-card-grid/u);
+  assert.match(markup, /decision-order-hint/u);
+  assert.equal(markup.includes("top-card.png"), true);
+  assert.equal(markup.includes("bottom-card.png"), true);
+  assert.match(markup, /decision-order-badge/u);
+  assert.match(markup, /draggable="true"/u);
+  assert.doesNotMatch(markup, /decision-order-row/u);
 });
 
 test("trigger order modal presents source cards like a single-card selection", () => {
@@ -125,6 +167,7 @@ test("trigger order modal presents source cards like a single-card selection", (
       onQuantity: () => undefined,
       onOption: () => undefined,
       onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
       onToggleBottomPlacement: () => undefined,
       onConfirm: () => undefined,
     }),

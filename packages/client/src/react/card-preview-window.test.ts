@@ -112,6 +112,7 @@ describe("card preview window", () => {
     assert.match(zone, /onCardPreview/u);
     assert.match(handRow, /onCardPreview/u);
     assert.match(collectionModal, /onPreviewCard/u);
+    assert.match(matchApp, /onMoveOrderedCard=\{client\.moveDecisionCard\}/u);
     assert.match(matchApp, /previewHoveredCard/u);
     assert.match(matchApp, /previewControl=/u);
     assert.match(matchApp, /CardPreviewToggle/u);

@@ -4,6 +4,7 @@ import type {
   ClientCardModel,
 } from "../view-model.js";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
 import { Zone } from "./Zone.js";
 
@@ -18,6 +19,13 @@ export interface BoardLayoutProps {
   onCardClick: (instanceId: string) => void;
   onCardAction: (actionIndex: number) => void;
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
+  onMoveHandCard?:
+    | ((
+        draggedInstanceId: string,
+        targetInstanceId: string,
+        placement: ReorderPlacement,
+      ) => void)
+    | undefined;
   onViewCollection: (title: string, cards: readonly ClientCardModel[]) => void;
   onBackgroundClick: () => void;
 }
@@ -55,6 +63,7 @@ export const BoardLayout = ({
   onCardClick,
   onCardAction,
   onPreviewCard,
+  onMoveHandCard,
   onViewCollection,
   onBackgroundClick,
 }: BoardLayoutProps): React.JSX.Element => {
@@ -89,6 +98,7 @@ export const BoardLayout = ({
         onCardPreview={onPreviewCard}
         onCardClick={onCardClick}
         onCardAction={onCardAction}
+        onMoveCard={onMoveHandCard}
       />
     </div>
     <div className="tabletop-board">

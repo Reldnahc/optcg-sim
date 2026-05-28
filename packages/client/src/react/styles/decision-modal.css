@@ -82,6 +82,52 @@
   justify-content: space-between;
 }
 
+.decision-order-hint {
+  max-width: 420px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.decision-order-card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.decision-order-card {
+  position: relative;
+  width: auto;
+  height: var(--card-height);
+  aspect-ratio: 5 / 7;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+}
+
+.decision-order-card:active {
+  cursor: grabbing;
+}
+
+.decision-order-card .decision-card-placeholder {
+  box-sizing: border-box;
+}
+
+.decision-placement-toggle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 4px;
+  background: rgba(30, 27, 25, 0.82);
+  color: #fff;
+  padding: 3px 5px;
+  font-size: 0.65rem;
+}
+
 .quantity-slider-field {
   display: grid;
   gap: 8px;

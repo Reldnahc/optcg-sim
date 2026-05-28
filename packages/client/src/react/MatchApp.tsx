@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { CardRef, InstanceId } from "@optcg/types";
 
@@ -21,6 +21,8 @@ import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
+import { moveIdNear } from "./drag-reorder.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
@@ -37,6 +39,24 @@ interface RevealWindowState {
 const emptyRevealWindowState: RevealWindowState = {
   dismissed: new Set(),
   minimized: new Set(),
+};
+
+const orderCardsByInstanceIds = (
+  cards: readonly ClientCardModel[],
+  order: readonly string[] = [],
+): ClientCardModel[] => {
+  const cardsById = new Map(cards.map((card) => [String(card.instanceId), card]));
+  const orderedCards = order.flatMap((instanceId) => {
+    const card = cardsById.get(instanceId);
+    return card === undefined ? [] : [card];
+  });
+  const orderedIds = new Set(
+    orderedCards.map((card) => String(card.instanceId)),
+  );
+  return [
+    ...orderedCards,
+    ...cards.filter((card) => !orderedIds.has(String(card.instanceId))),
+  ];
 };
 
 export const MatchApp = (): React.JSX.Element => {
@@ -61,6 +81,7 @@ export const MatchApp = (): React.JSX.Element => {
   const [previewMinimized, setPreviewMinimized] = useState(false);
   const [actionLogOpen, setActionLogOpen] = useState(false);
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
+  const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
     board,
     cardCostSelection,
@@ -122,6 +143,51 @@ export const MatchApp = (): React.JSX.Element => {
       ? clientState
       : undefined;
   const currentPlayerId = client.currentPlayerId;
+  const handOrderKey = `${matchScope ?? "local"}:${String(
+    currentPlayerId ?? "unknown",
+  )}`;
+  const displayBoard = useMemo(() => {
+    if (board === undefined) {
+      return undefined;
+    }
+    return {
+      ...board,
+      self: {
+        ...board.self,
+        hand: orderCardsByInstanceIds(
+          board.self.hand,
+          handOrders[handOrderKey] ?? [],
+        ),
+      },
+    };
+  }, [board, handOrderKey, handOrders]);
+  const moveHandCard = useCallback(
+    (
+      draggedInstanceId: string,
+      targetInstanceId: string,
+      placement: ReorderPlacement,
+    ): void => {
+      if (board === undefined) {
+        return;
+      }
+      setHandOrders((current) => {
+        const currentOrder = orderCardsByInstanceIds(
+          board.self.hand,
+          current[handOrderKey] ?? [],
+        ).map((card) => String(card.instanceId));
+        return {
+          ...current,
+          [handOrderKey]: moveIdNear(
+            currentOrder,
+            draggedInstanceId,
+            targetInstanceId,
+            placement,
+          ),
+        };
+      });
+    },
+    [board, handOrderKey],
+  );
   const playerSnapshot =
     currentPlayerId === undefined || matchState === undefined
       ? undefined
@@ -343,7 +409,7 @@ export const MatchApp = (): React.JSX.Element => {
 
   return (
     <main className="match-app">
-      {board === undefined ? (
+      {displayBoard === undefined ? (
         <section className="loading-panel">
           {lobbyState === undefined
             ? "Loading match"
@@ -351,7 +417,7 @@ export const MatchApp = (): React.JSX.Element => {
         </section>
       ) : (
         <BoardLayout
-          board={board}
+          board={displayBoard}
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
@@ -363,6 +429,7 @@ export const MatchApp = (): React.JSX.Element => {
             void client.submitAction(actionIndex);
           }}
           onPreviewCard={previewHoveredCard}
+          onMoveHandCard={moveHandCard}
           onViewCollection={(title, cards) => {
             setCollectionModal((current) => {
               if (current?.title === title) {
@@ -433,6 +500,7 @@ export const MatchApp = (): React.JSX.Element => {
         onQuantity={client.setDecisionQuantityValue}
         onOption={client.setDecisionOptionValue}
         onActionOption={client.setDecisionActionOptionValue}
+        onMoveOrderedCard={client.moveDecisionCard}
         onToggleBottomPlacement={client.toggleDecisionCardBottomPlacement}
         onConfirm={() => {
           void client.confirmDecision();

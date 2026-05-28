@@ -120,6 +120,34 @@ describe("hand layout", () => {
     assert.match(playerMarkup, /hand-cards-overlap-left/u);
   });
 
+  test("player hand cards can be made draggable for client-side rearranging", () => {
+    const markup = renderToStaticMarkup(
+      createElement(HandRow, {
+        label: "Player hand",
+        cards: [card(1), card(2)],
+        overflowDirection: "left",
+        onMoveCard: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /draggable="true"/u);
+  });
+
+  test("board layout wires hand rearranging only to the player hand", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "BoardLayout.tsx"),
+      "utf8",
+    );
+    const matchSource = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /onMoveHandCard/u);
+    assert.match(source, /onMoveCard=\{onMoveHandCard\}/u);
+    assert.match(matchSource, /moveHandCard/u);
+  });
+
   test("hand CSS uses the full lane and overlaps without shrinking or wrapping", async () => {
     const styles = await readFile(appShellStylesPath, "utf8");
 

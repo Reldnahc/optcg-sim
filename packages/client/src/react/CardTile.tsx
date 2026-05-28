@@ -1,4 +1,6 @@
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
+import { reorderPlacementFromPointer } from "./drag-reorder.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 
 export interface CardTileProps {
   card: ClientCardModel;
@@ -14,6 +16,14 @@ export interface CardTileProps {
   onAction?: ((actionIndex: number) => void) | undefined;
   onAttachedDonClick?: ((instanceId: string) => void) | undefined;
   onHover?: ((card: ClientCardModel) => void) | undefined;
+  draggable?: boolean | undefined;
+  onMoveNear?:
+    | ((
+        draggedInstanceId: string,
+        targetInstanceId: string,
+        placement: ReorderPlacement,
+      ) => void)
+    | undefined;
 }
 
 export const CardTile = ({
@@ -30,6 +40,8 @@ export const CardTile = ({
   onAction,
   onAttachedDonClick,
   onHover,
+  draggable = false,
+  onMoveNear,
 }: CardTileProps): React.JSX.Element => {
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
@@ -49,11 +61,49 @@ export const CardTile = ({
     <div
       className="card-tile-shell"
       data-card-instance-id={String(card.instanceId)}
+      draggable={draggable}
       onPointerEnter={() => {
         if (card.category === "hidden") {
           return;
         }
         onHover?.(card);
+      }}
+      onDragStart={(event) => {
+        if (!draggable) {
+          return;
+        }
+        event.stopPropagation();
+        event.dataTransfer.setData("text/plain", String(card.instanceId));
+      }}
+      onDragOver={(event) => {
+        if (!draggable || onMoveNear === undefined) {
+          return;
+        }
+        event.preventDefault();
+      }}
+      onDrop={(event) => {
+        if (!draggable || onMoveNear === undefined) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const draggedInstanceId = event.dataTransfer.getData("text/plain");
+        const targetInstanceId = String(card.instanceId);
+        if (
+          draggedInstanceId.length === 0 ||
+          draggedInstanceId === targetInstanceId
+        ) {
+          return;
+        }
+        onMoveNear(
+          draggedInstanceId,
+          targetInstanceId,
+          reorderPlacementFromPointer(
+            event.currentTarget.getBoundingClientRect(),
+            event.clientX,
+            event.clientY,
+          ),
+        );
       }}
     >
       <button

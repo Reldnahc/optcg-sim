@@ -7,6 +7,7 @@ import {
   type CardRowLayout,
 } from "./card-row-layout.js";
 import { CardTile } from "./CardTile.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 
 export type HandOverflowDirection = "left" | "right";
 
@@ -48,6 +49,13 @@ export interface HandRowProps {
   onCardClick?: ((instanceId: string) => void) | undefined;
   onCardAction?: ((actionIndex: number) => void) | undefined;
   onCardPreview?: ((card: ClientCardModel) => void) | undefined;
+  onMoveCard?:
+    | ((
+        draggedInstanceId: string,
+        targetInstanceId: string,
+        placement: ReorderPlacement,
+      ) => void)
+    | undefined;
 }
 
 export const HandRow = ({
@@ -64,6 +72,7 @@ export const HandRow = ({
   onCardClick,
   onCardAction,
   onCardPreview,
+  onMoveCard,
 }: HandRowProps): React.JSX.Element => {
   const rowRef = useRef<HTMLElement | null>(null);
   const cardsRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +158,8 @@ export const HandRow = ({
               onAction={onCardAction}
               onAttachedDonClick={onCardClick}
               onHover={onCardPreview}
+              draggable={onMoveCard !== undefined}
+              onMoveNear={onMoveCard}
               onClick={
                 onCardClick === undefined
                   ? undefined

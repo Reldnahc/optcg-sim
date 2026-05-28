@@ -2,6 +2,8 @@ import type { CardRef, InstanceId } from "@optcg/types";
 
 import type { DecisionModalModel } from "../interactions/decision-modal.js";
 import { ModalFrame } from "./ModalFrame.js";
+import { reorderPlacementFromPointer } from "./drag-reorder.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 
 export interface DecisionModalHostProps {
   model?: DecisionModalModel | undefined;
@@ -14,6 +16,11 @@ export interface DecisionModalHostProps {
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
   onActionOption: (actionIndex: number) => void;
+  onMoveOrderedCard: (
+    draggedId: InstanceId,
+    targetId: InstanceId,
+    placement: ReorderPlacement,
+  ) => void;
   onToggleBottomPlacement: (instanceId: InstanceId) => void;
   onConfirm: () => void;
 }
@@ -27,6 +34,7 @@ export const DecisionModalHost = ({
   onQuantity,
   onOption,
   onActionOption,
+  onMoveOrderedCard,
   onToggleBottomPlacement,
   onConfirm,
 }: DecisionModalHostProps): React.JSX.Element | null => {
@@ -72,28 +80,94 @@ export const DecisionModalHost = ({
         </div>
       ) : null}
       {model.kind === "orderCards" ? (
-        <div className="decision-order-list">
-          {model.orderedInstanceIds.map((instanceId, index) => {
-            const isBottom = model.bottomInstanceIds.includes(instanceId);
-            return (
-              <div key={String(instanceId)} className="decision-order-row">
-                <span>{String(instanceId)}</span>
-                <span>{index + 1}</span>
-                {model.placement?.type === "topOrBottom" ? (
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-                      onToggleBottomPlacement(instanceId);
-                    }}
-                  >
-                    {isBottom ? "Bottom" : "Top"}
-                  </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <p className="decision-order-hint">
+            {model.destination === "deck"
+              ? "Drag cards into deck order. 1 is highest in the deck; last is bottom-most."
+              : "Drag cards into order."}
+          </p>
+          <div className="decision-order-card-grid">
+            {model.orderedInstanceIds.map((instanceId, index) => {
+              const card = model.cards.find(
+                (candidate) => candidate.instanceId === instanceId,
+              );
+              if (card === undefined) {
+                return null;
+              }
+              const display = cardDisplay?.(card) ?? {
+                name: String(card.cardId),
+              };
+              const dragEnabled = !disabled;
+              const isBottom = model.bottomInstanceIds.includes(instanceId);
+              return (
+                <div
+                  key={String(instanceId)}
+                  className={`decision-order-card ${
+                    isBottom ? "is-bottom" : ""
+                  }`}
+                  draggable={dragEnabled}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData(
+                      "text/plain",
+                      String(instanceId),
+                    );
+                  }}
+                  onDragOver={(event) => {
+                    if (!dragEnabled) {
+                      return;
+                    }
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const draggedIdValue =
+                      event.dataTransfer.getData("text/plain");
+                    const draggedId = model.orderedInstanceIds.find(
+                      (candidateId) => String(candidateId) === draggedIdValue,
+                    );
+                    if (draggedId === undefined) {
+                      return;
+                    }
+                    onMoveOrderedCard(
+                      draggedId,
+                      instanceId,
+                      reorderPlacementFromPointer(
+                        event.currentTarget.getBoundingClientRect(),
+                        event.clientX,
+                        event.clientY,
+                      ),
+                    );
+                  }}
+                >
+                  <span className="decision-order-badge">{index + 1}</span>
+                  {display.imageUrl === undefined ? (
+                    <span className="decision-card-placeholder">
+                      {display.name}
+                    </span>
+                  ) : (
+                    <img
+                      className="decision-card-face"
+                      src={display.imageUrl}
+                      alt={display.name}
+                    />
+                  )}
+                  {model.placement?.type === "topOrBottom" ? (
+                    <button
+                      className="decision-placement-toggle"
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => {
+                        onToggleBottomPlacement(instanceId);
+                      }}
+                    >
+                      {isBottom ? "Bottom" : "Top"}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : null}
       {model.kind === "orderTriggers" ? (
         <div className="decision-card-grid">
