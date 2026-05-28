@@ -79,6 +79,25 @@
   font-size: 12px;
 }
 
+.stack-count {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  z-index: 4;
+  color: rgba(255, 255, 255, 0.08);
+  font-size: clamp(28px, 4.7vh, 46px);
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.95),
+    1px -1px 0 rgba(255, 255, 255, 0.95),
+    -1px 1px 0 rgba(255, 255, 255, 0.95),
+    1px 1px 0 rgba(255, 255, 255, 0.95);
+  transform: translateX(-50%);
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.95);
+}
+
 .stack-label {
   display: grid;
   height: 100%;

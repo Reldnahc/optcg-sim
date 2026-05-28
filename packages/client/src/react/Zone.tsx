@@ -112,6 +112,14 @@ export const Zone = ({
   return (
     <section ref={zoneRef} className={`zone zone-${size} zone-${displayMode}`}>
       <div className="zone-label">{label}</div>
+      {displayMode === "stack" ? (
+        <div
+          className="stack-count"
+          aria-label={`${label} count: ${String(cards.length)}`}
+        >
+          {cards.length}
+        </div>
+      ) : null}
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
         {displayMode === "slots" ? (
           Array.from({ length: slotCount }, (_, index) => {
@@ -150,7 +158,7 @@ export const Zone = ({
               </div>
             );
           })
-        ) : visibleCards.length === 0 ? (
+        ) : visibleCards.length === 0 && displayMode !== "stack" ? (
           <span className="empty-zone">empty</span>
         ) : (
           visibleCards.map((card) => {

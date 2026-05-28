@@ -45,6 +45,33 @@ describe("collection modal", () => {
     assert.match(markup, /zone-stack/u);
   });
 
+  test("stack zones show a prominent count overlay instead of tiny empty text", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Trash",
+        cards: [card("new", "Newest Trash"), card("old", "Old Trash")],
+        displayMode: "stack",
+        onViewCollection: () => undefined,
+      }),
+    );
+    const emptyMarkup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Trash",
+        cards: [],
+        displayMode: "stack",
+        onViewCollection: () => undefined,
+      }),
+    );
+    const styles = await readFile(zoneStylesPath, "utf8");
+
+    assert.match(markup, /stack-count/u);
+    assert.match(markup, /aria-label="Trash count: 2"/u);
+    assert.match(markup, />2</u);
+    assert.equal(emptyMarkup.includes("empty"), false);
+    assert.match(emptyMarkup, /aria-label="Trash count: 0"/u);
+    assert.match(styles, /\.stack-count\s*\{[^}]*-webkit-text-stroke:/u);
+  });
+
   test("overlap mode marks zone rows for overlap layout", () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
