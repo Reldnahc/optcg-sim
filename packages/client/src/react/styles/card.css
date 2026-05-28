@@ -36,6 +36,18 @@
   padding: 4px;
 }
 
+.card-back {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 42%),
+    repeating-linear-gradient(
+      45deg,
+      #4f4b4a 0,
+      #4f4b4a 5px,
+      #615d5b 5px,
+      #615d5b 10px
+    );
+}
+
 .card-tile.is-rested {
   transform: rotate(90deg);
 }

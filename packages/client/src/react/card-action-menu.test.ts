@@ -346,4 +346,29 @@ describe("card action menu", () => {
     assert.match(markup, /data-battle-attacker="self-leader"/u);
     assert.match(markup, /data-battle-target="opponent-leader"/u);
   });
+
+  test("life zones render hidden card backs from life count", () => {
+    const layout = board();
+    layout.self.lifeCount = 4;
+    layout.opponent.lifeCount = 5;
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.equal(markup.includes("Life 4"), false);
+    assert.equal(markup.includes("Life 5"), false);
+    assert.match(markup, /zone-cards-life/u);
+    assert.match(markup, /card-back/u);
+    assert.equal(markup.includes(">Hidden card<"), false);
+    assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 4);
+    assert.equal((markup.match(/hidden-life-opponent-/gu) ?? []).length, 5);
+  });
 });

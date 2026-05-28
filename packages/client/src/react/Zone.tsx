@@ -12,7 +12,7 @@ export interface ZoneProps {
   label: string;
   cards: readonly ClientCardModel[];
   size?: "normal" | "small" | "mini" | "hand";
-  displayMode?: "spread" | "stack" | "overlap" | "slots" | undefined;
+  displayMode?: "spread" | "stack" | "overlap" | "slots" | "life" | undefined;
   slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
@@ -100,6 +100,7 @@ export const Zone = ({
     "zone-cards",
     displayMode === "overlap" ? "zone-cards-overlap" : "",
     displayMode === "slots" ? "zone-cards-slots" : "",
+    displayMode === "life" ? "zone-cards-life" : "",
     rowLayout.edgePacked ? "is-edge-packed" : "",
     rowLayout.overlap > 0 ? "is-overlapping" : "",
   ]
@@ -108,6 +109,10 @@ export const Zone = ({
   const zoneCardsStyle = {
     "--card-row-overlap": `${rowLayout.overlap.toFixed(2)}px`,
   } as CSSProperties & Record<"--card-row-overlap", string>;
+  const lifeCardStyle = (index: number): CSSProperties =>
+    ({
+      "--life-card-index": String(index),
+    }) as CSSProperties & Record<"--life-card-index", string>;
 
   return (
     <section ref={zoneRef} className={`zone zone-${size} zone-${displayMode}`}>
@@ -155,6 +160,19 @@ export const Zone = ({
                         }
                   }
                 />
+              </div>
+            );
+          })
+        ) : displayMode === "life" ? (
+          visibleCards.map((card, index) => {
+            const instanceId = String(card.instanceId);
+            return (
+              <div
+                key={instanceId}
+                className="life-card-position"
+                style={lifeCardStyle(index)}
+              >
+                <CardTile card={card} />
               </div>
             );
           })

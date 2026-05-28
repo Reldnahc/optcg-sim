@@ -21,9 +21,9 @@ export interface BoardLayoutProps {
   onBackgroundClick: () => void;
 }
 
-const hiddenCards = (count: number): ClientCardModel[] =>
+const hiddenCards = (count: number, prefix: string): ClientCardModel[] =>
   Array.from({ length: Math.min(count, 10) }, (_, index) => ({
-    instanceId: `hidden-hand-${String(index)}` as ClientCardModel["instanceId"],
+    instanceId: `${prefix}-${String(index)}` as ClientCardModel["instanceId"],
     cardId: "hidden" as ClientCardModel["cardId"],
     name: "Hidden card",
     category: "hidden",
@@ -59,7 +59,7 @@ export const BoardLayout = ({
     <div className="hand-rail">
       <HandRow
         label="Opponent hand"
-        cards={hiddenCards(board.opponent.handCount)}
+        cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
         overflowDirection="right"
       />
       <HandRow
@@ -87,7 +87,12 @@ export const BoardLayout = ({
         />
       </div>
       <div className="playmat-zone opponent-life">
-        {stack("Life", board.opponent.lifeCount)}
+        <Zone
+          label="Life"
+          cards={hiddenCards(board.opponent.lifeCount, "hidden-life-opponent")}
+          size="small"
+          displayMode="life"
+        />
       </div>
       <div className="playmat-zone opponent-deck">
         {stack("Deck", board.opponent.deckCount)}
@@ -172,7 +177,12 @@ export const BoardLayout = ({
         />
       </div>
       <div className="playmat-zone player-life">
-        {stack("Life", board.self.lifeCount)}
+        <Zone
+          label="Life"
+          cards={hiddenCards(board.self.lifeCount, "hidden-life-self")}
+          size="small"
+          displayMode="life"
+        />
       </div>
       <div className="playmat-zone player-leader">
         <Zone

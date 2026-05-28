@@ -67,6 +67,20 @@
   overflow: visible;
 }
 
+.zone-cards-life {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.life-card-position {
+  position: absolute;
+  top: calc(var(--life-card-index) * 12%);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .zone-card-slot {
   display: grid;
   min-width: 0;

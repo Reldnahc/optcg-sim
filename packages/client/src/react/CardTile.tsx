@@ -30,7 +30,9 @@ export const CardTile = ({
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
   const image =
-    card.imageUrl === undefined ? (
+    card.category === "hidden" ? (
+      <div className="card-face card-back" aria-label={card.name} />
+    ) : card.imageUrl === undefined ? (
       <div className="card-face card-placeholder">{card.name}</div>
     ) : (
       <img className="card-face" src={card.imageUrl} alt={card.name} />
