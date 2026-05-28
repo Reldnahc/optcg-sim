@@ -6,6 +6,7 @@ import type { CardId, PlayerId } from "@optcg/types";
 import {
   createDevDeckCardIds,
   createDevDonDeckCardIds,
+  createDevRngSeed,
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
   defaultDevDonCounts,
@@ -85,6 +86,10 @@ describe("default dev manifest boundary", () => {
       secondPlayer: 10,
     });
     assert.deepEqual(resolveDevDonCounts(defaultDevDonCounts), [6, 10]);
+  });
+
+  test("dev RNG seed is fresh for each generated setup", () => {
+    assert.notEqual(createDevRngSeed(), createDevRngSeed());
   });
 
   test("rejects invalid dev DON deck count overrides", () => {

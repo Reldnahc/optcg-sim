@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
   createRedisCardDataCache,
@@ -124,6 +125,8 @@ export const resolveDevDonCounts = (
   assertValidDevDonCount(input.secondPlayer, "deck2 DON deck count"),
 ];
 
+export const createDevRngSeed = (): string => `dev-local-${randomUUID()}`;
+
 export const createDevPlayerSetupFromDecklist = (
   playerId: PlayerId,
   decklist: DevDecklist,
@@ -197,7 +200,7 @@ export const createDefaultDevMatchSetup = async (
   return {
     matchId: input.matchId,
     firstPlayerId: input.firstPlayerId,
-    rngSeed: "op13-dev-local-seed",
+    rngSeed: createDevRngSeed(),
     playerOrder: input.playerOrder,
     players: [
       createDevPlayerSetupFromDecklist(
