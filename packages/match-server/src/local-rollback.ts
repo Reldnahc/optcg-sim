@@ -293,7 +293,6 @@ export const resolveRollbackConsent = (
   const restored = cloneGameState(point.state);
   restored.seq = (Number(state.seq) + 1) as GameState["seq"];
   restored.actionSeq = state.actionSeq + 1;
-  delete restored.pendingDecision;
   return {
     state: restored,
     rollback: {

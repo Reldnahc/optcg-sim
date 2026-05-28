@@ -796,6 +796,60 @@ describe("local dev match", () => {
     );
   });
 
+  test("restores pending gameplay decisions when rolling back before a decision response", () => {
+    const match = createTestMatch();
+    const initial = getLocalDevSnapshot(match);
+    const setupAction = mustPlayerSnapshot(initial, p1).actions.find((action) =>
+      action.label.includes("during setup"),
+    );
+    if (setupAction === undefined) {
+      throw new Error("Expected p1 setup action.");
+    }
+    const appliedSetup = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: setupAction.index,
+    });
+    assert.deepEqual(appliedSetup.errors, []);
+    const setupPoint = getLocalDevSnapshot(match).rollback?.points.find(
+      (point) => point.stateSeq === initial.stateSeq,
+    );
+    if (setupPoint === undefined) {
+      throw new Error(
+        "Expected rollback point before setup decision response.",
+      );
+    }
+    const main = keepBothPlayersAndAdvance(match);
+    assert.equal(main.turn.phase, "main");
+
+    const requested = requestLocalDevRollback(match, {
+      playerId: p1,
+      rollbackPointId: setupPoint.rollbackPointId,
+    });
+    assert.deepEqual(requested.errors, []);
+    const decision = mustPlayerSnapshot(getLocalDevSnapshot(match), p2).view
+      .pendingDecision;
+    if (decision?.type !== "rollbackConsent") {
+      throw new Error("Expected rollback consent decision.");
+    }
+
+    const accepted = applyLocalDevDecision(match, {
+      playerId: p2,
+      decisionId: decision.id,
+      response: { type: "rollbackConsent", allow: true },
+    });
+
+    assert.deepEqual(accepted.errors, []);
+    const restored = getLocalDevSnapshot(match);
+    assert.equal(
+      mustPlayerSnapshot(restored, p1).view.pendingDecision?.type,
+      "selectCards",
+    );
+    assert.equal(
+      mustPlayerSnapshot(restored, p2).view.pendingDecision,
+      undefined,
+    );
+  });
+
   test("denying rollback consent clears the request without rewinding", () => {
     const match = createTestMatch();
     const before = keepBothPlayersAndAdvance(match);
