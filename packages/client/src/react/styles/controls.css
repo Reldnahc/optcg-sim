@@ -26,7 +26,16 @@
 }
 
 .controls-panel {
+  position: relative;
   overflow: auto;
+  padding-top: 58px;
+}
+
+.control-preview-slot {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
 }
 
 .control-actions,

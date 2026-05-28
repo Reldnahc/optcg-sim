@@ -178,6 +178,36 @@ describe("card action menu", () => {
     assert.equal(styles.includes(".match-facts"), false);
   });
 
+  test("control rail renders preview control in the top-left controls panel slot", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+        previewControl: createElement("button", {
+          className: "card-preview-minimized-button",
+          type: "button",
+        }),
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.match(markup, /control-preview-slot/u);
+    assert.match(markup, /card-preview-minimized-button/u);
+    assert.match(styles, /\.controls-panel\s*\{[^}]*position:\s*relative;/u);
+    assert.match(
+      styles,
+      /\.control-preview-slot\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(styles, /\.control-preview-slot\s*\{[^}]*top:\s*10px;/u);
+    assert.match(styles, /\.control-preview-slot\s*\{[^}]*left:\s*10px;/u);
+  });
+
   test("concede button uses dedicated red styles", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 
@@ -10,6 +12,7 @@ export interface ControlRailProps {
   concedeDisabled?: boolean | undefined;
   concedeConfirming?: boolean | undefined;
   onConcede?: (() => void) | undefined;
+  previewControl?: ReactNode | undefined;
 }
 
 export const ControlRail = ({
@@ -21,12 +24,16 @@ export const ControlRail = ({
   concedeDisabled = true,
   concedeConfirming = false,
   onConcede,
+  previewControl,
 }: ControlRailProps): React.JSX.Element => (
   <aside className="control-rail">
     <section className="summary-panel opponent-summary">
       <h2>Opponent</h2>
     </section>
     <section className="controls-panel">
+      {previewControl === undefined ? null : (
+        <div className="control-preview-slot">{previewControl}</div>
+      )}
       <div className="control-actions">
         <button className="action-button" type="button" onClick={onNewMatch}>
           New match

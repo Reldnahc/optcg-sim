@@ -3,41 +3,38 @@
 }
 
 .card-preview-minimized-button {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 11;
+  all: unset;
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  border: 2px solid #f4eee7;
-  border-radius: 8px;
-  background: rgba(38, 35, 34, 0.97);
-  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
+  color: #fff;
   cursor: pointer;
 }
 
-.card-preview-magnifier-icon {
-  position: relative;
-  display: block;
-  width: 17px;
-  height: 17px;
-  border: 3px solid #fff;
-  border-radius: 50%;
+.card-preview-minimized-button:hover:not(:disabled) .card-preview-magnifier-icon {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95));
+  stroke: #fff;
+  transform: scale(1.08);
 }
 
-.card-preview-magnifier-icon::after {
-  position: absolute;
-  right: -8px;
-  bottom: -6px;
-  width: 10px;
-  height: 3px;
-  background: #fff;
-  border-radius: 2px;
-  content: "";
-  transform: rotate(45deg);
-  transform-origin: left center;
+.card-preview-minimized-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.card-preview-magnifier-icon {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.8;
+  transition:
+    filter 120ms ease,
+    stroke 120ms ease,
+    transform 120ms ease;
 }
 
 .card-preview-content {
