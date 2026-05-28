@@ -67,6 +67,7 @@ export function parseEffectLineDetailed(
   const markerParse = parseMarkers(entryPoint.rest, registry.markers ?? []);
   const expression = firstExpressionParse(registry.expressions, {
     text: markerParse.rest,
+    entryPoint: entryPoint.node,
   });
   if (expression === undefined || expression.rest.trim().length > 0) {
     return {
@@ -89,9 +90,13 @@ export function parseEffectLineDetailed(
         category:
           expression.blockPatch?.category ?? entryPoint.node.category ?? "auto",
         trigger: entryPoint.node.trigger,
-        ...(expression.blockPatch?.condition === undefined
+        ...((expression.blockPatch?.condition ?? entryPoint.node.condition) ===
+        undefined
           ? {}
-          : { condition: expression.blockPatch.condition }),
+          : {
+              condition:
+                expression.blockPatch?.condition ?? entryPoint.node.condition,
+            }),
         ...(expression.blockPatch?.cost === undefined
           ? {}
           : { cost: expression.blockPatch.cost }),

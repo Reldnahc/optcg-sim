@@ -35,6 +35,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
 ]);
 const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
   "categories",
+  "names",
   "typesAny",
 ]);
 const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
@@ -132,7 +133,10 @@ const isSupportedBasePowerSetFilter = (
       return false;
     }
   }
-  return isNonEmptyStringArray(filter.typesAny);
+  return (
+    isNonEmptyStringArray(filter.typesAny) ||
+    isNonEmptyStringArray(filter.names)
+  );
 };
 
 const isSupportedCostModifierFilter = (
@@ -541,10 +545,13 @@ const effectToDerivedModifier = (
   }
   if (effect.type === "setBasePower") {
     if (
-      effect.target.type !== "all" ||
-      effect.target.zone !== "characterArea" ||
-      effect.target.player !== "self" ||
-      !isSupportedBasePowerSetFilter(effect.target.filter)
+      effect.target.type !== "self" &&
+      !(
+        effect.target.type === "all" &&
+        effect.target.zone === "characterArea" &&
+        effect.target.player === "self" &&
+        isSupportedBasePowerSetFilter(effect.target.filter)
+      )
     ) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported base-power target"),

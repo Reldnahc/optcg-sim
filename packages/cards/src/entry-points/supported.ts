@@ -1,4 +1,4 @@
-import type { EffectCategory, Trigger } from "@optcg/types";
+import type { Condition, EffectCategory, Trigger } from "@optcg/types";
 
 import type {
   EntryPointParseResult,
@@ -10,6 +10,7 @@ interface SupportedEntryPoint {
   readonly text: string;
   readonly trigger: Trigger;
   readonly category?: EffectCategory;
+  readonly condition?: Condition;
   readonly evidence: readonly PrimitiveEvidence[];
 }
 
@@ -54,7 +55,23 @@ const supportedEntryPoints: readonly SupportedEntryPoint[] = [
     text: "[Your Turn]",
     trigger: { type: "permanent" },
     category: "permanent",
-    evidence: ["entry:yourTurn", "sourcePresence:mustRemain"],
+    condition: { type: "yourTurn" },
+    evidence: [
+      "entry:yourTurn",
+      "condition:yourTurn",
+      "sourcePresence:mustRemain",
+    ],
+  },
+  {
+    text: "[Opponent's Turn]",
+    trigger: { type: "permanent" },
+    category: "permanent",
+    condition: { type: "opponentTurn" },
+    evidence: [
+      "entry:opponentTurn",
+      "condition:opponentTurn",
+      "sourcePresence:mustRemain",
+    ],
   },
 ];
 
@@ -73,6 +90,9 @@ export function parseSupportedEntryPoint(
           ...(entryPoint.category === undefined
             ? {}
             : { category: entryPoint.category }),
+          ...(entryPoint.condition === undefined
+            ? {}
+            : { condition: entryPoint.condition }),
         },
         evidence: entryPoint.evidence,
         rest: input.text.slice(entryPoint.text.length).trimStart(),

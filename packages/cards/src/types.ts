@@ -17,6 +17,7 @@ export type PrimitiveEvidence =
   | "entry:activateMain"
   | "entry:onBlock"
   | "entry:endOfYourTurn"
+  | "entry:opponentTurn"
   | "entry:eventMain"
   | "entry:eventCounter"
   | "entry:startOfGame"
@@ -135,6 +136,8 @@ export type PrimitiveEvidence =
   | "instruction:selectCards"
   | "instruction:attachDon"
   | "condition:turnCount"
+  | "condition:yourTurn"
+  | "condition:opponentTurn"
   | "position:top"
   | "target:thisCard"
   | "target:opponentCharacters"
@@ -188,6 +191,7 @@ export interface EntryPointParseResult {
     readonly type: "entryPoint";
     readonly trigger: Trigger;
     readonly category?: EffectCategory;
+    readonly condition?: Condition;
   };
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
@@ -195,6 +199,7 @@ export interface EntryPointParseResult {
 
 export interface ParseInput {
   readonly text: string;
+  readonly entryPoint?: EntryPointParseResult["node"];
 }
 
 export interface ExpressionParseResult {

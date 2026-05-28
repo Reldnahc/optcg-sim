@@ -30,12 +30,13 @@ const must = <T>(value: T | undefined, label: string): T => {
 const resolvedCard = (params: {
   cardId: CardId;
   category: "leader" | "character" | "don";
+  name?: string;
   power?: number;
 }): ResolvedCard =>
   ({
     cardId: params.cardId,
     language: "en",
-    name: String(params.cardId),
+    name: params.name ?? String(params.cardId),
     category: params.category,
     set: "TEST",
     setName: "Test Set",
@@ -285,6 +286,63 @@ const permanentLeaderPowerDefinition = (cardId: CardId): EffectDefinition => ({
   },
 });
 
+const permanentOpponentTurnBasePowerDefinition = (
+  cardId: CardId,
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:opponent-turn-base-power" as never,
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: { type: "opponentTurn" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "self",
+                filter: { categories: ["character"], names: ["Ohm"] },
+              },
+              value: 6000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: { type: "opponentTurn" },
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: { type: "self" },
+              value: 6000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: { type: "opponentTurn" },
+              },
+            },
+          },
+        ],
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
 test("reviewed permanent implemented-dsl keyword applies at threshold through computeView", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
@@ -406,6 +464,63 @@ test("reviewed permanent implemented-dsl leader power applies only while trash t
   assert.equal(
     atThresholdView.cards[p1State.leader.instanceId]?.currentPower,
     6000,
+  );
+});
+
+test("reviewed permanent implemented-dsl base power applies to named cards and self only on opponent turn", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("self-source"), 0);
+  const namedOhm = withCharacter(p1, toCardId("named-ohm"), 1);
+  const unrelated = withCharacter(p1, toCardId("unrelated-character"), 2);
+  p1State.characters = [source, namedOhm, unrelated];
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedCard({
+      cardId: source.cardId,
+      category: "character",
+      name: "Not Ohm",
+      power: 3000,
+    }),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:opponent-turn-base-power",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.cards[namedOhm.cardId] = resolvedCard({
+    cardId: namedOhm.cardId,
+    category: "character",
+    name: "Ohm",
+    power: 3000,
+  });
+  state.cardManifest.cards[unrelated.cardId] = resolvedCard({
+    cardId: unrelated.cardId,
+    category: "character",
+    name: "Other",
+    power: 3000,
+  });
+  state.cardManifest.effectDefinitions = {
+    "def:perm:opponent-turn-base-power":
+      permanentOpponentTurnBasePowerDefinition(source.cardId),
+  };
+
+  state.turn.turnPlayerId = p1;
+  const ownTurnView = computeView(state);
+  state.turn.turnPlayerId = p2;
+  const opponentTurnView = computeView(state);
+
+  assert.equal(ownTurnView.cards[source.instanceId]?.currentPower, 3000);
+  assert.equal(ownTurnView.cards[namedOhm.instanceId]?.currentPower, 3000);
+  assert.equal(opponentTurnView.cards[source.instanceId]?.currentPower, 6000);
+  assert.equal(opponentTurnView.cards[namedOhm.instanceId]?.currentPower, 6000);
+  assert.equal(
+    opponentTurnView.cards[unrelated.instanceId]?.currentPower,
+    3000,
   );
 });
 

@@ -501,6 +501,11 @@ const evaluateCondition = (
         supported: true,
         passed: state.turn.turnPlayerId === entry.controllerId,
       };
+    case "opponentTurn":
+      return {
+        supported: true,
+        passed: state.turn.turnPlayerId !== entry.controllerId,
+      };
     case "attachedDonCount":
       return evaluateAttachedDonCount(state, entry, condition);
     case "leaderColorCount":
@@ -606,7 +611,6 @@ const evaluateCondition = (
     case "custom":
     case "attackTarget":
     case "donCount":
-    case "opponentTurn":
     case "cardState":
     case "sourceStillInZone":
     case "eventPayload":
@@ -624,6 +628,7 @@ export const isSupportedQueuedEffectConditionShape = (
   }
   switch (condition.type) {
     case "yourTurn":
+    case "opponentTurn":
       return true;
     case "attachedDonCount":
       return (
@@ -675,7 +680,6 @@ export const isSupportedQueuedEffectConditionShape = (
     case "custom":
     case "attackTarget":
     case "donCount":
-    case "opponentTurn":
     case "cardState":
     case "sourceStillInZone":
     case "eventPayload":

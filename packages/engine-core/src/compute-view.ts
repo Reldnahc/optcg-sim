@@ -48,6 +48,7 @@ const supportedContinuousKeywordGrants = new Set<Keyword>([
 ]);
 const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
   "categories",
+  "names",
   "typesAny",
 ]);
 
@@ -112,7 +113,10 @@ const isSupportedBasePowerSetFilter = (
       return false;
     }
   }
-  return isNonEmptyStringArray(filter.typesAny);
+  return (
+    isNonEmptyStringArray(filter.typesAny) ||
+    isNonEmptyStringArray(filter.names)
+  );
 };
 
 const isSupportedContinuousBasePowerSetModifier = (
@@ -126,10 +130,11 @@ const isSupportedContinuousBasePowerSetModifier = (
   effect.modifier.operation.type === "setBasePower" &&
   Number.isSafeInteger(effect.modifier.operation.value) &&
   effect.modifier.operation.value > 0 &&
-  effect.modifier.target.type === "all" &&
-  effect.modifier.target.zone === "characterArea" &&
-  effect.modifier.target.player === "self" &&
-  isSupportedBasePowerSetFilter(effect.modifier.target.filter);
+  (effect.modifier.target.type === "self" ||
+    (effect.modifier.target.type === "all" &&
+      effect.modifier.target.zone === "characterArea" &&
+      effect.modifier.target.player === "self" &&
+      isSupportedBasePowerSetFilter(effect.modifier.target.filter)));
 
 const isSupportedContinuousCostModifier = (
   effect: ContinuousEffectRecord,
@@ -282,6 +287,12 @@ const cardMatchesAllFilter = (
   if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => metadata.types.includes(type))
+  ) {
+    return false;
+  }
+  if (
+    filter.names !== undefined &&
+    !filter.names.some((name) => metadata.name === name)
   ) {
     return false;
   }

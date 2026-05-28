@@ -1,4 +1,4 @@
-import type { Effect, EffectCategory, Trigger } from "@optcg/types";
+import type { Condition, Effect, EffectCategory, Trigger } from "@optcg/types";
 import { describe, expect, it } from "vitest";
 
 import { syntheticInstructionParser } from "../instructions/index.js";
@@ -11,6 +11,7 @@ const supportedEntryPointCases: readonly {
   readonly text: string;
   readonly trigger: Trigger;
   readonly category?: EffectCategory;
+  readonly condition?: Condition;
   readonly evidence: readonly string[];
 }[] = [
   {
@@ -49,17 +50,40 @@ const supportedEntryPointCases: readonly {
     category: "activate",
     evidence: ["entry:activateMain", "sourcePresence:mustRemain"],
   },
+  {
+    text: "[Your Turn]",
+    trigger: { type: "permanent" },
+    category: "permanent",
+    condition: { type: "yourTurn" },
+    evidence: [
+      "entry:yourTurn",
+      "condition:yourTurn",
+      "sourcePresence:mustRemain",
+    ],
+  },
+  {
+    text: "[Opponent's Turn]",
+    trigger: { type: "permanent" },
+    category: "permanent",
+    condition: { type: "opponentTurn" },
+    evidence: [
+      "entry:opponentTurn",
+      "condition:opponentTurn",
+      "sourcePresence:mustRemain",
+    ],
+  },
 ] as const;
 
 describe("supported entry-point parser", () => {
   it.each(supportedEntryPointCases)(
     "parses $text as an isolated entry point",
-    ({ text, trigger, category, evidence }) => {
+    ({ text, trigger, category, condition, evidence }) => {
       expect(parseSupportedEntryPoint({ text })).toEqual({
         node: {
           type: "entryPoint",
           trigger,
           ...(category === undefined ? {} : { category }),
+          ...(condition === undefined ? {} : { condition }),
         },
         evidence,
         rest: "",
@@ -69,7 +93,7 @@ describe("supported entry-point parser", () => {
 
   it.each(supportedEntryPointCases)(
     "integrates $text with expression orchestration without parsing the expression",
-    ({ text, trigger, category, evidence }) => {
+    ({ text, trigger, category, condition, evidence }) => {
       const effect: Effect = { type: "custom", handler: "synthetic:A" };
 
       const result = parseEffectLine(`${text} A.`, {
@@ -95,6 +119,7 @@ describe("supported entry-point parser", () => {
         block: {
           category: category ?? "auto",
           trigger,
+          ...(condition === undefined ? {} : { condition }),
           effect,
         },
         evidence: [

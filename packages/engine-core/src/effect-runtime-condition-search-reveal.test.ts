@@ -641,7 +641,10 @@ test("unsupported boolean child fails closed", () => {
           id: toEffectId("unsupported-boolean-child"),
           condition: {
             type: "and",
-            conditions: [{ type: "yourTurn" }, { type: "opponentTurn" }],
+            conditions: [
+              { type: "yourTurn" },
+              { type: "custom", check: "unsupported-condition" },
+            ],
           },
         },
       ],
@@ -668,7 +671,7 @@ test("and fails closed when earlier child is false and later child is unsupporte
     type: "and",
     conditions: [
       { type: "handCount", player: "self", op: "gt", value: 50 },
-      { type: "opponentTurn" },
+      { type: "custom", check: "unsupported-condition" },
     ],
   });
   assert.deepEqual(result, { supported: false });
@@ -679,7 +682,10 @@ test("or fails closed when earlier child is true and later child is unsupported"
   const entry = queueDrawForP1();
   const result = evaluateQueuedEffectCondition(state, entry, {
     type: "or",
-    conditions: [{ type: "yourTurn" }, { type: "opponentTurn" }],
+    conditions: [
+      { type: "yourTurn" },
+      { type: "custom", check: "unsupported-condition" },
+    ],
   });
   assert.deepEqual(result, { supported: false });
 });

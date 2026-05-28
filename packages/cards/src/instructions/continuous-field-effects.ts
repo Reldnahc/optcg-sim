@@ -1,4 +1,4 @@
-import type { Condition } from "@optcg/types";
+import type { Condition, Effect, Target } from "@optcg/types";
 
 import { parseKeyword } from "../keywords/index.js";
 import { parsePositivePowerModifier } from "../modifiers/index.js";
@@ -7,7 +7,11 @@ import {
   parseThisCharacterTarget,
   parseYourLeaderTarget,
 } from "../targets/index.js";
-import type { InstructionParseResult, ParseInput } from "../types.js";
+import type {
+  InstructionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 
 export interface ContinuousInstructionContext {
   readonly condition: Condition;
@@ -46,6 +50,114 @@ export const setBasePowerPrimitive = {
     "duration:whileConditionTrue",
   ],
 } as const;
+
+type BasePowerTargetSubject = {
+  readonly target: Target;
+  readonly evidence: readonly PrimitiveEvidence[];
+};
+
+const setBasePowerEffect = (
+  target: Target,
+  value: number,
+  condition: Condition,
+): Extract<Effect, { type: "setBasePower" }> => ({
+  type: "setBasePower",
+  target,
+  value,
+  duration: {
+    type: "whileConditionTrue",
+    condition,
+  },
+});
+
+const parseBasePowerSubject = (
+  text: string,
+): BasePowerTargetSubject | undefined => {
+  const namedCardsMatch =
+    /^All of your \[(?<name>[^\]]+)\] cards' base power$/i.exec(text.trim());
+  const name = namedCardsMatch?.groups?.["name"]?.trim();
+  if (name !== undefined && name.length > 0) {
+    return {
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: { categories: ["character"], names: [name] },
+      },
+      evidence: [
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:name",
+        "filter:category:character",
+      ],
+    };
+  }
+
+  if (/^this Character's base power$/i.test(text.trim())) {
+    return {
+      target: { type: "self" },
+      evidence: ["target:thisCharacter"],
+    };
+  }
+
+  return undefined;
+};
+
+export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const match = /^(?<targets>.+?) become (?<value>[1-9]\d*)\.?$/i.exec(
+    input.text,
+  );
+  const targetsText = match?.groups?.["targets"];
+  const valueText = match?.groups?.["value"];
+  if (targetsText === undefined || valueText === undefined) {
+    return undefined;
+  }
+
+  const value = Number.parseInt(valueText, 10);
+  const subjects = targetsText
+    .split(/\s+and\s+/i)
+    .map((subject) => parseBasePowerSubject(subject));
+  if (
+    subjects.length === 0 ||
+    subjects.some((subject) => subject === undefined)
+  ) {
+    return undefined;
+  }
+
+  const parsedSubjects = subjects as BasePowerTargetSubject[];
+  const effects = parsedSubjects.map((subject) =>
+    setBasePowerEffect(subject.target, value, context.condition),
+  );
+  const singleEffect = effects[0];
+  if (singleEffect === undefined) {
+    return undefined;
+  }
+  const effect: Effect =
+    effects.length === 1
+      ? singleEffect
+      : {
+          type: "sequence",
+          effects: effects.map((sequenceEffect) => ({
+            connector: "always" as const,
+            effect: sequenceEffect,
+          })),
+        };
+
+  return {
+    effect,
+    evidence: [
+      "instruction:setBasePower",
+      ...parsedSubjects.flatMap((subject) => subject.evidence),
+      "value:basePower:positiveInteger",
+      "duration:whileConditionTrue",
+    ],
+    rest: "",
+  };
+};
 
 export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
   input,

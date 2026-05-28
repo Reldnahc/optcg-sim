@@ -773,7 +773,7 @@ test("unsupported conditions fail closed deterministically", () => {
           {
             ...effect,
             id: toEffectId("unsupported-condition"),
-            condition: { type: "opponentTurn" },
+            condition: { type: "custom", check: "unsupported-condition" },
           },
         ],
       },
@@ -899,7 +899,7 @@ test("unsupported condition on first queued entry fail-closes and does not resol
         {
           ...effect,
           id: toEffectId("queue-unsupported-first"),
-          condition: { type: "opponentTurn" },
+          condition: { type: "custom", check: "unsupported-condition" },
         },
         { ...effect, id: toEffectId("queue-supported-second") },
       ],

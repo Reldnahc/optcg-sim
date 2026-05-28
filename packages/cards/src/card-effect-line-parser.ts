@@ -28,6 +28,7 @@ import {
   parseModifyCostInstruction,
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
+  parseBasePowerBecomeInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parsePlayFromTrashInstruction,
   parseRestOpponentCharactersInstruction,
@@ -49,6 +50,7 @@ import {
 } from "./orchestrator.js";
 import {
   conditionalContinuousExpressionParser,
+  entryConditionContinuousExpressionParser,
   conditionalBlockExpressionParser,
   conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
@@ -102,6 +104,7 @@ const continuousInstructionParsers = [
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,
   parseSetBasePowerInstruction,
+  parseBasePowerBecomeInstruction,
 ] as const;
 
 const generalExpressionParser = (input: ParseInput) =>
@@ -155,6 +158,10 @@ const defaultRegistry = {
     }),
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,
+      connectors: [parseAndConnector],
+      instructions: continuousInstructionParsers,
+    }),
+    entryConditionContinuousExpressionParser({
       connectors: [parseAndConnector],
       instructions: continuousInstructionParsers,
     }),

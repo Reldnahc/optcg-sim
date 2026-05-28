@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ContinuousInstructionContext } from "./continuous-field-effects.js";
 import {
+  parseBasePowerBecomeInstruction,
   parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
   thisCharacterKeywordGrantPrimitive,
@@ -62,6 +63,66 @@ describe("continuous field-effect instruction parsers", () => {
         "zone:characterArea",
         "filter:type",
         "filter:category:character",
+        "value:basePower:positiveInteger",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses named cards plus this Character as separate reusable base-power targets", () => {
+    expect(
+      parseBasePowerBecomeInstruction(
+        {
+          text: "All of your [Ohm] cards' base power and this Character's base power become 6000.",
+        },
+        {
+          condition: { type: "opponentTurn" },
+        },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "self",
+                filter: { categories: ["character"], names: ["Ohm"] },
+              },
+              value: 6000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: { type: "opponentTurn" },
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: { type: "self" },
+              value: 6000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: { type: "opponentTurn" },
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:setBasePower",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:name",
+        "filter:category:character",
+        "target:thisCharacter",
         "value:basePower:positiveInteger",
         "duration:whileConditionTrue",
       ],

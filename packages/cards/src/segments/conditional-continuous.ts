@@ -59,6 +59,55 @@ export function conditionalContinuousExpressionParser(options: {
   };
 }
 
+export function entryConditionContinuousExpressionParser(options: {
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly ContinuousInstructionParser[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input) => {
+    const condition = input.entryPoint?.condition;
+    if (condition === undefined || input.entryPoint?.category !== "permanent") {
+      return undefined;
+    }
+
+    const segment = continuousInstructionSegmentParser({
+      condition,
+      instructions: options.instructions,
+    })(input);
+    if (segment !== undefined) {
+      return {
+        effect: segment.effect,
+        evidence: segment.evidence,
+        rest: "",
+        blockPatch: {
+          category: "permanent",
+        },
+      };
+    }
+
+    const body = parseExpression(input.text, {
+      connectors: options.connectors,
+      segments: [
+        continuousInstructionSegmentParser({
+          condition,
+          instructions: options.instructions,
+        }),
+      ],
+    });
+    if (body === undefined || body.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: normalizeContinuousEffect(body.effect),
+      evidence: body.evidence,
+      rest: "",
+      blockPatch: {
+        category: "permanent",
+      },
+    };
+  };
+}
+
 function normalizeContinuousEffect(
   effect: ExpressionParseResult["effect"],
 ): ExpressionParseResult["effect"] {
