@@ -5,8 +5,7 @@
     "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"
     "opponent-deck . opponent-stage opponent-leader . opponent-life"
     "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"
-    ". . opponent-center-spacer opponent-center-spacer . ."
-    ". . player-center-spacer player-center-spacer . ."
+    ". . center-spacer center-spacer . ."
     "player-life player-characters player-characters player-characters player-characters player-characters"
     "player-life . player-leader player-stage . player-deck"
     "player-don-deck player-cost player-cost player-cost player-cost player-trash";
@@ -17,8 +16,7 @@
   grid-template-rows:
     var(--playmat-row-height) var(--playmat-row-height)
     var(--playmat-row-height) minmax(0, 1fr)
-    minmax(0, 1fr) var(--playmat-row-height)
-    var(--playmat-row-height)
+    var(--playmat-row-height) var(--playmat-row-height)
     var(--playmat-row-height);
   gap: 6px;
   min-height: 0;
@@ -87,12 +85,18 @@
   grid-area: player-characters;
 }
 
+.center-spacer {
+  grid-area: center-spacer;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .opponent-center-spacer {
-  grid-area: opponent-center-spacer;
+  min-height: 0;
 }
 
 .player-center-spacer {
-  grid-area: player-center-spacer;
+  min-height: 0;
 }
 
 .player-life {

@@ -180,8 +180,10 @@ export const BoardLayout = ({
           onCardAction={onCardAction}
         />
       </div>
-      <div className="playmat-zone opponent-center-spacer" />
-      <div className="playmat-zone player-center-spacer" />
+      <div className="playmat-zone center-spacer">
+        <div className="opponent-center-spacer" />
+        <div className="player-center-spacer" />
+      </div>
       <div className="playmat-zone player-characters">
         <Zone
           label="Character Area"

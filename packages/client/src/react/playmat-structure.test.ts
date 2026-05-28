@@ -30,6 +30,7 @@ describe("playmat structure", () => {
       "opponent-don-deck",
       "opponent-trash",
       "opponent-life",
+      "center-spacer",
       "opponent-center-spacer",
       "player-center-spacer",
       "player-characters",
@@ -65,7 +66,7 @@ describe("playmat structure", () => {
     );
   });
 
-  test("physical table grid uses fixed play rows with two center flexible spacers", async () => {
+  test("physical table grid keeps the original center footprint split into two halves", async () => {
     const [appShellStyles, playmatStyles] = await Promise.all([
       readFile(appShellStylesPath, "utf8"),
       readFile(playmatStylesPath, "utf8"),
@@ -77,19 +78,35 @@ describe("playmat structure", () => {
     );
     assert.match(
       playmatStyles,
-      /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
+      /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
+    );
+    assert.equal(
+      playmatStyles.includes('". . center-spacer center-spacer . ."'),
+      true,
     );
     assert.equal(
       playmatStyles.includes(
         '". . opponent-center-spacer opponent-center-spacer . ."',
       ),
-      true,
+      false,
     );
     assert.equal(
       playmatStyles.includes(
         '". . player-center-spacer player-center-spacer . ."',
       ),
-      true,
+      false,
+    );
+    assert.match(
+      playmatStyles,
+      /\.center-spacer\s*\{[^}]*grid-area:\s*center-spacer;[^}]*display:\s*grid;[^}]*grid-template-rows:\s*minmax\(\s*0,\s*1fr\s*\)\s+minmax\(\s*0,\s*1fr\s*\);/u,
+    );
+    assert.match(
+      playmatStyles,
+      /\.opponent-center-spacer\s*\{[^}]*min-height:\s*0;/u,
+    );
+    assert.match(
+      playmatStyles,
+      /\.player-center-spacer\s*\{[^}]*min-height:\s*0;/u,
     );
   });
 
@@ -270,7 +287,7 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
+      /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
     );
   });
 
