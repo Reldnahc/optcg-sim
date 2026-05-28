@@ -44,6 +44,12 @@ type ContinuousResolvedEffect = Extract<
 type ContinuousEffectWithChooseTarget = ContinuousResolvedEffect & {
   readonly target: Extract<Target, { type: "choose" | "chooseFromZones" }>;
 };
+type ConditionalContinuousChooseTargetEffect = Extract<
+  Effect,
+  { type: "conditional" }
+> & {
+  readonly then: ContinuousEffectWithChooseTarget;
+};
 
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
@@ -157,6 +163,22 @@ const isContinuousEffectWithChooseTarget = (
     target !== null &&
     ((target as { readonly type?: unknown }).type === "choose" ||
       (target as { readonly type?: unknown }).type === "chooseFromZones")
+  );
+};
+
+const isConditionalContinuousChooseTargetEffect = (
+  effect: unknown,
+): effect is ConditionalContinuousChooseTargetEffect => {
+  if (typeof effect !== "object" || effect === null) {
+    return false;
+  }
+  const candidate = effect as {
+    readonly then?: unknown;
+    readonly type?: unknown;
+  };
+  return (
+    candidate.type === "conditional" &&
+    isContinuousEffectWithChooseTarget(candidate.then)
   );
 };
 
@@ -369,6 +391,61 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       params.state,
       entry,
       pausedSegment.effect,
+      params.selectedTargets,
+    );
+    if (records === null) {
+      return {
+        error: params.sequenceRuntimeError(
+          entry.effectBlockId,
+          "segment-execution-failed",
+        ),
+        ok: false,
+      };
+    }
+    const scopedSegmentKey = segmentKeyForPath(
+      frame.effectPath,
+      params.segmentKey,
+    );
+    return params.resumeSequenceFrameFromLedgers({
+      createTrashDecision: params.createUnsupportedTrashDecision,
+      effectBlock,
+      entry,
+      finalizeCompleted: true,
+      frame,
+      ledgers: {
+        savedReferences: frame.savedReferences,
+        segmentResults: {
+          ...frame.segmentResults,
+          [scopedSegmentKey(
+            pausedSegment,
+            frame.pendingDecision.resumeAtSegmentIndex,
+          )]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: records.length > 0,
+            selectedTargets: [...params.selectedTargets],
+          },
+        },
+      },
+      state:
+        records.length === 0
+          ? params.state
+          : {
+              ...params.state,
+              continuousEffects: [
+                ...params.state.continuousEffects,
+                ...records,
+              ],
+            },
+    });
+  }
+
+  if (isConditionalContinuousChooseTargetEffect(pausedSegment.effect)) {
+    const records = createContinuousRecordsForResolvedEffect(
+      params.state,
+      entry,
+      pausedSegment.effect.then,
       params.selectedTargets,
     );
     if (records === null) {

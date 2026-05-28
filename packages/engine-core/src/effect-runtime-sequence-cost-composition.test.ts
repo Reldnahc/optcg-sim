@@ -397,6 +397,104 @@ const returnDonLeaderOrCharacterPowerSequence = (): Extract<
   ],
 });
 
+const conditionalReturnDonLeaderOrCharacterPowerSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-return-don",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: { type: "returnDon", count: 1, optional: true },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "conditional-power-leader-or-character",
+      connector: "ifYouDo",
+      effect: {
+        type: "conditional",
+        if: {
+          type: "hasCardInZone",
+          player: "self",
+          zone: "leaderArea",
+          filter: { categories: ["leader"], names: ["leader-red"] },
+        },
+        then: {
+          type: "modifyPower",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["leaderArea", "characterArea"],
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { categories: ["leader", "character"] },
+            },
+          },
+          value: 1000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    },
+    {
+      id: "ko-opponent-low-power-character",
+      connector: "then",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:ko-target",
+            connector: "always",
+            saveResultAs: "selected:ko-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: {
+                  categories: ["character"],
+                  power: { max: 3000 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "ko",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:ko-target",
+                },
+                zone: "characterArea",
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
   return applyAction(state, {
@@ -688,6 +786,72 @@ test("return-DON sequence resolves choose-from-zones continuous target before ma
     powerRecord.modifier.target.card.instanceId,
     leaderCandidate.card.instanceId,
   );
+});
+
+test("conditional return-DON sequence resolves choose-from-zones continuous target before materializing power", () => {
+  const state = sequenceQueueState(
+    conditionalReturnDonLeaderOrCharacterPowerSequence(),
+  );
+  placeActiveDon(state, 1);
+  const p1State = must(state.players[p1], "p1");
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+
+  const returnDonPaused = processEffectRuntime(state);
+  const paidReturnDon = payReturnDonWithFirstCostDon(returnDonPaused.state);
+  const targetDecision = must(
+    paidReturnDon.state.pendingDecision,
+    "leader-or-character target decision",
+  );
+
+  assert.equal(returnDonPaused.errors, undefined);
+  assert.equal(paidReturnDon.errors, undefined);
+  assert.equal(targetDecision.type, "selectTargets");
+
+  const leaderCandidate = must(
+    targetDecision.candidates.find(
+      (candidate) => candidate.card.zone?.zone === "leaderArea",
+    ),
+    "leader target candidate",
+  );
+  const selectedLeader = applyAction(paidReturnDon.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: [leaderCandidate.card] },
+  });
+  const powerRecord = must(
+    selectedLeader.state.continuousEffects[0],
+    "power record",
+  );
+  const koTargetDecision = must(
+    selectedLeader.state.pendingDecision,
+    "KO target decision",
+  );
+
+  assert.equal(selectedLeader.errors, undefined);
+  assert.equal(koTargetDecision.type, "selectTargets");
+  assert.deepEqual(koTargetDecision.request.filter, {
+    categories: ["character"],
+    power: { max: 3000 },
+  });
+  assert.equal(powerRecord.modifier.layer, "powerAdd");
+  assert.equal(powerRecord.modifier.target.type, "exactCard");
+  assert.equal(
+    powerRecord.modifier.target.card.instanceId,
+    leaderCandidate.card.instanceId,
+  );
+
+  const skippedKo = applyAction(selectedLeader.state, {
+    type: "respondToDecision",
+    decisionId: koTargetDecision.id,
+    response: { type: "targets", targets: [] },
+  });
+
+  assert.equal(skippedKo.errors, undefined);
+  assert.equal(skippedKo.state.pendingDecision, undefined);
 });
 
 test("hand play sequence filters candidates by color, type, and dynamic DON-field cost", () => {

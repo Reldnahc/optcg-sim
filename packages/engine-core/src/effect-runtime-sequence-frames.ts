@@ -1881,6 +1881,73 @@ const continueNoDecisionSegments = (
         events.push(...nested.events);
         changedState = nested.events.length > 0;
       } else {
+        const request = continuousChooseTargetRequest(segment.effect.then);
+        if (request !== undefined) {
+          const candidates = resolvePublicTargetCandidatesForRequest(
+            nextState,
+            request,
+            {
+              sourceControllerId: entry.controllerId,
+            },
+          );
+          const chooserId = resolvePlayerId(nextState, entry, request.chooser);
+          if (!candidates.ok || chooserId === undefined) {
+            return { ok: false };
+          }
+          const decision: SelectTargetsDecision = {
+            id: toDecisionId(
+              `decision:selectTargets:sequence:${String(entry.id)}:${String(index)}`,
+            ),
+            type: "selectTargets",
+            playerId: chooserId,
+            prompt: "Select targets.",
+            causedBy: {
+              type: "effect",
+              queueEntryId: entry.id,
+              effectId: entry.effectBlockId,
+            },
+            visibility: { type: "public" },
+            request,
+            candidates: candidates.candidates,
+          };
+          const decisionEvents: EngineEvent[] = [];
+          appendEvent(
+            nextState,
+            decisionEvents,
+            "decisionCreated",
+            {
+              decisionId: decision.id,
+              decisionType: decision.type,
+              playerId: decision.playerId,
+            },
+            { type: "public" },
+          );
+          const created = decisionEvents[0];
+          if (created !== undefined) {
+            created.causedBy = decision.causedBy;
+          }
+          const decisionState: GameState = {
+            ...nextState,
+            seq: toStateSeq(nextState.seq + 1),
+            pendingDecision: decision,
+            eventJournal: [...nextState.eventJournal, ...decisionEvents],
+          };
+          const frame = frameForPausedSequenceDecision({
+            decision,
+            entry,
+            effectPath: [...effectPath],
+            index,
+            savedReferences: pausedLedgers.savedReferences,
+            segmentResults: pausedLedgers.segmentResults,
+            state: decisionState,
+          });
+          return {
+            events: [...events, ...decisionEvents],
+            kind: "paused",
+            ok: true,
+            state: stateWithPausedSequenceFrame(decisionState, entry, frame),
+          };
+        }
         const records = createContinuousRecordsForResolvedEffect(
           nextState,
           entry,
