@@ -15,6 +15,7 @@ import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
+const cardStylesPath = join(sourceDirectory, "styles", "card.css");
 const countBadgeStylesPath = join(sourceDirectory, "styles", "count-badge.css");
 
 const card = (index: number): ClientCardModel => ({
@@ -161,6 +162,14 @@ describe("hand layout", () => {
     assert.doesNotMatch(pointerDownSource, /stopPropagation\(\)/u);
     assert.doesNotMatch(pointerDownSource, /setPointerCapture/u);
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
+  });
+
+  test("card images do not start native browser image dragging", async () => {
+    const styles = await readFile(cardStylesPath, "utf8");
+
+    assert.match(styles, /\.card-face\s*\{[^}]*pointer-events:\s*none;/u);
+    assert.match(styles, /\.card-face\s*\{[^}]*user-select:\s*none;/u);
+    assert.match(styles, /\.card-face\s*\{[^}]*-webkit-user-drag:\s*none;/u);
   });
 
   test("board layout wires hand rearranging only to the player hand", async () => {
