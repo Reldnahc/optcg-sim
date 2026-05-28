@@ -205,6 +205,18 @@ describe("collection modal", () => {
     );
   });
 
+  test("match app renders a close-only opponent reveal collection window", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /opponentRevealFromEvents/u);
+    assert.match(source, /Opponent revealed/u);
+    assert.match(source, /setDismissedRevealIds/u);
+    assert.doesNotMatch(source, /onToggleMinimized=\{[^}]*opponentReveal/u);
+  });
+
   test("collection modal can render selectable decision cards with confirm control", () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {

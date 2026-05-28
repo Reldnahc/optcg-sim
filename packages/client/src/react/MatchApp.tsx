@@ -16,6 +16,7 @@ import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
+import { opponentRevealFromEvents } from "./reveal-viewer.js";
 import { useMatchClient } from "./useMatchClient.js";
 
 export const MatchApp = (): React.JSX.Element => {
@@ -23,6 +24,9 @@ export const MatchApp = (): React.JSX.Element => {
   const [collectionModal, setCollectionModal] = useState<
     CollectionModalModel | undefined
   >(undefined);
+  const [dismissedRevealIds, setDismissedRevealIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
@@ -45,6 +49,11 @@ export const MatchApp = (): React.JSX.Element => {
     clientState !== undefined && "lobbyId" in clientState
       ? clientState
       : undefined;
+  const currentPlayerId = client.currentPlayerId;
+  const playerSnapshot =
+    currentPlayerId === undefined || matchState === undefined
+      ? undefined
+      : matchState.snapshot.players[currentPlayerId];
   const globalActions =
     decisionModal === undefined ? client.globalActions() : [];
   const concedeAction = useMemo(
@@ -143,6 +152,21 @@ export const MatchApp = (): React.JSX.Element => {
               : { orderHint: cardCostSelection.orderHint }),
           },
         };
+  const opponentReveal =
+    currentPlayerId === undefined || playerSnapshot === undefined
+      ? undefined
+      : opponentRevealFromEvents(
+          playerSnapshot.view.events,
+          currentPlayerId,
+          dismissedRevealIds,
+        );
+  const opponentRevealModal =
+    opponentReveal === undefined
+      ? undefined
+      : {
+          title: "Opponent revealed",
+          cards: opponentReveal.cards.map((card) => cardModel(card)),
+        };
 
   return (
     <main className="match-app">
@@ -230,7 +254,10 @@ export const MatchApp = (): React.JSX.Element => {
       />
       <CollectionModalHost
         model={
-          cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal
+          cardCostCollectionModal ??
+          decisionCollectionModal ??
+          collectionModal ??
+          opponentRevealModal
         }
         disabled={client.state.actionInFlight}
         onToggleCard={(instanceId) => {
@@ -246,7 +273,15 @@ export const MatchApp = (): React.JSX.Element => {
           cardCostCollectionModal === undefined &&
           decisionCollectionModal === undefined
             ? () => {
-                setCollectionModal(undefined);
+                if (collectionModal !== undefined) {
+                  setCollectionModal(undefined);
+                  return;
+                }
+                if (opponentReveal !== undefined) {
+                  setDismissedRevealIds(
+                    (current) => new Set([...current, opponentReveal.revealId]),
+                  );
+                }
               }
             : undefined
         }

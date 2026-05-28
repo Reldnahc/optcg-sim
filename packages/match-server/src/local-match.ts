@@ -14,6 +14,7 @@ import {
 import type { DevPoneglyphFetch } from "@optcg/cards";
 import type {
   CardId,
+  CardRef,
   EngineError,
   EngineResult,
   GameState,
@@ -886,6 +887,61 @@ const addVisibleCatalogEntriesForCards = (
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const revealPayloadCardRef = (value: unknown): CardRef | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const instanceId = value["instanceId"];
+  const cardId = value["cardId"];
+  const playerId = value["playerId"];
+  if (
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    typeof playerId !== "string"
+  ) {
+    return undefined;
+  }
+  return { instanceId, cardId, playerId } as CardRef;
+};
+
+const revealPayloadCards = (payload: unknown): readonly CardRef[] => {
+  if (!isRecord(payload)) {
+    return [];
+  }
+  const cards = payload["cards"];
+  if (Array.isArray(cards)) {
+    return cards.flatMap((card) => {
+      const ref = revealPayloadCardRef(card);
+      return ref === undefined ? [] : [ref];
+    });
+  }
+  const ref = revealPayloadCardRef(payload);
+  return ref === undefined ? [] : [ref];
+};
+
+const addVisibleCatalogEntriesForRevealEvents = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
+  view: PlayerView,
+): void => {
+  for (const event of view.events) {
+    if (event.type !== "cardRevealed") {
+      continue;
+    }
+    for (const card of revealPayloadCards(event.payload)) {
+      addVisibleCatalogEntryForCardId(
+        players,
+        manifest,
+        card.playerId,
+        card.cardId,
+      );
+    }
+  }
+};
+
 const addVisibleCatalogEntries = (
   players: Record<PlayerId, DevPlayerCardCatalog>,
   manifest: MatchCardManifest,
@@ -918,6 +974,7 @@ const addVisibleCatalogEntries = (
       addVisibleCatalogEntryForCardId(players, manifest, viewerId, card.cardId);
     }
   }
+  addVisibleCatalogEntriesForRevealEvents(players, manifest, view);
 };
 
 const devCardCatalogEntry = (

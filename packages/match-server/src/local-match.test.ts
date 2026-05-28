@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { beforeAll, describe, test } from "vitest";
-import type { CardId, PlayerId } from "@optcg/types";
+import type { CardId, EngineEventId, PlayerId } from "@optcg/types";
 
 import {
   applyLocalDevAction,
@@ -728,6 +728,43 @@ describe("local dev match", () => {
     assert.equal(
       match.state.cardManifest.manifestHash,
       setup.cardManifest.manifestHash,
+    );
+  });
+
+  test("player card catalog includes cards from visible reveal events", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const revealed = p1State.deck[0];
+    if (revealed === undefined) {
+      throw new Error("Missing reveal card in p1 deck.");
+    }
+    match.state.eventJournal.push({
+      id: "event:test:public-reveal" as EngineEventId,
+      seq: 1,
+      type: "cardRevealed",
+      payload: {
+        revealId: "reveal:test:public",
+        cards: [
+          {
+            instanceId: revealed.instanceId,
+            cardId: revealed.cardId,
+            playerId: p1,
+          },
+        ],
+        origin: "topOfDeck",
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: match.state.seq,
+    });
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p2);
+
+    assert.equal(
+      catalog.players[p1]?.cards[revealed.cardId]?.cardId,
+      revealed.cardId,
     );
   });
 });
