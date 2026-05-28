@@ -9,6 +9,7 @@ import { describe, test } from "vitest";
 import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import { BoardLayout } from "./BoardLayout.js";
+import { CardTile } from "./CardTile.js";
 import { ControlRail } from "./ControlRail.js";
 import type {
   BoardViewModel,
@@ -277,6 +278,34 @@ describe("card action menu", () => {
       /\.card-face\s*\{[^}]*border:\s*2px solid #f4eee7;/u.test(styles),
       false,
     );
+  });
+
+  test("card styling includes hover feedback and a separate active card state", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.card-tile:hover:not\(:disabled\) \.card-face\s*\{[^}]*--card-hover-glow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.95\),\s*0 0 10px\s+rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile\.is-active \.card-face\s*\{[^}]*--card-active-glow:\s*0 0 0 2px rgba\(89,\s*255,\s*143,\s*0\.95\),\s*0 0 12px\s+rgba\(89,\s*255,\s*143,\s*0\.72\);/u,
+    );
+  });
+
+  test("active card state is rendered independently from selection", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CardTile, {
+        card: card("active-card", "Resolving Card"),
+        active: true,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*card-tile[^"]*is-active/u);
+    assert.equal(markup.includes("is-selected"), false);
   });
 
   test("selected DON attachment is rendered as a selected-card menu action", () => {

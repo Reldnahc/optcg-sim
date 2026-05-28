@@ -5,6 +5,7 @@ export interface CardTileProps {
   label?: string | undefined;
   selectionOrderLabel?: string | undefined;
   selected?: boolean;
+  active?: boolean | undefined;
   pendingChoice?: boolean | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
   actions?: readonly ClientActionModel[] | undefined;
@@ -19,6 +20,7 @@ export const CardTile = ({
   label,
   selectionOrderLabel,
   selected = false,
+  active = false,
   pendingChoice = false,
   selectedDonInstanceIds = [],
   actions = [],
@@ -49,7 +51,9 @@ export const CardTile = ({
       <button
         className={`card-tile ${card.state === "rested" ? "is-rested" : ""} ${
           isSelected ? "is-selected" : ""
-        } ${pendingChoice ? "is-pending-choice" : ""}`}
+        } ${active ? "is-active" : ""} ${
+          pendingChoice ? "is-pending-choice" : ""
+        }`}
         type="button"
         title={card.name}
         disabled={disabled}
