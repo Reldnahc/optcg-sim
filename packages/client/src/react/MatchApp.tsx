@@ -195,6 +195,11 @@ export const MatchApp = (): React.JSX.Element => {
       return next;
     });
   };
+  const closeCardPreview = (): void => {
+    setPreviewEnabled(false);
+    setPreviewCard(undefined);
+    setPreviewMinimized(false);
+  };
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
     client.currentPlayerId,
@@ -413,10 +418,7 @@ export const MatchApp = (): React.JSX.Element => {
         onToggleMinimized={() => {
           setPreviewMinimized((current) => !current);
         }}
-        onClose={() => {
-          setPreviewCard(undefined);
-          setPreviewMinimized(false);
-        }}
+        onClose={closeCardPreview}
       />
     </main>
   );

@@ -151,4 +151,15 @@ describe("card preview window", () => {
     assert.match(source, /setPreviewCard\(undefined\);/u);
     assert.match(source, /setPreviewCard\(lastPreviewCard\);/u);
   });
+
+  test("closing the preview window disables hover preview", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /const closeCardPreview/u);
+    assert.match(source, /setPreviewEnabled\(false\);/u);
+    assert.match(source, /onClose=\{closeCardPreview\}/u);
+  });
 });
