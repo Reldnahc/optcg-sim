@@ -71,6 +71,18 @@ describe("card preview window", () => {
     assert.match(markup, /data-card-instance-id="preview-card"/u);
   });
 
+  test("hidden card tiles do not expose preview hover callbacks", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardTile.tsx"),
+      "utf8",
+    );
+
+    assert.match(
+      source,
+      /if\s*\(\s*card\.category\s*===\s*"hidden"\s*\)\s*\{\s*return;\s*\}/u,
+    );
+  });
+
   test("board and modal surfaces pass hover preview callbacks through shared card tiles", async () => {
     const [boardLayout, zone, handRow, collectionModal, matchApp] =
       await Promise.all([

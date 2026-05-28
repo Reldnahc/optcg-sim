@@ -50,6 +50,9 @@ export const CardTile = ({
       className="card-tile-shell"
       data-card-instance-id={String(card.instanceId)}
       onPointerEnter={() => {
+        if (card.category === "hidden") {
+          return;
+        }
         onHover?.(card);
       }}
     >
