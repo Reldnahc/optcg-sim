@@ -5,3 +5,5 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 Thumbs.db
+packages/match-server/dev-decks/deck1.txt
+packages/match-server/dev-decks/deck2.txt
