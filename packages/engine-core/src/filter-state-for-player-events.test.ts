@@ -120,3 +120,94 @@ test("preserves safe visible card identity in player event payloads", () => {
   assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
   assert.equal(JSON.stringify(view.events).includes("faceDownCardId"), false);
 });
+
+test("preserves safe gameplay event details for player logs", () => {
+  const state = createActiveState();
+  const attackerCardId = toCardId("OP13-089");
+  const targetCardId = toCardId("OP13-091");
+  const events: EngineEvent[] = [
+    {
+      id: toEngineEventId("event:phase-started"),
+      seq: 1,
+      type: "phaseStarted",
+      actor: p1,
+      payload: { phase: "main", playerId: p1, internalPhaseGate: true },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+    {
+      id: toEngineEventId("event:attack-declared"),
+      seq: 2,
+      type: "attackDeclared",
+      actor: p1,
+      payload: {
+        attacker: {
+          playerId: p1,
+          instanceId: "attacker-1",
+          cardId: attackerCardId,
+          privatePowerSnapshot: 9000,
+        },
+        target: {
+          playerId: p2,
+          instanceId: "target-1",
+          cardId: targetCardId,
+          privatePowerSnapshot: 5000,
+        },
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+    {
+      id: toEngineEventId("event:cost-paid"),
+      seq: 3,
+      type: "costPaid",
+      actor: p1,
+      payload: {
+        playerId: p1,
+        optionId: "restDon",
+        selectedDonInstanceIds: ["don-1", "don-2"],
+        selectedCardInstanceIds: ["card-1"],
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+  ];
+  state.eventJournal = events;
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(
+    view.events.map((event) => event.payload),
+    [
+      { phase: "main", playerId: p1 },
+      {
+        attacker: {
+          playerId: p1,
+          instanceId: "attacker-1",
+          cardId: attackerCardId,
+        },
+        target: {
+          playerId: p2,
+          instanceId: "target-1",
+          cardId: targetCardId,
+        },
+      },
+      {
+        playerId: p1,
+        optionId: "restDon",
+        selectedDonCount: 2,
+        selectedCardCount: 1,
+      },
+    ],
+  );
+  assert.equal(
+    JSON.stringify(view.events).includes("internalPhaseGate"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(view.events).includes("privatePowerSnapshot"),
+    false,
+  );
+  assert.equal(JSON.stringify(view.events).includes("don-1"), false);
+  assert.equal(JSON.stringify(view.events).includes("card-1"), false);
+});

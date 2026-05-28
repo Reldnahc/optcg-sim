@@ -120,13 +120,120 @@ const payloadSelectedCount = (payload: unknown): number | undefined => {
 const selectedCountLabel = (count: number): string =>
   `${String(count)} ${count === 1 ? "card" : "cards"}`;
 
+const stringField = (payload: unknown, field: string): string | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const value = payload[field];
+  return typeof value === "string" ? value : undefined;
+};
+
+const numberField = (payload: unknown, field: string): number | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const value = payload[field];
+  return typeof value === "number" ? value : undefined;
+};
+
+const cardIdentityField = (
+  payload: unknown,
+  field: string,
+): VisibleCardIdentity | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  return payloadCardIdentity(payload[field], undefined);
+};
+
+const playerLabel = (playerId: string | undefined): string =>
+  playerId ?? "A player";
+
+const phaseLabel = (phase: string | undefined): string =>
+  phase === undefined ? "phase" : `${phase} phase`;
+
+const zoneLabels: Record<string, string> = {
+  characterArea: "character area",
+  costArea: "cost area",
+  deck: "deck",
+  donDeck: "DON!! deck",
+  hand: "hand",
+  leaderArea: "leader area",
+  life: "life",
+  stageArea: "stage area",
+  trash: "trash",
+};
+
+const zoneLabel = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    return zoneLabels[value] ?? value;
+  }
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const zone = value["zone"];
+  return typeof zone === "string" ? (zoneLabels[zone] ?? zone) : undefined;
+};
+
+const moveRouteLabel = (payload: unknown): string => {
+  if (!isRecord(payload)) {
+    return "";
+  }
+  const from = zoneLabel(payload["from"]);
+  const to = zoneLabel(payload["to"]);
+  if (from !== undefined && to !== undefined) {
+    return ` from ${from} to ${to}`;
+  }
+  if (to !== undefined) {
+    return ` to ${to}`;
+  }
+  return "";
+};
+
+const costPaidLabel = (payload: unknown): string => {
+  const optionId = stringField(payload, "optionId");
+  const donCount = numberField(payload, "selectedDonCount");
+  const cardCount = numberField(payload, "selectedCardCount");
+  if (optionId === "restDon" && donCount !== undefined) {
+    return `rested ${String(donCount)} DON!!`;
+  }
+  if (optionId === "returnDon" && donCount !== undefined) {
+    return `returned ${String(donCount)} DON!!`;
+  }
+  if (optionId === "restSelf") {
+    return "rested source card";
+  }
+  if (optionId === "trashFromHand" && cardCount !== undefined) {
+    return `trashed ${selectedCountLabel(cardCount)} from hand`;
+  }
+  if (optionId === "trashFromField" && cardCount !== undefined) {
+    return `trashed ${selectedCountLabel(cardCount)} from field`;
+  }
+  if (optionId === "moveCards" && cardCount !== undefined) {
+    return `moved ${selectedCountLabel(cardCount)}`;
+  }
+  return "paid a cost";
+};
+
 const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
   const payloadIdentities = payloadCardIdentities(event.payload, event.actor);
+  if (event.type === "phaseStarted" || event.type === "phaseEnded") {
+    const verb = event.type === "phaseStarted" ? "started" : "ended";
+    return `${playerLabel(stringField(event.payload, "playerId"))} ${verb} ${phaseLabel(
+      stringField(event.payload, "phase"),
+    )}`;
+  }
+  if (event.type === "decisionCreated") {
+    const prompt = stringField(event.payload, "prompt");
+    return prompt === undefined
+      ? `${playerLabel(stringField(event.payload, "playerId"))} decision created`
+      : `${playerLabel(stringField(event.payload, "playerId"))} decision: ${prompt}`;
+  }
   if (event.type === "decisionResolved") {
     const selectedCount = payloadSelectedCount(event.payload);
     return selectedCount === undefined
-      ? "Decision resolved"
-      : `Decision resolved: ${selectedCountLabel(selectedCount)}`;
+      ? `${playerLabel(stringField(event.payload, "playerId"))} resolved decision`
+      : `${playerLabel(stringField(event.payload, "playerId"))} resolved decision: ${selectedCountLabel(selectedCount)}`;
   }
 
   if (event.type === "cardRevealed") {
@@ -140,9 +247,11 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
   }
   if (event.type === "cardMoved") {
     if (payloadIdentities.length === 0) {
-      return "A card moved";
+      return `A card moved${moveRouteLabel(event.payload)}`;
     }
-    return `${cardListLabel(catalog, payloadIdentities)} moved`;
+    return `${cardListLabel(catalog, payloadIdentities)} moved${moveRouteLabel(
+      event.payload,
+    )}`;
   }
   if (event.type === "cardDiscarded") {
     return `Discarded ${cardListLabel(catalog, payloadIdentities)}`;
@@ -158,6 +267,47 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
   }
   if (event.type === "triggerActivated") {
     return `Activated ${cardListLabel(catalog, payloadIdentities)} trigger`;
+  }
+  if (event.type === "costPaid") {
+    return `${playerLabel(stringField(event.payload, "playerId"))} paid cost: ${costPaidLabel(
+      event.payload,
+    )}`;
+  }
+  if (event.type === "attackDeclared") {
+    const attacker = cardIdentityField(event.payload, "attacker");
+    const target = cardIdentityField(event.payload, "target");
+    if (attacker !== undefined && target !== undefined) {
+      return `${cardName(catalog, attacker)} attacked ${cardName(
+        catalog,
+        target,
+      )}`;
+    }
+    return "Attack declared";
+  }
+  if (event.type === "blockerActivated") {
+    const blocker = cardIdentityField(event.payload, "blocker");
+    const target = cardIdentityField(event.payload, "currentTarget");
+    if (blocker !== undefined && target !== undefined) {
+      return `${cardName(catalog, blocker)} blocked; new target is ${cardName(
+        catalog,
+        target,
+      )}`;
+    }
+    return "Blocker activated";
+  }
+  if (event.type === "damageDealt") {
+    const amount = numberField(event.payload, "amount");
+    return amount === undefined
+      ? "Damage dealt"
+      : `${String(amount)} ${amount === 1 ? "damage" : "damage"} dealt`;
+  }
+  if (event.type === "lifeTaken") {
+    const amount = numberField(event.payload, "amount");
+    return amount === undefined
+      ? `${playerLabel(stringField(event.payload, "damagedPlayerId"))} took life`
+      : `${playerLabel(stringField(event.payload, "damagedPlayerId"))} took ${String(
+          amount,
+        )} ${amount === 1 ? "life" : "life"}`;
   }
 
   const label = eventLabels[event.type];

@@ -7,6 +7,7 @@ import { createActionLogEntries } from "./action-log.js";
 import type { MatchCardCatalog } from "./transport.js";
 
 const p1 = "p1" as PlayerId;
+const p2 = "p2" as PlayerId;
 
 const event = (
   overrides: Partial<EngineEvent> & Pick<EngineEvent, "type">,
@@ -26,6 +27,15 @@ const catalog: MatchCardCatalog = {
         ["OP13-089" as CardId]: {
           cardId: "OP13-089" as CardId,
           name: "Saint Shepherd Ju Peter",
+          category: "Character",
+        },
+      },
+    },
+    [p2]: {
+      cards: {
+        ["OP13-091" as CardId]: {
+          cardId: "OP13-091" as CardId,
+          name: "Saint Marcus Mars",
           category: "Character",
         },
       },
@@ -57,7 +67,10 @@ describe("action log", () => {
 
     assert.deepEqual(
       entries.map((entry) => entry.text),
-      ["Decision resolved: 1 card", "Saint Shepherd Ju Peter effect queued"],
+      [
+        "A player resolved decision: 1 card",
+        "Saint Shepherd Ju Peter effect queued",
+      ],
     );
   });
 
@@ -129,7 +142,88 @@ describe("action log", () => {
 
     assert.deepEqual(
       entries.map((entry) => entry.text),
-      ["A card moved"],
+      ["A card moved from deck to hand"],
+    );
+  });
+
+  test("formats gameplay flow events with safe visible details", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          type: "phaseStarted",
+          seq: 1,
+          payload: { phase: "main", playerId: p1 },
+        }),
+        event({
+          type: "cardMoved",
+          seq: 2,
+          payload: {
+            playerId: p1,
+            instanceId: "source-1",
+            cardId: "OP13-089",
+            from: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+            to: {
+              zone: "characterArea",
+              playerId: p1,
+              slot: "character",
+              index: 0,
+            },
+            reason: "playCard",
+          },
+        }),
+        event({
+          type: "costPaid",
+          seq: 3,
+          payload: {
+            playerId: p1,
+            optionId: "restDon",
+            selectedDonCount: 4,
+          },
+        }),
+        event({
+          type: "attackDeclared",
+          seq: 4,
+          payload: {
+            attacker: {
+              playerId: p1,
+              instanceId: "source-1",
+              cardId: "OP13-089",
+            },
+            target: {
+              playerId: p2,
+              instanceId: "target-1",
+              cardId: "OP13-091",
+            },
+          },
+        }),
+        event({
+          type: "lifeTaken",
+          seq: 5,
+          payload: { damagedPlayerId: p2, amount: 1 },
+        }),
+        event({
+          type: "decisionCreated",
+          seq: 6,
+          payload: {
+            decisionType: "selectCards",
+            playerId: p1,
+            prompt: "Choose a card.",
+          },
+        }),
+      ],
+      catalog,
+    });
+
+    assert.deepEqual(
+      entries.map((entry) => entry.text),
+      [
+        "p1 decision: Choose a card.",
+        "p2 took 1 life",
+        "Saint Shepherd Ju Peter attacked Saint Marcus Mars",
+        "p1 paid cost: rested 4 DON!!",
+        "Saint Shepherd Ju Peter moved from hand to character area",
+        "p1 started main phase",
+      ],
     );
   });
 });

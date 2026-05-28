@@ -326,6 +326,26 @@ const toAllowedRevealCard = (
   };
 };
 
+const toAllowedCardRef = (
+  value: unknown,
+): Record<string, string> | undefined => {
+  const ref = asRecord(value);
+  if (ref === undefined) {
+    return undefined;
+  }
+  const instanceId = ref["instanceId"];
+  const cardId = ref["cardId"];
+  const playerId = ref["playerId"];
+  if (
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    typeof playerId !== "string"
+  ) {
+    return undefined;
+  }
+  return { instanceId, cardId, playerId };
+};
+
 const pickStringPayloadFields = (
   payload: Record<string, unknown>,
   fields: readonly string[],
@@ -375,10 +395,59 @@ const pickVisibleCardMovePayload = (
   };
 };
 
+const pickPhasePayload = (
+  payload: Record<string, unknown>,
+): Record<string, string> =>
+  pickStringPayloadFields(payload, ["phase", "playerId"]);
+
+const countArrayPayloadField = (
+  payload: Record<string, unknown>,
+  field: string,
+): number | undefined => {
+  const value = payload[field];
+  return Array.isArray(value) ? value.length : undefined;
+};
+
+const pickCostPaidPayload = (
+  payload: Record<string, unknown>,
+): Record<string, unknown> => ({
+  ...pickStringPayloadFields(payload, ["playerId", "optionId"]),
+  ...(countArrayPayloadField(payload, "selectedDonInstanceIds") === undefined
+    ? {}
+    : {
+        selectedDonCount: countArrayPayloadField(
+          payload,
+          "selectedDonInstanceIds",
+        ),
+      }),
+  ...(countArrayPayloadField(payload, "selectedCardInstanceIds") === undefined
+    ? {}
+    : {
+        selectedCardCount: countArrayPayloadField(
+          payload,
+          "selectedCardInstanceIds",
+        ),
+      }),
+});
+
+const pickCardRefPayloadFields = (
+  payload: Record<string, unknown>,
+  fields: readonly string[],
+): Record<string, Record<string, string>> =>
+  Object.fromEntries(
+    fields.flatMap((field) => {
+      const ref = toAllowedCardRef(payload[field]);
+      return ref === undefined ? [] : [[field, ref] as const];
+    }),
+  );
+
 const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
   const payload = asRecord(event.payload);
   if (payload === undefined) {
     return {};
+  }
+  if (event.type === "phaseStarted" || event.type === "phaseEnded") {
+    return pickPhasePayload(payload);
   }
   if (event.type === "decisionCreated") {
     return pickStringPayloadFields(payload, [
@@ -406,6 +475,13 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
     return typeof payload["amount"] === "number"
       ? { amount: payload["amount"] }
       : {};
+  }
+  if (event.type === "lifeTaken") {
+    const amount = payload["amount"];
+    return {
+      ...pickStringPayloadFields(payload, ["damagedPlayerId"]),
+      ...(typeof amount === "number" ? { amount } : {}),
+    };
   }
   if (event.type === "cardRevealed") {
     const revealCards = payload["cards"];
@@ -438,6 +514,19 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
   }
   if (event.type === "cardMoved") {
     return pickVisibleCardMovePayload(payload);
+  }
+  if (event.type === "costPaid") {
+    return pickCostPaidPayload(payload);
+  }
+  if (event.type === "attackDeclared") {
+    return pickCardRefPayloadFields(payload, ["attacker", "target"]);
+  }
+  if (event.type === "blockerActivated") {
+    return pickCardRefPayloadFields(payload, [
+      "blocker",
+      "previousTarget",
+      "currentTarget",
+    ]);
   }
   if (
     event.type === "cardPlayed" ||
