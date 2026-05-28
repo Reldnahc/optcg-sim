@@ -58,7 +58,8 @@ export const ActionLogWindow = ({
                     focusable="false"
                   >
                     <path d="M7.5 9.5H3.5V5.5" />
-                    <path d="M4 9.5A8 8 0 1 1 6.3 15" />
+                    <path d="M3.6 9.5A8.4 8.4 0 1 1 6.1 15.6" />
+                    <path d="M11.8 8.3v4.1l2.8 1.8" />
                   </svg>
                 </button>
               )}
