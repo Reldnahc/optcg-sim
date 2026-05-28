@@ -92,15 +92,18 @@ const createFakeLiveTransport = (options?: {
   actionErrors?: string[];
   decisionErrors?: string[];
   rollbackErrors?: string[];
+  cancelRollbackErrors?: string[];
 }): MatchLiveTransport & {
   submittedActions: number[];
   submittedDecisions: DecisionId[];
   requestedRollbacks: string[];
+  cancelledRollbacks: number;
   connection: LiveMatchConnection;
 } => {
   const submittedActions: number[] = [];
   const submittedDecisions: DecisionId[] = [];
   const requestedRollbacks: string[] = [];
+  let cancelledRollbacks = 0;
   const connection: LiveMatchConnection = {
     close() {},
     submitVisibleAction(input) {
@@ -124,11 +127,21 @@ const createFakeLiveTransport = (options?: {
         errors: options?.rollbackErrors ?? [],
       });
     },
+    cancelRollback() {
+      cancelledRollbacks += 1;
+      return Promise.resolve({
+        snapshot: { stateSeq: 2, players: {} },
+        errors: options?.cancelRollbackErrors ?? [],
+      });
+    },
   };
   return {
     submittedActions,
     submittedDecisions,
     requestedRollbacks,
+    get cancelledRollbacks() {
+      return cancelledRollbacks;
+    },
     connection,
     connect() {
       return connection;
@@ -406,5 +419,22 @@ describe("match client controller", () => {
     await controller.requestRollback({ rollbackPointId: "rollback:1" });
 
     assert.deepEqual(liveTransport.requestedRollbacks, ["rollback:1"]);
+  });
+
+  test("cancels rollback through the live connection", async () => {
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      transport: createFakeTransport(),
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    await controller.startNewLocalMatch("p1" as PlayerId);
+    controller.connectLive({ onState() {}, onError() {} });
+    await controller.cancelRollback();
+
+    assert.equal(liveTransport.cancelledRollbacks, 1);
   });
 });

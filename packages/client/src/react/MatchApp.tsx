@@ -138,6 +138,21 @@ export const MatchApp = (): React.JSX.Element => {
     client.state.actionInFlight ||
     concedeAction === undefined ||
     matchState?.snapshot.status !== "active";
+  const pendingRollbackRequest = matchState?.snapshot.rollback?.pendingRequest;
+  const rollbackStatus =
+    pendingRollbackRequest === undefined || currentPlayerId === undefined
+      ? undefined
+      : pendingRollbackRequest.requestedBy === currentPlayerId
+        ? {
+            message: "Rollback requested. Waiting for opponent.",
+            canCancel: true,
+          }
+        : pendingRollbackRequest.approvingPlayerId === currentPlayerId
+          ? {
+              message: "Opponent requested a rollback.",
+              canCancel: false,
+            }
+          : undefined;
   useEffect(() => {
     if (concedeDisabled) {
       setConcedeConfirming(false);
@@ -342,6 +357,10 @@ export const MatchApp = (): React.JSX.Element => {
         onNewMatch={() => {
           setConcedeConfirming(false);
           void client.createNewMatch();
+        }}
+        rollbackStatus={rollbackStatus}
+        onCancelRollback={() => {
+          void client.cancelRollback();
         }}
         previewControl={
           <CardPreviewToggle

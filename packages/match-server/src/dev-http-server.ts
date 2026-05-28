@@ -10,6 +10,7 @@ import type { MatchId, PlayerId } from "@optcg/types";
 import {
   applyLocalDevAction,
   applyLocalDevDecision,
+  cancelLocalDevRollback,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
@@ -849,7 +850,9 @@ const handleWebSocketUpgrade = (
           ? applyLocalDevAction(match, payload)
           : payload.type === "respondToDecision"
             ? applyLocalDevDecision(match, payload)
-            : requestLocalDevRollback(match, payload);
+            : payload.type === "requestRollback"
+              ? requestLocalDevRollback(match, payload)
+              : cancelLocalDevRollback(match, payload);
       const errors = result.errors;
       sendSocketJson(connection, {
         type: "actionResult",

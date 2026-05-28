@@ -9,6 +9,13 @@ export interface ControlRailProps {
   disabled: boolean;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
+  rollbackStatus?:
+    | {
+        message: string;
+        canCancel: boolean;
+      }
+    | undefined;
+  onCancelRollback?: (() => void) | undefined;
   concedeDisabled?: boolean | undefined;
   concedeConfirming?: boolean | undefined;
   onConcede?: (() => void) | undefined;
@@ -22,6 +29,8 @@ export const ControlRail = ({
   disabled,
   onAction,
   onNewMatch,
+  rollbackStatus,
+  onCancelRollback,
   concedeDisabled = true,
   concedeConfirming = false,
   onConcede,
@@ -63,6 +72,21 @@ export const ControlRail = ({
           {error}
         </p>
       ))}
+      {rollbackStatus === undefined ? null : (
+        <section className="rollback-status-panel">
+          <p>{rollbackStatus.message}</p>
+          {rollbackStatus.canCancel ? (
+            <button
+              className="action-button"
+              type="button"
+              disabled={disabled}
+              onClick={onCancelRollback}
+            >
+              Cancel rollback request
+            </button>
+          ) : null}
+        </section>
+      )}
       <ActionMenu
         title="Global actions"
         actions={globalActions}

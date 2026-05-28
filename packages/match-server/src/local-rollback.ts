@@ -16,6 +16,11 @@ export interface RequestLocalDevRollbackInput {
   expectedStateSeq?: number;
 }
 
+export interface CancelLocalDevRollbackInput {
+  playerId: PlayerId;
+  expectedStateSeq?: number;
+}
+
 interface LocalRollbackPoint {
   rollbackPointId: string;
   eventId?: string;
@@ -297,6 +302,47 @@ export const resolveRollbackConsent = (
         (candidate) => candidate.stateSeq <= point.stateSeq,
       ),
     },
+    errors: [],
+  };
+};
+
+export const cancelRollbackConsent = (
+  state: GameState,
+  rollback: LocalRollbackState,
+  input: CancelLocalDevRollbackInput,
+): LocalRollbackMutationResult => {
+  if (
+    input.expectedStateSeq !== undefined &&
+    input.expectedStateSeq !== state.seq
+  ) {
+    return {
+      state,
+      rollback,
+      errors: [
+        `Rollback cancellation is stale for ${String(
+          input.playerId,
+        )}; refresh the current match state.`,
+      ],
+    };
+  }
+  const request = rollback.pendingRequest;
+  if (request === undefined) {
+    return {
+      state,
+      rollback,
+      errors: ["No rollback request is pending."],
+    };
+  }
+  if (request.requestedBy !== input.playerId) {
+    return {
+      state,
+      rollback,
+      errors: ["Only the rollback requester can cancel the request."],
+    };
+  }
+  return {
+    state: clearRollbackConsent(state),
+    rollback: withoutPendingRollbackRequest(rollback),
     errors: [],
   };
 };

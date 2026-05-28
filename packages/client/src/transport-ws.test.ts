@@ -193,4 +193,68 @@ describe("dev WebSocket match transport", () => {
 
     assert.equal(result.snapshot.stateSeq, 8);
   });
+
+  test("sends rollback cancellation through the live match socket", async () => {
+    const recording = createRecordingWebSocket();
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      randomUUID: () => "client-action-cancel-rollback",
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    const resultPromise = connection.cancelRollback({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      expectedStateSeq: 7,
+    });
+
+    socket.open();
+    await Promise.resolve();
+
+    const sentPayload = socket.sent[0];
+    if (sentPayload === undefined) {
+      throw new Error("Expected a sent WebSocket payload.");
+    }
+    assert.deepEqual(JSON.parse(sentPayload) as unknown, {
+      type: "cancelRollback",
+      clientActionId: "client-action-cancel-rollback",
+      matchId: "match-1",
+      playerId: "p1",
+      expectedStateSeq: 7,
+    });
+
+    socket.receive({
+      type: "actionResult",
+      clientActionId: "client-action-cancel-rollback",
+      matchId: "match-1",
+      accepted: true,
+      stateSeq: 8,
+      actionSeq: 1,
+      errors: [],
+    });
+    socket.receive({
+      type: "stateSync",
+      matchId: "match-1",
+      serverSeq: 3,
+      stateSeq: 8,
+      snapshot: { stateSeq: 8, players: {} },
+    });
+
+    const result = await resultPromise;
+
+    assert.equal(result.snapshot.stateSeq, 8);
+  });
 });

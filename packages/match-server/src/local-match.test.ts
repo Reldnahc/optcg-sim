@@ -5,6 +5,7 @@ import type { CardId, EngineEventId, PlayerId } from "@optcg/types";
 import {
   applyLocalDevAction,
   applyLocalDevDecision,
+  cancelLocalDevRollback,
   createLocalDevMatch,
   getLocalDevCardCatalogForPlayer,
   getLocalDevSnapshot,
@@ -836,6 +837,48 @@ describe("local dev match", () => {
     assert.equal(current.turn.turnPlayerId, afterAction.turn.turnPlayerId);
     assert.equal(current.turn.phase, afterAction.turn.phase);
     assert.equal(current.rollback?.pendingRequest, undefined);
+  });
+
+  test("requester can cancel a pending rollback request without rewinding", () => {
+    const match = createTestMatch();
+    const before = keepBothPlayersAndAdvance(match);
+    const endMainIndex = actionIndexByLabel(
+      mustPlayerSnapshot(before, p1).actions,
+      "End main phase",
+    );
+    const applied = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endMainIndex,
+    });
+    assert.deepEqual(applied.errors, []);
+    const afterAction = getLocalDevSnapshot(match);
+    const rollbackPoint = afterAction.rollback?.points.find(
+      (point) => point.stateSeq === before.stateSeq,
+    );
+    if (rollbackPoint === undefined) {
+      throw new Error("Expected rollback point for state before end main.");
+    }
+    const requested = requestLocalDevRollback(match, {
+      playerId: p1,
+      rollbackPointId: rollbackPoint.rollbackPointId,
+    });
+    assert.deepEqual(requested.errors, []);
+
+    const cancelled = cancelLocalDevRollback(match, { playerId: p1 });
+
+    assert.deepEqual(cancelled.errors, []);
+    const current = getLocalDevSnapshot(match);
+    assert.equal(current.turn.turnPlayerId, afterAction.turn.turnPlayerId);
+    assert.equal(current.turn.phase, afterAction.turn.phase);
+    assert.equal(current.rollback?.pendingRequest, undefined);
+    assert.equal(
+      mustPlayerSnapshot(current, p1).view.pendingDecision,
+      undefined,
+    );
+    assert.equal(
+      mustPlayerSnapshot(current, p2).view.pendingDecision,
+      undefined,
+    );
   });
 
   test("boots from a premade match setup carrying manifest and player decks", () => {

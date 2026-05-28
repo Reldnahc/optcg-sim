@@ -23,6 +23,11 @@ interface DevRollbackRequest {
   expectedStateSeq?: number;
 }
 
+interface DevRollbackCancelRequest {
+  playerId: PlayerId;
+  expectedStateSeq?: number;
+}
+
 interface DevSocketActionEnvelope extends DevActionRequest {
   type: "submitAction";
   matchId: MatchId;
@@ -41,10 +46,17 @@ interface DevSocketRollbackEnvelope extends DevRollbackRequest {
   clientActionId: string;
 }
 
+interface DevSocketRollbackCancelEnvelope extends DevRollbackCancelRequest {
+  type: "cancelRollback";
+  matchId: MatchId;
+  clientActionId: string;
+}
+
 export type DevSocketEnvelope =
   | DevSocketActionEnvelope
   | DevSocketDecisionEnvelope
-  | DevSocketRollbackEnvelope;
+  | DevSocketRollbackEnvelope
+  | DevSocketRollbackCancelEnvelope;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -86,6 +98,19 @@ const isDevRollbackRequest = (value: unknown): value is DevRollbackRequest => {
   );
 };
 
+const isDevRollbackCancelRequest = (
+  value: unknown,
+): value is DevRollbackCancelRequest => {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value["playerId"] === "string" &&
+    (value["expectedStateSeq"] === undefined ||
+      Number.isInteger(value["expectedStateSeq"]))
+  );
+};
+
 export const isDevSocketEnvelope = (
   value: unknown,
 ): value is DevSocketEnvelope => {
@@ -112,6 +137,13 @@ export const isDevSocketEnvelope = (
     typeof value["clientActionId"] === "string"
   ) {
     return isDevRollbackRequest(value);
+  }
+  if (
+    value["type"] === "cancelRollback" &&
+    typeof value["matchId"] === "string" &&
+    typeof value["clientActionId"] === "string"
+  ) {
+    return isDevRollbackCancelRequest(value);
   }
   return false;
 };

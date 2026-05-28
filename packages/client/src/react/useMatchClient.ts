@@ -385,6 +385,19 @@ export const useMatchClient = (): MatchClientUi => {
     [controller],
   );
 
+  const cancelRollback = useCallback(async (): Promise<void> => {
+    setActionInFlight(true);
+    try {
+      const result = await controller.cancelRollback();
+      setClientState(result);
+      setErrors([]);
+    } catch (error) {
+      setErrors([error instanceof Error ? error.message : String(error)]);
+    } finally {
+      setActionInFlight(false);
+    }
+  }, [controller]);
+
   const attachSelectedDonToTarget = useCallback(
     async (targetInstanceId: string): Promise<void> => {
       if (selectedDonInstanceIds.length === 0) {
@@ -1000,6 +1013,7 @@ export const useMatchClient = (): MatchClientUi => {
     chooseDecisionTriggerValue,
     confirmDecision,
     requestRollback,
+    cancelRollback,
     createNewMatch,
   };
 };

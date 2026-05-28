@@ -1,5 +1,6 @@
 export {
   applyLocalDevAction,
+  cancelLocalDevRollback,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
@@ -12,6 +13,7 @@ export {
 export type {
   ApplyLocalDevActionInput,
   ApplyLocalDevActionResult,
+  CancelLocalDevRollbackInput,
   DevMatchPlayerSetup,
   DevMatchSetup,
   LocalDevMatch,

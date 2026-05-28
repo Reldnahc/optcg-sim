@@ -95,6 +95,26 @@ describe("action log window", () => {
     assert.match(styles, /\.control-tool-strip\s*\{[^}]*display:\s*flex;/u);
   });
 
+  test("control rail renders pending rollback status with cancellation", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+        rollbackStatus: {
+          message: "Rollback requested. Waiting for opponent.",
+          canCancel: true,
+        },
+        onCancelRollback: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /Rollback requested\. Waiting for opponent\./u);
+    assert.match(markup, /Cancel rollback request/u);
+  });
+
   test("action log toggle exposes pressed state", () => {
     const markup = renderToStaticMarkup(
       createElement(ActionLogToggle, {

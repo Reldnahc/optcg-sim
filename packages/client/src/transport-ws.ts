@@ -12,6 +12,7 @@ import type {
   MatchActionResultMessage,
   MatchLiveTransport,
   MatchStateSyncMessage,
+  CancelRollbackInput,
   RequestRollbackInput,
 } from "./transport.js";
 
@@ -215,6 +216,19 @@ export const createDevWebSocketMatchTransport = ({
             matchId: input.matchId,
             playerId: input.playerId,
             rollbackPointId: input.rollbackPointId,
+            expectedStateSeq: input.expectedStateSeq,
+          },
+          clientActionId,
+        );
+      },
+      cancelRollback(input: CancelRollbackInput) {
+        const clientActionId = randomUUID();
+        return sendRequest(
+          {
+            type: "cancelRollback",
+            clientActionId,
+            matchId: input.matchId,
+            playerId: input.playerId,
             expectedStateSeq: input.expectedStateSeq,
           },
           clientActionId,

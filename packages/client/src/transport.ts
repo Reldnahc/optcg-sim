@@ -128,6 +128,12 @@ export interface RequestRollbackInput {
   expectedStateSeq?: number;
 }
 
+export interface CancelRollbackInput {
+  matchId: MatchId;
+  playerId: PlayerId;
+  expectedStateSeq?: number;
+}
+
 export interface MatchActionResult {
   snapshot: MatchSnapshot;
   errors: string[];
@@ -168,6 +174,7 @@ export interface LiveMatchConnection {
     input: RespondToDecisionInput,
   ) => Promise<MatchActionResult>;
   requestRollback: (input: RequestRollbackInput) => Promise<MatchActionResult>;
+  cancelRollback: (input: CancelRollbackInput) => Promise<MatchActionResult>;
 }
 
 export interface LiveLobbyConnection {

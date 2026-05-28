@@ -40,6 +40,7 @@ import type {
   DevVisibleCardCatalog,
 } from "./dev-snapshot-types.js";
 import {
+  cancelRollbackConsent,
   cloneGameState,
   createLocalRollbackState,
   recordRollbackPoint,
@@ -47,10 +48,14 @@ import {
   resolveRollbackConsent,
   rollbackView,
   type LocalRollbackState,
+  type CancelLocalDevRollbackInput,
   type RequestLocalDevRollbackInput,
 } from "./local-rollback.js";
 
-export type { RequestLocalDevRollbackInput } from "./local-rollback.js";
+export type {
+  CancelLocalDevRollbackInput,
+  RequestLocalDevRollbackInput,
+} from "./local-rollback.js";
 
 export interface DevMatchPlayerSetup {
   playerId: PlayerId;
@@ -921,6 +926,16 @@ export const requestLocalDevRollback = (
   input: RequestLocalDevRollbackInput,
 ): ApplyLocalDevActionResult => {
   const result = requestRollbackConsent(match.state, match.rollback, input);
+  match.state = result.state;
+  match.rollback = result.rollback;
+  return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
+};
+
+export const cancelLocalDevRollback = (
+  match: LocalDevMatch,
+  input: CancelLocalDevRollbackInput,
+): ApplyLocalDevActionResult => {
+  const result = cancelRollbackConsent(match.state, match.rollback, input);
   match.state = result.state;
   match.rollback = result.rollback;
   return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
