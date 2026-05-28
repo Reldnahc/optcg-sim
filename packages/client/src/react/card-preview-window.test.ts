@@ -8,10 +8,7 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId } from "@optcg/types";
 
-import {
-  CardPreviewMinimizedButton,
-  CardPreviewWindow,
-} from "./CardPreviewWindow.js";
+import { CardPreviewWindow } from "./CardPreviewWindow.js";
 import { CardTile } from "./CardTile.js";
 import type { ClientCardModel } from "../view-model.js";
 
@@ -37,6 +34,7 @@ describe("card preview window", () => {
         card: card(),
         minimized: false,
         onToggleMinimized: () => undefined,
+        onClose: () => undefined,
       }),
     );
 
@@ -49,11 +47,13 @@ describe("card preview window", () => {
     assert.match(markup, /Add 1 card\./u);
   });
 
-  test("minimizes to a control-panel magnifier icon button", async () => {
+  test("minimized preview stays mounted as a draggable bar", async () => {
     const markup = renderToStaticMarkup(
-      createElement(CardPreviewMinimizedButton, {
-        disabled: false,
+      createElement(CardPreviewWindow, {
+        card: card(),
+        minimized: true,
         onToggleMinimized: () => undefined,
+        onClose: () => undefined,
       }),
     );
     const styles = await readFile(
@@ -61,36 +61,17 @@ describe("card preview window", () => {
       "utf8",
     );
 
-    assert.match(markup, /card-preview-minimized-button/u);
-    assert.match(markup, /card-preview-magnifier-icon/u);
-    assert.match(markup, /aria-label="Show card preview"/u);
-    assert.match(markup, /viewBox="0 0 24 24"/u);
-    assert.equal(markup.includes("floating-window"), false);
+    assert.match(markup, /floating-window is-minimized card-preview-window/u);
+    assert.match(markup, /floating-window-drag-handle/u);
+    assert.match(markup, /aria-label="Restore Card Preview"/u);
+    assert.match(markup, /aria-label="Close Card Preview"/u);
+    assert.match(markup, />-</u);
+    assert.match(markup, />x</u);
     assert.equal(markup.includes("Draw 1 card."), false);
-    assert.doesNotMatch(
-      styles,
-      /\.card-preview-minimized-button\s*\{[^}]*border:/u,
-    );
-    assert.doesNotMatch(
-      styles,
-      /\.card-preview-minimized-button\s*\{[^}]*background:/u,
-    );
     assert.match(
       styles,
-      /\.card-preview-minimized-button:hover:not\(:disabled\)\s+\.card-preview-magnifier-icon/u,
+      /\.card-preview-window\.is-minimized\s*\{[^}]*min-height:\s*0;/u,
     );
-  });
-
-  test("minimized preview window renders no floating content", () => {
-    const markup = renderToStaticMarkup(
-      createElement(CardPreviewWindow, {
-        card: card(),
-        minimized: true,
-        onToggleMinimized: () => undefined,
-      }),
-    );
-
-    assert.equal(markup, "");
   });
 
   test("card tiles expose generic hover callbacks for preview surfaces", () => {
@@ -131,7 +112,7 @@ describe("card preview window", () => {
     assert.match(handRow, /onCardPreview/u);
     assert.match(collectionModal, /onPreviewCard/u);
     assert.match(matchApp, /setPreviewCard/u);
-    assert.match(matchApp, /previewControl=/u);
+    assert.doesNotMatch(matchApp, /previewControl=/u);
     assert.match(matchApp, /CardPreviewWindow/u);
   });
 });

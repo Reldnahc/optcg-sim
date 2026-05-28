@@ -38,7 +38,8 @@ describe("floating window", () => {
     assert.match(markup, /floating-window-resize-handle/u);
     assert.match(markup, /transform:translate\(320px,\s*120px\)/u);
     assert.match(markup, /Window body/u);
-    assert.match(markup, /Close/u);
+    assert.match(markup, /aria-label="Close Trash"/u);
+    assert.match(markup, />x</u);
   });
 
   test("uses fixed positioning and bounded resize affordances", async () => {
@@ -50,6 +51,14 @@ describe("floating window", () => {
     assert.match(
       styles,
       /\.floating-window-drag-handle\s*\{[^}]*cursor:\s*move;/u,
+    );
+    assert.match(
+      styles,
+      /\.floating-window-minimize,\s*\.floating-window-close\s*\{[^}]*border:\s*0;/u,
+    );
+    assert.match(
+      styles,
+      /\.floating-window-close:hover\s*\{[^}]*background:\s*#c42b1c;/u,
     );
     assert.match(
       styles,

@@ -5,42 +5,16 @@ export interface CardPreviewWindowProps {
   card?: ClientCardModel | undefined;
   minimized: boolean;
   onToggleMinimized: () => void;
+  onClose: () => void;
 }
-
-export interface CardPreviewMinimizedButtonProps {
-  disabled: boolean;
-  onToggleMinimized: () => void;
-}
-
-export const CardPreviewMinimizedButton = ({
-  disabled,
-  onToggleMinimized,
-}: CardPreviewMinimizedButtonProps): React.JSX.Element => (
-  <button
-    className="card-preview-minimized-button"
-    type="button"
-    disabled={disabled}
-    aria-label="Show card preview"
-    title="Show card preview"
-    onClick={onToggleMinimized}
-  >
-    <svg
-      className="card-preview-magnifier-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="M15.5 15.5 21 21" />
-    </svg>
-  </button>
-);
 
 export const CardPreviewWindow = ({
   card,
   minimized,
   onToggleMinimized,
+  onClose,
 }: CardPreviewWindowProps): React.JSX.Element | null => {
-  if (card === undefined || minimized) {
+  if (card === undefined) {
     return null;
   }
 
@@ -51,7 +25,9 @@ export const CardPreviewWindow = ({
       initialRect={{ x: 20, y: 20, width: 330, height: 520 }}
       minWidth={240}
       minHeight={220}
+      minimized={minimized}
       onToggleMinimized={onToggleMinimized}
+      onClose={onClose}
     >
       <article className="card-preview-content">
         <div className="card-preview-image-frame">

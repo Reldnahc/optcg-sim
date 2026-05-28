@@ -8,10 +8,7 @@ import {
 } from "../interactions/decision-surface.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import { BoardLayout } from "./BoardLayout.js";
-import {
-  CardPreviewMinimizedButton,
-  CardPreviewWindow,
-} from "./CardPreviewWindow.js";
+import { CardPreviewWindow } from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
@@ -228,14 +225,6 @@ export const MatchApp = (): React.JSX.Element => {
           setConcedeConfirming(false);
           void client.submitAction(concedeAction.index);
         }}
-        previewControl={
-          <CardPreviewMinimizedButton
-            disabled={previewCard === undefined}
-            onToggleMinimized={() => {
-              setPreviewMinimized((current) => !current);
-            }}
-          />
-        }
       />
       <DecisionModalHost
         model={
@@ -296,7 +285,11 @@ export const MatchApp = (): React.JSX.Element => {
         card={previewCard}
         minimized={previewMinimized}
         onToggleMinimized={() => {
-          setPreviewMinimized(true);
+          setPreviewMinimized((current) => !current);
+        }}
+        onClose={() => {
+          setPreviewCard(undefined);
+          setPreviewMinimized(false);
         }}
       />
     </main>

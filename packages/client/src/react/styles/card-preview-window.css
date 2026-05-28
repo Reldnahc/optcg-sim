@@ -2,39 +2,8 @@
   z-index: 11;
 }
 
-.card-preview-minimized-button {
-  all: unset;
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  color: #fff;
-  cursor: pointer;
-}
-
-.card-preview-minimized-button:hover:not(:disabled) .card-preview-magnifier-icon {
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95));
-  stroke: #fff;
-  transform: scale(1.08);
-}
-
-.card-preview-minimized-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.card-preview-magnifier-icon {
-  width: 26px;
-  height: 26px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.8;
-  transition:
-    filter 120ms ease,
-    stroke 120ms ease,
-    transform 120ms ease;
+.card-preview-window.is-minimized {
+  min-height: 0;
 }
 
 .card-preview-content {

@@ -212,14 +212,20 @@ export const FloatingWindow = ({
           <button
             className="floating-window-minimize"
             type="button"
+            aria-label={`${minimized ? "Restore" : "Minimize"} ${title}`}
             onClick={onToggleMinimized}
           >
-            {minimized ? "Show" : "Minimize"}
+            -
           </button>
         )}
         {onClose === undefined ? null : (
-          <button className="floating-window-close" type="button" onClick={onClose}>
-            Close
+          <button
+            className="floating-window-close"
+            type="button"
+            aria-label={`Close ${title}`}
+            onClick={onClose}
+          >
+            x
           </button>
         )}
       </div>
