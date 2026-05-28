@@ -240,6 +240,24 @@ describe("collection modal", () => {
     );
   });
 
+  test("client-side collection viewers remember their last window rectangle", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+    const hostSource = await readFile(
+      join(sourceDirectory, "CollectionModalHost.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /collectionWindowRects/u);
+    assert.match(source, /collectionViewerKey/u);
+    assert.match(source, /initialRect=\{/u);
+    assert.match(source, /onRectChange=\{/u);
+    assert.match(hostSource, /onRectChange/u);
+    assert.match(hostSource, /initialRect/u);
+  });
+
   test("match app keeps opponent reveal out of the collection window", async () => {
     const source = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),

@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
 import {
+  clampRectToViewport,
   FloatingWindow,
   resolveOffscreenDropAction,
 } from "./FloatingWindow.js";
@@ -96,6 +97,18 @@ describe("floating window", () => {
         { canMinimize: true, canClose: true },
       ),
       undefined,
+    );
+  });
+
+  test("reopened windows clamp saved rectangles back onto the viewport", () => {
+    assert.deepEqual(
+      clampRectToViewport(
+        { x: 1600, y: 900, width: 320, height: 220 },
+        280,
+        160,
+        { width: 1280, height: 800 },
+      ),
+      { x: 960, y: 580, width: 320, height: 220 },
     );
   });
 });

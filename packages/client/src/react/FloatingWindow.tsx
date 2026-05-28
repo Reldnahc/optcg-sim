@@ -35,6 +35,7 @@ export interface FloatingWindowProps {
   minimized?: boolean | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onRectChange?: ((rect: WindowRect) => void) | undefined;
   children?: React.ReactNode;
 }
 
@@ -55,6 +56,34 @@ const clampRect = (
   width: Math.max(minWidth, rect.width),
   height: Math.max(minHeight, rect.height),
 });
+
+export const clampRectToViewport = (
+  rect: WindowRect,
+  minWidth: number,
+  minHeight: number,
+  viewport?: WindowViewport,
+): WindowRect => {
+  const sizedRect = clampRect(rect, minWidth, minHeight);
+  if (viewport === undefined) {
+    return sizedRect;
+  }
+  const width = Math.min(sizedRect.width, viewport.width);
+  const height = Math.min(sizedRect.height, viewport.height);
+  return {
+    x: Math.min(Math.max(0, sizedRect.x), Math.max(0, viewport.width - width)),
+    y: Math.min(
+      Math.max(0, sizedRect.y),
+      Math.max(0, viewport.height - height),
+    ),
+    width,
+    height,
+  };
+};
+
+const currentViewport = (): WindowViewport | undefined =>
+  typeof window === "undefined"
+    ? undefined
+    : { width: window.innerWidth, height: window.innerHeight };
 
 const dragRect = (
   start: PointerStart,
@@ -104,13 +133,21 @@ export const FloatingWindow = ({
   minimized = false,
   onToggleMinimized,
   onClose,
+  onRectChange,
   children,
 }: FloatingWindowProps): React.JSX.Element => {
   const [rect, setRect] = useState(() =>
-    clampRect(initialRect, minWidth, minHeight),
+    clampRectToViewport(initialRect, minWidth, minHeight, currentViewport()),
   );
   const dragStart = useRef<PointerStart | undefined>(undefined);
   const resizeStart = useRef<PointerStart | undefined>(undefined);
+  const updateRect = useCallback(
+    (nextRect: WindowRect) => {
+      setRect(nextRect);
+      onRectChange?.(nextRect);
+    },
+    [onRectChange],
+  );
 
   const stopInteraction = useCallback((pointerId: number) => {
     if (dragStart.current?.pointerId === pointerId) {
@@ -195,7 +232,7 @@ export const FloatingWindow = ({
             if (start === undefined || start.pointerId !== event.pointerId) {
               return;
             }
-            setRect(
+            updateRect(
               dragRect(start, event.clientX, event.clientY, minWidth, minHeight),
             );
           }}
@@ -250,7 +287,7 @@ export const FloatingWindow = ({
               if (start === undefined || start.pointerId !== event.pointerId) {
                 return;
               }
-              setRect(
+              updateRect(
                 clampRect(
                   {
                     ...start.rect,

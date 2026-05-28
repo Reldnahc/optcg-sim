@@ -21,6 +21,7 @@ import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
+import type { WindowRect } from "./FloatingWindow.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
 import { useMatchClient } from "./useMatchClient.js";
@@ -44,6 +45,9 @@ export const MatchApp = (): React.JSX.Element => {
     CollectionModalModel | undefined
   >(undefined);
   const [collectionMinimized, setCollectionMinimized] = useState(false);
+  const [collectionWindowRects, setCollectionWindowRects] = useState<
+    Record<string, WindowRect>
+  >({});
   const [revealWindowState, setRevealWindowState] = useState<RevealWindowState>(
     () => emptyRevealWindowState,
   );
@@ -284,6 +288,11 @@ export const MatchApp = (): React.JSX.Element => {
   const renderedCollectionModal =
     cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal;
   const renderedCollectionKey = renderedCollectionModal?.title;
+  const collectionViewerKey =
+    cardCostCollectionModal === undefined &&
+    decisionCollectionModal === undefined
+      ? collectionModal?.title
+      : undefined;
   useEffect(() => {
     setCollectionMinimized(false);
   }, [renderedCollectionKey]);
@@ -431,9 +440,24 @@ export const MatchApp = (): React.JSX.Element => {
         model={renderedCollectionModal}
         disabled={client.state.actionInFlight}
         minimized={collectionMinimized}
+        initialRect={
+          collectionViewerKey === undefined
+            ? undefined
+            : collectionWindowRects[collectionViewerKey]
+        }
         onToggleMinimized={() => {
           setCollectionMinimized((current) => !current);
         }}
+        onRectChange={
+          collectionViewerKey === undefined
+            ? undefined
+            : (rect) => {
+                setCollectionWindowRects((current) => ({
+                  ...current,
+                  [collectionViewerKey]: rect,
+                }));
+              }
+        }
         onToggleCard={(instanceId) => {
           client.toggleDecisionCard(instanceId as InstanceId);
         }}

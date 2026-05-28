@@ -1,6 +1,7 @@
 import type { ClientCardModel } from "../view-model.js";
 import { CardTile } from "./CardTile.js";
 import { FloatingWindow } from "./FloatingWindow.js";
+import type { WindowRect } from "./FloatingWindow.js";
 
 export interface CollectionModalModel {
   title: string;
@@ -20,8 +21,10 @@ export interface CollectionModalHostProps {
   model?: CollectionModalModel | undefined;
   disabled?: boolean | undefined;
   minimized?: boolean | undefined;
+  initialRect?: WindowRect | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onRectChange?: ((rect: WindowRect) => void) | undefined;
   onToggleCard?: ((instanceId: string) => void) | undefined;
   onConfirm?: (() => void) | undefined;
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
@@ -31,8 +34,10 @@ export const CollectionModalHost = ({
   model,
   disabled = false,
   minimized = false,
+  initialRect,
   onToggleMinimized,
   onClose,
+  onRectChange,
   onToggleCard,
   onConfirm,
   onPreviewCard,
@@ -48,9 +53,11 @@ export const CollectionModalHost = ({
     <FloatingWindow
       title={model.title}
       className="floating-window-collection collection-modal"
+      initialRect={initialRect}
       minimized={minimized}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
+      onRectChange={onRectChange}
     >
       <div className="collection-modal-card-grid">
         {model.cards.map((card) => {
