@@ -316,6 +316,17 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "chooseQuantity", quantity: 3 });
   });
 
+  test("chooseQuantity draft defaults to the maximum legal quantity", () => {
+    const decision = quantityDecision();
+    const draft = createDecisionDraft(decision);
+    const model = createDecisionModalModel(decision, draft);
+
+    assert.equal(draft.kind, "chooseQuantity");
+    assert.equal(draft.quantity, decision.max);
+    assert.equal(model.kind, "chooseQuantity");
+    assert.equal(model.quantity, decision.max);
+  });
+
   test("invalid drafts fail closed before response construction", () => {
     const decision = {
       ...quantityDecision(),

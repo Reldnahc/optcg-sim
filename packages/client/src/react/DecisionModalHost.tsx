@@ -138,16 +138,22 @@ export const DecisionModalHost = ({
         </div>
       ) : null}
       {model.kind === "chooseQuantity" ? (
-        <input
-          className="quantity-input"
-          type="number"
-          min={model.min}
-          max={model.max}
-          value={model.quantity}
-          onChange={(event) => {
-            onQuantity(Number(event.currentTarget.value));
-          }}
-        />
+        <label className="quantity-slider-field">
+          <span className="quantity-slider-value">{model.quantity}</span>
+          <input
+            className="quantity-slider"
+            type="range"
+            min={model.min}
+            max={model.max}
+            value={model.quantity}
+            onChange={(event) => {
+              onQuantity(Number(event.currentTarget.value));
+            }}
+          />
+          <span className="quantity-slider-range">
+            {model.min}-{model.max}
+          </span>
+        </label>
       ) : null}
       {model.kind === "chooseOption" ? (
         <div className="decision-option-list">

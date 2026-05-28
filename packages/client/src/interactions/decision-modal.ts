@@ -316,7 +316,7 @@ export const createDecisionDraft = (
     return {
       kind: "chooseQuantity",
       decisionId: decision.id,
-      quantity: decision.min,
+      quantity: decision.max,
     };
   }
   const options = simpleDecisionOptions(decision);

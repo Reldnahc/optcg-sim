@@ -82,7 +82,25 @@
   justify-content: space-between;
 }
 
-.quantity-input {
-  width: 140px;
-  padding: 8px;
+.quantity-slider-field {
+  display: grid;
+  gap: 8px;
+}
+
+.quantity-slider-value {
+  color: #ffdc62;
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.quantity-slider {
+  width: min(280px, 72vw);
+  accent-color: #ffdc62;
+}
+
+.quantity-slider-range {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  text-align: center;
 }

@@ -55,3 +55,36 @@ test("selectCards modal renders card images and disables nonselectable choices",
   assert.equal(markup.includes("illegal-card.png"), true);
   assert.match(markup, /disabled=""/u);
 });
+
+test("chooseQuantity modal renders a range slider over the legal range", () => {
+  const model: DecisionModalModel = {
+    kind: "chooseQuantity",
+    decisionId: "decision-quantity" as never,
+    prompt: "Choose quantity",
+    min: 0,
+    max: 4,
+    quantity: 4,
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onToggleBottomPlacement: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /type="range"/u);
+  assert.match(markup, /class="quantity-slider"/u);
+  assert.match(markup, /min="0"/u);
+  assert.match(markup, /max="4"/u);
+  assert.match(markup, /value="4"/u);
+  assert.equal(markup.includes('type="number"'), false);
+});
