@@ -2,6 +2,44 @@
   z-index: 11;
 }
 
+.card-preview-minimized-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 11;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 2px solid #f4eee7;
+  border-radius: 8px;
+  background: rgba(38, 35, 34, 0.97);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.card-preview-magnifier-icon {
+  position: relative;
+  display: block;
+  width: 17px;
+  height: 17px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+
+.card-preview-magnifier-icon::after {
+  position: absolute;
+  right: -8px;
+  bottom: -6px;
+  width: 10px;
+  height: 3px;
+  background: #fff;
+  border-radius: 2px;
+  content: "";
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
 .card-preview-content {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

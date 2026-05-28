@@ -16,6 +16,20 @@ export const CardPreviewWindow = ({
     return null;
   }
 
+  if (minimized) {
+    return (
+      <button
+        className="card-preview-minimized-button"
+        type="button"
+        aria-label="Show card preview"
+        title="Show card preview"
+        onClick={onToggleMinimized}
+      >
+        <span className="card-preview-magnifier-icon" aria-hidden="true" />
+      </button>
+    );
+  }
+
   return (
     <FloatingWindow
       title="Card Preview"
@@ -23,7 +37,6 @@ export const CardPreviewWindow = ({
       initialRect={{ x: 20, y: 20, width: 330, height: 520 }}
       minWidth={240}
       minHeight={220}
-      minimized={minimized}
       onToggleMinimized={onToggleMinimized}
     >
       <article className="card-preview-content">

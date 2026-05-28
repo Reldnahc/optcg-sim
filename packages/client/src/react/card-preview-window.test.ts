@@ -46,7 +46,7 @@ describe("card preview window", () => {
     assert.match(markup, /Add 1 card\./u);
   });
 
-  test("can render minimized without card body content", () => {
+  test("minimizes to a standalone magnifier button", () => {
     const markup = renderToStaticMarkup(
       createElement(CardPreviewWindow, {
         card: card(),
@@ -55,8 +55,10 @@ describe("card preview window", () => {
       }),
     );
 
-    assert.match(markup, /is-minimized/u);
-    assert.match(markup, /Show/u);
+    assert.match(markup, /card-preview-minimized-button/u);
+    assert.match(markup, /card-preview-magnifier-icon/u);
+    assert.match(markup, /aria-label="Show card preview"/u);
+    assert.equal(markup.includes("floating-window"), false);
     assert.equal(markup.includes("Draw 1 card."), false);
   });
 
