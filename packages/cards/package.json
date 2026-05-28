@@ -12,6 +12,7 @@
   },
   "scripts": {
     "capture:fixture": "corepack pnpm exec tsx src/fixture-capture-cli.ts",
+    "cache:clear": "corepack pnpm exec tsx src/cache-clear-cli.ts",
     "support:probe": "corepack pnpm exec tsx src/support-probe.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src"

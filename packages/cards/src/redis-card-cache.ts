@@ -9,6 +9,14 @@ export interface RedisJsonClient {
   ): Promise<unknown>;
 }
 
+export interface RedisKeyPatternClient {
+  scanIterator(options: {
+    readonly MATCH: string;
+    readonly COUNT: number;
+  }): AsyncIterable<string | string[]>;
+  del(keys: string[]): Promise<number>;
+}
+
 export const createRedisCardDataCacheFromClient = (
   client: RedisJsonClient,
 ): CardDataCache => ({
@@ -36,6 +44,27 @@ export const createRedisCardDataCacheFromClient = (
     });
   },
 });
+
+export const clearRedisKeysByPatternFromClient = async (
+  client: RedisKeyPatternClient,
+  pattern = "card:*",
+): Promise<number> => {
+  const keys: string[] = [];
+  for await (const entry of client.scanIterator({
+    MATCH: pattern,
+    COUNT: 100,
+  })) {
+    if (typeof entry === "string") {
+      keys.push(entry);
+    } else {
+      keys.push(...entry);
+    }
+  }
+  if (keys.length === 0) {
+    return 0;
+  }
+  return client.del(keys);
+};
 
 export const createRedisCardDataCache = async (input: {
   readonly url: string;

@@ -13,6 +13,7 @@ export {
   createPoneglyphHttpClient,
 } from "./card-repository.js";
 export {
+  clearRedisKeysByPatternFromClient,
   createRedisCardDataCache,
   createRedisCardDataCacheFromClient,
 } from "./redis-card-cache.js";
@@ -30,7 +31,10 @@ export type {
   PoneglyphFetchRequest,
   PoneglyphFetchResponse,
 } from "./card-repository.js";
-export type { RedisJsonClient } from "./redis-card-cache.js";
+export type {
+  RedisJsonClient,
+  RedisKeyPatternClient,
+} from "./redis-card-cache.js";
 export type {
   BuildDevMatchCardManifestFromPoneglyphIdsRequest,
   DevPoneglyphFetch,
