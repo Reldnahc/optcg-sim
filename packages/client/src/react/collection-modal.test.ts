@@ -74,7 +74,11 @@ describe("collection modal", () => {
       styles,
       /\.stack-count\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
     );
-    assert.match(styles, /\.stack-count\s*\{[^}]*-webkit-text-stroke:/u);
+    assert.match(styles, /\.stack-count\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(
+      styles,
+      /\.stack-count\s*\{[^}]*-webkit-text-stroke:\s*3px rgba\(0,\s*0,\s*0,\s*0\.92\);/u,
+    );
   });
 
   test("overlap mode marks zone rows for overlap layout", () => {
