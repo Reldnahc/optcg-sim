@@ -19,6 +19,7 @@ export { parseModifyPowerInstruction } from "./modify-power.js";
 export {
   parseModifyCostInstruction,
   parseSelfHandModifyCostInstruction,
+  parseTargetedModifyCostInstruction,
 } from "./modify-cost.js";
 export { parsePlayFromHandInstruction } from "./play-from-hand.js";
 export { parsePlayFromTrashInstruction } from "./play-from-trash.js";

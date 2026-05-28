@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   opponentCharactersTargetPrimitive,
   parseOpponentCharactersTarget,
+  parseYourCharactersTarget,
   parseYourNamedCardsTarget,
   parseYourLeaderTarget,
+  yourCharactersTargetPrimitive,
   yourNamedCardsTargetPrimitive,
   yourLeaderTargetPrimitive,
 } from "./field-targets.js";
@@ -18,6 +20,10 @@ describe("field target parsers", () => {
     expect(yourLeaderTargetPrimitive).toEqual({
       primitiveId: "target:yourLeader",
       matches: [{ id: "your-leader" }],
+    });
+    expect(yourCharactersTargetPrimitive).toEqual({
+      primitiveId: "target:yourCharacters",
+      matches: [{ id: "of-your-characters" }],
     });
     expect(yourNamedCardsTargetPrimitive).toEqual({
       primitiveId: "target:yourNamedCards",
@@ -75,6 +81,35 @@ describe("field target parsers", () => {
       },
       evidence: ["target:yourNamedCards", "player:self", "filter:name"],
       rest: "gains +2000 power during this battle.",
+    });
+  });
+
+  it("parses your Characters target and leaves modifier text", () => {
+    expect(
+      parseYourCharactersTarget({
+        text: "of your Characters gains +2 cost until the end of your opponent's next End Phase.",
+      }),
+    ).toEqual({
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"] },
+        },
+      },
+      evidence: [
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+      ],
+      rest: "gains +2 cost until the end of your opponent's next End Phase.",
     });
   });
 });

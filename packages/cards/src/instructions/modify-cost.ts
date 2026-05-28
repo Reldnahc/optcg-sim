@@ -1,5 +1,8 @@
 import { parseCardFilterPredicates } from "../filters/index.js";
-import type { InstructionParser } from "../types.js";
+import { parseUpToCardinality } from "../cardinality/index.js";
+import { parseOpponentNextEndPhaseDuration } from "../durations/index.js";
+import { parseYourCharactersTarget } from "../targets/index.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 import type { ContinuousInstructionParser } from "./continuous-field-effects.js";
 
 export const modifyCostInstructionPrimitive = {
@@ -54,6 +57,55 @@ export const parseModifyCostInstruction: InstructionParser = (input) => {
   };
 };
 
+export const parseTargetedModifyCostInstruction: InstructionParser = (
+  input,
+) => {
+  const cardinality = parseUpToCardinality(input);
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = parseYourCharactersTarget({ text: cardinality.rest });
+  if (target?.target === undefined) {
+    return undefined;
+  }
+
+  const actionMatch = /^gains\s+(?<rest>.*)$/i.exec(target.rest);
+  const modifierText = actionMatch?.groups?.["rest"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const modifier = parsePositiveCostModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+
+  const duration = parseOpponentNextEndPhaseDuration({ text: modifier.rest });
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyCost",
+      player: "self",
+      target: target.target,
+      value: modifier.value,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:modifyCost",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      ...modifier.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+};
+
 export const parseSelfHandModifyCostInstruction: ContinuousInstructionParser = (
   input,
   context,
@@ -94,3 +146,24 @@ export const parseSelfHandModifyCostInstruction: ContinuousInstructionParser = (
     rest: "",
   };
 };
+
+function parsePositiveCostModifier(input: { readonly text: string }):
+  | {
+      readonly value: number;
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+    }
+  | undefined {
+  const match = /^\+(?<value>[1-9]\d*) cost\b\s*(?<rest>.*)$/i.exec(input.text);
+  const valueText = match?.groups?.["value"];
+  const restText = match?.groups?.["rest"];
+  if (valueText === undefined) {
+    return undefined;
+  }
+
+  return {
+    value: Number.parseInt(valueText, 10),
+    evidence: ["modifier:positiveCost", "count:positiveInteger"],
+    rest: restText?.trim() ?? "",
+  };
+}

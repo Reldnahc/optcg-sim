@@ -166,8 +166,9 @@ const isSupportedCostModifierEffect = (
       (effect.target === undefined &&
         isSupportedCostModifierFilter(effect.filter)))) ||
     (effect.sourceZone === undefined &&
-      effect.target?.type === "self" &&
-      effect.filter === undefined));
+      effect.target !== undefined &&
+      effect.filter === undefined &&
+      isSupportedTarget(effect.target)));
 
 const isSupportedChooseFromZonesTarget = (
   target: Extract<Target, { type: "chooseFromZones" }>,
@@ -368,7 +369,7 @@ export const createContinuousRecordsForResolvedEffect = (
     | Extract<Effect, { type: "cannotBlock" }>,
   chosenTargets?: readonly CardRef[],
 ): ContinuousEffectRecord[] | null => {
-  if (effect.type === "modifyCost") {
+  if (effect.type === "modifyCost" && effect.target?.type !== "choose") {
     return [
       createRecord(
         state,
@@ -379,10 +380,14 @@ export const createContinuousRecordsForResolvedEffect = (
       ),
     ];
   }
-  if (effect.target.type === "choose") {
+  const target = effect.target;
+  if (target === undefined) {
+    return null;
+  }
+  if (target.type === "choose") {
     if (chosenTargets === undefined) return null;
     if (chosenTargets.length === 0) {
-      return effect.target.request.min === 0 ? [] : null;
+      return target.request.min === 0 ? [] : null;
     }
     const records: ContinuousEffectRecord[] = [];
     for (const [index, chosen] of chosenTargets.entries()) {
@@ -401,7 +406,7 @@ export const createContinuousRecordsForResolvedEffect = (
     }
     return records;
   }
-  if (effect.target.type === "myLeader") {
+  if (target.type === "myLeader") {
     const leader = state.players[entry.controllerId]?.leader;
     if (leader === undefined) {
       return null;
@@ -426,7 +431,7 @@ export const createContinuousRecordsForResolvedEffect = (
       ),
     ];
   }
-  return [createRecord(state, entry, effect, effect.target, 0)];
+  return [createRecord(state, entry, effect, target, 0)];
 };
 
 const supportedDerivedKeywords = new Set<Keyword>([

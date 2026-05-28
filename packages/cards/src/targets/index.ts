@@ -3,6 +3,7 @@ export { parseYourDonCardsCostTarget } from "./cost-targets.js";
 export {
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,
+  parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,

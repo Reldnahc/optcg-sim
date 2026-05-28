@@ -144,6 +144,7 @@ const isSupportedContinuousCostModifier = (
   effect.modifier.operation.type === "addCost" &&
   Number.isSafeInteger(effect.modifier.operation.value) &&
   (effect.modifier.target.type === "self" ||
+    effect.modifier.target.type === "exactCard" ||
     (effect.modifier.target.type === "allMatching" &&
       effect.modifier.target.zone === "hand" &&
       (effect.modifier.target.player === "self" ||
