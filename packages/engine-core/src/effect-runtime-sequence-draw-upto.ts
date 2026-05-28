@@ -13,7 +13,7 @@ import {
   applyResolvedQuantityDrawSegment,
   applyResolvedQuantityMoveCardsSegment,
 } from "./effect-runtime-sequence-segments.js";
-import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
+import { toSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
@@ -115,7 +115,8 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     };
   }
   const effectBlock = params.findSequenceEffectBlock(params.state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
@@ -125,7 +126,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     };
   }
   const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "drawUpTo" &&
@@ -191,7 +192,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
   }
   return params.resumeSequenceFrameFromLedgers({
     createTrashDecision: params.unsupportedTrashDecision,
-    effectBlock,
+    effectBlock: supportedBlock,
     entry,
     finalizeCompleted: true,
     frame,

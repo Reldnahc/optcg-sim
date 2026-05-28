@@ -112,6 +112,32 @@ const attachDonSequence = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const parserNestedAttachDonSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const flat = attachDonSequence();
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "sequence",
+          effects: flat.effects.slice(0, 2),
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "sequence",
+          effects: flat.effects.slice(2),
+        },
+      },
+    ],
+  };
+};
+
 const setupDefinition = (
   state: GameState,
   effect: Effect,
@@ -259,6 +285,27 @@ test("activate-main DON sequence checks turn count, adds active/rested DON, and 
   assert.deepEqual(
     afterTarget?.attachedDon,
     selectedDon.map((card) => card.instanceId),
+  );
+});
+
+test("parser-emitted nested DON sequence resumes after the first quantity decision", () => {
+  const state = createActiveState();
+  setupDefinition(state, parserNestedAttachDonSequence());
+
+  const firstPause = processEffectRuntime(state);
+  assert.equal(firstPause.errors, undefined);
+  assert.equal(firstPause.state.pendingDecision?.type, "chooseQuantity");
+
+  const addedActive = chooseQuantity(firstPause.state, 1);
+
+  assert.equal(addedActive.errors, undefined);
+  assert.equal(addedActive.state.pendingDecision?.type, "chooseQuantity");
+  assert.equal(addedActive.state.pendingDecision.max, 4);
+  assert.equal(
+    must(addedActive.state.players[p1], "p1").costArea.filter(
+      (card) => card.state === "active",
+    ).length,
+    1,
   );
 });
 
