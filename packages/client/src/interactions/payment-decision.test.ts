@@ -208,6 +208,64 @@ describe("optional card-cost interaction", () => {
     assert.deepEqual(group.source, source);
   });
 
+  test("collapses returnDon payments into one cost-area selectable group", () => {
+    const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 2 DON!!",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "returnDon",
+          chooseLabel: "Choose DON!! to return",
+          selectedCardInstanceIds: [
+            "don-1" as InstanceId,
+            "don-2" as InstanceId,
+          ],
+          source,
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Pay cost with 2 DON!!",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "returnDon",
+          chooseLabel: "Choose DON!! to return",
+          selectedCardInstanceIds: [
+            "don-1" as InstanceId,
+            "don-3" as InstanceId,
+          ],
+          source,
+        },
+      },
+    ];
+
+    const group = autoOptionalCardCostGroup(
+      createOptionalCardCostChoice(payCostDecision, actions),
+    );
+
+    assert.deepEqual(group, {
+      chooseActionIndex: -5,
+      operation: "returnDon",
+      chooseLabel: "Choose DON!! to return",
+      requiredCount: 2,
+      source,
+      cardActions: [
+        { instanceIds: ["don-1", "don-2"], actionIndex: 2 },
+        { instanceIds: ["don-1", "don-3"], actionIndex: 3 },
+      ],
+    });
+  });
+
   test("does not collapse mixed payment families", () => {
     const actions: readonly ClientActionModel[] = [
       {

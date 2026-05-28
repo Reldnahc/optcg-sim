@@ -8,6 +8,7 @@ import type {
   DecisionModalModel,
   MatchClientState,
   MatchClientSessionState,
+  OptionalCardCostChoice,
   OptionalCardCostGroup,
 } from "../index.js";
 
@@ -152,6 +153,50 @@ export const chooseNoDecisionLabel = (
 export const CONFIRM_DECISION_SELECTION_ACTION_INDEX = -2;
 export const CLEAR_DECISION_SELECTION_ACTION_INDEX = -3;
 export const CHOOSE_NO_DECISION_CARDS_ACTION_INDEX = -4;
+
+export const activeCardCostGlobalActions = ({
+  choice,
+  group,
+  explicitChoiceActive,
+  selectedInstanceCount,
+  selectedActionIndex,
+}: {
+  choice: OptionalCardCostChoice;
+  group: OptionalCardCostGroup;
+  explicitChoiceActive: boolean;
+  selectedInstanceCount: number;
+  selectedActionIndex: number | undefined;
+}): ClientActionModel[] => {
+  const actions: ClientActionModel[] = [
+    {
+      index: choice.declineActionIndex,
+      label: "Decline cost",
+      type: "respondToDecision",
+    },
+  ];
+  if (explicitChoiceActive) {
+    actions.push({
+      index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+      label: "Cancel card choice",
+      type: "clearDecisionSelection",
+    });
+  }
+  if (group.requiredCount > 1 && selectedActionIndex !== undefined) {
+    actions.push({
+      index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+      label: "Pay cost",
+      type: "confirmDecisionSelection",
+    });
+  }
+  if (group.requiredCount > 1 && selectedInstanceCount > 0) {
+    actions.push({
+      index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+      label: "Clear selection",
+      type: "clearDecisionSelection",
+    });
+  }
+  return actions;
+};
 
 export const toggleCardCostSelectedInstanceId = (
   selected: readonly string[],

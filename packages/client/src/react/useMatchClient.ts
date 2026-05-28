@@ -53,6 +53,7 @@ import {
   CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+  activeCardCostGlobalActions,
   decisionCandidateInstanceIds,
   decisionHasCandidate,
   isMatchClientState,
@@ -766,21 +767,13 @@ export const useMatchClient = (): MatchClientUi => {
       activeCardCostGroup !== undefined &&
       optionalCardCostChoice !== undefined
     ) {
-      const actions: ClientActionModel[] = [
-        {
-          index: optionalCardCostChoice.declineActionIndex,
-          label: "Decline cost",
-          type: "respondToDecision",
-        },
-      ];
-      if (explicitCardCostChoiceActive) {
-        actions.push({
-          index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
-          label: "Cancel card choice",
-          type: "clearDecisionSelection",
-        });
-      }
-      return actions;
+      return activeCardCostGlobalActions({
+        choice: optionalCardCostChoice,
+        group: activeCardCostGroup,
+        explicitChoiceActive: explicitCardCostChoiceActive,
+        selectedInstanceCount: activeCardCostSelectedInstanceIds.length,
+        selectedActionIndex: selectedCardCostActionIndex,
+      });
     }
     if (
       pendingDecisionInteractionMode === "zoneClick" &&
@@ -831,11 +824,13 @@ export const useMatchClient = (): MatchClientUi => {
     activeAttackTargetChoice,
     activeCounterTargetChoice,
     activeCardCostGroup,
+    activeCardCostSelectedInstanceIds.length,
     explicitCardCostChoiceActive,
     optionalCardCostChoice,
     pendingDecision,
     pendingDecisionInteractionMode,
     playerSnapshot,
+    selectedCardCostActionIndex,
   ]);
 
   const toggleDecisionCard = useCallback(

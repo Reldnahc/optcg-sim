@@ -5,6 +5,7 @@ import type { CardId, DecisionId, InstanceId, PlayerId } from "@optcg/types";
 
 import {
   createCollectionDecisionSurface,
+  usesCollectionCardCostSurface,
   type CollectionDecisionSurface,
 } from "./decision-surface.js";
 import type { DecisionModalModel } from "./decision-modal.js";
@@ -92,5 +93,20 @@ describe("decision surface routing", () => {
     ]);
 
     assert.equal(createCollectionDecisionSurface(model, p1), undefined);
+  });
+
+  test("routes only stacked trash card-cost selections to collection surfaces", () => {
+    assert.equal(
+      usesCollectionCardCostSurface({ zone: "trash", playerId: p1 }),
+      true,
+    );
+    assert.equal(
+      usesCollectionCardCostSurface({ zone: "costArea", playerId: p1 }),
+      false,
+    );
+    assert.equal(
+      usesCollectionCardCostSurface({ zone: "hand", playerId: p1 }),
+      false,
+    );
   });
 });

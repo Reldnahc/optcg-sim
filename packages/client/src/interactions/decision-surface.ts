@@ -1,6 +1,7 @@
 import type { PlayerId } from "@optcg/types";
 
 import type { DecisionModalModel } from "./decision-modal.js";
+import type { OptionalCardCostGroup } from "./payment-decision.js";
 
 export interface CollectionDecisionSurface {
   kind: "collection";
@@ -45,3 +46,7 @@ export const createCollectionDecisionSurface = (
     model,
   };
 };
+
+export const usesCollectionCardCostSurface = (
+  source: OptionalCardCostGroup["source"] | undefined,
+): boolean => source?.zone === "trash";

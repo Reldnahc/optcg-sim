@@ -275,6 +275,8 @@ const chooseLabelForCardCostOperation = (
       return "Choose card to trash";
     case "moveCards":
       return fallback;
+    case "returnDon":
+      return fallback;
     case "returnToHand":
       return fallback;
   }

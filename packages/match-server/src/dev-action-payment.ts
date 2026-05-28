@@ -37,11 +37,15 @@ export const actionDecisionPayment = (
   if (
     option?.type !== "trashFromHand" &&
     option?.type !== "trashFromField" &&
-    option?.type !== "moveCards"
+    option?.type !== "moveCards" &&
+    option?.type !== "returnDon"
   ) {
     return undefined;
   }
-  const selectedCardInstanceIds = response.selectedCardInstanceIds;
+  const selectedCardInstanceIds =
+    option.type === "returnDon"
+      ? response.selectedDonInstanceIds
+      : response.selectedCardInstanceIds;
   if (
     selectedCardInstanceIds === undefined ||
     selectedCardInstanceIds.length === 0
@@ -50,21 +54,37 @@ export const actionDecisionPayment = (
   }
   return {
     kind: "cardCost",
-    operation: option.type === "moveCards" ? "moveCards" : "trash",
+    operation: cardCostOperation(option.type),
     chooseLabel: chooseCardCostLabel(option.type),
     selectedCardInstanceIds: [...selectedCardInstanceIds],
     ...cardCostSource(state, selectedCardInstanceIds),
   };
 };
 
+const cardCostOperation = (
+  optionType: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon",
+): "trash" | "moveCards" | "returnDon" => {
+  switch (optionType) {
+    case "moveCards":
+      return "moveCards";
+    case "returnDon":
+      return "returnDon";
+    case "trashFromField":
+    case "trashFromHand":
+      return "trash";
+  }
+};
+
 const chooseCardCostLabel = (
-  optionType: "trashFromHand" | "trashFromField" | "moveCards",
+  optionType: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon",
 ): string => {
   switch (optionType) {
     case "trashFromField":
       return "Choose Character to trash";
     case "moveCards":
       return "Choose cards from trash";
+    case "returnDon":
+      return "Choose DON!! to return";
     case "trashFromHand":
       return "Choose card to trash";
   }

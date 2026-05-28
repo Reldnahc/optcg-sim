@@ -16,7 +16,7 @@ export interface DevVisibleAction {
     | { kind: "paymentDeclined" }
     | {
         kind: "cardCost";
-        operation: "trash" | "returnToHand" | "moveCards";
+        operation: "trash" | "returnToHand" | "moveCards" | "returnDon";
         chooseLabel: string;
         selectedCardInstanceIds: CardInstance["instanceId"][];
         source?: { zone: Zone; playerId?: PlayerId } | undefined;

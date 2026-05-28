@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { CardRef, InstanceId } from "@optcg/types";
 
-import { createCollectionDecisionSurface } from "../interactions/decision-surface.js";
+import {
+  createCollectionDecisionSurface,
+  usesCollectionCardCostSurface,
+} from "../interactions/decision-surface.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import { BoardLayout } from "./BoardLayout.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
@@ -115,7 +118,9 @@ export const MatchApp = (): React.JSX.Element => {
           },
         };
   const cardCostCollectionModal =
-    board === undefined || cardCostSelection === undefined
+    board === undefined ||
+    cardCostSelection === undefined ||
+    !usesCollectionCardCostSurface(cardCostSelection.source)
       ? undefined
       : {
           title: cardCostSelection.title,
