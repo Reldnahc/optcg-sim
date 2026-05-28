@@ -69,6 +69,11 @@ describe("collection modal", () => {
     assert.match(markup, />2</u);
     assert.equal(emptyMarkup.includes("empty"), false);
     assert.match(emptyMarkup, /aria-label="Trash count: 0"/u);
+    assert.match(styles, /\.stack-count\s*\{[^}]*top:\s*50%;/u);
+    assert.match(
+      styles,
+      /\.stack-count\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
+    );
     assert.match(styles, /\.stack-count\s*\{[^}]*-webkit-text-stroke:/u);
   });
 
