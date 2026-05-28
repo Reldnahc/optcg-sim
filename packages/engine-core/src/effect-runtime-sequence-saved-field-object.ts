@@ -456,6 +456,9 @@ export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
   ) {
     return { ledgers: params.ledgers, state: params.state };
   }
+  if (params.segment.effect.target.type !== "savedFieldObject") {
+    return { ledgers: params.ledgers, state: params.state };
+  }
   const resolvedSavedTarget = resolveSavedFieldObjectKoSelection({
     controllerId: params.entry.controllerId,
     savedReferences: params.ledgers.savedReferences,

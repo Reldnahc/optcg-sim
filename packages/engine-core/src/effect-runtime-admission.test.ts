@@ -102,6 +102,76 @@ test("runtime admission accepts DON deck movement as a reusable auto body", () =
   );
 });
 
+test("runtime admission accepts costed main sequences with conditional draw and this-turn power reduction", () => {
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "cost:return-don",
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              id: "body:after-cost",
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "conditional",
+                      if: {
+                        type: "hasCardInZone",
+                        player: "self",
+                        zone: "leaderArea",
+                        filter: { categories: ["leader"], names: ["Enel"] },
+                      },
+                      then: { type: "draw", player: "self", count: 1 },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "modifyPower",
+                      target: {
+                        type: "choose",
+                        request: {
+                          timing: "onResolution",
+                          chooser: "self",
+                          player: "opponent",
+                          zone: "characterArea",
+                          min: 0,
+                          max: 1,
+                          allowFewerIfUnavailable: true,
+                          visibility: "public",
+                          filter: { categories: ["character"] },
+                        },
+                      },
+                      value: -1000,
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
 test("runtime admission rejects parsed unsupported entry adapters", () => {
   assert.deepEqual(
     evaluateEffectBlockRuntimeSupport(

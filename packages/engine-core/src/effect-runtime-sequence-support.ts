@@ -28,7 +28,18 @@ type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
-type CounterPowerEffect = Extract<Effect, { type: "modifyPower" }>;
+type DirectContinuousEffect = Extract<
+  Effect,
+  {
+    type:
+      | "modifyPower"
+      | "modifyCost"
+      | "invalidateEffects"
+      | "cannotBecomeActive"
+      | "cannotAttack"
+      | "cannotBlock";
+  }
+>;
 type TrashEffect = Extract<Effect, { type: "trash" }>;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
@@ -71,7 +82,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SelectCardsEffect
     | MoveSelectedEffect
     | AttachSelectedDonEffect
-    | CounterPowerEffect
+    | DirectContinuousEffect
     | TrashEffect
     | SelectTargetsEffect
     | PlaySelectedEffect
@@ -395,14 +406,6 @@ const isSupportedAttachSelectedDonSegment = (
   effect.target.filter?.categories?.length === 1 &&
   effect.target.filter.categories[0] === "character";
 
-const isSupportedPreResolvedCounterPowerSegment = (
-  effect: SequenceSegmentEffect,
-): effect is CounterPowerEffect =>
-  effect.type === "modifyPower" &&
-  effect.duration.type === "thisBattle" &&
-  Number.isInteger(effect.value) &&
-  effect.value > 0;
-
 const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
@@ -675,7 +678,13 @@ export const toSupportedSequenceBlock = (
       if (isSupportedAllFieldTrashSegment(segment.effect)) {
         return true;
       }
-      if (isSupportedPreResolvedCounterPowerSegment(segment.effect)) {
+      if (isSupportedContinuousQueueEffect(segment.effect)) {
+        if (
+          "target" in segment.effect &&
+          segment.effect.target.type === "choose"
+        ) {
+          supportState.hasPendingDecisionSegment = true;
+        }
         return true;
       }
       if (segment.effect.type === "selectTargets") {

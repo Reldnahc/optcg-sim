@@ -212,6 +212,43 @@ const twoSelectTargetsThenKoSavedSelectedTargetSequence = (): Extract<
   ],
 });
 
+const directPowerReductionTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "prelude-draw",
+      connector: "always",
+      effect: { type: "draw", player: "self", count: 0 },
+    },
+    {
+      id: "power-reduction",
+      connector: "then",
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character"] },
+          },
+        },
+        value: -1000,
+        duration: { type: "thisTurn" },
+      },
+    },
+  ],
+});
+
 test("sequence selectTargets fail-closes when no legal candidates satisfy min without leaving a pending decision", () => {
   const { state } = sequenceQueueState(
     selectTargetsThenKoSavedSelectedTargetSequence(),
@@ -242,6 +279,47 @@ test("sequence selectTargets fail-closes when no legal candidates satisfy min wi
   );
   assert.equal(first.stateHash, second.stateHash);
   assert.equal(first.stateHash, hashCanonicalStateValue(first.state));
+});
+
+test("sequence direct continuous choose segment creates target decision and exact-card power modifier", () => {
+  const { state } = sequenceQueueState(directPowerReductionTargetSequence());
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "target"),
+    zone: "characterArea",
+    index: 0,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 5000,
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "target candidate").card],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  const modifier = must(result.state.continuousEffects[0], "power modifier");
+  assert.equal(modifier.modifier.layer, "powerAdd");
+  assert.equal(modifier.modifier.target.type, "exactCard");
+  assert.equal(modifier.modifier.target.card.instanceId, target.instanceId);
+  assert.deepEqual(modifier.modifier.operation, {
+    type: "addPower",
+    value: -1000,
+  });
 });
 
 test("multiple sequence selectTargets segments use distinct decision ids", () => {

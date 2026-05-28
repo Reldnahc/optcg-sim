@@ -13,6 +13,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
+import { createContinuousRecordsForResolvedEffect } from "./effect-runtime-continuous.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 import {
   frameForPausedSequenceDecision,
@@ -26,6 +27,23 @@ import {
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+type ContinuousResolvedEffect = Extract<
+  Effect,
+  {
+    type:
+      | "modifyPower"
+      | "modifyCost"
+      | "invalidateEffects"
+      | "cannotBecomeActive"
+      | "cannotAttack"
+      | "cannotBlock";
+  }
+>;
+type ContinuousEffectWithChooseTarget = ContinuousResolvedEffect & {
+  readonly target: Extract<Effect, { target: unknown }>["target"] & {
+    readonly type: "choose";
+  };
+};
 
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
@@ -115,6 +133,30 @@ type SequenceRuntimeError = (
     | "unsupported-sequence-shape"
     | "segment-execution-failed",
 ) => EngineError;
+
+const isContinuousEffectWithChooseTarget = (
+  effect: unknown,
+): effect is ContinuousEffectWithChooseTarget => {
+  if (typeof effect !== "object" || effect === null) {
+    return false;
+  }
+  const candidate = effect as {
+    readonly target?: unknown;
+    readonly type?: unknown;
+  };
+  const target = candidate.target;
+  return (
+    (candidate.type === "modifyPower" ||
+      candidate.type === "modifyCost" ||
+      candidate.type === "invalidateEffects" ||
+      candidate.type === "cannotBecomeActive" ||
+      candidate.type === "cannotAttack" ||
+      candidate.type === "cannotBlock") &&
+    typeof target === "object" &&
+    target !== null &&
+    (target as { readonly type?: unknown }).type === "choose"
+  );
+};
 
 export const applySelectTargetsSequenceSegment = (params: {
   entry: EffectQueueEntry;
@@ -310,10 +352,72 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
   const sequence = resolveSequenceForPath(effectBlock.effect, frame.effectPath);
   const pausedSegment =
     sequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (
-    pausedSegment === undefined ||
-    pausedSegment.effect.type !== "selectTargets"
-  ) {
+  if (pausedSegment === undefined) {
+    return {
+      error: params.sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+
+  if (isContinuousEffectWithChooseTarget(pausedSegment.effect)) {
+    const records = createContinuousRecordsForResolvedEffect(
+      params.state,
+      entry,
+      pausedSegment.effect,
+      params.selectedTargets,
+    );
+    if (records === null) {
+      return {
+        error: params.sequenceRuntimeError(
+          entry.effectBlockId,
+          "segment-execution-failed",
+        ),
+        ok: false,
+      };
+    }
+    const scopedSegmentKey = segmentKeyForPath(
+      frame.effectPath,
+      params.segmentKey,
+    );
+    return params.resumeSequenceFrameFromLedgers({
+      createTrashDecision: params.createUnsupportedTrashDecision,
+      effectBlock,
+      entry,
+      finalizeCompleted: true,
+      frame,
+      ledgers: {
+        savedReferences: frame.savedReferences,
+        segmentResults: {
+          ...frame.segmentResults,
+          [scopedSegmentKey(
+            pausedSegment,
+            frame.pendingDecision.resumeAtSegmentIndex,
+          )]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: records.length > 0,
+            selectedTargets: [...params.selectedTargets],
+          },
+        },
+      },
+      state:
+        records.length === 0
+          ? params.state
+          : {
+              ...params.state,
+              continuousEffects: [
+                ...params.state.continuousEffects,
+                ...records,
+              ],
+            },
+    });
+  }
+
+  if (pausedSegment.effect.type !== "selectTargets") {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,

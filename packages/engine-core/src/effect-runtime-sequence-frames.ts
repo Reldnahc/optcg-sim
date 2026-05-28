@@ -23,7 +23,7 @@ import {
   getOpponentId,
   reindexZoneCards,
 } from "./action-state.js";
-import { appendEvent, toStateSeq } from "./action-results.js";
+import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { createSupportedHandSelectionChoiceDecision } from "./effect-runtime-hand-selection.js";
 import {
@@ -52,6 +52,7 @@ import {
 } from "./effect-runtime-sequence-saved-field-object.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "./effect-runtime-continuous.js";
+import { resolvePlayerId } from "./effect-runtime-primitives.js";
 import {
   applySelectTargetsSequenceSegment,
   resumeSequenceFrameAfterSelectTargets as resumeSequenceFrameAfterSelectTargetsHelper,
@@ -76,6 +77,7 @@ import {
   type SupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./effect-runtime-sequence-support.js";
+import { resolvePublicTargetCandidates } from "./target-selection.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -103,6 +105,12 @@ type ContinuousResolvedEffect = Extract<
       | "cannotBecomeActive"
       | "cannotAttack"
       | "cannotBlock";
+  }
+>;
+type ContinuousEffectWithTarget = Extract<
+  ContinuousResolvedEffect,
+  {
+    target: Target;
   }
 >;
 type SegmentLedgers = {
@@ -153,6 +161,23 @@ const isContinuousResolvedEffect = (
   effect.type === "cannotBecomeActive" ||
   effect.type === "cannotAttack" ||
   effect.type === "cannotBlock";
+
+const isContinuousEffectWithTarget = (
+  effect: ContinuousResolvedEffect,
+): effect is ContinuousEffectWithTarget => "target" in effect;
+
+const hasSavedFieldObjectContinuousTarget = (
+  effect: ContinuousResolvedEffect,
+): boolean =>
+  isContinuousEffectWithTarget(effect) &&
+  effect.target.type === "savedFieldObject";
+
+const continuousChooseTargetRequest = (
+  effect: ContinuousResolvedEffect,
+): Extract<Target, { type: "choose" }>["request"] | undefined =>
+  isContinuousEffectWithTarget(effect) && effect.target.type === "choose"
+    ? effect.target.request
+    : undefined;
 
 const selectedCardRefsForMove = (
   ledgers: SegmentLedgers,
@@ -1229,6 +1254,102 @@ const continueNoDecisionSegments = (
       nextState = trashed.state;
       nextLedgers = trashed.ledgers;
       events.push(...trashed.events);
+      continue;
+    }
+    if (
+      isContinuousResolvedEffect(segment.effect) &&
+      !hasSavedFieldObjectContinuousTarget(segment.effect)
+    ) {
+      const request = continuousChooseTargetRequest(segment.effect);
+      if (request !== undefined) {
+        const candidates = resolvePublicTargetCandidates(nextState, request, {
+          sourceControllerId: entry.controllerId,
+        });
+        const chooserId = resolvePlayerId(nextState, entry, request.chooser);
+        if (!candidates.ok || chooserId === undefined) {
+          return { ok: false };
+        }
+        const decision: SelectTargetsDecision = {
+          id: toDecisionId(
+            `decision:selectTargets:sequence:${String(entry.id)}:${String(index)}`,
+          ),
+          type: "selectTargets",
+          playerId: chooserId,
+          prompt: "Select targets.",
+          causedBy: {
+            type: "effect",
+            queueEntryId: entry.id,
+            effectId: entry.effectBlockId,
+          },
+          visibility: { type: "public" },
+          request,
+          candidates: candidates.candidates,
+        };
+        const decisionEvents: EngineEvent[] = [];
+        appendEvent(
+          nextState,
+          decisionEvents,
+          "decisionCreated",
+          {
+            decisionId: decision.id,
+            decisionType: decision.type,
+            playerId: decision.playerId,
+          },
+          { type: "public" },
+        );
+        const created = decisionEvents[0];
+        if (created !== undefined) {
+          created.causedBy = decision.causedBy;
+        }
+        const decisionState: GameState = {
+          ...nextState,
+          seq: toStateSeq(nextState.seq + 1),
+          pendingDecision: decision,
+          eventJournal: [...nextState.eventJournal, ...decisionEvents],
+        };
+        const frame = frameForPausedSequenceDecision({
+          decision,
+          entry,
+          effectPath: [...effectPath],
+          index,
+          savedReferences: pausedLedgers.savedReferences,
+          segmentResults: pausedLedgers.segmentResults,
+          state: decisionState,
+        });
+        return {
+          events: [...events, ...decisionEvents],
+          kind: "paused",
+          ok: true,
+          state: stateWithPausedSequenceFrame(decisionState, entry, frame),
+        };
+      }
+      const records = createContinuousRecordsForResolvedEffect(
+        nextState,
+        entry,
+        segment.effect,
+      );
+      if (records === null) {
+        return { ok: false };
+      }
+      nextState =
+        records.length === 0
+          ? nextState
+          : {
+              ...nextState,
+              continuousEffects: [...nextState.continuousEffects, ...records],
+            };
+      nextLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [ledgerKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: records.length > 0,
+          },
+        },
+      };
       continue;
     }
     if (segment.effect.type === "rest") {
