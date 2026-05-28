@@ -144,7 +144,9 @@ function parseGainsPositivePower(target: Target, text: string) {
     return undefined;
   }
 
-  const duration = parseThisBattleDuration({ text: modifier.rest });
+  const duration =
+    parseThisBattleDuration({ text: modifier.rest }) ??
+    parseThisTurnDuration({ text: modifier.rest });
   if (duration?.duration === undefined) {
     return undefined;
   }

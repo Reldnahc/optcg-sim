@@ -346,6 +346,100 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses costed Main Event conditional self power and opponent power-filtered KO sequence", () => {
+    const result = parseCardEffectLine(
+      "[Main] DON!! \u22121: If your Leader is [Enel], up to 1 of your Leader or Character cards gains +1000 power during this turn. Then, K.O. up to 1 of your opponent's Characters with 3000 power or less.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "conditional",
+                      if: {
+                        type: "hasCardInZone",
+                        player: "self",
+                        zone: "leaderArea",
+                        filter: {
+                          categories: ["leader"],
+                          names: ["Enel"],
+                        },
+                      },
+                      then: {
+                        type: "modifyPower",
+                        target: { type: "chooseFromZones" },
+                        value: 1000,
+                        duration: { type: "thisTurn" },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          connector: "always",
+                          effect: {
+                            type: "selectTargets",
+                            request: {
+                              player: "opponent",
+                              zone: "characterArea",
+                              filter: {
+                                categories: ["character"],
+                                power: { max: 3000 },
+                              },
+                            },
+                          },
+                        },
+                        {
+                          connector: "then",
+                          effect: { type: "ko" },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "cost:returnDon",
+        "condition:leaderIdentity",
+        "instruction:modifyPower",
+        "target:yourLeaderOrCharacters",
+        "duration:thisTurn",
+        "instruction:ko",
+        "filter:power",
+        "condition:comparator:lte",
+      ]),
+    );
+  });
+
   it("parses Main Event rest-DON cost and opponent Character effect negation primitives", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 2 of your DON!! cards: Negate the effect of up to 1 of your opponent's Characters with a cost of 5 or less during this turn.",

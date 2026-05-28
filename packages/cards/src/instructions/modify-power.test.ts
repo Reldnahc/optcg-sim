@@ -95,4 +95,43 @@ describe("modify power instruction parser", () => {
       ],
     });
   });
+
+  it("parses positive power for self Leader or Character targets during this turn", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "up to 1 of your Leader or Character cards gains +1000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: { categories: ["leader", "character"] },
+          },
+        },
+        value: 1000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "filter:category:leader",
+        "filter:category:character",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
 });

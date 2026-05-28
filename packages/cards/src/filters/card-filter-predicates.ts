@@ -277,6 +277,32 @@ function parsePowerPredicate(
   text: string,
   current: CardFilter,
 ): ReturnType<PredicateParser> {
+  const thresholdMatch =
+    /^(?<value>[1-9]\d*) power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
+      text,
+    );
+  const thresholdValueText = thresholdMatch?.groups?.["value"];
+  const direction = thresholdMatch?.groups?.["direction"];
+  if (thresholdValueText !== undefined && direction !== undefined) {
+    const op: Comparator =
+      direction.toLowerCase() === "or more" ? "gte" : "lte";
+    return {
+      filter: {
+        ...current,
+        power:
+          op === "gte"
+            ? { min: Number.parseInt(thresholdValueText, 10) }
+            : { max: Number.parseInt(thresholdValueText, 10) },
+      },
+      evidence: [
+        "filter:power",
+        op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: thresholdMatch?.groups?.["thresholdRest"] ?? "",
+    };
+  }
+
   const match = /^(?<value>[1-9]\d*) power\b\s*(?<rest>.*)$/i.exec(text);
   const valueText = match?.groups?.["value"];
   const restText = match?.groups?.["rest"];

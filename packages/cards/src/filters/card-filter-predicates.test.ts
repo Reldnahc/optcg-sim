@@ -67,6 +67,44 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses power thresholds as the same reusable power predicate family", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters with 3000 power or less",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        power: { max: 3000 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters with 3000 power or more",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        power: { min: 3000 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses bracketed card names as a reusable name predicate", () => {
     expect(parseCardFilterPredicates({ text: "[Imu]" })).toEqual({
       filter: { names: ["Imu"] },
