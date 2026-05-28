@@ -630,4 +630,61 @@ describe("card effect event parser", () => {
       ]),
     );
   });
+
+  it("parses On Play DON return reminder text into conditional opponent hand trash primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] DON!! \u22121 (You may return the specified number of DON!! cards from your field to your DON!! deck.): If your opponent has 7 or more cards in their hand, trash 2 cards from your opponent's hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "handCount",
+                  player: "opponent",
+                  op: "gte",
+                  value: 7,
+                },
+                then: {
+                  type: "trashFromHand",
+                  player: "opponent",
+                  chooser: "opponent",
+                  count: 2,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "composition:costedEffect",
+        "cost:returnDon",
+        "expression:conditional",
+        "condition:handCount",
+        "condition:comparator:gte",
+        "player:opponent",
+        "instruction:trashFromHand",
+        "chooser:opponent",
+      ]),
+    );
+  });
 });

@@ -39,6 +39,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
           id: "trash-n-cards-from-your-hand",
         },
         {
+          id: "trash-n-cards-from-your-opponents-hand",
+        },
+        {
           id: "opponent-trashes-n-cards-from-their-hand",
         },
       ],
