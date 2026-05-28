@@ -32,6 +32,7 @@ const must = <T>(value: T | undefined, label: string): T => {
 const resolvedCard = (params: {
   cardId: CardId;
   category: "leader" | "character" | "don";
+  cost?: number;
   power?: number;
   printedKeywords?: ResolvedCard["printedKeywords"];
   types?: string[];
@@ -63,6 +64,7 @@ const resolvedCard = (params: {
       sourceTextHash: "source-hash",
       behaviorHash: "behavior-hash",
     },
+    ...(params.cost !== undefined ? { cost: params.cost } : {}),
     ...(params.power !== undefined ? { power: params.power } : {}),
   } satisfies ResolvedCard;
   return base;
@@ -90,6 +92,7 @@ const createManifest = (): MatchCardManifest => ({
     [toCardId("char-vanilla")]: resolvedCard({
       cardId: toCardId("char-vanilla"),
       category: "character",
+      cost: 3,
       power: 3000,
     }),
     [toCardId("char-rush")]: resolvedCard({
@@ -731,6 +734,48 @@ test("derived DSL continuous keyword can target named cards and self separately"
     view.cards[other.instanceId]?.keywords.includes("doubleAttack"),
     false,
   );
+});
+
+test("derived DSL continuous self cost and power modifiers affect computed character view", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  const block = must(definition.effects[0], "permanent block");
+  delete block.condition;
+  block.effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "modifyPower",
+          target: { type: "self" },
+          value: 2000,
+          duration: { type: "whileSourceOnField" },
+        },
+      },
+      {
+        connector: "always",
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          target: { type: "self" },
+          value: 5,
+          duration: { type: "whileSourceOnField" },
+        },
+      },
+    ],
+  };
+  installPermanentDslCandidate(state, source, definition);
+
+  const view = computeView(state);
+
+  assert.equal(view.cards[source.instanceId]?.basePower, 3000);
+  assert.equal(view.cards[source.instanceId]?.currentPower, 5000);
+  assert.equal(view.cards[source.instanceId]?.baseCost, 3);
+  assert.equal(view.cards[source.instanceId]?.currentCost, 8);
 });
 
 test("fails closed for missing permanent definition", () => {

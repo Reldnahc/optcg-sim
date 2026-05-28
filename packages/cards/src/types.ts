@@ -156,6 +156,7 @@ export type PrimitiveEvidence =
   | "duration:opponentNextEndPhase"
   | "modifier:positivePower"
   | "modifier:negativePower"
+  | "modifier:positiveCost"
   | "modifier:costReduction"
   | "protectionProcess:fieldRemoval"
   | "protectionProcess:ko"

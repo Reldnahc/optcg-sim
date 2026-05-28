@@ -360,6 +360,35 @@ const cardMatchesFilter = (
   return true;
 };
 
+const isSupportedTrashCountFilter = (filter: CardFilter): boolean => {
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return (
+    keys.every((key) => key === "categories") &&
+    Array.isArray(filter.categories) &&
+    filter.categories.length > 0 &&
+    filter.categories.every(
+      (category) =>
+        category === "character" ||
+        category === "event" ||
+        category === "stage" ||
+        category === "leader",
+    )
+  );
+};
+
+const countTrashCardsMatchingFilter = (
+  state: GameState,
+  playerId: PlayerId,
+  filter: CardFilter,
+): number => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return 0;
+  }
+  return player.trash.filter((card) => cardMatchesFilter(state, card, filter))
+    .length;
+};
+
 const isSupportedOnlyMatchingFieldCardsFilter = (
   filter: CardFilter,
 ): boolean => {
@@ -602,7 +631,10 @@ const evaluateCondition = (
         (playerId) => state.turn.playerTurnCounts[playerId] ?? 0,
       );
     case "trashCount":
-      if (condition.filter !== undefined) {
+      if (
+        condition.filter !== undefined &&
+        !isSupportedTrashCountFilter(condition.filter)
+      ) {
         return { supported: false };
       }
       return evaluateCountCondition(
@@ -611,7 +643,10 @@ const evaluateCondition = (
         condition.player,
         condition.value,
         condition.op,
-        (playerId) => state.players[playerId]?.trash.length ?? 0,
+        (playerId) =>
+          condition.filter === undefined
+            ? (state.players[playerId]?.trash.length ?? 0)
+            : countTrashCardsMatchingFilter(state, playerId, condition.filter),
       );
     case "fieldCount": {
       if (isSupportedDonFieldCountFilter(condition.filter)) {
@@ -713,7 +748,8 @@ export const isSupportedQueuedEffectConditionShape = (
       );
     case "trashCount":
       return (
-        condition.filter === undefined &&
+        (condition.filter === undefined ||
+          isSupportedTrashCountFilter(condition.filter)) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")

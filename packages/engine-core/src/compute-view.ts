@@ -411,6 +411,26 @@ const continuousBasePowerForCard = (
   return basePower;
 };
 
+const continuousCostBonusForCard = (
+  state: GameState,
+  card: CardInstance,
+): number => {
+  let costBonus = 0;
+  const effects = allContinuousEffects(state);
+
+  for (const effect of effects) {
+    if (!durationIsActive(state, effect)) continue;
+    if (!recordConditionPasses(state, effect)) continue;
+    if (effect.modifier.layer !== "costAdd") continue;
+    if (effect.modifier.operation.type !== "addCost") continue;
+    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+
+    costBonus += effect.modifier.operation.value;
+  }
+
+  return costBonus;
+};
+
 const hasRestriction = (
   state: GameState,
   card: CardInstance,
@@ -623,6 +643,8 @@ const computeCardView = (
   const metadata = resolveCombatMetadata(state, card, options);
   const printedBasePower = metadata.power;
   const basePower = continuousBasePowerForCard(state, card) ?? printedBasePower;
+  const baseCost = metadata.cost;
+  const continuousCostBonus = continuousCostBonusForCard(state, card);
   const donBonus =
     card.controller === state.turn.turnPlayerId
       ? card.attachedDon.length * 1000
@@ -650,6 +672,12 @@ const computeCardView = (
     cardId: card.cardId,
     basePower,
     currentPower: basePower + donBonus + counterBonus + continuousPowerBonus,
+    ...(baseCost === undefined
+      ? {}
+      : {
+          baseCost,
+          currentCost: Math.max(0, baseCost + continuousCostBonus),
+        }),
     keywords,
     canAttack: canAttackNow(state, card, keywords),
     canBlock: canBlockNow(state, card, keywords),

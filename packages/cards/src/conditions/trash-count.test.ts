@@ -13,6 +13,9 @@ describe("trash count condition parser", () => {
         {
           id: "you-have-n-or-more-cards-in-your-trash",
         },
+        {
+          id: "you-have-n-or-more-events-in-your-trash",
+        },
       ],
     });
   });
@@ -34,6 +37,30 @@ describe("trash count condition parser", () => {
         "condition:comparator:gte",
         "condition:threshold:positiveInteger",
         "player:self",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses self Event trash count thresholds as a filtered condition", () => {
+    expect(
+      parseTrashCountCondition({
+        text: "you have 4 or more Events in your trash",
+      }),
+    ).toEqual({
+      condition: {
+        type: "trashCount",
+        player: "self",
+        filter: { categories: ["event"] },
+        op: "gte",
+        value: 4,
+      },
+      evidence: [
+        "condition:trashCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:event",
       ],
       rest: "",
     });

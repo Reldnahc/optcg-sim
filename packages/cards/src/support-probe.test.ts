@@ -73,6 +73,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for filtered trash-count power and cost gains", async () => {
+    const report = await createSupportProbeReport({
+      text: "If you have 4 or more Events in your trash, this Character gains +2000 power and +5 cost.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports raw keyword reminder lines as metadata-supported", async () => {
     const report = await createSupportProbeReport({
       text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",

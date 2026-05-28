@@ -5,6 +5,7 @@ import {
   parseBasePowerBecomeInstruction,
   parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
+  parseYourLeaderConditionalPowerInstruction,
   thisCharacterKeywordGrantPrimitive,
 } from "./continuous-field-effects.js";
 
@@ -230,6 +231,56 @@ describe("continuous field-effect instruction parsers", () => {
         "filter:category:character",
         "target:thisCharacter",
         "keyword:anySupported",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses this Character power and cost gains as separate reusable modifiers", () => {
+    expect(
+      parseYourLeaderConditionalPowerInstruction(
+        {
+          text: "this Character gains +2000 power and +5 cost.",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "modifyPower",
+              target: { type: "self" },
+              value: 2000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "modifyCost",
+              target: { type: "self" },
+              value: 5,
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "modifier:positivePower",
+        "modifier:positiveCost",
         "duration:whileConditionTrue",
       ],
       rest: "",

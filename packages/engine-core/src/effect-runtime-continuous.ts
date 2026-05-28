@@ -157,13 +157,17 @@ const isSupportedCostModifierEffect = (
   effect: Extract<Effect, { type: "modifyCost" }>,
 ): boolean =>
   effect.player === "self" &&
-  effect.sourceZone === "hand" &&
   Number.isSafeInteger(effect.value) &&
-  effect.value < 0 &&
+  effect.value !== 0 &&
   isSupportedDuration(effect.duration) &&
-  ((effect.target?.type === "self" && effect.filter === undefined) ||
-    (effect.target === undefined &&
-      isSupportedCostModifierFilter(effect.filter)));
+  ((effect.sourceZone === "hand" &&
+    effect.value < 0 &&
+    ((effect.target?.type === "self" && effect.filter === undefined) ||
+      (effect.target === undefined &&
+        isSupportedCostModifierFilter(effect.filter)))) ||
+    (effect.sourceZone === undefined &&
+      effect.target?.type === "self" &&
+      effect.filter === undefined));
 
 const isSupportedChooseFromZonesTarget = (
   target: Extract<Target, { type: "chooseFromZones" }>,

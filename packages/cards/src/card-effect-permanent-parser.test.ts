@@ -160,4 +160,70 @@ describe("permanent card effect line parser", () => {
       ]),
     );
   });
+
+  it("parses filtered trash-count self power and cost gains as reusable primitives", () => {
+    const result = parseCardEffectLine(
+      "If you have 4 or more Events in your trash, this Character gains +2000 power and +5 cost.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: { type: "self" },
+                value: 2000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    filter: { categories: ["event"] },
+                    op: "gte",
+                    value: 4,
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "modifyCost",
+                target: { type: "self" },
+                value: 5,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    filter: { categories: ["event"] },
+                    op: "gte",
+                    value: 4,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "condition:trashCount",
+        "filter:category:event",
+        "instruction:modifyPower",
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "modifier:positivePower",
+        "modifier:positiveCost",
+      ]),
+    );
+  });
 });

@@ -44,6 +44,29 @@ const setTrashCount = (
   }
 };
 
+const addTrashCard = (
+  state: ReturnType<typeof createActiveState>,
+  playerId: PlayerId,
+  category: "character" | "event",
+  index: number,
+): void => {
+  const player = must(state.players[playerId], "player");
+  const source = must(player.deck.pop() ?? player.hand.shift(), "trash source");
+  const cardId =
+    `${String(playerId)}-${category}-${String(index)}` as typeof source.cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({ cardId, category });
+  player.trash.push({
+    ...source,
+    cardId,
+    zone: {
+      zone: "trash",
+      playerId,
+      slot: "trash",
+      index: player.trash.length,
+    },
+  });
+};
+
 const evaluateTrashCount = (
   condition: Extract<Condition, { type: "trashCount" }>,
   counts: { self: number; opponent?: number },
@@ -143,6 +166,36 @@ test("opponent trashCount gte threshold evaluates below, at, and above threshold
   });
 });
 
+test("trashCount supports reusable category filters for Events", () => {
+  const state = createActiveState();
+  addTrashCard(state, p1, "event", 0);
+  addTrashCard(state, p1, "event", 1);
+  addTrashCard(state, p1, "event", 2);
+  addTrashCard(state, p1, "event", 3);
+  addTrashCard(state, p1, "character", 4);
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "trashCount",
+      player: "self",
+      filter: { categories: ["event"] },
+      op: "gte",
+      value: 4,
+    }),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "trashCount",
+      player: "self",
+      filter: { categories: ["event"] },
+      op: "gte",
+      value: 5,
+    }),
+    { supported: true, passed: false },
+  );
+});
+
 test("trashCount supports lte and exact equality comparator semantics", () => {
   assert.deepEqual(
     evaluateTrashCount(
@@ -230,7 +283,7 @@ test("true, false, and unsupported trashCount paths keep deterministic event ord
         player: "self",
         op: "gte",
         value: 7,
-        filter: { categories: ["event"] },
+        filter: { categories: ["don"] },
       },
       "trash-count-unsupported-deterministic",
     );
@@ -294,7 +347,7 @@ test("unsupported trashCount shapes and condition families fail closed without m
       player: "self",
       op: "gte",
       value: 7,
-      filter: { categories: ["event"] },
+      filter: { categories: ["don"] },
     },
     {
       type: "hasCardInZone",
