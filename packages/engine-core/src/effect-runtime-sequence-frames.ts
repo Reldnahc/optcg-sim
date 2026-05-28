@@ -24,6 +24,7 @@ import {
   cardMatchesHandSelectionFilter,
   getOpponentId,
   reindexZoneCards,
+  toCardRef,
 } from "./action-state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
@@ -94,6 +95,12 @@ type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
+type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
+type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
+type BounceEffect = Extract<Effect, { type: "bounce" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+  destination: "hand";
+};
 type TrashEffect = Extract<Effect, { type: "trash" }> & {
   target: Extract<Target, { type: "all" }>;
 };
@@ -345,6 +352,193 @@ const applyAttachSelectedDonSequenceSegment = (params: {
   };
 };
 
+const applyRevealTopSequenceSegment = (params: {
+  effect: RevealTopEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  const player = params.state.players[params.entry.controllerId];
+  if (player === undefined || params.effect.player !== "self") {
+    return {
+      events: [],
+      ledgers: params.ledgers,
+      state: params.state,
+    };
+  }
+  const revealedCards = player.deck
+    .slice(0, params.effect.count)
+    .map((card) => toCardRef(card, params.entry.controllerId));
+  const revealId = `reveal:sequence:${String(params.entry.id)}:${String(params.index)}`;
+  const events: EngineEvent[] = [];
+  if (revealedCards.length > 0) {
+    appendEvent(
+      params.state,
+      events,
+      "cardRevealed",
+      {
+        revealId,
+        cards: revealedCards,
+        origin: "topOfDeck",
+        selectionSetId: params.effect.saveAs,
+      },
+      { type: "public" },
+    );
+    const event = events[0];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: params.entry.id,
+        effectId: params.entry.effectBlockId,
+      };
+    }
+  }
+
+  const nextState =
+    revealedCards.length === 0
+      ? params.state
+      : {
+          ...params.state,
+          seq: toStateSeq(params.state.seq + 1),
+          revealedCards: [
+            ...params.state.revealedCards,
+            {
+              id: revealId,
+              cards: revealedCards,
+              visibility: { type: "public" as const },
+              origin: "topOfDeck" as const,
+              createdAtStateSeq: toStateSeq(params.state.seq + 1),
+              cleanupPolicy: "returnToOrigin" as const,
+            },
+          ],
+          eventJournal: [...params.state.eventJournal, ...events],
+        };
+
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      savedReferences: {
+        ...params.ledgers.savedReferences,
+        [params.effect.saveAs]: {
+          kind: "selectedCards",
+          cards: revealedCards,
+        },
+      },
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: revealedCards.length > 0,
+          selectedCards: revealedCards,
+        },
+      },
+    },
+    state: nextState,
+  };
+};
+
+const createSelectFromSetDecision = (params: {
+  effect: SelectFromSetEffect;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  state: GameState;
+}): { events: EngineEvent[]; ok: true; state: GameState } | { ok: false } => {
+  const set = params.ledgers.savedReferences[params.effect.set];
+  if (set?.kind !== "selectedCards") {
+    return { ok: false };
+  }
+  const candidates = set.cards.filter((card) => {
+    const player = params.state.players[card.playerId];
+    const deckCard =
+      card.zone?.zone === "deck"
+        ? player?.deck.find(
+            (candidate) => candidate.instanceId === card.instanceId,
+          )
+        : undefined;
+    return (
+      deckCard !== undefined &&
+      cardMatchesHandSelectionFilter(
+        params.state,
+        card.playerId,
+        deckCard,
+        params.effect.filter,
+      )
+    );
+  });
+  const decision: SelectCardsDecision = {
+    id: toDecisionId(
+      `decision:selectCards:sequence-set:${String(params.entry.id)}:${String(params.index)}`,
+    ),
+    type: "selectCards",
+    playerId: params.entry.controllerId,
+    prompt: "Choose a revealed card, or decline.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: params.entry.id,
+      effectId: params.entry.effectBlockId,
+    },
+    visibility: { type: "public" },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      set: params.effect.set,
+      min: params.effect.min,
+      max: params.effect.max,
+      allowFewerIfUnavailable: true,
+      visibility: "public",
+      ...(params.effect.filter === undefined
+        ? {}
+        : { filter: params.effect.filter }),
+    },
+    candidates: candidates.map((card) => ({
+      card,
+      visibility: { type: "public" as const },
+    })),
+    defaultResponse: { type: "cards", cards: [] },
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    params.state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    { type: "public" },
+  );
+  const event = events[0];
+  if (event !== undefined) {
+    event.causedBy = decision.causedBy;
+  }
+  return {
+    events,
+    ok: true,
+    state: {
+      ...params.state,
+      seq: toStateSeq(params.state.seq + 1),
+      pendingDecision: decision,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
+
 const applyTrashToHandMoveSelectedSegment = (params: {
   effect: MoveSelectedEffect;
   emptySegmentResult: () => SequenceSegmentResult;
@@ -457,6 +651,132 @@ const applyTrashToHandMoveSelectedSegment = (params: {
     ok: true,
     state: {
       ...eventBaseState,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
+
+const applyBounceToOwnerHandSequenceSegment = (params: {
+  effect: BounceEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const selected =
+    params.ledgers.savedReferences[params.effect.target.binding.saveResultAs];
+  if (selected?.kind !== "selectedTargets") {
+    return { ok: false };
+  }
+  let nextState = params.state;
+  const events: EngineEvent[] = [];
+  const movedTargets: CardRef[] = [];
+  for (const selectedTarget of selected.targets) {
+    const target = selectedTarget.object;
+    const player = nextState.players[target.playerId];
+    if (player === undefined || target.zone?.zone !== "characterArea") {
+      continue;
+    }
+    const card = player.characters.find(
+      (candidate) => candidate.instanceId === target.instanceId,
+    );
+    if (card === undefined) {
+      continue;
+    }
+    const attachedDonIds = new Set(card.attachedDon);
+    const nextCharacters = reindexZoneCards(
+      player.characters.filter(
+        (candidate) => candidate.instanceId !== card.instanceId,
+      ),
+      "characterArea",
+      target.playerId,
+      "character",
+    );
+    const nextHand = reindexZoneCards(
+      [...player.hand, { ...card, attachedDon: [] }],
+      "hand",
+      target.playerId,
+      "hand",
+    );
+    const nextCostArea = player.costArea.map((don) =>
+      attachedDonIds.has(don.instanceId)
+        ? { ...don, state: "rested" as const }
+        : don,
+    );
+    const eventBaseState: GameState = {
+      ...nextState,
+      players: {
+        ...nextState.players,
+        [target.playerId]: {
+          ...player,
+          characters: nextCharacters,
+          costArea: nextCostArea,
+          hand: nextHand,
+        },
+      },
+    };
+    const movedCard = nextHand.find(
+      (candidate) => candidate.instanceId === card.instanceId,
+    );
+    appendEvent(
+      eventBaseState,
+      events,
+      "cardMoved",
+      {
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        from: card.zone,
+        to: movedCard?.zone,
+        reason: "effect",
+      },
+      { type: "public" },
+    );
+    const event = events[events.length - 1];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: params.entry.id,
+        effectId: params.entry.effectBlockId,
+      };
+    }
+    nextState = eventBaseState;
+    movedTargets.push(target);
+  }
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: movedTargets.length > 0,
+          selectedTargets: movedTargets,
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...nextState,
+      seq:
+        movedTargets.length === 0
+          ? nextState.seq
+          : toStateSeq(nextState.seq + 1),
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };
@@ -1052,6 +1372,22 @@ const continueNoDecisionSegments = (
       nextLedgers = search.ledgers;
       continue;
     }
+    if (segment.effect.type === "revealTop") {
+      const revealed = applyRevealTopSequenceSegment({
+        effect: segment.effect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      nextState = revealed.state;
+      nextLedgers = revealed.ledgers;
+      events.push(...revealed.events);
+      continue;
+    }
     const partialResult: SequenceSegmentResult = {
       ...emptySegmentResult(),
       attempted: true,
@@ -1153,6 +1489,37 @@ const continueNoDecisionSegments = (
         state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
       };
     }
+    if (segment.effect.type === "selectFromSet") {
+      const decisionResult = createSelectFromSetDecision({
+        effect: segment.effect,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        state: nextState,
+      });
+      if (!decisionResult.ok) {
+        return { ok: false };
+      }
+      const decision = decisionResult.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        effectPath: [...effectPath],
+        index,
+        savedReferences: pausedLedgers.savedReferences,
+        segmentResults: pausedLedgers.segmentResults,
+        state: decisionResult.state,
+      });
+      return {
+        events: [...events, ...decisionResult.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
+      };
+    }
     if (segment.effect.type === "selectTargets") {
       const selectTargets = applySelectTargetsSequenceSegment({
         emptySegmentResult,
@@ -1211,6 +1578,29 @@ const continueNoDecisionSegments = (
       nextState = moved.state;
       nextLedgers = moved.ledgers;
       events.push(...moved.events);
+      continue;
+    }
+    if (
+      segment.effect.type === "bounce" &&
+      segment.effect.destination === "hand" &&
+      segment.effect.target.type === "savedFieldObject"
+    ) {
+      const bounced = applyBounceToOwnerHandSequenceSegment({
+        effect: segment.effect as BounceEffect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      if (!bounced.ok) {
+        return { ok: false };
+      }
+      nextState = bounced.state;
+      nextLedgers = bounced.ledgers;
+      events.push(...bounced.events);
       continue;
     }
     if (segment.effect.type === "attachSelectedDon") {

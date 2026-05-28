@@ -1,3 +1,5 @@
+import type { Condition } from "@optcg/types";
+
 import type {
   EntryPointParseResult,
   ExpressionParseResult,
@@ -52,14 +54,17 @@ export function parseEffectLineDetailed(
     return { ok: true, value: metadataLine };
   }
 
-  const entryPoint = firstEntryPointParse(registry.entryPoints, { text });
+  const leadingMarkerParse = parseMarkers(text, registry.markers ?? []);
+  const entryPoint = firstEntryPointParse(registry.entryPoints, {
+    text: leadingMarkerParse.rest,
+  });
   if (entryPoint === undefined) {
     return {
       ok: false,
       diagnostic: {
         stage: "entryPoint",
         reason: "no entry-point parser matched",
-        text,
+        text: leadingMarkerParse.rest,
       },
     };
   }
@@ -83,6 +88,13 @@ export function parseEffectLineDetailed(
     };
   }
 
+  const condition = combineConditions(
+    leadingMarkerParse.patch.condition,
+    entryPoint.node.condition,
+    markerParse.patch.condition,
+    expression.blockPatch?.condition,
+  );
+
   return {
     ok: true,
     value: {
@@ -90,13 +102,7 @@ export function parseEffectLineDetailed(
         category:
           expression.blockPatch?.category ?? entryPoint.node.category ?? "auto",
         trigger: entryPoint.node.trigger,
-        ...((expression.blockPatch?.condition ?? entryPoint.node.condition) ===
-        undefined
-          ? {}
-          : {
-              condition:
-                expression.blockPatch?.condition ?? entryPoint.node.condition,
-            }),
+        ...(condition === undefined ? {} : { condition }),
         ...(expression.blockPatch?.cost === undefined
           ? {}
           : { cost: expression.blockPatch.cost }),
@@ -105,6 +111,7 @@ export function parseEffectLineDetailed(
         effect: expression.effect,
       },
       evidence: [
+        ...leadingMarkerParse.evidence,
         ...entryPoint.evidence,
         ...markerParse.evidence,
         ...expression.evidence,
@@ -138,6 +145,7 @@ function parseMarkers(
 } {
   let rest = text;
   let oncePerTurn: true | undefined;
+  const conditions: Condition[] = [];
   const evidence: PrimitiveEvidence[] = [];
 
   let consumed = true;
@@ -152,6 +160,9 @@ function parseMarkers(
       if (result.patch.oncePerTurn === true) {
         oncePerTurn = true;
       }
+      if (result.patch.condition !== undefined) {
+        conditions.push(result.patch.condition);
+      }
 
       evidence.push(...result.evidence);
       rest = result.rest;
@@ -160,11 +171,30 @@ function parseMarkers(
     }
   }
 
+  const markerCondition = combineConditions(...conditions);
   return {
     rest,
-    patch: oncePerTurn === true ? { oncePerTurn } : {},
+    patch: {
+      ...(oncePerTurn === true ? { oncePerTurn } : {}),
+      ...(markerCondition === undefined ? {} : { condition: markerCondition }),
+    },
     evidence,
   };
+}
+
+function combineConditions(
+  ...conditions: readonly (Condition | undefined)[]
+): Condition | undefined {
+  const present = conditions.filter(
+    (condition): condition is Condition => condition !== undefined,
+  );
+  if (present.length === 0) {
+    return undefined;
+  }
+  if (present.length === 1) {
+    return present[0];
+  }
+  return { type: "and", conditions: present };
 }
 
 function firstEntryPointParse(

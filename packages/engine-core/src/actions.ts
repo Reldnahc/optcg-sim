@@ -61,6 +61,7 @@ import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-searc
 import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
 import {
   applySearchRevealSequenceChoiceResponse,
+  applySequenceSelectCardsChoiceResponse,
   resumeSequenceAfterSearchRevealOrderResponse,
 } from "./search-reveal-sequence-actions.js";
 import {
@@ -919,6 +920,13 @@ const applyRespondToDecision = (
       state,
       applySupportedSearchRevealChoiceResponse(state, action),
     );
+  }
+  const sequenceSelectCards = applySequenceSelectCardsChoiceResponse(
+    state,
+    action,
+  );
+  if (sequenceSelectCards !== null) {
+    return continueRuntimeAfterDecisionResult(state, sequenceSelectCards);
   }
   const searchRevealOrderResult = applySearchRevealOrderResponse(state, action);
   if (searchRevealOrderResult !== null) {

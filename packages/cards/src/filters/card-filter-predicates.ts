@@ -23,6 +23,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
   parseTypeCharacterPredicate,
   parseGenericTypeCardPredicate,
+  parseTypeOnlyPredicate,
   parseRestedCharacterPredicate,
   parseEventCategoryPredicate,
   parseStageCategoryPredicate,
@@ -167,6 +168,29 @@ function parseGenericTypeCardPredicate(
   current: CardFilter,
 ): ReturnType<PredicateParser> {
   const match = /^(?<type>\{[^}]+\}) type card\b\s*(?<rest>.*)$/i.exec(text);
+  const typeText = match?.groups?.["type"];
+  const restText = match?.groups?.["rest"];
+  if (typeText === undefined) {
+    return undefined;
+  }
+
+  const typeName = /^\{(?<name>[^}]+)\}$/.exec(typeText)?.groups?.["name"];
+  if (typeName === undefined || typeName.trim().length === 0) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, typesAny: [typeName.trim()] },
+    evidence: ["filter:type"],
+    rest: restText ?? "",
+  };
+}
+
+function parseTypeOnlyPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^(?<type>\{[^}]+\}) type\b\s*(?<rest>.*)$/i.exec(text);
   const typeText = match?.groups?.["type"];
   const restText = match?.groups?.["rest"];
   if (typeText === undefined) {

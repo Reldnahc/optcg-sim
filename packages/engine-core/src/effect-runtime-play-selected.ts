@@ -192,7 +192,9 @@ export const applyPlaySelectedSequenceSegment = (params: {
   for (const selected of selectedCards) {
     if (
       selected.playerId !== entry.controllerId ||
-      (selected.zone?.zone !== "hand" && selected.zone?.zone !== "trash")
+      (selected.zone?.zone !== "hand" &&
+        selected.zone?.zone !== "trash" &&
+        selected.zone?.zone !== "deck")
     ) {
       nextLedgers = {
         ...nextLedgers,

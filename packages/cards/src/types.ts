@@ -24,6 +24,7 @@ export type PrimitiveEvidence =
   | "entry:implicitPermanent"
   | "entrySupport:unsupported"
   | "marker:oncePerTurn"
+  | "marker:attachedDon"
   | "wrapper:onPlay"
   | "wrapper:onKO"
   | "body:draw"
@@ -46,6 +47,7 @@ export type PrimitiveEvidence =
   | "condition:trashCount"
   | "condition:lifeCount"
   | "condition:donFieldCount"
+  | "condition:attachedDonCount"
   | "condition:fieldCountDifference"
   | "condition:comparator:eq"
   | "condition:comparator:lte"
@@ -64,6 +66,9 @@ export type PrimitiveEvidence =
   | "instruction:placeTopDeckCards"
   | "instruction:playSelected"
   | "instruction:moveSelected"
+  | "instruction:revealTop"
+  | "instruction:selectFromSet"
+  | "instruction:returnToOwnerHand"
   | "instruction:trash"
   | "instruction:ko"
   | "instruction:giveProtection"
@@ -81,6 +86,7 @@ export type PrimitiveEvidence =
   | "cost:trashFromField"
   | "cost:trashFromHand"
   | "cost:moveCards"
+  | "cost:returnToOwnerHand"
   | "composition:costSequence"
   | "composition:costedEffect"
   | "composition:conditionalCostedEffect"
@@ -115,6 +121,7 @@ export type PrimitiveEvidence =
   | "value:basePower:positiveInteger"
   | "filter:any"
   | "destination:hand"
+  | "destination:ownerHand"
   | "destination:deck"
   | "destination:trash"
   | "destination:stageArea"
@@ -225,6 +232,7 @@ export interface ExpressionParseResult {
 
 export interface EffectBlockPatch {
   readonly oncePerTurn?: true;
+  readonly condition?: Condition;
 }
 
 export interface MarkerParseResult {

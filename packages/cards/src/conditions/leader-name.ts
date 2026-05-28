@@ -4,7 +4,9 @@ import type { ConditionParseResult, ConditionParser } from "../types.js";
 export const parseLeaderNameCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
-  const subjectMatch = /^your Leader is\s+(?<predicate>.+)$/i.exec(input.text);
+  const subjectMatch = /^your Leader (?:is|has the)\s+(?<predicate>.+)$/i.exec(
+    input.text,
+  );
   const predicateText = subjectMatch?.groups?.["predicate"];
   if (predicateText === undefined) {
     return undefined;

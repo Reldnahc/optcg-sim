@@ -275,7 +275,8 @@ export const resumeSequenceFrameAfterHandSelection = (params: {
   )?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
-    pausedSegment.effect.type !== "selectCards"
+    (pausedSegment.effect.type !== "selectCards" &&
+      pausedSegment.effect.type !== "selectFromSet")
   ) {
     return {
       error: params.sequenceRuntimeError(

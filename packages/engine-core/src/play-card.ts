@@ -417,7 +417,7 @@ const placePlayedCardResult = (params: {
   player: GameState["players"][PlayerId];
   sourceIndex: number;
   sourceCard: CardInstance;
-  sourceZone?: "hand" | "trash";
+  sourceZone?: "hand" | "trash" | "deck";
   supported: SupportedPlayMetadata;
   costArea: CardInstance[];
   selectedOverflowCharacterIndex?: number;
@@ -476,6 +476,15 @@ const placePlayedCardResult = (params: {
           "hand",
         )
       : player.hand;
+  const nextDeck =
+    sourceZone === "deck"
+      ? reindexZoneCards(
+          player.deck.filter((_, index) => index !== sourceIndex),
+          "deck",
+          playerId,
+          "deck",
+        )
+      : player.deck;
 
   let nextCharacters = player.characters;
   let nextTrash =
@@ -568,6 +577,7 @@ const placePlayedCardResult = (params: {
             ...player,
             costArea: nextCostArea,
             hand: nextHand,
+            deck: nextDeck,
             trash: nextTrash,
           },
         },
@@ -619,6 +629,7 @@ const placePlayedCardResult = (params: {
             ...player,
             costArea: nextCostArea,
             hand: nextHand,
+            deck: nextDeck,
             trash: nextTrash,
           },
         },
@@ -657,6 +668,7 @@ const placePlayedCardResult = (params: {
           ...player,
           costArea: nextCostArea,
           hand: nextHand,
+          deck: nextDeck,
           characters: [...nextCharacters, playedCard],
           trash: nextTrash,
         }
@@ -664,6 +676,7 @@ const placePlayedCardResult = (params: {
           ...player,
           costArea: nextCostArea,
           hand: nextHand,
+          deck: nextDeck,
           stage: playedCard,
           trash: nextTrash,
         };
@@ -724,7 +737,7 @@ export const applyRuntimePlaySelected = (params: {
   state: GameState;
   playerId: PlayerId;
   cardInstanceId: CardInstance["instanceId"];
-  sourceZone: "hand" | "trash";
+  sourceZone: "hand" | "trash" | "deck";
   enterRested: boolean;
   ignoreCost: boolean;
   causedBy?: CausalityRef;
@@ -742,7 +755,12 @@ export const applyRuntimePlaySelected = (params: {
   if (player === undefined) {
     return illegalAction(state, "playSelected requires an existing player.");
   }
-  const sourceCards = sourceZone === "hand" ? player.hand : player.trash;
+  const sourceCards =
+    sourceZone === "hand"
+      ? player.hand
+      : sourceZone === "trash"
+        ? player.trash
+        : player.deck;
   const sourceIndex = sourceCards.findIndex(
     (card) => card.instanceId === cardInstanceId,
   );

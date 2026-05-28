@@ -7,6 +7,8 @@ import type {
   EffectDefinition,
   EngineResult,
   GameState,
+  SelectionId,
+  SelectionSetId,
 } from "@optcg/types";
 
 import {
@@ -217,6 +219,81 @@ test("sequence search segment resumes into following then segment", () => {
   );
   assert.ok(
     player.hand.some((card) => card.instanceId === drawnCard?.instanceId),
+  );
+});
+
+test("sequence reveal-top segment can select and play the revealed card rested", () => {
+  const revealSet = "set:revealed-top" as SelectionSetId;
+  const selection = "revealSelection:play" as SelectionId;
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          count: 1,
+          saveAs: revealSet,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: revealSet,
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {
+            categories: ["character"],
+            typesAny: ["The Seven Warlords of the Sea"],
+            cost: { max: 4 },
+          },
+          saveAs: selection,
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "playSelected",
+          selection,
+          enterRested: true,
+          ignoreCost: true,
+        },
+      },
+    ],
+  };
+  const { state } = sequenceQueueState(effect, 1);
+  const topCard = must(state.players[p1], "p1").deck[0];
+  assert.ok(topCard !== undefined);
+  state.cardManifest.cards[topCard.cardId] = {
+    ...resolvedCard({
+      cardId: topCard.cardId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    }),
+    types: ["The Seven Warlords of the Sea"],
+  };
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+  assert.equal(paused.state.pendingDecision.candidates.length, 1);
+
+  const resolved = respondWithCards(paused.state);
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const player = must(resolved.state.players[p1], "resolved p1");
+  const played = player.characters.find(
+    (card) => card.instanceId === topCard.instanceId,
+  );
+  assert.ok(played !== undefined);
+  assert.equal(played.state, "rested");
+  assert.ok(
+    !player.deck.some((card) => card.instanceId === topCard.instanceId),
   );
 });
 

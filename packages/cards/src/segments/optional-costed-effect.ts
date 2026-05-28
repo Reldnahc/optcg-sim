@@ -83,7 +83,7 @@ function parseOptionalCostSequenceFromOptionalText(
 }
 
 function hasOptionalCostMarker(text: string): boolean {
-  return /^(?:You may\b|.*(?:,|\band\b)\s*You may\b)/i.test(text);
+  return /^(?:[➀①➁②➂③➃④➄⑤]|You may\b|.*(?:,|\band\b)\s*You may\b)/iu.test(text);
 }
 
 function parseOptionalCostedBody(

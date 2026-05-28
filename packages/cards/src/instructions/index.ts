@@ -30,6 +30,10 @@ export {
   parseYourLeaderPowerOpponentNextEndInstruction,
 } from "./planned-field-effects.js";
 export {
+  parseReturnToOwnerHandInstruction,
+  selectThenReturnToOwnerHand,
+} from "./return-to-owner-hand.js";
+export {
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseProtectionInstruction,
 } from "./protection.js";

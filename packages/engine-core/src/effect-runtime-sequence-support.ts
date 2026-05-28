@@ -28,6 +28,12 @@ type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
+type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
+type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
+type BounceEffect = Extract<Effect, { type: "bounce" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+  destination: "hand";
+};
 type DirectContinuousEffect = Extract<
   Effect,
   {
@@ -83,6 +89,9 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SelectCardsEffect
     | MoveSelectedEffect
     | AttachSelectedDonEffect
+    | RevealTopEffect
+    | SelectFromSetEffect
+    | BounceEffect
     | DirectContinuousEffect
     | TrashEffect
     | SelectTargetsEffect
@@ -407,6 +416,26 @@ const isSupportedAttachSelectedDonSegment = (
   effect.target.filter?.categories?.length === 1 &&
   effect.target.filter.categories[0] === "character";
 
+const isSupportedRevealTopSegment = (
+  effect: SequenceSegmentEffect,
+): effect is RevealTopEffect =>
+  effect.type === "revealTop" &&
+  effect.player === "self" &&
+  effect.visibility === "bothPlayers" &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
+
+const isSupportedSelectFromSetSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SelectFromSetEffect =>
+  effect.type === "selectFromSet" &&
+  effect.chooser === "self" &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min &&
+  isSupportedHandSelectionCardFilter(effect.filter);
+
 const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
@@ -420,6 +449,13 @@ const isSupportedKoSegment = (
   effect: SequenceSegmentEffect,
 ): effect is KoEffect =>
   effect.type === "ko" && isSupportedSavedFieldObjectKoTarget(effect.target);
+
+const isSupportedBounceSegment = (
+  effect: SequenceSegmentEffect,
+): effect is BounceEffect =>
+  effect.type === "bounce" &&
+  effect.destination === "hand" &&
+  isSupportedSavedFieldObjectKoTarget(effect.target);
 
 const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "categories",
@@ -540,6 +576,9 @@ const isSupportedConditionalSegment = (
       return isSupportedSequenceTargetRequest(segment.effect.request);
     }
     if (isSupportedKoSegment(segment.effect)) {
+      return true;
+    }
+    if (isSupportedBounceSegment(segment.effect)) {
       return true;
     }
     if (isSupportedAllFieldTrashSegment(segment.effect)) {
@@ -666,6 +705,13 @@ export const toSupportedSequenceBlock = (
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
+      if (isSupportedRevealTopSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedSelectFromSetSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
       if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return true;
@@ -718,10 +764,14 @@ export const toSupportedSequenceBlock = (
           (segment.effect.enterRested === undefined ||
             typeof segment.effect.enterRested === "boolean") &&
           (String(segment.effect.selection).startsWith("handSelection:") ||
-            String(segment.effect.selection).startsWith("trashSelection:"))
+            String(segment.effect.selection).startsWith("trashSelection:") ||
+            String(segment.effect.selection).startsWith("revealSelection:"))
         );
       }
       if (isSupportedKoSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedBounceSegment(segment.effect)) {
         return true;
       }
       return false;

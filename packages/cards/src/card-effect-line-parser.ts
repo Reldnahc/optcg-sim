@@ -39,6 +39,7 @@ import {
   parsePreventThatCharacterRefreshInstruction,
   parsePlayFromTrashInstruction,
   parseRestOpponentCharactersInstruction,
+  parseReturnToOwnerHandInstruction,
   parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseTrashAllYourCharactersInstruction,
@@ -48,7 +49,10 @@ import {
   parseYourLeaderPowerOpponentNextEndInstruction,
   parsePlayFromHandInstruction,
 } from "./instructions/index.js";
-import { parseOncePerTurnMarker } from "./markers/index.js";
+import {
+  parseAttachedDonMarker,
+  parseOncePerTurnMarker,
+} from "./markers/index.js";
 import { parseDonDeckSizeRuleLine } from "./metadata-lines/index.js";
 import {
   parseEffectLine,
@@ -65,6 +69,8 @@ import {
   instructionExpressionSegmentParser,
   optionalCostedEffectExpressionParser,
   playStageFromDeckExpressionParser,
+  returnToOwnerHandCostedEffectExpressionParser,
+  revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   syntheticInstructionSegmentParser,
 } from "./segments/index.js";
@@ -110,6 +116,7 @@ const instructionParsers = [
   parseTargetedModifyCostInstruction,
   parseModifyCostInstruction,
   parseKoInstruction,
+  parseReturnToOwnerHandInstruction,
   parseRestOpponentCharactersInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -175,15 +182,37 @@ const defaultRegistry = {
     parseRecognizedUnsupportedEntryPoint,
     parseImplicitPermanentEntryPoint,
   ],
-  markers: [parseOncePerTurnMarker],
+  markers: [parseAttachedDonMarker, parseOncePerTurnMarker],
   expressions: [
     conditionalCostedBlockExpressionParser({
       conditions: conditionParsers,
       expressions: [
+        returnToOwnerHandCostedEffectExpressionParser({
+          conditions: conditionParsers,
+          instructions: instructionParsers,
+          expressions: [
+            revealTopPlayRestedExpressionParser,
+            searchRevealExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
         optionalCostedEffectExpressionParser({
           instructions: instructionParsers,
-          expressions: [searchRevealExpressionParser, generalExpressionParser],
+          expressions: [
+            revealTopPlayRestedExpressionParser,
+            searchRevealExpressionParser,
+            generalExpressionParser,
+          ],
         }),
+      ],
+    }),
+    returnToOwnerHandCostedEffectExpressionParser({
+      conditions: conditionParsers,
+      instructions: instructionParsers,
+      expressions: [
+        revealTopPlayRestedExpressionParser,
+        searchRevealExpressionParser,
+        generalExpressionParser,
       ],
     }),
     conditionalContinuousExpressionParser({
@@ -206,9 +235,14 @@ const defaultRegistry = {
     }),
     optionalCostedEffectExpressionParser({
       instructions: instructionParsers,
-      expressions: [searchRevealExpressionParser, generalExpressionParser],
+      expressions: [
+        revealTopPlayRestedExpressionParser,
+        searchRevealExpressionParser,
+        generalExpressionParser,
+      ],
     }),
     playStageFromDeckExpressionParser,
+    revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     generalExpressionParser,
   ],

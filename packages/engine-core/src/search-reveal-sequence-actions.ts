@@ -3,6 +3,7 @@ import type { Action, CardRef, EngineResult, GameState } from "@optcg/types";
 import { toEngineResult } from "./action-results.js";
 import {
   retargetSequenceFrameAfterSearchRevealOrder,
+  resumeSequenceFrameAfterHandSelection,
   resumeSequenceFrameAfterSearchReveal,
 } from "./effect-runtime-sequence-frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
@@ -81,6 +82,34 @@ export const applySearchRevealSequenceChoiceResponse = (
     ...searchResult.events,
     ...resumed.events,
   ]);
+};
+
+export const applySequenceSelectCardsChoiceResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.request.set === undefined ||
+    String(decision.request.set).startsWith("set:search-reveal:") ||
+    !hasSequenceFrameForDecision(state, decision.id)
+  ) {
+    return null;
+  }
+  const resumed = resumeSequenceFrameAfterHandSelection(
+    state,
+    decision,
+    selectedCardsFromResponse(action),
+  );
+  if (resumed === undefined) {
+    return null;
+  }
+  if (!resumed.ok) {
+    return toEngineResult(state, [], [resumed.error]);
+  }
+  return toEngineResult(resumed.state, resumed.events);
 };
 
 export const resumeSequenceAfterSearchRevealOrderResponse = (
