@@ -61,6 +61,7 @@ import {
   isSelfAttachmentTarget,
   lobbyIdFromUrl,
   matchIdFromUrl,
+  resolvingEffectSourceInstanceIds,
   seatIdFromUrl,
   setLobbyLocation,
   setMatchLocation,
@@ -97,6 +98,11 @@ export const useMatchClient = (): MatchClientUi => {
   const [errors, setErrors] = useState<string[]>([]);
 
   const currentPlayerId = clientState?.seat.playerId;
+  const playerSnapshot =
+    currentPlayerId === undefined || !isMatchClientState(clientState)
+      ? undefined
+      : clientState.snapshot.players[currentPlayerId];
+  const pendingDecision = playerSnapshot?.view.pendingDecision;
   const activeCardInstanceIds = [
     ...(activeAttackTargetChoice === undefined
       ? []
@@ -104,6 +110,10 @@ export const useMatchClient = (): MatchClientUi => {
     ...(activeCounterTargetChoice === undefined
       ? []
       : [activeCounterTargetChoice.counterCardInstanceId]),
+    ...resolvingEffectSourceInstanceIds({
+      pendingDecision,
+      events: playerSnapshot?.view.events ?? [],
+    }),
   ];
   const board = !isMatchClientState(clientState)
     ? undefined
@@ -113,10 +123,6 @@ export const useMatchClient = (): MatchClientUi => {
         playerId: clientState.seat.playerId,
         activeCardInstanceIds,
       });
-  const playerSnapshot =
-    currentPlayerId === undefined || !isMatchClientState(clientState)
-      ? undefined
-      : clientState.snapshot.players[currentPlayerId];
   const liveConnectionKey = !isMatchClientState(clientState)
     ? undefined
     : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;
@@ -124,7 +130,6 @@ export const useMatchClient = (): MatchClientUi => {
     clientState === undefined || isMatchClientState(clientState)
       ? undefined
       : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
-  const pendingDecision = playerSnapshot?.view.pendingDecision;
   const zoneClickVisibleIds = zoneClickVisibleInstanceIds(board);
   const pendingDecisionInteractionMode =
     pendingDecision === undefined

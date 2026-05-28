@@ -1,12 +1,21 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import type { DecisionId, PlayerId, Zone } from "@optcg/types";
+import type {
+  CardId,
+  DecisionId,
+  EngineEvent,
+  InstanceId,
+  PlayerId,
+  PlayerView,
+  Zone,
+} from "@optcg/types";
 
 import {
   activeCardCostGlobalActions,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+  resolvingEffectSourceInstanceIds,
 } from "./useMatchClient-support.js";
 import type {
   OptionalCardCostChoice,
@@ -42,6 +51,28 @@ const moveCardsGroup: OptionalCardCostGroup = {
     { instanceIds: ["trash-1", "trash-3"], actionIndex: 3 },
   ],
 };
+
+const event = (
+  overrides: Partial<EngineEvent> & Pick<EngineEvent, "type" | "seq">,
+): EngineEvent => ({
+  id: `event:${String(overrides.seq)}:${overrides.type}` as EngineEvent["id"],
+  payload: {},
+  visibility: { type: "public" },
+  createdAtStateSeq: 1 as EngineEvent["createdAtStateSeq"],
+  ...overrides,
+});
+
+const decision = (id: string): NonNullable<PlayerView["pendingDecision"]> => ({
+  id: id as DecisionId,
+  type: "selectCards",
+  playerId: "p1" as PlayerId,
+  prompt: "Choose a card.",
+  causedBy: { type: "ruleProcess", name: "privateCausality" },
+  min: 0,
+  max: 1,
+  candidates: [],
+  choices: [],
+});
 
 describe("match client support helpers", () => {
   test("active card-cost selections expose global confirm and clear actions", () => {
@@ -80,5 +111,80 @@ describe("match client support helpers", () => {
       }),
       [{ index: 1, label: "Decline cost", type: "respondToDecision" }],
     );
+  });
+
+  test("current pending decision activates its visible effect source card", () => {
+    const activeSource = resolvingEffectSourceInstanceIds({
+      pendingDecision: decision("decision:search"),
+      events: [
+        event({
+          type: "effectQueued",
+          seq: 1,
+          source: {
+            instanceId: "old-source" as InstanceId,
+            cardId: "OP13-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+        }),
+        event({
+          type: "effectResolved",
+          seq: 2,
+          source: {
+            instanceId: "old-source" as InstanceId,
+            cardId: "OP13-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+        }),
+        event({
+          type: "effectQueued",
+          seq: 3,
+          source: {
+            instanceId: "active-source" as InstanceId,
+            cardId: "OP13-089" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+        }),
+        event({
+          type: "decisionCreated",
+          seq: 4,
+          payload: { decisionId: "decision:search" },
+        }),
+      ],
+    });
+
+    assert.deepEqual(activeSource, ["active-source"]);
+  });
+
+  test("resolved effects and unrelated decisions do not keep stale active cards", () => {
+    const activeSource = resolvingEffectSourceInstanceIds({
+      pendingDecision: decision("decision:mulligan"),
+      events: [
+        event({
+          type: "effectQueued",
+          seq: 1,
+          source: {
+            instanceId: "old-source" as InstanceId,
+            cardId: "OP13-089" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+        }),
+        event({
+          type: "effectResolved",
+          seq: 2,
+          source: {
+            instanceId: "old-source" as InstanceId,
+            cardId: "OP13-089" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+        }),
+        event({
+          type: "decisionCreated",
+          seq: 3,
+          payload: { decisionId: "decision:mulligan" },
+        }),
+      ],
+    });
+
+    assert.deepEqual(activeSource, []);
   });
 });

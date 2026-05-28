@@ -1,5 +1,11 @@
 import { useEffect } from "react";
-import type { DecisionId, InstanceId, MatchId, PlayerId } from "@optcg/types";
+import type {
+  DecisionId,
+  EngineEvent,
+  InstanceId,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
 
 import { createCanonicalDonPaymentActions } from "../index.js";
 import type {
@@ -145,6 +151,49 @@ export const decisionHasCandidate = (
   >,
   instanceId: string,
 ): boolean => decisionCandidateInstanceIds(decision).includes(instanceId);
+
+const eventDecisionId = (event: EngineEvent): string | undefined => {
+  if (typeof event.payload !== "object" || event.payload === null) {
+    return undefined;
+  }
+  const decisionId = (event.payload as Record<string, unknown>)["decisionId"];
+  return typeof decisionId === "string" ? decisionId : undefined;
+};
+
+export const resolvingEffectSourceInstanceIds = ({
+  pendingDecision,
+  events,
+}: {
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined;
+  events: readonly EngineEvent[];
+}): string[] => {
+  if (pendingDecision === undefined) {
+    return [];
+  }
+  const pendingId = String(pendingDecision.id);
+  const decisionEventIndex = events.findLastIndex(
+    (event) =>
+      event.type === "decisionCreated" && eventDecisionId(event) === pendingId,
+  );
+  if (decisionEventIndex < 0) {
+    return [];
+  }
+  for (let index = decisionEventIndex - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event === undefined) {
+      continue;
+    }
+    if (event.type === "effectResolved") {
+      return [];
+    }
+    if (event.type === "effectQueued" && event.source !== undefined) {
+      return [String(event.source.instanceId)];
+    }
+  }
+  return [];
+};
 
 export const chooseNoDecisionLabel = (
   decision: NonNullable<
