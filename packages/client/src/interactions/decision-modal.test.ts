@@ -288,6 +288,7 @@ describe("headless decision modal models", () => {
 
     assert.equal(model.kind, "orderTriggers");
     assert.deepEqual(model.orderedTriggerIds, ["trigger-3"]);
+    assert.equal(model.confirmLabel, "Confirm");
     assert.deepEqual(
       model.choices.map((choice) => ({
         triggerId: choice.triggerId,

@@ -127,11 +127,6 @@ export const DecisionModalHost = ({
                     alt={display.name}
                   />
                 )}
-                {choice.orderIndex === undefined ? null : (
-                  <span className="decision-order-badge">
-                    {choice.orderIndex + 1}
-                  </span>
-                )}
               </button>
             );
           })}

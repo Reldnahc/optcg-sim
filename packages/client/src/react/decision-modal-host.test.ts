@@ -88,3 +88,52 @@ test("chooseQuantity modal renders a range slider over the legal range", () => {
   assert.match(markup, /value="4"/u);
   assert.equal(markup.includes('type="number"'), false);
 });
+
+test("trigger order modal presents source cards like a single-card selection", () => {
+  const model: DecisionModalModel = {
+    kind: "orderTriggers",
+    decisionId: "decision-trigger-order" as never,
+    prompt: "Choose the next trigger.",
+    canConfirm: true,
+    orderedTriggerIds: ["trigger-legal"],
+    choices: [
+      {
+        triggerId: "trigger-legal",
+        source: cardRef("legal"),
+        selected: true,
+        orderIndex: 0,
+      },
+      {
+        triggerId: "trigger-other",
+        source: cardRef("other"),
+        selected: false,
+      },
+    ],
+    confirmLabel: "Confirm",
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      cardDisplay: (card: CardRef) => ({
+        name: String(card.cardId),
+        imageUrl: `https://cdn.example/${String(card.cardId)}.png`,
+      }),
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onToggleBottomPlacement: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /decision-card-grid/u);
+  assert.match(markup, /decision-card-choice is-selected/u);
+  assert.equal(markup.includes("legal-card.png"), true);
+  assert.equal(markup.includes("other-card.png"), true);
+  assert.doesNotMatch(markup, /decision-order-badge/u);
+  assert.match(markup, />Confirm<\/button>/u);
+});

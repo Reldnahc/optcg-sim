@@ -604,7 +604,7 @@ export const createDecisionModalModel = (
           ...(orderIndex === undefined ? {} : { orderIndex }),
         };
       }),
-      confirmLabel: "Choose trigger",
+      confirmLabel: "Confirm",
     };
   }
   if (decision.type === "chooseQuantity") {
