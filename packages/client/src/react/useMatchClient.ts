@@ -15,6 +15,7 @@ import {
   ATTACH_SELECTED_DON_ACTION_INDEX,
   autoOptionalCardCostGroup,
   autoPayCostActionIndex,
+  directReturnDonCostClick,
   findAttachDonActionIndex,
   createCanonicalDonPaymentActions,
   createOptionalCardCostChoice,
@@ -50,11 +51,10 @@ import type {
 } from "../index.js";
 import { createController } from "../match-client-controller-factory.js";
 import {
-  chooseNoDecisionLabel,
   CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
-  activeCardCostGlobalActions,
+  buildGlobalActions,
   decisionCandidateInstanceIds,
   decisionHasCandidate,
   isMatchClientState,
@@ -73,30 +73,25 @@ import {
 
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
-  const [clientState, setClientState] = useState<
-    MatchClientSessionState | undefined
-  >();
+  const [clientState, setClientState] = useState<MatchClientSessionState>();
   const [selectedCardInstanceId, setSelectedCardInstanceId] =
     useState<string>();
   const [selectedDonInstanceIds, setSelectedDonInstanceIds] = useState<
     string[]
   >([]);
-  const [decisionDraft, setDecisionDraft] = useState<
-    DecisionDraft | undefined
-  >();
-  const [activeCardCostChoice, setActiveCardCostChoice] = useState<
-    { decisionId: string; actionIndex: number } | undefined
-  >();
+  const [decisionDraft, setDecisionDraft] = useState<DecisionDraft>();
+  const [activeCardCostChoice, setActiveCardCostChoice] = useState<{
+    decisionId: string;
+    actionIndex: number;
+  }>();
   const [
     activeCardCostSelectedInstanceIds,
     setActiveCardCostSelectedInstanceIds,
   ] = useState<string[]>([]);
-  const [activeAttackTargetChoice, setActiveAttackTargetChoice] = useState<
-    AttackTargetChoice | undefined
-  >();
-  const [activeCounterTargetChoice, setActiveCounterTargetChoice] = useState<
-    CounterTargetChoice | undefined
-  >();
+  const [activeAttackTargetChoice, setActiveAttackTargetChoice] =
+    useState<AttackTargetChoice>();
+  const [activeCounterTargetChoice, setActiveCounterTargetChoice] =
+    useState<CounterTargetChoice>();
   const autoSubmittedPayCostDecisionId = useRef<string | undefined>(undefined);
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -616,6 +611,22 @@ export const useMatchClient = (): MatchClientUi => {
         ) {
           return;
         }
+        const directReturnDonClick = directReturnDonCostClick(
+          activeCardCostGroup,
+          activeCardCostSelectedInstanceIds,
+          instanceId,
+        );
+        if (directReturnDonClick !== undefined) {
+          setSelectedCardInstanceId(undefined);
+          setSelectedDonInstanceIds([]);
+          setActiveCardCostSelectedInstanceIds(
+            directReturnDonClick.selectedInstanceIds,
+          );
+          if (directReturnDonClick.actionIndex !== undefined) {
+            void submitAction(directReturnDonClick.actionIndex);
+          }
+          return;
+        }
         if (activeCardCostGroup.requiredCount === 1) {
           const actionIndex = optionalCardCostActionForInstance(
             activeCardCostGroup,
@@ -687,6 +698,7 @@ export const useMatchClient = (): MatchClientUi => {
       activeAttackTargetChoice,
       activeCounterTargetChoice,
       activeCardCostGroup,
+      activeCardCostSelectedInstanceIds,
       board,
       pendingDecision,
       pendingDecisionInteractionMode,
@@ -743,83 +755,19 @@ export const useMatchClient = (): MatchClientUi => {
   );
 
   const globalActions = useCallback((): ClientActionModel[] => {
-    if (playerSnapshot === undefined) {
-      return [];
-    }
-    if (activeAttackTargetChoice !== undefined) {
-      return [
-        {
-          index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
-          label: "Cancel attack",
-          type: "clearDecisionSelection",
-        },
-      ];
-    }
-    if (activeCounterTargetChoice !== undefined) {
-      return [
-        {
-          index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
-          label: "Cancel counter",
-          type: "clearDecisionSelection",
-        },
-      ];
-    }
-    if (
-      activeCardCostGroup !== undefined &&
-      optionalCardCostChoice !== undefined
-    ) {
-      return activeCardCostGlobalActions({
-        choice: optionalCardCostChoice,
-        group: activeCardCostGroup,
-        explicitChoiceActive: explicitCardCostChoiceActive,
-        selectedInstanceCount: activeCardCostSelectedInstanceIds.length,
-        selectedActionIndex: selectedCardCostActionIndex,
-      });
-    }
-    if (
-      pendingDecisionInteractionMode === "zoneClick" &&
-      pendingDecision !== undefined &&
-      (pendingDecision.type === "selectCards" ||
-        pendingDecision.type === "selectTargets")
-    ) {
-      const actions: ClientActionModel[] = [];
-      if (pendingDecision.min === 0) {
-        actions.push({
-          index: CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
-          label: chooseNoDecisionLabel(pendingDecision),
-          type: "chooseNoDecisionCards",
-        });
-      }
-      if (
-        pendingDecision.max > 1 &&
-        activeDecisionDraft?.kind === "selectCards" &&
-        activeDecisionDraft.selectedInstanceIds.length >= pendingDecision.min
-      ) {
-        actions.push({
-          index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
-          label: "Confirm selection",
-          type: "confirmDecisionSelection",
-        });
-        if (activeDecisionDraft.selectedInstanceIds.length > 0) {
-          actions.push({
-            index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
-            label: "Clear selection",
-            type: "clearDecisionSelection",
-          });
-        }
-      }
-      return actions;
-    }
-    const globalActions = playerSnapshot.actions
-      .filter((action) => action.placement === undefined)
-      .map((action) => ({
-        index: action.index,
-        label: action.label,
-        type: action.type,
-      }));
-    return pendingDecision?.type === "payCost"
-      ? (createCanonicalDonPaymentActions(globalActions) ?? globalActions)
-      : globalActions;
+    return buildGlobalActions({
+      playerSnapshot,
+      attackTargetChoiceActive: activeAttackTargetChoice !== undefined,
+      counterTargetChoiceActive: activeCounterTargetChoice !== undefined,
+      activeCardCostGroup,
+      optionalCardCostChoice,
+      explicitCardCostChoiceActive,
+      selectedCardCostInstanceCount: activeCardCostSelectedInstanceIds.length,
+      selectedCardCostActionIndex,
+      pendingDecisionInteractionMode,
+      pendingDecision,
+      activeDecisionDraft,
+    });
   }, [
     activeDecisionDraft,
     activeAttackTargetChoice,

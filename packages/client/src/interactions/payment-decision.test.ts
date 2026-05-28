@@ -14,12 +14,14 @@ import {
   createCanonicalDonPaymentModalActions,
   autoOptionalCardCostGroup,
   autoPayCostActionIndex,
+  directReturnDonCostClick,
   optionalCardCostActionForInstance,
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
 } from "./payment-decision.js";
+import type { OptionalCardCostGroup } from "./payment-decision.js";
 import type { ClientActionModel } from "../view-model.js";
 
 const payCostDecision = {
@@ -263,6 +265,51 @@ describe("optional card-cost interaction", () => {
         { instanceIds: ["don-1", "don-2"], actionIndex: 2 },
         { instanceIds: ["don-1", "don-3"], actionIndex: 3 },
       ],
+    });
+  });
+
+  test("returnDon costs progress from clicked DON and submit when a legal set is complete", () => {
+    const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
+    const group: OptionalCardCostGroup = {
+      chooseActionIndex: -5,
+      operation: "returnDon",
+      chooseLabel: "Choose DON!! to return",
+      requiredCount: 2,
+      source,
+      cardActions: [
+        { instanceIds: ["don-1", "don-2"], actionIndex: 2 },
+        { instanceIds: ["don-1", "don-3"], actionIndex: 3 },
+      ],
+    };
+
+    assert.deepEqual(directReturnDonCostClick(group, [], "don-1"), {
+      selectedInstanceIds: ["don-1"],
+    });
+    assert.deepEqual(directReturnDonCostClick(group, ["don-1"], "don-3"), {
+      selectedInstanceIds: ["don-1", "don-3"],
+      actionIndex: 3,
+    });
+  });
+
+  test("returnDon costs allow unselecting and ignore illegal completed sets", () => {
+    const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
+    const group: OptionalCardCostGroup = {
+      chooseActionIndex: -5,
+      operation: "returnDon",
+      chooseLabel: "Choose DON!! to return",
+      requiredCount: 2,
+      source,
+      cardActions: [
+        { instanceIds: ["don-1", "don-2"], actionIndex: 2 },
+        { instanceIds: ["don-3", "don-4"], actionIndex: 3 },
+      ],
+    };
+
+    assert.deepEqual(directReturnDonCostClick(group, ["don-1"], "don-1"), {
+      selectedInstanceIds: [],
+    });
+    assert.deepEqual(directReturnDonCostClick(group, ["don-1"], "don-3"), {
+      selectedInstanceIds: ["don-1"],
     });
   });
 

@@ -176,6 +176,42 @@ export const optionalCardCostInstanceIds = (
     ? []
     : [...new Set(choice.cardActions.flatMap((action) => action.instanceIds))];
 
+export interface DirectReturnDonCostClickResult {
+  selectedInstanceIds: string[];
+  actionIndex?: number | undefined;
+}
+
+export const directReturnDonCostClick = (
+  group: OptionalCardCostGroup,
+  selectedInstanceIds: readonly string[],
+  clickedInstanceId: string,
+): DirectReturnDonCostClickResult | undefined => {
+  if (
+    group.operation !== "returnDon" ||
+    !optionalCardCostInstanceIds(group).includes(clickedInstanceId)
+  ) {
+    return undefined;
+  }
+  if (selectedInstanceIds.includes(clickedInstanceId)) {
+    return {
+      selectedInstanceIds: selectedInstanceIds.filter(
+        (instanceId) => instanceId !== clickedInstanceId,
+      ),
+    };
+  }
+  if (selectedInstanceIds.length >= group.requiredCount) {
+    return { selectedInstanceIds: [...selectedInstanceIds] };
+  }
+  const nextSelection = [...selectedInstanceIds, clickedInstanceId];
+  if (nextSelection.length < group.requiredCount) {
+    return { selectedInstanceIds: nextSelection };
+  }
+  const actionIndex = optionalCardCostActionForSelection(group, nextSelection);
+  return actionIndex === undefined
+    ? { selectedInstanceIds: [...selectedInstanceIds] }
+    : { selectedInstanceIds: nextSelection, actionIndex };
+};
+
 const donPaymentLabelPattern = /^Pay cost with (?<count>[1-9]\d*) DON!!$/u;
 
 export const createCanonicalDonPaymentActions = (

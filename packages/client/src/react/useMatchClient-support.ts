@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { DecisionId, InstanceId, MatchId, PlayerId } from "@optcg/types";
 
+import { createCanonicalDonPaymentActions } from "../index.js";
 import type {
   BoardViewModel,
   ClientActionModel,
@@ -10,6 +11,7 @@ import type {
   MatchClientSessionState,
   OptionalCardCostChoice,
   OptionalCardCostGroup,
+  PendingDecisionInteractionMode,
 } from "../index.js";
 
 export interface MatchClientUiState {
@@ -168,6 +170,7 @@ export const activeCardCostGlobalActions = ({
   selectedInstanceCount: number;
   selectedActionIndex: number | undefined;
 }): ClientActionModel[] => {
+  const clickDrivenReturnDon = group.operation === "returnDon";
   const actions: ClientActionModel[] = [
     {
       index: choice.declineActionIndex,
@@ -182,14 +185,22 @@ export const activeCardCostGlobalActions = ({
       type: "clearDecisionSelection",
     });
   }
-  if (group.requiredCount > 1 && selectedActionIndex !== undefined) {
+  if (
+    !clickDrivenReturnDon &&
+    group.requiredCount > 1 &&
+    selectedActionIndex !== undefined
+  ) {
     actions.push({
       index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
       label: "Pay cost",
       type: "confirmDecisionSelection",
     });
   }
-  if (group.requiredCount > 1 && selectedInstanceCount > 0) {
+  if (
+    !clickDrivenReturnDon &&
+    group.requiredCount > 1 &&
+    selectedInstanceCount > 0
+  ) {
     actions.push({
       index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
       label: "Clear selection",
@@ -197,6 +208,112 @@ export const activeCardCostGlobalActions = ({
     });
   }
   return actions;
+};
+
+export const buildGlobalActions = ({
+  playerSnapshot,
+  attackTargetChoiceActive,
+  counterTargetChoiceActive,
+  activeCardCostGroup,
+  optionalCardCostChoice,
+  explicitCardCostChoiceActive,
+  selectedCardCostInstanceCount,
+  selectedCardCostActionIndex,
+  pendingDecisionInteractionMode,
+  pendingDecision,
+  activeDecisionDraft,
+}: {
+  playerSnapshot: MatchClientState["snapshot"]["players"][PlayerId] | undefined;
+  attackTargetChoiceActive: boolean;
+  counterTargetChoiceActive: boolean;
+  activeCardCostGroup: OptionalCardCostGroup | undefined;
+  optionalCardCostChoice: OptionalCardCostChoice | undefined;
+  explicitCardCostChoiceActive: boolean;
+  selectedCardCostInstanceCount: number;
+  selectedCardCostActionIndex: number | undefined;
+  pendingDecisionInteractionMode: PendingDecisionInteractionMode | undefined;
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined;
+  activeDecisionDraft: DecisionDraft | undefined;
+}): ClientActionModel[] => {
+  if (playerSnapshot === undefined) {
+    return [];
+  }
+  if (attackTargetChoiceActive) {
+    return [
+      {
+        index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+        label: "Cancel attack",
+        type: "clearDecisionSelection",
+      },
+    ];
+  }
+  if (counterTargetChoiceActive) {
+    return [
+      {
+        index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+        label: "Cancel counter",
+        type: "clearDecisionSelection",
+      },
+    ];
+  }
+  if (
+    activeCardCostGroup !== undefined &&
+    optionalCardCostChoice !== undefined
+  ) {
+    return activeCardCostGlobalActions({
+      choice: optionalCardCostChoice,
+      group: activeCardCostGroup,
+      explicitChoiceActive: explicitCardCostChoiceActive,
+      selectedInstanceCount: selectedCardCostInstanceCount,
+      selectedActionIndex: selectedCardCostActionIndex,
+    });
+  }
+  if (
+    pendingDecisionInteractionMode === "zoneClick" &&
+    pendingDecision !== undefined &&
+    (pendingDecision.type === "selectCards" ||
+      pendingDecision.type === "selectTargets")
+  ) {
+    const actions: ClientActionModel[] = [];
+    if (pendingDecision.min === 0) {
+      actions.push({
+        index: CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
+        label: chooseNoDecisionLabel(pendingDecision),
+        type: "chooseNoDecisionCards",
+      });
+    }
+    if (
+      pendingDecision.max > 1 &&
+      activeDecisionDraft?.kind === "selectCards" &&
+      activeDecisionDraft.selectedInstanceIds.length >= pendingDecision.min
+    ) {
+      actions.push({
+        index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+        label: "Confirm selection",
+        type: "confirmDecisionSelection",
+      });
+      if (activeDecisionDraft.selectedInstanceIds.length > 0) {
+        actions.push({
+          index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+          label: "Clear selection",
+          type: "clearDecisionSelection",
+        });
+      }
+    }
+    return actions;
+  }
+  const globalActions = playerSnapshot.actions
+    .filter((action) => action.placement === undefined)
+    .map((action) => ({
+      index: action.index,
+      label: action.label,
+      type: action.type,
+    }));
+  return pendingDecision?.type === "payCost"
+    ? (createCanonicalDonPaymentActions(globalActions) ?? globalActions)
+    : globalActions;
 };
 
 export const toggleCardCostSelectedInstanceId = (

@@ -31,12 +31,24 @@ const returnDonGroup: OptionalCardCostGroup = {
   ],
 };
 
+const moveCardsGroup: OptionalCardCostGroup = {
+  chooseActionIndex: -5,
+  operation: "moveCards",
+  chooseLabel: "Choose cards from trash",
+  requiredCount: 2,
+  source: { zone: "trash" as Zone, playerId: "p1" as PlayerId },
+  cardActions: [
+    { instanceIds: ["trash-1", "trash-2"], actionIndex: 2 },
+    { instanceIds: ["trash-1", "trash-3"], actionIndex: 3 },
+  ],
+};
+
 describe("match client support helpers", () => {
   test("active card-cost selections expose global confirm and clear actions", () => {
     assert.deepEqual(
       activeCardCostGlobalActions({
         choice: optionalChoice,
-        group: returnDonGroup,
+        group: moveCardsGroup,
         explicitChoiceActive: false,
         selectedInstanceCount: 2,
         selectedActionIndex: 2,
@@ -54,6 +66,19 @@ describe("match client support helpers", () => {
           type: "clearDecisionSelection",
         },
       ],
+    );
+  });
+
+  test("direct return-DON costs expose only decline while clicks drive payment", () => {
+    assert.deepEqual(
+      activeCardCostGlobalActions({
+        choice: optionalChoice,
+        group: returnDonGroup,
+        explicitChoiceActive: false,
+        selectedInstanceCount: 1,
+        selectedActionIndex: undefined,
+      }),
+      [{ index: 1, label: "Decline cost", type: "respondToDecision" }],
     );
   });
 });
