@@ -327,6 +327,6 @@ describe("playmat structure", () => {
       playmatStyles,
       /\.battle-arrow-overlay\s*\{[^}]*z-index:\s*5;/u,
     );
-    assert.match(modalStyles, /\.modal-frame\s*\{[^}]*z-index:\s*10;/u);
+    assert.match(modalStyles, /\.modal-frame\s*\{[^}]*z-index:\s*30;/u);
   });
 });

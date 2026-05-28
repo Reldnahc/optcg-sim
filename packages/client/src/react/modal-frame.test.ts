@@ -69,4 +69,14 @@ describe("modal frame", () => {
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*box-shadow:/u);
   });
+
+  test("modal frame stacks above floating windows", async () => {
+    const [modalStyles, floatingStyles] = await Promise.all([
+      readFile(modalStylesPath, "utf8"),
+      readFile(join(sourceDirectory, "styles", "floating-window.css"), "utf8"),
+    ]);
+
+    assert.match(modalStyles, /\.modal-frame\s*\{[^}]*z-index:\s*30;/u);
+    assert.match(floatingStyles, /\.floating-window\s*\{[^}]*z-index:\s*10;/u);
+  });
 });

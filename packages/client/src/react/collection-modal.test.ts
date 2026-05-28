@@ -189,6 +189,30 @@ describe("collection modal", () => {
     assert.equal(markup.includes('disabled=""'), false);
   });
 
+  test("pending collection decisions render as modals instead of floating windows", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Player trash",
+          cards: [card("one", "One")],
+          selection: {
+            selectedInstanceIds: [],
+            selectableInstanceIds: ["one"],
+            canConfirm: true,
+            confirmLabel: "Confirm",
+          },
+        },
+        presentation: "modal",
+        onToggleCard: () => undefined,
+        onConfirm: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /modal-frame/u);
+    assert.match(markup, /collection-modal/u);
+    assert.doesNotMatch(markup, /floating-window/u);
+  });
+
   test("collection viewer has close and minimize controls", async () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {

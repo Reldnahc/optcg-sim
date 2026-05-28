@@ -2,6 +2,7 @@ import type { ClientCardModel } from "../view-model.js";
 import { CardTile } from "./CardTile.js";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import { ModalFrame } from "./ModalFrame.js";
 
 export interface CollectionModalModel {
   title: string;
@@ -19,6 +20,7 @@ export interface CollectionModalModel {
 
 export interface CollectionModalHostProps {
   model?: CollectionModalModel | undefined;
+  presentation?: "window" | "modal" | undefined;
   disabled?: boolean | undefined;
   minimized?: boolean | undefined;
   initialRect?: WindowRect | undefined;
@@ -32,6 +34,7 @@ export interface CollectionModalHostProps {
 
 export const CollectionModalHost = ({
   model,
+  presentation = "window",
   disabled = false,
   minimized = false,
   initialRect,
@@ -48,17 +51,8 @@ export const CollectionModalHost = ({
   const selectedIds = new Set(model.selection?.selectedInstanceIds ?? []);
   const selectableIds = new Set(model.selection?.selectableInstanceIds ?? []);
   const orderedSelectionIds = model.selection?.selectedInstanceIds ?? [];
-
-  return (
-    <FloatingWindow
-      title={model.title}
-      className="floating-window-collection collection-modal"
-      initialRect={initialRect}
-      minimized={minimized}
-      onToggleMinimized={onToggleMinimized}
-      onClose={onClose}
-      onRectChange={onRectChange}
-    >
+  const body = (
+    <>
       <div className="collection-modal-card-grid">
         {model.cards.map((card) => {
           const instanceId = String(card.instanceId);
@@ -106,6 +100,28 @@ export const CollectionModalHost = ({
           </button>
         </div>
       )}
+    </>
+  );
+
+  if (presentation === "modal") {
+    return (
+      <ModalFrame title={model.title} className="collection-modal">
+        {body}
+      </ModalFrame>
+    );
+  }
+
+  return (
+    <FloatingWindow
+      title={model.title}
+      className="floating-window-collection collection-modal"
+      initialRect={initialRect}
+      minimized={minimized}
+      onToggleMinimized={onToggleMinimized}
+      onClose={onClose}
+      onRectChange={onRectChange}
+    >
+      {body}
     </FloatingWindow>
   );
 };

@@ -293,6 +293,8 @@ export const MatchApp = (): React.JSX.Element => {
     decisionCollectionModal === undefined
       ? collectionModal?.title
       : undefined;
+  const collectionPresentation =
+    collectionViewerKey === undefined ? "modal" : "window";
   useEffect(() => {
     setCollectionMinimized(false);
   }, [renderedCollectionKey]);
@@ -438,6 +440,7 @@ export const MatchApp = (): React.JSX.Element => {
       />
       <CollectionModalHost
         model={renderedCollectionModal}
+        presentation={collectionPresentation}
         disabled={client.state.actionInFlight}
         minimized={collectionMinimized}
         initialRect={
