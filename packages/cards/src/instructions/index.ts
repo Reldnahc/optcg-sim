@@ -23,6 +23,7 @@ export {
 export { parsePlayFromHandInstruction } from "./play-from-hand.js";
 export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
 export {
+  parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,

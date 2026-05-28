@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  preventOpponentCharactersRefreshPrimitive,
   preventThatCharacterRefreshPrimitive,
+  parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
@@ -19,6 +21,14 @@ describe("planned field-effect instruction parsers", () => {
       primitiveId: "instruction:preventActivation",
       childPrimitiveIds: [
         "reference:thatCharacter",
+        "duration:opponentNextRefreshPhase",
+      ],
+    });
+    expect(preventOpponentCharactersRefreshPrimitive).toEqual({
+      primitiveId: "instruction:preventActivation",
+      childPrimitiveIds: [
+        "cardinality:upTo",
+        "target:opponentCharacters",
         "duration:opponentNextRefreshPhase",
       ],
     });
@@ -134,6 +144,52 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
+  it("parses direct opponent Character refresh locks as target selection plus duration primitives", () => {
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "up to 1 of your opponent's rested Characters with 6000 power or less will not become active in your opponent's next Refresh Phase.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: {
+              categories: ["character"],
+              state: "rested",
+              power: { max: 6000 },
+            },
+          },
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:state:rested",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses your Leader power through opponent next End Phase as a modifier", () => {
     expect(
       parseYourLeaderPowerOpponentNextEndInstruction({
@@ -165,6 +221,11 @@ describe("planned field-effect instruction parsers", () => {
     expect(
       parsePreventThatCharacterRefreshInstruction({
         text: "that Character will not become active this turn.",
+      }),
+    ).toBeUndefined();
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "your opponent's Characters will not become active in your opponent's next Refresh Phase.",
       }),
     ).toBeUndefined();
     expect(

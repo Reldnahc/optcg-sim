@@ -38,6 +38,15 @@ export const preventThatCharacterRefreshPrimitive = {
   ],
 } as const;
 
+export const preventOpponentCharactersRefreshPrimitive = {
+  primitiveId: "instruction:preventActivation",
+  childPrimitiveIds: [
+    "cardinality:upTo",
+    "target:opponentCharacters",
+    "duration:opponentNextRefreshPhase",
+  ],
+} as const;
+
 export const yourLeaderPowerOpponentNextEndPrimitive = {
   primitiveId: "instruction:modifyPower",
   childPrimitiveIds: [
@@ -149,6 +158,67 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
     rest: "",
   };
 };
+
+export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser =
+  (input) => {
+    const cardinality = parseUpToCardinality(input);
+    if (cardinality === undefined) {
+      return undefined;
+    }
+
+    const target = parseOpponentCharactersTarget({ text: cardinality.rest });
+    if (target === undefined) {
+      return undefined;
+    }
+
+    const actionMatch = /^will not become active\s+(?<rest>.*)$/i.exec(
+      target.rest,
+    );
+    const durationText = actionMatch?.groups?.["rest"];
+    if (durationText === undefined) {
+      return undefined;
+    }
+
+    const duration = parseOpponentNextRefreshPhaseDuration({
+      text: durationText,
+    });
+    if (
+      duration === undefined ||
+      duration.duration === undefined ||
+      duration.rest.length > 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            filter: target.filter ?? { categories: ["character"] },
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+          },
+        },
+        duration: duration.duration,
+      },
+      evidence: [
+        "instruction:preventActivation",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...target.evidence,
+        ...duration.evidence,
+      ],
+      rest: "",
+    };
+  };
 
 export const parseYourLeaderPowerOpponentNextEndInstruction: InstructionParser =
   (input) => {

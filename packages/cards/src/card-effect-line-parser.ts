@@ -31,6 +31,7 @@ import {
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseBasePowerBecomeInstruction,
+  parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parsePlayFromTrashInstruction,
   parseRestOpponentCharactersInstruction,
@@ -87,6 +88,7 @@ const instructionParsers = [
   parseModifyCostInstruction,
   parseKoInstruction,
   parseRestOpponentCharactersInstruction,
+  parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
 ] as const;
