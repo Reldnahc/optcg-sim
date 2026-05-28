@@ -14,7 +14,7 @@
 
 .floating-window-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
   border-bottom: 1px solid rgba(244, 238, 231, 0.24);
@@ -38,6 +38,7 @@
   white-space: nowrap;
 }
 
+.floating-window-minimize,
 .floating-window-close {
   min-height: 30px;
   border: 0;
@@ -46,6 +47,11 @@
   background: #3f3d3c;
   cursor: pointer;
   padding: 0 12px;
+}
+
+.floating-window.is-minimized {
+  grid-template-rows: auto;
+  min-height: 0;
 }
 
 .floating-window-body {

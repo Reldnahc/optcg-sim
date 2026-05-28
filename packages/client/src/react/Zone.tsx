@@ -24,6 +24,7 @@ export interface ZoneProps {
   actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
   onCardAction?: ((actionIndex: number) => void) | undefined;
+  onCardPreview?: ((card: ClientCardModel) => void) | undefined;
   onViewCollection?: (() => void) | undefined;
 }
 
@@ -41,6 +42,7 @@ export const Zone = ({
   actionDisabled = false,
   onCardClick,
   onCardAction,
+  onCardPreview,
   onViewCollection,
 }: ZoneProps): React.JSX.Element => {
   const visibleCards =
@@ -152,6 +154,7 @@ export const Zone = ({
                   disabled={actionDisabled}
                   onAction={onCardAction}
                   onAttachedDonClick={onCardClick}
+                  onHover={onCardPreview}
                   onClick={
                     onCardClick === undefined
                       ? undefined
@@ -172,7 +175,7 @@ export const Zone = ({
                 className="life-card-position"
                 style={lifeCardStyle(index)}
               >
-                <CardTile card={card} />
+                <CardTile card={card} onHover={onCardPreview} />
               </div>
             );
           })
@@ -193,6 +196,7 @@ export const Zone = ({
                 disabled={actionDisabled}
                 onAction={onCardAction}
                 onAttachedDonClick={onCardClick}
+                onHover={onCardPreview}
                 onClick={
                   displayMode === "stack" && onViewCollection !== undefined
                     ? onViewCollection

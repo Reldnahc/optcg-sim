@@ -20,6 +20,8 @@ export interface FloatingWindowProps {
   initialRect?: WindowRect | undefined;
   minWidth?: number | undefined;
   minHeight?: number | undefined;
+  minimized?: boolean | undefined;
+  onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   children?: React.ReactNode;
 }
@@ -48,6 +50,8 @@ export const FloatingWindow = ({
   initialRect = defaultRect,
   minWidth = 320,
   minHeight = 220,
+  minimized = false,
+  onToggleMinimized,
   onClose,
   children,
 }: FloatingWindowProps): React.JSX.Element => {
@@ -68,11 +72,17 @@ export const FloatingWindow = ({
 
   return (
     <section
-      className={`floating-window ${className ?? ""}`.trim()}
+      className={[
+        "floating-window",
+        minimized ? "is-minimized" : "",
+        className ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         transform: `translate(${String(rect.x)}px, ${String(rect.y)}px)`,
         width: `${String(rect.width)}px`,
-        height: `${String(rect.height)}px`,
+        ...(minimized ? {} : { height: `${String(rect.height)}px` }),
       }}
       onClick={(event) => {
         event.stopPropagation();
@@ -118,50 +128,63 @@ export const FloatingWindow = ({
         >
           <span>{title}</span>
         </button>
+        {onToggleMinimized === undefined ? null : (
+          <button
+            className="floating-window-minimize"
+            type="button"
+            onClick={onToggleMinimized}
+          >
+            {minimized ? "Show" : "Minimize"}
+          </button>
+        )}
         {onClose === undefined ? null : (
           <button className="floating-window-close" type="button" onClick={onClose}>
             Close
           </button>
         )}
       </div>
-      <div className="floating-window-body">{children}</div>
-      <button
-        className="floating-window-resize-handle"
-        type="button"
-        aria-label={`Resize ${title}`}
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          resizeStart.current = {
-            pointerId: event.pointerId,
-            clientX: event.clientX,
-            clientY: event.clientY,
-            rect,
-          };
-        }}
-        onPointerMove={(event) => {
-          const start = resizeStart.current;
-          if (start === undefined || start.pointerId !== event.pointerId) {
-            return;
-          }
-          setRect(
-            clampRect(
-              {
-                ...start.rect,
-                width: start.rect.width + event.clientX - start.clientX,
-                height: start.rect.height + event.clientY - start.clientY,
-              },
-              minWidth,
-              minHeight,
-            ),
-          );
-        }}
-        onPointerUp={(event) => {
-          stopInteraction(event.pointerId);
-        }}
-        onPointerCancel={(event) => {
-          stopInteraction(event.pointerId);
-        }}
-      />
+      {minimized ? null : (
+        <>
+          <div className="floating-window-body">{children}</div>
+          <button
+            className="floating-window-resize-handle"
+            type="button"
+            aria-label={`Resize ${title}`}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              resizeStart.current = {
+                pointerId: event.pointerId,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                rect,
+              };
+            }}
+            onPointerMove={(event) => {
+              const start = resizeStart.current;
+              if (start === undefined || start.pointerId !== event.pointerId) {
+                return;
+              }
+              setRect(
+                clampRect(
+                  {
+                    ...start.rect,
+                    width: start.rect.width + event.clientX - start.clientX,
+                    height: start.rect.height + event.clientY - start.clientY,
+                  },
+                  minWidth,
+                  minHeight,
+                ),
+              );
+            }}
+            onPointerUp={(event) => {
+              stopInteraction(event.pointerId);
+            }}
+            onPointerCancel={(event) => {
+              stopInteraction(event.pointerId);
+            }}
+          />
+        </>
+      )}
     </section>
   );
 };

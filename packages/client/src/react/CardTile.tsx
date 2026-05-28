@@ -13,6 +13,7 @@ export interface CardTileProps {
   onClick?: (() => void) | undefined;
   onAction?: ((actionIndex: number) => void) | undefined;
   onAttachedDonClick?: ((instanceId: string) => void) | undefined;
+  onHover?: ((card: ClientCardModel) => void) | undefined;
 }
 
 export const CardTile = ({
@@ -28,6 +29,7 @@ export const CardTile = ({
   onClick,
   onAction,
   onAttachedDonClick,
+  onHover,
 }: CardTileProps): React.JSX.Element => {
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
@@ -47,6 +49,9 @@ export const CardTile = ({
     <div
       className="card-tile-shell"
       data-card-instance-id={String(card.instanceId)}
+      onPointerEnter={() => {
+        onHover?.(card);
+      }}
     >
       <button
         className={`card-tile ${card.state === "rested" ? "is-rested" : ""} ${

@@ -6,6 +6,7 @@ import "./styles/count-badge.css";
 import "./styles/playmat.css";
 import "./styles/zone.css";
 import "./styles/card.css";
+import "./styles/card-preview-window.css";
 import "./styles/controls.css";
 import "./styles/modal-frame.css";
 import "./styles/floating-window.css";

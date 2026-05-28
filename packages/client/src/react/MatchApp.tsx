@@ -8,6 +8,7 @@ import {
 } from "../interactions/decision-surface.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import { BoardLayout } from "./BoardLayout.js";
+import { CardPreviewWindow } from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
@@ -19,6 +20,10 @@ export const MatchApp = (): React.JSX.Element => {
   const [collectionModal, setCollectionModal] = useState<
     CollectionModalModel | undefined
   >(undefined);
+  const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
+    undefined,
+  );
+  const [previewMinimized, setPreviewMinimized] = useState(false);
   const {
     board,
     cardCostSelection,
@@ -157,6 +162,9 @@ export const MatchApp = (): React.JSX.Element => {
           onCardAction={(actionIndex) => {
             void client.submitAction(actionIndex);
           }}
+          onPreviewCard={(card) => {
+            setPreviewCard(card);
+          }}
           onViewCollection={(title, cards) => {
             setCollectionModal({ title, cards });
           }}
@@ -218,6 +226,9 @@ export const MatchApp = (): React.JSX.Element => {
         onConfirm={() => {
           void client.confirmDecision();
         }}
+        onPreviewCard={(card) => {
+          setPreviewCard(card);
+        }}
         onClose={
           cardCostCollectionModal === undefined &&
           decisionCollectionModal === undefined
@@ -226,6 +237,13 @@ export const MatchApp = (): React.JSX.Element => {
               }
             : undefined
         }
+      />
+      <CardPreviewWindow
+        card={previewCard}
+        minimized={previewMinimized}
+        onToggleMinimized={() => {
+          setPreviewMinimized((current) => !current);
+        }}
       />
     </main>
   );

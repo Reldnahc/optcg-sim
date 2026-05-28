@@ -46,6 +46,7 @@ export interface HandRowProps {
   actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
   onCardAction?: ((actionIndex: number) => void) | undefined;
+  onCardPreview?: ((card: ClientCardModel) => void) | undefined;
 }
 
 export const HandRow = ({
@@ -60,6 +61,7 @@ export const HandRow = ({
   actionDisabled = false,
   onCardClick,
   onCardAction,
+  onCardPreview,
 }: HandRowProps): React.JSX.Element => {
   const rowRef = useRef<HTMLElement | null>(null);
   const cardsRef = useRef<HTMLDivElement | null>(null);
@@ -143,6 +145,7 @@ export const HandRow = ({
               disabled={actionDisabled}
               onAction={onCardAction}
               onAttachedDonClick={onCardClick}
+              onHover={onCardPreview}
               onClick={
                 onCardClick === undefined
                   ? undefined

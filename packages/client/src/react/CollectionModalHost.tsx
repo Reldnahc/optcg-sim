@@ -22,6 +22,7 @@ export interface CollectionModalHostProps {
   onClose?: (() => void) | undefined;
   onToggleCard?: ((instanceId: string) => void) | undefined;
   onConfirm?: (() => void) | undefined;
+  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
 }
 
 export const CollectionModalHost = ({
@@ -30,6 +31,7 @@ export const CollectionModalHost = ({
   onClose,
   onToggleCard,
   onConfirm,
+  onPreviewCard,
 }: CollectionModalHostProps): React.JSX.Element | null => {
   if (model === undefined) {
     return null;
@@ -62,6 +64,7 @@ export const CollectionModalHost = ({
               }
               pendingChoice={selectable}
               disabled={disabled || !selectable}
+              onHover={onPreviewCard}
               onClick={
                 hasSelection && selectable
                   ? () => {

@@ -17,6 +17,7 @@ export interface BoardLayoutProps {
   actionDisabled?: boolean | undefined;
   onCardClick: (instanceId: string) => void;
   onCardAction: (actionIndex: number) => void;
+  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
   onViewCollection: (title: string, cards: readonly ClientCardModel[]) => void;
   onBackgroundClick: () => void;
 }
@@ -53,6 +54,7 @@ export const BoardLayout = ({
   actionDisabled = false,
   onCardClick,
   onCardAction,
+  onPreviewCard,
   onViewCollection,
   onBackgroundClick,
 }: BoardLayoutProps): React.JSX.Element => (
@@ -80,6 +82,7 @@ export const BoardLayout = ({
         selectedDonInstanceIds={selectedDonInstanceIds}
         cardActions={cardActions}
         actionDisabled={actionDisabled}
+        onCardPreview={onPreviewCard}
         onCardClick={onCardClick}
         onCardAction={onCardAction}
       />
@@ -92,6 +95,7 @@ export const BoardLayout = ({
           cards={board.opponent.costArea}
           size="mini"
           displayMode="overlap"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone opponent-life">
@@ -100,6 +104,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.opponent.lifeCount, "hidden-life-opponent")}
           size="small"
           displayMode="life"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone opponent-deck">
@@ -108,6 +113,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.opponent.deckCount, "hidden-deck-opponent")}
           size="small"
           displayMode="stack"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone opponent-don-deck">
@@ -119,6 +125,7 @@ export const BoardLayout = ({
           )}
           size="small"
           displayMode="stack"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone opponent-trash">
@@ -127,6 +134,7 @@ export const BoardLayout = ({
           cards={board.opponent.trash}
           size="small"
           displayMode="stack"
+          onCardPreview={onPreviewCard}
           onViewCollection={() => {
             onViewCollection("Opponent trash", board.opponent.trash);
           }}
@@ -145,6 +153,7 @@ export const BoardLayout = ({
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
           onCardAction={onCardAction}
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone opponent-stage">
@@ -162,6 +171,7 @@ export const BoardLayout = ({
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
           onCardAction={onCardAction}
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone opponent-characters">
@@ -178,6 +188,7 @@ export const BoardLayout = ({
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
           onCardAction={onCardAction}
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone center-spacer">
@@ -198,6 +209,7 @@ export const BoardLayout = ({
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
           onCardAction={onCardAction}
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone player-life">
@@ -206,6 +218,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.self.lifeCount, "hidden-life-self")}
           size="small"
           displayMode="life"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone player-leader">
@@ -221,6 +234,7 @@ export const BoardLayout = ({
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
           onCardAction={onCardAction}
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone player-stage">
@@ -236,6 +250,7 @@ export const BoardLayout = ({
           actionDisabled={actionDisabled}
           onCardClick={onCardClick}
           onCardAction={onCardAction}
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone player-deck">
@@ -244,6 +259,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
           size="small"
           displayMode="stack"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone player-don-deck">
@@ -252,6 +268,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.self.donDeckCount, "hidden-don-deck-self")}
           size="small"
           displayMode="stack"
+          onCardPreview={onPreviewCard}
         />
       </div>
       <div className="playmat-zone player-trash">
@@ -260,6 +277,7 @@ export const BoardLayout = ({
           cards={board.self.trash}
           size="small"
           displayMode="stack"
+          onCardPreview={onPreviewCard}
           onViewCollection={() => {
             onViewCollection("Player trash", board.self.trash);
           }}
@@ -274,6 +292,7 @@ export const BoardLayout = ({
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
           selectedDonInstanceIds={selectedDonInstanceIds}
+          onCardPreview={onPreviewCard}
           onCardClick={onCardClick}
         />
       </div>
