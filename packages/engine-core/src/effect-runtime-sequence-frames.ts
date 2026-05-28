@@ -16,6 +16,8 @@ import type {
   SelectCardsDecision,
   SequenceSegmentResult,
   Target,
+  TargetRequest,
+  MultiZoneTargetRequest,
 } from "@optcg/types";
 
 import {
@@ -77,7 +79,7 @@ import {
   type SupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./effect-runtime-sequence-support.js";
-import { resolvePublicTargetCandidates } from "./target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -176,10 +178,18 @@ const hasSavedFieldObjectContinuousTarget = (
 
 const continuousChooseTargetRequest = (
   effect: ContinuousResolvedEffect,
-): Extract<Target, { type: "choose" }>["request"] | undefined =>
-  isContinuousEffectWithTarget(effect) && effect.target.type === "choose"
-    ? effect.target.request
-    : undefined;
+): TargetRequest | MultiZoneTargetRequest | undefined => {
+  if (!isContinuousEffectWithTarget(effect)) {
+    return undefined;
+  }
+  if (
+    effect.target.type === "choose" ||
+    effect.target.type === "chooseFromZones"
+  ) {
+    return effect.target.request;
+  }
+  return undefined;
+};
 
 const selectedCardRefsForMove = (
   ledgers: SegmentLedgers,
@@ -1264,9 +1274,13 @@ const continueNoDecisionSegments = (
     ) {
       const request = continuousChooseTargetRequest(segment.effect);
       if (request !== undefined) {
-        const candidates = resolvePublicTargetCandidates(nextState, request, {
-          sourceControllerId: entry.controllerId,
-        });
+        const candidates = resolvePublicTargetCandidatesForRequest(
+          nextState,
+          request,
+          {
+            sourceControllerId: entry.controllerId,
+          },
+        );
         const chooserId = resolvePlayerId(nextState, entry, request.chooser);
         if (!candidates.ok || chooserId === undefined) {
           return { ok: false };

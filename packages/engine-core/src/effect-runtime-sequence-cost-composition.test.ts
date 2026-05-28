@@ -356,6 +356,47 @@ const returnDonKeywordThenTrashFromHandSequence = (): Extract<
   ],
 });
 
+const returnDonLeaderOrCharacterPowerSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-return-don",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: { type: "returnDon", count: 1, optional: true },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "power-leader-or-character",
+      connector: "ifYouDo",
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["leader", "character"] },
+          },
+        },
+        value: 1000,
+        duration: { type: "thisTurn" },
+      },
+    },
+  ],
+});
+
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
   return applyAction(state, {
@@ -594,6 +635,59 @@ test("return-DON sequence can grant a temporary keyword before trailing hand tra
   assert.equal(keywordRecord.modifier.operation.type, "addKeyword");
   assert.equal(keywordRecord.modifier.operation.keyword, "blocker");
   assert.equal(keywordRecord.duration.type, "untilEndOfNextTurn");
+});
+
+test("return-DON sequence resolves choose-from-zones continuous target before materializing power", () => {
+  const state = sequenceQueueState(returnDonLeaderOrCharacterPowerSequence());
+  placeActiveDon(state, 1);
+  const p1State = must(state.players[p1], "p1");
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+
+  const returnDonPaused = processEffectRuntime(state);
+  const paidReturnDon = payReturnDonWithFirstCostDon(returnDonPaused.state);
+  const targetDecision = must(
+    paidReturnDon.state.pendingDecision,
+    "leader-or-character target decision",
+  );
+
+  assert.equal(returnDonPaused.errors, undefined);
+  assert.equal(paidReturnDon.errors, undefined);
+  assert.equal(targetDecision.type, "selectTargets");
+  assert.ok("zones" in targetDecision.request);
+  assert.deepEqual(targetDecision.request.zones, [
+    "leaderArea",
+    "characterArea",
+  ]);
+  assert.equal(targetDecision.candidates.length >= 2, true);
+
+  const leaderCandidate = must(
+    targetDecision.candidates.find(
+      (candidate) => candidate.card.zone?.zone === "leaderArea",
+    ),
+    "leader target candidate",
+  );
+  const selectedLeader = applyAction(paidReturnDon.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: [leaderCandidate.card] },
+  });
+  const powerRecord = must(
+    selectedLeader.state.continuousEffects[0],
+    "power record",
+  );
+
+  assert.equal(selectedLeader.errors, undefined);
+  assert.equal(selectedLeader.state.pendingDecision, undefined);
+  assert.equal(powerRecord.modifier.layer, "powerAdd");
+  assert.equal(powerRecord.modifier.target.type, "exactCard");
+  assert.equal(
+    powerRecord.modifier.target.card.instanceId,
+    leaderCandidate.card.instanceId,
+  );
 });
 
 test("hand play sequence filters candidates by color, type, and dynamic DON-field cost", () => {

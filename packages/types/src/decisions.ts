@@ -15,6 +15,7 @@ import type {
   Cost,
   EffectOption,
   ExactCardinality,
+  MultiZoneTargetRequest,
   OptionalCost,
   TargetRequest,
 } from "./effects.js";
@@ -122,7 +123,7 @@ export interface OptionalPayCostDecision extends BaseDecision {
 
 export interface SelectTargetsDecision extends BaseDecision {
   type: "selectTargets";
-  request: TargetRequest;
+  request: TargetRequest | MultiZoneTargetRequest;
   candidates: TargetCandidate[];
 }
 

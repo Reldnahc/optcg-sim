@@ -10,6 +10,7 @@ import type {
   SavedFieldObjectReference,
   SelectTargetsDecision,
   SequenceSegmentResult,
+  Target,
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
@@ -32,6 +33,7 @@ type ContinuousResolvedEffect = Extract<
   {
     type:
       | "modifyPower"
+      | "giveKeyword"
       | "modifyCost"
       | "invalidateEffects"
       | "cannotBecomeActive"
@@ -40,9 +42,7 @@ type ContinuousResolvedEffect = Extract<
   }
 >;
 type ContinuousEffectWithChooseTarget = ContinuousResolvedEffect & {
-  readonly target: Extract<Effect, { target: unknown }>["target"] & {
-    readonly type: "choose";
-  };
+  readonly target: Extract<Target, { type: "choose" | "chooseFromZones" }>;
 };
 
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
@@ -147,6 +147,7 @@ const isContinuousEffectWithChooseTarget = (
   const target = candidate.target;
   return (
     (candidate.type === "modifyPower" ||
+      candidate.type === "giveKeyword" ||
       candidate.type === "modifyCost" ||
       candidate.type === "invalidateEffects" ||
       candidate.type === "cannotBecomeActive" ||
@@ -154,7 +155,8 @@ const isContinuousEffectWithChooseTarget = (
       candidate.type === "cannotBlock") &&
     typeof target === "object" &&
     target !== null &&
-    (target as { readonly type?: unknown }).type === "choose"
+    ((target as { readonly type?: unknown }).type === "choose" ||
+      (target as { readonly type?: unknown }).type === "chooseFromZones")
   );
 };
 

@@ -403,7 +403,7 @@ export const createContinuousRecordsForResolvedEffect = (
   if (target === undefined) {
     return null;
   }
-  if (target.type === "choose") {
+  if (target.type === "choose" || target.type === "chooseFromZones") {
     if (chosenTargets === undefined) return null;
     if (chosenTargets.length === 0) {
       return target.request.min === 0 ? [] : null;

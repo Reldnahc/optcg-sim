@@ -2,6 +2,7 @@ import type {
   CardFilter,
   CardInstance,
   GameState,
+  MultiZoneTargetRequest,
   PlayerId,
   PlayerRef,
   ResolvedCard,
@@ -53,6 +54,10 @@ const isValidTargetCount = (request: TargetRequest): boolean =>
   request.min >= 0 &&
   request.max >= 0 &&
   request.min <= request.max;
+
+const isMultiZoneTargetRequest = (
+  request: TargetRequest | MultiZoneTargetRequest,
+): request is MultiZoneTargetRequest => "zones" in request;
 
 const resolvePlayerRef = (
   state: GameState,
@@ -271,5 +276,32 @@ export const resolvePublicTargetCandidates = (
     }
   }
 
+  return { ok: true, candidates };
+};
+
+export const resolvePublicTargetCandidatesForRequest = (
+  state: GameState,
+  request: TargetRequest | MultiZoneTargetRequest,
+  context: ResolvePublicTargetCandidatesContext,
+): TargetCandidateResolutionResult => {
+  if (!isMultiZoneTargetRequest(request)) {
+    return resolvePublicTargetCandidates(state, request, context);
+  }
+  if (request.zones.length === 0) {
+    return { ok: false, reason: "unsupportedZone" };
+  }
+
+  const candidates: TargetCandidate[] = [];
+  for (const zone of request.zones) {
+    const resolved = resolvePublicTargetCandidates(
+      state,
+      { ...request, zone },
+      context,
+    );
+    if (!resolved.ok) {
+      return resolved;
+    }
+    candidates.push(...resolved.candidates);
+  }
   return { ok: true, candidates };
 };

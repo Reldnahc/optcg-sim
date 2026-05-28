@@ -12,6 +12,7 @@ import type {
   ResolvedCard,
   SelectTargetsDecision,
   Target,
+  MultiZoneTargetRequest,
   TargetRequest,
 } from "@optcg/types";
 
@@ -203,8 +204,8 @@ const targetRequestForEffect = (effect: Effect): TargetRequest | undefined => {
 };
 
 const targetRequestsEqual = (
-  left: TargetRequest,
-  right: TargetRequest,
+  left: TargetRequest | MultiZoneTargetRequest,
+  right: TargetRequest | MultiZoneTargetRequest,
 ): boolean => JSON.stringify(left) === JSON.stringify(right);
 
 export const isUnsupportedSelectTargetsDecision = (

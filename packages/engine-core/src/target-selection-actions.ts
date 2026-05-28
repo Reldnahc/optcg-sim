@@ -20,7 +20,7 @@ import { isUnsupportedSelectTargetsDecision } from "./effect-runtime-queue-targe
 import { resumeSequenceFrameAfterSelectTargets } from "./effect-runtime-sequence-frames.js";
 import { isSequenceFrameSelectTargetsDecision } from "./effect-runtime-sequence-select-targets.js";
 import { assertGameStateInvariants } from "./invariants.js";
-import { resolvePublicTargetCandidates } from "./target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -92,9 +92,13 @@ const currentCandidatesForDecision = (
   if (entry === undefined) {
     return null;
   }
-  const resolved = resolvePublicTargetCandidates(state, decision.request, {
-    sourceControllerId: entry.controllerId,
-  });
+  const resolved = resolvePublicTargetCandidatesForRequest(
+    state,
+    decision.request,
+    {
+      sourceControllerId: entry.controllerId,
+    },
+  );
   return resolved.ok ? resolved.candidates : null;
 };
 
