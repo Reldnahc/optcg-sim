@@ -87,6 +87,11 @@
   margin-left: calc(-1 * var(--hand-lane-extension));
 }
 
+.hand-cards.is-using-outside-lane.hand-cards-overlap-right {
+  width: calc(100% + var(--hand-lane-extension));
+  margin-right: calc(-1 * var(--hand-lane-extension));
+}
+
 .hand-cards.is-overlapping {
   gap: 0;
 }
