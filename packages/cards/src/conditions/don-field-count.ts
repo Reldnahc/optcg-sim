@@ -6,8 +6,10 @@ export const donFieldCountConditionPrimitive = {
   childPrimitiveIds: [
     "player:self",
     "condition:comparator:lte",
+    "condition:comparator:gte",
     "condition:threshold:positiveInteger",
     "filter:category:don",
+    "filter:state:attached",
   ],
 } as const;
 
@@ -51,6 +53,27 @@ export const parseDonFieldCountCondition: ConditionParser = (
   const comparisonText = subjectMatch?.groups?.["comparison"];
   if (comparisonText === undefined) {
     return undefined;
+  }
+
+  if (/^any DON!! cards given$/i.test(comparisonText)) {
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"], state: "attached" },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+        "filter:state:attached",
+      ],
+      rest: "",
+    };
   }
 
   const comparison = parseLeadingCountComparison({ text: comparisonText });

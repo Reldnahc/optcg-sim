@@ -108,6 +108,7 @@ export type PrimitiveEvidence =
   | "filter:category:event"
   | "filter:category:don"
   | "filter:state:rested"
+  | "filter:state:attached"
   | "valueSource:donFieldCount:self"
   | "valueOffset:fieldCountDifference"
   | "value:basePower:positiveInteger"

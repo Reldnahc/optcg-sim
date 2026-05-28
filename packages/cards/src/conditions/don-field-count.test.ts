@@ -12,8 +12,10 @@ describe("DON field count condition parser", () => {
       childPrimitiveIds: [
         "player:self",
         "condition:comparator:lte",
+        "condition:comparator:gte",
         "condition:threshold:positiveInteger",
         "filter:category:don",
+        "filter:state:attached",
       ],
     });
   });
@@ -64,6 +66,31 @@ describe("DON field count condition parser", () => {
         "player:self",
         "filter:category:don",
       ],
+    });
+  });
+
+  it("parses any given DON as an attached DON field-count condition", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have any DON!! cards given",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"], state: "attached" },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+        "filter:state:attached",
+      ],
+      rest: "",
     });
   });
 

@@ -177,3 +177,79 @@ it("parses activate-main turn-count DON ramp and rested-DON attach compositional
     ]),
   );
 });
+
+it("parses main rest-DON cost with attached-DON condition and power reduction body", () => {
+  const result = parseCardEffectLine(
+    "[Main] You may rest 5 of your DON!! cards: If you have any DON!! cards given, give up to 1 of your opponent's Characters −8000 power during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "paidCost",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "restDon",
+                count: 5,
+                chooser: "self",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "conditional",
+              if: {
+                type: "fieldCount",
+                player: "self",
+                filter: { categories: ["don"], state: "attached" },
+                op: "gte",
+                value: 1,
+              },
+              then: {
+                type: "modifyPower",
+                value: -8000,
+                duration: { type: "thisTurn" },
+                target: {
+                  type: "choose",
+                  request: {
+                    chooser: "self",
+                    player: "opponent",
+                    zone: "characterArea",
+                    min: 0,
+                    max: 1,
+                    filter: { categories: ["character"] },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "cost:restDon",
+      "condition:donFieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "filter:category:don",
+      "filter:state:attached",
+      "instruction:modifyPower",
+      "modifier:negativePower",
+      "duration:thisTurn",
+      "target:opponentCharacters",
+    ]),
+  );
+});
