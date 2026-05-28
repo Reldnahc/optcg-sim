@@ -10,7 +10,10 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
-import { opponentRevealFromEvents } from "./reveal-viewer.js";
+import {
+  opponentRevealFromEvents,
+  opponentRevealsFromEvents,
+} from "./reveal-viewer.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -141,5 +144,32 @@ describe("reveal viewer", () => {
     );
 
     assert.equal(reveal?.revealId, "reveal:search-reveal:selected:newer");
+  });
+
+  test("returns every active search reveal instead of replacing older reveal windows", () => {
+    const reveals = opponentRevealsFromEvents(
+      [
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:first",
+          cardOwner: p1,
+          seq: 1,
+        }),
+        revealEvent({
+          revealId: "reveal:search-reveal:selected:second",
+          cardOwner: p1,
+          seq: 2,
+        }),
+      ],
+      p2,
+      new Set(),
+    );
+
+    assert.deepEqual(
+      reveals.map((reveal) => reveal.revealId),
+      [
+        "reveal:search-reveal:selected:first",
+        "reveal:search-reveal:selected:second",
+      ],
+    );
   });
 });

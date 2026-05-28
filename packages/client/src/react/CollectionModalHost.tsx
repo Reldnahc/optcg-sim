@@ -19,6 +19,8 @@ export interface CollectionModalModel {
 export interface CollectionModalHostProps {
   model?: CollectionModalModel | undefined;
   disabled?: boolean | undefined;
+  minimized?: boolean | undefined;
+  onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   onToggleCard?: ((instanceId: string) => void) | undefined;
   onConfirm?: (() => void) | undefined;
@@ -28,6 +30,8 @@ export interface CollectionModalHostProps {
 export const CollectionModalHost = ({
   model,
   disabled = false,
+  minimized = false,
+  onToggleMinimized,
   onClose,
   onToggleCard,
   onConfirm,
@@ -44,6 +48,8 @@ export const CollectionModalHost = ({
     <FloatingWindow
       title={model.title}
       className="floating-window-collection collection-modal"
+      minimized={minimized}
+      onToggleMinimized={onToggleMinimized}
       onClose={onClose}
     >
       <div className="collection-modal-card-grid">

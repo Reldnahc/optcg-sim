@@ -8,6 +8,7 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId } from "@optcg/types";
 
+import { CardPreviewToggle } from "./CardPreviewToggle.js";
 import { CardPreviewWindow } from "./CardPreviewWindow.js";
 import { CardTile } from "./CardTile.js";
 import type { ClientCardModel } from "../view-model.js";
@@ -111,8 +112,43 @@ describe("card preview window", () => {
     assert.match(zone, /onCardPreview/u);
     assert.match(handRow, /onCardPreview/u);
     assert.match(collectionModal, /onPreviewCard/u);
-    assert.match(matchApp, /setPreviewCard/u);
-    assert.doesNotMatch(matchApp, /previewControl=/u);
+    assert.match(matchApp, /previewHoveredCard/u);
+    assert.match(matchApp, /previewControl=/u);
+    assert.match(matchApp, /CardPreviewToggle/u);
     assert.match(matchApp, /CardPreviewWindow/u);
+  });
+
+  test("preview toggle controls whether hover preview is enabled", () => {
+    const enabledMarkup = renderToStaticMarkup(
+      createElement(CardPreviewToggle, {
+        enabled: true,
+        onToggle: () => undefined,
+      }),
+    );
+    const disabledMarkup = renderToStaticMarkup(
+      createElement(CardPreviewToggle, {
+        enabled: false,
+        onToggle: () => undefined,
+      }),
+    );
+
+    assert.match(enabledMarkup, /card-preview-toggle is-enabled/u);
+    assert.match(enabledMarkup, /aria-pressed="true"/u);
+    assert.match(enabledMarkup, /Disable card preview on hover/u);
+    assert.match(disabledMarkup, /aria-pressed="false"/u);
+    assert.match(disabledMarkup, /Enable card preview on hover/u);
+  });
+
+  test("match app remembers the last hovered card and reopens preview when re-enabled", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /lastPreviewCard/u);
+    assert.match(source, /const previewHoveredCard/u);
+    assert.match(source, /if\s*\(!previewEnabled\)\s*\{\s*return;/u);
+    assert.match(source, /setPreviewCard\(undefined\);/u);
+    assert.match(source, /setPreviewCard\(lastPreviewCard\);/u);
   });
 });

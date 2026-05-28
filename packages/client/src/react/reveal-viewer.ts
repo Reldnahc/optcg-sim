@@ -66,7 +66,22 @@ export const opponentRevealFromEvents = (
   playerId: PlayerId,
   dismissedRevealIds: ReadonlySet<string>,
 ): OpponentRevealViewModel | undefined => {
-  for (const event of [...events].reverse()) {
+  const reveals = opponentRevealsFromEvents(
+    events,
+    playerId,
+    dismissedRevealIds,
+  );
+  return reveals[reveals.length - 1];
+};
+
+export const opponentRevealsFromEvents = (
+  events: readonly EngineEvent[],
+  playerId: PlayerId,
+  dismissedRevealIds: ReadonlySet<string>,
+): readonly OpponentRevealViewModel[] => {
+  const reveals: OpponentRevealViewModel[] = [];
+  const seenRevealIds = new Set<string>();
+  for (const event of events) {
     if (
       event.type !== "cardRevealed" ||
       event.visibility.type !== "public" ||
@@ -75,13 +90,14 @@ export const opponentRevealFromEvents = (
       continue;
     }
     const revealId = revealIdFromEvent(event);
-    if (dismissedRevealIds.has(revealId)) {
+    if (dismissedRevealIds.has(revealId) || seenRevealIds.has(revealId)) {
       continue;
     }
     const cards = revealedCardsFromEvent(event);
     if (cards.length > 0 && cards.every((card) => card.playerId !== playerId)) {
-      return { revealId, cards };
+      seenRevealIds.add(revealId);
+      reveals.push({ revealId, cards });
     }
   }
-  return undefined;
+  return reveals;
 };

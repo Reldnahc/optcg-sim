@@ -130,6 +130,19 @@ export const Zone = ({
           {displayedStackCount}
         </div>
       ) : null}
+      {displayMode === "stack" &&
+      visibleCards.length === 0 &&
+      onViewCollection !== undefined ? (
+        <button
+          className="zone-stack-open-button"
+          type="button"
+          aria-label={`Open ${label}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onViewCollection();
+          }}
+        />
+      ) : null}
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
         {displayMode === "slots" ? (
           Array.from({ length: slotCount }, (_, index) => {

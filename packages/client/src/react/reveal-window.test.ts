@@ -34,14 +34,32 @@ describe("reveal window", () => {
           title: "Opponent revealed",
           cards: [card("https://cdn.example.test/revealed.webp")],
         },
+        minimized: false,
+        onToggleMinimized: () => undefined,
         onClose: () => undefined,
       }),
     );
 
     assert.match(markup, /floating-window-reveal reveal-window/u);
+    assert.match(markup, /floating-window-minimize/u);
     assert.match(markup, /reveal-window-card-spot/u);
     assert.match(markup, /src="https:\/\/cdn\.example\.test\/revealed\.webp"/u);
     assert.doesNotMatch(markup, /collection-modal-card-grid/u);
+  });
+
+  test("reveal windows spawn at their minimum allowed size", () => {
+    const markup = renderToStaticMarkup(
+      createElement(RevealWindowHost, {
+        model: {
+          title: "Opponent revealed",
+          cards: [card("https://cdn.example.test/revealed.webp")],
+        },
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /width:300px/);
+    assert.match(markup, /height:420px/);
   });
 
   test("large reveal card sizing is isolated from collection grid sizing", async () => {
@@ -59,5 +77,12 @@ describe("reveal window", () => {
     assert.match(styles, /\.reveal-window-card-spot\s+\.card-tile-shell/u);
     assert.match(mainSource, /styles\/reveal-window\.css/u);
     assert.match(matchAppSource, /RevealWindowHost/u);
+  });
+
+  test("match app renders one reveal window for each active reveal", async () => {
+    const source = await readFile(matchAppPath, "utf8");
+
+    assert.match(source, /opponentRevealWindows\.map/u);
+    assert.doesNotMatch(source, /model=\{opponentRevealWindow\}/u);
   });
 });

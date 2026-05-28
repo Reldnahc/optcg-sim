@@ -187,13 +187,15 @@ describe("collection modal", () => {
     assert.equal(markup.includes("Three"), true);
   });
 
-  test("collection viewer has close controls without minimize controls", async () => {
+  test("collection viewer has close and minimize controls", async () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {
         model: {
           title: "Player trash",
           cards: [card("one", "One")],
         },
+        minimized: false,
+        onToggleMinimized: () => undefined,
         onClose: () => undefined,
       }),
     );
@@ -204,9 +206,23 @@ describe("collection modal", () => {
 
     assert.match(markup, /floating-window-collection collection-modal/u);
     assert.match(markup, /floating-window-close/u);
-    assert.equal(markup.includes("floating-window-minimize"), false);
-    assert.equal(source.includes("onToggleMinimized"), false);
-    assert.equal(source.includes("minimized"), false);
+    assert.match(markup, /floating-window-minimize/u);
+    assert.match(source, /onToggleMinimized/u);
+    assert.match(source, /minimized/u);
+  });
+
+  test("empty stack zones still expose a collection opener", () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Trash",
+        cards: [],
+        displayMode: "stack",
+        onViewCollection: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /zone-stack-open-button/u);
+    assert.match(markup, /aria-label="Open Trash"/u);
   });
 
   test("clicking the same trash collection toggles the viewer closed", async () => {
@@ -218,7 +234,7 @@ describe("collection modal", () => {
     assert.match(source, /setCollectionModal\(\(current\)\s*=>/u);
     assert.match(
       source,
-      /current\?\.title\s*===\s*title\s*\?\s*undefined\s*:\s*\{\s*title,\s*cards\s*\}/u,
+      /if\s*\(current\?\.title\s*===\s*title\)\s*\{\s*return undefined;/u,
     );
   });
 
@@ -228,12 +244,12 @@ describe("collection modal", () => {
       "utf8",
     );
 
-    assert.match(source, /opponentRevealFromEvents/u);
+    assert.match(source, /opponentRevealsFromEvents/u);
     assert.match(source, /Opponent revealed/u);
-    assert.match(source, /setDismissedRevealIds/u);
+    assert.match(source, /updateRevealWindowState/u);
     assert.match(source, /RevealWindowHost/u);
     assert.doesNotMatch(source, /opponentRevealModal/u);
-    assert.doesNotMatch(source, /onToggleMinimized=\{[^}]*opponentReveal/u);
+    assert.match(source, /activeRevealWindowState\.minimized/u);
   });
 
   test("collection modal can render selectable decision cards with confirm control", () => {

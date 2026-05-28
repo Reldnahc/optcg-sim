@@ -1,0 +1,46 @@
+import { strict as assert } from "node:assert";
+import { describe, test } from "vitest";
+
+import type { MatchId } from "@optcg/types";
+
+import { createMemoryClientStorage } from "../session.js";
+import { createRevealWindowStateStore } from "./window-state-store.js";
+
+describe("reveal window state store", () => {
+  test("persists dismissed and minimized reveal ids by match", () => {
+    const storage = createMemoryClientStorage();
+    const matchOne = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+    const matchTwo = createRevealWindowStateStore({
+      storage,
+      matchId: "match-2" as MatchId,
+    });
+
+    matchOne.saveDismissedRevealIds(new Set(["reveal-1", "reveal-2"]));
+    matchOne.saveMinimizedRevealIds(new Set(["reveal-2"]));
+
+    assert.deepEqual(
+      [...matchOne.loadDismissedRevealIds()],
+      ["reveal-1", "reveal-2"],
+    );
+    assert.deepEqual([...matchOne.loadMinimizedRevealIds()], ["reveal-2"]);
+    assert.deepEqual([...matchTwo.loadDismissedRevealIds()], []);
+    assert.deepEqual([...matchTwo.loadMinimizedRevealIds()], []);
+  });
+
+  test("fails closed to empty sets for malformed stored data", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:reveal-window-state:match-1:dismissed",
+      JSON.stringify({ revealId: "not-an-array" }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual([...store.loadDismissedRevealIds()], []);
+  });
+});

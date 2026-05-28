@@ -96,6 +96,15 @@
   transform: translate(-50%, -50%);
 }
 
+.zone-stack-open-button {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .zone-stack:hover .stack-count {
   opacity: 1;
 }

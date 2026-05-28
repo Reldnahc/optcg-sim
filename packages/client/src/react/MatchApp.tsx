@@ -8,26 +8,45 @@ import {
 } from "../interactions/decision-surface.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import { BoardLayout } from "./BoardLayout.js";
+import { createBrowserPersistentStorage } from "./browser-storage.js";
+import { CardPreviewToggle } from "./CardPreviewToggle.js";
 import { CardPreviewWindow } from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
-import { opponentRevealFromEvents } from "./reveal-viewer.js";
+import { opponentRevealsFromEvents } from "./reveal-viewer.js";
 import { useMatchClient } from "./useMatchClient.js";
+import type { RevealWindowStateStore } from "./window-state-store.js";
+import { createRevealWindowStateStore } from "./window-state-store.js";
+
+interface RevealWindowState {
+  scope?: string | undefined;
+  dismissed: Set<string>;
+  minimized: Set<string>;
+}
+
+const emptyRevealWindowState: RevealWindowState = {
+  dismissed: new Set(),
+  minimized: new Set(),
+};
 
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
   const [collectionModal, setCollectionModal] = useState<
     CollectionModalModel | undefined
   >(undefined);
-  const [dismissedRevealIds, setDismissedRevealIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [collectionMinimized, setCollectionMinimized] = useState(false);
+  const [revealWindowState, setRevealWindowState] =
+    useState<RevealWindowState>(() => emptyRevealWindowState);
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
+  const [lastPreviewCard, setLastPreviewCard] = useState<
+    ClientCardModel | undefined
+  >(undefined);
+  const [previewEnabled, setPreviewEnabled] = useState(true);
   const [previewMinimized, setPreviewMinimized] = useState(false);
   const {
     board,
@@ -43,6 +62,48 @@ export const MatchApp = (): React.JSX.Element => {
     clientState !== undefined && "matchId" in clientState
       ? clientState
       : undefined;
+  const matchScope =
+    matchState === undefined ? undefined : String(matchState.matchId);
+  const revealWindowStateStore = useMemo<RevealWindowStateStore | undefined>(
+    () =>
+      matchState === undefined || typeof window === "undefined"
+        ? undefined
+        : createRevealWindowStateStore({
+            storage: createBrowserPersistentStorage(),
+            matchId: matchState.matchId,
+          }),
+    [matchState?.matchId],
+  );
+  useEffect(() => {
+    if (matchScope === undefined || revealWindowStateStore === undefined) {
+      setRevealWindowState(emptyRevealWindowState);
+      return;
+    }
+    setRevealWindowState({
+      scope: matchScope,
+      dismissed: revealWindowStateStore.loadDismissedRevealIds(),
+      minimized: revealWindowStateStore.loadMinimizedRevealIds(),
+    });
+  }, [matchScope, revealWindowStateStore]);
+  const updateRevealWindowState = (
+    update: (state: RevealWindowState) => RevealWindowState,
+  ): void => {
+    if (matchScope === undefined) {
+      return;
+    }
+    setRevealWindowState((current) => {
+      const base =
+        current.scope === matchScope ? current : emptyRevealWindowState;
+      const next = update({
+        scope: matchScope,
+        dismissed: new Set(base.dismissed),
+        minimized: new Set(base.minimized),
+      });
+      revealWindowStateStore?.saveDismissedRevealIds(next.dismissed);
+      revealWindowStateStore?.saveMinimizedRevealIds(next.minimized);
+      return next;
+    });
+  };
   const lobbyState =
     clientState !== undefined && "lobbyId" in clientState
       ? clientState
@@ -110,6 +171,30 @@ export const MatchApp = (): React.JSX.Element => {
       attachedDonCards: [],
     };
   };
+  const previewHoveredCard = (card: ClientCardModel): void => {
+    setLastPreviewCard(card);
+    if (!previewEnabled) {
+      return;
+    }
+    setPreviewCard(card);
+  };
+  useEffect(() => {
+    if (previewEnabled) {
+      return;
+    }
+    setPreviewCard(undefined);
+    setPreviewMinimized(false);
+  }, [previewEnabled]);
+  const togglePreviewEnabled = (): void => {
+    setPreviewEnabled((current) => {
+      const next = !current;
+      if (next) {
+        setPreviewCard(lastPreviewCard);
+        setPreviewMinimized(false);
+      }
+      return next;
+    });
+  };
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
     client.currentPlayerId,
@@ -150,21 +235,40 @@ export const MatchApp = (): React.JSX.Element => {
               : { orderHint: cardCostSelection.orderHint }),
           },
         };
-  const opponentReveal =
-    currentPlayerId === undefined || playerSnapshot === undefined
-      ? undefined
-      : opponentRevealFromEvents(
+  const renderedCollectionModal =
+    cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal;
+  const renderedCollectionKey = renderedCollectionModal?.title;
+  useEffect(() => {
+    setCollectionMinimized(false);
+  }, [renderedCollectionKey]);
+  const activeRevealWindowState =
+    matchScope !== undefined && revealWindowState.scope === matchScope
+      ? revealWindowState
+      : emptyRevealWindowState;
+  const opponentReveals =
+    currentPlayerId === undefined ||
+    playerSnapshot === undefined ||
+    matchScope === undefined ||
+    revealWindowState.scope !== matchScope
+      ? []
+      : opponentRevealsFromEvents(
           playerSnapshot.view.events,
           currentPlayerId,
-          dismissedRevealIds,
+          activeRevealWindowState.dismissed,
         );
-  const opponentRevealWindow =
-    opponentReveal === undefined
-      ? undefined
-      : {
-          title: "Opponent revealed",
-          cards: opponentReveal.cards.map((card) => cardModel(card)),
-        };
+  const opponentRevealWindows = opponentReveals.map((reveal, index) => ({
+    revealId: reveal.revealId,
+    initialRect: {
+      x: 380 + index * 24,
+      y: 100 + index * 24,
+      width: 300,
+      height: 420,
+    },
+    model: {
+      title: "Opponent revealed",
+      cards: reveal.cards.map((card) => cardModel(card)),
+    },
+  }));
 
   return (
     <main className="match-app">
@@ -187,13 +291,15 @@ export const MatchApp = (): React.JSX.Element => {
           onCardAction={(actionIndex) => {
             void client.submitAction(actionIndex);
           }}
-          onPreviewCard={(card) => {
-            setPreviewCard(card);
-          }}
+          onPreviewCard={previewHoveredCard}
           onViewCollection={(title, cards) => {
-            setCollectionModal((current) =>
-              current?.title === title ? undefined : { title, cards },
-            );
+            setCollectionModal((current) => {
+              if (current?.title === title) {
+                return undefined;
+              }
+              setCollectionMinimized(false);
+              return { title, cards };
+            });
           }}
           onBackgroundClick={() => {
             client.selectCard(undefined);
@@ -212,6 +318,12 @@ export const MatchApp = (): React.JSX.Element => {
           setConcedeConfirming(false);
           void client.createNewMatch();
         }}
+        previewControl={
+          <CardPreviewToggle
+            enabled={previewEnabled}
+            onToggle={togglePreviewEnabled}
+          />
+        }
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
         onConcede={() => {
@@ -243,19 +355,19 @@ export const MatchApp = (): React.JSX.Element => {
         }}
       />
       <CollectionModalHost
-        model={
-          cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal
-        }
+        model={renderedCollectionModal}
         disabled={client.state.actionInFlight}
+        minimized={collectionMinimized}
+        onToggleMinimized={() => {
+          setCollectionMinimized((current) => !current);
+        }}
         onToggleCard={(instanceId) => {
           client.toggleDecisionCard(instanceId as InstanceId);
         }}
         onConfirm={() => {
           void client.confirmDecision();
         }}
-        onPreviewCard={(card) => {
-          setPreviewCard(card);
-        }}
+        onPreviewCard={previewHoveredCard}
         onClose={
           cardCostCollectionModal === undefined &&
           decisionCollectionModal === undefined
@@ -267,20 +379,34 @@ export const MatchApp = (): React.JSX.Element => {
             : undefined
         }
       />
-      <RevealWindowHost
-        model={opponentRevealWindow}
-        onPreviewCard={(card) => {
-          setPreviewCard(card);
-        }}
-        onClose={() => {
-          if (opponentReveal === undefined) {
-            return;
-          }
-          setDismissedRevealIds(
-            (current) => new Set([...current, opponentReveal.revealId]),
-          );
-        }}
-      />
+      {opponentRevealWindows.map((revealWindow) => (
+        <RevealWindowHost
+          key={revealWindow.revealId}
+          model={revealWindow.model}
+          initialRect={revealWindow.initialRect}
+          minimized={activeRevealWindowState.minimized.has(
+            revealWindow.revealId,
+          )}
+          onToggleMinimized={() => {
+            updateRevealWindowState((state) => {
+              if (state.minimized.has(revealWindow.revealId)) {
+                state.minimized.delete(revealWindow.revealId);
+              } else {
+                state.minimized.add(revealWindow.revealId);
+              }
+              return state;
+            });
+          }}
+          onPreviewCard={previewHoveredCard}
+          onClose={() => {
+            updateRevealWindowState((state) => {
+              state.dismissed.add(revealWindow.revealId);
+              state.minimized.delete(revealWindow.revealId);
+              return state;
+            });
+          }}
+        />
+      ))}
       <CardPreviewWindow
         card={previewCard}
         minimized={previewMinimized}
