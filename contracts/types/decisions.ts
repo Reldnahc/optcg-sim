@@ -15,6 +15,7 @@ import type {
   Cost,
   EffectOption,
   ExactCardinality,
+  MultiZoneTargetRequest,
   OptionalCost,
   TargetRequest,
 } from "./effects.js";
@@ -64,6 +65,7 @@ export interface PaymentDeclinedResponse {
 
 export type DecisionResponse =
   | { type: "orderedIds"; ids: string[] }
+  | { type: "topBottomPlacement"; topIds: string[]; bottomIds: string[] }
   | { type: "optionalActivation"; choice: "activate" | "decline" }
   | PaymentResponse
   | PaymentDeclinedResponse
@@ -121,7 +123,7 @@ export interface OptionalPayCostDecision extends BaseDecision {
 
 export interface SelectTargetsDecision extends BaseDecision {
   type: "selectTargets";
-  request: TargetRequest;
+  request: TargetRequest | MultiZoneTargetRequest;
   candidates: TargetCandidate[];
 }
 
@@ -146,6 +148,7 @@ export interface OrderCardsDecision extends BaseDecision {
   type: "orderCards";
   cards: CardRef[];
   destination: Zone;
+  placement?: { type: "topOrBottom" };
 }
 
 export interface MulliganDecision extends BaseDecision {
