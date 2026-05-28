@@ -767,4 +767,38 @@ describe("local dev match", () => {
       revealed.cardId,
     );
   });
+
+  test("player card catalog keys persistent revealed cards by revealed card owner", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const revealed = p1State.deck[0];
+    if (revealed === undefined) {
+      throw new Error("Missing reveal card in p1 deck.");
+    }
+    match.state.revealedCards.push({
+      id: "reveal:search-reveal:test",
+      cards: [
+        {
+          instanceId: revealed.instanceId,
+          cardId: revealed.cardId,
+          playerId: p1,
+        },
+      ],
+      visibility: { type: "public" },
+      origin: "topOfDeck",
+      createdAtStateSeq: match.state.seq,
+      cleanupPolicy: "returnToOrigin",
+    });
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p2);
+
+    assert.equal(
+      catalog.players[p1]?.cards[revealed.cardId]?.cardId,
+      revealed.cardId,
+    );
+    assert.equal(catalog.players[p2]?.cards[revealed.cardId], undefined);
+  });
 });

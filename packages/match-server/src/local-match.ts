@@ -971,7 +971,12 @@ const addVisibleCatalogEntries = (
   );
   for (const reveal of view.revealedCards) {
     for (const card of reveal.cards) {
-      addVisibleCatalogEntryForCardId(players, manifest, viewerId, card.cardId);
+      addVisibleCatalogEntryForCardId(
+        players,
+        manifest,
+        card.playerId,
+        card.cardId,
+      );
     }
   }
   addVisibleCatalogEntriesForRevealEvents(players, manifest, view);
