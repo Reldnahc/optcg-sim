@@ -23,8 +23,6 @@ export const MatchApp = (): React.JSX.Element => {
   const [collectionModal, setCollectionModal] = useState<
     CollectionModalModel | undefined
   >(undefined);
-  const [collectionViewerMinimized, setCollectionViewerMinimized] =
-    useState(false);
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
@@ -171,8 +169,9 @@ export const MatchApp = (): React.JSX.Element => {
             setPreviewCard(card);
           }}
           onViewCollection={(title, cards) => {
-            setCollectionModal({ title, cards });
-            setCollectionViewerMinimized(false);
+            setCollectionModal((current) =>
+              current?.title === title ? undefined : { title, cards },
+            );
           }}
           onBackgroundClick={() => {
             client.selectCard(undefined);
@@ -233,12 +232,6 @@ export const MatchApp = (): React.JSX.Element => {
         model={
           cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal
         }
-        minimized={
-          cardCostCollectionModal === undefined &&
-          decisionCollectionModal === undefined
-            ? collectionViewerMinimized
-            : false
-        }
         disabled={client.state.actionInFlight}
         onToggleCard={(instanceId) => {
           client.toggleDecisionCard(instanceId as InstanceId);
@@ -249,21 +242,11 @@ export const MatchApp = (): React.JSX.Element => {
         onPreviewCard={(card) => {
           setPreviewCard(card);
         }}
-        onToggleMinimized={
-          cardCostCollectionModal === undefined &&
-          decisionCollectionModal === undefined &&
-          collectionModal !== undefined
-            ? () => {
-                setCollectionViewerMinimized((current) => !current);
-              }
-            : undefined
-        }
         onClose={
           cardCostCollectionModal === undefined &&
           decisionCollectionModal === undefined
             ? () => {
                 setCollectionModal(undefined);
-                setCollectionViewerMinimized(false);
               }
             : undefined
         }
