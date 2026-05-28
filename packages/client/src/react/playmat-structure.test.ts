@@ -72,14 +72,33 @@ describe("playmat structure", () => {
       readFile(playmatStylesPath, "utf8"),
     ]);
 
+    assert.match(appShellStyles, /--match-app-padding:\s*8px;/);
+    assert.match(appShellStyles, /--playmat-board-padding:\s*8px;/);
+    assert.match(appShellStyles, /--playmat-border-width:\s*2px;/);
+    assert.match(appShellStyles, /--playmat-grid-gap:\s*6px;/);
     assert.match(
       appShellStyles,
-      /--playmat-row-height:\s*calc\(100vh\s*\/\s*6\.5\);/,
+      /--playmat-vertical-chrome:\s*calc\(\s*\(var\(--match-app-padding\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-board-padding\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-border-width\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*6\)\s*\);/,
     );
+    assert.match(
+      appShellStyles,
+      /--playmat-row-height:\s*calc\(\(100vh\s*-\s*var\(--playmat-vertical-chrome\)\)\s*\/\s*6\);/,
+    );
+    assert.match(appShellStyles, /padding:\s*var\(--match-app-padding\);/);
     assert.match(
       playmatStyles,
       /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
     );
+    assert.match(
+      playmatStyles,
+      /height:\s*calc\(100vh\s*-\s*\(var\(--match-app-padding\)\s*\*\s*2\)\);/,
+    );
+    assert.match(playmatStyles, /gap:\s*var\(--playmat-grid-gap\);/);
+    assert.match(
+      playmatStyles,
+      /border:\s*var\(--playmat-border-width\)\s+solid\s+#e8e0d6;/,
+    );
+    assert.match(playmatStyles, /padding:\s*var\(--playmat-board-padding\);/);
     assert.equal(
       playmatStyles.includes('". . center-spacer center-spacer . ."'),
       true,

@@ -1,5 +1,13 @@
 .match-app {
-  --playmat-row-height: calc(100vh / 6.5);
+  --match-app-padding: 8px;
+  --playmat-board-padding: 8px;
+  --playmat-border-width: 2px;
+  --playmat-grid-gap: 6px;
+  --playmat-vertical-chrome: calc(
+    (var(--match-app-padding) * 2) + (var(--playmat-board-padding) * 2) +
+      (var(--playmat-border-width) * 2) + (var(--playmat-grid-gap) * 6)
+  );
+  --playmat-row-height: calc((100vh - var(--playmat-vertical-chrome)) / 6);
   --card-height: calc(var(--playmat-row-height) - 14px);
   --card-width: calc(var(--card-height) / 1.4);
   --card-zone-width: calc(var(--card-width) + 14px);
@@ -10,7 +18,7 @@
   grid-template-columns: 1fr;
   gap: 8px;
   height: 100vh;
-  padding: 8px;
+  padding: var(--match-app-padding);
   overflow: visible;
 }
 

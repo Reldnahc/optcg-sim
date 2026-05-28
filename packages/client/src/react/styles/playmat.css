@@ -1,6 +1,7 @@
 .tabletop-board {
   position: relative;
   display: grid;
+  height: calc(100vh - (var(--match-app-padding) * 2));
   grid-template-areas:
     "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"
     "opponent-deck . opponent-stage opponent-leader . opponent-life"
@@ -18,11 +19,11 @@
     var(--playmat-row-height) minmax(0, 1fr)
     var(--playmat-row-height) var(--playmat-row-height)
     var(--playmat-row-height);
-  gap: 6px;
+  gap: var(--playmat-grid-gap);
   min-height: 0;
-  border: 2px solid #e8e0d6;
+  border: var(--playmat-border-width) solid #e8e0d6;
   background: #9d9694;
-  padding: 8px;
+  padding: var(--playmat-board-padding);
 }
 
 .playmat-zone {
