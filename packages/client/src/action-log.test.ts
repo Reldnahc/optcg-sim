@@ -60,4 +60,76 @@ describe("action log", () => {
       ["Decision resolved: 1 card", "Saint Shepherd Ju Peter effect queued"],
     );
   });
+
+  test("names cards from visible event payload identity", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          type: "cardPlayed",
+          seq: 1,
+          payload: {
+            playerId: p1,
+            instanceId: "source-1",
+            cardId: "OP13-089",
+            category: "character",
+          },
+        }),
+        event({
+          type: "cardTrashed",
+          seq: 2,
+          payload: {
+            playerId: p1,
+            instanceId: "source-1",
+            cardId: "OP13-089",
+            reason: "trashFromHand",
+          },
+        }),
+        event({
+          type: "cardRevealed",
+          seq: 3,
+          payload: {
+            cards: [
+              {
+                playerId: p1,
+                instanceId: "source-1",
+                cardId: "OP13-089",
+              },
+            ],
+          },
+        }),
+      ],
+      catalog,
+    });
+
+    assert.deepEqual(
+      entries.map((entry) => entry.text),
+      [
+        "Revealed Saint Shepherd Ju Peter",
+        "Trashed Saint Shepherd Ju Peter",
+        "Played Saint Shepherd Ju Peter",
+      ],
+    );
+  });
+
+  test("keeps card movement generic when projected payload has no card identity", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          type: "cardMoved",
+          seq: 1,
+          payload: {
+            from: "deck",
+            to: "hand",
+            reason: "draw",
+          },
+        }),
+      ],
+      catalog,
+    });
+
+    assert.deepEqual(
+      entries.map((entry) => entry.text),
+      ["A card moved"],
+    );
+  });
 });

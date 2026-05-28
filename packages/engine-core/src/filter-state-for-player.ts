@@ -337,6 +337,44 @@ const pickStringPayloadFields = (
     }),
   );
 
+const pickCardIdentityPayloadFields = (
+  payload: Record<string, unknown>,
+): Record<string, string> =>
+  pickStringPayloadFields(payload, [
+    "playerId",
+    "instanceId",
+    "cardId",
+    "category",
+    "reason",
+  ]);
+
+const pickVisibleCardPayload = (
+  payload: Record<string, unknown>,
+): Record<string, unknown> => pickCardIdentityPayloadFields(payload);
+
+const pickVisibleCardMovePayload = (
+  payload: Record<string, unknown>,
+): Record<string, unknown> => {
+  const fromZone = toAllowedZoneRef(payload["from"]);
+  const toZone = toAllowedZoneRef(payload["to"]);
+  const from = payload["from"];
+  const to = payload["to"];
+
+  return {
+    ...pickCardIdentityPayloadFields(payload),
+    ...(fromZone !== undefined
+      ? { from: fromZone }
+      : typeof from === "string"
+        ? { from }
+        : {}),
+    ...(toZone !== undefined
+      ? { to: toZone }
+      : typeof to === "string"
+        ? { to }
+        : {}),
+  };
+};
+
 const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
   const payload = asRecord(event.payload);
   if (payload === undefined) {
@@ -397,6 +435,20 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
       return { playerId, instanceId, cardId };
     }
     return {};
+  }
+  if (event.type === "cardMoved") {
+    return pickVisibleCardMovePayload(payload);
+  }
+  if (
+    event.type === "cardPlayed" ||
+    event.type === "cardTrashed" ||
+    event.type === "cardDiscarded" ||
+    event.type === "cardKOd" ||
+    event.type === "cardReturned" ||
+    event.type === "counterUsed" ||
+    event.type === "triggerActivated"
+  ) {
+    return pickVisibleCardPayload(payload);
   }
   return {};
 };
