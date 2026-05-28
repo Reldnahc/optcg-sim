@@ -1,16 +1,21 @@
 import type { CardRef, EngineEvent } from "@optcg/types";
 
-import type { MatchCardCatalog } from "./transport.js";
+import type { MatchCardCatalog, RollbackPointView } from "./transport.js";
 
 export interface ActionLogEntry {
   id: string;
   seq: number;
   text: string;
+  rollback?: {
+    rollbackPointId: string;
+    label: string;
+  };
 }
 
 export interface CreateActionLogEntriesInput {
   events: readonly EngineEvent[];
   catalog: MatchCardCatalog;
+  rollbackPoints?: readonly RollbackPointView[] | undefined;
 }
 
 const eventLabels: Record<EngineEvent["type"], string> = {
@@ -321,12 +326,27 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
 export const createActionLogEntries = ({
   events,
   catalog,
+  rollbackPoints = [],
 }: CreateActionLogEntriesInput): ActionLogEntry[] =>
   events
     .slice(-80)
-    .map((event) => ({
-      id: String(event.id),
-      seq: event.seq,
-      text: eventText(event, catalog),
-    }))
+    .map((event) => {
+      const rollbackPoint = rollbackPoints.find(
+        (point) =>
+          point.eventId === String(event.id) || point.eventSeq === event.seq,
+      );
+      return {
+        id: String(event.id),
+        seq: event.seq,
+        text: eventText(event, catalog),
+        ...(rollbackPoint === undefined
+          ? {}
+          : {
+              rollback: {
+                rollbackPointId: rollbackPoint.rollbackPointId,
+                label: rollbackPoint.label,
+              },
+            }),
+      };
+    })
     .reverse();

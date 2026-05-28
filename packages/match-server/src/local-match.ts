@@ -14,7 +14,6 @@ import {
 import type { DevPoneglyphFetch } from "@optcg/cards";
 import type {
   CardId,
-  CardRef,
   EngineError,
   EngineResult,
   GameState,
@@ -22,8 +21,6 @@ import type {
   MatchCardManifest,
   MatchId,
   PlayerId,
-  PlayerView,
-  PublicCardView,
   CardInstance,
   DecisionId,
   DecisionResponse,
@@ -32,14 +29,28 @@ import type {
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
 import { actionDecisionPayment } from "./dev-action-payment.js";
 import { allPlayerCards, cardName } from "./dev-card-utils.js";
+import {
+  buildLocalDevCardCatalog,
+  buildLocalDevCardCatalogForPlayer,
+} from "./local-card-catalog.js";
 import type {
-  DevCardCatalogEntry,
   DevMatchSnapshot,
-  DevPlayerCardCatalog,
   DevPlayerSnapshot,
   DevVisibleAction,
   DevVisibleCardCatalog,
 } from "./dev-snapshot-types.js";
+import {
+  cloneGameState,
+  createLocalRollbackState,
+  recordRollbackPoint,
+  requestRollbackConsent,
+  resolveRollbackConsent,
+  rollbackView,
+  type LocalRollbackState,
+  type RequestLocalDevRollbackInput,
+} from "./local-rollback.js";
+
+export type { RequestLocalDevRollbackInput } from "./local-rollback.js";
 
 export interface DevMatchPlayerSetup {
   playerId: PlayerId;
@@ -57,10 +68,12 @@ export interface DevMatchSetup {
   cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
+  rollback?: Parameters<typeof createLocalRollbackState>[0];
 }
 
 export interface LocalDevMatch {
   state: GameState;
+  rollback: LocalRollbackState;
 }
 
 export interface CreatePremadeDevMatchSetupOptions {
@@ -89,6 +102,8 @@ export interface ApplyLocalDevActionResult {
 
 type ExecutableDevAction = DevVisibleAction & {
   apply: (state: GameState) => EngineResult;
+  decisionId?: DecisionId;
+  response?: DecisionResponse;
 };
 
 const visibleAction = (
@@ -355,12 +370,13 @@ export const createLocalDevMatch = (setup: DevMatchSetup): LocalDevMatch => {
     cardManifest: setup.cardManifest,
     shuffleDecks: setup.shuffleDecks ?? false,
   });
+  const rollback = createLocalRollbackState(setup.rollback);
   if (setupState.pendingDecision !== undefined) {
-    return { state: setupState };
+    return { state: setupState, rollback };
   }
   const started = startMulliganFlow(setupState);
   assertEngineResult(started, "Local dev match boot");
-  return { state: started.state };
+  return { state: started.state, rollback };
 };
 
 const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
@@ -596,6 +612,46 @@ const phaseActions = (
   ];
 };
 
+const rollbackConsentActions = (
+  state: GameState,
+  playerId: PlayerId,
+): ExecutableDevAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "rollbackConsent" ||
+    decision.playerId !== playerId
+  ) {
+    return [];
+  }
+  return [
+    {
+      index: 0,
+      type: "respondToDecision",
+      label: "Allow rollback",
+      decisionId: decision.id,
+      response: { type: "rollbackConsent", allow: true },
+      apply: (currentState) => ({
+        state: currentState,
+        events: [],
+        stateHash: hashCanonicalStateValue(currentState),
+      }),
+    },
+    {
+      index: 1,
+      type: "respondToDecision",
+      label: "Deny rollback",
+      decisionId: decision.id,
+      response: { type: "rollbackConsent", allow: false },
+      apply: (currentState) => ({
+        state: currentState,
+        events: [],
+        stateHash: hashCanonicalStateValue(currentState),
+      }),
+    },
+  ];
+};
+
 const setupStartOfGameActions = (
   state: GameState,
   playerId: PlayerId,
@@ -650,6 +706,7 @@ const executableActions = (
   const actions = [
     ...setupStartOfGameActions(state, playerId),
     ...mulliganActions(state, playerId),
+    ...rollbackConsentActions(state, playerId),
     ...phaseActions(state, playerId),
     ...rawActions,
   ];
@@ -705,6 +762,7 @@ export const getLocalDevSnapshot = (
   activePlayerId:
     match.state.pendingDecision?.playerId ?? match.state.turn.turnPlayerId,
   players: devPlayerSnapshots(match.state),
+  rollback: rollbackView(match.rollback, match.state),
 });
 
 export const getLocalDevSnapshotForPlayer = (
@@ -721,6 +779,7 @@ export const getLocalDevSnapshotForPlayer = (
     activePlayerId:
       match.state.pendingDecision?.playerId ?? match.state.turn.turnPlayerId,
     players: { [playerId]: player },
+    rollback: rollbackView(match.rollback, match.state),
   };
 };
 
@@ -755,12 +814,30 @@ export const applyLocalDevAction = (
     };
   }
 
+  if (
+    action.type === "respondToDecision" &&
+    action.decisionId !== undefined &&
+    action.response?.type === "rollbackConsent"
+  ) {
+    return applyLocalDevDecision(match, {
+      playerId: input.playerId,
+      decisionId: action.decisionId,
+      response: action.response,
+    });
+  }
+
+  const previousState = cloneGameState(match.state);
   const result = autoAdvanceMandatoryTurnFlow(
     startMulliganAfterSetupIfReady(action.apply(match.state)),
   );
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
+    match.rollback = recordRollbackPoint(
+      match.rollback,
+      previousState,
+      result.events,
+    );
   }
   return {
     snapshot: getLocalDevSnapshot(match),
@@ -794,11 +871,29 @@ export const applyLocalDevDecision = (
     };
   }
 
+  if (decision.type === "rollbackConsent") {
+    if (input.response.type !== "rollbackConsent") {
+      return {
+        snapshot: getLocalDevSnapshot(match),
+        errors: ["Rollback consent requires a rollbackConsent response."],
+      };
+    }
+    const result = resolveRollbackConsent(match.state, match.rollback, {
+      playerId: input.playerId,
+      decisionId: input.decisionId,
+      response: input.response,
+    });
+    match.state = result.state;
+    match.rollback = result.rollback;
+    return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
+  }
+
   const action = {
     type: "respondToDecision" as const,
     decisionId: input.decisionId,
     response: input.response,
   };
+  const previousState = cloneGameState(match.state);
   const responseResult =
     decision.type === "mulligan"
       ? respondToMulliganDecision(match.state, action)
@@ -809,6 +904,11 @@ export const applyLocalDevDecision = (
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
+    match.rollback = recordRollbackPoint(
+      match.rollback,
+      previousState,
+      result.events,
+    );
   }
   return {
     snapshot: getLocalDevSnapshot(match),
@@ -816,189 +916,27 @@ export const applyLocalDevDecision = (
   };
 };
 
+export const requestLocalDevRollback = (
+  match: LocalDevMatch,
+  input: RequestLocalDevRollbackInput,
+): ApplyLocalDevActionResult => {
+  const result = requestRollbackConsent(match.state, match.rollback, input);
+  match.state = result.state;
+  match.rollback = result.rollback;
+  return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
+};
+
 export const getLocalDevCardCatalog = (
   match: LocalDevMatch,
-): DevVisibleCardCatalog => {
-  const snapshot = getLocalDevSnapshot(match);
-  const players: Record<PlayerId, DevPlayerCardCatalog> = {};
-  for (const [viewerId, playerSnapshot] of Object.entries(snapshot.players)) {
-    addVisibleCatalogEntries(
-      players,
-      match.state.cardManifest,
-      viewerId as PlayerId,
-      playerSnapshot.view,
-    );
-  }
-  return { players };
-};
+): DevVisibleCardCatalog =>
+  buildLocalDevCardCatalog(match.state, getLocalDevSnapshot(match));
 
 export const getLocalDevCardCatalogForPlayer = (
   match: LocalDevMatch,
   playerId: PlayerId,
-): DevVisibleCardCatalog => {
-  const snapshot = getLocalDevSnapshotForPlayer(match, playerId);
-  const playerSnapshot = snapshot.players[playerId];
-  if (playerSnapshot === undefined) {
-    return { players: {} };
-  }
-  const players: Record<PlayerId, DevPlayerCardCatalog> = {};
-  addVisibleCatalogEntries(
-    players,
-    match.state.cardManifest,
+): DevVisibleCardCatalog =>
+  buildLocalDevCardCatalogForPlayer(
+    match.state,
+    getLocalDevSnapshotForPlayer(match, playerId),
     playerId,
-    playerSnapshot.view,
   );
-  return { players };
-};
-
-const addVisibleCatalogEntryForCardId = (
-  players: Record<PlayerId, DevPlayerCardCatalog>,
-  manifest: MatchCardManifest,
-  owner: PlayerId,
-  cardId: CardId,
-): void => {
-  const manifestCard = manifest.cards[cardId];
-  if (manifestCard === undefined) {
-    return;
-  }
-  const ownerCatalog = players[owner] ?? { cards: {} };
-  ownerCatalog.cards[cardId] = devCardCatalogEntry(manifestCard);
-  players[owner] = ownerCatalog;
-};
-
-const addVisibleCatalogEntry = (
-  players: Record<PlayerId, DevPlayerCardCatalog>,
-  manifest: MatchCardManifest,
-  card: PublicCardView | undefined,
-): void => {
-  if (card === undefined) {
-    return;
-  }
-  addVisibleCatalogEntryForCardId(players, manifest, card.owner, card.cardId);
-};
-
-const addVisibleCatalogEntriesForCards = (
-  players: Record<PlayerId, DevPlayerCardCatalog>,
-  manifest: MatchCardManifest,
-  cards: readonly PublicCardView[],
-): void => {
-  for (const card of cards) {
-    addVisibleCatalogEntry(players, manifest, card);
-  }
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const revealPayloadCardRef = (value: unknown): CardRef | undefined => {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  const instanceId = value["instanceId"];
-  const cardId = value["cardId"];
-  const playerId = value["playerId"];
-  if (
-    typeof instanceId !== "string" ||
-    typeof cardId !== "string" ||
-    typeof playerId !== "string"
-  ) {
-    return undefined;
-  }
-  return { instanceId, cardId, playerId } as CardRef;
-};
-
-const revealPayloadCards = (payload: unknown): readonly CardRef[] => {
-  if (!isRecord(payload)) {
-    return [];
-  }
-  const cards = payload["cards"];
-  if (Array.isArray(cards)) {
-    return cards.flatMap((card) => {
-      const ref = revealPayloadCardRef(card);
-      return ref === undefined ? [] : [ref];
-    });
-  }
-  const ref = revealPayloadCardRef(payload);
-  return ref === undefined ? [] : [ref];
-};
-
-const addVisibleCatalogEntriesForRevealEvents = (
-  players: Record<PlayerId, DevPlayerCardCatalog>,
-  manifest: MatchCardManifest,
-  view: PlayerView,
-): void => {
-  for (const event of view.events) {
-    if (event.type !== "cardRevealed") {
-      continue;
-    }
-    for (const card of revealPayloadCards(event.payload)) {
-      addVisibleCatalogEntryForCardId(
-        players,
-        manifest,
-        card.playerId,
-        card.cardId,
-      );
-    }
-  }
-};
-
-const addVisibleCatalogEntries = (
-  players: Record<PlayerId, DevPlayerCardCatalog>,
-  manifest: MatchCardManifest,
-  viewerId: PlayerId,
-  view: PlayerView,
-): void => {
-  addVisibleCatalogEntry(players, manifest, view.self.leader);
-  addVisibleCatalogEntry(players, manifest, view.self.stage);
-  addVisibleCatalogEntriesForCards(players, manifest, view.self.characters);
-  addVisibleCatalogEntriesForCards(players, manifest, view.self.costArea);
-  addVisibleCatalogEntriesForCards(players, manifest, view.self.hand);
-  addVisibleCatalogEntriesForCards(players, manifest, view.self.trash);
-  addVisibleCatalogEntriesForCards(
-    players,
-    manifest,
-    view.self.life.faceUpCards,
-  );
-  addVisibleCatalogEntry(players, manifest, view.opponent.leader);
-  addVisibleCatalogEntry(players, manifest, view.opponent.stage);
-  addVisibleCatalogEntriesForCards(players, manifest, view.opponent.characters);
-  addVisibleCatalogEntriesForCards(players, manifest, view.opponent.costArea);
-  addVisibleCatalogEntriesForCards(players, manifest, view.opponent.trash);
-  addVisibleCatalogEntriesForCards(
-    players,
-    manifest,
-    view.opponent.life.faceUpCards,
-  );
-  for (const reveal of view.revealedCards) {
-    for (const card of reveal.cards) {
-      addVisibleCatalogEntryForCardId(
-        players,
-        manifest,
-        card.playerId,
-        card.cardId,
-      );
-    }
-  }
-  addVisibleCatalogEntriesForRevealEvents(players, manifest, view);
-};
-
-const devCardCatalogEntry = (
-  card: MatchCardManifest["cards"][CardId],
-): DevCardCatalogEntry => {
-  const firstVariant = card.variants[0];
-  const imageUrl =
-    firstVariant?.stockImageFull ?? firstVariant?.scanImageDisplay;
-  return {
-    cardId: card.cardId,
-    name: card.name,
-    category: card.category,
-    ...(card.cost === undefined ? {} : { cost: card.cost }),
-    ...(card.power === undefined ? {} : { power: card.power }),
-    ...(card.life === undefined ? {} : { life: card.life }),
-    ...(card.effectText === undefined ? {} : { effectText: card.effectText }),
-    ...(card.triggerText === undefined
-      ? {}
-      : { triggerText: card.triggerText }),
-    ...(imageUrl === undefined ? {} : { imageUrl }),
-  };
-};

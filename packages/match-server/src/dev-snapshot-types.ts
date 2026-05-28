@@ -43,6 +43,26 @@ export interface DevPlayerSnapshot {
   actions: DevVisibleAction[];
 }
 
+export interface DevRollbackPointView {
+  rollbackPointId: string;
+  eventId?: string;
+  eventSeq: number;
+  stateSeq: number;
+  actionSeq: number;
+  label: string;
+}
+
+export interface DevRollbackView {
+  enabled: boolean;
+  canRequest: boolean;
+  points: DevRollbackPointView[];
+  pendingRequest?: {
+    rollbackPointId: string;
+    requestedBy: PlayerId;
+    approvingPlayerId: PlayerId;
+  };
+}
+
 export interface DevMatchSnapshot {
   stateSeq: number;
   actionSeq: number;
@@ -51,6 +71,7 @@ export interface DevMatchSnapshot {
   turn: GameState["turn"];
   activePlayerId: PlayerId;
   players: Record<PlayerId, DevPlayerSnapshot>;
+  rollback?: DevRollbackView;
 }
 
 export interface DevCardCatalogEntry {

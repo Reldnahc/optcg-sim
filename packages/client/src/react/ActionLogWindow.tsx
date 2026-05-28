@@ -6,6 +6,7 @@ export interface ActionLogWindowProps {
   minimized: boolean;
   onToggleMinimized: () => void;
   onClose: () => void;
+  onRequestRollback?: (rollbackPointId: string) => void;
 }
 
 export const ActionLogWindow = ({
@@ -13,6 +14,7 @@ export const ActionLogWindow = ({
   minimized,
   onToggleMinimized,
   onClose,
+  onRequestRollback,
 }: ActionLogWindowProps): React.JSX.Element => (
   <FloatingWindow
     title="Action Log"
@@ -28,12 +30,28 @@ export const ActionLogWindow = ({
       <p className="muted">No visible actions yet.</p>
     ) : (
       <ol className="action-log-list">
-        {entries.map((entry) => (
-          <li key={entry.id} className="action-log-entry">
-            <span className="action-log-seq">{entry.seq}</span>
-            <span className="action-log-text">{entry.text}</span>
-          </li>
-        ))}
+        {entries.map((entry) => {
+          const rollback = entry.rollback;
+          return (
+            <li key={entry.id} className="action-log-entry">
+              <span className="action-log-seq">{entry.seq}</span>
+              <span className="action-log-text">{entry.text}</span>
+              {rollback === undefined ||
+              onRequestRollback === undefined ? null : (
+                <button
+                  className="action-log-rollback"
+                  type="button"
+                  title={rollback.label}
+                  onClick={() => {
+                    onRequestRollback(rollback.rollbackPointId);
+                  }}
+                >
+                  Request rollback
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ol>
     )}
   </FloatingWindow>

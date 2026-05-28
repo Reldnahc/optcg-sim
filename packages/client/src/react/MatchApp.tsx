@@ -41,8 +41,9 @@ export const MatchApp = (): React.JSX.Element => {
     CollectionModalModel | undefined
   >(undefined);
   const [collectionMinimized, setCollectionMinimized] = useState(false);
-  const [revealWindowState, setRevealWindowState] =
-    useState<RevealWindowState>(() => emptyRevealWindowState);
+  const [revealWindowState, setRevealWindowState] = useState<RevealWindowState>(
+    () => emptyRevealWindowState,
+  );
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
@@ -286,6 +287,10 @@ export const MatchApp = (): React.JSX.Element => {
         : createActionLogEntries({
             events: playerSnapshot.view.events,
             catalog: matchState.cards,
+            rollbackPoints:
+              matchState.snapshot.rollback?.canRequest === true
+                ? matchState.snapshot.rollback.points
+                : [],
           }),
     [matchState, playerSnapshot],
   );
@@ -446,6 +451,9 @@ export const MatchApp = (): React.JSX.Element => {
           onClose={() => {
             setActionLogOpen(false);
             setActionLogMinimized(false);
+          }}
+          onRequestRollback={(rollbackPointId) => {
+            void client.requestRollback(rollbackPointId);
           }}
         />
       ) : null}

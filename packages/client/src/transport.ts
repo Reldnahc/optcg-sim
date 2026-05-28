@@ -50,6 +50,25 @@ export interface MatchSnapshot {
   actionSeq?: number;
   status?: string;
   players: Record<PlayerId, ClientPlayerSnapshot>;
+  rollback?: {
+    enabled: boolean;
+    canRequest: boolean;
+    points: RollbackPointView[];
+    pendingRequest?: {
+      rollbackPointId: string;
+      requestedBy: PlayerId;
+      approvingPlayerId: PlayerId;
+    };
+  };
+}
+
+export interface RollbackPointView {
+  rollbackPointId: string;
+  eventId?: string;
+  eventSeq: number;
+  stateSeq: number;
+  actionSeq: number;
+  label: string;
 }
 
 export interface MatchCardCatalogEntry {
@@ -102,6 +121,13 @@ export interface RespondToDecisionInput {
   response: DecisionResponse;
 }
 
+export interface RequestRollbackInput {
+  matchId: MatchId;
+  playerId: PlayerId;
+  rollbackPointId: string;
+  expectedStateSeq?: number;
+}
+
 export interface MatchActionResult {
   snapshot: MatchSnapshot;
   errors: string[];
@@ -141,6 +167,7 @@ export interface LiveMatchConnection {
   respondToDecision: (
     input: RespondToDecisionInput,
   ) => Promise<MatchActionResult>;
+  requestRollback: (input: RequestRollbackInput) => Promise<MatchActionResult>;
 }
 
 export interface LiveLobbyConnection {

@@ -7,6 +7,7 @@ export {
   getLocalDevSnapshotForPlayer,
   getLocalDevSnapshot,
   isDevMatchSetup,
+  requestLocalDevRollback,
 } from "./local-match.js";
 export type {
   ApplyLocalDevActionInput,
@@ -15,6 +16,7 @@ export type {
   DevMatchSetup,
   LocalDevMatch,
   CreatePremadeDevMatchSetupOptions,
+  RequestLocalDevRollbackInput,
 } from "./local-match.js";
 export type {
   DevCardCatalogEntry,

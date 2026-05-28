@@ -33,6 +33,45 @@ describe("action log window", () => {
     assert.match(markup, /Card played/u);
   });
 
+  test("renders rollback request controls for rollbackable log rows", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ActionLogWindow, {
+        entries: [
+          {
+            id: "event:1",
+            seq: 1,
+            text: "Card played",
+            rollback: {
+              rollbackPointId: "rollback:1",
+              label: "Before Card played",
+            },
+          },
+        ],
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+        onRequestRollback: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /Request rollback/u);
+    assert.match(markup, /Before Card played/u);
+  });
+
+  test("does not render rollback controls for ordinary log rows", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ActionLogWindow, {
+        entries: [{ id: "event:1", seq: 1, text: "Card played" }],
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+        onRequestRollback: () => undefined,
+      }),
+    );
+
+    assert.doesNotMatch(markup, /Request rollback/u);
+  });
+
   test("control rail places action log control to the right of preview control", async () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {

@@ -8,6 +8,7 @@ import {
   createLocalDevMatch,
   getLocalDevCardCatalogForPlayer,
   getLocalDevSnapshot,
+  requestLocalDevRollback,
   type DevMatchSetup,
 } from "./local-match.js";
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
@@ -696,6 +697,145 @@ describe("local dev match", () => {
       "Action request is stale for p1; refresh the current match state.",
     ]);
     assert.equal(getLocalDevSnapshot(match).stateSeq, afterFirst.stateSeq);
+  });
+
+  test("records rollback points before accepted actions and asks the opponent for consent", () => {
+    const match = createTestMatch();
+    const before = keepBothPlayersAndAdvance(match);
+    const endMainIndex = actionIndexByLabel(
+      mustPlayerSnapshot(before, p1).actions,
+      "End main phase",
+    );
+    const applied = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endMainIndex,
+    });
+    assert.deepEqual(applied.errors, []);
+    const after = getLocalDevSnapshot(match);
+    const rollbackPoint = after.rollback?.points.find(
+      (point) => point.stateSeq === before.stateSeq,
+    );
+    if (rollbackPoint === undefined) {
+      throw new Error("Expected rollback point for state before end main.");
+    }
+
+    const requested = requestLocalDevRollback(match, {
+      playerId: p1,
+      rollbackPointId: rollbackPoint.rollbackPointId,
+    });
+
+    assert.deepEqual(requested.errors, []);
+    const snapshot = getLocalDevSnapshot(match);
+    const pendingRequest = snapshot.rollback?.pendingRequest;
+    if (pendingRequest === undefined) {
+      throw new Error("Expected pending rollback request.");
+    }
+    assert.equal(pendingRequest.requestedBy, p1);
+    assert.equal(pendingRequest.approvingPlayerId, p2);
+    assert.equal(
+      mustPlayerSnapshot(snapshot, p2).view.pendingDecision?.type,
+      "rollbackConsent",
+    );
+    assert.equal(
+      mustPlayerSnapshot(snapshot, p1).view.pendingDecision,
+      undefined,
+    );
+  });
+
+  test("restores the requested rollback point after opponent consent", () => {
+    const match = createTestMatch();
+    const before = keepBothPlayersAndAdvance(match);
+    const endMainIndex = actionIndexByLabel(
+      mustPlayerSnapshot(before, p1).actions,
+      "End main phase",
+    );
+    const applied = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endMainIndex,
+    });
+    assert.deepEqual(applied.errors, []);
+    const afterAction = getLocalDevSnapshot(match);
+    assert.equal(afterAction.turn.turnPlayerId, p2);
+    const rollbackPoint = afterAction.rollback?.points.find(
+      (point) => point.stateSeq === before.stateSeq,
+    );
+    if (rollbackPoint === undefined) {
+      throw new Error("Expected rollback point for state before end main.");
+    }
+    const requested = requestLocalDevRollback(match, {
+      playerId: p1,
+      rollbackPointId: rollbackPoint.rollbackPointId,
+    });
+    assert.deepEqual(requested.errors, []);
+    const decision = mustPlayerSnapshot(getLocalDevSnapshot(match), p2).view
+      .pendingDecision;
+    if (decision?.type !== "rollbackConsent") {
+      throw new Error("Expected rollback consent decision.");
+    }
+
+    const accepted = applyLocalDevDecision(match, {
+      playerId: p2,
+      decisionId: decision.id,
+      response: { type: "rollbackConsent", allow: true },
+    });
+
+    assert.deepEqual(accepted.errors, []);
+    const restored = getLocalDevSnapshot(match);
+    assert.equal(restored.turn.turnPlayerId, before.turn.turnPlayerId);
+    assert.equal(restored.turn.phase, before.turn.phase);
+    assert.equal(restored.stateSeq > afterAction.stateSeq, true);
+    assert.equal(restored.rollback?.pendingRequest, undefined);
+    assert.equal(
+      mustPlayerSnapshot(restored, p1).view.pendingDecision,
+      undefined,
+    );
+    assert.equal(
+      mustPlayerSnapshot(restored, p2).view.pendingDecision,
+      undefined,
+    );
+  });
+
+  test("denying rollback consent clears the request without rewinding", () => {
+    const match = createTestMatch();
+    const before = keepBothPlayersAndAdvance(match);
+    const endMainIndex = actionIndexByLabel(
+      mustPlayerSnapshot(before, p1).actions,
+      "End main phase",
+    );
+    const applied = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endMainIndex,
+    });
+    assert.deepEqual(applied.errors, []);
+    const afterAction = getLocalDevSnapshot(match);
+    const rollbackPoint = afterAction.rollback?.points.find(
+      (point) => point.stateSeq === before.stateSeq,
+    );
+    if (rollbackPoint === undefined) {
+      throw new Error("Expected rollback point for state before end main.");
+    }
+    const requested = requestLocalDevRollback(match, {
+      playerId: p1,
+      rollbackPointId: rollbackPoint.rollbackPointId,
+    });
+    assert.deepEqual(requested.errors, []);
+    const decision = mustPlayerSnapshot(getLocalDevSnapshot(match), p2).view
+      .pendingDecision;
+    if (decision?.type !== "rollbackConsent") {
+      throw new Error("Expected rollback consent decision.");
+    }
+
+    const denied = applyLocalDevDecision(match, {
+      playerId: p2,
+      decisionId: decision.id,
+      response: { type: "rollbackConsent", allow: false },
+    });
+
+    assert.deepEqual(denied.errors, []);
+    const current = getLocalDevSnapshot(match);
+    assert.equal(current.turn.turnPlayerId, afterAction.turn.turnPlayerId);
+    assert.equal(current.turn.phase, afterAction.turn.phase);
+    assert.equal(current.rollback?.pendingRequest, undefined);
   });
 
   test("boots from a premade match setup carrying manifest and player decks", () => {

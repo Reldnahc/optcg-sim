@@ -127,4 +127,70 @@ describe("dev WebSocket match transport", () => {
     assert.equal(result.snapshot.stateSeq, 8);
     assert.equal(receivedStates.length, 1);
   });
+
+  test("sends rollback requests through the live match socket", async () => {
+    const recording = createRecordingWebSocket();
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      randomUUID: () => "client-action-rollback",
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    const resultPromise = connection.requestRollback({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      rollbackPointId: "rollback:1",
+      expectedStateSeq: 7,
+    });
+
+    socket.open();
+    await Promise.resolve();
+
+    const sentPayload = socket.sent[0];
+    if (sentPayload === undefined) {
+      throw new Error("Expected a sent WebSocket payload.");
+    }
+    assert.deepEqual(JSON.parse(sentPayload) as unknown, {
+      type: "requestRollback",
+      clientActionId: "client-action-rollback",
+      matchId: "match-1",
+      playerId: "p1",
+      rollbackPointId: "rollback:1",
+      expectedStateSeq: 7,
+    });
+
+    socket.receive({
+      type: "actionResult",
+      clientActionId: "client-action-rollback",
+      matchId: "match-1",
+      accepted: true,
+      stateSeq: 8,
+      actionSeq: 1,
+      errors: [],
+    });
+    socket.receive({
+      type: "stateSync",
+      matchId: "match-1",
+      serverSeq: 3,
+      stateSeq: 8,
+      snapshot: { stateSeq: 8, players: {} },
+    });
+
+    const result = await resultPromise;
+
+    assert.equal(result.snapshot.stateSeq, 8);
+  });
 });

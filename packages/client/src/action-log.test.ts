@@ -226,4 +226,44 @@ describe("action log", () => {
       ],
     );
   });
+
+  test("projects server rollback points onto their action log rows", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          id: "event:play-card" as EngineEvent["id"],
+          type: "cardPlayed",
+          seq: 7,
+          payload: {
+            playerId: p1,
+            instanceId: "source-1",
+            cardId: "OP13-089",
+          },
+        }),
+      ],
+      catalog,
+      rollbackPoints: [
+        {
+          rollbackPointId: "rollback:before-play",
+          eventId: "event:play-card",
+          eventSeq: 7,
+          stateSeq: 5,
+          actionSeq: 2,
+          label: "Before Played Saint Shepherd Ju Peter",
+        },
+      ],
+    });
+
+    assert.deepEqual(entries, [
+      {
+        id: "event:play-card",
+        seq: 7,
+        text: "Played Saint Shepherd Ju Peter",
+        rollback: {
+          rollbackPointId: "rollback:before-play",
+          label: "Before Played Saint Shepherd Ju Peter",
+        },
+      },
+    ]);
+  });
 });

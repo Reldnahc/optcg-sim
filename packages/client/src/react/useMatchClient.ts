@@ -362,6 +362,29 @@ export const useMatchClient = (): MatchClientUi => {
     setErrors([]);
   }, [controller]);
 
+  const requestRollback = useCallback(
+    async (rollbackPointId: string): Promise<void> => {
+      setActionInFlight(true);
+      try {
+        const result = await controller.requestRollback({ rollbackPointId });
+        setClientState(result);
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
+        setDecisionDraft(undefined);
+        setActiveCardCostChoice(undefined);
+        setActiveCardCostSelectedInstanceIds([]);
+        setActiveAttackTargetChoice(undefined);
+        setActiveCounterTargetChoice(undefined);
+        setErrors([]);
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : String(error)]);
+      } finally {
+        setActionInFlight(false);
+      }
+    },
+    [controller],
+  );
+
   const attachSelectedDonToTarget = useCallback(
     async (targetInstanceId: string): Promise<void> => {
       if (selectedDonInstanceIds.length === 0) {
@@ -976,6 +999,7 @@ export const useMatchClient = (): MatchClientUi => {
     setDecisionActionOptionValue,
     chooseDecisionTriggerValue,
     confirmDecision,
+    requestRollback,
     createNewMatch,
   };
 };

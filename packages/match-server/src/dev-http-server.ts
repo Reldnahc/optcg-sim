@@ -5,12 +5,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import type { Duplex } from "node:stream";
-import type {
-  DecisionId,
-  DecisionResponse,
-  MatchId,
-  PlayerId,
-} from "@optcg/types";
+import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   applyLocalDevAction,
@@ -22,35 +17,11 @@ import {
   getLocalDevSnapshotForPlayer,
   getLocalDevSnapshot,
   isDevMatchSetup,
+  requestLocalDevRollback,
   type CreatePremadeDevMatchSetupOptions,
   type LocalDevMatch,
 } from "./local-match.js";
-
-interface DevActionRequest {
-  playerId: PlayerId;
-  actionIndex: number;
-  expectedStateSeq?: number;
-}
-
-interface DevDecisionRequest {
-  playerId: PlayerId;
-  decisionId: DecisionId;
-  response: DecisionResponse;
-}
-
-interface DevSocketActionEnvelope extends DevActionRequest {
-  type: "submitAction";
-  matchId: MatchId;
-  clientActionId: string;
-}
-
-interface DevSocketDecisionEnvelope extends DevDecisionRequest {
-  type: "respondToDecision";
-  matchId: MatchId;
-  clientActionId: string;
-}
-
-type DevSocketEnvelope = DevSocketActionEnvelope | DevSocketDecisionEnvelope;
+import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 
 interface DevResetRequest {
   setup?: unknown;
@@ -188,57 +159,8 @@ const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
     request.on("error", reject);
   });
 
-const isDevActionRequest = (value: unknown): value is DevActionRequest => {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate["playerId"] === "string" &&
-    Number.isInteger(candidate["actionIndex"]) &&
-    (candidate["expectedStateSeq"] === undefined ||
-      Number.isInteger(candidate["expectedStateSeq"]))
-  );
-};
-
-const isDevDecisionRequest = (value: unknown): value is DevDecisionRequest => {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  const response = candidate["response"];
-  return (
-    typeof candidate["playerId"] === "string" &&
-    typeof candidate["decisionId"] === "string" &&
-    typeof response === "object" &&
-    response !== null &&
-    typeof (response as Record<string, unknown>)["type"] === "string"
-  );
-};
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const isDevSocketEnvelope = (value: unknown): value is DevSocketEnvelope => {
-  if (!isRecord(value)) {
-    return false;
-  }
-  if (
-    value["type"] === "submitAction" &&
-    typeof value["matchId"] === "string" &&
-    typeof value["clientActionId"] === "string"
-  ) {
-    return isDevActionRequest(value);
-  }
-  if (
-    value["type"] === "respondToDecision" &&
-    typeof value["matchId"] === "string" &&
-    typeof value["clientActionId"] === "string"
-  ) {
-    return isDevDecisionRequest(value);
-  }
-  return false;
-};
 
 const matchNotFound = (response: ServerResponse, matchId: string): void => {
   sendJson(response, 404, { errors: [`Match ${matchId} not found.`] });
@@ -925,7 +847,9 @@ const handleWebSocketUpgrade = (
       const result =
         payload.type === "submitAction"
           ? applyLocalDevAction(match, payload)
-          : applyLocalDevDecision(match, payload);
+          : payload.type === "respondToDecision"
+            ? applyLocalDevDecision(match, payload)
+            : requestLocalDevRollback(match, payload);
       const errors = result.errors;
       sendSocketJson(connection, {
         type: "actionResult",

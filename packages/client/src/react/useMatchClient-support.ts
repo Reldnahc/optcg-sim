@@ -61,6 +61,7 @@ export interface MatchClientUi {
   setDecisionActionOptionValue: (actionIndex: number) => void;
   chooseDecisionTriggerValue: (triggerId: string) => void;
   confirmDecision: () => Promise<void>;
+  requestRollback: (rollbackPointId: string) => Promise<void>;
   createNewMatch: () => Promise<void>;
 }
 

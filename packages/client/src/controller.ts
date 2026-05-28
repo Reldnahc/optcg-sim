@@ -56,6 +56,9 @@ export interface MatchClientController {
     decisionId: DecisionId;
     response: DecisionResponse;
   }) => Promise<MatchClientState>;
+  requestRollback: (input: {
+    rollbackPointId: string;
+  }) => Promise<MatchClientState>;
   connectLive: (input: {
     onState: (state: MatchClientState) => void;
     onError: (message: string) => void;
@@ -329,6 +332,34 @@ export const createMatchClientController = ({
       };
       const result =
         await requireLiveConnection(liveConnection).respondToDecision(
+          transportInput,
+        );
+      throwIfActionResultFailed(result.errors);
+      const cards =
+        currentState?.cards ?? (await transport.loadCards(credential.matchId));
+      currentState = {
+        matchId: credential.matchId,
+        seat: {
+          matchId: credential.matchId,
+          playerId: credential.playerId,
+        },
+        snapshot: result.snapshot,
+        cards,
+      };
+      return currentState;
+    },
+    async requestRollback(input) {
+      const credential = requireCredential(sessionStore);
+      const transportInput = {
+        matchId: credential.matchId,
+        playerId: credential.playerId,
+        rollbackPointId: input.rollbackPointId,
+        ...(currentState === undefined
+          ? {}
+          : { expectedStateSeq: currentState.snapshot.stateSeq }),
+      };
+      const result =
+        await requireLiveConnection(liveConnection).requestRollback(
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
