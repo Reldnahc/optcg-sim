@@ -185,6 +185,8 @@ describe("collection modal", () => {
     assert.equal(markup.includes("One"), true);
     assert.equal(markup.includes("Two"), true);
     assert.equal(markup.includes("Three"), true);
+    assert.equal(markup.includes("is-pending-choice"), false);
+    assert.equal(markup.includes('disabled=""'), false);
   });
 
   test("collection viewer has close and minimize controls", async () => {
@@ -311,13 +313,24 @@ describe("collection modal", () => {
     assert.match(markup, /selection-order-badge[^>]*>1</u);
   });
 
-  test("collection modal body scrolls for large collections", async () => {
+  test("collection modal grid scales with the floating window without clipping outlines", async () => {
     const styles = await readFile(collectionStylesPath, "utf8");
 
     assert.match(
       styles,
-      /\.collection-modal-card-grid\s*\{[^}]*overflow:\s*auto;/u,
+      /\.collection-modal-card-grid\s*\{[^}]*display:\s*grid;/u,
     );
-    assert.match(styles, /\.collection-modal-card-grid\s*\{[^}]*max-height:/u);
+    assert.match(
+      styles,
+      /\.collection-modal-card-grid\s*\{[^}]*grid-template-columns:\s*repeat\(\s*auto-fill,\s*minmax\(var\(--collection-card-width\),\s*1fr\)\s*\);/u,
+    );
+    assert.match(
+      styles,
+      /\.collection-modal-card-grid\s*\{[^}]*overflow:\s*visible;/u,
+    );
+    assert.match(
+      styles,
+      /\.collection-modal-card-grid\s+\.card-tile-shell\s*\{[^}]*width:\s*min\(100%,\s*var\(--collection-card-width\)\);/u,
+    );
   });
 });

@@ -3,12 +3,22 @@
 }
 
 .collection-modal-card-grid {
-  display: flex;
-  flex-wrap: wrap;
+  --collection-card-width: calc(var(--card-height) * 5 / 7);
+
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(var(--collection-card-width), 1fr)
+  );
   align-content: flex-start;
+  justify-items: center;
   gap: 8px;
-  max-height: 100%;
-  overflow: auto;
+  padding: 5px;
+  overflow: visible;
+}
+
+.collection-modal-card-grid .card-tile-shell {
+  width: min(100%, var(--collection-card-width));
 }
 
 .collection-modal-actions {

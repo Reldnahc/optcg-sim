@@ -56,7 +56,7 @@ export const CollectionModalHost = ({
         {model.cards.map((card) => {
           const instanceId = String(card.instanceId);
           const hasSelection = model.selection !== undefined;
-          const selectable = !hasSelection || selectableIds.has(instanceId);
+          const selectable = hasSelection && selectableIds.has(instanceId);
           return (
             <CardTile
               key={instanceId}
@@ -69,7 +69,7 @@ export const CollectionModalHost = ({
                   : String(orderedSelectionIds.indexOf(instanceId) + 1)
               }
               pendingChoice={selectable}
-              disabled={disabled || !selectable}
+              disabled={disabled || (hasSelection && !selectable)}
               onHover={onPreviewCard}
               onClick={
                 hasSelection && selectable
