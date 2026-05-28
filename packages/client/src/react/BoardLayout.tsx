@@ -113,6 +113,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.opponent.deckCount, "hidden-deck-opponent")}
           size="small"
           displayMode="stack"
+          stackCount={board.opponent.deckCount}
           onCardPreview={onPreviewCard}
         />
       </div>
@@ -125,6 +126,7 @@ export const BoardLayout = ({
           )}
           size="small"
           displayMode="stack"
+          stackCount={board.opponent.donDeckCount}
           onCardPreview={onPreviewCard}
         />
       </div>
@@ -259,6 +261,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
           size="small"
           displayMode="stack"
+          stackCount={board.self.deckCount}
           onCardPreview={onPreviewCard}
         />
       </div>
@@ -268,6 +271,7 @@ export const BoardLayout = ({
           cards={hiddenCards(board.self.donDeckCount, "hidden-don-deck-self")}
           size="small"
           displayMode="stack"
+          stackCount={board.self.donDeckCount}
           onCardPreview={onPreviewCard}
         />
       </div>

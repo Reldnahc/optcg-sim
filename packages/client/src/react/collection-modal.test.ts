@@ -93,6 +93,23 @@ describe("collection modal", () => {
     );
   });
 
+  test("stack zones can display a true count larger than rendered hidden cards", () => {
+    const hiddenCards = Array.from({ length: 10 }, (_, index) =>
+      card(`hidden-${String(index)}`, "Hidden card"),
+    );
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Deck",
+        cards: hiddenCards,
+        displayMode: "stack",
+        stackCount: 37,
+      }),
+    );
+
+    assert.match(markup, /aria-label="Deck count: 37"/u);
+    assert.match(markup, />37</u);
+  });
+
   test("empty non-stack zones do not render placeholder text", () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {

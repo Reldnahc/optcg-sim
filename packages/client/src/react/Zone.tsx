@@ -13,6 +13,7 @@ export interface ZoneProps {
   cards: readonly ClientCardModel[];
   size?: "normal" | "small" | "mini" | "hand";
   displayMode?: "spread" | "stack" | "overlap" | "slots" | "life" | undefined;
+  stackCount?: number | undefined;
   slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
@@ -33,6 +34,7 @@ export const Zone = ({
   cards,
   size = "normal",
   displayMode = "spread",
+  stackCount,
   slotCount = 0,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
@@ -115,6 +117,7 @@ export const Zone = ({
     ({
       "--life-card-index": String(index),
     }) as CSSProperties & Record<"--life-card-index", string>;
+  const displayedStackCount = stackCount ?? cards.length;
 
   return (
     <section ref={zoneRef} className={`zone zone-${size} zone-${displayMode}`}>
@@ -122,9 +125,9 @@ export const Zone = ({
       {displayMode === "stack" ? (
         <div
           className="count-badge is-hover-revealed stack-count"
-          aria-label={`${label} count: ${String(cards.length)}`}
+          aria-label={`${label} count: ${String(displayedStackCount)}`}
         >
-          {cards.length}
+          {displayedStackCount}
         </div>
       ) : null}
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
