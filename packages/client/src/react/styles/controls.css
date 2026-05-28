@@ -63,30 +63,6 @@
   background: #b12d36;
 }
 
-.match-facts {
-  display: grid;
-  gap: 4px;
-  margin: 12px 0;
-  font-size: 12px;
-}
-
-.match-facts div {
-  display: grid;
-  grid-template-columns: 54px 1fr;
-  gap: 6px;
-}
-
-.match-facts dt {
-  color: rgba(255, 255, 255, 0.68);
-}
-
-.match-facts dd {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .action-menu-panel {
   margin-top: 12px;
 }

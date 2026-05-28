@@ -166,20 +166,6 @@ export const MatchApp = (): React.JSX.Element => {
         />
       )}
       <ControlRail
-        lobbyId={lobbyState === undefined ? undefined : lobbyState.lobbyId}
-        matchId={
-          matchState === undefined ? undefined : String(matchState.matchId)
-        }
-        playerId={
-          client.currentPlayerId === undefined
-            ? undefined
-            : String(client.currentPlayerId)
-        }
-        status={matchState?.snapshot.status}
-        phase={
-          matchState?.snapshot.players[matchState.seat.playerId]?.view.turn
-            .phase
-        }
         errors={client.state.errors}
         globalActions={visibleGlobalActions}
         disabled={client.state.actionInFlight}

@@ -2,11 +2,6 @@ import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 
 export interface ControlRailProps {
-  lobbyId?: string | undefined;
-  matchId?: string | undefined;
-  playerId?: string | undefined;
-  status?: string | undefined;
-  phase?: string | undefined;
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
@@ -18,11 +13,6 @@ export interface ControlRailProps {
 }
 
 export const ControlRail = ({
-  lobbyId,
-  matchId,
-  playerId,
-  status,
-  phase,
   errors,
   globalActions,
   disabled,
@@ -52,28 +42,6 @@ export const ControlRail = ({
           {concedeConfirming ? "Confirm concede" : "Concede"}
         </button>
       </div>
-      <dl className="match-facts">
-        <div>
-          <dt>Lobby</dt>
-          <dd>{lobbyId ?? "none"}</dd>
-        </div>
-        <div>
-          <dt>Match</dt>
-          <dd>{matchId ?? "loading"}</dd>
-        </div>
-        <div>
-          <dt>Seat</dt>
-          <dd>{playerId ?? "none"}</dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd>{status ?? "unknown"}</dd>
-        </div>
-        <div>
-          <dt>Phase</dt>
-          <dd>{phase ?? "unknown"}</dd>
-        </div>
-      </dl>
       {errors.map((error) => (
         <p key={error} className="error-text">
           {error}

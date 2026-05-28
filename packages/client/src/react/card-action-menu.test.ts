@@ -156,6 +156,28 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
 
+  test("control rail omits match fact text table", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    for (const text of ["Lobby", "Match", "Seat", "Status", "Phase"]) {
+      assert.equal(markup.includes(text), false);
+    }
+    assert.equal(markup.includes("match-facts"), false);
+    assert.equal(styles.includes(".match-facts"), false);
+  });
+
   test("concede button uses dedicated red styles", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),
