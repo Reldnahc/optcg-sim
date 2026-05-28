@@ -37,6 +37,12 @@ export const ControlRail = ({
       <h2>Opponent</h2>
     </section>
     <section className="controls-panel">
+      <ActionMenu
+        title="Global actions"
+        actions={globalActions}
+        disabled={disabled}
+        onAction={onAction}
+      />
       <div className="control-actions">
         <button className="action-button" type="button" onClick={onNewMatch}>
           New match
@@ -79,12 +85,6 @@ export const ControlRail = ({
           {error}
         </p>
       ))}
-      <ActionMenu
-        title="Global actions"
-        actions={globalActions}
-        disabled={disabled}
-        onAction={onAction}
-      />
     </section>
     <section className="summary-panel player-summary">
       <h2>Player</h2>

@@ -156,6 +156,38 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
 
+  test("control rail keeps global actions directly next to permanent match actions", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [
+          {
+            index: 0,
+            type: "endMainPhase",
+            label: "End turn",
+          },
+        ],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+        concedeDisabled: false,
+        onConcede: () => undefined,
+      }),
+    );
+
+    const globalActionsIndex = markup.indexOf("Global actions");
+    const endTurnIndex = markup.indexOf("End turn");
+    const newMatchIndex = markup.indexOf("New match");
+    const concedeIndex = markup.indexOf("Concede");
+    const lobbyIndex = markup.indexOf("Lobby");
+
+    assert.ok(globalActionsIndex >= 0);
+    assert.ok(globalActionsIndex < endTurnIndex);
+    assert.ok(endTurnIndex < newMatchIndex);
+    assert.ok(newMatchIndex < concedeIndex);
+    assert.ok(concedeIndex < lobbyIndex);
+  });
+
   test("concede button uses dedicated red styles", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),
