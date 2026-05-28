@@ -31,12 +31,6 @@ const hiddenCards = (count: number, prefix: string): ClientCardModel[] =>
     attachedDonCards: [],
   }));
 
-const stack = (label: string, count: number): React.JSX.Element => (
-  <div className="stack-label">
-    {label} {count}
-  </div>
-);
-
 const handCount = (
   owner: "Opponent" | "Player",
   count: number,
@@ -109,10 +103,23 @@ export const BoardLayout = ({
         />
       </div>
       <div className="playmat-zone opponent-deck">
-        {stack("Deck", board.opponent.deckCount)}
+        <Zone
+          label="Deck"
+          cards={hiddenCards(board.opponent.deckCount, "hidden-deck-opponent")}
+          size="small"
+          displayMode="stack"
+        />
       </div>
       <div className="playmat-zone opponent-don-deck">
-        {stack("DON!! Deck", board.opponent.donDeckCount)}
+        <Zone
+          label="DON!! Deck"
+          cards={hiddenCards(
+            board.opponent.donDeckCount,
+            "hidden-don-deck-opponent",
+          )}
+          size="small"
+          displayMode="stack"
+        />
       </div>
       <div className="playmat-zone opponent-trash">
         <Zone
@@ -229,10 +236,20 @@ export const BoardLayout = ({
         />
       </div>
       <div className="playmat-zone player-deck">
-        {stack("Deck", board.self.deckCount)}
+        <Zone
+          label="Deck"
+          cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
+          size="small"
+          displayMode="stack"
+        />
       </div>
       <div className="playmat-zone player-don-deck">
-        {stack("DON!! Deck", board.self.donDeckCount)}
+        <Zone
+          label="DON!! Deck"
+          cards={hiddenCards(board.self.donDeckCount, "hidden-don-deck-self")}
+          size="small"
+          displayMode="stack"
+        />
       </div>
       <div className="playmat-zone player-trash">
         <Zone

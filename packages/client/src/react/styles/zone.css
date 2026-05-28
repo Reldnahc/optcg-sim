@@ -99,17 +99,3 @@
 .zone-stack:hover .stack-count {
   opacity: 1;
 }
-
-.stack-label {
-  display: grid;
-  height: 100%;
-  min-height: 0;
-  place-items: center;
-  border: 2px solid #f4eee7;
-  color: #ffffff;
-  background: rgba(64, 61, 60, 0.42);
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-  text-transform: uppercase;
-}

@@ -210,6 +210,52 @@ describe("playmat structure", () => {
     );
   });
 
+  test("deck and DON deck render as hidden card stacks without collection modals", async () => {
+    const boardLayout = await readFile(
+      join(sourceDirectory, "BoardLayout.tsx"),
+      "utf8",
+    );
+
+    assert.match(
+      boardLayout,
+      /className="playmat-zone opponent-deck"[\s\S]*label="Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.deckCount/u,
+    );
+    assert.match(
+      boardLayout,
+      /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount/u,
+    );
+    assert.match(
+      boardLayout,
+      /className="playmat-zone player-deck"[\s\S]*label="Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.deckCount/u,
+    );
+    assert.match(
+      boardLayout,
+      /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount/u,
+    );
+    assert.equal(boardLayout.includes("const stack = "), false);
+    assert.equal(boardLayout.includes("stack-label"), false);
+
+    for (const zoneClass of [
+      "opponent-deck",
+      "opponent-don-deck",
+      "player-deck",
+      "player-don-deck",
+    ]) {
+      const zoneStart = boardLayout.indexOf(
+        `className="playmat-zone ${zoneClass}"`,
+      );
+      const nextZoneStart = boardLayout.indexOf(
+        'className="playmat-zone',
+        zoneStart + 1,
+      );
+      const zoneSource = boardLayout.slice(
+        zoneStart,
+        nextZoneStart === -1 ? undefined : nextZoneStart,
+      );
+      assert.equal(zoneSource.includes("onViewCollection"), false);
+    }
+  });
+
   test("deck, DON deck, trash, leader, and stage use same-height rows", async () => {
     const styles = await readFile(playmatStylesPath, "utf8");
 
