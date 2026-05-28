@@ -1,5 +1,11 @@
 import type { Condition, Effect, Target } from "@optcg/types";
 
+import {
+  parseOpponentNextEndPhaseDuration,
+  parseOpponentNextRefreshPhaseDuration,
+  parseThisBattleDuration,
+  parseThisTurnDuration,
+} from "../durations/index.js";
 import { parseKeyword } from "../keywords/index.js";
 import { parsePositivePowerModifier } from "../modifiers/index.js";
 import {
@@ -28,6 +34,7 @@ export const thisCharacterKeywordGrantPrimitive = {
     "target:thisCharacter",
     "keyword:anySupported",
     "duration:whileConditionTrue",
+    "duration:opponentNextEndPhase",
   ],
 } as const;
 
@@ -82,6 +89,19 @@ const continuousDuration = (
   condition === undefined
     ? { type: "whileSourceOnField" }
     : { type: "whileConditionTrue", condition };
+
+const continuousDurationEvidence = (
+  condition: Condition | undefined,
+): PrimitiveEvidence =>
+  condition === undefined
+    ? "duration:whileSourceOnField"
+    : "duration:whileConditionTrue";
+
+const parseExplicitFieldEffectDuration = (input: ParseInput) =>
+  parseOpponentNextEndPhaseDuration(input) ??
+  parseOpponentNextRefreshPhaseDuration(input) ??
+  parseThisTurnDuration(input) ??
+  parseThisBattleDuration(input);
 
 const parseBasePowerSubject = (
   text: string,
@@ -286,24 +306,37 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
     }
 
     const keyword = parseKeyword({ text: keywordText });
-    if (keyword === undefined || keyword.rest.length > 0) {
+    if (keyword === undefined) {
       return undefined;
     }
+    const explicitDuration =
+      keyword.rest.length === 0
+        ? undefined
+        : parseExplicitFieldEffectDuration({ text: keyword.rest });
+    if (keyword.rest.length > 0 && explicitDuration === undefined) {
+      return undefined;
+    }
+    if (explicitDuration !== undefined && explicitDuration.rest.length > 0) {
+      return undefined;
+    }
+    const duration =
+      explicitDuration?.duration ?? continuousDuration(context.condition);
+    const durationEvidence = explicitDuration?.evidence ?? [
+      continuousDurationEvidence(context.condition),
+    ];
 
     return {
       effect: {
         type: "giveKeyword",
         target: { type: "self" },
         keyword: keyword.keyword,
-        duration: continuousDuration(context.condition),
+        duration,
       },
       evidence: [
         "instruction:giveKeyword",
         ...target.evidence,
         ...keyword.evidence,
-        context.condition === undefined
-          ? "duration:whileSourceOnField"
-          : "duration:whileConditionTrue",
+        ...durationEvidence,
       ],
       rest: "",
     };

@@ -138,6 +138,7 @@ describe("continuous field-effect instruction parsers", () => {
         "target:thisCharacter",
         "keyword:anySupported",
         "duration:whileConditionTrue",
+        "duration:opponentNextEndPhase",
       ],
     });
   });
@@ -174,6 +175,31 @@ describe("continuous field-effect instruction parsers", () => {
         "target:thisCharacter",
         "keyword:anySupported",
         "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses explicit temporary durations on generic keyword grants", () => {
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "This Character gains [Blocker] until the end of your opponent's next End Phase.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "giveKeyword",
+        target: { type: "self" },
+        keyword: "blocker",
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "duration:opponentNextEndPhase",
       ],
       rest: "",
     });

@@ -100,6 +100,7 @@ type ContinuousResolvedEffect = Extract<
   {
     type:
       | "modifyPower"
+      | "giveKeyword"
       | "modifyCost"
       | "invalidateEffects"
       | "cannotBecomeActive"
@@ -156,6 +157,7 @@ const isContinuousResolvedEffect = (
   effect: Effect,
 ): effect is ContinuousResolvedEffect =>
   effect.type === "modifyPower" ||
+  effect.type === "giveKeyword" ||
   effect.type === "modifyCost" ||
   effect.type === "invalidateEffects" ||
   effect.type === "cannotBecomeActive" ||

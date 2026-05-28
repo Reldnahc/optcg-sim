@@ -33,6 +33,7 @@ type DirectContinuousEffect = Extract<
   {
     type:
       | "modifyPower"
+      | "giveKeyword"
       | "modifyCost"
       | "invalidateEffects"
       | "cannotBecomeActive"

@@ -318,6 +318,44 @@ const returnDonTrashFromHandThenDrawSequence = (): Extract<
   ],
 });
 
+const returnDonKeywordThenTrashFromHandSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-return-don",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: { type: "returnDon", count: 1, optional: true },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "give-blocker-if-paid",
+      connector: "ifYouDo",
+      effect: {
+        type: "giveKeyword",
+        target: { type: "self" },
+        keyword: "blocker",
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+    },
+    {
+      id: "trash-after-keyword",
+      connector: "then",
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+      },
+    },
+  ],
+});
+
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
   return applyAction(state, {
@@ -531,6 +569,31 @@ test("optional return-DON plus hand-trash cost sequence only runs body after eve
   assert.equal(paidTrashResult.state.pendingDecision, undefined);
   assert.equal(paidAfterP1.deck.length, paidBeforeDeckCount - 2);
   assert.equal(paidAfterP1.hand.length, paidBeforeHandCount + 1);
+});
+
+test("return-DON sequence can grant a temporary keyword before trailing hand trash", () => {
+  const state = sequenceQueueState(returnDonKeywordThenTrashFromHandSequence());
+  placeActiveDon(state, 1);
+
+  const returnDonPaused = processEffectRuntime(state);
+  const paidReturnDon = payReturnDonWithFirstCostDon(returnDonPaused.state);
+  const trashDecision = must(
+    paidReturnDon.state.pendingDecision,
+    "trash-from-hand decision",
+  );
+  const keywordRecord = must(
+    paidReturnDon.state.continuousEffects[0],
+    "temporary keyword record",
+  );
+
+  assert.equal(returnDonPaused.errors, undefined);
+  assert.equal(paidReturnDon.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.equal(keywordRecord.modifier.layer, "keywordAdd");
+  assert.equal(keywordRecord.modifier.target.type, "self");
+  assert.equal(keywordRecord.modifier.operation.type, "addKeyword");
+  assert.equal(keywordRecord.modifier.operation.keyword, "blocker");
+  assert.equal(keywordRecord.duration.type, "untilEndOfNextTurn");
 });
 
 test("hand play sequence filters candidates by color, type, and dynamic DON-field cost", () => {

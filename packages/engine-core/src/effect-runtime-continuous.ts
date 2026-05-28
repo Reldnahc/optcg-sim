@@ -203,6 +203,7 @@ export const isSupportedContinuousQueueEffect = (
   effect: Effect,
 ): effect is
   | Extract<Effect, { type: "modifyPower" }>
+  | Extract<Effect, { type: "giveKeyword" }>
   | Extract<Effect, { type: "modifyCost" }>
   | Extract<Effect, { type: "invalidateEffects" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
@@ -210,6 +211,7 @@ export const isSupportedContinuousQueueEffect = (
   | Extract<Effect, { type: "cannotBlock" }> => {
   if (
     effect.type !== "modifyPower" &&
+    effect.type !== "giveKeyword" &&
     effect.type !== "modifyCost" &&
     effect.type !== "invalidateEffects" &&
     effect.type !== "cannotBecomeActive" &&
@@ -238,8 +240,15 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (
     effect.type !== "modifyPower" &&
+    effect.type !== "giveKeyword" &&
     effect.type !== "invalidateEffects" &&
     !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (
+    effect.type === "giveKeyword" &&
+    !supportedDerivedKeywords.has(effect.keyword)
   ) {
     return false;
   }
@@ -271,6 +280,7 @@ const toExactCardTarget = (
 const mapEffectToModifier = (
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
@@ -283,6 +293,13 @@ const mapEffectToModifier = (
       layer: "powerAdd",
       target,
       operation: { type: "addPower", value: effect.value },
+    };
+  }
+  if (effect.type === "giveKeyword") {
+    return {
+      layer: "keywordAdd",
+      target,
+      operation: { type: "addKeyword", keyword: effect.keyword },
     };
   }
   if (effect.type === "modifyCost") {
@@ -325,6 +342,7 @@ const createRecord = (
   entry: EffectQueueEntry,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
@@ -362,6 +380,7 @@ export const createContinuousRecordsForResolvedEffect = (
   entry: EffectQueueEntry,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>

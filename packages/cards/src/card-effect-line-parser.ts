@@ -1,3 +1,5 @@
+import type { Effect } from "@optcg/types";
+
 import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
@@ -72,6 +74,23 @@ import type {
   ParseInput,
 } from "./types.js";
 
+const isExplicitActionKeywordDuration = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "giveKeyword" }> =>
+  effect.type === "giveKeyword" &&
+  effect.duration.type !== "whileSourceOnField" &&
+  effect.duration.type !== "whileConditionTrue";
+
+const parseExplicitActionKeywordGrantInstruction = (input: ParseInput) => {
+  const parsed = parseThisCharacterKeywordGrantInstruction(input, {
+    condition: undefined,
+  });
+  if (parsed === undefined || !isExplicitActionKeywordDuration(parsed.effect)) {
+    return undefined;
+  }
+  return parsed;
+};
+
 const instructionParsers = [
   parseDrawInstruction,
   parseActivateReferencedEffectInstruction,
@@ -95,6 +114,7 @@ const instructionParsers = [
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
+  parseExplicitActionKeywordGrantInstruction,
 ] as const;
 
 const conditionParsers = [
