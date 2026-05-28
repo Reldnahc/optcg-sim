@@ -36,6 +36,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "colorsAny",
   "cost",
+  "names",
   "power",
   "state",
   "typesAny",
@@ -124,6 +125,7 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
   (hasOnlySupportedFilterKeys(filter) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.state === undefined ||
       filter.state === "active" ||
@@ -183,6 +185,9 @@ const cardMatchesFilter = (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => card.types.includes(type))
   ) {
+    return false;
+  }
+  if (filter.names !== undefined && !filter.names.includes(card.name)) {
     return false;
   }
   if (filter.state !== undefined && instance.state !== filter.state) {

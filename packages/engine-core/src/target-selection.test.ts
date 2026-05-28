@@ -200,6 +200,41 @@ describe("resolvePublicTargetCandidates", () => {
     expect(targetCards(result)).toEqual([refs[0]]);
   });
 
+  test("matches public target candidates by printed card name", () => {
+    const state = createActiveState();
+    const named = toCardId("named-character");
+    const other = toCardId("other-character");
+    addManifestCard(state, {
+      cardId: named,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: other,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    state.cardManifest.cards[named] = {
+      ...must(state.cardManifest.cards[named], "named metadata"),
+      name: "Enel",
+    };
+    state.cardManifest.cards[other] = {
+      ...must(state.cardManifest.cards[other], "other metadata"),
+      name: "Not Enel",
+    };
+    const refs = placeCharacters(state, p1, [named, other]);
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({ filter: { names: ["Enel"] } }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([refs[0]]);
+  });
+
   test("supports leaderArea and opponent/nonTurnPlayer references with cost equality", () => {
     const state = createActiveState();
     state.turn.turnPlayerId = p1;
@@ -261,9 +296,7 @@ describe("resolvePublicTargetCandidates", () => {
     },
     {
       name: "unsupported filter",
-      request: publicCharacterRequest({
-        filter: { names: ["Monkey D. Luffy"] },
-      }),
+      request: publicCharacterRequest({ filter: { anyOf: [] } }),
       reason: "unsupportedFilter",
     },
     {

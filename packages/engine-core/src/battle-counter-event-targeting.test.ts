@@ -72,6 +72,51 @@ const installChooseLeaderOrCharacterCounterEvent = (
   };
 };
 
+const installNamedLeaderOrCharacterCounterEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  counterEvent: CardInstance,
+): void => {
+  installChooseLeaderOrCharacterCounterEvent(state, counterEvent);
+  const definitionId = `${String(counterEvent.cardId)}:counter`;
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[definitionId],
+    "counter definition",
+  );
+  const counterEffect = must(definition.effects[0], "counter effect");
+  const { condition, ...counterEffectWithoutCondition } = counterEffect;
+  assert.notEqual(condition, undefined);
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      ...definition,
+      effects: [
+        {
+          ...counterEffectWithoutCondition,
+          effect: {
+            type: "modifyPower",
+            target: {
+              type: "chooseFromZones",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: { names: ["Enel"] },
+              },
+            },
+            value: 2000,
+            duration: { type: "thisBattle" },
+          },
+        } satisfies EffectDefinition["effects"][number],
+      ],
+    },
+  };
+};
+
 const addTrashCards = (
   state: ReturnType<typeof setupAttackState>,
   count: number,
@@ -254,6 +299,51 @@ test("conditional Counter Event can apply choose-from-leader-or-character power 
   assert.equal(battleCounterPower(used.state.battle), undefined);
   const view = computeView(used.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 7000);
+  assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
+});
+
+test("Counter Event named leader-or-character target filter is supported by battle targeting", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  const defenderCharacter = must(p2State.characters[0], "defender character");
+  installNamedLeaderOrCharacterCounterEvent(state, counterEvent);
+  state.cardManifest.cards[defenderCharacter.cardId] = {
+    ...must(
+      state.cardManifest.cards[defenderCharacter.cardId],
+      "defender character metadata",
+    ),
+    name: "Enel",
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const namedTarget = cardRef(defenderCharacter, p2);
+
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId &&
+        action.target.instanceId === namedTarget.instanceId,
+    ),
+    true,
+  );
+  const used = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: namedTarget,
+  });
+
+  assert.equal(used.errors, undefined);
+  assert.equal(battleCounterPower(used.state.battle), undefined);
+  const view = computeView(used.state);
+  assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 5000);
   assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
 });
 

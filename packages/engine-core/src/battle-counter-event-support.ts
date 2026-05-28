@@ -13,6 +13,7 @@ import type {
 
 import { reifyCardRef } from "./action-state.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 export interface SupportedCounterEventPower {
   value: number;
@@ -98,27 +99,6 @@ const counterEventConditionPasses = (
   return evaluated.supported && evaluated.passed;
 };
 
-const targetZone = (
-  target: CardRef,
-): CardInstance["zone"]["zone"] | undefined => target.zone?.zone;
-
-const targetFilterMatchesCard = (
-  metadata: ResolvedCard,
-  filter: Extract<Target, { type: "chooseFromZones" }>["request"]["filter"],
-): boolean => {
-  if (filter === undefined) {
-    return true;
-  }
-  const keys = Object.keys(filter);
-  if (!keys.every((key) => key === "categories")) {
-    return false;
-  }
-  return (
-    filter.categories === undefined ||
-    filter.categories.includes(metadata.category)
-  );
-};
-
 const counterPowerTargetCanApplyToSelectedTarget = (
   state: GameState,
   controllerId: PlayerId,
@@ -148,19 +128,16 @@ const counterPowerTargetCanApplyToSelectedTarget = (
   if (target.type !== "chooseFromZones") {
     return false;
   }
-  const request = target.request;
-  const zone = targetZone(selectedTarget);
+  const resolved = resolvePublicTargetCandidatesForRequest(
+    state,
+    target.request,
+    { sourceControllerId: controllerId },
+  );
   return (
-    request.timing === "onResolution" &&
-    request.chooser === "self" &&
-    request.player === "self" &&
-    request.visibility === "public" &&
-    request.min >= 0 &&
-    request.min <= 1 &&
-    request.max >= 1 &&
-    zone !== undefined &&
-    request.zones.includes(zone) &&
-    targetFilterMatchesCard(metadata, request.filter)
+    resolved.ok &&
+    resolved.candidates.some((candidate) =>
+      sameCardRef(candidate.card, selectedTarget),
+    )
   );
 };
 
