@@ -104,6 +104,36 @@ describe("card repository", () => {
     assert.equal(resolved.support.effectDefinitionId, undefined);
   });
 
+  test("ignores fully parenthesized reminder lines when building generated effects", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard(
+        "OP01-001",
+        [
+          "If you have 6 or less DON!! cards on your field, this Character gains [Rush].",
+          "(This card can attack on the turn in which it is played.)",
+          "[On Play] DON!! \u22121: Draw 1 card.",
+        ].join("\n"),
+      ),
+    });
+    const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.equal(resolved.support.status, "implemented-dsl");
+    const definition = required(
+      resolved.support.effectDefinitionId,
+      "effect id",
+    );
+    assert.equal(definition, "OP01-001.generated-dev-support");
+  });
+
   test("fetches only uncached cards and returns results in caller order", async () => {
     const cache = new FakeCardCache();
     const cachedId = "OP01-001" as CardId;

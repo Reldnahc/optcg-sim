@@ -2,6 +2,7 @@ import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type { CardId, EffectBlock } from "@optcg/types";
 
 import { parseCardEffectLineDetailed } from "./card-effect-line-parser.js";
+import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 import type { ParsedEffectLine } from "./types.js";
 
@@ -71,10 +72,7 @@ const createCardSupportProbeReport = async (
   }
 
   const lines = [`Card ID: ${fetched.card.cardId}`];
-  const effectLines = fetched.card.effect
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  const effectLines = gameplayLinesFromTextParts([fetched.card.effect]);
 
   let exitCode = 0;
   for (const [index, text] of effectLines.entries()) {

@@ -115,6 +115,38 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("ignores fully parenthesized reminder lines from fetched card text", async () => {
+    const report = await createSupportProbeReport({
+      cardId: "OP01-001",
+      fetchCard: () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: "OP01-001",
+                effect: [
+                  "If you have 6 or less DON!! cards on your field, this Character gains [Rush].",
+                  "(This card can attack on the turn in which it is played.)",
+                  "[On Play] DON!! \u22121: Draw 1 card.",
+                ].join("\n"),
+              },
+            }),
+        }),
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Line 1 parse: passed");
+    expect(report.lines).toContain("Line 2 parse: passed");
+    expect(report.lines).not.toContain(
+      "Line 2 text: (This card can attack on the turn in which it is played.)",
+    );
+    expect(report.lines).toContain(
+      "Line 2 text: [On Play] DON!! \u22121: Draw 1 card.",
+    );
+  });
+
   it("reports parser success separately from unsupported engine runtime entry points", async () => {
     const report = await createSupportProbeReport({
       text: "[On Block] Draw 1 card.",

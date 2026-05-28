@@ -17,6 +17,7 @@ import type {
 } from "@optcg/types";
 
 import { parseCardEffectLineDetailed } from "./card-effect-line-parser.js";
+import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 
 export interface CardDataCache {
@@ -490,10 +491,7 @@ const buildEffectDefinition = (
 };
 
 const gameplayLines = (detail: PoneglyphCardDetail): string[] =>
-  [detail.effect, detail.trigger]
-    .flatMap((text) => (text ?? "").split(/\r?\n/u))
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  gameplayLinesFromTextParts([detail.effect, detail.trigger]);
 
 const rawKeywordsFromLines = (
   lines: readonly string[],
