@@ -158,8 +158,6 @@ export const Zone = ({
               </div>
             );
           })
-        ) : visibleCards.length === 0 && displayMode !== "stack" ? (
-          <span className="empty-zone">empty</span>
         ) : (
           visibleCards.map((card) => {
             const instanceId = String(card.instanceId);

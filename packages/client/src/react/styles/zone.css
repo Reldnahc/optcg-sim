@@ -74,11 +74,6 @@
   place-items: center;
 }
 
-.empty-zone {
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 12px;
-}
-
 .stack-count {
   position: absolute;
   top: 50%;

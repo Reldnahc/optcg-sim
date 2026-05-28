@@ -81,6 +81,18 @@ describe("collection modal", () => {
     );
   });
 
+  test("empty non-stack zones do not render placeholder text", () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Stage",
+        cards: [],
+      }),
+    );
+
+    assert.equal(markup.includes("empty"), false);
+    assert.equal(markup.includes("empty-zone"), false);
+  });
+
   test("overlap mode marks zone rows for overlap layout", () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
