@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { CardRef, InstanceId } from "@optcg/types";
 
-import { createActionLogEntries } from "../action-log.js";
+import {
+  createActionLogEntries,
+  type ActionLogCardMention,
+} from "../action-log.js";
 import {
   createCollectionDecisionSurface,
   usesCollectionCardCostSurface,
@@ -192,6 +195,23 @@ export const MatchApp = (): React.JSX.Element => {
       attachedDonCards: [],
     };
   };
+  const actionLogCardModel = (
+    card: ActionLogCardMention["card"],
+  ): ClientCardModel => ({
+    instanceId:
+      card.instanceId ??
+      (`action-log:${card.playerId}:${card.cardId}` as InstanceId),
+    cardId: card.cardId,
+    name: card.name,
+    category: card.category,
+    ...(card.effectText === undefined ? {} : { effectText: card.effectText }),
+    ...(card.triggerText === undefined
+      ? {}
+      : { triggerText: card.triggerText }),
+    ...(card.imageUrl === undefined ? {} : { imageUrl: card.imageUrl }),
+    attachedDonCount: 0,
+    attachedDonCards: [],
+  });
   const previewHoveredCard = (card: ClientCardModel): void => {
     setLastPreviewCard(card);
     if (!previewEnabled) {
@@ -473,6 +493,9 @@ export const MatchApp = (): React.JSX.Element => {
           }}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
+          }}
+          onPreviewCard={(card) => {
+            previewHoveredCard(actionLogCardModel(card));
           }}
         />
       ) : null}

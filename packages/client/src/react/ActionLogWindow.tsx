@@ -1,4 +1,4 @@
-import type { ActionLogEntry } from "../action-log.js";
+import type { ActionLogCardMention, ActionLogEntry } from "../action-log.js";
 import { FloatingWindow } from "./FloatingWindow.js";
 
 export interface ActionLogWindowProps {
@@ -7,7 +7,60 @@ export interface ActionLogWindowProps {
   onToggleMinimized: () => void;
   onClose: () => void;
   onRequestRollback?: (rollbackPointId: string) => void;
+  onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
 }
+
+const textParts = (
+  text: string,
+  mentions: readonly ActionLogCardMention[] = [],
+): Array<string | ActionLogCardMention> => {
+  const parts: Array<string | ActionLogCardMention> = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    const next = mentions
+      .map((mention) => ({
+        mention,
+        index: text.indexOf(mention.label, cursor),
+      }))
+      .filter(({ index }) => index >= 0)
+      .sort((left, right) => left.index - right.index)[0];
+    if (next === undefined) {
+      parts.push(text.slice(cursor));
+      break;
+    }
+    if (next.index > cursor) {
+      parts.push(text.slice(cursor, next.index));
+    }
+    parts.push(next.mention);
+    cursor = next.index + next.mention.label.length;
+  }
+  return parts;
+};
+
+const renderActionLogText = (
+  entry: ActionLogEntry,
+  onPreviewCard: ActionLogWindowProps["onPreviewCard"],
+): React.ReactNode =>
+  textParts(entry.text, entry.cardMentions).map((part, index) =>
+    typeof part === "string" ? (
+      part
+    ) : (
+      <button
+        key={`${String(index)}:${part.card.playerId}:${part.card.cardId}`}
+        className="action-log-card-mention"
+        type="button"
+        title={part.card.name}
+        onPointerEnter={() => {
+          onPreviewCard?.(part.card);
+        }}
+        onFocus={() => {
+          onPreviewCard?.(part.card);
+        }}
+      >
+        {part.label}
+      </button>
+    ),
+  );
 
 export const ActionLogWindow = ({
   entries,
@@ -15,6 +68,7 @@ export const ActionLogWindow = ({
   onToggleMinimized,
   onClose,
   onRequestRollback,
+  onPreviewCard,
 }: ActionLogWindowProps): React.JSX.Element => (
   <FloatingWindow
     title="Action Log"
@@ -39,7 +93,9 @@ export const ActionLogWindow = ({
           return (
             <li key={entry.id} className="action-log-entry">
               <span className="action-log-seq">{entry.seq}</span>
-              <span className="action-log-text">{entry.text}</span>
+              <span className="action-log-text">
+                {renderActionLogText(entry, onPreviewCard)}
+              </span>
               {rollback === undefined ||
               onRequestRollback === undefined ? null : (
                 <button

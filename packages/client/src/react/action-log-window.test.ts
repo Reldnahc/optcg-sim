@@ -6,6 +6,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
+import type { CardId, InstanceId, PlayerId } from "@optcg/types";
+
 import { ActionLogToggle } from "./ActionLogToggle.js";
 import { ActionLogWindow } from "./ActionLogWindow.js";
 import { ControlRail } from "./ControlRail.js";
@@ -62,6 +64,40 @@ describe("action log window", () => {
     assert.match(markup, /action-log-rollback-icon/u);
     assert.doesNotMatch(markup, />Request rollback</u);
     assert.match(markup, /Before Card played/u);
+  });
+
+  test("renders card-name mentions as preview hover targets", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ActionLogWindow, {
+        entries: [
+          {
+            id: "event:1",
+            seq: 1,
+            text: "Played Saint Shepherd Ju Peter",
+            cardMentions: [
+              {
+                label: "Saint Shepherd Ju Peter",
+                card: {
+                  cardId: "OP13-089" as CardId,
+                  playerId: "p1" as PlayerId,
+                  instanceId: "source-1" as InstanceId,
+                  name: "Saint Shepherd Ju Peter",
+                  category: "Character",
+                },
+              },
+            ],
+          },
+        ],
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+        onPreviewCard: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /action-log-card-mention/u);
+    assert.match(markup, /title="Saint Shepherd Ju Peter"/u);
+    assert.match(markup, />Saint Shepherd Ju Peter<\/button>/u);
   });
 
   test("does not render rollback controls for ordinary log rows", () => {

@@ -6,9 +6,24 @@ export interface ActionLogEntry {
   id: string;
   seq: number;
   text: string;
+  cardMentions?: readonly ActionLogCardMention[];
   rollback?: {
     rollbackPointId: string;
     label: string;
+  };
+}
+
+export interface ActionLogCardMention {
+  label: string;
+  card: {
+    cardId: CardRef["cardId"];
+    playerId: CardRef["playerId"];
+    instanceId?: CardRef["instanceId"] | undefined;
+    name: string;
+    category: string;
+    effectText?: string | undefined;
+    triggerText?: string | undefined;
+    imageUrl?: string | undefined;
   };
 }
 
@@ -59,6 +74,30 @@ const cardName = (
   ref: VisibleCardIdentity,
 ): string =>
   catalog.players[ref.playerId]?.cards[ref.cardId]?.name ?? String(ref.cardId);
+
+const cardMention = (
+  catalog: MatchCardCatalog,
+  ref: VisibleCardIdentity,
+): ActionLogCardMention => {
+  const entry = catalog.players[ref.playerId]?.cards[ref.cardId];
+  return {
+    label: entry?.name ?? String(ref.cardId),
+    card: {
+      cardId: ref.cardId,
+      playerId: ref.playerId,
+      ...(ref.instanceId === undefined ? {} : { instanceId: ref.instanceId }),
+      name: entry?.name ?? String(ref.cardId),
+      category: entry?.category ?? "unknown",
+      ...(entry?.effectText === undefined
+        ? {}
+        : { effectText: entry.effectText }),
+      ...(entry?.triggerText === undefined
+        ? {}
+        : { triggerText: entry.triggerText }),
+      ...(entry?.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
+    },
+  };
+};
 
 const payloadCardIdentity = (
   payload: unknown,
@@ -323,6 +362,58 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
         .toLowerCase()}${label.slice(1)}`;
 };
 
+const dedupeIdentities = (
+  identities: readonly VisibleCardIdentity[],
+): VisibleCardIdentity[] => {
+  const seen = new Set<string>();
+  return identities.filter((identity) => {
+    const key = `${identity.playerId}:${identity.cardId}:${
+      identity.instanceId ?? ""
+    }`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
+const eventCardMentions = (
+  event: EngineEvent,
+  catalog: MatchCardCatalog,
+): ActionLogCardMention[] => {
+  const identities: VisibleCardIdentity[] = [
+    ...payloadCardIdentities(event.payload, event.actor),
+  ];
+  if (event.source !== undefined) {
+    identities.push(event.source);
+  }
+  if (event.type === "attackDeclared") {
+    const attacker = cardIdentityField(event.payload, "attacker");
+    const target = cardIdentityField(event.payload, "target");
+    if (attacker !== undefined) {
+      identities.push(attacker);
+    }
+    if (target !== undefined) {
+      identities.push(target);
+    }
+  }
+  if (event.type === "blockerActivated") {
+    const blocker = cardIdentityField(event.payload, "blocker");
+    const target = cardIdentityField(event.payload, "currentTarget");
+    if (blocker !== undefined) {
+      identities.push(blocker);
+    }
+    if (target !== undefined) {
+      identities.push(target);
+    }
+  }
+
+  return dedupeIdentities(identities)
+    .map((identity) => cardMention(catalog, identity))
+    .filter((mention) => mention.label.length > 0);
+};
+
 export const createActionLogEntries = ({
   events,
   catalog,
@@ -335,10 +426,12 @@ export const createActionLogEntries = ({
         (point) =>
           point.eventId === String(event.id) || point.eventSeq === event.seq,
       );
+      const cardMentions = eventCardMentions(event, catalog);
       return {
         id: String(event.id),
         seq: event.seq,
         text: eventText(event, catalog),
+        ...(cardMentions.length === 0 ? {} : { cardMentions }),
         ...(rollbackPoint === undefined
           ? {}
           : {

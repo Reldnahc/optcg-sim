@@ -122,6 +122,16 @@ describe("action log", () => {
         "Played Saint Shepherd Ju Peter",
       ],
     );
+    assert.deepEqual(
+      entries.map((entry) =>
+        entry.cardMentions?.map((mention) => mention.label),
+      ),
+      [
+        ["Saint Shepherd Ju Peter"],
+        ["Saint Shepherd Ju Peter"],
+        ["Saint Shepherd Ju Peter"],
+      ],
+    );
   });
 
   test("keeps card movement generic when projected payload has no card identity", () => {
@@ -259,6 +269,18 @@ describe("action log", () => {
         id: "event:play-card",
         seq: 7,
         text: "Played Saint Shepherd Ju Peter",
+        cardMentions: [
+          {
+            label: "Saint Shepherd Ju Peter",
+            card: {
+              cardId: "OP13-089" as CardId,
+              playerId: p1,
+              instanceId: "source-1" as InstanceId,
+              name: "Saint Shepherd Ju Peter",
+              category: "Character",
+            },
+          },
+        ],
         rollback: {
           rollbackPointId: "rollback:before-play",
           label: "Before Played Saint Shepherd Ju Peter",

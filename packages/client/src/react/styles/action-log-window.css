@@ -32,6 +32,28 @@
   min-width: 0;
 }
 
+.action-log-card-mention {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #72e9a9;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(114, 233, 169, 0.45);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.action-log-card-mention:hover,
+.action-log-card-mention:focus-visible {
+  color: #a8f3c7;
+  outline: none;
+  text-decoration-color: currentcolor;
+}
+
 .action-log-rollback {
   display: grid;
   place-items: center;
