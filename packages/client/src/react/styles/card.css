@@ -6,6 +6,22 @@
   flex: 0 0 auto;
 }
 
+.card-tile-shell.is-pointer-reorderable {
+  touch-action: none;
+}
+
+.card-tile-shell.is-pointer-reorderable .card-tile {
+  cursor: grab;
+}
+
+.card-tile-shell.is-pointer-reorder-dragging {
+  z-index: 40;
+}
+
+.card-tile-shell.is-pointer-reorder-dragging .card-tile {
+  cursor: grabbing;
+}
+
 .card-tile {
   position: relative;
   width: 100%;

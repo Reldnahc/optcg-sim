@@ -158,7 +158,7 @@ export const HandRow = ({
               onAction={onCardAction}
               onAttachedDonClick={onCardClick}
               onHover={onCardPreview}
-              draggable={onMoveCard !== undefined}
+              reorderable={onMoveCard !== undefined}
               onMoveNear={onMoveCard}
               onClick={
                 onCardClick === undefined

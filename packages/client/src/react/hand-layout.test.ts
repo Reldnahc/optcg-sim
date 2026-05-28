@@ -120,7 +120,7 @@ describe("hand layout", () => {
     assert.match(playerMarkup, /hand-cards-overlap-left/u);
   });
 
-  test("player hand cards can be made draggable for client-side rearranging", () => {
+  test("player hand cards can use pointer-driven rearranging", () => {
     const markup = renderToStaticMarkup(
       createElement(HandRow, {
         label: "Player hand",
@@ -130,7 +130,21 @@ describe("hand layout", () => {
       }),
     );
 
-    assert.match(markup, /draggable="true"/u);
+    assert.match(markup, /is-pointer-reorderable/u);
+    assert.doesNotMatch(markup, /draggable=/u);
+  });
+
+  test("card tiles use pointer reorder instead of native drag", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardTile.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /onPointerDown/u);
+    assert.doesNotMatch(source, /onDragStart/u);
+    assert.doesNotMatch(source, /onDragOver/u);
+    assert.doesNotMatch(source, /onDrop/u);
+    assert.doesNotMatch(source, /draggable=/u);
   });
 
   test("board layout wires hand rearranging only to the player hand", async () => {

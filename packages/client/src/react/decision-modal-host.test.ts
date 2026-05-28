@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
@@ -8,6 +11,7 @@ import type { CardId, CardRef, InstanceId, PlayerId } from "@optcg/types";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { DecisionModalModel } from "../interactions/decision-modal.js";
 
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const p1 = "p1" as PlayerId;
 
 const cardRef = (id: string): CardRef => ({
@@ -127,8 +131,22 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   assert.equal(markup.includes("top-card.png"), true);
   assert.equal(markup.includes("bottom-card.png"), true);
   assert.match(markup, /decision-order-badge/u);
-  assert.match(markup, /draggable="true"/u);
+  assert.match(markup, /is-pointer-reorderable/u);
+  assert.doesNotMatch(markup, /draggable=/u);
   assert.doesNotMatch(markup, /decision-order-row/u);
+});
+
+test("return-to-deck order modal uses pointer reorder instead of native drag", async () => {
+  const source = await readFile(
+    join(sourceDirectory, "DecisionModalHost.tsx"),
+    "utf8",
+  );
+
+  assert.match(source, /onPointerDown/u);
+  assert.doesNotMatch(source, /onDragStart/u);
+  assert.doesNotMatch(source, /onDragOver/u);
+  assert.doesNotMatch(source, /onDrop/u);
+  assert.doesNotMatch(source, /draggable=/u);
 });
 
 test("trigger order modal presents source cards like a single-card selection", () => {

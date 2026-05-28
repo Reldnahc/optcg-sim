@@ -108,7 +108,12 @@
   cursor: grab;
 }
 
-.decision-order-card:active {
+.decision-order-card.is-pointer-reorderable {
+  touch-action: none;
+}
+
+.decision-order-card.is-pointer-reorder-dragging {
+  z-index: 40;
   cursor: grabbing;
 }
 
