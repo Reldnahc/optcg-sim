@@ -80,14 +80,10 @@ export const HandRow = ({
       const firstCard =
         cardsElement.querySelector<HTMLElement>(".card-tile-shell");
       const rowRect = rowElement.getBoundingClientRect();
-      const outsideOverflowWidth =
-        overflowDirection === "right"
-          ? window.innerWidth - rowRect.right
-          : rowRect.left;
       setLayout(
         calculateCardRowLayout({
           availableWidth: rowElement.clientWidth,
-          laneExtensionWidth: outsideOverflowWidth,
+          laneExtensionWidth: overflowDirection === "left" ? rowRect.left : 0,
           cardWidth: firstCard?.getBoundingClientRect().width ?? 0,
           cardCount: cards.length,
         }),

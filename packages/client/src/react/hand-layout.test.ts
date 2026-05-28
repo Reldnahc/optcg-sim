@@ -100,18 +100,6 @@ describe("hand layout", () => {
     );
   });
 
-  test("opponent hand consumes outside-right lane before overlapping cards", async () => {
-    const handRowSource = await readFile(
-      join(sourceDirectory, "HandRow.tsx"),
-      "utf8",
-    );
-
-    assert.match(
-      handRowSource,
-      /overflowDirection === "right"[\s\S]*window\.innerWidth - rowRect\.right/u,
-    );
-  });
-
   test("board hands declare opposite overflow directions", () => {
     const opponentMarkup = renderToStaticMarkup(
       createElement(HandRow, {
@@ -146,11 +134,10 @@ describe("hand layout", () => {
       styles,
       /\.hand-cards\.is-using-outside-lane\.hand-cards-overlap-left\s*\{[^}]*width:\s*calc\(100%\s*\+\s*var\(--hand-lane-extension\)\);[^}]*margin-left:\s*calc\(-1\s*\*\s*var\(--hand-lane-extension\)\);/u,
     );
-    assert.match(
-      styles,
-      /\.hand-cards\.is-using-outside-lane\.hand-cards-overlap-right\s*\{[^}]*width:\s*calc\(100%\s*\+\s*var\(--hand-lane-extension\)\);[^}]*margin-right:\s*calc\(-1\s*\*\s*var\(--hand-lane-extension\)\);/u,
+    assert.equal(
+      /\.hand-cards\.is-overlapping\s*\{[^}]*gap:\s*0;/u.test(styles),
+      false,
     );
-    assert.match(styles, /\.hand-cards\.is-overlapping\s*\{[^}]*gap:\s*0;/u);
     assert.match(
       styles,
       /\.hand-cards\.is-edge-packed\.hand-cards-overlap-left\s*\{[^}]*justify-content:\s*flex-end;/u,
