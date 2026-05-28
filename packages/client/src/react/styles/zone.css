@@ -95,6 +95,10 @@
   transform: translate(-50%, -50%);
 }
 
+.zone-stack:hover .stack-count {
+  opacity: 1;
+}
+
 .stack-label {
   display: grid;
   height: 100%;

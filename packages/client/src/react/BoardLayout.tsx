@@ -42,7 +42,7 @@ const handCount = (
   count: number,
 ): React.JSX.Element => (
   <div
-    className={`count-badge hand-count ${owner.toLowerCase()}-hand-count`}
+    className={`count-badge is-hover-revealed hand-count ${owner.toLowerCase()}-hand-count`}
     aria-label={`${owner} hand count: ${String(count)}`}
   >
     {count}

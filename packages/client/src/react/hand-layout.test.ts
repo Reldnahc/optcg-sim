@@ -168,9 +168,15 @@ describe("hand layout", () => {
       readFile(countBadgeStylesPath, "utf8"),
     ]);
 
-    assert.match(markup, /class="count-badge hand-count opponent-hand-count"/u);
+    assert.match(
+      markup,
+      /class="count-badge is-hover-revealed hand-count opponent-hand-count"/u,
+    );
     assert.match(markup, /aria-label="Opponent hand count: 6"/u);
-    assert.match(markup, /class="count-badge hand-count player-hand-count"/u);
+    assert.match(
+      markup,
+      /class="count-badge is-hover-revealed hand-count player-hand-count"/u,
+    );
     assert.match(markup, /aria-label="Player hand count: 3"/u);
     assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
     assert.match(
@@ -180,6 +186,10 @@ describe("hand layout", () => {
     assert.match(
       appShellStyles,
       /\.hand-count\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(
+      appShellStyles,
+      /\.hand-rail:hover\s+\.hand-count\s*\{[^}]*opacity:\s*1;/u,
     );
   });
 });

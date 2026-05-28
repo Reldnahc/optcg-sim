@@ -119,7 +119,7 @@ export const Zone = ({
       <div className="zone-label">{label}</div>
       {displayMode === "stack" ? (
         <div
-          className="count-badge stack-count"
+          className="count-badge is-hover-revealed stack-count"
           aria-label={`${label} count: ${String(cards.length)}`}
         >
           {cards.length}

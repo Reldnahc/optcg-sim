@@ -68,7 +68,7 @@ describe("collection modal", () => {
       readFile(countBadgeStylesPath, "utf8"),
     ]);
 
-    assert.match(markup, /count-badge stack-count/u);
+    assert.match(markup, /count-badge is-hover-revealed stack-count/u);
     assert.match(markup, /aria-label="Trash count: 2"/u);
     assert.match(markup, />2</u);
     assert.equal(emptyMarkup.includes("empty"), false);
@@ -78,7 +78,15 @@ describe("collection modal", () => {
       zoneStyles,
       /\.stack-count\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
     );
+    assert.match(
+      zoneStyles,
+      /\.zone-stack:hover\s+\.stack-count\s*\{[^}]*opacity:\s*1;/u,
+    );
     assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(
+      countBadgeStyles,
+      /\.count-badge\.is-hover-revealed\s*\{[^}]*opacity:\s*0;/u,
+    );
     assert.match(
       countBadgeStyles,
       /\.count-badge\s*\{[^}]*-webkit-text-stroke:\s*2px rgba\(0,\s*0,\s*0,\s*0\.92\);/u,
