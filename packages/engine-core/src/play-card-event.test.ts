@@ -11,6 +11,7 @@ import type {
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
+import { applyAction } from "./actions.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
@@ -708,6 +709,85 @@ test("implemented-dsl Main Event draw keeps event sequencing, state hash, and op
     opponentView.legalActions.some((action) => action.type === "playCard"),
     false,
   );
+});
+
+test("zero-cost implemented-dsl Main Event can pay DON minus 2 and run dependent draw", () => {
+  const state = setupMainPlayState();
+  addExtraDeckCard(state);
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  const drawnCard = must(p1State.deck[0], "drawn card");
+  const implemented = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 0,
+    effectText: "[Main] DON!! -2: Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-return-two-don-draw",
+    },
+  });
+  const definition = reviewedMainEventDrawDefinition(
+    implemented.cardId,
+    implemented.support,
+  );
+  state.cardManifest.cards[eventCard.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-return-two-don-draw": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "event effect"),
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "payCost",
+                  cost: { type: "returnDon", count: 2, optional: true },
+                },
+              },
+              {
+                connector: "ifYouDo",
+                effect: { type: "draw", player: "self", count: 1 },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+  const beforeDeckCount = p1State.deck.length;
+
+  const opened = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  const decision = must(opened.state.pendingDecision, "return DON decision");
+  assert.equal(opened.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "returnDon");
+
+  const openedP1 = must(opened.state.players[p1], "opened p1");
+  const paid = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: openedP1.costArea
+        .slice(0, 2)
+        .map((card) => card.instanceId),
+    },
+  });
+  const paidP1 = must(paid.state.players[p1], "paid p1");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision, undefined);
+  assert.equal(paidP1.deck.length, beforeDeckCount - 1);
+  assert.equal(paidP1.hand.at(-1)?.instanceId, drawnCard.instanceId);
 });
 
 test("supported implemented-dsl Main Event drawUpTo playCard reachability creates chooseQuantity and preserves deterministic event/state-hash surfaces", () => {

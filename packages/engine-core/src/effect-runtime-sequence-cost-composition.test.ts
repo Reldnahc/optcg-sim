@@ -744,7 +744,6 @@ test("return-DON sequence resolves choose-from-zones continuous target before ma
     category: "leader",
     power: 5000,
   });
-
   const returnDonPaused = processEffectRuntime(state);
   const paidReturnDon = payReturnDonWithFirstCostDon(returnDonPaused.state);
   const targetDecision = must(
@@ -798,6 +797,18 @@ test("conditional return-DON sequence resolves choose-from-zones continuous targ
     cardId: p1State.leader.cardId,
     category: "leader",
     power: 5000,
+  });
+  const p2State = must(state.players[p2], "p2");
+  const koTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "KO target"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[koTarget.cardId] = resolvedCard({
+    cardId: koTarget.cardId,
+    category: "character",
+    power: 3000,
   });
 
   const returnDonPaused = processEffectRuntime(state);

@@ -260,6 +260,35 @@ export const applySelectTargetsSequenceSegment = (params: {
       state: nextState,
     };
   }
+  if (
+    candidates.candidates.length === 0 &&
+    segment.effect.request.min === 0 &&
+    segment.effect.request.allowFewerIfUnavailable
+  ) {
+    const savedReferences =
+      segment.saveResultAs === undefined
+        ? nextLedgers.savedReferences
+        : saveReference(nextLedgers.savedReferences, segment, {
+            kind: "selectedTargets",
+            targets: [],
+          });
+    return {
+      kind: "continued",
+      ledgers: {
+        savedReferences,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [segmentKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+          },
+        },
+      },
+      ok: true,
+      state: nextState,
+    };
+  }
   const decision: SelectTargetsDecision = {
     id: toDecisionId(
       `decision:selectTargets:sequence:${String(entry.id)}:${String(index)}`,
