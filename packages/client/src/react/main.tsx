@@ -8,6 +8,7 @@ import "./styles/zone.css";
 import "./styles/card.css";
 import "./styles/controls.css";
 import "./styles/modal-frame.css";
+import "./styles/floating-window.css";
 import "./styles/decision-modal.css";
 import "./styles/collection-modal.css";
 

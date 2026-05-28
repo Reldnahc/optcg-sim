@@ -1,6 +1,6 @@
 import type { ClientCardModel } from "../view-model.js";
 import { CardTile } from "./CardTile.js";
-import { ModalFrame } from "./ModalFrame.js";
+import { FloatingWindow } from "./FloatingWindow.js";
 
 export interface CollectionModalModel {
   title: string;
@@ -39,9 +39,9 @@ export const CollectionModalHost = ({
   const orderedSelectionIds = model.selection?.selectedInstanceIds ?? [];
 
   return (
-    <ModalFrame
+    <FloatingWindow
       title={model.title}
-      className="modal-frame-collection collection-modal"
+      className="floating-window-collection collection-modal"
       onClose={onClose}
     >
       <div className="collection-modal-card-grid">
@@ -90,6 +90,6 @@ export const CollectionModalHost = ({
           </button>
         </div>
       )}
-    </ModalFrame>
+    </FloatingWindow>
   );
 };

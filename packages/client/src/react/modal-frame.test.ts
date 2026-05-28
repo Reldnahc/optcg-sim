@@ -25,7 +25,7 @@ const card = (instanceId: string, name: string): ClientCardModel => ({
 });
 
 describe("modal frame", () => {
-  test("decision and collection modals share the presentation frame", () => {
+  test("decision modals use modal frame while collection viewers use floating windows", () => {
     const decisionMarkup = renderToStaticMarkup(
       createElement(DecisionModalHost, {
         model: {
@@ -54,9 +54,9 @@ describe("modal frame", () => {
     );
 
     assert.match(decisionMarkup, /modal-frame/u);
-    assert.match(collectionMarkup, /modal-frame/u);
+    assert.equal(collectionMarkup.includes("modal-frame"), false);
     assert.match(decisionMarkup, /modal-frame-decision/u);
-    assert.match(collectionMarkup, /modal-frame-collection/u);
+    assert.match(collectionMarkup, /floating-window/u);
   });
 
   test("modal frame owns the shared smaller default size", async () => {

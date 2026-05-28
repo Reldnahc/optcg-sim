@@ -1,4 +1,4 @@
-.modal-frame-collection {
+.floating-window-collection {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
