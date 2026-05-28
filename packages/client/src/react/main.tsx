@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { MatchApp } from "./MatchApp.js";
 import "./styles.css";
 import "./styles/app-shell.css";
+import "./styles/count-badge.css";
 import "./styles/playmat.css";
 import "./styles/zone.css";
 import "./styles/card.css";

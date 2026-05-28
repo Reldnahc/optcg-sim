@@ -1,0 +1,12 @@
+.count-badge {
+  z-index: 4;
+  width: max-content;
+  color: #42e67c;
+  font-size: clamp(30px, 4.2vh, 52px);
+  font-weight: 900;
+  line-height: 0.9;
+  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.92);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}

@@ -6,14 +6,16 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
-import type { CardId, InstanceId } from "@optcg/types";
+import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
+import { BoardLayout } from "./BoardLayout.js";
 import { HandRow, calculateHandOverlap } from "./HandRow.js";
 import { calculateCardRowLayout } from "./card-row-layout.js";
-import type { ClientCardModel } from "../view-model.js";
+import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
+const countBadgeStylesPath = join(sourceDirectory, "styles", "count-badge.css");
 
 const card = (index: number): ClientCardModel => ({
   instanceId: `hand-${String(index)}` as InstanceId,
@@ -22,6 +24,31 @@ const card = (index: number): ClientCardModel => ({
   category: "Character",
   attachedDonCount: 0,
   attachedDonCards: [],
+});
+
+const board = (): BoardViewModel => ({
+  playerId: "p1" as PlayerId,
+  self: {
+    leader: card(100),
+    hand: [card(1), card(2), card(3)],
+    characters: [],
+    costArea: [],
+    trash: [],
+    deckCount: 40,
+    donDeckCount: 10,
+    lifeCount: 5,
+  },
+  opponent: {
+    leader: card(200),
+    handCount: 6,
+    characters: [],
+    costArea: [],
+    trash: [],
+    deckCount: 40,
+    donDeckCount: 10,
+    lifeCount: 5,
+  },
+  actionsByCardInstanceId: {},
 });
 
 describe("hand layout", () => {
@@ -93,12 +120,16 @@ describe("hand layout", () => {
     assert.match(playerMarkup, /hand-cards-overlap-left/u);
   });
 
-  test("hand CSS centers fitting cards and overlaps without shrinking or wrapping", async () => {
+  test("hand CSS uses the full lane and overlaps without shrinking or wrapping", async () => {
     const styles = await readFile(appShellStylesPath, "utf8");
 
     assert.match(styles, /\.hand-row\s*\{[^}]*justify-content:\s*center;/u);
     assert.match(styles, /\.hand-cards\s*\{[^}]*flex-wrap:\s*nowrap;/u);
     assert.match(styles, /\.hand-cards\s*\{[^}]*width:\s*100%;/u);
+    assert.match(
+      styles,
+      /\.hand-cards\s*\{[^}]*justify-content:\s*space-evenly;/u,
+    );
     assert.match(
       styles,
       /\.hand-cards\.is-using-outside-lane\.hand-cards-overlap-left\s*\{[^}]*width:\s*calc\(100%\s*\+\s*var\(--hand-lane-extension\)\);[^}]*margin-left:\s*calc\(-1\s*\*\s*var\(--hand-lane-extension\)\);/u,
@@ -115,6 +146,37 @@ describe("hand layout", () => {
     assert.match(
       styles,
       /\.hand-cards\.is-overlapping\s+\.card-tile-shell\s*\+\s*\.card-tile-shell\s*\{[^}]*margin-left:\s*calc\(-1\s*\*\s*var\(--hand-overlap\)\);/u,
+    );
+  });
+
+  test("hand counts render between hands and board with prominent outlined numbers", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: board(),
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+    const [appShellStyles, countBadgeStyles] = await Promise.all([
+      readFile(appShellStylesPath, "utf8"),
+      readFile(countBadgeStylesPath, "utf8"),
+    ]);
+
+    assert.match(markup, /class="count-badge hand-count opponent-hand-count"/u);
+    assert.match(markup, /aria-label="Opponent hand count: 6"/u);
+    assert.match(markup, /class="count-badge hand-count player-hand-count"/u);
+    assert.match(markup, /aria-label="Player hand count: 3"/u);
+    assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(
+      countBadgeStyles,
+      /\.count-badge\s*\{[^}]*-webkit-text-stroke:\s*2px rgba\(0,\s*0,\s*0,\s*0\.92\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /\.hand-count\s*\{[^}]*position:\s*absolute;/u,
     );
   });
 });

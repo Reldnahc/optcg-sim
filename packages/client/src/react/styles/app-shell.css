@@ -26,6 +26,7 @@
 
 .hand-rail {
   grid-area: hand-rail;
+  position: relative;
   display: grid;
   grid-template-rows: 1fr 1fr;
   gap: 8px;
@@ -54,13 +55,27 @@
   align-items: flex-end;
 }
 
+.hand-count {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.opponent-hand-count {
+  top: calc(var(--card-height) + 4px);
+}
+
+.player-hand-count {
+  bottom: calc(var(--card-height) + 4px);
+}
+
 .hand-cards {
   display: flex;
   flex-wrap: nowrap;
   width: 100%;
   height: var(--card-height);
   min-width: 0;
-  justify-content: center;
+  justify-content: space-evenly;
   gap: 5px;
   overflow: visible;
   --hand-lane-extension: 0px;

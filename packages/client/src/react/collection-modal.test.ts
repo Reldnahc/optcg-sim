@@ -19,6 +19,7 @@ const collectionStylesPath = join(
   "collection-modal.css",
 );
 const zoneStylesPath = join(sourceDirectory, "styles", "zone.css");
+const countBadgeStylesPath = join(sourceDirectory, "styles", "count-badge.css");
 
 const card = (instanceId: string, name: string): ClientCardModel => ({
   instanceId: instanceId as InstanceId,
@@ -62,22 +63,25 @@ describe("collection modal", () => {
         onViewCollection: () => undefined,
       }),
     );
-    const styles = await readFile(zoneStylesPath, "utf8");
+    const [zoneStyles, countBadgeStyles] = await Promise.all([
+      readFile(zoneStylesPath, "utf8"),
+      readFile(countBadgeStylesPath, "utf8"),
+    ]);
 
-    assert.match(markup, /stack-count/u);
+    assert.match(markup, /count-badge stack-count/u);
     assert.match(markup, /aria-label="Trash count: 2"/u);
     assert.match(markup, />2</u);
     assert.equal(emptyMarkup.includes("empty"), false);
     assert.match(emptyMarkup, /aria-label="Trash count: 0"/u);
-    assert.match(styles, /\.stack-count\s*\{[^}]*top:\s*50%;/u);
+    assert.match(zoneStyles, /\.stack-count\s*\{[^}]*top:\s*50%;/u);
     assert.match(
-      styles,
+      zoneStyles,
       /\.stack-count\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
     );
-    assert.match(styles, /\.stack-count\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
     assert.match(
-      styles,
-      /\.stack-count\s*\{[^}]*-webkit-text-stroke:\s*3px rgba\(0,\s*0,\s*0,\s*0\.92\);/u,
+      countBadgeStyles,
+      /\.count-badge\s*\{[^}]*-webkit-text-stroke:\s*2px rgba\(0,\s*0,\s*0,\s*0\.92\);/u,
     );
   });
 

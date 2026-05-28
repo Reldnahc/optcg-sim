@@ -37,6 +37,18 @@ const stack = (label: string, count: number): React.JSX.Element => (
   </div>
 );
 
+const handCount = (
+  owner: "Opponent" | "Player",
+  count: number,
+): React.JSX.Element => (
+  <div
+    className={`count-badge hand-count ${owner.toLowerCase()}-hand-count`}
+    aria-label={`${owner} hand count: ${String(count)}`}
+  >
+    {count}
+  </div>
+);
+
 export const BoardLayout = ({
   board,
   selectedCardInstanceId,
@@ -62,6 +74,8 @@ export const BoardLayout = ({
         cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
         overflowDirection="right"
       />
+      {handCount("Opponent", board.opponent.handCount)}
+      {handCount("Player", board.self.hand.length)}
       <HandRow
         label="Player hand"
         cards={board.self.hand}
