@@ -113,6 +113,52 @@ describe("planned field-effect instruction parsers", () => {
     expect(singular).toEqual(plural);
   });
 
+  it("parses filtered rest opponent Characters with trailing punctuation", () => {
+    expect(
+      parseRestOpponentCharactersInstruction({
+        text: "Rest up to 1 of your opponent's Characters with 5000 power or less.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  power: { max: 5000 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: { type: "rest" },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:rest",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses the selected Character refresh lock as a saved-target restriction", () => {
     expect(
       parsePreventThatCharacterRefreshInstruction({

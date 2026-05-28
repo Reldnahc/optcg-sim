@@ -519,6 +519,89 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses costed Main Event draw then filtered opponent Character rest sequence", () => {
+    const result = parseCardEffectLine(
+      "[Main] DON!! \u22122: Draw 1 card. Then, rest up to 1 of your opponent's Characters with 5000 power or less.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 2, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: { type: "draw", player: "self", count: 1 },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          connector: "always",
+                          saveResultAs: "selected:thatCharacter",
+                          effect: {
+                            type: "selectTargets",
+                            request: {
+                              timing: "onResolution",
+                              chooser: "self",
+                              player: "opponent",
+                              zone: "characterArea",
+                              min: 0,
+                              max: 1,
+                              allowFewerIfUnavailable: true,
+                              visibility: "public",
+                              filter: {
+                                categories: ["character"],
+                                power: { max: 5000 },
+                              },
+                            },
+                          },
+                        },
+                        {
+                          connector: "then",
+                          effect: { type: "rest" },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "cost:returnDon",
+        "instruction:draw",
+        "instruction:rest",
+        "cardinality:upTo",
+        "target:opponentCharacters",
+        "filter:power",
+        "condition:comparator:lte",
+      ]),
+    );
+  });
+
   it("parses Main Event rest-DON cost and opponent Character effect negation primitives", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 2 of your DON!! cards: Negate the effect of up to 1 of your opponent's Characters with a cost of 5 or less during this turn.",

@@ -71,7 +71,7 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
   }
 
   const target = parseOpponentCharactersTarget({ text: cardinality.rest });
-  if (target === undefined || target.rest.length > 0) {
+  if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
 
@@ -90,7 +90,7 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
               chooser: "self",
               player: "opponent",
               zone: "characterArea",
-              filter: { categories: ["character"] },
+              filter: target.filter ?? { categories: ["character"] },
               min: cardinality.cardinality.min,
               max: cardinality.cardinality.max,
               allowFewerIfUnavailable: true,
