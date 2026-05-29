@@ -162,6 +162,73 @@ const installWhenAttackingTopDeckPlacement = (
   });
 };
 
+const installWhenAttackingSearchReveal = (
+  state: ReturnType<typeof setupAttackState>,
+): void => {
+  const p1State = must(state.players[p1], "p1");
+  const topDeck = must(p1State.deck[0], "top deck");
+  state.cardManifest.cards[topDeck.cardId] = resolvedCard({
+    cardId: topDeck.cardId,
+    category: "character",
+    power: 1000,
+  });
+  const cardId = p1State.leader.cardId;
+  const definition: EffectDefinition = {
+    cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "when-attacking-search-reveal" as never,
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        optional: false,
+        oncePerTurn: false,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "search",
+          request: {
+            zone: "deck",
+            player: "self",
+            lookCount: 1,
+            filter: { categories: ["character"] },
+            min: 0,
+            max: 1,
+            destination: "hand",
+            revealTo: "chooserOnly",
+            shuffleAfter: false,
+          },
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "when-attacking-search-reveal-source",
+      rulesVersion: "r1",
+      effectDefinitionsVersion: "test",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-when-attacking-search-reveal": definition,
+  };
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "[When Attacking] Look at 1 card from the top of your deck; add up to 1 Character card to your hand.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-when-attacking-search-reveal",
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+};
+
 test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   const state = setupAttackState();
   const before = JSON.stringify(state);
@@ -366,6 +433,34 @@ test("When Attacking top-or-bottom placement resumes battle after ordering", () 
       topIds: [],
       bottomIds: [String(second.instanceId), String(first.instanceId)],
     },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
+});
+
+test("When Attacking search reveal resumes battle after choosing a card", () => {
+  const state = setupAttackState();
+  installWhenAttackingSearchReveal(state);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "selectCards");
+  const decision = must(opened.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  const candidate = must(decision.candidates[0], "candidate").card;
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [candidate] },
   });
 
   assert.equal(resolved.errors, undefined);
