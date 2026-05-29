@@ -42,7 +42,8 @@
 }
 
 .card-preview-toggle,
-.action-log-toggle {
+.action-log-toggle,
+.control-icon-button {
   display: grid;
   width: 32px;
   height: 32px;
@@ -57,13 +58,15 @@
 .card-preview-toggle:hover,
 .card-preview-toggle.is-enabled,
 .action-log-toggle:hover,
-.action-log-toggle.is-open {
+.action-log-toggle.is-open,
+.control-icon-button:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.14);
 }
 
 .card-preview-toggle svg,
-.action-log-toggle svg {
+.action-log-toggle svg,
+.control-icon-button svg {
   width: 21px;
   height: 21px;
   fill: none;
@@ -100,11 +103,18 @@
 }
 
 .concede-button {
-  background: #8b232b;
+  color: rgba(255, 220, 220, 0.9);
 }
 
+.concede-button:hover,
 .concede-button.is-confirming {
-  background: #b12d36;
+  color: #ffffff;
+  background: rgba(177, 45, 54, 0.82);
+}
+
+.concede-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .action-menu-panel {

@@ -209,16 +209,58 @@ describe("card action menu", () => {
     assert.match(styles, /\.control-tool-strip\s*\{[^}]*left:\s*10px;/u);
   });
 
-  test("concede button uses dedicated red styles", async () => {
+  test("control rail orders icon controls before global actions", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+        concedeDisabled: false,
+        onConcede: () => undefined,
+        previewControl: createElement("button", {
+          "aria-label": "Preview",
+          type: "button",
+        }),
+        actionLogControl: createElement("button", {
+          "aria-label": "Log",
+          type: "button",
+        }),
+      }),
+    );
+
+    const positions = [
+      'aria-label="Preview"',
+      'aria-label="Log"',
+      'aria-label="Settings"',
+      'aria-label="Concede"',
+      'aria-label="New match"',
+    ].map((needle) => markup.indexOf(needle));
+
+    assert.deepEqual(
+      positions.map((position) => position >= 0),
+      [true, true, true, true, true],
+    );
+    assert.deepEqual(
+      [...positions].sort((a, b) => a - b),
+      positions,
+    );
+  });
+
+  test("concede icon uses dedicated red hover styles", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),
       "utf8",
     );
 
-    assert.match(styles, /\.concede-button\s*\{[^}]*background:\s*#8b232b;/u);
     assert.match(
       styles,
-      /\.concede-button\.is-confirming\s*\{[^}]*background:\s*#b12d36;/u,
+      /\.concede-button:hover,\s*\.concede-button\.is-confirming\s*\{[^}]*background:\s*rgba\(177,\s*45,\s*54,\s*0\.82\);/u,
+    );
+    assert.match(
+      styles,
+      /\.concede-button:disabled\s*\{[^}]*opacity:\s*0\.45;/u,
     );
   });
 

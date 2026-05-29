@@ -36,13 +36,15 @@ export const ControlRail = ({
   onConcede,
   previewControl,
   actionLogControl,
-}: ControlRailProps): React.JSX.Element => (
-  <aside className="control-rail">
-    <section className="summary-panel opponent-summary">
-      <h2>Opponent</h2>
-    </section>
-    <section className="controls-panel">
-      {previewControl === undefined && actionLogControl === undefined ? null : (
+}: ControlRailProps): React.JSX.Element => {
+  const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
+
+  return (
+    <aside className="control-rail">
+      <section className="summary-panel opponent-summary">
+        <h2>Opponent</h2>
+      </section>
+      <section className="controls-panel">
         <div className="control-tool-strip">
           {previewControl === undefined ? null : (
             <div className="control-preview-slot">{previewControl}</div>
@@ -50,23 +52,52 @@ export const ControlRail = ({
           {actionLogControl === undefined ? null : (
             <div className="control-action-log-slot">{actionLogControl}</div>
           )}
+          <button
+            className="control-icon-button settings-button"
+            type="button"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3" />
+              <path d="M12 19v3" />
+              <path d="m4.93 4.93 2.12 2.12" />
+              <path d="m16.95 16.95 2.12 2.12" />
+              <path d="M2 12h3" />
+              <path d="M19 12h3" />
+              <path d="m4.93 19.07 2.12-2.12" />
+              <path d="m16.95 7.05 2.12-2.12" />
+            </svg>
+          </button>
+          <button
+            className={`control-icon-button concede-button ${
+              concedeConfirming ? "is-confirming" : ""
+            }`}
+            type="button"
+            disabled={concedeDisabled}
+            aria-label={concedeLabel}
+            title={concedeLabel}
+            onClick={onConcede}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 3v18" />
+              <path d="M5 4h12l-2 4 2 4H5" />
+            </svg>
+          </button>
+          <button
+            className="control-icon-button new-match-button"
+            type="button"
+            aria-label="New match"
+            title="New match"
+            onClick={onNewMatch}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+          </button>
         </div>
-      )}
-      <div className="control-actions">
-        <button className="action-button" type="button" onClick={onNewMatch}>
-          New match
-        </button>
-        <button
-          className={`action-button concede-button ${
-            concedeConfirming ? "is-confirming" : ""
-          }`}
-          type="button"
-          disabled={concedeDisabled}
-          onClick={onConcede}
-        >
-          {concedeConfirming ? "Confirm concede" : "Concede"}
-        </button>
-      </div>
       {errors.map((error) => (
         <p key={error} className="error-text">
           {error}
@@ -98,4 +129,5 @@ export const ControlRail = ({
       <h2>Player</h2>
     </section>
   </aside>
-);
+  );
+};
