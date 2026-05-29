@@ -265,7 +265,7 @@ export const getSupportedCounterEventPower = (
   card: CardInstance,
   target: CardRef | undefined,
   battleTarget = target,
-  options: { evaluateCondition?: boolean } = {},
+  options: { evaluateCondition?: boolean; effectCostPaid?: boolean } = {},
 ): SupportedCounterEventPower | null => {
   const metadata = state.cardManifest.cards[card.cardId];
   if (
@@ -324,6 +324,7 @@ export const getSupportedCounterEventPower = (
   }
   if (
     effectCost !== undefined &&
+    options.effectCostPaid !== true &&
     countEligibleHandCardsForEffectCost(state, card, target.playerId) <
       effectCost.count
   ) {
@@ -373,7 +374,7 @@ export const getSupportedCounterEventPowerTargets = (
   card: CardInstance,
   defenderId: PlayerId,
   battleTarget: CardRef | undefined,
-  options: { evaluateCondition?: boolean } = {},
+  options: { evaluateCondition?: boolean; effectCostPaid?: boolean } = {},
 ): SupportedCounterEventPower[] =>
   counterEventPowerCandidateTargets(state, defenderId).flatMap((target) => {
     const supported = getSupportedCounterEventPower(

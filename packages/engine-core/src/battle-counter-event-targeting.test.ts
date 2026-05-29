@@ -397,20 +397,17 @@ test("trash-from-hand cost Counter Event pays cost before applying selected lead
   });
   assert.equal(opened.errors, undefined);
   const nonBattleTarget = cardRef(defenderCharacter, p2);
-  assert.equal(
-    getLegalActions(opened.state, p2).some(
-      (action) =>
-        action.type === "useCounter" &&
-        action.cardInstanceId === counterEvent.instanceId &&
-        action.target.instanceId === nonBattleTarget.instanceId,
-    ),
-    true,
+  const useCounterActions = getLegalActions(opened.state, p2).filter(
+    (action) =>
+      action.type === "useCounter" &&
+      action.cardInstanceId === counterEvent.instanceId,
   );
+  assert.equal(useCounterActions.length, 1);
 
   const use = applyAction(opened.state, {
     type: "useCounter",
     cardInstanceId: counterEvent.instanceId,
-    target: nonBattleTarget,
+    target: cardRef(p2State.leader, p2),
   });
   assert.equal(use.errors, undefined);
   assert.equal(use.state.pendingDecision?.type, "payCost");
@@ -427,6 +424,8 @@ test("trash-from-hand cost Counter Event pays cost before applying selected lead
   });
 
   assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision?.type, "selectTargets");
+  const targetDecision = must(paid.state.pendingDecision, "target decision");
   assert.equal(
     must(paid.state.players[p2], "p2").trash.some(
       (card) => card.instanceId === costCard.instanceId,
@@ -434,9 +433,30 @@ test("trash-from-hand cost Counter Event pays cost before applying selected lead
     true,
   );
   assert.equal(battleCounterPower(paid.state.battle), undefined);
+  assert.equal(
+    must(paid.state.players[p2], "p2").hand.some(
+      (card) => card.instanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
+
+  const targeted = applyAction(paid.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: [nonBattleTarget] },
+  });
+  assert.equal(targeted.errors, undefined);
   const view = computeView(paid.state);
-  assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 6000);
-  assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
+  assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 3000);
+  const targetedView = computeView(targeted.state);
+  assert.equal(
+    targetedView.cards[defenderCharacter.instanceId]?.currentPower,
+    6000,
+  );
+  assert.equal(
+    targetedView.cards[p2State.leader.instanceId]?.currentPower,
+    5000,
+  );
 });
 
 test("Counter Event named leader-or-character target filter is supported by battle targeting", () => {

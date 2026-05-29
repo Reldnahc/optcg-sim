@@ -4,6 +4,10 @@ export interface CounterPayCostDecisionContext {
   targetInstanceId: string;
 }
 
+export interface CounterTargetDecisionContext {
+  counterEventInstanceId: string;
+}
+
 const encodeDecisionSegment = (value: string): string =>
   encodeURIComponent(value);
 
@@ -12,6 +16,8 @@ const decodeDecisionSegment = (value: string): string =>
 
 const counterPayCostDecisionPattern =
   /^decision:counterStep:payCost:([^:]+):([^:]+):(?:(effect|printed):)?\d+$/;
+const counterTargetDecisionPattern =
+  /^decision:counterStep:target:([^:]+):\d+$/;
 
 export const counterPayCostDecisionId = (
   counterEventInstanceId: string,
@@ -38,5 +44,27 @@ export const parseCounterPayCostDecisionId = (
     counterEventInstanceId: decodeDecisionSegment(match[1]),
     kind: match[3] === "effect" ? "effect" : "printed",
     targetInstanceId: decodeDecisionSegment(match[2]),
+  };
+};
+
+export const counterTargetDecisionId = (
+  counterEventInstanceId: string,
+  sequence: number,
+): string =>
+  [
+    "decision:counterStep:target",
+    encodeDecisionSegment(counterEventInstanceId),
+    String(sequence),
+  ].join(":");
+
+export const parseCounterTargetDecisionId = (
+  id: string,
+): CounterTargetDecisionContext | null => {
+  const match = counterTargetDecisionPattern.exec(id);
+  if (match?.[1] === undefined) {
+    return null;
+  }
+  return {
+    counterEventInstanceId: decodeDecisionSegment(match[1]),
   };
 };
