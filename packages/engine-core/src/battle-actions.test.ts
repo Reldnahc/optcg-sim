@@ -108,6 +108,60 @@ const installWhenAttackingConditionalPowerReduction = (
   });
 };
 
+const installWhenAttackingTopDeckPlacement = (
+  state: ReturnType<typeof setupAttackState>,
+): void => {
+  const p1State = must(state.players[p1], "p1");
+  const cardId = p1State.leader.cardId;
+  const definition: EffectDefinition = {
+    cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "when-attacking-top-deck-placement" as never,
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        optional: false,
+        oncePerTurn: false,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "placeTopDeckCards",
+          player: "self",
+          count: 2,
+          destination: "topOrBottom",
+          order: "ownerChoice",
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "when-attacking-top-deck-placement-source",
+      rulesVersion: "r1",
+      effectDefinitionsVersion: "test",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-when-attacking-top-deck-placement": definition,
+  };
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "[When Attacking] Look at 2 cards from the top of your deck and place them at the top or bottom of your deck in any order.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-when-attacking-top-deck-placement",
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+};
+
 test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   const state = setupAttackState();
   const before = JSON.stringify(state);
@@ -270,6 +324,48 @@ test("When Attacking target selection resumes battle after selecting a target", 
     type: "respondToDecision",
     decisionId: must(opened.state.pendingDecision, "pending decision").id,
     response: { type: "targets", targets: [cardRef(powerTarget, p2)] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
+});
+
+test("When Attacking top-or-bottom placement resumes battle after ordering", () => {
+  const state = setupAttackState();
+  installWhenAttackingTopDeckPlacement(state);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  while (p1State.deck.length < 2) {
+    const base = must(p1State.deck.at(-1), "deck card");
+    p1State.deck.push({
+      ...base,
+      instanceId:
+        `${String(base.instanceId)}:${String(p1State.deck.length)}` as never,
+      zone: { ...base.zone, index: p1State.deck.length },
+    });
+  }
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "orderCards");
+  const decision = must(opened.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "orderCards");
+  const first = must(decision.cards[0], "first looked card");
+  const second = must(decision.cards[1], "second looked card");
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "topBottomPlacement",
+      topIds: [],
+      bottomIds: [String(second.instanceId), String(first.instanceId)],
+    },
   });
 
   assert.equal(resolved.errors, undefined);

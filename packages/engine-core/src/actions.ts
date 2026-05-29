@@ -944,7 +944,9 @@ const applyRespondToDecision = (
     action,
   );
   if (topDeckPlacementResult !== null) {
-    return continueRuntimeAfterDecisionResult(state, topDeckPlacementResult);
+    return continueAttackTimingDecisionResultIfReady(
+      continueRuntimeAfterDecisionResult(state, topDeckPlacementResult),
+    );
   }
   if (isTrashFromHandSelectCardsDecision(decision)) {
     const trashResult = applySupportedTrashFromHandChoiceResponse(
