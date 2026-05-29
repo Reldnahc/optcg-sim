@@ -64,21 +64,6 @@ interface HandDragPreview {
   placement: ReorderPlacement;
 }
 
-const captureHandLayoutRects = (
-  rootElement: HTMLElement,
-): Map<string, DOMRect> => {
-  const rects = new Map<string, DOMRect>();
-  for (const element of rootElement.querySelectorAll<HTMLElement>(
-    "[data-hand-layout-id]",
-  )) {
-    const layoutId = element.dataset["handLayoutId"];
-    if (layoutId !== undefined) {
-      rects.set(layoutId, element.getBoundingClientRect());
-    }
-  }
-  return rects;
-};
-
 export const HandRow = ({
   label,
   cards,
@@ -105,7 +90,6 @@ export const HandRow = ({
   const [dragPreview, setDragPreview] = useState<
     HandDragPreview | undefined
   >(undefined);
-  const previousLayoutRectsRef = useRef<Map<string, DOMRect>>(new Map());
 
   useLayoutEffect(() => {
     const rowElement = rowRef.current;
@@ -160,43 +144,6 @@ export const HandRow = ({
     }
   }, [cards, dragPreview]);
 
-  useLayoutEffect(() => {
-    const cardsElement = cardsRef.current;
-    if (cardsElement === null) {
-      return;
-    }
-    const previousRects = previousLayoutRectsRef.current;
-    const nextRects = captureHandLayoutRects(cardsElement);
-    for (const element of cardsElement.querySelectorAll<HTMLElement>(
-      "[data-hand-layout-id]",
-    )) {
-      if (element.classList.contains("is-pointer-reorder-dragging")) {
-        continue;
-      }
-      const layoutId = element.dataset["handLayoutId"];
-      if (layoutId === undefined) {
-        continue;
-      }
-      const previousRect = previousRects.get(layoutId);
-      const nextRect = nextRects.get(layoutId);
-      if (previousRect === undefined || nextRect === undefined) {
-        continue;
-      }
-      const deltaX = previousRect.left - nextRect.left;
-      const deltaY = previousRect.top - nextRect.top;
-      if (deltaX === 0 && deltaY === 0) {
-        continue;
-      }
-      element.style.transition = "none";
-      element.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px)`;
-      window.requestAnimationFrame(() => {
-        element.style.transition = "transform 90ms ease";
-        element.style.transform = "";
-      });
-    }
-    previousLayoutRectsRef.current = nextRects;
-  });
-
   const handCardsClassName = [
     "hand-cards",
     `hand-cards-overlap-${overflowDirection}`,
@@ -226,15 +173,10 @@ export const HandRow = ({
           return (
             <Fragment key={instanceId}>
               {placeholderBefore ? (
-                <div
-                  className="hand-drag-placeholder"
-                  data-hand-layout-id={`placeholder:${dragPreview.draggedInstanceId}`}
-                  aria-hidden="true"
-                />
+                <div className="hand-drag-placeholder" aria-hidden="true" />
               ) : null}
               <CardTile
                 card={card}
-                layoutId={`card:${instanceId}`}
                 selected={
                   selectedCardInstanceId === instanceId ||
                   decisionSelectedInstanceIds.includes(instanceId)
@@ -267,13 +209,6 @@ export const HandRow = ({
                         onMoveCard(draggedInstanceId, targetInstanceId, placement);
                       }
                 }
-                onReorderStart={(draggedInstanceId) => {
-                  setDragPreview({
-                    draggedInstanceId,
-                    targetInstanceId: draggedInstanceId,
-                    placement: "before",
-                  });
-                }}
                 onReorderCancel={() => {
                   setDragPreview(undefined);
                 }}
@@ -286,11 +221,7 @@ export const HandRow = ({
                 }
               />
               {placeholderAfter ? (
-                <div
-                  className="hand-drag-placeholder"
-                  data-hand-layout-id={`placeholder:${dragPreview.draggedInstanceId}`}
-                  aria-hidden="true"
-                />
+                <div className="hand-drag-placeholder" aria-hidden="true" />
               ) : null}
             </Fragment>
           );

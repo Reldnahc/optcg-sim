@@ -180,8 +180,6 @@ describe("hand layout", () => {
 
     assert.match(source, /const pointerReorderDragThreshold = 2;/u);
     assert.match(source, /const moveCardNearPointer =/u);
-    assert.match(source, /onReorderStart\?\.\(String\(card\.instanceId\)\);/u);
-    assert.match(source, /pointerDrag !== undefined/u);
     assert.match(
       source,
       /onPreviewMoveNear\?\.\(draggedInstanceId, targetInstanceId, placement\);/u,
@@ -202,7 +200,6 @@ describe("hand layout", () => {
 
   test("hand cards animate around a placeholder while the dragged card stays direct", async () => {
     const styles = await readFile(cardStylesPath, "utf8");
-    const source = await readFile(join(sourceDirectory, "HandRow.tsx"), "utf8");
 
     assert.match(
       styles,
@@ -210,10 +207,6 @@ describe("hand layout", () => {
     );
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*height:\s*100%;/u);
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*transition:/u);
-    assert.match(source, /data-hand-layout-id/u);
-    assert.match(source, /previousLayoutRectsRef/u);
-    assert.match(source, /requestAnimationFrame/u);
-    assert.match(source, /placement:\s*"before"/u);
     assert.match(
       styles,
       /\.card-tile-shell\.is-pointer-reorder-dragging\s*\{[^}]*transition:\s*none;/u,
