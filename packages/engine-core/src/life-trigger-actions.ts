@@ -77,6 +77,13 @@ const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
   ) {
     return true;
   }
+  if (
+    effect.type === "playSource" &&
+    effect.source.type === "triggerCard" &&
+    effect.ignoreCost === true
+  ) {
+    return true;
+  }
   if (effect.type === "draw") {
     return (
       Number.isInteger(effect.count) &&

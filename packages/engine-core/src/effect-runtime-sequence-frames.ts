@@ -87,6 +87,7 @@ import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "./once-per-turn.js";
+import { applyRuntimePlaySource } from "./play-card.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -1612,6 +1613,40 @@ const continueNoDecisionSegments = (
       }
       nextState = played.state;
       nextLedgers = played.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "playSource") {
+      const playSource = segment.effect;
+      if (
+        playSource.source.type !== "triggerCard" ||
+        playSource.ignoreCost !== true
+      ) {
+        return { ok: false };
+      }
+      const played = applyRuntimePlaySource({
+        state: nextState,
+        entry,
+        enterRested: playSource.enterRested === true,
+        ignoreCost: true,
+      });
+      if (played.errors !== undefined || played.state.pendingDecision) {
+        return { ok: false };
+      }
+      nextState = played.state;
+      nextLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [ledgerKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: true,
+            selectedCards: [entry.source],
+          },
+        },
+      };
+      events.push(...played.events);
       continue;
     }
     if (segment.effect.type === "moveSelected") {

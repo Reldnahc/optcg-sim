@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type {
   DecisionId,
   Effect,
@@ -68,6 +69,7 @@ import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "./once-per-turn.js";
+import { applyRuntimePlaySource } from "./play-card.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 export type QueueEffectResolvedCustomTriggers = (
   state: GameState,
@@ -270,6 +272,29 @@ export const createEffectRuntimeQueueResults = (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
       !isSupportedQueuedTrashFromHandEffect(match)
+    ) {
+      return undefined;
+    }
+    return match.effect;
+  };
+
+  const resolveQueuedPlaySourceEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "playSource" }> | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      match.category !== "auto" ||
+      match.optional === true ||
+      match.oncePerTurn === true ||
+      match.cost !== undefined ||
+      match.conditionTiming !== undefined ||
+      match.failurePolicy !== undefined ||
+      match.effect.type !== "playSource" ||
+      match.effect.source.type !== "triggerCard" ||
+      match.effect.ignoreCost !== true
     ) {
       return undefined;
     }
@@ -657,6 +682,10 @@ export const createEffectRuntimeQueueResults = (
           : unsupportedEffectQueueResult(originalState);
       }
       const moveCardsEffect = resolveMoveCardsEffect(queuedEffect, selected);
+      const playSourceEffect = resolveQueuedPlaySourceEffect(
+        nextState,
+        selected,
+      );
       const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
       const queuedContinuousEffect = resolveQueuedContinuousEffect(
         nextState,
@@ -710,6 +739,7 @@ export const createEffectRuntimeQueueResults = (
         if (
           drawEffect === undefined &&
           moveCardsEffect === undefined &&
+          playSourceEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
           return unsupportedEffectQueueResult(originalState);
@@ -760,6 +790,23 @@ export const createEffectRuntimeQueueResults = (
           moveCardsEffect,
         );
         if (resolution.errors !== undefined) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (playSourceEffect !== undefined) {
+        const resolution = applyRuntimePlaySource({
+          state: nextState,
+          entry: resolvingEntry,
+          enterRested: playSourceEffect.enterRested === true,
+          ignoreCost: true,
+        });
+        if (
+          resolution.errors !== undefined ||
+          resolution.state.pendingDecision
+        ) {
           return unsupportedEffectQueueResult(originalState);
         }
         nextState = resolution.state;

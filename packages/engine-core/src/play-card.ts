@@ -1,7 +1,9 @@
+/* eslint-disable max-lines */
 import type {
   Action,
   CardInstance,
   CausalityRef,
+  EffectQueueEntry,
   EngineError,
   EngineEvent,
   EngineResult,
@@ -417,7 +419,7 @@ const placePlayedCardResult = (params: {
   player: GameState["players"][PlayerId];
   sourceIndex: number;
   sourceCard: CardInstance;
-  sourceZone?: "hand" | "trash" | "deck";
+  sourceZone?: "hand" | "trash" | "deck" | "noZone";
   supported: SupportedPlayMetadata;
   costArea: CardInstance[];
   selectedOverflowCharacterIndex?: number;
@@ -710,6 +712,15 @@ const placePlayedCardResult = (params: {
     seq: toStateSeq(state.seq + 1),
     actionSeq: incrementActionSeq ? state.actionSeq + 1 : state.actionSeq,
     players: { ...state.players, [playerId]: nextPlayer },
+    revealedCards:
+      sourceZone === "noZone"
+        ? state.revealedCards.filter(
+            (record) =>
+              !record.cards.some(
+                (card) => card.instanceId === sourceCard.instanceId,
+              ),
+          )
+        : state.revealedCards,
   };
   delete nextStateBase.pendingDecision;
   const nextState = applyRuleProcessingCheckpoint({
@@ -820,6 +831,67 @@ export const applyRuntimePlaySelected = (params: {
           },
         }
       : {}),
+  });
+};
+
+export const applyRuntimePlaySource = (params: {
+  state: GameState;
+  entry: EffectQueueEntry;
+  enterRested: boolean;
+  ignoreCost: boolean;
+}): EngineResult => {
+  const { state, entry, enterRested, ignoreCost } = params;
+  const player = state.players[entry.controllerId];
+  if (player === undefined) {
+    return illegalAction(state, "playSource requires an existing player.");
+  }
+  const sourceCard: CardInstance = {
+    instanceId: entry.source.instanceId,
+    cardId: entry.source.cardId,
+    owner: entry.sourceSnapshot.ownerId,
+    controller: entry.sourceSnapshot.controllerId,
+    attachedDon: [],
+    zone: entry.source.zone ?? entry.sourceSnapshot.zone,
+  };
+  const supported = getSupportedPlayMetadata(state, sourceCard);
+  if (supported === null) {
+    return illegalAction(state, "playSource card is unsupported.");
+  }
+  if (supported.category !== "character" && supported.category !== "stage") {
+    return illegalAction(
+      state,
+      "playSource supports only Character and Stage cards.",
+    );
+  }
+  if (supported.category === "character" && player.characters.length >= 5) {
+    return illegalAction(
+      state,
+      "playSource character overflow is unsupported.",
+    );
+  }
+  if (
+    !ignoreCost &&
+    getActiveDonCount(player.costArea) <
+      getEffectivePlayCost(state, entry.controllerId, sourceCard, supported)
+  ) {
+    return illegalAction(state, "playSource requires enough active DON!!.");
+  }
+  if (!canResolveDestinationConflict(player, supported.category)) {
+    return illegalAction(state, "playSource destination conflict is invalid.");
+  }
+  return placePlayedCardResult({
+    state,
+    events: [],
+    playerId: entry.controllerId,
+    player,
+    sourceIndex: -1,
+    sourceCard,
+    sourceZone: "noZone",
+    supported,
+    costArea: player.costArea,
+    enterRested,
+    resolveOnPlayRuntime: false,
+    incrementActionSeq: false,
   });
 };
 

@@ -30,6 +30,7 @@ type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
+type PlaySourceEffect = Extract<Effect, { type: "playSource" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
 type BounceEffect = Extract<Effect, { type: "bounce" }> & {
@@ -92,6 +93,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SelectCardsEffect
     | MoveSelectedEffect
     | AttachSelectedDonEffect
+    | PlaySourceEffect
     | RevealTopEffect
     | SelectFromSetEffect
     | BounceEffect
@@ -449,6 +451,13 @@ const isSupportedAttachSelectedDonSegment = (
   effect.target.controller === undefined &&
   effect.target.binding.family === "selectedTargets" &&
   isSupportedAttachDonTargetFilter(effect.target.filter);
+
+const isSupportedPlaySourceSegment = (
+  effect: SequenceSegmentEffect,
+): effect is PlaySourceEffect =>
+  effect.type === "playSource" &&
+  effect.source.type === "triggerCard" &&
+  effect.ignoreCost === true;
 
 const isSupportedAttachDonTargetFilter = (
   filter: CardFilter | undefined,
@@ -834,6 +843,9 @@ export const toSupportedSequenceBlock = (
             String(segment.effect.selection).startsWith("trashSelection:") ||
             String(segment.effect.selection).startsWith("revealSelection:"))
         );
+      }
+      if (isSupportedPlaySourceSegment(segment.effect)) {
+        return true;
       }
       if (isSupportedKoSegment(segment.effect)) {
         return true;

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
@@ -754,6 +755,88 @@ describe("card effect event parser", () => {
         "instruction:activateReferencedEffect",
         "target:triggerCard",
         "reference:eventMain",
+      ]),
+    );
+  });
+
+  it("parses life Trigger play-this-card as source-card play primitive", () => {
+    const result = parseCardEffectLine(
+      "[Trigger] If your Leader is [Monkey.D.Luffy], play this card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "trigger" },
+        sourcePresencePolicy: "noSourceRequired",
+        condition: {
+          type: "hasCardInZone",
+          zone: "leaderArea",
+          player: "self",
+          filter: {
+            categories: ["leader"],
+            names: ["Monkey.D.Luffy"],
+          },
+        },
+        effect: {
+          type: "playSource",
+          source: { type: "triggerCard" },
+          ignoreCost: true,
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:lifeTrigger",
+        "condition:leaderIdentity",
+        "filter:name",
+        "instruction:playSource",
+        "target:triggerCard",
+      ]),
+    );
+  });
+
+  it("parses optional-cost life Trigger play-this-card compositionally", () => {
+    const result = parseCardEffectLine(
+      "[Trigger] You may trash 1 card from your hand: Play this card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "trigger" },
+        sourcePresencePolicy: "noSourceRequired",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 1,
+                  chooser: "self",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "playSource",
+                source: { type: "triggerCard" },
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:lifeTrigger",
+        "composition:optionalCostedEffect",
+        "cost:trashFromHand",
+        "instruction:playSource",
+        "target:triggerCard",
       ]),
     );
   });

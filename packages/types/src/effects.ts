@@ -516,6 +516,13 @@ export interface PlaySelectedEffect {
   ignoreCost?: boolean;
 }
 
+export interface PlaySourceEffect {
+  type: "playSource";
+  source: Target;
+  enterRested?: boolean;
+  ignoreCost?: boolean;
+}
+
 export type PlayHandSelectedEffect = PlaySelectedEffect & {
   selection: HandSelectionId;
 };
@@ -632,6 +639,7 @@ export type Effect =
       costModifier?: number;
     }
   | PlaySelectedEffect
+  | PlaySourceEffect
   | {
       type: "returnUnselectedToDeck";
       set: SelectionSetId;

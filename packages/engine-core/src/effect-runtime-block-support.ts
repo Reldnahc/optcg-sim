@@ -52,6 +52,13 @@ const isSupportedActivateReferencedEffectBody = (
   effect.source.type === "triggerCard" &&
   effect.trigger.type === "main";
 
+const isSupportedPlaySourceBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "playSource" }> =>
+  effect.type === "playSource" &&
+  effect.source.type === "triggerCard" &&
+  effect.ignoreCost === true;
+
 const isSupportedTrashFromHandBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "trashFromHand" }> =>
@@ -150,6 +157,7 @@ const isSupportedNonOptionalBody = (
   isSupportedSearchBody(block) ||
   isSupportedContinuousBody(block) ||
   isSupportedActivateReferencedEffectBody(block.effect) ||
+  isSupportedPlaySourceBody(block.effect) ||
   isSupportedTargetChoiceBody(block) ||
   isSupportedSequenceBody(block, adapter);
 

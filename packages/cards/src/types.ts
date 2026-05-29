@@ -69,6 +69,7 @@ export type PrimitiveEvidence =
   | "instruction:search"
   | "instruction:placeTopDeckCards"
   | "instruction:playSelected"
+  | "instruction:playSource"
   | "instruction:moveSelected"
   | "instruction:revealTop"
   | "instruction:selectFromSet"

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -743,6 +744,141 @@ test("activated life trigger emits public reveal and queued runtime events befor
   );
   assert.equal(result.state.effectQueue.length, 0);
   assert.equal(result.state.revealedCards.length, 0);
+});
+
+test("activated life trigger can play its source card from the trigger zone", () => {
+  const lifeCardId = toCardId("trigger-play-this-card");
+  const definition = supportedLifeTriggerDefinition(
+    lifeCardId,
+    {
+      type: "playSource",
+      source: { type: "triggerCard" },
+      ignoreCost: true,
+    },
+    "noSourceRequired",
+  );
+  const { state, lifeInstanceId } = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-play-this-card",
+    triggerText: "[Trigger] Play this card.",
+    definition,
+  });
+  must(state.players[p2], "p2").characters = [];
+  state.cardManifest.cards[lifeCardId] = {
+    ...must(state.cardManifest.cards[lifeCardId], "trigger source metadata"),
+    cost: 1,
+  };
+  const decision = must(state.pendingDecision, "life trigger decision");
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  const p2State = must(result.state.players[p2], "p2");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    p2State.characters.some(
+      (character) => character.instanceId === lifeInstanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    p2State.trash.some((card) => card.instanceId === lifeInstanceId),
+    false,
+  );
+  assert.equal(result.state.revealedCards.length, 0);
+  assert.deepEqual(
+    result.events
+      .map((event) => event.type)
+      .filter(
+        (type) =>
+          type === "cardMoved" ||
+          type === "cardPlayed" ||
+          type === "cardTrashed",
+      ),
+    ["cardMoved", "cardPlayed"],
+  );
+});
+
+test("activated life trigger can pay a sequence cost before playing its source card", () => {
+  const lifeCardId = toCardId("trigger-pay-play-this-card");
+  const definition = supportedLifeTriggerDefinition(
+    lifeCardId,
+    {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "trashFromHand",
+              count: 1,
+              chooser: "self",
+              optional: true,
+            },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: {
+            type: "playSource",
+            source: { type: "triggerCard" },
+            ignoreCost: true,
+          },
+        },
+      ],
+    },
+    "noSourceRequired",
+  );
+  const { state, lifeInstanceId } = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-pay-play-this-card",
+    triggerText:
+      "[Trigger] You may trash 1 card from your hand: Play this card.",
+    definition,
+  });
+  must(state.players[p2], "p2").characters = [];
+  state.cardManifest.cards[lifeCardId] = {
+    ...must(state.cardManifest.cards[lifeCardId], "trigger source metadata"),
+    cost: 1,
+  };
+  const decision = must(state.pendingDecision, "life trigger decision");
+
+  const activated = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  const payCost = must(activated.state.pendingDecision, "pay cost decision");
+  assert.equal(payCost.type, "payCost");
+  const trashed = must(
+    must(activated.state.players[p2], "p2 after activation").hand[0],
+    "payment card",
+  );
+  const paid = applyAction(activated.state, {
+    type: "respondToDecision",
+    decisionId: payCost.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [trashed.instanceId],
+    },
+  });
+  const p2State = must(paid.state.players[p2], "p2 after payment");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(
+    p2State.characters.some(
+      (character) => character.instanceId === lifeInstanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    p2State.trash.some((card) => card.instanceId === trashed.instanceId),
+    true,
+  );
+  assert.equal(paid.state.revealedCards.length, 0);
 });
 
 test("activated life trigger reveal is public while effect queue internals stay hidden from player views", () => {
