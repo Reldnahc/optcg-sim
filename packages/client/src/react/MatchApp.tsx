@@ -36,9 +36,39 @@ interface RevealWindowState {
   minimized: Set<string>;
 }
 
+interface FloatingWindowRectState {
+  scope?: string | undefined;
+  rects: Record<string, WindowRect>;
+  openWindowIds: Set<string>;
+}
+
 const emptyRevealWindowState: RevealWindowState = {
   dismissed: new Set(),
   minimized: new Set(),
+};
+
+const emptyFloatingWindowRectState: FloatingWindowRectState = {
+  rects: {},
+  openWindowIds: new Set(),
+};
+
+const cardPreviewWindowKey = "card-preview";
+const actionLogWindowKey = "action-log";
+const collectionWindowKey = (title: string): string => `collection:${title}`;
+const revealWindowKey = (revealId: string): string => `reveal:${revealId}`;
+
+const collectionModalFromWindowKey = (
+  key: string,
+  board: BoardViewModel,
+): CollectionModalModel | undefined => {
+  switch (key) {
+    case "collection:Player trash":
+      return { title: "Player trash", cards: board.self.trash };
+    case "collection:Opponent trash":
+      return { title: "Opponent trash", cards: board.opponent.trash };
+    default:
+      return undefined;
+  }
 };
 
 const orderCardsByInstanceIds = (
@@ -65,12 +95,11 @@ export const MatchApp = (): React.JSX.Element => {
     CollectionModalModel | undefined
   >(undefined);
   const [collectionMinimized, setCollectionMinimized] = useState(false);
-  const [collectionWindowRects, setCollectionWindowRects] = useState<
-    Record<string, WindowRect>
-  >({});
   const [revealWindowState, setRevealWindowState] = useState<RevealWindowState>(
     () => emptyRevealWindowState,
   );
+  const [floatingWindowRects, setFloatingWindowRects] =
+    useState<FloatingWindowRectState>(() => emptyFloatingWindowRectState);
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
@@ -111,12 +140,18 @@ export const MatchApp = (): React.JSX.Element => {
   useEffect(() => {
     if (matchScope === undefined || revealWindowStateStore === undefined) {
       setRevealWindowState(emptyRevealWindowState);
+      setFloatingWindowRects(emptyFloatingWindowRectState);
       return;
     }
     setRevealWindowState({
       scope: matchScope,
       dismissed: revealWindowStateStore.loadDismissedRevealIds(),
       minimized: revealWindowStateStore.loadMinimizedRevealIds(),
+    });
+    setFloatingWindowRects({
+      scope: matchScope,
+      rects: revealWindowStateStore.loadWindowRects(),
+      openWindowIds: revealWindowStateStore.loadOpenWindowIds(),
     });
   }, [matchScope, revealWindowStateStore]);
   const updateRevealWindowState = (
@@ -143,6 +178,82 @@ export const MatchApp = (): React.JSX.Element => {
       ? clientState
       : undefined;
   const currentPlayerId = client.currentPlayerId;
+  const activeFloatingWindowRects =
+    matchScope !== undefined && floatingWindowRects.scope === matchScope
+      ? floatingWindowRects.rects
+      : {};
+  const activeOpenWindowIds =
+    matchScope !== undefined && floatingWindowRects.scope === matchScope
+      ? floatingWindowRects.openWindowIds
+      : new Set<string>();
+  const updateFloatingWindowRect = (key: string, rect: WindowRect): void => {
+    if (matchScope === undefined) {
+      return;
+    }
+    setFloatingWindowRects((current) => {
+      const base =
+        current.scope === matchScope
+          ? current
+          : { scope: matchScope, rects: {}, openWindowIds: new Set<string>() };
+      const next = {
+        scope: matchScope,
+        rects: { ...base.rects, [key]: rect },
+        openWindowIds: new Set(base.openWindowIds),
+      };
+      revealWindowStateStore?.saveWindowRects(next.rects);
+      return next;
+    });
+  };
+  const updateFloatingWindowOpen = (key: string, open: boolean): void => {
+    if (matchScope === undefined) {
+      return;
+    }
+    setFloatingWindowRects((current) => {
+      const base =
+        current.scope === matchScope
+          ? current
+          : { scope: matchScope, rects: {}, openWindowIds: new Set<string>() };
+      const openWindowIds = new Set(base.openWindowIds);
+      if (open) {
+        openWindowIds.add(key);
+      } else {
+        openWindowIds.delete(key);
+      }
+      const next = {
+        scope: matchScope,
+        rects: base.rects,
+        openWindowIds,
+      };
+      revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
+      return next;
+    });
+  };
+  const updateCollectionWindowOpen = (key: string, open: boolean): void => {
+    if (matchScope === undefined) {
+      return;
+    }
+    setFloatingWindowRects((current) => {
+      const base =
+        current.scope === matchScope
+          ? current
+          : { scope: matchScope, rects: {}, openWindowIds: new Set<string>() };
+      const openWindowIds = new Set(
+        [...base.openWindowIds].filter(
+          (windowId) => !windowId.startsWith("collection:"),
+        ),
+      );
+      if (open) {
+        openWindowIds.add(key);
+      }
+      const next = {
+        scope: matchScope,
+        rects: base.rects,
+        openWindowIds,
+      };
+      revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
+      return next;
+    });
+  };
   const handOrderKey = `${matchScope ?? "local"}:${String(
     currentPlayerId ?? "unknown",
   )}`;
@@ -351,14 +462,30 @@ export const MatchApp = (): React.JSX.Element => {
               : { orderHint: cardCostSelection.orderHint }),
           },
         };
+  const persistedCollectionModal =
+    displayBoard === undefined
+      ? undefined
+      : [...activeOpenWindowIds]
+          .flatMap((key) => {
+            const modal = collectionModalFromWindowKey(key, displayBoard);
+            return modal === undefined ? [] : [modal];
+          })
+          .sort((left, right) => left.title.localeCompare(right.title))[0];
   const renderedCollectionModal =
-    cardCostCollectionModal ?? decisionCollectionModal ?? collectionModal;
+    cardCostCollectionModal ??
+    decisionCollectionModal ??
+    collectionModal ??
+    persistedCollectionModal;
   const renderedCollectionKey = renderedCollectionModal?.title;
   const collectionViewerKey =
     cardCostCollectionModal === undefined &&
     decisionCollectionModal === undefined
-      ? collectionModal?.title
+      ? renderedCollectionModal?.title
       : undefined;
+  const collectionViewerWindowKey =
+    collectionViewerKey === undefined
+      ? undefined
+      : collectionWindowKey(collectionViewerKey);
   const collectionPresentation =
     collectionViewerKey === undefined ? "modal" : "window";
   useEffect(() => {
@@ -406,7 +533,12 @@ export const MatchApp = (): React.JSX.Element => {
           }),
     [matchState, playerSnapshot],
   );
-
+  useEffect(() => {
+    if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
+      return;
+    }
+    setActionLogOpen(activeOpenWindowIds.has(actionLogWindowKey));
+  }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope]);
   return (
     <main className="match-app">
       {displayBoard === undefined ? (
@@ -431,13 +563,11 @@ export const MatchApp = (): React.JSX.Element => {
           onPreviewCard={previewHoveredCard}
           onMoveHandCard={moveHandCard}
           onViewCollection={(title, cards) => {
-            setCollectionModal((current) => {
-              if (current?.title === title) {
-                return undefined;
-              }
-              setCollectionMinimized(false);
-              return { title, cards };
-            });
+            const key = collectionWindowKey(title);
+            const nextOpen = renderedCollectionModal?.title !== title;
+            setCollectionMinimized(false);
+            setCollectionModal(nextOpen ? { title, cards } : undefined);
+            updateCollectionWindowOpen(key, nextOpen);
           }}
           onBackgroundClick={() => {
             client.selectCard(undefined);
@@ -470,7 +600,9 @@ export const MatchApp = (): React.JSX.Element => {
           <ActionLogToggle
             open={actionLogOpen}
             onToggle={() => {
-              setActionLogOpen((current) => !current);
+              const nextOpen = !actionLogOpen;
+              setActionLogOpen(nextOpen);
+              updateFloatingWindowOpen(actionLogWindowKey, nextOpen);
               setActionLogMinimized(false);
             }}
           />
@@ -501,7 +633,7 @@ export const MatchApp = (): React.JSX.Element => {
         onOption={client.setDecisionOptionValue}
         onActionOption={client.setDecisionActionOptionValue}
         onMoveOrderedCard={client.moveDecisionCard}
-        onToggleBottomPlacement={client.toggleDecisionCardBottomPlacement}
+        onPlacementDestination={client.setDecisionPlacementDestination}
         onConfirm={() => {
           void client.confirmDecision();
         }}
@@ -512,21 +644,18 @@ export const MatchApp = (): React.JSX.Element => {
         disabled={client.state.actionInFlight}
         minimized={collectionMinimized}
         initialRect={
-          collectionViewerKey === undefined
+          collectionViewerWindowKey === undefined
             ? undefined
-            : collectionWindowRects[collectionViewerKey]
+            : activeFloatingWindowRects[collectionViewerWindowKey]
         }
         onToggleMinimized={() => {
           setCollectionMinimized((current) => !current);
         }}
         onRectChange={
-          collectionViewerKey === undefined
+          collectionViewerWindowKey === undefined
             ? undefined
             : (rect) => {
-                setCollectionWindowRects((current) => ({
-                  ...current,
-                  [collectionViewerKey]: rect,
-                }));
+                updateFloatingWindowRect(collectionViewerWindowKey, rect);
               }
         }
         onToggleCard={(instanceId) => {
@@ -536,22 +665,28 @@ export const MatchApp = (): React.JSX.Element => {
           void client.confirmDecision();
         }}
         onPreviewCard={previewHoveredCard}
-        onClose={
-          cardCostCollectionModal === undefined &&
-          decisionCollectionModal === undefined
-            ? () => {
+          onClose={
+            cardCostCollectionModal === undefined &&
+            decisionCollectionModal === undefined
+              ? () => {
                 if (collectionModal !== undefined) {
                   setCollectionModal(undefined);
                 }
+                if (collectionViewerWindowKey !== undefined) {
+                  updateCollectionWindowOpen(collectionViewerWindowKey, false);
+                }
               }
             : undefined
-        }
+          }
       />
       {opponentRevealWindows.map((revealWindow) => (
         <RevealWindowHost
           key={revealWindow.revealId}
           model={revealWindow.model}
-          initialRect={revealWindow.initialRect}
+          initialRect={
+            activeFloatingWindowRects[revealWindowKey(revealWindow.revealId)] ??
+            revealWindow.initialRect
+          }
           minimized={activeRevealWindowState.minimized.has(
             revealWindow.revealId,
           )}
@@ -573,18 +708,26 @@ export const MatchApp = (): React.JSX.Element => {
               return state;
             });
           }}
+          onRectChange={(rect) => {
+            updateFloatingWindowRect(revealWindowKey(revealWindow.revealId), rect);
+          }}
         />
       ))}
       {actionLogOpen ? (
         <ActionLogWindow
           entries={actionLogEntries}
           minimized={actionLogMinimized}
+          initialRect={activeFloatingWindowRects[actionLogWindowKey]}
           onToggleMinimized={() => {
             setActionLogMinimized((current) => !current);
           }}
           onClose={() => {
             setActionLogOpen(false);
             setActionLogMinimized(false);
+            updateFloatingWindowOpen(actionLogWindowKey, false);
+          }}
+          onRectChange={(rect) => {
+            updateFloatingWindowRect(actionLogWindowKey, rect);
           }}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
@@ -597,10 +740,14 @@ export const MatchApp = (): React.JSX.Element => {
       <CardPreviewWindow
         card={previewCard}
         minimized={previewMinimized}
+        initialRect={activeFloatingWindowRects[cardPreviewWindowKey]}
         onToggleMinimized={() => {
           setPreviewMinimized((current) => !current);
         }}
         onClose={closeCardPreview}
+        onRectChange={(rect) => {
+          updateFloatingWindowRect(cardPreviewWindowKey, rect);
+        }}
       />
     </main>
   );

@@ -138,6 +138,68 @@ const parserNestedAttachDonSequence = (): Extract<
   };
 };
 
+const leaderOrCharacterAttachDonSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const flat = attachDonSequence();
+  return {
+    ...flat,
+    effects: flat.effects.map((segment) => {
+      if (segment.id === "select-character") {
+        return {
+          ...segment,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["leaderArea", "characterArea"] as (
+                | "leaderArea"
+                | "characterArea"
+              )[],
+              filter: {
+                categories: ["leader", "character"],
+                typesAny: ["The Seven Warlords of the Sea"],
+              },
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        };
+      }
+      if (segment.id === "attach-selected-don") {
+        return {
+          ...segment,
+          effect: {
+            type: "attachSelectedDon",
+            selection: "donSelection:attach" as SelectionId,
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: "targetSelection:attach-don",
+              },
+              zone: "characterArea",
+              player: "self",
+              filter: {
+                categories: ["leader", "character"],
+                typesAny: ["The Seven Warlords of the Sea"],
+              },
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+          },
+        };
+      }
+      return segment;
+    }),
+  };
+};
+
 const setupDefinition = (
   state: GameState,
   effect: Effect,
@@ -284,6 +346,60 @@ test("activate-main DON sequence checks turn count, adds active/rested DON, and 
   assert.equal(attached.errors, undefined);
   assert.deepEqual(
     afterTarget?.attachedDon,
+    selectedDon.map((card) => card.instanceId),
+  );
+});
+
+test("DON attachment sequence can target the controller's typed leader", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  setupDefinition(state, leaderOrCharacterAttachDonSequence());
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    support: must(
+      state.cardManifest.cards[p1State.leader.cardId]?.support,
+      "leader support",
+    ),
+  });
+  must(
+    state.cardManifest.cards[p1State.leader.cardId],
+    "leader metadata",
+  ).types = ["The Seven Warlords of the Sea"];
+
+  const firstPause = processEffectRuntime(state);
+  const addedActive = chooseQuantity(firstPause.state, 1);
+  const addedRested = chooseQuantity(addedActive.state, 1);
+  const selectDon = must(addedRested.state.pendingDecision, "select DON");
+  assert.equal(selectDon.type, "selectCards");
+  const selectedDon = [must(selectDon.candidates[0], "selected DON").card];
+  const selected = applyAction(addedRested.state, {
+    type: "respondToDecision",
+    decisionId: selectDon.id,
+    response: { type: "cards", cards: selectedDon },
+  });
+  assert.equal(selected.errors, undefined);
+  const selectTarget = must(selected.state.pendingDecision, "select target");
+  assert.equal(selectTarget.type, "selectTargets");
+  const leaderTarget = must(
+    selectTarget.candidates.find(
+      (candidate) => candidate.card.zone?.zone === "leaderArea",
+    ),
+    "leader target",
+  );
+
+  const attached = applyAction(selected.state, {
+    type: "respondToDecision",
+    decisionId: selectTarget.id,
+    response: {
+      type: "targets",
+      targets: [leaderTarget.card],
+    },
+  });
+
+  assert.equal(attached.errors, undefined);
+  assert.deepEqual(
+    must(attached.state.players[p1], "after p1").leader.attachedDon,
     selectedDon.map((card) => card.instanceId),
   );
 });

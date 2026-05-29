@@ -50,7 +50,7 @@ test("selectCards modal renders card images and disables nonselectable choices",
       onOption: () => undefined,
       onActionOption: () => undefined,
       onMoveOrderedCard: () => undefined,
-      onToggleBottomPlacement: () => undefined,
+      onPlacementDestination: () => undefined,
       onConfirm: () => undefined,
     }),
   );
@@ -82,7 +82,7 @@ test("chooseQuantity modal renders a range slider over the legal range", () => {
       onOption: () => undefined,
       onActionOption: () => undefined,
       onMoveOrderedCard: () => undefined,
-      onToggleBottomPlacement: () => undefined,
+      onPlacementDestination: () => undefined,
       onConfirm: () => undefined,
     }),
   );
@@ -103,7 +103,7 @@ test("return-to-deck order modal renders card images with deck order badges", ()
     destination: "deck",
     canConfirm: true,
     orderedInstanceIds: ["top" as InstanceId, "bottom" as InstanceId],
-    bottomInstanceIds: [],
+    placementDestination: "top",
     cards: [cardRef("top"), cardRef("bottom")],
   };
 
@@ -121,7 +121,7 @@ test("return-to-deck order modal renders card images with deck order badges", ()
       onOption: () => undefined,
       onActionOption: () => undefined,
       onMoveOrderedCard: () => undefined,
-      onToggleBottomPlacement: () => undefined,
+      onPlacementDestination: () => undefined,
       onConfirm: () => undefined,
     }),
   );
@@ -136,6 +136,74 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   assert.match(markup, /is-pointer-reorderable/u);
   assert.doesNotMatch(markup, /draggable=/u);
   assert.doesNotMatch(markup, /decision-order-row/u);
+});
+
+test("top-or-bottom order modal uses one destination control for all ordered cards", () => {
+  const model: DecisionModalModel = {
+    kind: "orderCards",
+    decisionId: "decision-top-or-bottom" as never,
+    prompt: "Place cards at the top or bottom of your deck.",
+    destination: "deck",
+    placement: { type: "topOrBottom" },
+    canConfirm: true,
+    orderedInstanceIds: ["top" as InstanceId, "bottom" as InstanceId],
+    placementDestination: "bottom",
+    cards: [cardRef("top"), cardRef("bottom")],
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      cardDisplay: (card: CardRef) => ({
+        name: String(card.cardId),
+        imageUrl: `https://cdn.example/${String(card.cardId)}.png`,
+      }),
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /decision-placement-choice/u);
+  assert.match(markup, />Top<\/button>/u);
+  assert.match(markup, />Bottom<\/button>/u);
+  assert.doesNotMatch(markup, /decision-placement-toggle/u);
+});
+
+test("fixed top order modal has no top-or-bottom destination control", () => {
+  const model: DecisionModalModel = {
+    kind: "orderCards",
+    decisionId: "decision-fixed-top" as never,
+    prompt: "Place cards at the top of your deck.",
+    destination: "deck",
+    canConfirm: true,
+    orderedInstanceIds: ["top" as InstanceId, "bottom" as InstanceId],
+    placementDestination: "top",
+    cards: [cardRef("top"), cardRef("bottom")],
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.doesNotMatch(markup, /decision-placement-choice/u);
 });
 
 test("return-to-deck order modal shares CardTile reorder instead of custom drag", async () => {
@@ -202,7 +270,7 @@ test("trigger order modal presents source cards like a single-card selection", (
       onOption: () => undefined,
       onActionOption: () => undefined,
       onMoveOrderedCard: () => undefined,
-      onToggleBottomPlacement: () => undefined,
+      onPlacementDestination: () => undefined,
       onConfirm: () => undefined,
     }),
   );

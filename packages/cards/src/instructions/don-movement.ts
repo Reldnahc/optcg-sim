@@ -1,7 +1,8 @@
-import type { SelectionId } from "@optcg/types";
+import type { CardFilter, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import type { InstructionParser } from "../types.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const donAttachSelection = "donSelection:attach" as SelectionId;
 const donAttachTarget = "targetSelection:attach-don";
@@ -91,15 +92,20 @@ export const parseAddRestedDonFromDonDeckInstruction: InstructionParser = (
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   const match =
-    /^give (?<quantity>up to [1-9]\d*) rested DON!! cards to 1 of your Characters\.?$/i.exec(
+    /^give (?<quantity>up to [1-9]\d*) rested DON!! cards? to 1 of your (?<target>.+)$/i.exec(
       input.text,
     );
   const quantityText = match?.groups?.["quantity"];
-  if (quantityText === undefined) {
+  const targetText = match?.groups?.["target"];
+  if (quantityText === undefined || targetText === undefined) {
     return undefined;
   }
   const quantity = parseUpToCardinality({ text: quantityText });
   if (quantity === undefined || quantity.rest.length > 0) {
+    return undefined;
+  }
+  const target = parseRestedDonAttachmentTarget(targetText);
+  if (target === undefined) {
     return undefined;
   }
 
@@ -132,9 +138,9 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
             request: {
               timing: "onResolution",
               chooser: "self",
-              zone: "characterArea",
               player: "self",
-              filter: { categories: ["character"] },
+              ...target.requestZone,
+              filter: target.filter,
               min: 1,
               max: 1,
               allowFewerIfUnavailable: false,
@@ -154,9 +160,9 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
                 family: "selectedTargets",
                 saveResultAs: donAttachTarget,
               },
-              zone: "characterArea",
+              zone: target.savedTargetZone,
               player: "self",
-              filter: { categories: ["character"] },
+              filter: target.filter,
               visibility: "publicOnly",
               onFailure: "failClosed",
             },
@@ -173,11 +179,53 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
       "zone:costArea",
       "filter:category:don",
       "filter:state:rested",
-      "filter:category:character",
-      "zone:characterArea",
+      ...target.evidence,
       "composition:selectThenApply",
     ],
     rest: "",
+  };
+};
+
+const parseRestedDonAttachmentTarget = (
+  targetText: string,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: CardFilter;
+      readonly requestZone:
+        | { readonly zone: "characterArea" }
+        | { readonly zones: ["leaderArea", "characterArea"] };
+      readonly savedTargetZone: "characterArea";
+    }
+  | undefined => {
+  const parsed = parseCardFilterPredicates({ text: targetText });
+  const rest = parsed?.rest.trim().replace(/\.$/u, "");
+  if (parsed === undefined || rest !== "") {
+    return undefined;
+  }
+  const categories = parsed.filter.categories ?? [];
+  const supportsCharacters = categories.includes("character");
+  const supportsLeaders = categories.includes("leader");
+  if (!supportsCharacters) {
+    return undefined;
+  }
+  const requestZone = supportsLeaders
+    ? {
+        zones: ["leaderArea", "characterArea"] as [
+          "leaderArea",
+          "characterArea",
+        ],
+      }
+    : { zone: "characterArea" as const };
+  const leaderEvidence: PrimitiveEvidence[] = supportsLeaders
+    ? ["zone:leaderArea"]
+    : [];
+
+  return {
+    evidence: [...leaderEvidence, "zone:characterArea", ...parsed.evidence],
+    filter: parsed.filter,
+    requestZone,
+    savedTargetZone: "characterArea",
   };
 };
 

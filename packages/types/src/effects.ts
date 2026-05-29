@@ -471,7 +471,7 @@ export interface SelectCardsEffect {
 
 export interface SelectTargetsEffect {
   type: "selectTargets";
-  request: SelectedTargetsRequest;
+  request: SelectedTargetsRequest | MultiZoneTargetRequest;
 }
 
 export interface SelectTargetsProducerSegment extends SequencedEffect {
@@ -543,7 +543,7 @@ export type Effect =
       type: "placeTopDeckCards";
       player: PlayerRef;
       count: number;
-      destinations: ["top", "bottom"];
+      destination: "top" | "bottom" | "topOrBottom";
       order: "ownerChoice";
     }
   | { type: "lookAtTop"; player: PlayerRef; count: number }

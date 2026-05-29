@@ -275,7 +275,7 @@ it("parses conditional when-attacking top-deck top-or-bottom placement", () => {
         type: "placeTopDeckCards",
         player: "self",
         count: 2,
-        destinations: ["top", "bottom"],
+        destination: "topOrBottom",
         order: "ownerChoice",
       },
     },
@@ -292,6 +292,152 @@ it("parses conditional when-attacking top-deck top-or-bottom placement", () => {
       "zone:deck",
       "position:top",
       "position:bottom",
+      "order:anyOrder",
+    ]),
+  );
+});
+
+it("parses on-play top-deck top-or-bottom placement before rested-DON attachment", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Look at 3 cards from the top of your deck and place them at the top or bottom of your deck in any order. Then, give up to 1 rested DON!! card to 1 of your {The Seven Warlords of the Sea} type Leader or Character cards.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "placeTopDeckCards",
+              player: "self",
+              count: 3,
+              destination: "topOrBottom",
+              order: "ownerChoice",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  id: "select:rested-don",
+                  connector: "always",
+                  saveResultAs: "donSelection:attach",
+                  effect: {
+                    type: "selectCards",
+                    zone: "costArea",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: { categories: ["don"], state: "rested" },
+                    saveAs: "donSelection:attach",
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  id: "select:don-attach-target",
+                  connector: "ifYouDo",
+                  saveResultAs: "targetSelection:attach-don",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      player: "self",
+                      zones: ["leaderArea", "characterArea"],
+                      filter: {
+                        categories: ["leader", "character"],
+                        typesAny: ["The Seven Warlords of the Sea"],
+                      },
+                      min: 1,
+                      max: 1,
+                      allowFewerIfUnavailable: false,
+                      visibility: "public",
+                    },
+                  },
+                },
+                {
+                  id: "attach:selected-don",
+                  connector: "then",
+                  effect: {
+                    type: "attachSelectedDon",
+                    selection: "donSelection:attach",
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "selectedTargets",
+                        saveResultAs: "targetSelection:attach-don",
+                      },
+                      zone: "characterArea",
+                      player: "self",
+                      filter: {
+                        categories: ["leader", "character"],
+                        typesAny: ["The Seven Warlords of the Sea"],
+                      },
+                      visibility: "publicOnly",
+                      onFailure: "failClosed",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:placeTopDeckCards",
+      "look:topDeck",
+      "zone:deck",
+      "position:top",
+      "position:bottom",
+      "order:anyOrder",
+      "instruction:selectCards",
+      "instruction:attachDon",
+      "filter:category:leader",
+      "filter:category:character",
+      "filter:type",
+      "expression:sequence",
+    ]),
+  );
+});
+
+it("parses on-play fixed top-deck placement", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Look at 3 cards from the top of your deck and place them at the top of your deck in any order.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "placeTopDeckCards",
+        player: "self",
+        count: 3,
+        destination: "top",
+        order: "ownerChoice",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:placeTopDeckCards",
+      "look:topDeck",
+      "zone:deck",
+      "position:top",
       "order:anyOrder",
     ]),
   );

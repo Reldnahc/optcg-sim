@@ -266,7 +266,11 @@ const applyAttachSelectedDonSequenceSegment = (params: {
       card.cardId === target.cardId &&
       card.zone.zone === "characterArea",
   );
-  if (targetIndex < 0) {
+  const targetsLeader =
+    player.leader.instanceId === target.instanceId &&
+    player.leader.cardId === target.cardId &&
+    target.zone?.zone === "leaderArea";
+  if (targetIndex < 0 && !targetsLeader) {
     return { ok: false };
   }
   if (
@@ -281,6 +285,12 @@ const applyAttachSelectedDonSequenceSegment = (params: {
   ) {
     return { ok: false };
   }
+  const nextLeader = targetsLeader
+    ? {
+        ...player.leader,
+        attachedDon: [...player.leader.attachedDon, ...selectedIds],
+      }
+    : player.leader;
   const nextCharacters = player.characters.map((card, index) =>
     index === targetIndex
       ? { ...card, attachedDon: [...card.attachedDon, ...selectedIds] }
@@ -301,6 +311,7 @@ const applyAttachSelectedDonSequenceSegment = (params: {
       ...params.state.players,
       [params.entry.controllerId]: {
         ...player,
+        leader: nextLeader,
         characters: nextCharacters,
         costArea: nextCostArea,
       },

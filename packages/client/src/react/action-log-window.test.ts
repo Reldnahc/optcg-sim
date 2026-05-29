@@ -182,4 +182,40 @@ describe("action log window", () => {
     assert.match(markup, /action-log-toggle is-open/u);
     assert.match(markup, /aria-pressed="true"/u);
   });
+
+  test("action log window uses persisted floating window rectangle wiring", async () => {
+    const [matchApp, actionLogWindow] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "ActionLogWindow.tsx"), "utf8"),
+    ]);
+
+    assert.match(matchApp, /const actionLogWindowKey = "action-log";/u);
+    assert.match(
+      matchApp,
+      /initialRect=\{activeFloatingWindowRects\[actionLogWindowKey\]\}/u,
+    );
+    assert.match(
+      matchApp,
+      /updateFloatingWindowRect\(actionLogWindowKey, rect\)/u,
+    );
+    assert.match(actionLogWindow, /initialRect\?: WindowRect/u);
+    assert.match(actionLogWindow, /onRectChange=\{onRectChange\}/u);
+  });
+
+  test("action log window remembers whether it was open", async () => {
+    const matchApp = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(matchApp, /activeOpenWindowIds\.has\(actionLogWindowKey\)/u);
+    assert.match(
+      matchApp,
+      /updateFloatingWindowOpen\(actionLogWindowKey, nextOpen\)/u,
+    );
+    assert.match(
+      matchApp,
+      /updateFloatingWindowOpen\(actionLogWindowKey, false\)/u,
+    );
+  });
 });

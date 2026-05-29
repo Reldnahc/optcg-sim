@@ -21,6 +21,7 @@ type PredicateParser = (
 
 const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
+  parseTypeLeaderOrCharacterPredicate,
   parseTypeCharacterPredicate,
   parseGenericTypeCardPredicate,
   parseTypeOnlyPredicate,
@@ -125,6 +126,40 @@ function parseNextPredicate(text: string, filter: CardFilter) {
 
 function stripLeadingConnector(text: string): string {
   return text.replace(/^(?:with|and)\s+/i, "").trim();
+}
+
+function parseTypeLeaderOrCharacterPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<type>\{[^}]+\}) type Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeText = match?.groups?.["type"];
+  const restText = match?.groups?.["rest"];
+  if (typeText === undefined) {
+    return undefined;
+  }
+
+  const typeName = /^\{(?<name>[^}]+)\}$/.exec(typeText)?.groups?.["name"];
+  if (typeName === undefined || typeName.trim().length === 0) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      categories: ["leader", "character"],
+      typesAny: [typeName.trim()],
+    },
+    evidence: [
+      "filter:type",
+      "filter:category:leader",
+      "filter:category:character",
+    ],
+    rest: restText ?? "",
+  };
 }
 
 function parseTypeCharacterPredicate(

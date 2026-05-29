@@ -1,11 +1,14 @@
 import type { ActionLogCardMention, ActionLogEntry } from "../action-log.js";
 import { FloatingWindow } from "./FloatingWindow.js";
+import type { WindowRect } from "./FloatingWindow.js";
 
 export interface ActionLogWindowProps {
   entries: readonly ActionLogEntry[];
   minimized: boolean;
+  initialRect?: WindowRect | undefined;
   onToggleMinimized: () => void;
   onClose: () => void;
+  onRectChange?: ((rect: WindowRect) => void) | undefined;
   onRequestRollback?: (rollbackPointId: string) => void;
   onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
 }
@@ -65,20 +68,23 @@ const renderActionLogText = (
 export const ActionLogWindow = ({
   entries,
   minimized,
+  initialRect = { x: 960, y: 80, width: 360, height: 520 },
   onToggleMinimized,
   onClose,
+  onRectChange,
   onRequestRollback,
   onPreviewCard,
 }: ActionLogWindowProps): React.JSX.Element => (
   <FloatingWindow
     title="Action Log"
     className="action-log-window"
-    initialRect={{ x: 960, y: 80, width: 360, height: 520 }}
+    initialRect={initialRect}
     minWidth={280}
     minHeight={220}
     minimized={minimized}
     onToggleMinimized={onToggleMinimized}
     onClose={onClose}
+    onRectChange={onRectChange}
   >
     {entries.length === 0 ? (
       <p className="muted">No visible actions yet.</p>

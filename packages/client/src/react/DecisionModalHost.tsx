@@ -25,7 +25,7 @@ export interface DecisionModalHostProps {
     targetId: InstanceId,
     placement: ReorderPlacement,
   ) => void;
-  onToggleBottomPlacement: (instanceId: InstanceId) => void;
+  onPlacementDestination: (destination: "top" | "bottom") => void;
   onConfirm: () => void;
 }
 
@@ -52,7 +52,7 @@ export const DecisionModalHost = ({
   onOption,
   onActionOption,
   onMoveOrderedCard,
-  onToggleBottomPlacement,
+  onPlacementDestination,
   onConfirm,
 }: DecisionModalHostProps): React.JSX.Element | null => {
   const orderedCards =
@@ -131,12 +131,37 @@ export const DecisionModalHost = ({
               ? "Drag cards into deck order. 1 is highest in the deck; last is bottom-most."
               : "Drag cards into order."}
           </p>
+          {model.placement?.type === "topOrBottom" ? (
+            <div className="decision-placement-choice" role="group">
+              <button
+                className={`decision-placement-choice-button ${
+                  model.placementDestination === "top" ? "is-selected" : ""
+                }`}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onPlacementDestination("top");
+                }}
+              >
+                Top
+              </button>
+              <button
+                className={`decision-placement-choice-button ${
+                  model.placementDestination === "bottom" ? "is-selected" : ""
+                }`}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onPlacementDestination("bottom");
+                }}
+              >
+                Bottom
+              </button>
+            </div>
+          ) : null}
           <div className="hand-cards decision-order-card-grid">
             {orderedCards.map((card, index) => {
               const instanceId = String(card.instanceId);
-              const isBottom = model.bottomInstanceIds.includes(
-                card.instanceId,
-              );
               return (
                 <Fragment key={instanceId}>
                   {orderReorder.placeholderBefore(instanceId) ? (
@@ -151,20 +176,6 @@ export const DecisionModalHost = ({
                     onMoveNear={orderReorder.onMoveNear}
                     onReorderCancel={orderReorder.onReorderCancel}
                     onHover={() => undefined}
-                    overlay={
-                      model.placement?.type === "topOrBottom" ? (
-                      <button
-                        className="decision-placement-toggle"
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => {
-                          onToggleBottomPlacement(card.instanceId);
-                        }}
-                      >
-                        {isBottom ? "Bottom" : "Top"}
-                      </button>
-                      ) : null
-                    }
                   />
                   {orderReorder.placeholderAfter(instanceId) ? (
                     <div className="hand-drag-placeholder" aria-hidden="true" />

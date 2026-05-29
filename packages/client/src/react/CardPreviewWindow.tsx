@@ -1,18 +1,23 @@
 import type { ClientCardModel } from "../view-model.js";
 import { FloatingWindow } from "./FloatingWindow.js";
+import type { WindowRect } from "./FloatingWindow.js";
 
 export interface CardPreviewWindowProps {
   card?: ClientCardModel | undefined;
   minimized: boolean;
+  initialRect?: WindowRect | undefined;
   onToggleMinimized: () => void;
   onClose: () => void;
+  onRectChange?: ((rect: WindowRect) => void) | undefined;
 }
 
 export const CardPreviewWindow = ({
   card,
   minimized,
+  initialRect = { x: 20, y: 20, width: 330, height: 520 },
   onToggleMinimized,
   onClose,
+  onRectChange,
 }: CardPreviewWindowProps): React.JSX.Element | null => {
   if (card === undefined) {
     return null;
@@ -22,12 +27,13 @@ export const CardPreviewWindow = ({
     <FloatingWindow
       title="Card Preview"
       className="card-preview-window"
-      initialRect={{ x: 20, y: 20, width: 330, height: 520 }}
+      initialRect={initialRect}
       minWidth={240}
       minHeight={220}
       minimized={minimized}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
+      onRectChange={onRectChange}
     >
       <article className="card-preview-content">
         <div className="card-preview-image-frame">

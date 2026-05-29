@@ -55,7 +55,7 @@ export interface MatchClientUi {
     targetId: InstanceId,
     placement: "before" | "after",
   ) => void;
-  toggleDecisionCardBottomPlacement: (instanceId: InstanceId) => void;
+  setDecisionPlacementDestination: (destination: "top" | "bottom") => void;
   setDecisionQuantityValue: (quantity: number) => void;
   setDecisionOptionValue: (option: string) => void;
   setDecisionActionOptionValue: (actionIndex: number) => void;

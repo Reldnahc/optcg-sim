@@ -23,7 +23,7 @@ import {
   isDecisionModalSuppressed,
   chooseDecisionTrigger,
   moveOrderedCardNear,
-  toggleOrderedCardBottomPlacement,
+  setOrderedCardsPlacementDestination,
   setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
@@ -238,7 +238,7 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "orderedIds", ids: ["3", "1", "2"] });
   });
 
-  test("top-or-bottom orderCards draft builds topBottomPlacement response", () => {
+  test("top-or-bottom orderCards draft builds a single-destination top response", () => {
     const decision = {
       ...orderDecision(),
       placement: { type: "topOrBottom" },
@@ -251,22 +251,45 @@ describe("headless decision modal models", () => {
       "1" as InstanceId,
       "before",
     );
-    draft = toggleOrderedCardBottomPlacement(
-      decision,
-      draft,
-      "1" as InstanceId,
-    );
 
     const model = createDecisionModalModel(decision, draft);
     const response = buildDecisionResponse(decision, draft);
 
     assert.equal(model.kind, "orderCards");
     assert.deepEqual(model.orderedInstanceIds, ["3", "1", "2"]);
-    assert.deepEqual(model.bottomInstanceIds, ["1"]);
+    assert.equal(model.placementDestination, "top");
     assert.deepEqual(response, {
       type: "topBottomPlacement",
-      topIds: ["3", "2"],
-      bottomIds: ["1"],
+      topIds: ["3", "1", "2"],
+      bottomIds: [],
+    });
+  });
+
+  test("top-or-bottom orderCards draft builds a single-destination bottom response", () => {
+    const decision = {
+      ...orderDecision(),
+      placement: { type: "topOrBottom" },
+    } satisfies PublicOrderCardsDecision;
+    let draft = createDecisionDraft(decision);
+    draft = moveOrderedCardNear(
+      decision,
+      draft,
+      "3" as InstanceId,
+      "1" as InstanceId,
+      "before",
+    );
+    draft = setOrderedCardsPlacementDestination(decision, draft, "bottom");
+
+    const model = createDecisionModalModel(decision, draft);
+    const response = buildDecisionResponse(decision, draft);
+
+    assert.equal(model.kind, "orderCards");
+    assert.deepEqual(model.orderedInstanceIds, ["3", "1", "2"]);
+    assert.equal(model.placementDestination, "bottom");
+    assert.deepEqual(response, {
+      type: "topBottomPlacement",
+      topIds: [],
+      bottomIds: ["3", "1", "2"],
     });
   });
 

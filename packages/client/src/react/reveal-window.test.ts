@@ -85,4 +85,29 @@ describe("reveal window", () => {
     assert.match(source, /opponentRevealWindows\.map/u);
     assert.doesNotMatch(source, /model=\{opponentRevealWindow\}/u);
   });
+
+  test("reveal windows use persisted floating window rectangle wiring", async () => {
+    const [matchAppSource, revealWindowSource] = await Promise.all([
+      readFile(matchAppPath, "utf8"),
+      readFile(join(sourceDirectory, "RevealWindowHost.tsx"), "utf8"),
+    ]);
+
+    assert.match(
+      matchAppSource,
+      /const revealWindowKey = \(revealId: string\)/u,
+    );
+    assert.match(
+      matchAppSource,
+      /activeFloatingWindowRects\[revealWindowKey\(revealWindow\.revealId\)\]/u,
+    );
+    assert.match(
+      matchAppSource,
+      /updateFloatingWindowRect\(revealWindowKey\(revealWindow\.revealId\), rect\)/u,
+    );
+    assert.match(
+      revealWindowSource,
+      /onRectChange\?: \(\(rect: WindowRect\) => void\)/u,
+    );
+    assert.match(revealWindowSource, /onRectChange=\{onRectChange\}/u);
+  });
 });

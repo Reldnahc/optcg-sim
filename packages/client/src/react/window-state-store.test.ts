@@ -43,4 +43,82 @@ describe("reveal window state store", () => {
 
     assert.deepEqual([...store.loadDismissedRevealIds()], []);
   });
+
+  test("persists floating window rectangles by match", () => {
+    const storage = createMemoryClientStorage();
+    const matchOne = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+    const matchTwo = createRevealWindowStateStore({
+      storage,
+      matchId: "match-2" as MatchId,
+    });
+
+    matchOne.saveWindowRects({
+      "card-preview": { x: 10, y: 20, width: 300, height: 400 },
+      "collection:Trash": { x: 30, y: 40, width: 500, height: 260 },
+    });
+
+    assert.deepEqual(matchOne.loadWindowRects(), {
+      "card-preview": { x: 10, y: 20, width: 300, height: 400 },
+      "collection:Trash": { x: 30, y: 40, width: 500, height: 260 },
+    });
+    assert.deepEqual(matchTwo.loadWindowRects(), {});
+  });
+
+  test("persists open floating window ids by match", () => {
+    const storage = createMemoryClientStorage();
+    const matchOne = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+    const matchTwo = createRevealWindowStateStore({
+      storage,
+      matchId: "match-2" as MatchId,
+    });
+
+    matchOne.saveOpenWindowIds(
+      new Set(["action-log", "collection:Player trash"]),
+    );
+
+    assert.deepEqual(
+      [...matchOne.loadOpenWindowIds()],
+      ["action-log", "collection:Player trash"],
+    );
+    assert.deepEqual([...matchTwo.loadOpenWindowIds()], []);
+  });
+
+  test("fails closed to empty open window ids for malformed stored data", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:open-floating-windows:match-1",
+      JSON.stringify({ window: "action-log" }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual([...store.loadOpenWindowIds()], []);
+  });
+
+  test("fails closed to empty window rectangles for malformed stored data", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:floating-window-rects:match-1",
+      JSON.stringify({
+        good: { x: 10, y: 20, width: 300, height: 400 },
+        bad: { x: "10", y: 20, width: 300, height: 400 },
+      }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual(store.loadWindowRects(), {
+      good: { x: 10, y: 20, width: 300, height: 400 },
+    });
+  });
 });

@@ -25,7 +25,7 @@ import {
   toSupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./effect-runtime-sequence-support.js";
-import { resolvePublicTargetCandidates } from "./target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type ContinuousResolvedEffect = Extract<
@@ -225,7 +225,7 @@ export const applySelectTargetsSequenceSegment = (params: {
     segment,
     segmentKey,
   } = params;
-  const candidates = resolvePublicTargetCandidates(
+  const candidates = resolvePublicTargetCandidatesForRequest(
     nextState,
     segment.effect.request,
     {

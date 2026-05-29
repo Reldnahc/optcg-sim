@@ -14,6 +14,7 @@ export interface RevealWindowHostProps {
   minimized?: boolean | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onRectChange?: ((rect: WindowRect) => void) | undefined;
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
 }
 
@@ -23,6 +24,7 @@ export const RevealWindowHost = ({
   minimized = false,
   onToggleMinimized,
   onClose,
+  onRectChange,
   onPreviewCard,
 }: RevealWindowHostProps): React.JSX.Element | null => {
   if (model === undefined) {
@@ -39,6 +41,7 @@ export const RevealWindowHost = ({
       minimized={minimized}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
+      onRectChange={onRectChange}
     >
       <div className="reveal-window-card-spot">
         {model.cards.map((card) => (

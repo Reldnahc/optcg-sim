@@ -43,7 +43,7 @@ describe("modal frame", () => {
         onOption: () => undefined,
         onActionOption: () => undefined,
         onMoveOrderedCard: () => undefined,
-        onToggleBottomPlacement: () => undefined,
+        onPlacementDestination: () => undefined,
         onConfirm: () => undefined,
       }),
     );

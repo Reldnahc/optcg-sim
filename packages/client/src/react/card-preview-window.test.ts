@@ -163,4 +163,27 @@ describe("card preview window", () => {
     assert.match(source, /setPreviewEnabled\(false\);/u);
     assert.match(source, /onClose=\{closeCardPreview\}/u);
   });
+
+  test("preview window uses persisted floating window rectangle wiring", async () => {
+    const [matchApp, previewWindow] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "CardPreviewWindow.tsx"), "utf8"),
+    ]);
+
+    assert.match(matchApp, /const cardPreviewWindowKey = "card-preview";/u);
+    assert.match(
+      matchApp,
+      /initialRect=\{activeFloatingWindowRects\[cardPreviewWindowKey\]\}/u,
+    );
+    assert.match(
+      matchApp,
+      /updateFloatingWindowRect\(cardPreviewWindowKey, rect\)/u,
+    );
+    assert.match(previewWindow, /initialRect\?: WindowRect/u);
+    assert.match(
+      previewWindow,
+      /onRectChange\?: \(\(rect: WindowRect\) => void\)/u,
+    );
+    assert.match(previewWindow, /onRectChange=\{onRectChange\}/u);
+  });
 });

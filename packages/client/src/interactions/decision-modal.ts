@@ -23,7 +23,7 @@ export type DecisionDraft =
       kind: "orderCards";
       decisionId: DecisionId;
       orderedInstanceIds: InstanceId[];
-      bottomInstanceIds: InstanceId[];
+      placementDestination: "top" | "bottom";
     }
   | {
       kind: "orderTriggers";
@@ -70,7 +70,7 @@ export type DecisionModalModel =
       placement?: PublicOrderCardsDecision["placement"];
       canConfirm: true;
       orderedInstanceIds: InstanceId[];
-      bottomInstanceIds: InstanceId[];
+      placementDestination: "top" | "bottom";
       cards: PublicOrderCardsDecision["cards"];
     }
   | {
@@ -302,7 +302,7 @@ export const createDecisionDraft = (
       kind: "orderCards",
       decisionId: decision.id,
       orderedInstanceIds: decision.cards.map((card) => card.instanceId),
-      bottomInstanceIds: [],
+      placementDestination: "top",
     };
   }
   if (decision.type === "chooseTriggerOrder") {
@@ -448,10 +448,10 @@ export const moveOrderedCardNear = (
   };
 };
 
-export const toggleOrderedCardBottomPlacement = (
+export const setOrderedCardsPlacementDestination = (
   decision: PublicOrderCardsDecision,
   draft: DecisionDraft,
-  instanceId: InstanceId,
+  destination: "top" | "bottom",
 ): DecisionDraft => {
   assertDraftForDecision(decision, draft);
   if (draft.kind !== "orderCards") {
@@ -460,16 +460,7 @@ export const toggleOrderedCardBottomPlacement = (
   if (decision.placement?.type !== "topOrBottom") {
     return draft;
   }
-  if (!orderCardIds(decision).has(instanceKey(instanceId))) {
-    return draft;
-  }
-  const isBottom = draft.bottomInstanceIds.includes(instanceId);
-  return {
-    ...draft,
-    bottomInstanceIds: isBottom
-      ? draft.bottomInstanceIds.filter((id) => id !== instanceId)
-      : [...draft.bottomInstanceIds, instanceId],
-  };
+  return { ...draft, placementDestination: destination };
 };
 
 export const chooseDecisionTrigger = (
@@ -576,7 +567,7 @@ export const createDecisionModalModel = (
         : { placement: decision.placement }),
       canConfirm: true,
       orderedInstanceIds: draft.orderedInstanceIds,
-      bottomInstanceIds: draft.bottomInstanceIds,
+      placementDestination: draft.placementDestination,
       cards: decision.cards,
     };
   }
@@ -711,15 +702,11 @@ export const buildDecisionResponse = (
       throw new Error("Decision draft is not an orderCards draft.");
     }
     if (decision.placement?.type === "topOrBottom") {
-      const bottom = new Set(draft.bottomInstanceIds.map(String));
+      const orderedIds = draft.orderedInstanceIds.map(String);
       return {
         type: "topBottomPlacement",
-        topIds: draft.orderedInstanceIds
-          .map(String)
-          .filter((id) => !bottom.has(id)),
-        bottomIds: draft.orderedInstanceIds
-          .map(String)
-          .filter((id) => bottom.has(id)),
+        topIds: draft.placementDestination === "top" ? orderedIds : [],
+        bottomIds: draft.placementDestination === "bottom" ? orderedIds : [],
       };
     }
     return { type: "orderedIds", ids: draft.orderedInstanceIds.map(String) };

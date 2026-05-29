@@ -257,11 +257,15 @@ describe("collection modal", () => {
       "utf8",
     );
 
-    assert.match(source, /setCollectionModal\(\(current\)\s*=>/u);
     assert.match(
       source,
-      /if\s*\(current\?\.title\s*===\s*title\)\s*\{\s*return undefined;/u,
+      /const nextOpen = renderedCollectionModal\?\.title !== title;/u,
     );
+    assert.match(
+      source,
+      /setCollectionModal\(nextOpen \? \{ title, cards \} : undefined\);/u,
+    );
+    assert.match(source, /updateCollectionWindowOpen\(key, nextOpen\)/u);
   });
 
   test("client-side collection viewers remember their last window rectangle", async () => {
@@ -274,12 +278,41 @@ describe("collection modal", () => {
       "utf8",
     );
 
-    assert.match(source, /collectionWindowRects/u);
+    assert.match(source, /floatingWindowRects/u);
+    assert.doesNotMatch(source, /useState<\s*Record<string, WindowRect>\s*>/u);
     assert.match(source, /collectionViewerKey/u);
+    assert.match(source, /collectionViewerWindowKey/u);
+    assert.match(
+      source,
+      /activeFloatingWindowRects\[collectionViewerWindowKey\]/u,
+    );
+    assert.match(
+      source,
+      /updateFloatingWindowRect\(collectionViewerWindowKey, rect\)/u,
+    );
     assert.match(source, /initialRect=\{/u);
     assert.match(source, /onRectChange=\{/u);
     assert.match(hostSource, /onRectChange/u);
     assert.match(hostSource, /initialRect/u);
+  });
+
+  test("client-side collection viewers remember whether they were open", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+    const storeSource = await readFile(
+      join(sourceDirectory, "window-state-store.ts"),
+      "utf8",
+    );
+
+    assert.match(source, /activeOpenWindowIds/u);
+    assert.match(source, /collectionModalFromWindowKey/u);
+    assert.match(source, /persistedCollectionModal/u);
+    assert.match(source, /updateCollectionWindowOpen\(key, nextOpen\)/u);
+    assert.match(source, /windowId\.startsWith\("collection:"\)/u);
+    assert.match(storeSource, /loadOpenWindowIds/u);
+    assert.match(storeSource, /saveOpenWindowIds/u);
   });
 
   test("match app keeps opponent reveal out of the collection window", async () => {

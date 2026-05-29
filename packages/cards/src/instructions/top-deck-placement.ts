@@ -9,11 +9,8 @@ export const parseTopDeckPlacementInstruction: InstructionParser = (
     return undefined;
   }
 
-  if (
-    !/^place them at the top or bottom of your deck in any order\.?$/i.test(
-      look.rest,
-    )
-  ) {
+  const placement = parsePlacementText(look.rest);
+  if (placement === undefined) {
     return undefined;
   }
 
@@ -22,16 +19,39 @@ export const parseTopDeckPlacementInstruction: InstructionParser = (
       type: "placeTopDeckCards",
       player: "self",
       count: look.count,
-      destinations: ["top", "bottom"],
+      destination: placement.destination,
       order: "ownerChoice",
     },
     evidence: [
       "instruction:placeTopDeckCards",
       ...look.evidence,
-      "position:top",
-      "position:bottom",
+      ...placement.evidence,
       "order:anyOrder",
     ],
     rest: "",
   };
+};
+
+const parsePlacementText = (
+  text: string,
+):
+  | {
+      readonly destination: "top" | "bottom" | "topOrBottom";
+      readonly evidence:
+        | readonly ["position:top"]
+        | readonly ["position:top", "position:bottom"];
+    }
+  | undefined => {
+  if (
+    /^place them at the top or bottom of your deck in any order\.?$/i.test(text)
+  ) {
+    return {
+      destination: "topOrBottom",
+      evidence: ["position:top", "position:bottom"],
+    };
+  }
+  if (/^place them at the top of your deck in any order\.?$/i.test(text)) {
+    return { destination: "top", evidence: ["position:top"] };
+  }
+  return undefined;
 };

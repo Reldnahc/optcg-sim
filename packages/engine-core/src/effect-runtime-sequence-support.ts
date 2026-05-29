@@ -413,8 +413,30 @@ const isSupportedAttachSelectedDonSegment = (
   effect.target.zone === "characterArea" &&
   effect.target.controller === undefined &&
   effect.target.binding.family === "selectedTargets" &&
-  effect.target.filter?.categories?.length === 1 &&
-  effect.target.filter.categories[0] === "character";
+  isSupportedAttachDonTargetFilter(effect.target.filter);
+
+const isSupportedAttachDonTargetFilter = (
+  filter: CardFilter | undefined,
+): boolean => {
+  const categories = filter?.categories;
+  if (categories === undefined) {
+    return false;
+  }
+  const categoryShape =
+    (categories.length === 1 && categories[0] === "character") ||
+    (categories.length === 2 &&
+      categories[0] === "leader" &&
+      categories[1] === "character");
+  if (!categoryShape) {
+    return false;
+  }
+  if (filter === undefined) {
+    return false;
+  }
+  return Object.keys(filter).every(
+    (key) => key === "categories" || key === "typesAny",
+  );
+};
 
 const isSupportedRevealTopSegment = (
   effect: SequenceSegmentEffect,
@@ -477,13 +499,19 @@ const isSupportedPublicFieldTargetFilter = (
 const isSupportedSequenceTargetRequest = (
   request: SelectTargetsEffect["request"],
 ): boolean => {
-  const maxSupportedTargetCount = request.zone === "costArea" ? 10 : 5;
+  const zones: readonly string[] =
+    "zones" in request ? request.zones : [request.zone];
+  const maxSupportedTargetCount = zones.includes("costArea") ? 10 : 5;
   return (
     request.timing === "onResolution" &&
     request.chooser === "self" &&
-    (request.zone === "characterArea" ||
-      request.zone === "stageArea" ||
-      request.zone === "costArea") &&
+    zones.every(
+      (zone) =>
+        zone === "leaderArea" ||
+        zone === "characterArea" ||
+        zone === "stageArea" ||
+        zone === "costArea",
+    ) &&
     (request.player === "self" || request.player === "opponent") &&
     Number.isInteger(request.min) &&
     Number.isInteger(request.max) &&

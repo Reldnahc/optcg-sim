@@ -59,16 +59,14 @@ export const isSupportedPlaceTopDeckCardsEffect = (
     return false;
   }
   const candidate = effect as {
-    readonly destinations?: readonly unknown[];
+    readonly destination?: unknown;
     readonly order?: unknown;
   };
   return (
     effect.player === "self" &&
     isPositiveSafeInteger(effect.count) &&
     candidate.order === "ownerChoice" &&
-    candidate.destinations?.length === 2 &&
-    candidate.destinations[0] === "top" &&
-    candidate.destinations[1] === "bottom"
+    (candidate.destination === "top" || candidate.destination === "topOrBottom")
   );
 };
 
@@ -168,7 +166,7 @@ export const createTopDeckPlacementDecision = (
     id: toDecisionId(`${decisionPrefix}${String(entry.id)}`),
     type: "orderCards",
     playerId,
-    prompt: "Place looked cards at the top or bottom of your deck.",
+    prompt: placementPrompt(effect.destination),
     causedBy: {
       type: "effect",
       queueEntryId: entry.id,
@@ -177,7 +175,9 @@ export const createTopDeckPlacementDecision = (
     visibility: { type: "private", playerId },
     cards,
     destination: "deck",
-    placement: { type: "topOrBottom" },
+    ...(effect.destination === "topOrBottom"
+      ? { placement: { type: "topOrBottom" as const } }
+      : {}),
   };
   const events: EngineEvent[] = [];
   appendEvent(
@@ -208,10 +208,21 @@ export const createTopDeckPlacementDecision = (
 
 const isTopDeckPlacementOrderDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
-): decision is OrderCardsDecision & { placement: { type: "topOrBottom" } } =>
+): decision is OrderCardsDecision =>
   decision.type === "orderCards" &&
-  decision.placement?.type === "topOrBottom" &&
   String(decision.id).startsWith(decisionPrefix);
+
+const placementPrompt = (
+  destination: PlaceTopDeckCardsEffect["destination"],
+): string => {
+  if (destination === "top") {
+    return "Place looked cards at the top of your deck.";
+  }
+  if (destination === "bottom") {
+    return "Place looked cards at the bottom of your deck.";
+  }
+  return "Place looked cards at the top or bottom of your deck.";
+};
 
 const hasDuplicateIds = (ids: readonly string[]): boolean =>
   ids.some((id, index) => ids.slice(index + 1).includes(id));
@@ -237,15 +248,33 @@ export const applyTopDeckPlacementDecisionResponse = (
   }
   const fail = (reason: string): EngineResult =>
     toEngineResult(state, [], invalidDecision(reason));
-  if (action.response.type !== "topBottomPlacement") {
-    return fail(
-      "Response type must be topBottomPlacement for top-deck placement.",
-    );
-  }
-  const topIds = action.response.topIds;
-  const bottomIds = action.response.bottomIds;
-  const responseIds = [...topIds, ...bottomIds];
   const expectedIds = decision.cards.map((card) => String(card.instanceId));
+  let topIds: string[];
+  let bottomIds: string[];
+  let responseType: string;
+  if (decision.placement?.type === "topOrBottom") {
+    if (action.response.type !== "topBottomPlacement") {
+      return fail(
+        "Response type must be topBottomPlacement for top-deck placement.",
+      );
+    }
+    topIds = action.response.topIds;
+    bottomIds = action.response.bottomIds;
+    const placedOnTop = topIds.length === expectedIds.length;
+    const placedOnBottom = bottomIds.length === expectedIds.length;
+    if (!placedOnTop && !placedOnBottom) {
+      return fail("Looked cards must all be placed on top or all on bottom.");
+    }
+    responseType = action.response.type;
+  } else {
+    if (action.response.type !== "orderedIds") {
+      return fail("Response type must be orderedIds for top-deck placement.");
+    }
+    topIds = action.response.ids;
+    bottomIds = [];
+    responseType = action.response.type;
+  }
+  const responseIds = [...topIds, ...bottomIds];
   if (
     hasDuplicateIds(responseIds) ||
     responseIds.length !== expectedIds.length ||
@@ -308,7 +337,7 @@ export const applyTopDeckPlacementDecisionResponse = (
       decisionId: decision.id,
       decisionType: decision.type,
       playerId: decision.playerId,
-      responseType: action.response.type,
+      responseType,
       orderedCount: responseIds.length,
     },
     decision.visibility,
