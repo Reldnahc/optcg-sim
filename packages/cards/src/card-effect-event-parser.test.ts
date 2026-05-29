@@ -43,6 +43,83 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses optional hand-trash cost into conditional Life setup and self power sequence", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] You may trash 1 card from your hand: If you have 1 or less Life cards, add up to 1 card from the top of your deck to the top of your Life cards. Then, this Character gains +1000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 1,
+                  chooser: "self",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "conditional",
+                      if: {
+                        type: "lifeCount",
+                        player: "self",
+                        op: "lte",
+                        value: 1,
+                      },
+                      then: {
+                        type: "moveCards",
+                        count: 1,
+                        from: { player: "self", zone: "deck", position: "top" },
+                        to: { player: "self", zone: "life", position: "top" },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "modifyPower",
+                      target: { type: "self" },
+                      value: 1000,
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:optionalCostedEffect",
+        "cost:trashFromHand",
+        "condition:lifeCount",
+        "instruction:moveCards",
+        "destination:life",
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses Main Event rest-DON cost, leader condition, and Stage K.O. target primitives", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 1 of your DON!! cards: If your Leader is [Imu], K.O. up to 1 of your opponent's Stages with a cost of 7.",

@@ -15,6 +15,7 @@ describe("modify power instruction parser", () => {
         "target:yourNamedCards",
         "target:yourLeaderOrCharacters",
         "target:yourLeader",
+        "target:thisCharacter",
         "modifier:negativePower",
         "modifier:positivePower",
         "duration:thisBattle",
@@ -128,6 +129,28 @@ describe("modify power instruction parser", () => {
         "player:self",
         "filter:category:leader",
         "filter:category:character",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses positive power for this Character during this turn", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "this Character gains +1000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: 1000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:thisCharacter",
         "modifier:positivePower",
         "duration:thisTurn",
       ],

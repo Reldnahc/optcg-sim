@@ -11,6 +11,7 @@ import {
 } from "../modifiers/index.js";
 import {
   parseOpponentCharactersTarget,
+  parseThisCharacterTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
@@ -25,6 +26,7 @@ export const modifyPowerInstructionPrimitive = {
     "target:yourNamedCards",
     "target:yourLeaderOrCharacters",
     "target:yourLeader",
+    "target:thisCharacter",
     "modifier:negativePower",
     "modifier:positivePower",
     "duration:thisBattle",
@@ -112,11 +114,18 @@ const parsePowerGainInstruction: InstructionParser = (input) => {
   }
 
   const leader = parseYourLeaderTarget(input);
-  if (leader?.target === undefined) {
+  const directTarget =
+    leader?.target === undefined
+      ? parseThisCharacterTarget({ text: input.text, allowImplicit: false })
+      : leader;
+  if (directTarget?.target === undefined) {
     return undefined;
   }
 
-  const parsed = parseGainsPositivePower(leader.target, leader.rest);
+  const parsed = parseGainsPositivePower(
+    directTarget.target,
+    directTarget.rest,
+  );
   if (parsed === undefined) {
     return undefined;
   }
@@ -125,7 +134,7 @@ const parsePowerGainInstruction: InstructionParser = (input) => {
     effect: parsed.effect,
     evidence: [
       "instruction:modifyPower",
-      ...leader.evidence,
+      ...directTarget.evidence,
       ...parsed.evidence,
     ],
     rest: "",
