@@ -58,7 +58,28 @@ export const getCounterEventPaymentLegalActions = (
     selectedTarget.target,
     battle.currentTarget,
   );
-  if (supported === null || supported.printedCost <= 0) {
+  if (supported === null) {
+    return [];
+  }
+  if (context.kind === "effect") {
+    const effectCost = supported.effectCost;
+    if (effectCost === undefined) {
+      return [];
+    }
+    const eligibleHandIds = player.hand
+      .filter((card) => card.instanceId !== handCard.instanceId)
+      .map((card) => card.instanceId);
+    return chooseDonCombos(eligibleHandIds, effectCost.count).map((combo) => ({
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "payment",
+        optionId: "trashFromHand",
+        selectedCardInstanceIds: combo,
+      },
+    }));
+  }
+  if (supported.printedCost <= 0) {
     return [];
   }
   const activeDonIds = player.costArea

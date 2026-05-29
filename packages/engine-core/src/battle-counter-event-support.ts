@@ -6,6 +6,7 @@ import type {
   EffectDefinition,
   EffectQueueEntry,
   GameState,
+  OptionalCost,
   PlayerId,
   ResolvedCard,
   Target,
@@ -16,6 +17,7 @@ import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 export interface SupportedCounterEventPower {
+  effectCost?: Extract<OptionalCost, { type: "trashFromHand" }>;
   value: number;
   printedCost: number;
   target: CardRef;
@@ -144,6 +146,7 @@ const counterPowerTargetCanApplyToSelectedTarget = (
 const counterPowerEffect = (
   effect: EffectDefinition["effects"][number],
 ): {
+  effectCost?: Extract<OptionalCost, { type: "trashFromHand" }>;
   power: Extract<Effect, { type: "modifyPower" }>;
   trailingStartIndex?: number;
 } | null => {
@@ -153,7 +156,25 @@ const counterPowerEffect = (
   if (effect.effect.type !== "sequence") {
     return null;
   }
-  const [first, ...rest] = effect.effect.effects;
+  const [first, second, ...rest] = effect.effect.effects;
+  if (
+    first !== undefined &&
+    first.connector === "always" &&
+    first.optional !== true &&
+    first.effect.type === "payCost" &&
+    first.effect.cost.type === "trashFromHand" &&
+    second !== undefined &&
+    second.connector === "ifYouDo" &&
+    second.optional !== true &&
+    second.effect.type === "modifyPower"
+  ) {
+    return {
+      effectCost: first.effect.cost,
+      power: second.effect,
+      ...(rest.length === 0 ? {} : { trailingStartIndex: 2 }),
+    };
+  }
+
   if (
     first === undefined ||
     first.connector !== "always" ||
@@ -162,7 +183,8 @@ const counterPowerEffect = (
   ) {
     return null;
   }
-  if (rest.length === 0) {
+  const trailing = second === undefined ? rest : [second, ...rest];
+  if (trailing.length === 0) {
     return { power: first.effect };
   }
   return {
@@ -180,6 +202,7 @@ const supportedCounterEventPower = (
   battleTarget: CardRef | undefined,
   options: { evaluateCondition: boolean },
 ): {
+  effectCost?: SupportedCounterEventPower["effectCost"];
   value: number;
   trailingSequence?: SupportedCounterEventPower["trailingSequence"];
 } | null => {
@@ -198,6 +221,11 @@ const supportedCounterEventPower = (
     typeof parsed.power.value !== "number" ||
     !Number.isInteger(parsed.power.value) ||
     parsed.power.value <= 0 ||
+    (parsed.effectCost !== undefined &&
+      (parsed.effectCost.chooser !== "self" ||
+        parsed.effectCost.filter !== undefined ||
+        !Number.isInteger(parsed.effectCost.count) ||
+        parsed.effectCost.count <= 0)) ||
     (options.evaluateCondition &&
       !counterEventConditionPasses(
         state,
@@ -217,6 +245,9 @@ const supportedCounterEventPower = (
     return null;
   }
   return {
+    ...(parsed.effectCost === undefined
+      ? {}
+      : { effectCost: parsed.effectCost }),
     value: parsed.power.value,
     ...(parsed.trailingStartIndex === undefined
       ? {}
@@ -258,6 +289,7 @@ export const getSupportedCounterEventPower = (
     return null;
   }
   let value = 0;
+  let effectCost: SupportedCounterEventPower["effectCost"];
   let trailingSequence: SupportedCounterEventPower["trailingSequence"];
   for (const counterEffect of counterEffects) {
     const counterValue = supportedCounterEventPower(
@@ -273,6 +305,12 @@ export const getSupportedCounterEventPower = (
       return null;
     }
     value += counterValue.value;
+    if (counterValue.effectCost !== undefined) {
+      if (effectCost !== undefined) {
+        return null;
+      }
+      effectCost = counterValue.effectCost;
+    }
     if (counterValue.trailingSequence !== undefined) {
       if (trailingSequence !== undefined) {
         return null;
@@ -284,7 +322,15 @@ export const getSupportedCounterEventPower = (
   if (!Number.isInteger(printedCost) || printedCost < 0) {
     return null;
   }
+  if (
+    effectCost !== undefined &&
+    countEligibleHandCardsForEffectCost(state, card, target.playerId) <
+      effectCost.count
+  ) {
+    return null;
+  }
   return {
+    ...(effectCost === undefined ? {} : { effectCost }),
     value,
     printedCost,
     target,
@@ -292,6 +338,20 @@ export const getSupportedCounterEventPower = (
       battleTarget !== undefined && sameCardRef(target, battleTarget),
     ...(trailingSequence === undefined ? {} : { trailingSequence }),
   };
+};
+
+const countEligibleHandCardsForEffectCost = (
+  state: GameState,
+  card: CardInstance,
+  controllerId: PlayerId,
+): number => {
+  const player = state.players[controllerId];
+  if (player === undefined) {
+    return 0;
+  }
+  return player.hand.filter(
+    (candidate) => candidate.instanceId !== card.instanceId,
+  ).length;
 };
 
 const counterEventPowerCandidateTargets = (

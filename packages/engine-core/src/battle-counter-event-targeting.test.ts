@@ -117,6 +117,85 @@ const installNamedLeaderOrCharacterCounterEvent = (
   };
 };
 
+const installTrashHandCostLeaderOrCharacterCounterEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  counterEvent: CardInstance,
+): void => {
+  installChooseLeaderOrCharacterCounterEvent(state, counterEvent);
+  const definitionId = `${String(counterEvent.cardId)}:counter`;
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[definitionId],
+    "counter definition",
+  );
+  const counterEffect = must(definition.effects[0], "counter effect");
+  const { condition, ...counterEffectWithoutCondition } = counterEffect;
+  void condition;
+  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+    cardId: counterEvent.cardId,
+    category: "event",
+    cost: 0,
+    effectText:
+      "[Counter] You may trash 1 card from your hand: Up to 1 of your Leader or Character cards gains +3000 power during this battle.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+    },
+  });
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      ...definition,
+      effects: [
+        {
+          ...counterEffectWithoutCondition,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                id: "cost:trashFromHand",
+                connector: "always",
+                saveResultAs: "paidCost",
+                effect: {
+                  type: "payCost",
+                  cost: {
+                    type: "trashFromHand",
+                    count: 1,
+                    chooser: "self",
+                    optional: true,
+                  },
+                },
+              },
+              {
+                id: "body:power",
+                connector: "ifYouDo",
+                effect: {
+                  type: "modifyPower",
+                  target: {
+                    type: "chooseFromZones",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      player: "self",
+                      zones: ["leaderArea", "characterArea"],
+                      min: 0,
+                      max: 1,
+                      allowFewerIfUnavailable: true,
+                      visibility: "public",
+                      filter: { categories: ["leader", "character"] },
+                    },
+                  },
+                  value: 3000,
+                  duration: { type: "thisBattle" },
+                },
+              },
+            ],
+          },
+        } satisfies EffectDefinition["effects"][number],
+      ],
+    },
+  };
+};
+
 const addTrashCards = (
   state: ReturnType<typeof setupAttackState>,
   count: number,
@@ -299,6 +378,64 @@ test("conditional Counter Event can apply choose-from-leader-or-character power 
   assert.equal(battleCounterPower(used.state.battle), undefined);
   const view = computeView(used.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 7000);
+  assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
+});
+
+test("trash-from-hand cost Counter Event pays cost before applying selected leader-or-character power", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  const costCard = must(p2State.hand[1], "cost card");
+  const defenderCharacter = must(p2State.characters[0], "defender character");
+  installTrashHandCostLeaderOrCharacterCounterEvent(state, counterEvent);
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const nonBattleTarget = cardRef(defenderCharacter, p2);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId &&
+        action.target.instanceId === nonBattleTarget.instanceId,
+    ),
+    true,
+  );
+
+  const use = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: nonBattleTarget,
+  });
+  assert.equal(use.errors, undefined);
+  assert.equal(use.state.pendingDecision?.type, "payCost");
+  assert.equal(use.state.pendingDecision.cost.type, "trashFromHand");
+
+  const paid = applyAction(use.state, {
+    type: "respondToDecision",
+    decisionId: use.state.pendingDecision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [costCard.instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(
+    must(paid.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === costCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(battleCounterPower(paid.state.battle), undefined);
+  const view = computeView(paid.state);
+  assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 6000);
   assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
 });
 
