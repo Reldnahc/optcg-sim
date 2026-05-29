@@ -28,6 +28,7 @@ interface PointerReorderTarget {
 export interface CardTileProps {
   card: ClientCardModel;
   label?: string | undefined;
+  layoutId?: string | undefined;
   selectionOrderLabel?: string | undefined;
   selected?: boolean;
   active?: boolean | undefined;
@@ -54,12 +55,14 @@ export interface CardTileProps {
         placement: ReorderPlacement,
       ) => void)
     | undefined;
+  onReorderStart?: ((draggedInstanceId: string) => void) | undefined;
   onReorderCancel?: (() => void) | undefined;
 }
 
 export const CardTile = ({
   card,
   label,
+  layoutId,
   selectionOrderLabel,
   selected = false,
   active = false,
@@ -74,6 +77,7 @@ export const CardTile = ({
   reorderable = false,
   onMoveNear,
   onPreviewMoveNear,
+  onReorderStart,
   onReorderCancel,
 }: CardTileProps): React.JSX.Element => {
   const [pointerDrag, setPointerDrag] = useState<
@@ -103,10 +107,11 @@ export const CardTile = ({
       ? undefined
       : `${card.costDelta > 0 ? "+" : ""}${String(card.costDelta)}`;
   const pointerDragStyle =
-    pointerDrag?.moved === true
+    pointerDrag !== undefined
       ? ({
           position: "fixed",
-          left: pointerDrag.originLeft + pointerDrag.currentX - pointerDrag.originX,
+          left:
+            pointerDrag.originLeft + pointerDrag.currentX - pointerDrag.originX,
           top: pointerDrag.originTop + pointerDrag.currentY - pointerDrag.originY,
           width: pointerDrag.width,
           height: pointerDrag.height,
@@ -160,8 +165,9 @@ export const CardTile = ({
     <div
       className={`card-tile-shell ${
         pointerReorderEnabled ? "is-pointer-reorderable" : ""
-      } ${pointerDrag?.moved === true ? "is-pointer-reorder-dragging" : ""}`}
+      } ${pointerDrag !== undefined ? "is-pointer-reorder-dragging" : ""}`}
       data-card-instance-id={String(card.instanceId)}
+      data-hand-layout-id={layoutId}
       style={pointerDragStyle}
       onPointerEnter={() => {
         if (card.category === "hidden") {
@@ -194,6 +200,7 @@ export const CardTile = ({
           currentY: event.clientY,
           moved: false,
         });
+        onReorderStart?.(String(card.instanceId));
       }}
       onPointerMove={(event) => {
         if (
