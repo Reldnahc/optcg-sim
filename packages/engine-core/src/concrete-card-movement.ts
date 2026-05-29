@@ -4,6 +4,7 @@ import type {
   EngineEvent,
   EventVisibility,
   GameState,
+  LifeCard,
   PlayerId,
 } from "@optcg/types";
 
@@ -16,6 +17,7 @@ type TrashSourceZone =
   | "characterArea"
   | "deck"
   | "hand"
+  | "life"
   | "noZone"
   | "stageArea";
 type CardMovedPayloadShape = "publicZoneNames" | "zoneRefs";
@@ -58,6 +60,9 @@ const sourceCollection = (
   if (sourceZone === "stageArea") {
     return player.stage === undefined ? [] : [player.stage];
   }
+  if (sourceZone === "life") {
+    return player.life.map((lifeCard) => lifeCard.card);
+  }
   if (sourceZone === "noZone") {
     return [];
   }
@@ -71,6 +76,18 @@ const sourceSlot = (
 
 const sourceZoneName = (sourceZone: TrashSourceZone): string =>
   sourceZone === "characterArea" ? "character" : sourceZone;
+
+const reindexLifeCards = (
+  cards: readonly LifeCard[],
+  playerId: PlayerId,
+): LifeCard[] =>
+  cards.map((lifeCard, index) => ({
+    ...lifeCard,
+    card: {
+      ...lifeCard.card,
+      zone: { zone: "life", playerId, slot: "life", index },
+    },
+  }));
 
 const withCausedBy = (
   events: EngineEvent[],
@@ -165,6 +182,11 @@ export const moveConcreteCardsToTrash = (
       "characterArea",
       options.playerId,
       "character",
+    );
+  } else if (options.sourceZone === "life") {
+    nextPlayer.life = reindexLifeCards(
+      player.life.filter((lifeCard) => !movedIds.has(lifeCard.card.instanceId)),
+      options.playerId,
     );
   } else {
     nextPlayer[options.sourceZone] = reindexZoneCards(

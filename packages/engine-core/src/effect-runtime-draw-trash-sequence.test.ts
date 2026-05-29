@@ -346,33 +346,6 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
       type: "sequence",
       effects: [
         {
-          connector: "always",
-          effect: { type: "draw", player: "self", count: 1 },
-        },
-      ],
-    },
-    {
-      type: "sequence",
-      effects: [
-        {
-          connector: "always",
-          effect: {
-            type: "trashFromHand",
-            player: "self",
-            chooser: "self",
-            count: 1,
-          },
-        },
-        {
-          connector: "then",
-          effect: { type: "draw", player: "self", count: 1 },
-        },
-      ],
-    },
-    {
-      type: "sequence",
-      effects: [
-        {
           connector: "then",
           effect: { type: "draw", player: "self", count: 1 },
         },

@@ -487,86 +487,33 @@ const executeLifeTopToTrashMove = (
     return toEngineResult(state, []);
   }
 
-  const movedLife = player.life.slice(0, movedCount);
-  const movedCards = movedLife.map(
-    (lifeCard, index): CardInstance => ({
-      ...lifeCard.card,
-      zone: { zone: "trash", playerId, slot: "trash", index },
-    }),
-  );
-  const nextLife = reindexLife(player.life.slice(movedCount), playerId);
-  const nextTrash = reindexZoneCards(
-    [...movedCards, ...player.trash],
-    "trash",
-    playerId,
-    "trash",
-  );
   const events: EngineEvent[] = [];
-  for (const [index, movedCard] of movedCards.entries()) {
-    const from = {
-      zone: "life" as const,
-      playerId,
-      slot: "life" as const,
-      index,
-    };
-    const to = {
-      zone: "trash" as const,
-      playerId,
-      slot: "trash" as const,
-      index,
-    };
-    events.push({
-      id: `event:${String(state.seq)}:${String(index * 2 + 1)}:cardMoved` as EngineEvent["id"],
-      seq: state.eventJournal.length + events.length + 1,
-      type: "cardMoved",
-      payload: {
-        instanceId: movedCard.instanceId,
-        cardId: movedCard.cardId,
-        from,
-        to,
-        reason: "moveCards",
-      },
-      visibility: { type: "public" },
+  const movedResult = moveConcreteCardsToTrash(
+    state,
+    events,
+    player.life.slice(0, movedCount).map((lifeCard) => lifeCard.card),
+    {
+      cardMovedPayloadShape: "zoneRefs",
+      cardMovedVisibility: { type: "public" },
+      cardTrashedVisibility: { type: "public" },
       causedBy: {
         type: "effect",
         queueEntryId: entry.id,
         effectId: entry.effectBlockId,
       },
-      createdAtStateSeq: state.seq,
-    });
-    events.push({
-      id: `event:${String(state.seq)}:${String(index * 2 + 2)}:cardTrashed` as EngineEvent["id"],
-      seq: state.eventJournal.length + events.length + 1,
-      type: "cardTrashed",
-      payload: {
-        playerId,
-        instanceId: movedCard.instanceId,
-        cardId: movedCard.cardId,
-        reason: "moveCards",
-      },
-      visibility: { type: "public" },
-      causedBy: {
-        type: "effect",
-        queueEntryId: entry.id,
-        effectId: entry.effectBlockId,
-      },
-      createdAtStateSeq: state.seq,
-    });
-  }
+      emitCardTrashed: true,
+      includeCardIdentityInCardMoved: true,
+      playerId,
+      reason: "moveCards",
+      sourceZone: "life",
+    },
+  );
 
   const shouldIncrementStateSeq = options.incrementStateSeq ?? true;
   return toEngineResult(
     {
-      ...state,
+      ...movedResult.state,
       ...(shouldIncrementStateSeq ? { seq: toStateSeq(state.seq + 1) } : {}),
-      players: {
-        ...state.players,
-        [playerId]: {
-          ...player,
-          life: nextLife,
-          trash: nextTrash,
-        },
-      },
       eventJournal: [...state.eventJournal, ...events],
     },
     events,

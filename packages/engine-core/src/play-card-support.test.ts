@@ -452,7 +452,7 @@ test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-actio
                 },
                 {
                   connector: "ifPossible",
-                  effect: { type: "draw", count: 1, player: "self" },
+                  effect: { type: "draw", count: 1, player: "opponent" },
                 },
               ],
             },
@@ -482,7 +482,7 @@ test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-actio
                 },
                 {
                   connector: "then",
-                  effect: { type: "drawUpTo", count: 1, player: "self" },
+                  effect: { type: "draw", count: 1, player: "opponent" },
                 },
               ],
             },

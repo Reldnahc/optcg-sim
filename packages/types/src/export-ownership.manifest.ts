@@ -188,6 +188,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   HandSelectCardsEffect: "TYP-007D",
   PlaySelectedEffect: "TYP-007D",
   PlayHandSelectedEffect: "TYP-007D",
+  PlaySourceEffect: "TYP-007D",
   PayCostEffect: "TYP-009A",
   EffectDslFieldRemovalProtection: "TYP-012B",
   ReplacementTrigger: "TYP-001D",
