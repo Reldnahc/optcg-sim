@@ -29,6 +29,43 @@ const isSupportedMainEventEffect = (
   effect.trigger.type === "main" &&
   evaluateEffectBlockRuntimeSupport(effect).supported;
 
+const queuedMainEventTriggerEventIds = (state: GameState): Set<string> =>
+  new Set(
+    state.eventJournal.flatMap((event) => {
+      if (event.type !== "effectQueued") {
+        return [];
+      }
+      const payload = event.payload as {
+        timingWindowId?: unknown;
+        triggerEventId?: unknown;
+      };
+      return typeof payload.triggerEventId === "string" &&
+        payload.timingWindowId === `timing-window:${payload.triggerEventId}`
+        ? [payload.triggerEventId]
+        : [];
+    }),
+  );
+
+const queuedOpponentActivationTriggerEventIds = (
+  state: GameState,
+): Set<string> =>
+  new Set(
+    state.eventJournal.flatMap((event) => {
+      if (event.type !== "effectQueued") {
+        return [];
+      }
+      const payload = event.payload as {
+        timingWindowId?: unknown;
+        triggerEventId?: unknown;
+      };
+      return typeof payload.triggerEventId === "string" &&
+        typeof payload.timingWindowId === "string" &&
+        payload.timingWindowId.endsWith(":opponentActivated")
+        ? [payload.triggerEventId]
+        : [];
+    }),
+  );
+
 export const createMainEventTriggerQueueing = (
   dependencies: Pick<
     EffectRuntimeTriggerQueueingDependencies,
@@ -46,10 +83,21 @@ export const createMainEventTriggerQueueing = (
     if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
       return undefined;
     }
-    const acceptedCardPlayed = state.eventJournal.filter(
-      (event) =>
-        event.type === "cardPlayed" && event.createdAtStateSeq === state.seq,
-    );
+    const queuedMainEvents = queuedMainEventTriggerEventIds(state);
+    const queuedOpponentActivations =
+      queuedOpponentActivationTriggerEventIds(state);
+    const acceptedCardPlayed = state.eventJournal.filter((event) => {
+      if (
+        event.type !== "cardPlayed" ||
+        queuedMainEvents.has(String(event.id))
+      ) {
+        return false;
+      }
+      return (
+        event.createdAtStateSeq === state.seq ||
+        queuedOpponentActivations.has(String(event.id))
+      );
+    });
     if (acceptedCardPlayed.length === 0) {
       return undefined;
     }

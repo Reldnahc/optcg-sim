@@ -756,6 +756,222 @@ const cardRefsMatch = (left: CardRef, right: CardRef): boolean =>
   left.cardId === right.cardId &&
   left.playerId === right.playerId;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isCardRefPayload = (value: unknown): value is CardRef => {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const zone = value["zone"];
+  return (
+    typeof value["instanceId"] === "string" &&
+    typeof value["cardId"] === "string" &&
+    typeof value["playerId"] === "string" &&
+    (zone === undefined || isRecord(zone))
+  );
+};
+
+const isCounterEventTrailingSequence = (
+  value: unknown,
+): value is CounterEventTrailingSequence => {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value["effectBlockId"] === "string" &&
+    typeof value["startIndex"] === "number" &&
+    Number.isInteger(value["startIndex"]) &&
+    value["startIndex"] >= 0
+  );
+};
+
+type PendingCounterEventUse = {
+  playerId: PlayerId;
+  instanceId: CardInstance["instanceId"];
+  cardId: CardInstance["cardId"];
+  target: CardRef;
+  value: number;
+  applyCounterPower: boolean;
+  usesBattleCounterPower: boolean;
+  trailingSequence?: CounterEventTrailingSequence;
+};
+
+const counterEventEffectId = (cardId: CardInstance["cardId"]): string =>
+  `${String(cardId)}:counter`;
+
+const hasCounterEventResolution = (
+  state: GameState,
+  pending: Pick<PendingCounterEventUse, "cardId" | "instanceId" | "playerId">,
+): boolean =>
+  state.eventJournal.some((event) => {
+    if (event.type !== "effectResolved" || !isRecord(event.payload)) {
+      return false;
+    }
+    const source = event.payload["source"];
+    return (
+      isRecord(source) &&
+      event.payload["effectId"] === counterEventEffectId(pending.cardId) &&
+      source["instanceId"] === pending.instanceId &&
+      source["cardId"] === pending.cardId &&
+      source["playerId"] === pending.playerId
+    );
+  });
+
+const pendingCounterEventUseFromEvent = (
+  state: GameState,
+  event: EngineEvent,
+): PendingCounterEventUse | undefined => {
+  if (event.type !== "counterUsed" || !isRecord(event.payload)) {
+    return undefined;
+  }
+  const playerId = event.payload["playerId"];
+  const instanceId = event.payload["instanceId"];
+  const cardId = event.payload["cardId"];
+  const target = event.payload["target"];
+  const value = event.payload["value"];
+  const applyCounterPower = event.payload["applyCounterPower"];
+  const usesBattleCounterPower = event.payload["usesBattleCounterPower"];
+  const trailingSequence = event.payload["trailingSequence"];
+  if (
+    typeof playerId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    !isCardRefPayload(target) ||
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    typeof applyCounterPower !== "boolean" ||
+    typeof usesBattleCounterPower !== "boolean"
+  ) {
+    return undefined;
+  }
+  const metadata = state.cardManifest.cards[cardId as CardInstance["cardId"]];
+  if (metadata?.category !== "event") {
+    return undefined;
+  }
+  const pending: PendingCounterEventUse = {
+    playerId: playerId as PlayerId,
+    instanceId: instanceId as CardInstance["instanceId"],
+    cardId: cardId as CardInstance["cardId"],
+    target,
+    value,
+    applyCounterPower,
+    usesBattleCounterPower,
+    ...(isCounterEventTrailingSequence(trailingSequence)
+      ? { trailingSequence }
+      : {}),
+  };
+  return hasCounterEventResolution(state, pending) ? undefined : pending;
+};
+
+const pendingCounterEventUse = (
+  state: GameState,
+): PendingCounterEventUse | undefined => {
+  for (let index = state.eventJournal.length - 1; index >= 0; index -= 1) {
+    const event = state.eventJournal[index];
+    if (event === undefined) {
+      continue;
+    }
+    const pending = pendingCounterEventUseFromEvent(state, event);
+    if (pending !== undefined) {
+      return pending;
+    }
+  }
+  return undefined;
+};
+
+export const finalizePendingCounterEventUse = (
+  state: GameState,
+): EngineResult | null => {
+  const pending = pendingCounterEventUse(state);
+  if (pending === undefined) {
+    return null;
+  }
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "counter") {
+    return illegalAction(state, "Pending Counter Event has no Counter Step.");
+  }
+  const player = state.players[pending.playerId];
+  if (player === undefined) {
+    return illegalAction(state, "Pending Counter Event player is missing.");
+  }
+  const source = player.trash.find(
+    (card) =>
+      card.instanceId === pending.instanceId && card.cardId === pending.cardId,
+  );
+  if (source === undefined) {
+    return illegalAction(state, "Pending Counter Event source is missing.");
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "effectResolved",
+    {
+      source: {
+        instanceId: pending.instanceId,
+        cardId: pending.cardId,
+        playerId: pending.playerId,
+      },
+      effectId: counterEventEffectId(pending.cardId),
+      target: pending.target,
+    },
+    { type: "public" },
+  );
+
+  const nextBattle: EngineInternalBattleState = { ...battle };
+  let nextContinuousEffects = state.continuousEffects;
+  if (pending.applyCounterPower) {
+    if (pending.usesBattleCounterPower) {
+      nextBattle.counterPower =
+        ((battle as EngineInternalBattleState).counterPower ?? 0) +
+        pending.value;
+    } else {
+      const counterEventPowerRecord = createCounterEventPowerRecord(
+        state,
+        pending.playerId,
+        source,
+        pending.target,
+        pending.value,
+      );
+      if (counterEventPowerRecord === null) {
+        return illegalAction(state, "Unsupported Counter Event target.");
+      }
+      nextContinuousEffects = [
+        ...state.continuousEffects,
+        counterEventPowerRecord,
+      ];
+    }
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    battle: nextBattle,
+    continuousEffects: nextContinuousEffects,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+
+  if (pending.trailingSequence !== undefined) {
+    const trailing = continueCounterEventTrailingSequence(
+      nextState,
+      pending.playerId,
+      source,
+      pending.trailingSequence,
+    );
+    if (trailing === null) {
+      return illegalAction(state, "Unsupported Counter Event trailing effect.");
+    }
+    assertGameStateInvariants(trailing.state);
+    return toEngineResult(trailing.state, [...events, ...trailing.events]);
+  }
+
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
 const applyCounterEventTargetDecisionResponse = (params: {
   action: Extract<Action, { type: "respondToDecision" }>;
   battle: NonNullable<GameState["battle"]>;
@@ -873,12 +1089,21 @@ const resolveCounterCardUse = (params: {
       { type: "public" },
     );
   }
+  const isCounterEvent =
+    state.cardManifest.cards[handCard.cardId]?.category === "event";
   appendEvent(state, events, "counterUsed", {
     playerId: decisionPlayerId,
     instanceId: handCard.instanceId,
     cardId: handCard.cardId,
     target,
     value: counterValue,
+    ...(isCounterEvent
+      ? {
+          applyCounterPower,
+          usesBattleCounterPower,
+          ...(trailingSequence === undefined ? {} : { trailingSequence }),
+        }
+      : {}),
   });
   const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
     cardMovedPayloadShape: "zoneRefs",
@@ -901,48 +1126,14 @@ const resolveCounterCardUse = (params: {
   if (trashedCard === undefined) {
     return illegalAction(state, "Counter card movement failed.");
   }
-  const isCounterEvent =
-    state.cardManifest.cards[handCard.cardId]?.category === "event";
-  if (isCounterEvent) {
-    appendEvent(
-      state,
-      events,
-      "effectResolved",
-      {
-        source: {
-          instanceId: handCard.instanceId,
-          cardId: handCard.cardId,
-          playerId: decisionPlayerId,
-        },
-        effectId: `${String(handCard.cardId)}:counter`,
-        target,
-      },
-      { type: "public" },
-    );
-  }
-
   const nextBattle: EngineInternalBattleState = {
     ...battle,
   };
-  if (applyCounterPower && usesBattleCounterPower) {
+  if (!isCounterEvent && applyCounterPower && usesBattleCounterPower) {
     nextBattle.counterPower =
       ((battle as EngineInternalBattleState).counterPower ?? 0) + counterValue;
   }
-  const counterEventPowerRecord =
-    applyCounterPower && !usesBattleCounterPower && isCounterEvent
-      ? createCounterEventPowerRecord(
-          state,
-          decisionPlayerId,
-          handCard,
-          target,
-          counterValue,
-        )
-      : null;
-  if (
-    applyCounterPower &&
-    !usesBattleCounterPower &&
-    counterEventPowerRecord === null
-  ) {
+  if (!isCounterEvent && applyCounterPower && !usesBattleCounterPower) {
     return illegalAction(state, "Unsupported Counter Event target.");
   }
   const nextState: GameState = {
@@ -957,10 +1148,7 @@ const resolveCounterCardUse = (params: {
       },
     },
     battle: nextBattle,
-    continuousEffects:
-      counterEventPowerRecord === null
-        ? state.continuousEffects
-        : [...state.continuousEffects, counterEventPowerRecord],
+    continuousEffects: state.continuousEffects,
     eventJournal: [...state.eventJournal, ...events],
   };
   const resumePendingDecision = isCounterEvent ? undefined : pendingDecision;
@@ -969,7 +1157,7 @@ const resolveCounterCardUse = (params: {
   } else {
     delete nextState.pendingDecision;
   }
-  if (trailingSequence !== undefined) {
+  if (!isCounterEvent && trailingSequence !== undefined) {
     const trailing = continueCounterEventTrailingSequence(
       nextState,
       decisionPlayerId,

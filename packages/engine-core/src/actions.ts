@@ -637,6 +637,24 @@ const continueRuntimeAndAttackTimingAfterDecision = (
     continueRuntimeAfterDecisionResult(originalState, result),
   );
 
+const shouldContinueRuntimeAfterChooseQuantity = (
+  state: GameState,
+  decision: NonNullable<GameState["pendingDecision"]>,
+): boolean => {
+  const causedBy = decision.causedBy;
+  if (decision.type !== "chooseQuantity" || causedBy.type !== "effect") {
+    return false;
+  }
+  const queueEntry = state.effectQueue.find(
+    (entry) => entry.id === causedBy.queueEntryId,
+  );
+  return (
+    queueEntry?.causedBy.type === "ruleProcess" &&
+    queueEntry.causedBy.name ===
+      "effectRuntime:opponentActivationTriggerQueueing"
+  );
+};
+
 const applyRespondToDecision = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -837,7 +855,9 @@ const applyRespondToDecision = (
     action,
   );
   if (chooseQuantityResult !== null) {
-    return continueAttackTimingDecisionResultIfReady(chooseQuantityResult);
+    return shouldContinueRuntimeAfterChooseQuantity(state, decision)
+      ? continueRuntimeAndAttackTimingAfterDecision(state, chooseQuantityResult)
+      : continueAttackTimingDecisionResultIfReady(chooseQuantityResult);
   }
   return illegalAction(state, "Unsupported decision type.");
 };

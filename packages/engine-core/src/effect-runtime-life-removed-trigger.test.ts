@@ -339,6 +339,16 @@ test("opponent activation reaction queues immediately after the opponent Counter
     target: must(opened.state.battle, "battle").currentTarget,
   });
   assert.equal(countered.errors, undefined);
+  assert.deepEqual(
+    countered.events.map((event) => event.type),
+    [
+      "counterUsed",
+      "cardMoved",
+      "cardTrashed",
+      "effectQueued",
+      "decisionCreated",
+    ],
+  );
   const reactionDecision = must(
     countered.state.pendingDecision,
     "reaction reveal",
@@ -353,6 +363,10 @@ test("opponent activation reaction queues immediately after the opponent Counter
   });
 
   assert.equal(resumedCounter.errors, undefined);
+  assert.equal(
+    resumedCounter.events.some((event) => event.type === "effectResolved"),
+    true,
+  );
   const counterPass = must(
     resumedCounter.state.pendingDecision,
     "counter pass",
@@ -462,7 +476,7 @@ test("opponent activation reaction ignores stale activation events after their t
   assert.equal(result.events.length, 0);
 });
 
-test("opponent activation reaction queues after the opponent Event main effect", () => {
+test("opponent activation reaction queues before the opponent Event main effect", () => {
   const { source, state } = setupOpponentActivationRevealPowerState();
   state.eventJournal = [];
   state.turn.turnPlayerId = p2;
@@ -503,7 +517,11 @@ test("opponent activation reaction queues after the opponent Event main effect",
   assert.equal(played.errors, undefined);
   assert.equal(
     played.events.some((event) => event.type === "effectResolved"),
-    true,
+    false,
+  );
+  assert.equal(
+    played.events.some((event) => event.type === "cardDrawn"),
+    false,
   );
   const decision = must(played.state.pendingDecision, "reaction reveal");
   assert.equal(decision.type, "chooseQuantity");
@@ -515,6 +533,10 @@ test("opponent activation reaction queues after the opponent Event main effect",
   });
 
   assert.equal(resolved.errors, undefined);
+  assert.equal(
+    resolved.events.some((event) => event.type === "cardDrawn"),
+    true,
+  );
   assert.equal(
     resolved.state.continuousEffects.some(
       (effect) =>
