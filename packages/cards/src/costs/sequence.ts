@@ -6,6 +6,7 @@ import {
   type CostParseResult,
   type SequenceCostPrimitive,
 } from "./rest-don.js";
+import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseRestSelfCost } from "./rest-self.js";
 import { parseReturnDonSequenceCost } from "./return-don.js";
@@ -16,6 +17,7 @@ const costParsers = [
   parseRestSelfCost,
   parseRestDonCost,
   parseMoveCardsCost,
+  parseTurnLifeFaceUpCost,
   parseTrashFromHandCost,
 ] as const;
 
@@ -96,6 +98,8 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       };
     case "restSelf":
       return { type: "restSelf", optional: true };
+    case "turnLifeFaceUp":
+      return { ...cost, optional: true };
     case "trashFromHand":
       return {
         type: "trashFromHand",
@@ -119,6 +123,13 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
       };
     case "restSelf":
       return { type: "restSelf" };
+    case "turnLifeFaceUp":
+      return {
+        type: "turnLifeFaceUp",
+        count: cost.count,
+        player: cost.player,
+        position: cost.position,
+      };
     case "returnDon":
       return {
         type: "returnDon",

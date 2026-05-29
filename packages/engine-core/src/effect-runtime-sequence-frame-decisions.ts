@@ -30,6 +30,10 @@ type MoveCardsPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
   { type: "moveCards" }
 >;
+type TurnLifeFaceUpPaymentOption = Extract<
+  OptionalPayCostDecision["paymentOptions"][number],
+  { type: "turnLifeFaceUp" }
+>;
 
 const expandMoveCardsCostRoutes = (
   cost: Extract<OptionalCost, { type: "moveCards" }>,
@@ -114,6 +118,27 @@ const selectableMoveCardsCostIds = (
     }
   }
   return undefined;
+};
+
+const canTurnLifeFaceUp = (
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+  option: TurnLifeFaceUpPaymentOption,
+): boolean => {
+  if (
+    option.player !== "self" ||
+    !Number.isInteger(option.count) ||
+    option.count <= 0
+  ) {
+    return false;
+  }
+  const selected =
+    option.position === "top"
+      ? player.life.slice(0, option.count)
+      : player.life.slice(Math.max(0, player.life.length - option.count));
+  return (
+    selected.length === option.count &&
+    selected.every((lifeCard) => !lifeCard.faceUp)
+  );
 };
 
 export const findSequenceFrameByDecisionId = (
@@ -504,6 +529,19 @@ export const getSequencePayCostLegalActions = (
       );
       continue;
     }
+    if (option.type === "turnLifeFaceUp") {
+      if (canTurnLifeFaceUp(player, option)) {
+        legalPayments.push({
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+          },
+        });
+      }
+      continue;
+    }
     if (option.type === "restDon" || option.type === "returnDon") {
       const selectableDonIds =
         option.type === "returnDon"
@@ -549,7 +587,8 @@ export const getSequenceOptionalPayCostOptions = (
         | "returnDon"
         | "trashFromHand"
         | "trashFromField"
-        | "moveCards";
+        | "moveCards"
+        | "turnLifeFaceUp";
     }
   >
 > => {
@@ -563,7 +602,8 @@ export const getSequenceOptionalPayCostOptions = (
           | "returnDon"
           | "trashFromHand"
           | "trashFromField"
-          | "moveCards";
+          | "moveCards"
+          | "turnLifeFaceUp";
       }
     >
   > = [];
@@ -634,6 +674,22 @@ export const getSequenceOptionalPayCostOptions = (
           to: route.to,
         });
       }
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "turnLifeFaceUp") {
+    const option: TurnLifeFaceUpPaymentOption = {
+      id: `turnLifeFaceUp:${cost.position}`,
+      type: "turnLifeFaceUp",
+      count: cost.count,
+      player: cost.player,
+      position: cost.position,
+    };
+    if (
+      currentPlayer !== undefined &&
+      canTurnLifeFaceUp(currentPlayer, option)
+    ) {
+      paymentOptions.push(option);
     }
     return paymentOptions;
   }

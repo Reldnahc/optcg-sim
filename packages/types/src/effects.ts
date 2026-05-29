@@ -121,6 +121,12 @@ export type Cost =
     }
   | { type: "restSelf"; optional?: boolean }
   | {
+      type: "turnLifeFaceUp";
+      count: number;
+      player: PlayerRef;
+      position: "top" | "bottom";
+    }
+  | {
       type: "trashFromHand";
       count: number;
       filter?: CardFilter;
@@ -201,6 +207,13 @@ export type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
+  | {
+      type: "turnLifeFaceUp";
+      count: number;
+      player: PlayerRef;
+      position: "top" | "bottom";
+      optional: true;
+    }
   | OptionalTrashFromHandCost
   | OptionalMoveCardsCost
   | OptionalChooseOneTrashCost

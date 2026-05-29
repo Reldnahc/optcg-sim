@@ -151,6 +151,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { ...cost, optional: true };
     case "moveCards":
       return { ...cost, optional: true };
+    case "turnLifeFaceUp":
+      return { ...cost, optional: true };
     case "sequence":
     case "trashSelf":
     case "discard":
@@ -363,6 +365,11 @@ const isSupportedPayCostSegment = (
   }
   if (cost.type === "restSelf") {
     return true;
+  }
+  if (cost.type === "turnLifeFaceUp") {
+    return (
+      cost.player === "self" && Number.isInteger(cost.count) && cost.count > 0
+    );
   }
   return (
     (cost.type === "restDon" ||

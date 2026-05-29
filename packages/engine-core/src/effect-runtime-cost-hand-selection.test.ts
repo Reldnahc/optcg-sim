@@ -346,6 +346,95 @@ test("optional returnDon cost payment records costPaid and returns DON to DON de
   );
 });
 
+test("optional turnLifeFaceUp cost flips Life public and resumes the sequence", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        id: "turn-life-face-up",
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "turnLifeFaceUp",
+            count: 1,
+            player: "self",
+            position: "top",
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "draw-if-paid",
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  });
+  const before = must(state.players[p1], "before p1");
+  const topLife = must(before.life[0], "top Life");
+  assert.equal(topLife.faceUp, false);
+  const beforeHandCount = before.hand.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "turnLifeFaceUp");
+  assert.deepEqual(decision.paymentOptions, [
+    {
+      id: "turnLifeFaceUp:top",
+      type: "turnLifeFaceUp",
+      count: 1,
+      player: "self",
+      position: "top",
+    },
+  ]);
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "turnLifeFaceUp:top",
+    },
+  });
+  const after = must(paid.state.players[p1], "after p1");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(must(after.life[0], "after top Life").faceUp, true);
+  assert.equal(after.hand.length, beforeHandCount + 1);
+  assert.deepEqual(
+    eventTypes(paid.events).filter(
+      (type) =>
+        type === "cardRevealed" || type === "costPaid" || type === "cardDrawn",
+    ),
+    ["cardRevealed", "costPaid", "cardDrawn"],
+  );
+  const revealed = must(
+    paid.events.find((event) => event.type === "cardRevealed"),
+    "cardRevealed event",
+  );
+  assert.equal(revealed.visibility.type, "public");
+  assert.deepEqual(revealed.payload, {
+    revealId: `reveal:life-face-up:${String(decision.id)}`,
+    cards: [
+      {
+        instanceId: topLife.card.instanceId,
+        cardId: topLife.card.cardId,
+        playerId: p1,
+        zone: {
+          zone: "life",
+          playerId: p1,
+          slot: "life",
+          index: 0,
+        },
+      },
+    ],
+    origin: "life",
+    reason: "turnLifeFaceUpCost",
+  });
+});
+
 test("optional returnDon may pay using attached DON and detaches host attachment", () => {
   const { state } = sequenceQueueState(optionalReturnDonThenPauseSequence());
   placeActiveDon(state);

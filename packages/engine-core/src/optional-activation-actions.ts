@@ -17,6 +17,7 @@ import type {
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { reindexZoneCards, zonesEqual } from "./action-state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
+import { applyTurnLifeFaceUpPayment } from "./effect-runtime-life-face-up-cost.js";
 import {
   processEffectRuntimeAfterOptionalActivationAccept,
   processEffectRuntimeAfterOptionalActivationDecline,
@@ -356,6 +357,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "restSelf" &&
         decision.cost.type !== "returnDon" &&
         decision.cost.type !== "moveCards" &&
+        decision.cost.type !== "turnLifeFaceUp" &&
         decision.cost.type !== "trashFromHand" &&
         decision.cost.type !== "chooseOne")
     ) {
@@ -407,6 +409,12 @@ export const applyOptionalActivationDecisionResponse = (
             selectedCardInstanceIds: NonNullable<
               typeof action.response.selectedCardInstanceIds
             >;
+          }
+        | {
+            playerId: PlayerId;
+            optionId: "turnLifeFaceUp";
+            count: number;
+            position: "top" | "bottom";
           };
       if (selectedOption.type === "moveCards") {
         if (!isSupportedMoveCardsPaymentRoute(selectedOption)) {
@@ -462,6 +470,39 @@ export const applyOptionalActivationDecisionResponse = (
           playerId: decision.playerId,
           optionId: "moveCards",
           selectedCardInstanceIds: selected,
+        };
+      } else if (selectedOption.type === "turnLifeFaceUp") {
+        if (
+          paymentResponse.selectedCardInstanceIds !== undefined ||
+          paymentResponse.selectedDonInstanceIds !== undefined
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment Life face-up selection is invalid."),
+          );
+        }
+        const updated = applyTurnLifeFaceUpPayment({
+          decisionId: decision.id,
+          events,
+          player,
+          playerId: decision.playerId,
+          selectedOption,
+          state,
+        });
+        if (updated === null) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment Life face-up selection is invalid."),
+          );
+        }
+        nextPlayer = updated;
+        costPaidPayload = {
+          playerId: decision.playerId,
+          optionId: "turnLifeFaceUp",
+          count: selectedOption.count,
+          position: selectedOption.position,
         };
       } else if (
         selectedOption.type === "trashFromHand" ||

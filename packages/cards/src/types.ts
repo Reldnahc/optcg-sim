@@ -86,6 +86,7 @@ export type PrimitiveEvidence =
   | "cost:restSelf"
   | "cost:restDon"
   | "cost:returnDon"
+  | "cost:turnLifeFaceUp"
   | "cost:chooseOne"
   | "cost:trashFromField"
   | "cost:trashFromHand"
