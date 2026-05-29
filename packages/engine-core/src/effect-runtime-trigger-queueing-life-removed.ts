@@ -57,6 +57,47 @@ const movedLifePlayer = (event: EngineEvent): PlayerId | undefined => {
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 1);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isRuntimeLifeMovementEvent = (event: EngineEvent): boolean =>
+  event.causedBy?.type === "effect" || event.causedBy?.type === "decision";
+
+const isEligibleLifeRemovedEvent = (
+  state: GameState,
+  event: EngineEvent,
+): boolean =>
+  isRecentRuntimeEvent(state, event) || isRuntimeLifeMovementEvent(event);
+
+const sourceFieldEntryEventSeq = (
+  state: GameState,
+  source: CardInstance,
+): number | undefined => {
+  for (let index = state.eventJournal.length - 1; index >= 0; index -= 1) {
+    const event = state.eventJournal[index];
+    if (event?.type !== "cardPlayed" || !isRecord(event.payload)) {
+      continue;
+    }
+    if (
+      event.payload["instanceId"] === source.instanceId &&
+      event.payload["cardId"] === source.cardId &&
+      event.payload["playerId"] === source.controller
+    ) {
+      return event.seq;
+    }
+  }
+  return undefined;
+};
+
+const didLifeRemovalHappenAfterSourceEntered = (
+  state: GameState,
+  event: EngineEvent,
+  source: CardInstance,
+): boolean => {
+  const fieldEntrySeq = sourceFieldEntryEventSeq(state, source);
+  return fieldEntrySeq === undefined || event.seq > fieldEntrySeq;
+};
+
 const playerRefMatches = (
   state: GameState,
   source: CardInstance,
@@ -98,7 +139,7 @@ export const createLifeRemovedTriggerQueueing = (
     const alreadyQueued = queuedTriggerEventIds(state);
     const lifeRemovedEvents = state.eventJournal.filter(
       (event) =>
-        isRecentRuntimeEvent(state, event) &&
+        isEligibleLifeRemovedEvent(state, event) &&
         !alreadyQueued.has(String(event.id)) &&
         movedLifePlayer(event) !== undefined,
     );
@@ -120,7 +161,10 @@ export const createLifeRemovedTriggerQueueing = (
       }
 
       for (const source of sources) {
-        if (isCardEffectInvalidated(state, source)) {
+        if (
+          isCardEffectInvalidated(state, source) ||
+          !didLifeRemovalHappenAfterSourceEntered(state, event, source)
+        ) {
           continue;
         }
         const resolved = state.cardManifest.cards[source.cardId];

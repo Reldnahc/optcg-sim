@@ -28,6 +28,8 @@ import {
   queueDrawForP1,
   toCardId,
   toEffectId,
+  toQueueEntryId,
+  toTimingWindowId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
 
@@ -94,6 +96,65 @@ const setupLifeRemovedDefinition = (
     "def-life-removed": definition,
   };
   state.cardManifest.cards[source.cardId] = supportCard;
+};
+
+const setupDelayedLifeMoveDefinition = (
+  state: ReturnType<typeof createActiveState>,
+) => {
+  const leader = must(must(state.players[p1], "p1").leader, "leader");
+  const supportCard = resolvedCard({
+    cardId: leader.cardId,
+    category: "leader",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-delayed-life-move",
+      rulesVersion: "delayed-life-move-rules",
+      sourceTextHash: "delayed-life-move-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    leader.cardId,
+    supportCard.support,
+  );
+  const effectBlockId = toEffectId("delayed-life-move-sequence");
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...must(baseDefinition.effects[0], "base effect"),
+        id: effectBlockId,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "moveCards",
+                count: 1,
+                from: { player: "self", zone: "life", position: "top" },
+                to: { player: "self", zone: "trash" },
+                order: "original",
+              },
+            },
+            {
+              connector: "then",
+              effect: { type: "drawUpTo", count: 1, player: "self" },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-delayed-life-move": definition,
+  };
+  state.cardManifest.cards[leader.cardId] = supportCard;
+  return { effectBlockId, leader };
 };
 
 test("lifeRemoved reaction queues from Life movement and prevents later own-effect draws", () => {
@@ -169,6 +230,153 @@ test("lifeRemoved reaction queues from Life movement and prevents later own-effe
     must(blockedDraw.state.players[p2], "p2 unaffected").hand.length,
     must(resolved.state.players[p2], "p2 before unrelated").hand.length,
   );
+});
+
+test("lifeRemoved reaction queues from canonical moveCards after the moving effect resumes", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.eventJournal = [];
+  setupLifeRemovedDefinition(state);
+  const { effectBlockId, leader } = setupDelayedLifeMoveDefinition(state);
+  const before = must(state.players[p1], "p1 before");
+  const initialHandLength = before.hand.length;
+  const topLife = must(before.life[0], "top life").card;
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-delayed-life-move"),
+      timingWindowId: toTimingWindowId("timing-window-delayed-life-move"),
+      controllerId: p1,
+      source: {
+        instanceId: leader.instanceId,
+        cardId: leader.cardId,
+        playerId: p1,
+        zone: leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: leader.instanceId,
+        cardId: leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: leader.zone,
+        category: "leader",
+        colors: ["red"],
+        cost: 0,
+        keywords: [],
+      },
+      effectBlockId,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "test:delayed-life-move" },
+    },
+  ];
+
+  const pendingDrawChoice = processEffectRuntime(state);
+  assert.equal(pendingDrawChoice.errors, undefined);
+  assert.equal(pendingDrawChoice.state.pendingDecision?.type, "chooseQuantity");
+  assert.equal(
+    pendingDrawChoice.events.some(
+      (event) =>
+        event.type === "cardMoved" &&
+        event.visibility.type === "public" &&
+        JSON.stringify(event.payload).includes('"zone":"life"'),
+    ),
+    true,
+  );
+  assert.equal(
+    must(pendingDrawChoice.state.players[p1], "p1 after move").trash[0]
+      ?.instanceId,
+    topLife.instanceId,
+  );
+
+  const drawChoice = must(
+    pendingDrawChoice.state.pendingDecision,
+    "draw choice",
+  );
+  const movedEffectResolved = applyAction(pendingDrawChoice.state, {
+    type: "respondToDecision",
+    decisionId: drawChoice.id,
+    response: { type: "chooseQuantity", quantity: 0 },
+  });
+  assert.equal(movedEffectResolved.errors, undefined);
+
+  const queuedLifeRemoved =
+    movedEffectResolved.state.effectQueue.length > 0
+      ? movedEffectResolved
+      : processEffectRuntime(movedEffectResolved.state);
+  assert.equal(queuedLifeRemoved.errors, undefined);
+  assert.equal(queuedLifeRemoved.state.effectQueue.length, 1);
+  assert.deepEqual(queuedLifeRemoved.state.effectQueue[0]?.causedBy, {
+    type: "ruleProcess",
+    name: "effectRuntime:lifeRemovedTriggerQueueing",
+  });
+
+  const resolvedLifeRemoved = processEffectRuntime(queuedLifeRemoved.state);
+  assert.equal(resolvedLifeRemoved.errors, undefined);
+  assert.equal(
+    must(resolvedLifeRemoved.state.players[p1], "p1 after life removed trigger")
+      .hand.length,
+    initialHandLength + 1,
+  );
+  assert.equal(
+    resolvedLifeRemoved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "restriction" &&
+        effect.modifier.operation.type === "restriction" &&
+        effect.modifier.operation.restriction === "cannotDrawByOwnEffects" &&
+        effect.controller === p1,
+    ),
+    true,
+  );
+});
+
+test("lifeRemoved reaction ignores movement before the source entered field", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  setupLifeRemovedDefinition(state);
+  const source = must(
+    must(state.players[p1], "p1").characters[0],
+    "reaction source",
+  );
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:life-removed-before-source"),
+      seq: 1,
+      type: "cardMoved",
+      payload: {
+        from: { zone: "life", playerId: p1, slot: "life", index: 0 },
+        to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+        reason: "moveCards",
+      },
+      visibility: { type: "public" },
+      causedBy: {
+        type: "effect",
+        queueEntryId: toQueueEntryId("queue-entry-before-source"),
+        effectId: toEffectId("effect-before-source"),
+      },
+      createdAtStateSeq: toStateSeq(1),
+    },
+    {
+      id: toEngineEventId("event:reaction-source-entered-after-life"),
+      seq: 2,
+      type: "cardPlayed",
+      payload: {
+        playerId: p1,
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        category: "character",
+      },
+      visibility: { type: "public" },
+      causedBy: { type: "ruleProcess", name: "test:source-entry" },
+      createdAtStateSeq: toStateSeq(2),
+    },
+  ];
+  state.seq = toStateSeq(10);
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.events.length, 0);
 });
 
 const installOpponentActivationRevealPowerDefinition = (
