@@ -115,9 +115,10 @@ export const Zone = ({
   const zoneCardsStyle = {
     "--card-row-overlap": `${rowLayout.overlap.toFixed(2)}px`,
   } as CSSProperties & Record<"--card-row-overlap", string>;
-  const lifeCardStyle = (index: number): CSSProperties =>
+  const lifeCardStyle = (index: number, count: number): CSSProperties =>
     ({
       "--life-card-index": String(index),
+      zIndex: count - index,
     }) as CSSProperties & Record<"--life-card-index", string>;
   const displayedStackCount = stackCount ?? cards.length;
 
@@ -194,7 +195,7 @@ export const Zone = ({
                   <div
                     key={instanceId}
                     className="life-card-position"
-                    style={lifeCardStyle(index)}
+                    style={lifeCardStyle(index, visibleCards.length)}
                   >
                     <CardTile card={card} onHover={onCardPreview} />
                   </div>

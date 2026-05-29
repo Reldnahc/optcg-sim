@@ -590,5 +590,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes(">Hidden card<"), false);
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 4);
     assert.equal((markup.match(/hidden-life-opponent-/gu) ?? []).length, 5);
+    assert.match(markup, /--life-card-index:0;z-index:4/u);
+    assert.match(markup, /--life-card-index:3;z-index:1/u);
   });
 });
