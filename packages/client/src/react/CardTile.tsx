@@ -112,8 +112,10 @@ export const CardTile = ({
     pointerDrag?.moved === true
       ? ({
           position: "fixed",
-          left: pointerDrag.originLeft + pointerDrag.currentX - pointerDrag.originX,
-          top: pointerDrag.originTop + pointerDrag.currentY - pointerDrag.originY,
+          left:
+            pointerDrag.originLeft + pointerDrag.currentX - pointerDrag.originX,
+          top:
+            pointerDrag.originTop + pointerDrag.currentY - pointerDrag.originY,
           width: pointerDrag.width,
           height: pointerDrag.height,
           pointerEvents: "none",
@@ -190,9 +192,7 @@ export const CardTile = ({
                   element === event.currentTarget
                     ? rect
                     : element.getBoundingClientRect();
-                return [
-                  { id, centerX: entryRect.left + entryRect.width / 2 },
-                ];
+                return [{ id, centerX: entryRect.left + entryRect.width / 2 }];
               });
         lastPointerMoveRef.current = undefined;
         setPointerDrag({

@@ -263,7 +263,7 @@ test("TYP-010 canonical selectedTargets producer contracts stay explicit and non
   );
   assert.match(
     canonicalTypes,
-    /export interface SelectTargetsEffect\s*{[\s\S]*?\btype:\s*"selectTargets";[\s\S]*?\brequest:\s*SelectedTargetsRequest;[\s\S]*?}/m,
+    /export interface SelectTargetsEffect\s*{[\s\S]*?\btype:\s*"selectTargets";[\s\S]*?\brequest:\s*SelectedTargetsRequest\s*\|\s*MultiZoneTargetRequest;[\s\S]*?}/m,
   );
   assert.match(
     canonicalTypes,

@@ -91,36 +91,36 @@ export const ControlRail = ({
             </svg>
           </button>
         </div>
-      {errors.map((error) => (
-        <p key={error} className="error-text">
-          {error}
-        </p>
-      ))}
-      {rollbackStatus === undefined ? null : (
-        <section className="rollback-status-panel">
-          <p>{rollbackStatus.message}</p>
-          {rollbackStatus.canCancel ? (
-            <button
-              className="action-button"
-              type="button"
-              disabled={disabled}
-              onClick={onCancelRollback}
-            >
-              Cancel rollback request
-            </button>
-          ) : null}
-        </section>
-      )}
-      <ActionMenu
-        title="Global actions"
-        actions={globalActions}
-        disabled={disabled}
-        onAction={onAction}
-      />
-    </section>
-    <section className="summary-panel player-summary">
-      <h2>Player</h2>
-    </section>
-  </aside>
+        {errors.map((error) => (
+          <p key={error} className="error-text">
+            {error}
+          </p>
+        ))}
+        {rollbackStatus === undefined ? null : (
+          <section className="rollback-status-panel">
+            <p>{rollbackStatus.message}</p>
+            {rollbackStatus.canCancel ? (
+              <button
+                className="action-button"
+                type="button"
+                disabled={disabled}
+                onClick={onCancelRollback}
+              >
+                Cancel rollback request
+              </button>
+            ) : null}
+          </section>
+        )}
+        <ActionMenu
+          title="Global actions"
+          actions={globalActions}
+          disabled={disabled}
+          onAction={onAction}
+        />
+      </section>
+      <section className="summary-panel player-summary">
+        <h2>Player</h2>
+      </section>
+    </aside>
   );
 };

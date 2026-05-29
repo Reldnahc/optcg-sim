@@ -146,90 +146,92 @@ export const Zone = ({
         />
       ) : null}
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
-        {displayMode === "slots" ? (
-          Array.from({ length: slotCount }, (_, index) => {
-            const card = visibleCards[index];
-            if (card === undefined) {
+        {displayMode === "slots"
+          ? Array.from({ length: slotCount }, (_, index) => {
+              const card = visibleCards[index];
+              if (card === undefined) {
+                return (
+                  <div
+                    key={`empty-slot-${String(index)}`}
+                    className="zone-card-slot is-empty"
+                  />
+                );
+              }
+              const instanceId = String(card.instanceId);
               return (
-                <div
-                  key={`empty-slot-${String(index)}`}
-                  className="zone-card-slot is-empty"
-                />
+                <div key={instanceId} className="zone-card-slot">
+                  <CardTile
+                    card={card}
+                    selected={
+                      selectedCardInstanceId === instanceId ||
+                      decisionSelectedInstanceIds.includes(instanceId)
+                    }
+                    pendingChoice={pendingChoiceInstanceIds.includes(
+                      instanceId,
+                    )}
+                    selectedDonInstanceIds={selectedDonInstanceIds}
+                    active={activeCardInstanceIds.includes(instanceId)}
+                    actions={cardActions?.(instanceId) ?? []}
+                    disabled={actionDisabled}
+                    onAction={onCardAction}
+                    onAttachedDonClick={onCardClick}
+                    onHover={onCardPreview}
+                    onClick={
+                      onCardClick === undefined
+                        ? undefined
+                        : () => {
+                            onCardClick(instanceId);
+                          }
+                    }
+                  />
+                </div>
               );
-            }
-            const instanceId = String(card.instanceId);
-            return (
-              <div key={instanceId} className="zone-card-slot">
-                <CardTile
-                  card={card}
-                  selected={
-                    selectedCardInstanceId === instanceId ||
-                    decisionSelectedInstanceIds.includes(instanceId)
-                  }
-                  pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
-                  selectedDonInstanceIds={selectedDonInstanceIds}
-                  active={activeCardInstanceIds.includes(instanceId)}
-                  actions={cardActions?.(instanceId) ?? []}
-                  disabled={actionDisabled}
-                  onAction={onCardAction}
-                  onAttachedDonClick={onCardClick}
-                  onHover={onCardPreview}
-                  onClick={
-                    onCardClick === undefined
-                      ? undefined
-                      : () => {
-                          onCardClick(instanceId);
-                        }
-                  }
-                />
-              </div>
-            );
-          })
-        ) : displayMode === "life" ? (
-          visibleCards.map((card, index) => {
-            const instanceId = String(card.instanceId);
-            return (
-              <div
-                key={instanceId}
-                className="life-card-position"
-                style={lifeCardStyle(index)}
-              >
-                <CardTile card={card} onHover={onCardPreview} />
-              </div>
-            );
-          })
-        ) : (
-          visibleCards.map((card) => {
-            const instanceId = String(card.instanceId);
-            return (
-              <CardTile
-                key={instanceId}
-                card={card}
-                selected={
-                  selectedCardInstanceId === instanceId ||
-                  decisionSelectedInstanceIds.includes(instanceId)
-                }
-                pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
-                selectedDonInstanceIds={selectedDonInstanceIds}
-                active={activeCardInstanceIds.includes(instanceId)}
-                actions={cardActions?.(instanceId) ?? []}
-                disabled={actionDisabled}
-                onAction={onCardAction}
-                onAttachedDonClick={onCardClick}
-                onHover={onCardPreview}
-                onClick={
-                  displayMode === "stack" && onViewCollection !== undefined
-                    ? onViewCollection
-                    : onCardClick === undefined
-                      ? undefined
-                      : () => {
-                          onCardClick(instanceId);
-                        }
-                }
-              />
-            );
-          })
-        )}
+            })
+          : displayMode === "life"
+            ? visibleCards.map((card, index) => {
+                const instanceId = String(card.instanceId);
+                return (
+                  <div
+                    key={instanceId}
+                    className="life-card-position"
+                    style={lifeCardStyle(index)}
+                  >
+                    <CardTile card={card} onHover={onCardPreview} />
+                  </div>
+                );
+              })
+            : visibleCards.map((card) => {
+                const instanceId = String(card.instanceId);
+                return (
+                  <CardTile
+                    key={instanceId}
+                    card={card}
+                    selected={
+                      selectedCardInstanceId === instanceId ||
+                      decisionSelectedInstanceIds.includes(instanceId)
+                    }
+                    pendingChoice={pendingChoiceInstanceIds.includes(
+                      instanceId,
+                    )}
+                    selectedDonInstanceIds={selectedDonInstanceIds}
+                    active={activeCardInstanceIds.includes(instanceId)}
+                    actions={cardActions?.(instanceId) ?? []}
+                    disabled={actionDisabled}
+                    onAction={onCardAction}
+                    onAttachedDonClick={onCardClick}
+                    onHover={onCardPreview}
+                    onClick={
+                      displayMode === "stack" && onViewCollection !== undefined
+                        ? onViewCollection
+                        : onCardClick === undefined
+                          ? undefined
+                          : () => {
+                              onCardClick(instanceId);
+                            }
+                    }
+                  />
+                );
+              })}
       </div>
     </section>
   );

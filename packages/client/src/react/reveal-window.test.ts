@@ -102,7 +102,7 @@ describe("reveal window", () => {
     );
     assert.match(
       matchAppSource,
-      /updateFloatingWindowRect\(revealWindowKey\(revealWindow\.revealId\), rect\)/u,
+      /updateFloatingWindowRect\(\s*revealWindowKey\(revealWindow\.revealId\),\s*rect,\s*\)/u,
     );
     assert.match(
       revealWindowSource,

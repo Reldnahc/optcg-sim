@@ -233,7 +233,13 @@ export const FloatingWindow = ({
               return;
             }
             updateRect(
-              dragRect(start, event.clientX, event.clientY, minWidth, minHeight),
+              dragRect(
+                start,
+                event.clientX,
+                event.clientY,
+                minWidth,
+                minHeight,
+              ),
             );
           }}
           onPointerUp={(event) => {

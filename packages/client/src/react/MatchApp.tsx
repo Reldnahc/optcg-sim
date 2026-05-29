@@ -75,7 +75,9 @@ const orderCardsByInstanceIds = (
   cards: readonly ClientCardModel[],
   order: readonly string[] = [],
 ): ClientCardModel[] => {
-  const cardsById = new Map(cards.map((card) => [String(card.instanceId), card]));
+  const cardsById = new Map(
+    cards.map((card) => [String(card.instanceId), card]),
+  );
   const orderedCards = order.flatMap((instanceId) => {
     const card = cardsById.get(instanceId);
     return card === undefined ? [] : [card];
@@ -671,10 +673,10 @@ export const MatchApp = (): React.JSX.Element => {
           void client.confirmDecision();
         }}
         onPreviewCard={previewHoveredCard}
-          onClose={
-            cardCostCollectionModal === undefined &&
-            decisionCollectionModal === undefined
-              ? () => {
+        onClose={
+          cardCostCollectionModal === undefined &&
+          decisionCollectionModal === undefined
+            ? () => {
                 if (collectionModal !== undefined) {
                   setCollectionModal(undefined);
                 }
@@ -683,7 +685,7 @@ export const MatchApp = (): React.JSX.Element => {
                 }
               }
             : undefined
-          }
+        }
       />
       {opponentRevealWindows.map((revealWindow) => (
         <RevealWindowHost
@@ -715,7 +717,10 @@ export const MatchApp = (): React.JSX.Element => {
             });
           }}
           onRectChange={(rect) => {
-            updateFloatingWindowRect(revealWindowKey(revealWindow.revealId), rect);
+            updateFloatingWindowRect(
+              revealWindowKey(revealWindow.revealId),
+              rect,
+            );
           }}
         />
       ))}

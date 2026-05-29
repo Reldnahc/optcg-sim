@@ -49,6 +49,8 @@ export interface PublicCardView {
   turnPlayed?: number;
   printedPower?: number;
   currentPower?: number;
+  printedCost?: number;
+  currentCost?: number;
 }
 
 export interface PublicLifeView {
@@ -94,6 +96,7 @@ export interface PublicDecision<TType extends string = string> {
   playerId: PlayerId;
   prompt: string;
   causedBy: CausalityRef;
+  source?: CardRef;
   timeoutMs?: number;
 }
 
@@ -195,6 +198,7 @@ export interface PlayerView {
   opponent: OpponentVisibleState;
   battle?: PublicBattleState;
   pendingDecision?: PublicPendingDecision;
+  activeEffectSources?: CardRef[];
   legalActions: PublicLegalAction[];
   revealedCards: PublicRevealRecord[];
   events: EngineEvent[];

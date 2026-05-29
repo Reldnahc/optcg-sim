@@ -78,258 +78,264 @@ export const BoardLayout = ({
         onBackgroundClick();
       }}
     >
-    <div className="hand-rail">
-      <HandRow
-        label="Opponent hand"
-        cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
-        overflowDirection="right"
-      />
-      {handCount("Opponent", board.opponent.handCount)}
-      {handCount("Player", board.self.hand.length)}
-      {decisionPrompt === undefined ? null : (
-        <div className="decision-status-prompt" role="status">
-          {decisionPrompt}
+      <div className="hand-rail">
+        <HandRow
+          label="Opponent hand"
+          cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
+          overflowDirection="right"
+        />
+        {handCount("Opponent", board.opponent.handCount)}
+        {handCount("Player", board.self.hand.length)}
+        {decisionPrompt === undefined ? null : (
+          <div className="decision-status-prompt" role="status">
+            {decisionPrompt}
+          </div>
+        )}
+        <HandRow
+          label="Player hand"
+          cards={board.self.hand}
+          overflowDirection="left"
+          selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+          selectedDonInstanceIds={selectedDonInstanceIds}
+          activeCardInstanceIds={activeCardInstanceIds}
+          cardActions={cardActions}
+          actionDisabled={actionDisabled}
+          onCardPreview={onPreviewCard}
+          onCardClick={onCardClick}
+          onCardAction={onCardAction}
+          onMoveCard={onMoveHandCard}
+        />
+      </div>
+      <div className="tabletop-board">
+        <BattleArrowOverlay battleArrow={board.battleArrow} />
+        <div className="playmat-zone opponent-cost">
+          <Zone
+            label="Cost Area"
+            cards={board.opponent.costArea}
+            size="mini"
+            displayMode="overlap"
+            activeCardInstanceIds={activeCardInstanceIds}
+            onCardPreview={onPreviewCard}
+          />
         </div>
-      )}
-      <HandRow
-        label="Player hand"
-        cards={board.self.hand}
-        overflowDirection="left"
-        selectedCardInstanceId={selectedCardInstanceId}
-        pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-        decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-        selectedDonInstanceIds={selectedDonInstanceIds}
-        activeCardInstanceIds={activeCardInstanceIds}
-        cardActions={cardActions}
-        actionDisabled={actionDisabled}
-        onCardPreview={onPreviewCard}
-        onCardClick={onCardClick}
-        onCardAction={onCardAction}
-        onMoveCard={onMoveHandCard}
-      />
-    </div>
-    <div className="tabletop-board">
-      <BattleArrowOverlay battleArrow={board.battleArrow} />
-      <div className="playmat-zone opponent-cost">
-        <Zone
-          label="Cost Area"
-          cards={board.opponent.costArea}
-          size="mini"
-          displayMode="overlap"
-          activeCardInstanceIds={activeCardInstanceIds}
-          onCardPreview={onPreviewCard}
-        />
+        <div className="playmat-zone opponent-life">
+          <Zone
+            label="Life"
+            cards={hiddenCards(
+              board.opponent.lifeCount,
+              "hidden-life-opponent",
+            )}
+            size="small"
+            displayMode="life"
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone opponent-deck">
+          <Zone
+            label="Deck"
+            cards={hiddenCards(
+              board.opponent.deckCount,
+              "hidden-deck-opponent",
+            )}
+            size="small"
+            displayMode="stack"
+            stackCount={board.opponent.deckCount}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone opponent-don-deck">
+          <Zone
+            label="DON!! Deck"
+            cards={hiddenCards(
+              board.opponent.donDeckCount,
+              "hidden-don-deck-opponent",
+            )}
+            size="small"
+            displayMode="stack"
+            stackCount={board.opponent.donDeckCount}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone opponent-trash">
+          <Zone
+            label="Trash"
+            cards={board.opponent.trash}
+            size="small"
+            displayMode="stack"
+            onCardPreview={onPreviewCard}
+            onViewCollection={() => {
+              onViewCollection("Opponent trash", board.opponent.trash);
+            }}
+          />
+        </div>
+        <div className="playmat-zone opponent-leader">
+          <Zone
+            label="Leader"
+            cards={[board.opponent.leader]}
+            size="small"
+            selectedCardInstanceId={selectedCardInstanceId}
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            cardActions={cardActions}
+            actionDisabled={actionDisabled}
+            onCardClick={onCardClick}
+            onCardAction={onCardAction}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone opponent-stage">
+          <Zone
+            label="Stage"
+            cards={
+              board.opponent.stage === undefined ? [] : [board.opponent.stage]
+            }
+            size="small"
+            selectedCardInstanceId={selectedCardInstanceId}
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            cardActions={cardActions}
+            actionDisabled={actionDisabled}
+            onCardClick={onCardClick}
+            onCardAction={onCardAction}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone opponent-characters">
+          <Zone
+            label="Character Area"
+            cards={board.opponent.characters}
+            displayMode="slots"
+            slotCount={5}
+            selectedCardInstanceId={selectedCardInstanceId}
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            cardActions={cardActions}
+            actionDisabled={actionDisabled}
+            onCardClick={onCardClick}
+            onCardAction={onCardAction}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone center-spacer">
+          <div className="opponent-center-spacer" />
+          <div className="player-center-spacer" />
+        </div>
+        <div className="playmat-zone player-characters">
+          <Zone
+            label="Character Area"
+            cards={board.self.characters}
+            displayMode="slots"
+            slotCount={5}
+            selectedCardInstanceId={selectedCardInstanceId}
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            cardActions={cardActions}
+            actionDisabled={actionDisabled}
+            onCardClick={onCardClick}
+            onCardAction={onCardAction}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-life">
+          <Zone
+            label="Life"
+            cards={hiddenCards(board.self.lifeCount, "hidden-life-self")}
+            size="small"
+            displayMode="life"
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-leader">
+          <Zone
+            label="Leader"
+            cards={[board.self.leader]}
+            size="small"
+            selectedCardInstanceId={selectedCardInstanceId}
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            cardActions={cardActions}
+            actionDisabled={actionDisabled}
+            onCardClick={onCardClick}
+            onCardAction={onCardAction}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-stage">
+          <Zone
+            label="Stage"
+            cards={board.self.stage === undefined ? [] : [board.self.stage]}
+            size="small"
+            selectedCardInstanceId={selectedCardInstanceId}
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            cardActions={cardActions}
+            actionDisabled={actionDisabled}
+            onCardClick={onCardClick}
+            onCardAction={onCardAction}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-deck">
+          <Zone
+            label="Deck"
+            cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
+            size="small"
+            displayMode="stack"
+            stackCount={board.self.deckCount}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-don-deck">
+          <Zone
+            label="DON!! Deck"
+            cards={hiddenCards(board.self.donDeckCount, "hidden-don-deck-self")}
+            size="small"
+            displayMode="stack"
+            stackCount={board.self.donDeckCount}
+            onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-trash">
+          <Zone
+            label="Trash"
+            cards={board.self.trash}
+            size="small"
+            displayMode="stack"
+            onCardPreview={onPreviewCard}
+            onViewCollection={() => {
+              onViewCollection("Player trash", board.self.trash);
+            }}
+          />
+        </div>
+        <div className="playmat-zone player-cost">
+          <Zone
+            label="Cost Area"
+            cards={board.self.costArea}
+            size="mini"
+            displayMode="overlap"
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
+            activeCardInstanceIds={activeCardInstanceIds}
+            onCardPreview={onPreviewCard}
+            onCardClick={onCardClick}
+          />
+        </div>
       </div>
-      <div className="playmat-zone opponent-life">
-        <Zone
-          label="Life"
-          cards={hiddenCards(board.opponent.lifeCount, "hidden-life-opponent")}
-          size="small"
-          displayMode="life"
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone opponent-deck">
-        <Zone
-          label="Deck"
-          cards={hiddenCards(board.opponent.deckCount, "hidden-deck-opponent")}
-          size="small"
-          displayMode="stack"
-          stackCount={board.opponent.deckCount}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone opponent-don-deck">
-        <Zone
-          label="DON!! Deck"
-          cards={hiddenCards(
-            board.opponent.donDeckCount,
-            "hidden-don-deck-opponent",
-          )}
-          size="small"
-          displayMode="stack"
-          stackCount={board.opponent.donDeckCount}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone opponent-trash">
-        <Zone
-          label="Trash"
-          cards={board.opponent.trash}
-          size="small"
-          displayMode="stack"
-          onCardPreview={onPreviewCard}
-          onViewCollection={() => {
-            onViewCollection("Opponent trash", board.opponent.trash);
-          }}
-        />
-      </div>
-      <div className="playmat-zone opponent-leader">
-        <Zone
-          label="Leader"
-          cards={[board.opponent.leader]}
-          size="small"
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          cardActions={cardActions}
-          actionDisabled={actionDisabled}
-          onCardClick={onCardClick}
-          onCardAction={onCardAction}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone opponent-stage">
-        <Zone
-          label="Stage"
-          cards={
-            board.opponent.stage === undefined ? [] : [board.opponent.stage]
-          }
-          size="small"
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          cardActions={cardActions}
-          actionDisabled={actionDisabled}
-          onCardClick={onCardClick}
-          onCardAction={onCardAction}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone opponent-characters">
-        <Zone
-          label="Character Area"
-          cards={board.opponent.characters}
-          displayMode="slots"
-          slotCount={5}
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          cardActions={cardActions}
-          actionDisabled={actionDisabled}
-          onCardClick={onCardClick}
-          onCardAction={onCardAction}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone center-spacer">
-        <div className="opponent-center-spacer" />
-        <div className="player-center-spacer" />
-      </div>
-      <div className="playmat-zone player-characters">
-        <Zone
-          label="Character Area"
-          cards={board.self.characters}
-          displayMode="slots"
-          slotCount={5}
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          cardActions={cardActions}
-          actionDisabled={actionDisabled}
-          onCardClick={onCardClick}
-          onCardAction={onCardAction}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone player-life">
-        <Zone
-          label="Life"
-          cards={hiddenCards(board.self.lifeCount, "hidden-life-self")}
-          size="small"
-          displayMode="life"
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone player-leader">
-        <Zone
-          label="Leader"
-          cards={[board.self.leader]}
-          size="small"
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          cardActions={cardActions}
-          actionDisabled={actionDisabled}
-          onCardClick={onCardClick}
-          onCardAction={onCardAction}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone player-stage">
-        <Zone
-          label="Stage"
-          cards={board.self.stage === undefined ? [] : [board.self.stage]}
-          size="small"
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          cardActions={cardActions}
-          actionDisabled={actionDisabled}
-          onCardClick={onCardClick}
-          onCardAction={onCardAction}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone player-deck">
-        <Zone
-          label="Deck"
-          cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
-          size="small"
-          displayMode="stack"
-          stackCount={board.self.deckCount}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone player-don-deck">
-        <Zone
-          label="DON!! Deck"
-          cards={hiddenCards(board.self.donDeckCount, "hidden-don-deck-self")}
-          size="small"
-          displayMode="stack"
-          stackCount={board.self.donDeckCount}
-          onCardPreview={onPreviewCard}
-        />
-      </div>
-      <div className="playmat-zone player-trash">
-        <Zone
-          label="Trash"
-          cards={board.self.trash}
-          size="small"
-          displayMode="stack"
-          onCardPreview={onPreviewCard}
-          onViewCollection={() => {
-            onViewCollection("Player trash", board.self.trash);
-          }}
-        />
-      </div>
-      <div className="playmat-zone player-cost">
-        <Zone
-          label="Cost Area"
-          cards={board.self.costArea}
-          size="mini"
-          displayMode="overlap"
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          activeCardInstanceIds={activeCardInstanceIds}
-          onCardPreview={onPreviewCard}
-          onCardClick={onCardClick}
-        />
-      </div>
-    </div>
     </section>
   );
 };
