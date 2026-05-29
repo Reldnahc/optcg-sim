@@ -7,6 +7,7 @@ import type {
   Effect,
   EffectDefinition,
   GameState,
+  HandSelectionId,
 } from "@optcg/types";
 
 import { applyAction } from "./actions.js";
@@ -732,5 +733,193 @@ test("nested conditional up-to moveCards quantity resumes from the nested path",
   assert.equal(
     must(afterQuantity.life[0], "new top life").card.instanceId,
     topDeck.instanceId,
+  );
+});
+
+test("optional life cost resumes conditional deck-to-life and then hand playSelected", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const playCandidate = must(p1State.hand[1], "play candidate");
+  const topLife = must(p1State.life[0], "top life").card;
+  const topDeck = must(p1State.deck[0], "top deck");
+  state.cardManifest.cards[p1State.leader.cardId] = {
+    ...resolvedCard({
+      cardId: p1State.leader.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    types: ["Straw Hat Crew"],
+  };
+  state.cardManifest.cards[playCandidate.cardId] = {
+    ...resolvedCard({
+      cardId: playCandidate.cardId,
+      category: "character",
+      cost: 5,
+    }),
+    types: ["Sky Island"],
+  };
+  const handSelection = "handSelection:play-from-hand" as HandSelectionId;
+  const definition = setupMoveCardsDefinition(state, source, {
+    type: "sequence",
+    effects: [
+      {
+        id: "cost:life-to-hand",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "moveCards",
+            count: 1,
+            chooser: "self",
+            from: { player: "self", zone: "life", position: "top" },
+            to: { player: "self", zone: "hand" },
+            order: "chooserChoice",
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "body:after-cost",
+        connector: "ifYouDo",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "hasCardInZone",
+                  zone: "leaderArea",
+                  player: "self",
+                  filter: {
+                    categories: ["leader"],
+                    typesAny: ["Straw Hat Crew"],
+                  },
+                },
+                then: deckTopToLifeTopEffect(1),
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    id: "select:hand-play",
+                    connector: "always",
+                    saveResultAs: handSelection,
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      chooser: "self",
+                      min: 0,
+                      max: 1,
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Sky Island"],
+                        cost: { max: 5 },
+                      },
+                      saveAs: handSelection,
+                      visibility: "chooserOnly",
+                    },
+                  },
+                  {
+                    id: "play:selected-from-hand",
+                    connector: "ifPossible",
+                    effect: {
+                      type: "playSelected",
+                      selection: handSelection,
+                      ignoreCost: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-life-cost-conditional-play"),
+      timingWindowId: toTimingWindowId("window-life-cost-conditional-play"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "sequence effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: {
+        type: "ruleProcess",
+        name: "life-cost-conditional-play-test",
+      },
+    },
+  ];
+
+  const costPaused = processEffectRuntime(state);
+  const costDecision = must(costPaused.state.pendingDecision, "cost decision");
+  assert.equal(costPaused.errors, undefined);
+  assert.equal(costDecision.type, "payCost");
+
+  const costPaid = applyAction(costPaused.state, {
+    type: "respondToDecision",
+    decisionId: costDecision.id,
+    response: {
+      type: "payment",
+      optionId: "moveCards:top",
+      selectedCardInstanceIds: [topLife.instanceId],
+    },
+  });
+  const quantityDecision = must(
+    costPaid.state.pendingDecision,
+    "quantity decision",
+  );
+  assert.equal(costPaid.errors, undefined);
+  assert.equal(quantityDecision.type, "chooseQuantity");
+
+  const quantityChosen = applyAction(costPaid.state, {
+    type: "respondToDecision",
+    decisionId: quantityDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+  const selectDecision = must(
+    quantityChosen.state.pendingDecision,
+    "play selection decision",
+  );
+  const afterQuantity = must(
+    quantityChosen.state.players[p1],
+    "after quantity",
+  );
+  assert.equal(quantityChosen.errors, undefined);
+  assert.equal(
+    must(afterQuantity.life[0], "new top life").card.instanceId,
+    topDeck.instanceId,
+  );
+  assert.equal(selectDecision.type, "selectCards");
+
+  const selected = must(selectDecision.candidates[0], "play candidate").card;
+  const played = applyAction(quantityChosen.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+  const afterPlay = must(played.state.players[p1], "after play");
+
+  assert.equal(played.errors, undefined);
+  assert.equal(
+    afterPlay.characters.some(
+      (character) => character.instanceId === playCandidate.instanceId,
+    ),
+    true,
   );
 });

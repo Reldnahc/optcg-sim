@@ -1160,6 +1160,34 @@ const resolveSequenceForPath = (
   return current;
 };
 
+const conditionalParentForPath = (
+  effectPath: readonly string[],
+):
+  | {
+      parentIndex: number;
+      parentPath: string[];
+    }
+  | undefined => {
+  if (isRootSequencePath(effectPath) || effectPath.length < 5) {
+    return undefined;
+  }
+  const branchToken = effectPath[effectPath.length - 1];
+  const thenToken = effectPath[effectPath.length - 2];
+  const parentIndexToken = effectPath[effectPath.length - 3];
+  const parentIndex = Number(parentIndexToken);
+  if (
+    thenToken !== "then" ||
+    (branchToken !== "sequence" && branchToken !== "single") ||
+    !Number.isSafeInteger(parentIndex)
+  ) {
+    return undefined;
+  }
+  return {
+    parentIndex,
+    parentPath: effectPath.slice(0, -3),
+  };
+};
+
 const findFrameQueueEntry = (
   state: GameState,
   frame: EffectExecutionFrame,
@@ -1186,6 +1214,86 @@ const findSequenceEffectBlock = (
   return state.cardManifest.effectDefinitions?.[definitionId]?.effects.find(
     (effect) => effect.id === entry.effectBlockId,
   );
+};
+
+const continueParentSequencesAfterNestedCompletion = (params: {
+  createTrashDecision: CreateTrashFromHandSequenceDecision;
+  effectBlock: SupportedSequenceBlock;
+  entry: EffectQueueEntry;
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+  completedPath: readonly string[];
+}): SequenceFrameRunResult => {
+  let completedPath = [...params.completedPath];
+  let nextState = params.state;
+  let nextLedgers = params.ledgers;
+  const events = [...params.events];
+  while (!isRootSequencePath(completedPath)) {
+    const parent = conditionalParentForPath(completedPath);
+    if (parent === undefined) {
+      return { ok: false };
+    }
+    const parentEffect = resolveSequenceForPath(
+      params.effectBlock.effect,
+      parent.parentPath,
+    );
+    const parentSegment = parentEffect?.effects[parent.parentIndex];
+    if (
+      parentSegment === undefined ||
+      parentSegment.effect.type !== "conditional"
+    ) {
+      return { ok: false };
+    }
+    nextLedgers = {
+      ...nextLedgers,
+      segmentResults: {
+        ...nextLedgers.segmentResults,
+        [segmentKeyForPath(
+          parent.parentPath,
+          parentSegment,
+          parent.parentIndex,
+        )]: {
+          ...emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: events.length > 0,
+        },
+      },
+    };
+    const continued = continueNoDecisionSegments(
+      nextState,
+      params.entry,
+      parentEffect,
+      parent.parentIndex + 1,
+      nextLedgers,
+      params.createTrashDecision,
+      false,
+      parent.parentPath,
+    );
+    if (!continued.ok) {
+      return { ok: false };
+    }
+    events.push(...continued.events);
+    if (continued.kind === "paused") {
+      return {
+        events,
+        kind: "paused",
+        ok: true,
+        state: continued.state,
+      };
+    }
+    nextState = continued.state;
+    nextLedgers = continued.ledgers;
+    completedPath = parent.parentPath;
+  }
+  return {
+    events,
+    kind: "completed",
+    ledgers: nextLedgers,
+    ok: true,
+    state: nextState,
+  };
 };
 
 const resumeSequenceFrameFromLedgers = (params: {
@@ -1226,6 +1334,33 @@ const resumeSequenceFrameFromLedgers = (params: {
 
   const events = [...continued.events];
   let completedState = removeFrame(continued.state, params.frame);
+  const completed = continueParentSequencesAfterNestedCompletion({
+    createTrashDecision: params.createTrashDecision,
+    effectBlock: params.effectBlock,
+    entry: params.entry,
+    events,
+    ledgers: continued.ledgers,
+    state: completedState,
+    completedPath: params.frame.effectPath,
+  });
+  if (!completed.ok) {
+    return {
+      error: sequenceRuntimeError(
+        params.entry.effectBlockId,
+        "segment-execution-failed",
+      ),
+      ok: false,
+    };
+  }
+  if (completed.kind === "paused") {
+    return {
+      events: completed.events,
+      ok: true,
+      state: completed.state,
+    };
+  }
+  events.splice(0, events.length, ...completed.events);
+  completedState = completed.state;
   if (params.finalizeCompleted) {
     completedState = appendEffectResolvedForCompletedSequence(
       completedState,
