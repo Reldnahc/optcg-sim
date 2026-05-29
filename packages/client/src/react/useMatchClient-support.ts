@@ -201,6 +201,30 @@ export const resolvingEffectSourceInstanceIds = ({
   return [];
 };
 
+export const activeCardInstanceIdsForUi = ({
+  attackSourceInstanceId,
+  counterSourceInstanceId,
+  playerSnapshot,
+  pendingDecision,
+}: {
+  attackSourceInstanceId?: string | undefined;
+  counterSourceInstanceId?: string | undefined;
+  playerSnapshot: MatchClientState["snapshot"]["players"][PlayerId] | undefined;
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined;
+}): string[] => [
+  ...(attackSourceInstanceId === undefined ? [] : [attackSourceInstanceId]),
+  ...(counterSourceInstanceId === undefined ? [] : [counterSourceInstanceId]),
+  ...(playerSnapshot?.view.activeEffectSources ?? []).map((source) =>
+    String(source.instanceId),
+  ),
+  ...resolvingEffectSourceInstanceIds({
+    pendingDecision,
+    events: playerSnapshot?.view.events ?? [],
+  }),
+];
+
 const countLabel = (count: number, singular: string, plural: string): string =>
   `${String(count)} ${count === 1 ? singular : plural}`;
 

@@ -477,6 +477,10 @@ export const MatchApp = (): React.JSX.Element => {
     decisionCollectionModal ??
     collectionModal ??
     persistedCollectionModal;
+  const decisionPromptVisible =
+    decisionModal === undefined &&
+    cardCostCollectionModal === undefined &&
+    decisionCollectionModal === undefined;
   const renderedCollectionKey = renderedCollectionModal?.title;
   const collectionViewerKey =
     cardCostCollectionModal === undefined &&
@@ -551,7 +555,7 @@ export const MatchApp = (): React.JSX.Element => {
       ) : (
         <BoardLayout
           board={displayBoard}
-          decisionPrompt={decisionPrompt}
+          decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}

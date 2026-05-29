@@ -533,6 +533,12 @@ test("selectTargets projection exposes public target candidates without private 
 
   const forDecisionPlayer = filterStateForPlayer(state, p1);
   const forOpponent = filterStateForPlayer(state, p2);
+  const expectedSource = {
+    instanceId: p1State.leader.instanceId,
+    cardId: p1State.leader.cardId,
+    playerId: p1,
+    zone: p1State.leader.zone,
+  };
 
   assert.deepEqual(forDecisionPlayer.pendingDecision, {
     id: toDecisionId("decision:select-targets"),
@@ -540,12 +546,7 @@ test("selectTargets projection exposes public target candidates without private 
     playerId: p1,
     prompt: "Select targets.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
-    source: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-      zone: p1State.leader.zone,
-    },
+    source: expectedSource,
     min: 1,
     max: 1,
     candidates: [
@@ -559,6 +560,7 @@ test("selectTargets projection exposes public target candidates without private 
       },
     ],
   });
+  assert.deepEqual(forDecisionPlayer.activeEffectSources, [expectedSource]);
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
       (action) => action.type === "respondToDecision",
@@ -594,6 +596,7 @@ test("selectTargets projection exposes public target candidates without private 
   );
 
   assert.equal(forOpponent.pendingDecision, undefined);
+  assert.deepEqual(forOpponent.activeEffectSources, [expectedSource]);
   assert.deepEqual(
     forOpponent.legalActions.filter(
       (action) => action.type === "respondToDecision",

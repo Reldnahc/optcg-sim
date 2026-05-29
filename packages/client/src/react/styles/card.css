@@ -126,6 +126,20 @@
     rgba(89, 255, 143, 0.72);
 }
 
+.card-tile.is-active::after {
+  position: absolute;
+  inset: -3px;
+  z-index: 6;
+  border: 2px solid rgba(89, 255, 143, 0.98);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(6, 17, 10, 0.95),
+    0 0 16px rgba(89, 255, 143, 0.9),
+    inset 0 0 10px rgba(89, 255, 143, 0.35);
+  content: "";
+  pointer-events: none;
+}
+
 .card-tile.is-pending-choice .card-face {
   --card-pending-glow: 0 0 0 3px rgba(68, 216, 255, 0.75);
 }

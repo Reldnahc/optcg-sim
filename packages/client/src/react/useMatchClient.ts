@@ -55,13 +55,13 @@ import {
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   buildGlobalActions,
+  activeCardInstanceIdsForUi,
   decisionCandidateInstanceIds,
   decisionHasCandidate,
   isMatchClientState,
   isSelfAttachmentTarget,
   lobbyIdFromUrl,
   matchIdFromUrl,
-  resolvingEffectSourceInstanceIds,
   prominentDecisionPrompt,
   seatIdFromUrl,
   setLobbyLocation,
@@ -104,18 +104,12 @@ export const useMatchClient = (): MatchClientUi => {
       ? undefined
       : clientState.snapshot.players[currentPlayerId];
   const pendingDecision = playerSnapshot?.view.pendingDecision;
-  const activeCardInstanceIds = [
-    ...(activeAttackTargetChoice === undefined
-      ? []
-      : [activeAttackTargetChoice.attackerInstanceId]),
-    ...(activeCounterTargetChoice === undefined
-      ? []
-      : [activeCounterTargetChoice.counterCardInstanceId]),
-    ...resolvingEffectSourceInstanceIds({
-      pendingDecision,
-      events: playerSnapshot?.view.events ?? [],
-    }),
-  ];
+  const activeCardInstanceIds = activeCardInstanceIdsForUi({
+    attackSourceInstanceId: activeAttackTargetChoice?.attackerInstanceId,
+    counterSourceInstanceId: activeCounterTargetChoice?.counterCardInstanceId,
+    playerSnapshot,
+    pendingDecision,
+  });
   const board = !isMatchClientState(clientState)
     ? undefined
     : createBoardViewModel({

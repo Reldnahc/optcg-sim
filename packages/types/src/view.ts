@@ -198,6 +198,7 @@ export interface PlayerView {
   opponent: OpponentVisibleState;
   battle?: PublicBattleState;
   pendingDecision?: PublicPendingDecision;
+  activeEffectSources?: CardRef[];
   legalActions: PublicLegalAction[];
   revealedCards: PublicRevealRecord[];
   events: EngineEvent[];

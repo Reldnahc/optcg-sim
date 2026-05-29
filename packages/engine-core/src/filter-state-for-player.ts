@@ -26,6 +26,7 @@ import { getLegalActions } from "./actions.js";
 import { toCardRef, zonesEqual } from "./action-state.js";
 import { computeView } from "./compute-view.js";
 import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
+import { toPublicTimerState } from "./public-timers.js";
 
 interface ComputedBoardCardStats {
   currentPower?: number;
@@ -621,20 +622,18 @@ const toPublicDecision = (
   if (pending === undefined || pending.playerId !== playerId) {
     return undefined;
   }
+  const source = publicDecisionSourceFromEffectQueue({
+    state,
+    pending,
+    visibleCards: visibleCardsForPlayer(state, playerId),
+  });
   const base = {
     id: pending.id,
     type: pending.type,
     playerId: pending.playerId,
     prompt: pending.prompt,
     causedBy: toPublicDecisionCausedBy(pending),
-    ...(() => {
-      const source = publicDecisionSourceFromEffectQueue({
-        state,
-        pending,
-        visibleCards: visibleCardsForPlayer(state, playerId),
-      });
-      return source === undefined ? {} : { source };
-    })(),
+    ...(source === undefined ? {} : { source }),
     ...(pending.timeoutMs === undefined
       ? {}
       : { timeoutMs: pending.timeoutMs }),
@@ -1005,25 +1004,14 @@ export const filterStateForPlayer = (
           damageCount: state.battle.damageCount,
         };
 
-  const timers: PlayerView["timers"] = {
-    players: Object.fromEntries(
-      (Object.keys(state.timers.players) as PlayerId[]).map((id) => {
-        const timer = state.timers.players[id];
-        if (timer === undefined) {
-          throw new TypeError(`Missing timer for player ${String(id)}.`);
-        }
-        return [
-          id,
-          { remainingMs: timer.remainingMs, isRunning: timer.isRunning },
-        ];
-      }),
-    ),
-    ...(state.timers.drainingPlayerId === undefined
-      ? {}
-      : { activePlayerId: state.timers.drainingPlayerId }),
-  };
-
   const pendingDecision = toPublicDecision(state, playerId);
+  const activeEffectSource = state.pendingDecision
+    ? publicDecisionSourceFromEffectQueue({
+        state,
+        pending: state.pendingDecision,
+        visibleCards: visibleCardsForPlayer(state, playerId),
+      })
+    : undefined;
   // Keep computeView validation fail-closed for unsupported board-power metadata.
   const computedStatsByInstance = computedBoardCardStatsByInstance(state);
 
@@ -1041,6 +1029,9 @@ export const filterStateForPlayer = (
     ),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
+    ...(activeEffectSource === undefined
+      ? {}
+      : { activeEffectSources: [activeEffectSource] }),
     legalActions: dedupePublicLegalActions([
       ...getLegalActions(state, playerId)
         .map((action) => toPublicLegalAction(state, playerId, action))
@@ -1051,6 +1042,6 @@ export const filterStateForPlayer = (
       .filter((event) => isEventVisibleToPlayer(event, playerId))
       .filter((event) => shouldIncludePlayerEvent(state, event))
       .map(toPlayerEvent),
-    timers,
+    timers: toPublicTimerState(state),
   };
 };
