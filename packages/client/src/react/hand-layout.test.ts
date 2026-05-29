@@ -180,15 +180,24 @@ describe("hand layout", () => {
 
     assert.match(source, /const pointerReorderDragThreshold = 2;/u);
     assert.match(source, /const moveCardNearPointer =/u);
-    assert.match(source, /const reorderRoot = hostElement\.closest/u);
-    assert.match(source, /const nearestTargetElement =/u);
-    assert.match(source, /reorderCandidates\s*\.map/u);
-    assert.match(source, /distance: Math\.abs\(clientX - centerX\)/u);
+    assert.match(
+      source,
+      /event\.currentTarget\.closest<HTMLElement>\("\.hand-cards"\)/u,
+    );
+    assert.match(source, /horizontalReorderTargetFromPointer/u);
+    assert.match(
+      source,
+      /reorderEntries: readonly HorizontalReorderEntry\[\]/u,
+    );
+    assert.match(source, /entries: pointerDrag\.reorderEntries/u);
+    assert.match(source, /const reorderEntries =/u);
     assert.doesNotMatch(source, /elementFromPoint/u);
+    assert.doesNotMatch(source, /reorderPlacementFromOriginalDirection/u);
+    assert.doesNotMatch(source, /reorderPlacementFromPointer/u);
     assert.doesNotMatch(source, /Math\.hypot\(clientX - centerX/u);
     assert.match(
       source,
-      /onPreviewMoveNear\?\.\(draggedInstanceId, targetInstanceId, placement\);/u,
+      /onPreviewMoveNear\?\.\(draggedInstanceId, target\.targetId, target\.placement\);/u,
     );
     assert.match(pointerMoveSource, /moveCardNearPointer/u);
     assert.doesNotMatch(pointerMoveSource, /onMoveNear\(/u);

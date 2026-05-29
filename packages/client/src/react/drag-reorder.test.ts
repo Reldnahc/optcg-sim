@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import {
-  isPointerInOriginalHorizontalSlot,
+  horizontalReorderTargetFromPointer,
   reorderPlacementFromPointer,
 } from "./drag-reorder.js";
 
@@ -39,24 +39,37 @@ describe("drag reorder", () => {
     );
   });
 
-  test("original slot snap scales to visible spacing in overlapped rows", () => {
-    assert.equal(
-      isPointerInOriginalHorizontalSlot({
+  test("horizontal reorder uses stable slot regions between card centers", () => {
+    const entries = [
+      { id: "one", centerX: 80 },
+      { id: "two", centerX: 100 },
+      { id: "three", centerX: 120 },
+      { id: "four", centerX: 140 },
+    ];
+
+    assert.deepEqual(
+      horizontalReorderTargetFromPointer({
+        entries,
+        draggedId: "three",
         clientX: 100,
-        originalLeft: 70,
-        originalWidth: 60,
-        neighborCenterXs: [80, 120],
       }),
-      true,
+      { targetId: "two", placement: "before" },
     );
-    assert.equal(
-      isPointerInOriginalHorizontalSlot({
-        clientX: 111,
-        originalLeft: 70,
-        originalWidth: 60,
-        neighborCenterXs: [80, 120],
+    assert.deepEqual(
+      horizontalReorderTargetFromPointer({
+        entries,
+        draggedId: "three",
+        clientX: 119,
       }),
-      false,
+      { targetId: "three", placement: "before" },
+    );
+    assert.deepEqual(
+      horizontalReorderTargetFromPointer({
+        entries,
+        draggedId: "three",
+        clientX: 140,
+      }),
+      { targetId: "four", placement: "after" },
     );
   });
 });
