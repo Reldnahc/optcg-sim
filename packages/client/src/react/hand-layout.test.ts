@@ -184,6 +184,7 @@ describe("hand layout", () => {
     assert.match(source, /const nearestTargetElement =/u);
     assert.match(source, /reorderCandidates\s*\.map/u);
     assert.match(source, /distance: Math\.abs\(clientX - centerX\)/u);
+    assert.doesNotMatch(source, /elementFromPoint/u);
     assert.doesNotMatch(source, /Math\.hypot\(clientX - centerX/u);
     assert.match(
       source,

@@ -1,7 +1,10 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import { reorderPlacementFromPointer } from "./drag-reorder.js";
+import {
+  isPointerInOriginalHorizontalSlot,
+  reorderPlacementFromPointer,
+} from "./drag-reorder.js";
 
 const rect = ({
   left,
@@ -33,6 +36,27 @@ describe("drag reorder", () => {
     assert.equal(
       reorderPlacementFromPointer(cardRect, 155, 95, rowRect),
       "after",
+    );
+  });
+
+  test("original slot snap scales to visible spacing in overlapped rows", () => {
+    assert.equal(
+      isPointerInOriginalHorizontalSlot({
+        clientX: 100,
+        originalLeft: 70,
+        originalWidth: 60,
+        neighborCenterXs: [80, 120],
+      }),
+      true,
+    );
+    assert.equal(
+      isPointerInOriginalHorizontalSlot({
+        clientX: 111,
+        originalLeft: 70,
+        originalWidth: 60,
+        neighborCenterXs: [80, 120],
+      }),
+      false,
     );
   });
 });

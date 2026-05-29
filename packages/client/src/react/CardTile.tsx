@@ -2,7 +2,10 @@ import { useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
-import { reorderPlacementFromPointer } from "./drag-reorder.js";
+import {
+  isPointerInOriginalHorizontalSlot,
+  reorderPlacementFromPointer,
+} from "./drag-reorder.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 
 const pointerReorderDragThreshold = 2;
@@ -125,24 +128,6 @@ export const CardTile = ({
     }
     const draggedInstanceId = String(card.instanceId);
     const reorderRoot = hostElement.closest<HTMLElement>(".hand-cards");
-    const previousPointerEvents = hostElement.style.pointerEvents;
-    let targetElement: HTMLElement | null | undefined;
-    try {
-      hostElement.style.pointerEvents = "none";
-      targetElement = document
-        .elementFromPoint(clientX, clientY)
-        ?.closest<HTMLElement>("[data-card-instance-id]");
-    } finally {
-      hostElement.style.pointerEvents = previousPointerEvents;
-    }
-    if (
-      targetElement !== undefined &&
-      targetElement !== null &&
-      reorderRoot !== null &&
-      !reorderRoot.contains(targetElement)
-    ) {
-      targetElement = undefined;
-    }
     const reorderCandidates =
       reorderRoot === null
         ? []
@@ -165,11 +150,29 @@ export const CardTile = ({
         };
       })
       .sort((left, right) => left.distance - right.distance)[0]?.element;
-    targetElement ??= nearestTargetElement;
-    if (targetElement == null) {
+    if (
+      pointerDrag !== undefined &&
+      isPointerInOriginalHorizontalSlot({
+        clientX,
+        originalLeft: pointerDrag.originLeft,
+        originalWidth: pointerDrag.width,
+        neighborCenterXs: reorderCandidates.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.left + rect.width / 2;
+        }),
+      })
+    ) {
+      lastPointerMoveRef.current = {
+        targetInstanceId: draggedInstanceId,
+        placement: "before",
+      };
+      onPreviewMoveNear?.(draggedInstanceId, draggedInstanceId, "before");
       return;
     }
-    const targetInstanceId = targetElement.dataset["cardInstanceId"];
+    if (nearestTargetElement === undefined) {
+      return;
+    }
+    const targetInstanceId = nearestTargetElement.dataset["cardInstanceId"];
     if (
       targetInstanceId === undefined ||
       targetInstanceId === draggedInstanceId
@@ -177,7 +180,7 @@ export const CardTile = ({
       return;
     }
     const placement = reorderPlacementFromPointer(
-      targetElement.getBoundingClientRect(),
+      nearestTargetElement.getBoundingClientRect(),
       clientX,
       clientY,
       reorderRoot?.getBoundingClientRect(),
