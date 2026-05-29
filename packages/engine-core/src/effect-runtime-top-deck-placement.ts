@@ -20,7 +20,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reindexZoneCards, zonesEqual } from "./action-state.js";
+import { reorderDeckSlice, zonesEqual } from "./action-state.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 
 type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;
@@ -313,12 +313,13 @@ export const applyTopDeckPlacementDecisionResponse = (
 
   const topCards = orderedCardsFromIds(activeDeckCards, topIds);
   const bottomCards = orderedCardsFromIds(activeDeckCards, bottomIds);
-  const finalDeck = reindexZoneCards(
-    [...topCards, ...player.deck.slice(decision.cards.length), ...bottomCards],
-    "deck",
-    decision.playerId,
-    "deck",
-  );
+  const finalDeck = reorderDeckSlice({
+    deck: player.deck,
+    destination: topCards.length > 0 ? "top" : "bottom",
+    orderedSlice: topCards.length > 0 ? topCards : bottomCards,
+    playerId: decision.playerId,
+    sliceCount: decision.cards.length,
+  });
   const causedBy = decision.causedBy;
   const queuedEntry =
     causedBy.type === "effect"

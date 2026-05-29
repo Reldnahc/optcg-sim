@@ -101,6 +101,24 @@ export const reindexZoneCards = (
     zone: { zone, playerId, slot, index },
   }));
 
+export const reorderDeckSlice = (params: {
+  readonly deck: readonly CardInstance[];
+  readonly destination: "top" | "bottom";
+  readonly orderedSlice: readonly CardInstance[];
+  readonly playerId: PlayerId;
+  readonly sliceCount: number;
+}): CardInstance[] => {
+  const tail = params.deck.slice(params.sliceCount);
+  return reindexZoneCards(
+    params.destination === "top"
+      ? [...params.orderedSlice, ...tail]
+      : [...tail, ...params.orderedSlice],
+    "deck",
+    params.playerId,
+    "deck",
+  );
+};
+
 const supportedSearchFilterKeys = new Set([
   "anyOf",
   "categories",
