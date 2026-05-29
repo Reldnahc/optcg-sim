@@ -11,9 +11,18 @@ interface PointerReorderDrag {
   pointerId: number;
   originX: number;
   originY: number;
+  originLeft: number;
+  originTop: number;
+  width: number;
+  height: number;
   currentX: number;
   currentY: number;
   moved: boolean;
+}
+
+interface PointerReorderTarget {
+  targetInstanceId: string;
+  placement: ReorderPlacement;
 }
 
 export interface CardTileProps {
@@ -38,6 +47,14 @@ export interface CardTileProps {
         placement: ReorderPlacement,
       ) => void)
     | undefined;
+  onPreviewMoveNear?:
+    | ((
+        draggedInstanceId: string,
+        targetInstanceId: string,
+        placement: ReorderPlacement,
+      ) => void)
+    | undefined;
+  onReorderCancel?: (() => void) | undefined;
 }
 
 export const CardTile = ({
@@ -56,12 +73,16 @@ export const CardTile = ({
   onHover,
   reorderable = false,
   onMoveNear,
+  onPreviewMoveNear,
+  onReorderCancel,
 }: CardTileProps): React.JSX.Element => {
   const [pointerDrag, setPointerDrag] = useState<
     PointerReorderDrag | undefined
   >(undefined);
   const suppressClickRef = useRef(false);
-  const lastPointerMoveRef = useRef<string | undefined>(undefined);
+  const lastPointerMoveRef = useRef<PointerReorderTarget | undefined>(
+    undefined,
+  );
   const pointerReorderEnabled = reorderable && onMoveNear !== undefined;
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
@@ -84,9 +105,12 @@ export const CardTile = ({
   const pointerDragStyle =
     pointerDrag?.moved === true
       ? ({
-          transform: `translate(${String(
-            pointerDrag.currentX - pointerDrag.originX,
-          )}px, ${String(pointerDrag.currentY - pointerDrag.originY)}px)`,
+          position: "fixed",
+          left: pointerDrag.originLeft + pointerDrag.currentX - pointerDrag.originX,
+          top: pointerDrag.originTop + pointerDrag.currentY - pointerDrag.originY,
+          width: pointerDrag.width,
+          height: pointerDrag.height,
+          pointerEvents: "none",
         } satisfies CSSProperties)
       : undefined;
   const moveCardNearPointer = (
@@ -123,12 +147,14 @@ export const CardTile = ({
       clientX,
       clientY,
     );
-    const moveKey = `${targetInstanceId}:${placement}`;
-    if (lastPointerMoveRef.current === moveKey) {
+    if (
+      lastPointerMoveRef.current?.targetInstanceId === targetInstanceId &&
+      lastPointerMoveRef.current.placement === placement
+    ) {
       return;
     }
-    lastPointerMoveRef.current = moveKey;
-    onMoveNear(draggedInstanceId, targetInstanceId, placement);
+    lastPointerMoveRef.current = { targetInstanceId, placement };
+    onPreviewMoveNear?.(draggedInstanceId, targetInstanceId, placement);
   };
   return (
     <div
@@ -154,11 +180,16 @@ export const CardTile = ({
         ) {
           return;
         }
+        const rect = event.currentTarget.getBoundingClientRect();
         lastPointerMoveRef.current = undefined;
         setPointerDrag({
           pointerId: event.pointerId,
           originX: event.clientX,
           originY: event.clientY,
+          originLeft: rect.left,
+          originTop: rect.top,
+          width: rect.width,
+          height: rect.height,
           currentX: event.clientX,
           currentY: event.clientY,
           moved: false,
@@ -206,6 +237,7 @@ export const CardTile = ({
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
+        const commitTarget = lastPointerMoveRef.current;
         setPointerDrag(undefined);
         lastPointerMoveRef.current = undefined;
         suppressClickRef.current = pointerDrag.moved;
@@ -214,11 +246,21 @@ export const CardTile = ({
         }
         event.preventDefault();
         event.stopPropagation();
+        if (commitTarget !== undefined) {
+          onMoveNear(
+            String(card.instanceId),
+            commitTarget.targetInstanceId,
+            commitTarget.placement,
+          );
+        } else {
+          onReorderCancel?.();
+        }
       }}
       onPointerCancel={(event) => {
         if (pointerDrag?.pointerId === event.pointerId) {
           setPointerDrag(undefined);
           lastPointerMoveRef.current = undefined;
+          onReorderCancel?.();
         }
       }}
     >

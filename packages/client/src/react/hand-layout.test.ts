@@ -164,7 +164,7 @@ describe("hand layout", () => {
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
   });
 
-  test("card pointer reorder moves cards during drag and releases without another reorder", async () => {
+  test("card pointer reorder previews during drag and commits once on release", async () => {
     const source = await readFile(
       join(sourceDirectory, "CardTile.tsx"),
       "utf8",
@@ -182,10 +182,12 @@ describe("hand layout", () => {
     assert.match(source, /const moveCardNearPointer =/u);
     assert.match(
       source,
-      /onMoveNear\(draggedInstanceId, targetInstanceId, placement\);/u,
+      /onPreviewMoveNear\?\.\(draggedInstanceId, targetInstanceId, placement\);/u,
     );
     assert.match(pointerMoveSource, /moveCardNearPointer/u);
-    assert.doesNotMatch(pointerUpSource, /onMoveNear\(/u);
+    assert.doesNotMatch(pointerMoveSource, /onMoveNear\(/u);
+    assert.match(pointerUpSource, /onMoveNear\(/u);
+    assert.match(pointerUpSource, /lastPointerMoveRef\.current/u);
   });
 
   test("card images do not start native browser image dragging", async () => {
@@ -196,13 +198,15 @@ describe("hand layout", () => {
     assert.match(styles, /\.card-face\s*\{[^}]*-webkit-user-drag:\s*none;/u);
   });
 
-  test("hand cards animate into reordered slots while the dragged card stays direct", async () => {
+  test("hand cards animate around a placeholder while the dragged card stays direct", async () => {
     const styles = await readFile(cardStylesPath, "utf8");
 
     assert.match(
       styles,
       /\.hand-cards\s+\.card-tile-shell\s*\{[^}]*transition:\s*margin-left 80ms ease,\s*transform 80ms ease;/u,
     );
+    assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*height:\s*100%;/u);
+    assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*transition:/u);
     assert.match(
       styles,
       /\.card-tile-shell\.is-pointer-reorder-dragging\s*\{[^}]*transition:\s*none;/u,

@@ -110,3 +110,9 @@
 .hand-cards.is-overlapping .card-tile-shell + .card-tile-shell {
   margin-left: calc(-1 * var(--hand-overlap));
 }
+
+.hand-cards.is-overlapping
+  :where(.card-tile-shell, .hand-drag-placeholder)
+  + :where(.card-tile-shell, .hand-drag-placeholder) {
+  margin-left: calc(-1 * var(--hand-overlap));
+}
