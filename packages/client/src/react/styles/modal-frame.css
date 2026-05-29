@@ -1,9 +1,9 @@
 .modal-frame {
   position: fixed;
-  inset: 24% 32%;
+  inset: 26% 34%;
   z-index: 30;
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   border: 2px solid #f4eee7;
   background: rgba(38, 35, 34, 0.97);
@@ -30,4 +30,11 @@
   background: #3f3d3c;
   cursor: pointer;
   padding: 0 12px;
+}
+
+.modal-frame-decision > .primary-action {
+  flex: 0 0 auto;
+  min-height: 30px;
+  max-height: 34px;
+  margin-top: auto;
 }

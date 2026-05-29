@@ -63,12 +63,31 @@ describe("modal frame", () => {
   test("modal frame owns the shared smaller default size", async () => {
     const styles = await readFile(modalStylesPath, "utf8");
 
-    assert.match(styles, /\.modal-frame\s*\{[^}]*inset:\s*24% 32%;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*inset:\s*26% 34%;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*display:\s*flex;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*flex-direction:\s*column;/u);
     assert.match(
       styles,
       /\.modal-frame\s*\{[^}]*border:\s*2px solid #f4eee7;/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*box-shadow:/u);
+  });
+
+  test("decision confirm action anchors low without stretching tall", async () => {
+    const styles = await readFile(modalStylesPath, "utf8");
+
+    assert.match(
+      styles,
+      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*margin-top:\s*auto;/u,
+    );
+    assert.match(
+      styles,
+      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*max-height:\s*34px;/u,
+    );
+    assert.match(
+      styles,
+      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*flex:\s*0 0 auto;/u,
+    );
   });
 
   test("modal frame stacks above floating windows", async () => {
