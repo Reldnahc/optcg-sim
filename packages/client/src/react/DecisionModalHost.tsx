@@ -131,7 +131,7 @@ export const DecisionModalHost = ({
               ? "Drag cards into deck order. 1 is highest in the deck; last is bottom-most."
               : "Drag cards into order."}
           </p>
-          <div className="decision-order-card-grid">
+          <div className="hand-cards decision-order-card-grid">
             {orderedCards.map((card, index) => {
               const instanceId = String(card.instanceId);
               const isBottom = model.bottomInstanceIds.includes(
@@ -142,18 +142,17 @@ export const DecisionModalHost = ({
                   {orderReorder.placeholderBefore(instanceId) ? (
                     <div className="hand-drag-placeholder" aria-hidden="true" />
                   ) : null}
-                  <div className="decision-order-card-slot">
-                    <CardTile
-                      card={card}
-                      selectionOrderLabel={String(index + 1)}
-                      disabled={disabled}
-                      reorderable={!disabled}
-                      onPreviewMoveNear={orderReorder.onPreviewMoveNear}
-                      onMoveNear={orderReorder.onMoveNear}
-                      onReorderCancel={orderReorder.onReorderCancel}
-                      onHover={() => undefined}
-                    />
-                    {model.placement?.type === "topOrBottom" ? (
+                  <CardTile
+                    card={card}
+                    selectionOrderLabel={String(index + 1)}
+                    disabled={disabled}
+                    reorderable={!disabled}
+                    onPreviewMoveNear={orderReorder.onPreviewMoveNear}
+                    onMoveNear={orderReorder.onMoveNear}
+                    onReorderCancel={orderReorder.onReorderCancel}
+                    onHover={() => undefined}
+                    overlay={
+                      model.placement?.type === "topOrBottom" ? (
                       <button
                         className="decision-placement-toggle"
                         type="button"
@@ -164,8 +163,9 @@ export const DecisionModalHost = ({
                       >
                         {isBottom ? "Bottom" : "Top"}
                       </button>
-                    ) : null}
-                  </div>
+                      ) : null
+                    }
+                  />
                   {orderReorder.placeholderAfter(instanceId) ? (
                     <div className="hand-drag-placeholder" aria-hidden="true" />
                   ) : null}

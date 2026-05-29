@@ -127,6 +127,7 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   );
 
   assert.match(markup, /decision-order-card-grid/u);
+  assert.match(markup, /hand-cards decision-order-card-grid/u);
   assert.match(markup, /decision-order-hint/u);
   assert.equal(markup.includes("top-card.png"), true);
   assert.equal(markup.includes("bottom-card.png"), true);
@@ -138,15 +139,22 @@ test("return-to-deck order modal renders card images with deck order badges", ()
 });
 
 test("return-to-deck order modal shares CardTile reorder instead of custom drag", async () => {
-  const source = await readFile(
-    join(sourceDirectory, "DecisionModalHost.tsx"),
-    "utf8",
-  );
+  const [source, styles] = await Promise.all([
+    readFile(join(sourceDirectory, "DecisionModalHost.tsx"), "utf8"),
+    readFile(join(sourceDirectory, "styles", "decision-modal.css"), "utf8"),
+  ]);
 
   assert.match(source, /CardTile/u);
   assert.match(source, /useCardReorderPreview/u);
   assert.match(source, /onPreviewMoveNear/u);
   assert.match(source, /onMoveNear/u);
+  assert.match(source, /className="hand-cards decision-order-card-grid"/u);
+  assert.doesNotMatch(source, /decision-order-card-slot/u);
+  assert.doesNotMatch(styles, /\.decision-order-card-grid\s*\{[^}]*gap:/u);
+  assert.doesNotMatch(
+    styles,
+    /\.decision-order-card-grid\s*\{[^}]*justify-content:/u,
+  );
   assert.doesNotMatch(source, /PointerReorderDrag/u);
   assert.doesNotMatch(source, /data-decision-order-instance-id/u);
   assert.doesNotMatch(source, /reorderPlacementFromPointer/u);

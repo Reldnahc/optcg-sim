@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
 import { reorderPlacementFromPointer } from "./drag-reorder.js";
@@ -35,6 +35,7 @@ export interface CardTileProps {
   selectedDonInstanceIds?: readonly string[] | undefined;
   actions?: readonly ClientActionModel[] | undefined;
   disabled?: boolean | undefined;
+  overlay?: ReactNode | undefined;
   onClick?: (() => void) | undefined;
   onAction?: ((actionIndex: number) => void) | undefined;
   onAttachedDonClick?: ((instanceId: string) => void) | undefined;
@@ -67,6 +68,7 @@ export const CardTile = ({
   selectedDonInstanceIds = [],
   actions = [],
   disabled = false,
+  overlay,
   onClick,
   onAction,
   onAttachedDonClick,
@@ -121,6 +123,8 @@ export const CardTile = ({
     if (!pointerReorderEnabled) {
       return;
     }
+    const draggedInstanceId = String(card.instanceId);
+    const reorderRoot = hostElement.closest<HTMLElement>(".hand-cards");
     const previousPointerEvents = hostElement.style.pointerEvents;
     let targetElement: HTMLElement | null | undefined;
     try {
@@ -131,11 +135,41 @@ export const CardTile = ({
     } finally {
       hostElement.style.pointerEvents = previousPointerEvents;
     }
+    if (
+      targetElement !== undefined &&
+      targetElement !== null &&
+      reorderRoot !== null &&
+      !reorderRoot.contains(targetElement)
+    ) {
+      targetElement = undefined;
+    }
+    const reorderCandidates =
+      reorderRoot === null
+        ? []
+        : Array.from(
+            reorderRoot.querySelectorAll<HTMLElement>(
+              "[data-card-instance-id]",
+            ),
+          ).filter(
+            (element) =>
+              element.dataset["cardInstanceId"] !== undefined &&
+              element.dataset["cardInstanceId"] !== draggedInstanceId,
+          );
+    const nearestTargetElement = reorderCandidates
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        return {
+          element,
+          distance: Math.abs(clientX - centerX),
+        };
+      })
+      .sort((left, right) => left.distance - right.distance)[0]?.element;
+    targetElement ??= nearestTargetElement;
     if (targetElement == null) {
       return;
     }
     const targetInstanceId = targetElement.dataset["cardInstanceId"];
-    const draggedInstanceId = String(card.instanceId);
     if (
       targetInstanceId === undefined ||
       targetInstanceId === draggedInstanceId
@@ -146,6 +180,7 @@ export const CardTile = ({
       targetElement.getBoundingClientRect(),
       clientX,
       clientY,
+      reorderRoot?.getBoundingClientRect(),
     );
     if (
       lastPointerMoveRef.current?.targetInstanceId === targetInstanceId &&
@@ -182,6 +217,9 @@ export const CardTile = ({
         }
         const rect = event.currentTarget.getBoundingClientRect();
         lastPointerMoveRef.current = undefined;
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }
         setPointerDrag({
           pointerId: event.pointerId,
           originX: event.clientX,
@@ -355,6 +393,7 @@ export const CardTile = ({
           ))}
         </div>
       ) : null}
+      {overlay}
     </div>
   );
 };

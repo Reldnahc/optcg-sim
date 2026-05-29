@@ -160,8 +160,8 @@ describe("hand layout", () => {
     const pointerDownSource = source.slice(pointerDownStart, pointerMoveStart);
 
     assert.doesNotMatch(pointerDownSource, /stopPropagation\(\)/u);
-    assert.doesNotMatch(pointerDownSource, /setPointerCapture/u);
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
+    assert.match(pointerDownSource, /setPointerCapture\(event\.pointerId\)/u);
   });
 
   test("card pointer reorder previews during drag and commits once on release", async () => {
@@ -180,6 +180,11 @@ describe("hand layout", () => {
 
     assert.match(source, /const pointerReorderDragThreshold = 2;/u);
     assert.match(source, /const moveCardNearPointer =/u);
+    assert.match(source, /const reorderRoot = hostElement\.closest/u);
+    assert.match(source, /const nearestTargetElement =/u);
+    assert.match(source, /reorderCandidates\s*\.map/u);
+    assert.match(source, /distance: Math\.abs\(clientX - centerX\)/u);
+    assert.doesNotMatch(source, /Math\.hypot\(clientX - centerX/u);
     assert.match(
       source,
       /onPreviewMoveNear\?\.\(draggedInstanceId, targetInstanceId, placement\);/u,

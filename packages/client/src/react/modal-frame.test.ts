@@ -63,7 +63,7 @@ describe("modal frame", () => {
   test("modal frame owns the shared smaller default size", async () => {
     const styles = await readFile(modalStylesPath, "utf8");
 
-    assert.match(styles, /\.modal-frame\s*\{[^}]*inset:\s*14% 22%;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*inset:\s*24% 32%;/u);
     assert.match(
       styles,
       /\.modal-frame\s*\{[^}]*border:\s*2px solid #f4eee7;/u,

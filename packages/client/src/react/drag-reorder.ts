@@ -26,8 +26,9 @@ export const reorderPlacementFromPointer = (
   rect: DOMRect,
   clientX: number,
   clientY: number,
+  orientationRect: DOMRect = rect,
 ): ReorderPlacement => {
-  const horizontal = rect.width >= rect.height;
+  const horizontal = orientationRect.width >= orientationRect.height;
   const midpoint = horizontal
     ? rect.left + rect.width / 2
     : rect.top + rect.height / 2;
