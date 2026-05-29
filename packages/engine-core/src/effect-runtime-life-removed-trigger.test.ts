@@ -284,6 +284,22 @@ const setupOpponentActivationRevealPowerState = () => {
   return { source, state };
 };
 
+const reviewedMainEventDrawUpToDefinition = (
+  cardId: CardInstance["cardId"],
+  support: ReturnType<typeof resolvedCard>["support"],
+): EffectDefinition => {
+  const base = reviewedMainEventDrawDefinition(cardId, support);
+  return {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base main event effect"),
+        effect: { type: "drawUpTo", count: 1, player: "self" },
+      },
+    ],
+  };
+};
+
 test("opponent activation reaction can reveal Life and applies dynamic power from revealed cost", () => {
   const { source, state } = setupOpponentActivationRevealPowerState();
   const queued = processEffectRuntime(state);
@@ -532,6 +548,86 @@ test("opponent activation reaction queues after the opponent Event main effect",
   assert.equal(resolved.errors, undefined);
   assert.equal(
     resolved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "powerAdd" &&
+        effect.modifier.operation.type === "addPower" &&
+        effect.modifier.operation.value === 4000 &&
+        effect.source.instanceId === source.instanceId,
+    ),
+    true,
+  );
+});
+
+test("opponent activation reaction queues after a decision-paused opponent Event main effect", () => {
+  const { source, state } = setupOpponentActivationRevealPowerState();
+  state.eventJournal = [];
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  p1State.hand = p1State.hand.map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  const p2State = must(state.players[p2], "p2");
+  const eventCard = must(p2State.hand[0], "event");
+  const eventSupport = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 0,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-opponent-main-event-draw-upto",
+      rulesVersion: "opponent-main-event-draw-upto-rules",
+      sourceTextHash: "opponent-main-event-draw-upto-source",
+    },
+  });
+  const eventDefinition = reviewedMainEventDrawUpToDefinition(
+    eventCard.cardId,
+    eventSupport.support,
+  );
+  state.cardManifest.cards[eventCard.cardId] = eventSupport;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-opponent-main-event-draw-upto": eventDefinition,
+  };
+
+  const played = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+
+  assert.equal(played.errors, undefined);
+  const eventDecision = must(played.state.pendingDecision, "event draw up to");
+  assert.equal(eventDecision.type, "chooseQuantity");
+  assert.equal(eventDecision.playerId, p2);
+
+  const eventResolved = applyAction(played.state, {
+    type: "respondToDecision",
+    decisionId: eventDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(eventResolved.errors, undefined);
+  assert.equal(
+    eventResolved.events.some((event) => event.type === "cardDrawn"),
+    true,
+  );
+  const reactionDecision = must(
+    eventResolved.state.pendingDecision,
+    "reaction reveal",
+  );
+  assert.equal(reactionDecision.type, "chooseQuantity");
+  assert.equal(reactionDecision.playerId, p1);
+
+  const reactionResolved = applyAction(eventResolved.state, {
+    type: "respondToDecision",
+    decisionId: reactionDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(reactionResolved.errors, undefined);
+  assert.equal(
+    reactionResolved.state.continuousEffects.some(
       (effect) =>
         effect.modifier.layer === "powerAdd" &&
         effect.modifier.operation.type === "addPower" &&

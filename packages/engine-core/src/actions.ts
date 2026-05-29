@@ -637,12 +637,12 @@ const continueRuntimeAndAttackTimingAfterDecision = (
     continueRuntimeAfterDecisionResult(originalState, result),
   );
 
-const shouldContinueRuntimeAfterChooseQuantity = (
+const shouldContinueRuntimeAfterEffectDecision = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]>,
 ): boolean => {
   const causedBy = decision.causedBy;
-  if (decision.type !== "chooseQuantity" || causedBy.type !== "effect") {
+  if (causedBy.type !== "effect") {
     return false;
   }
   const queueEntry = state.effectQueue.find(
@@ -650,10 +650,20 @@ const shouldContinueRuntimeAfterChooseQuantity = (
   );
   return (
     queueEntry?.causedBy.type === "ruleProcess" &&
-    queueEntry.causedBy.name ===
-      "effectRuntime:opponentActivationTriggerQueueing"
+    (queueEntry.causedBy.name === "effectRuntime:mainEventTriggerQueueing" ||
+      queueEntry.causedBy.name ===
+        "effectRuntime:opponentActivationTriggerQueueing")
   );
 };
+
+const continueAfterEffectDecision = (
+  originalState: GameState,
+  decision: NonNullable<GameState["pendingDecision"]>,
+  result: EngineResult,
+): EngineResult =>
+  shouldContinueRuntimeAfterEffectDecision(originalState, decision)
+    ? continueRuntimeAndAttackTimingAfterDecision(originalState, result)
+    : continueAttackTimingDecisionResultIfReady(result);
 
 const applyRespondToDecision = (
   state: GameState,
@@ -742,21 +752,25 @@ const applyRespondToDecision = (
     action,
   );
   if (optionalActivationResult !== null) {
-    return continueAttackTimingDecisionResultIfReady(optionalActivationResult);
+    return continueAfterEffectDecision(
+      state,
+      decision,
+      optionalActivationResult,
+    );
   }
   const triggerOrderResult = applyChooseTriggerOrderDecisionResponse(
     state,
     action,
   );
   if (triggerOrderResult !== null) {
-    return continueAttackTimingDecisionResultIfReady(triggerOrderResult);
+    return continueAfterEffectDecision(state, decision, triggerOrderResult);
   }
   const targetSelectionResult = applySelectTargetsDecisionResponse(
     state,
     action,
   );
   if (targetSelectionResult !== null) {
-    return continueAttackTimingDecisionResultIfReady(targetSelectionResult);
+    return continueAfterEffectDecision(state, decision, targetSelectionResult);
   }
   if (
     decision.type === "selectCards" &&
@@ -830,7 +844,7 @@ const applyRespondToDecision = (
       trashResult.allEvents,
       trashResult.resolutionEvents,
     );
-    return continueAttackTimingDecisionResultIfReady(finalized);
+    return continueAfterEffectDecision(state, decision, finalized);
   }
   const setupStartOfGame = applyStartOfGameSetupDecisionResponse(state, action);
   if (setupStartOfGame !== null) {
@@ -848,16 +862,14 @@ const applyRespondToDecision = (
     action,
   );
   if (replacementResult !== null) {
-    return continueAttackTimingDecisionResultIfReady(replacementResult);
+    return continueAfterEffectDecision(state, decision, replacementResult);
   }
   const chooseQuantityResult = applyChooseQuantityDecisionResponse(
     state,
     action,
   );
   if (chooseQuantityResult !== null) {
-    return shouldContinueRuntimeAfterChooseQuantity(state, decision)
-      ? continueRuntimeAndAttackTimingAfterDecision(state, chooseQuantityResult)
-      : continueAttackTimingDecisionResultIfReady(chooseQuantityResult);
+    return continueAfterEffectDecision(state, decision, chooseQuantityResult);
   }
   return illegalAction(state, "Unsupported decision type.");
 };

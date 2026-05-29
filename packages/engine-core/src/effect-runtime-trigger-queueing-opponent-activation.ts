@@ -47,6 +47,23 @@ const queuedOpponentActivationTriggerEventIds = (
     }),
   );
 
+const queuedMainEventTriggerEventIds = (state: GameState): Set<string> =>
+  new Set(
+    state.eventJournal.flatMap((event) => {
+      if (event.type !== "effectQueued") {
+        return [];
+      }
+      const payload = event.payload as {
+        timingWindowId?: unknown;
+        triggerEventId?: unknown;
+      };
+      return typeof payload.triggerEventId === "string" &&
+        payload.timingWindowId === `timing-window:${payload.triggerEventId}`
+        ? [payload.triggerEventId]
+        : [];
+    }),
+  );
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -155,9 +172,11 @@ export const createOpponentActivationTriggerQueueing = (
       return undefined;
     }
     const alreadyQueued = queuedOpponentActivationTriggerEventIds(state);
+    const queuedMainEvents = queuedMainEventTriggerEventIds(state);
     const activationEvents = state.eventJournal.filter(
       (event) =>
-        isRecentRuntimeEvent(state, event) &&
+        (isRecentRuntimeEvent(state, event) ||
+          queuedMainEvents.has(String(event.id))) &&
         !alreadyQueued.has(String(event.id)) &&
         opponentActivationFromEvent(state, event) !== undefined,
     );
