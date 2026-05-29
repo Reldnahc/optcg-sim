@@ -47,11 +47,21 @@ export function parseAllFieldTarget(
 
 function parseFieldTargetOwnership(text: string):
   | {
-      readonly player: "self";
+      readonly player: "self" | "opponent";
       readonly evidence: readonly PrimitiveEvidence[];
       readonly rest: string;
     }
   | undefined {
+  const opponentMatch = /^of your opponent's\s+(?<rest>.+)$/i.exec(text);
+  const opponentRest = opponentMatch?.groups?.["rest"];
+  if (opponentRest !== undefined) {
+    return {
+      player: "opponent",
+      evidence: ["player:opponent"],
+      rest: opponentRest.trim(),
+    };
+  }
+
   const match = /^of your\s+(?<rest>.+)$/i.exec(text);
   const rest = match?.groups?.["rest"];
   if (rest === undefined) {

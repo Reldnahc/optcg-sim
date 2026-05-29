@@ -10,6 +10,7 @@ import {
   parsePositivePowerModifier,
 } from "../modifiers/index.js";
 import {
+  parseAllFieldTarget,
   parseOpponentCharactersTarget,
   parseThisCharacterTarget,
   parseYourLeaderOrCharacterCardsTarget,
@@ -21,6 +22,7 @@ import type { InstructionParser } from "../types.js";
 export const modifyPowerInstructionPrimitive = {
   primitiveId: "instruction:modifyPower",
   childPrimitiveIds: [
+    "cardinality:all",
     "cardinality:upTo",
     "target:opponentCharacters",
     "target:yourNamedCards",
@@ -44,6 +46,35 @@ export const parseModifyPowerInstruction: InstructionParser = (input) => {
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  const allTarget = parseAllFieldTarget({ text: actionRest });
+  if (allTarget !== undefined) {
+    const modifier = parseNegativePowerModifier({ text: allTarget.rest });
+    if (modifier === undefined) {
+      return undefined;
+    }
+
+    const duration = parseThisTurnDuration({ text: modifier.rest });
+    if (duration === undefined || duration.duration === undefined) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "modifyPower",
+        target: allTarget.target,
+        value: modifier.value,
+        duration: duration.duration,
+      },
+      evidence: [
+        "instruction:modifyPower",
+        ...allTarget.evidence,
+        ...modifier.evidence,
+        ...duration.evidence,
+      ],
+      rest: "",
+    };
   }
 
   const cardinality = parseUpToCardinality({ text: actionRest });

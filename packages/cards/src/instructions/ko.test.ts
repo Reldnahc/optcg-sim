@@ -3,6 +3,38 @@ import { describe, expect, it } from "vitest";
 import { parseKoInstruction } from "./ko.js";
 
 describe("K.O. instruction parser", () => {
+  it("parses all opponent Character K.O. as all target plus filter primitives", () => {
+    expect(
+      parseKoInstruction({
+        text: "K.O. all of your opponent's Characters with 0 power or less.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "ko",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "opponent",
+          filter: {
+            categories: ["character"],
+            power: { max: 0 },
+          },
+        },
+      },
+      evidence: [
+        "instruction:ko",
+        "cardinality:all",
+        "player:opponent",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:lte",
+        "condition:threshold:nonNegativeInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses K.O. as an action consuming a reusable selected field target request", () => {
     expect(
       parseKoInstruction({

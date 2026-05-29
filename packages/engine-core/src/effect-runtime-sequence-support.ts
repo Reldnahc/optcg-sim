@@ -77,9 +77,13 @@ type SavedTargetContinuousEffect = (
 ) & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
-type KoEffect = Extract<Effect, { type: "ko" }> & {
+type SavedFieldObjectKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
+type AllTargetKoEffect = Extract<Effect, { type: "ko" }> & {
+  target: Extract<Target, { type: "all" }>;
+};
+type KoEffect = SavedFieldObjectKoEffect | AllTargetKoEffect;
 
 export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
@@ -514,7 +518,13 @@ const isSupportedSavedFieldObjectKoTarget = (
 const isSupportedKoSegment = (
   effect: SequenceSegmentEffect,
 ): effect is KoEffect =>
-  effect.type === "ko" && isSupportedSavedFieldObjectKoTarget(effect.target);
+  effect.type === "ko" &&
+  (isSupportedSavedFieldObjectKoTarget(effect.target) ||
+    (effect.target.type === "all" &&
+      effect.target.zone === "characterArea" &&
+      (effect.target.player === "self" ||
+        effect.target.player === "opponent") &&
+      isSupportedPublicFieldTargetFilter(effect.target.filter)));
 
 const isSupportedBounceSegment = (
   effect: SequenceSegmentEffect,

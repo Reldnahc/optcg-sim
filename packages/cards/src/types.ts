@@ -57,6 +57,7 @@ export type PrimitiveEvidence =
   | "condition:comparator:lte"
   | "condition:comparator:gte"
   | "condition:threshold:positiveInteger"
+  | "condition:threshold:nonNegativeInteger"
   | "instruction:draw"
   | "instruction:trashFromHand"
   | "instruction:moveCards"

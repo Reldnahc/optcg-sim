@@ -337,7 +337,7 @@ function parsePowerPredicate(
   current: CardFilter,
 ): ReturnType<PredicateParser> {
   const thresholdMatch =
-    /^(?<value>[1-9]\d*) (?:base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
+    /^(?<value>0|[1-9]\d*) (?:base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
       text,
     );
   const thresholdValueText = thresholdMatch?.groups?.["value"];
@@ -345,6 +345,10 @@ function parsePowerPredicate(
   if (thresholdValueText !== undefined && direction !== undefined) {
     const op: Comparator =
       direction.toLowerCase() === "or more" ? "gte" : "lte";
+    const thresholdEvidence: PrimitiveEvidence =
+      thresholdValueText === "0"
+        ? "condition:threshold:nonNegativeInteger"
+        : "condition:threshold:positiveInteger";
     return {
       filter: {
         ...current,
@@ -356,13 +360,13 @@ function parsePowerPredicate(
       evidence: [
         "filter:power",
         op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
-        "condition:threshold:positiveInteger",
+        thresholdEvidence,
       ],
       rest: thresholdMatch?.groups?.["thresholdRest"] ?? "",
     };
   }
 
-  const match = /^(?<value>[1-9]\d*) (?:base )?power\b\s*(?<rest>.*)$/i.exec(
+  const match = /^(?<value>0|[1-9]\d*) (?:base )?power\b\s*(?<rest>.*)$/i.exec(
     text,
   );
   const valueText = match?.groups?.["value"];
@@ -370,17 +374,17 @@ function parsePowerPredicate(
   if (valueText === undefined) {
     return undefined;
   }
+  const thresholdEvidence: PrimitiveEvidence =
+    valueText === "0"
+      ? "condition:threshold:nonNegativeInteger"
+      : "condition:threshold:positiveInteger";
 
   return {
     filter: {
       ...current,
       power: { op: "eq", value: Number.parseInt(valueText, 10) },
     },
-    evidence: [
-      "filter:power",
-      "condition:comparator:eq",
-      "condition:threshold:positiveInteger",
-    ],
+    evidence: ["filter:power", "condition:comparator:eq", thresholdEvidence],
     rest: restText ?? "",
   };
 }

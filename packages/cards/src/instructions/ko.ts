@@ -1,7 +1,10 @@
 import type { Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import { parseOpponentFieldTarget } from "../targets/index.js";
+import {
+  parseAllFieldTarget,
+  parseOpponentFieldTarget,
+} from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";
@@ -20,6 +23,18 @@ export const parseKoInstruction: InstructionParser = (input) => {
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  const allTarget = parseAllFieldTarget({ text: actionRest });
+  if (
+    allTarget !== undefined &&
+    (allTarget.rest.length === 0 || allTarget.rest === ".")
+  ) {
+    return {
+      effect: { type: "ko", target: allTarget.target },
+      evidence: ["instruction:ko", ...allTarget.evidence],
+      rest: "",
+    };
   }
 
   const cardinality = parseUpToCardinality({ text: actionRest });

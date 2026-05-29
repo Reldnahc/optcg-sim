@@ -202,7 +202,10 @@ export const applySavedFieldObjectKoSequenceSegment = (params: {
   ledgers: SegmentLedgers;
   state: GameState;
 } => {
-  if (params.segment.effect.type !== "ko") {
+  if (
+    params.segment.effect.type !== "ko" ||
+    params.segment.effect.target.type !== "savedFieldObject"
+  ) {
     return {
       events: [],
       ledgers: params.ledgers,

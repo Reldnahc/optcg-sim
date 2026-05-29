@@ -10,6 +10,7 @@ describe("modify power instruction parser", () => {
     expect(modifyPowerInstructionPrimitive).toEqual({
       primitiveId: "instruction:modifyPower",
       childPrimitiveIds: [
+        "cardinality:all",
         "cardinality:upTo",
         "target:opponentCharacters",
         "target:yourNamedCards",
@@ -94,6 +95,36 @@ describe("modify power instruction parser", () => {
         "modifier:negativePower",
         "duration:thisTurn",
       ],
+    });
+  });
+
+  it("parses all opponent Character negative power as all target plus modifier primitives", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Give all of your opponent's Characters −2000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "opponent",
+          filter: { categories: ["character"] },
+        },
+        value: -2000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:all",
+        "player:opponent",
+        "zone:characterArea",
+        "filter:category:character",
+        "modifier:negativePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
     });
   });
 

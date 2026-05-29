@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import type {
   CardInstance,
+  CardFilter,
   CardRef,
   ChooseOptionalActivationDecision,
   Effect,
@@ -55,6 +56,7 @@ import {
 } from "./effect-runtime-sequence-saved-field-object.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "./effect-runtime-continuous.js";
+import { executeSelectedTargetEffectPrimitive } from "./effect-runtime-target-ko-primitives.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 import {
   applySelectTargetsSequenceSegment,
@@ -88,6 +90,7 @@ import {
   toOncePerTurnKey,
 } from "./once-per-turn.js";
 import { applyRuntimePlaySource } from "./play-card.js";
+import { computeView } from "./compute-view.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -104,6 +107,9 @@ type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   destination: "hand";
 };
 type TrashEffect = Extract<Effect, { type: "trash" }> & {
+  target: Extract<Target, { type: "all" }>;
+};
+type AllTargetKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "all" }>;
 };
 type ContinuousResolvedEffect = Extract<
@@ -942,6 +948,171 @@ const applyAllTargetTrashSequenceSegment = (params: {
   };
 };
 
+const numericFilterMatches = (
+  value: number | undefined,
+  filter: CardFilter["power"],
+): boolean => {
+  if (filter === undefined) return true;
+  if (value === undefined) return false;
+  if ("op" in filter) {
+    if (filter.op === "eq") return value === filter.value;
+    if (filter.op === "neq") return value !== filter.value;
+    if (filter.op === "gt") return value > filter.value;
+    if (filter.op === "gte") return value >= filter.value;
+    if (filter.op === "lt") return value < filter.value;
+    return value <= filter.value;
+  }
+  if (filter.min !== undefined && value < filter.min) return false;
+  if (filter.max !== undefined && value > filter.max) return false;
+  return true;
+};
+
+const withoutPowerFilter = (filter: CardFilter): CardFilter => {
+  const { power, ...rest } = filter;
+  void power;
+  return rest;
+};
+
+const cardMatchesAllKoFilter = (
+  state: GameState,
+  playerId: CardRef["playerId"],
+  card: CardInstance,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if (
+    !cardMatchesHandSelectionFilter(
+      state,
+      playerId,
+      card,
+      withoutPowerFilter(filter),
+    )
+  ) {
+    return false;
+  }
+  if (filter.power === undefined) {
+    return true;
+  }
+  const view = computeView(state, {
+    supportStatusPolicy: "ignore",
+    unsupportedCombatKeywordPolicy: "ignore",
+  });
+  return numericFilterMatches(
+    view.cards[card.instanceId]?.currentPower,
+    filter.power,
+  );
+};
+
+const applyAllTargetKoSequenceSegment = (params: {
+  effect: AllTargetKoEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  const targetPlayerId =
+    params.effect.target.player === "self"
+      ? params.entry.controllerId
+      : getOpponentId(params.state, params.entry.controllerId);
+  const player =
+    targetPlayerId === null ? undefined : params.state.players[targetPlayerId];
+  if (targetPlayerId === null || player === undefined) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  const selectedTargets = player.characters
+    .filter((card) =>
+      cardMatchesAllKoFilter(
+        params.state,
+        targetPlayerId,
+        card,
+        params.effect.target.filter,
+      ),
+    )
+    .map((card) => toCardRef(card, targetPlayerId));
+  const resolvedKo = executeSelectedTargetEffectPrimitive(
+    params.state,
+    params.entry,
+    {
+      type: "ko",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: params.effect.target.player,
+          zone: "characterArea",
+          min: selectedTargets.length,
+          max: selectedTargets.length,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    selectedTargets,
+  );
+  if (
+    resolvedKo.errors !== undefined ||
+    resolvedKo.state.pendingDecision?.type === "chooseReplacement"
+  ) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  return {
+    events: resolvedKo.events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          changedState: resolvedKo.events.length > 0,
+          selectedTargets,
+          succeeded: true,
+        },
+      },
+    },
+    state: resolvedKo.state,
+  };
+};
+
 export type SequenceFrameDecisionResult =
   | {
       events: EngineEvent[];
@@ -1711,6 +1882,22 @@ const continueNoDecisionSegments = (
       continue;
     }
     if (segment.effect.type === "ko") {
+      if (segment.effect.target.type === "all") {
+        const resolvedKo = applyAllTargetKoSequenceSegment({
+          effect: segment.effect as AllTargetKoEffect,
+          emptySegmentResult,
+          entry,
+          index,
+          ledgers: nextLedgers,
+          segment,
+          segmentKey: ledgerKey,
+          state: nextState,
+        });
+        nextState = resolvedKo.state;
+        nextLedgers = resolvedKo.ledgers;
+        events.push(...resolvedKo.events);
+        continue;
+      }
       const resolvedKo = applySavedFieldObjectKoSequenceSegment({
         emptySegmentResult,
         entry,
