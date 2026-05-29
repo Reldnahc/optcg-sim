@@ -80,12 +80,57 @@ export const isSupportedLifeTopToHandEffect = (
   effect.to.zone === "hand" &&
   effect.to.position === undefined;
 
+export const isSupportedLifeBottomToHandEffect = (
+  effect: Effect,
+): effect is MoveCardsEffect =>
+  effect.type === "moveCards" &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0 &&
+  effect.from.player === "self" &&
+  effect.from.zone === "life" &&
+  effect.from.position === "bottom" &&
+  effect.to.player === "self" &&
+  effect.to.zone === "hand" &&
+  effect.to.position === undefined;
+
+export const isSupportedLifeTopToTrashEffect = (
+  effect: Effect,
+): effect is MoveCardsEffect =>
+  effect.type === "moveCards" &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0 &&
+  effect.from.player === "self" &&
+  effect.from.zone === "life" &&
+  effect.from.position === "top" &&
+  effect.to.player === "self" &&
+  effect.to.zone === "trash" &&
+  effect.to.position === undefined;
+
+export const isSupportedDeckTopToLifeTopEffect = (
+  effect: Effect,
+): effect is MoveCardsEffect =>
+  effect.type === "moveCards" &&
+  (effect.min === undefined ||
+    (Number.isInteger(effect.min) && effect.min >= 0)) &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0 &&
+  (effect.min ?? effect.count) <= effect.count &&
+  effect.from.player === "self" &&
+  effect.from.zone === "deck" &&
+  effect.from.position === "top" &&
+  effect.to.player === "self" &&
+  effect.to.zone === "life" &&
+  effect.to.position === "top";
+
 export const isSupportedMoveCardsEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   isSupportedDeckTopToTrashEffect(effect) ||
   isSupportedDonDeckToCostAreaEffect(effect) ||
-  isSupportedLifeTopToHandEffect(effect);
+  isSupportedLifeTopToHandEffect(effect) ||
+  isSupportedLifeBottomToHandEffect(effect) ||
+  isSupportedLifeTopToTrashEffect(effect) ||
+  isSupportedDeckTopToLifeTopEffect(effect);
 
 export const isSupportedMoveCardsEffectBlock = (
   effect: EffectDefinition["effects"][number],
@@ -176,6 +221,28 @@ export const executeMoveCardsPrimitive = (
       options,
     );
   }
+  if (isSupportedLifeBottomToHandEffect(effect)) {
+    return executeLifeToHandMove(state, entry, effect, fromPlayerId, options);
+  }
+  if (isSupportedLifeTopToTrashEffect(effect)) {
+    return executeLifeTopToTrashMove(
+      state,
+      entry,
+      effect,
+      fromPlayerId,
+      options,
+    );
+  }
+  if (isSupportedDeckTopToLifeTopEffect(effect)) {
+    return executeDeckTopToLifeTopMove(
+      state,
+      entry,
+      effect,
+      fromPlayerId,
+      player,
+      options,
+    );
+  }
   if (isSupportedDeckTopToTrashEffect(effect)) {
     return executeDeckTopToTrashMove(
       state,
@@ -261,6 +328,29 @@ const executeLifeTopToHandMove = (
   effect: MoveCardsEffect,
   playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
   options: { incrementStateSeq?: boolean },
+): EngineResult =>
+  executeLifeToHandMove(state, entry, effect, playerId, options);
+
+const lifeCardsForPosition = (
+  life: readonly LifeCard[],
+  count: number,
+  position: "top" | "bottom",
+): LifeCard[] =>
+  position === "top" ? life.slice(0, count) : life.slice(-count);
+
+const remainingLifeAfterPositionMove = (
+  life: readonly LifeCard[],
+  count: number,
+  position: "top" | "bottom",
+): LifeCard[] =>
+  position === "top" ? life.slice(count) : life.slice(0, life.length - count);
+
+const executeLifeToHandMove = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: MoveCardsEffect,
+  playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
+  options: { incrementStateSeq?: boolean },
 ): EngineResult => {
   const player = state.players[playerId];
   if (player === undefined) {
@@ -271,18 +361,36 @@ const executeLifeTopToHandMove = (
     );
   }
 
+  const position = effect.from.position;
+  if (position !== "top" && position !== "bottom") {
+    return toEngineResult(
+      state,
+      [],
+      [
+        moveCardsExecutionError(
+          entry.effectBlockId,
+          "unsupported-effect-shape",
+        ),
+      ],
+    );
+  }
+
   const movedCount = Math.min(effect.count, player.life.length);
   if (movedCount === 0) {
     return toEngineResult(state, []);
   }
 
-  const movedCards = player.life.slice(0, movedCount).map(
+  const movedLife = lifeCardsForPosition(player.life, movedCount, position);
+  const movedCards = movedLife.map(
     (lifeCard, index): CardInstance => ({
       ...lifeCard.card,
       zone: { zone: "hand", playerId, slot: "hand", index },
     }),
   );
-  const nextLife = reindexLife(player.life.slice(movedCount), playerId);
+  const nextLife = reindexLife(
+    remainingLifeAfterPositionMove(player.life, movedCount, position),
+    playerId,
+  );
   const nextHand = reindexZoneCards(
     [...movedCards, ...player.hand],
     "hand",
@@ -291,11 +399,13 @@ const executeLifeTopToHandMove = (
   );
   const events: EngineEvent[] = [];
   for (const [index, movedCard] of movedCards.entries()) {
+    const fromIndex =
+      position === "top" ? index : player.life.length - movedCount + index;
     const from = {
       zone: "life" as const,
       playerId,
       slot: "life" as const,
-      index,
+      index: fromIndex,
     };
     const to = {
       zone: "hand" as const,
@@ -347,6 +457,184 @@ const executeLifeTopToHandMove = (
         [playerId]: {
           ...player,
           hand: nextHand,
+          life: nextLife,
+        },
+      },
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    events,
+  );
+};
+
+const executeLifeTopToTrashMove = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: MoveCardsEffect,
+  playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
+  options: { incrementStateSeq?: boolean },
+): EngineResult => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [moveCardsExecutionError(entry.effectBlockId, "unsupported-player-ref")],
+    );
+  }
+
+  const movedCount = Math.min(effect.count, player.life.length);
+  if (movedCount === 0) {
+    return toEngineResult(state, []);
+  }
+
+  const movedLife = player.life.slice(0, movedCount);
+  const movedCards = movedLife.map(
+    (lifeCard, index): CardInstance => ({
+      ...lifeCard.card,
+      zone: { zone: "trash", playerId, slot: "trash", index },
+    }),
+  );
+  const nextLife = reindexLife(player.life.slice(movedCount), playerId);
+  const nextTrash = reindexZoneCards(
+    [...movedCards, ...player.trash],
+    "trash",
+    playerId,
+    "trash",
+  );
+  const events: EngineEvent[] = [];
+  for (const [index, movedCard] of movedCards.entries()) {
+    const from = {
+      zone: "life" as const,
+      playerId,
+      slot: "life" as const,
+      index,
+    };
+    const to = {
+      zone: "trash" as const,
+      playerId,
+      slot: "trash" as const,
+      index,
+    };
+    events.push({
+      id: `event:${String(state.seq)}:${String(index * 2 + 1)}:cardMoved` as EngineEvent["id"],
+      seq: state.eventJournal.length + events.length + 1,
+      type: "cardMoved",
+      payload: {
+        instanceId: movedCard.instanceId,
+        cardId: movedCard.cardId,
+        from,
+        to,
+        reason: "moveCards",
+      },
+      visibility: { type: "public" },
+      causedBy: {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    });
+    events.push({
+      id: `event:${String(state.seq)}:${String(index * 2 + 2)}:cardTrashed` as EngineEvent["id"],
+      seq: state.eventJournal.length + events.length + 1,
+      type: "cardTrashed",
+      payload: {
+        playerId,
+        instanceId: movedCard.instanceId,
+        cardId: movedCard.cardId,
+        reason: "moveCards",
+      },
+      visibility: { type: "public" },
+      causedBy: {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    });
+  }
+
+  const shouldIncrementStateSeq = options.incrementStateSeq ?? true;
+  return toEngineResult(
+    {
+      ...state,
+      ...(shouldIncrementStateSeq ? { seq: toStateSeq(state.seq + 1) } : {}),
+      players: {
+        ...state.players,
+        [playerId]: {
+          ...player,
+          life: nextLife,
+          trash: nextTrash,
+        },
+      },
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    events,
+  );
+};
+
+const executeDeckTopToLifeTopMove = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: MoveCardsEffect,
+  playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
+  player: NonNullable<GameState["players"][PlayerId]>,
+  options: { incrementStateSeq?: boolean },
+): EngineResult => {
+  const movedCount = Math.min(effect.count, player.deck.length);
+  if (movedCount === 0) {
+    return toEngineResult(state, []);
+  }
+
+  const moved = player.deck.slice(0, movedCount);
+  const nextDeck = reindexZoneCards(
+    player.deck.slice(movedCount),
+    "deck",
+    playerId,
+    "deck",
+  );
+  const nextLife = reindexLife(
+    [
+      ...moved.map(
+        (card, index): LifeCard => ({
+          faceUp: false,
+          card: {
+            ...card,
+            zone: { zone: "life", playerId, slot: "life", index },
+          },
+        }),
+      ),
+      ...player.life,
+    ],
+    playerId,
+  );
+  const events: EngineEvent[] = moved.map((_, index) => ({
+    id: `event:${String(state.seq)}:${String(index + 1)}:cardMoved` as EngineEvent["id"],
+    seq: state.eventJournal.length + index + 1,
+    type: "cardMoved",
+    payload: {
+      from: { zone: "deck", playerId, slot: "deck", index },
+      to: { zone: "life", playerId, slot: "life", index },
+      reason: "moveCards",
+    },
+    visibility: { type: "public" },
+    causedBy: {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    },
+    createdAtStateSeq: state.seq,
+  }));
+  const shouldIncrementStateSeq = options.incrementStateSeq ?? true;
+  return toEngineResult(
+    {
+      ...state,
+      ...(shouldIncrementStateSeq ? { seq: toStateSeq(state.seq + 1) } : {}),
+      players: {
+        ...state.players,
+        [playerId]: {
+          ...player,
+          deck: nextDeck,
           life: nextLife,
         },
       },

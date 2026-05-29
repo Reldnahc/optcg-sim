@@ -130,7 +130,11 @@ export type Cost =
       type: "moveCards";
       count: number;
       chooser: PlayerRef;
-      from: { player: PlayerRef; zone: Zone };
+      from: {
+        player: PlayerRef;
+        zone: Zone;
+        position?: "top" | "bottom" | "topOrBottom";
+      };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "chooserChoice";
       optional?: boolean;
@@ -157,7 +161,11 @@ export type OptionalMoveCardsCost = {
   type: "moveCards";
   count: number;
   chooser: PlayerRef;
-  from: { player: PlayerRef; zone: Zone };
+  from: {
+    player: PlayerRef;
+    zone: Zone;
+    position?: "top" | "bottom" | "topOrBottom";
+  };
   to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
   order: "chooserChoice";
   optional: true;

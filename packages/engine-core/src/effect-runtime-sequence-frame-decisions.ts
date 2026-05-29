@@ -26,6 +26,96 @@ const decisionCauseForEntry = (entry: EffectQueueEntry) =>
     effectId: entry.effectBlockId,
   }) as const;
 
+type MoveCardsPaymentOption = Extract<
+  OptionalPayCostDecision["paymentOptions"][number],
+  { type: "moveCards" }
+>;
+
+const expandMoveCardsCostRoutes = (
+  cost: Extract<OptionalCost, { type: "moveCards" }>,
+): MoveCardsPaymentOption[] => {
+  if (
+    cost.from.player !== "self" ||
+    cost.to.player !== "self" ||
+    !Number.isInteger(cost.count) ||
+    cost.count <= 0
+  ) {
+    return [];
+  }
+  if (
+    cost.from.zone === "trash" &&
+    cost.from.position === undefined &&
+    cost.to.zone === "deck" &&
+    cost.to.position === "bottom"
+  ) {
+    return [
+      {
+        id: "moveCards",
+        type: "moveCards",
+        count: cost.count,
+        from: { player: cost.from.player, zone: cost.from.zone },
+        to: cost.to,
+      },
+    ];
+  }
+  if (
+    cost.from.zone !== "life" ||
+    cost.to.zone !== "hand" ||
+    cost.to.position !== undefined
+  ) {
+    return [];
+  }
+  const positions =
+    cost.from.position === "topOrBottom"
+      ? (["top", "bottom"] as const)
+      : cost.from.position === "top" || cost.from.position === "bottom"
+        ? ([cost.from.position] as const)
+        : [];
+  return positions.map((position) => ({
+    id: `moveCards:${position}`,
+    type: "moveCards",
+    count: cost.count,
+    from: { ...cost.from, position },
+    to: cost.to,
+  }));
+};
+
+const selectableMoveCardsCostIds = (
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+  option: MoveCardsPaymentOption,
+): CardInstance["instanceId"][] | undefined => {
+  if (
+    option.from.player !== "self" ||
+    option.to.player !== "self" ||
+    option.count <= 0
+  ) {
+    return undefined;
+  }
+  if (
+    option.from.zone === "trash" &&
+    option.from.position === undefined &&
+    option.to.zone === "deck" &&
+    option.to.position === "bottom"
+  ) {
+    return player.trash.map((card) => card.instanceId);
+  }
+  if (
+    option.from.zone === "life" &&
+    option.to.zone === "hand" &&
+    option.to.position === undefined
+  ) {
+    if (option.from.position === "top") {
+      const card = player.life[0]?.card;
+      return card === undefined ? [] : [card.instanceId];
+    }
+    if (option.from.position === "bottom") {
+      const card = player.life.at(-1)?.card;
+      return card === undefined ? [] : [card.instanceId];
+    }
+  }
+  return undefined;
+};
+
 export const findSequenceFrameByDecisionId = (
   state: GameState,
   decisionId: NonNullable<GameState["pendingDecision"]>["id"],
@@ -397,16 +487,10 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "moveCards") {
-      if (
-        option.from.player !== "self" ||
-        option.from.zone !== "trash" ||
-        option.to.player !== "self" ||
-        option.to.zone !== "deck" ||
-        option.to.position !== "bottom"
-      ) {
+      const selectableCardIds = selectableMoveCardsCostIds(player, option);
+      if (selectableCardIds === undefined) {
         continue;
       }
-      const selectableCardIds = player.trash.map((card) => card.instanceId);
       legalPayments.push(
         ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
           type: "respondToDecision" as const,
@@ -528,24 +612,28 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "moveCards") {
-    if (
-      cost.chooser === "self" &&
-      cost.from.player === "self" &&
-      cost.from.zone === "trash" &&
-      cost.to.player === "self" &&
-      cost.to.zone === "deck" &&
-      cost.to.position === "bottom" &&
-      Number.isInteger(cost.count) &&
-      cost.count > 0 &&
-      (currentPlayer?.trash.length ?? 0) >= cost.count
-    ) {
-      paymentOptions.push({
-        id: "moveCards",
-        type: "moveCards",
-        count: cost.count,
-        from: cost.from,
-        to: cost.to,
-      });
+    if (cost.chooser !== "self") {
+      return paymentOptions;
+    }
+    for (const route of expandMoveCardsCostRoutes(cost)) {
+      const selectable =
+        currentPlayer === undefined
+          ? undefined
+          : selectableMoveCardsCostIds(currentPlayer, route);
+      if (
+        selectable !== undefined &&
+        Number.isInteger(route.count) &&
+        route.count > 0 &&
+        selectable.length >= route.count
+      ) {
+        paymentOptions.push({
+          id: route.id,
+          type: "moveCards",
+          count: route.count,
+          from: route.from,
+          to: route.to,
+        });
+      }
     }
     return paymentOptions;
   }

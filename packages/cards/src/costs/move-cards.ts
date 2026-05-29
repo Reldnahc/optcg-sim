@@ -7,6 +7,11 @@ import type { CostParseResult } from "./rest-don.js";
 export const parseMoveCardsCost = (
   input: ParseInput,
 ): CostParseResult | undefined => {
+  const lifeToHand = parseLifeToHandCost(input);
+  if (lifeToHand !== undefined) {
+    return lifeToHand;
+  }
+
   const actionMatch = /^place\s+(?<rest>.+)$/i.exec(input.text);
   const afterAction = actionMatch?.groups?.["rest"];
   if (afterAction === undefined) {
@@ -45,4 +50,51 @@ export const parseMoveCardsCost = (
   ];
 
   return { cost, evidence, rest: "" };
+};
+
+const parseLifeToHandCost = (
+  input: ParseInput,
+): CostParseResult | undefined => {
+  const match =
+    /^add (?<count>[1-9]\d*) cards? from the (?<position>top|bottom|top or bottom) of your Life cards to your hand$/i.exec(
+      input.text,
+    );
+  const countText = match?.groups?.["count"];
+  const positionText = match?.groups?.["position"];
+  if (countText === undefined || positionText === undefined) {
+    return undefined;
+  }
+
+  const position =
+    positionText.toLowerCase() === "top or bottom"
+      ? "topOrBottom"
+      : (positionText.toLowerCase() as "top" | "bottom");
+  const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+    type: "moveCards",
+    count: Number.parseInt(countText, 10),
+    chooser: "self",
+    from: { player: "self", zone: "life", position },
+    to: { player: "self", zone: "hand" },
+    order: "chooserChoice",
+    optional: true,
+  };
+  const positionEvidence: PrimitiveEvidence[] =
+    position === "topOrBottom"
+      ? ["position:top", "position:bottom"]
+      : [position === "top" ? "position:top" : "position:bottom"];
+
+  return {
+    cost,
+    evidence: [
+      "cost:moveCards",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:life",
+      ...positionEvidence,
+      "destination:hand",
+      "order:original",
+    ],
+    rest: "",
+  };
 };

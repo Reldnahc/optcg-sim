@@ -58,6 +58,31 @@ const lifeTopToHandEffect = (count: number): Effect => ({
   order: "original",
 });
 
+const lifeBottomToHandEffect = (count: number): Effect => ({
+  type: "moveCards",
+  count,
+  from: { player: "self", zone: "life", position: "bottom" },
+  to: { player: "self", zone: "hand" },
+  order: "original",
+});
+
+const lifeTopToTrashEffect = (count: number): Effect => ({
+  type: "moveCards",
+  count,
+  from: { player: "self", zone: "life", position: "top" },
+  to: { player: "self", zone: "trash" },
+  order: "original",
+});
+
+const deckTopToLifeTopEffect = (count: number): Effect => ({
+  type: "moveCards",
+  min: 0,
+  count,
+  from: { player: "self", zone: "deck", position: "top" },
+  to: { player: "self", zone: "life", position: "top" },
+  order: "original",
+});
+
 const setupDeckTopTrashDefinition = (
   state: GameState,
   source: CardInstance,
@@ -358,4 +383,152 @@ test("moveCards top life to hand resolves without revealing hidden card identity
     to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
     reason: "moveCards",
   });
+});
+
+test("moveCards bottom life to hand moves the bottom Life card without public identity", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const bottomLife = must(p1State.life.at(-1), "bottom life").card;
+  const definition = setupMoveCardsDefinition(
+    state,
+    source,
+    lifeBottomToHandEffect(1),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-life-bottom-to-hand"),
+      timingWindowId: toTimingWindowId("window-life-bottom-to-hand"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "life move effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "life-bottom-to-hand-test" },
+    },
+  ];
+
+  const result = processEffectRuntime(state);
+  const player = must(result.state.players[p1], "p1 result");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(player.life.length, p1State.life.length - 1);
+  assert.equal(
+    must(player.hand[0], "new hand top").instanceId,
+    bottomLife.instanceId,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.visibility.type === "public" &&
+        JSON.stringify(event.payload).includes(String(bottomLife.cardId)),
+    ),
+    false,
+  );
+});
+
+test("moveCards top life to trash reveals the trashed card publicly", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const topLife = must(p1State.life[0], "top life").card;
+  const definition = setupMoveCardsDefinition(
+    state,
+    source,
+    lifeTopToTrashEffect(1),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-life-to-trash"),
+      timingWindowId: toTimingWindowId("window-life-to-trash"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "life trash effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "life-to-trash-test" },
+    },
+  ];
+
+  const result = processEffectRuntime(state);
+  const player = must(result.state.players[p1], "p1 result");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(player.life.length, p1State.life.length - 1);
+  assert.equal(
+    must(player.trash[0], "trash top").instanceId,
+    topLife.instanceId,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "cardTrashed" &&
+        JSON.stringify(event.payload).includes(String(topLife.cardId)),
+    ),
+    true,
+  );
+});
+
+test("moveCards deck top to life top keeps card identity hidden publicly", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const topDeck = must(p1State.deck[0], "top deck");
+  const originalLifeTop = must(p1State.life[0], "life top").card;
+  const definition = setupMoveCardsDefinition(
+    state,
+    source,
+    deckTopToLifeTopEffect(1),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-deck-to-life"),
+      timingWindowId: toTimingWindowId("window-deck-to-life"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "deck to life effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "deck-to-life-test" },
+    },
+  ];
+
+  const result = processEffectRuntime(state);
+  const player = must(result.state.players[p1], "p1 result");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(player.life[0], "new life top").card.instanceId,
+    topDeck.instanceId,
+  );
+  assert.equal(
+    must(player.life[1], "old life top").card.instanceId,
+    originalLifeTop.instanceId,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.visibility.type === "public" &&
+        JSON.stringify(event.payload).includes(String(topDeck.cardId)),
+    ),
+    false,
+  );
 });

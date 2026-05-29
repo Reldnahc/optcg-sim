@@ -371,14 +371,33 @@ const isSupportedPayCostSegment = (
       cost.type === "moveCards") &&
     (cost.chooser === undefined || cost.chooser === "self") &&
     (cost.type !== "trashFromHand" || cost.filter === undefined) &&
-    (cost.type !== "moveCards" ||
-      (cost.from.player === "self" &&
-        cost.from.zone === "trash" &&
-        cost.to.player === "self" &&
-        cost.to.zone === "deck" &&
-        cost.to.position === "bottom")) &&
+    (cost.type !== "moveCards" || isSupportedMoveCardsCostRoute(cost)) &&
     Number.isInteger(cost.count) &&
     cost.count > 0
+  );
+};
+
+const isSupportedMoveCardsCostRoute = (
+  cost: Extract<Cost, { type: "moveCards" }>,
+): boolean => {
+  if (cost.from.player !== "self" || cost.to.player !== "self") {
+    return false;
+  }
+  if (
+    cost.from.zone === "trash" &&
+    cost.from.position === undefined &&
+    cost.to.zone === "deck" &&
+    cost.to.position === "bottom"
+  ) {
+    return true;
+  }
+  return (
+    cost.from.zone === "life" &&
+    (cost.from.position === "top" ||
+      cost.from.position === "bottom" ||
+      cost.from.position === "topOrBottom") &&
+    cost.to.zone === "hand" &&
+    cost.to.position === undefined
   );
 };
 

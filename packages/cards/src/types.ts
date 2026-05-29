@@ -130,6 +130,7 @@ export type PrimitiveEvidence =
   | "destination:ownerHand"
   | "destination:deck"
   | "destination:trash"
+  | "destination:life"
   | "destination:stageArea"
   | "destination:costArea"
   | "deckRestriction:ignored"

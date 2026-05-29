@@ -36,7 +36,11 @@ export type PaymentOption =
       id: string;
       type: "moveCards";
       count: number;
-      from: { player: PlayerRef; zone: Zone };
+      from: {
+        player: PlayerRef;
+        zone: Zone;
+        position?: "top" | "bottom";
+      };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
     }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
