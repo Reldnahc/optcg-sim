@@ -17,6 +17,7 @@ import {
   isSupportedWhenAttackingCompatibleQueuedEffect,
 } from "./effect-runtime-trigger-queueing-attack.js";
 import { isSupportedOnKOCompatibleQueuedEffect } from "./effect-runtime-trigger-queueing-ko.js";
+import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
 
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -217,6 +218,7 @@ const supportsBattleRuntimeMetadataSanitization = (
   definition.effects.every(
     (effect) =>
       isSupportedBattleRuntimeEffect(effect) ||
+      isSupportedReplacementEffectBlock(effect) ||
       isBattleNeutralTrigger(effect.trigger),
   );
 
@@ -256,6 +258,7 @@ const hasBattleSafeImplementedDslDefinitionForText = (
     lookup.definition.effects.every(
       (effect) =>
         isSupportedBattleRuntimeEffect(effect) ||
+        isSupportedReplacementEffectBlock(effect) ||
         isBattleNeutralTrigger(effect.trigger) ||
         isSupportedPermanentContinuousEffectBlock(effect),
     )
@@ -283,6 +286,7 @@ const battleMetadataIssueForEffect = (
 ): string | undefined => {
   if (
     isSupportedBattleRuntimeEffect(effect) ||
+    isSupportedReplacementEffectBlock(effect) ||
     isSupportedPermanentContinuousEffectBlock(effect)
   ) {
     return undefined;

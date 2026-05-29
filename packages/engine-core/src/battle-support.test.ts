@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition } from "@optcg/types";
+import type {
+  EffectDefinition,
+  ReplacementTrigger,
+  Target,
+} from "@optcg/types";
 
 import {
   createActiveState,
@@ -102,6 +106,77 @@ test("battle effect metadata ignores supported main-only unblockable grants", ()
             target: { type: "myLeader" },
             keyword: "unblockable",
             duration: { type: "untilEndOfTurn" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: implemented.support.sourceTextHash,
+        rulesVersion: implemented.support.rulesVersion,
+        effectDefinitionsVersion: "0.1.0",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+
+  assert.equal(getUnsupportedBattleEffectMetadataReason(state), undefined);
+  assert.equal(hasUnsupportedBattleEffectMetadata(state), false);
+});
+
+test("battle effect metadata ignores supported field-removal replacement primitives", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const leader = p1State.leader;
+  const implemented = resolvedCard({
+    cardId: leader.cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "If your {Sky Island} type Character with 6000 base power or more would be removed from the field by your opponent, you may add 1 card from the top of your Life cards to your hand instead.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-field-removal-replacement",
+    },
+  });
+  const target: Target = {
+    type: "all",
+    zone: "characterArea",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      typesAny: ["Sky Island"],
+      power: { min: 6000 },
+    },
+  };
+  const when: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    target,
+  };
+
+  state.cardManifest.cards[leader.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-field-removal-replacement": {
+      cardId: leader.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "field-removal-replacement" as EffectDefinition["effects"][number]["id"],
+          category: "replacement",
+          trigger: { type: "replacement", replacement: when },
+          optional: true,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
+          effect: {
+            type: "replacement",
+            when,
+            instead: {
+              type: "moveCards",
+              count: 1,
+              from: { player: "self", zone: "life", position: "top" },
+              to: { player: "self", zone: "hand" },
+              order: "original",
+            },
           },
         },
       ],

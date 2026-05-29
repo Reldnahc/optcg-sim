@@ -103,6 +103,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for optional field-removal replacement effects", async () => {
+    const report = await createSupportProbeReport({
+      text: "If your {Sky Island} type Character with 6000 base power or more would be removed from the field by your opponent, you may add 1 card from the top of your Life cards to your hand instead.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports raw keyword reminder lines as metadata-supported", async () => {
     const report = await createSupportProbeReport({
       text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",

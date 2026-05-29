@@ -260,9 +260,10 @@ const evaluateParsedLine = (
     };
   }
 
-  const runtimeSupport = evaluateEffectBlockRuntimeSupport(
-    toEffectBlock(parsed.value, effectId),
-  );
+  const runtimeSupport = evaluateEffectBlockRuntimeSupport({
+    ...parsed.value.block,
+    id: effectId as EffectBlock["id"],
+  });
   return {
     kind: "effect",
     parseOk: true,
@@ -273,22 +274,6 @@ const evaluateParsedLine = (
       : { runtimeReason: runtimeSupport.reason }),
   };
 };
-
-const toEffectBlock = (
-  line: Extract<ParsedEffectLine, { readonly block: unknown }>,
-  effectId: string,
-): EffectBlock => ({
-  id: effectId as EffectBlock["id"],
-  category: line.block.category,
-  trigger: line.block.trigger,
-  ...(line.block.condition === undefined
-    ? {}
-    : { condition: line.block.condition }),
-  ...(line.block.cost === undefined ? {} : { cost: line.block.cost }),
-  sourcePresencePolicy: line.block.sourcePresencePolicy,
-  ...(line.block.oncePerTurn === true ? { oncePerTurn: true } : {}),
-  effect: line.block.effect,
-});
 
 const runtimeReason = (
   lineReport: Extract<
