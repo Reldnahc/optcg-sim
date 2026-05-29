@@ -42,6 +42,9 @@ export const actionDecisionPayment = (
   ) {
     return undefined;
   }
+  if (isDeterministicLifeToHandMoveCost(option)) {
+    return undefined;
+  }
   const selectedCardInstanceIds =
     option.type === "returnDon"
       ? response.selectedDonInstanceIds
@@ -60,6 +63,20 @@ export const actionDecisionPayment = (
     ...cardCostSource(state, selectedCardInstanceIds),
   };
 };
+
+const isDeterministicLifeToHandMoveCost = (
+  option: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "payCost" }
+  >["paymentOptions"][number],
+): boolean =>
+  option.type === "moveCards" &&
+  option.from.zone === "life" &&
+  option.from.player === "self" &&
+  option.from.position !== undefined &&
+  option.to.zone === "hand" &&
+  option.to.player === "self" &&
+  option.to.position === undefined;
 
 const cardCostOperation = (
   optionType: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon",

@@ -24,6 +24,7 @@ import type {
   CardInstance,
   DecisionId,
   DecisionResponse,
+  PaymentOption,
 } from "@optcg/types";
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
@@ -420,6 +421,7 @@ const instanceNameWithCardId = (
 ): string => `${instanceName(state, ref.instanceId)} (${String(ref.cardId)})`;
 
 const responseLabel = (
+  state: GameState,
   action: Extract<LegalAction, { type: "respondToDecision" }>,
 ): string => {
   if (String(action.decisionId).startsWith("decision:counterStep:pass:")) {
@@ -427,6 +429,10 @@ const responseLabel = (
   }
   switch (action.response.type) {
     case "payment": {
+      const option = paymentOptionForAction(state, action);
+      if (option !== undefined && isDeterministicLifeToHandMoveCost(option)) {
+        return "Pay cost";
+      }
       const selectedDonCount =
         action.response.selectedDonInstanceIds?.length ?? 0;
       const selectedCardsCount =
@@ -494,9 +500,39 @@ const actionLabel = (state: GameState, action: LegalAction): string => {
     case "concede":
       return "Concede";
     case "respondToDecision":
-      return responseLabel(action);
+      return responseLabel(state, action);
   }
 };
+
+const paymentOptionForAction = (
+  state: GameState,
+  action: Extract<LegalAction, { type: "respondToDecision" }>,
+): PaymentOption | undefined => {
+  if (action.response.type !== "payment") {
+    return undefined;
+  }
+  const response = action.response;
+  const pending = state.pendingDecision;
+  if (
+    pending === undefined ||
+    pending.type !== "payCost" ||
+    pending.id !== action.decisionId
+  ) {
+    return undefined;
+  }
+  return pending.paymentOptions.find(
+    (option) => option.id === response.optionId,
+  );
+};
+
+const isDeterministicLifeToHandMoveCost = (option: PaymentOption): boolean =>
+  option.type === "moveCards" &&
+  option.from.zone === "life" &&
+  option.from.player === "self" &&
+  option.from.position !== undefined &&
+  option.to.zone === "hand" &&
+  option.to.player === "self" &&
+  option.to.position === undefined;
 
 const actionPlacement = (
   action: LegalAction,

@@ -25,6 +25,15 @@ const donCard = (instanceId: string): CardInstance => ({
   attachedDon: [],
 });
 
+const lifeCard = (instanceId: string): CardInstance => ({
+  instanceId: instanceId as InstanceId,
+  cardId: "life-card" as CardId,
+  owner: p1,
+  controller: p1,
+  zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
+  attachedDon: [],
+});
+
 const minimalState = (costArea: CardInstance[]): GameState =>
   ({
     pendingDecision: {
@@ -33,7 +42,7 @@ const minimalState = (costArea: CardInstance[]): GameState =>
       playerId: p1,
       prompt: "Choose whether to pay this optional cost.",
       causedBy: { type: "ruleProcess", name: "privateCausality" },
-      visibility: "private",
+      visibility: { type: "private", playerId: p1 },
       cost: { type: "returnDon", count: 2, optional: true },
       paymentOptions: [{ id: "returnDon", type: "returnDon", count: 2 }],
     },
@@ -77,5 +86,52 @@ describe("dev action payment metadata", () => {
         source: { zone: "costArea", playerId: p1 },
       },
     );
+  });
+
+  test("does not project deterministic Life-to-hand cost as a collection choice", () => {
+    const topLife = lifeCard("life-1");
+    const state = minimalState([]);
+    state.pendingDecision = {
+      id: "decision:life-to-hand" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: {
+        type: "moveCards",
+        count: 1,
+        chooser: "self",
+        from: { player: "self", zone: "life", position: "top" },
+        to: { player: "self", zone: "hand" },
+        order: "chooserChoice",
+        optional: true,
+      },
+      paymentOptions: [
+        {
+          id: "moveCards:top",
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "life", position: "top" },
+          to: { player: "self", zone: "hand" },
+        },
+      ],
+    };
+    const player = state.players[p1];
+    if (player === undefined) {
+      throw new Error("Expected p1 in minimal state.");
+    }
+    player.life = [{ card: topLife, faceUp: false }];
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:life-to-hand" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "moveCards:top",
+        selectedCardInstanceIds: [topLife.instanceId],
+      },
+    };
+
+    assert.equal(actionDecisionPayment(state, action), undefined);
   });
 });
