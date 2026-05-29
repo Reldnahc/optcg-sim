@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { beforeAll, describe, test } from "vitest";
-import type { CardId, EngineEventId, PlayerId } from "@optcg/types";
+import type { CardId, DecisionId, EngineEventId, PlayerId } from "@optcg/types";
 
 import {
   applyLocalDevAction,
@@ -1003,6 +1003,45 @@ describe("local dev match", () => {
       catalog.players[p1]?.cards[revealed.cardId]?.cardId,
       revealed.cardId,
     );
+  });
+
+  test("player card catalog includes private order-card decision cards", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const looked = p1State.deck[0];
+    if (looked === undefined) {
+      throw new Error("Missing looked deck card.");
+    }
+    match.state.pendingDecision = {
+      id: "decision:orderCards:test" as DecisionId,
+      type: "orderCards",
+      playerId: p1,
+      prompt: "Place looked cards.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      visibility: { type: "private", playerId: p1 },
+      cards: [
+        {
+          instanceId: looked.instanceId,
+          cardId: looked.cardId,
+          playerId: p1,
+          zone: looked.zone,
+        },
+      ],
+      destination: "deck",
+      placement: { type: "topOrBottom" },
+    };
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const entry = catalog.players[p1]?.cards[looked.cardId];
+    if (entry === undefined) {
+      throw new Error("Missing pending order card catalog entry.");
+    }
+
+    assert.equal(entry.cardId, looked.cardId);
+    assert.equal(entry.imageUrl?.startsWith("https://"), true);
   });
 
   test("player card catalog keys persistent revealed cards by revealed card owner", () => {

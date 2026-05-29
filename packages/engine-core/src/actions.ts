@@ -58,10 +58,10 @@ import {
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
-import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
 import {
   applySearchRevealSequenceChoiceResponse,
   applySequenceSelectCardsChoiceResponse,
+  applyTopDeckPlacementSequenceAwareResponse,
   resumeSequenceAfterSearchRevealOrderResponse,
 } from "./search-reveal-sequence-actions.js";
 import {
@@ -939,7 +939,7 @@ const applyRespondToDecision = (
     }
     return continueRuntimeAfterDecisionResult(state, searchRevealOrderResult);
   }
-  const topDeckPlacementResult = applyTopDeckPlacementDecisionResponse(
+  const topDeckPlacementResult = applyTopDeckPlacementSequenceAwareResponse(
     state,
     action,
   );

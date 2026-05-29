@@ -5,10 +5,12 @@ import {
   retargetSequenceFrameAfterSearchRevealOrder,
   resumeSequenceFrameAfterHandSelection,
   resumeSequenceFrameAfterSearchReveal,
+  resumeSequenceFrameAfterTopDeckPlacement,
 } from "./effect-runtime-sequence-frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
+import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -142,4 +144,51 @@ export const resumeSequenceAfterSearchRevealOrderResponse = (
     ...orderResult.events,
     ...resumed.events,
   ]);
+};
+
+export const resumeSequenceAfterTopDeckPlacementResponse = (
+  state: GameState,
+  orderResult: EngineResult,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "orderCards" ||
+    !hasSequenceFrameForDecision(state, decision.id) ||
+    orderResult.errors !== undefined ||
+    orderResult.state.pendingDecision !== undefined
+  ) {
+    return null;
+  }
+  const resumed = resumeSequenceFrameAfterTopDeckPlacement(
+    orderResult.state,
+    decision.id,
+    createSupportedTrashFromHandChoiceDecision,
+  );
+  if (resumed === undefined) {
+    return null;
+  }
+  if (!resumed.ok) {
+    return toEngineResult(state, [], [resumed.error]);
+  }
+  return toEngineResult(resumed.state, [
+    ...orderResult.events,
+    ...resumed.events,
+  ]);
+};
+
+export const applyTopDeckPlacementSequenceAwareResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  const result = applyTopDeckPlacementDecisionResponse(state, action, {
+    deferQueueResolution:
+      decision?.type === "orderCards" &&
+      hasSequenceFrameForDecision(state, decision.id),
+  });
+  if (result === null) {
+    return null;
+  }
+  return resumeSequenceAfterTopDeckPlacementResponse(state, result) ?? result;
 };

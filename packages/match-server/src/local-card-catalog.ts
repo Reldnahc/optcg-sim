@@ -131,6 +131,25 @@ const addVisibleCatalogEntriesForRevealEvents = (
   }
 };
 
+const addVisibleCatalogEntriesForPendingDecision = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
+  view: PlayerView,
+): void => {
+  const pending = view.pendingDecision;
+  if (pending?.type !== "orderCards") {
+    return;
+  }
+  for (const card of pending.cards) {
+    addVisibleCatalogEntryForCardId(
+      players,
+      manifest,
+      card.playerId,
+      card.cardId,
+    );
+  }
+};
+
 const addVisibleCatalogEntries = (
   players: Record<PlayerId, DevPlayerCardCatalog>,
   manifest: MatchCardManifest,
@@ -167,6 +186,7 @@ const addVisibleCatalogEntries = (
       );
     }
   }
+  addVisibleCatalogEntriesForPendingDecision(players, manifest, view);
   addVisibleCatalogEntriesForRevealEvents(players, manifest, view);
 };
 

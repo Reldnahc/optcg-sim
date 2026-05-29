@@ -119,6 +119,7 @@ export const createTopDeckPlacementDecision = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: Effect,
+  options: { decisionIdSuffix?: string } = {},
 ): EngineResult => {
   if (!isSupportedPlaceTopDeckCardsEffect(effect)) {
     return toEngineResult(
@@ -163,7 +164,13 @@ export const createTopDeckPlacementDecision = (
   }
 
   const pendingDecision: OrderCardsDecision = {
-    id: toDecisionId(`${decisionPrefix}${String(entry.id)}`),
+    id: toDecisionId(
+      `${decisionPrefix}${String(entry.id)}${
+        options.decisionIdSuffix === undefined
+          ? ""
+          : `:${options.decisionIdSuffix}`
+      }`,
+    ),
     type: "orderCards",
     playerId,
     prompt: placementPrompt(effect.destination),
@@ -241,6 +248,7 @@ const orderedCardsFromIds = (
 export const applyTopDeckPlacementDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: { deferQueueResolution?: boolean } = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || !isTopDeckPlacementOrderDecision(decision)) {
@@ -329,6 +337,8 @@ export const applyTopDeckPlacementDecisionResponse = (
             entry.effectBlockId === causedBy.effectId,
         )
       : undefined;
+  const shouldResolveQueue =
+    queuedEntry !== undefined && options.deferQueueResolution !== true;
   const events: EngineEvent[] = [];
   appendEvent(
     state,
@@ -343,7 +353,7 @@ export const applyTopDeckPlacementDecisionResponse = (
     },
     decision.visibility,
   );
-  if (queuedEntry !== undefined) {
+  if (shouldResolveQueue) {
     appendEffectResolvedEvent(state, events, queuedEntry);
   }
   for (const event of events) {
@@ -357,10 +367,9 @@ export const applyTopDeckPlacementDecisionResponse = (
       ...state.players,
       [decision.playerId]: { ...player, deck: finalDeck },
     },
-    effectQueue:
-      queuedEntry === undefined
-        ? state.effectQueue
-        : state.effectQueue.filter((entry) => entry.id !== queuedEntry.id),
+    effectQueue: !shouldResolveQueue
+      ? state.effectQueue
+      : state.effectQueue.filter((entry) => entry.id !== queuedEntry.id),
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;

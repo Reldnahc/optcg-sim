@@ -17,6 +17,7 @@ import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
+import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -25,6 +26,7 @@ type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SearchEffect = Extract<Effect, { type: "search" }>;
+type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
@@ -85,6 +87,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | MoveCardsEffect
     | TrashFromHandEffect
     | SearchEffect
+    | PlaceTopDeckCardsEffect
     | PayCostEffect
     | SelectCardsEffect
     | MoveSelectedEffect
@@ -300,6 +303,12 @@ const isSupportedSearchSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SearchEffect =>
   effect.type === "search" && isSupportedSearchRequestShape(effect.request);
+
+const isSupportedPlaceTopDeckCardsSegment = (
+  effect: SequenceSegmentEffect,
+): effect is PlaceTopDeckCardsEffect =>
+  effect.type === "placeTopDeckCards" &&
+  isSupportedPlaceTopDeckCardsEffect(effect);
 
 const isSupportedPayCostSegment = (
   effect: SequenceSegmentEffect,
@@ -723,6 +732,10 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedSearchSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedPlaceTopDeckCardsSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return true;
       }

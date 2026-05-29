@@ -66,6 +66,7 @@ import {
   resumeSequenceFrameAfterSearchRevealHelper,
   retargetSequenceFrameAfterSearchRevealOrder,
 } from "./effect-runtime-sequence-search-reveal.js";
+import { createTopDeckPlacementDecision } from "./effect-runtime-top-deck-placement.js";
 import {
   applyDrawSegment,
   applyMoveCardsSegment,
@@ -1399,6 +1400,47 @@ const continueNoDecisionSegments = (
       events.push(...revealed.events);
       continue;
     }
+    if (segment.effect.type === "placeTopDeckCards") {
+      const partialResult: SequenceSegmentResult = {
+        ...emptySegmentResult(),
+        attempted: true,
+      };
+      const pausedLedgers: SegmentLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [ledgerKey(segment, index)]: partialResult,
+        },
+      };
+      const decisionResult = createTopDeckPlacementDecision(
+        nextState,
+        entry,
+        segment.effect,
+        { decisionIdSuffix: `segment:${String(index)}` },
+      );
+      if (decisionResult.errors !== undefined) {
+        return { ok: false };
+      }
+      const decision = decisionResult.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        effectPath: [...effectPath],
+        index,
+        savedReferences: pausedLedgers.savedReferences,
+        segmentResults: pausedLedgers.segmentResults,
+        state: decisionResult.state,
+      });
+      return {
+        events: [...events, ...decisionResult.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
+      };
+    }
     const partialResult: SequenceSegmentResult = {
       ...emptySegmentResult(),
       attempted: true,
@@ -2290,6 +2332,67 @@ export const resumeSequenceFrameAfterSearchReveal = (
     sequenceRuntimeError,
     state,
   });
+
+export const resumeSequenceFrameAfterTopDeckPlacement = (
+  state: GameState,
+  decisionId: NonNullable<GameState["pendingDecision"]>["id"],
+  createTrashDecision: CreateTrashFromHandSequenceDecision,
+): SequenceFrameResumeResult => {
+  const frame = findSequenceFrameByDecisionId(state, decisionId);
+  if (frame === undefined) {
+    return undefined;
+  }
+  const entry = findFrameQueueEntry(state, frame);
+  if (entry === undefined) {
+    return {
+      error: sequenceRuntimeError(frame.effectBlockId, "missing-queue-entry"),
+      ok: false,
+    };
+  }
+  const effectBlock = findSequenceEffectBlock(state, entry);
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
+    return {
+      error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
+      ok: false,
+    };
+  }
+  const pausedSegment =
+    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  if (
+    pausedSegment === undefined ||
+    pausedSegment.effect.type !== "placeTopDeckCards"
+  ) {
+    return {
+      error: sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+  return resumeSequenceFrameFromLedgers({
+    createTrashDecision,
+    effectBlock: supportedBlock,
+    entry,
+    finalizeCompleted: true,
+    frame,
+    ledgers: {
+      savedReferences: frame.savedReferences,
+      segmentResults: {
+        ...frame.segmentResults,
+        [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
+          {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: true,
+          },
+      },
+    },
+    state,
+  });
+};
 
 export const resumeSequenceFrameAfterOptionalActivation = (
   state: GameState,
