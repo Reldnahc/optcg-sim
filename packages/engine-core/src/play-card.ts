@@ -235,7 +235,7 @@ const shouldResolveOnPlayRuntime = (
   handCard: CardInstance,
   supported: SupportedPlayMetadata,
 ): boolean =>
-  (supported.category === "character" || supported.category === "event") &&
+  supported.category === "event" ||
   state.cardManifest.cards[handCard.cardId]?.support.status ===
     "implemented-dsl";
 

@@ -520,10 +520,17 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
       const revealId = payload["revealId"];
       const origin = payload["origin"];
       const selectionSetId = payload["selectionSetId"];
+      const lifeOrigin =
+        isObjectRecord(origin) &&
+        origin["zone"] === "life" &&
+        typeof origin["playerId"] === "string"
+          ? { zone: "life", playerId: origin["playerId"] }
+          : undefined;
       return {
         ...(typeof revealId === "string" ? { revealId } : {}),
         cards,
         ...(typeof origin === "string" ? { origin } : {}),
+        ...(lifeOrigin === undefined ? {} : { origin: lifeOrigin }),
         ...(typeof selectionSetId === "string" ? { selectionSetId } : {}),
       };
     }

@@ -75,6 +75,9 @@ const opponentActivationFromEvent = (
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
+  Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
+
 const sourceFieldEntryEventSeq = (
   state: GameState,
   source: CardInstance,
@@ -132,6 +135,7 @@ export const createOpponentActivationTriggerQueueing = (
     const alreadyQueued = queuedOpponentActivationTriggerEventIds(state);
     const activationEvents = state.eventJournal.filter(
       (event) =>
+        isRecentRuntimeEvent(state, event) &&
         !alreadyQueued.has(String(event.id)) &&
         opponentActivationFromEvent(event) !== undefined,
     );

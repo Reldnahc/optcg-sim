@@ -61,6 +61,20 @@ const isOpponentSearchRevealEvent = (event: EngineEvent): boolean => {
   );
 };
 
+const isLifeRevealEvent = (event: EngineEvent): boolean => {
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const revealId = event.payload["revealId"];
+  const origin = event.payload["origin"];
+  return (
+    typeof revealId === "string" &&
+    revealId.startsWith("reveal:sequence:") &&
+    isRecord(origin) &&
+    origin["zone"] === "life"
+  );
+};
+
 export const opponentRevealFromEvents = (
   events: readonly EngineEvent[],
   playerId: PlayerId,
@@ -82,11 +96,11 @@ export const opponentRevealsFromEvents = (
   const reveals: OpponentRevealViewModel[] = [];
   const seenRevealIds = new Set<string>();
   for (const event of events) {
-    if (
-      event.type !== "cardRevealed" ||
-      event.visibility.type !== "public" ||
-      !isOpponentSearchRevealEvent(event)
-    ) {
+    if (event.type !== "cardRevealed" || event.visibility.type !== "public") {
+      continue;
+    }
+    const showToBothPlayers = isLifeRevealEvent(event);
+    if (!showToBothPlayers && !isOpponentSearchRevealEvent(event)) {
       continue;
     }
     const revealId = revealIdFromEvent(event);
@@ -94,7 +108,10 @@ export const opponentRevealsFromEvents = (
       continue;
     }
     const cards = revealedCardsFromEvent(event);
-    if (cards.length > 0 && cards.every((card) => card.playerId !== playerId)) {
+    if (
+      cards.length > 0 &&
+      (showToBothPlayers || cards.every((card) => card.playerId !== playerId))
+    ) {
       seenRevealIds.add(revealId);
       reveals.push({ revealId, cards });
     }

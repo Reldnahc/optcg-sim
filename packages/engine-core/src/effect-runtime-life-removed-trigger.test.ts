@@ -12,6 +12,7 @@ import {
   reviewedMainEventDrawDefinition,
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
+  toStateSeq,
 } from "./action-test-fixtures.js";
 import {
   executeNoChoiceEffectPrimitive,
@@ -352,6 +353,48 @@ test("opponent activation reaction ignores activations before the source entered
     causedBy: { type: "ruleProcess", name: "test:reaction-source-entry" },
     createdAtStateSeq: state.seq,
   });
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.events.length, 0);
+});
+
+test("opponent activation reaction ignores stale activation events after their timing window", () => {
+  const { source, state } = setupOpponentActivationRevealPowerState();
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:reaction-source-entry"),
+      seq: 1,
+      type: "cardPlayed",
+      payload: {
+        playerId: p1,
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        category: "character",
+      },
+      visibility: { type: "public" },
+      causedBy: { type: "ruleProcess", name: "test:reaction-source-entry" },
+      createdAtStateSeq: toStateSeq(1),
+    },
+    {
+      id: toEngineEventId("event:stale-opponent-event-played"),
+      seq: 2,
+      type: "cardPlayed",
+      payload: {
+        playerId: p2,
+        instanceId: "opponent-event-instance",
+        cardId: "opponent-event",
+        category: "event",
+      },
+      visibility: { type: "public" },
+      causedBy: { type: "ruleProcess", name: "test:stale-opponent-event" },
+      createdAtStateSeq: toStateSeq(2),
+    },
+  ];
+  state.seq = toStateSeq(10);
 
   const result = processEffectRuntime(state);
 

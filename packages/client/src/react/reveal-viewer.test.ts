@@ -21,7 +21,7 @@ const p2 = "p2" as PlayerId;
 const revealEvent = (options: {
   revealId?: string;
   cardOwner: PlayerId;
-  origin?: string;
+  origin?: string | { zone: "life"; playerId: PlayerId };
   visibility?: "public" | "private";
   seq?: number;
 }): EngineEvent => ({
@@ -79,6 +79,24 @@ describe("reveal viewer", () => {
     );
 
     assert.equal(reveal, undefined);
+  });
+
+  test("shows public Life reveal windows to both players", () => {
+    const event = revealEvent({
+      revealId: "reveal:sequence:life-reaction:0",
+      cardOwner: p1,
+      origin: { zone: "life", playerId: p1 },
+    });
+
+    const ownerReveal = opponentRevealFromEvents([event], p1, new Set());
+    const opponentReveal = opponentRevealFromEvents([event], p2, new Set());
+
+    if (ownerReveal === undefined || opponentReveal === undefined) {
+      throw new Error("Expected both players to see the Life reveal.");
+    }
+    assert.equal(ownerReveal.revealId, "reveal:sequence:life-reaction:0");
+    assert.equal(opponentReveal.revealId, "reveal:sequence:life-reaction:0");
+    assert.equal(ownerReveal.cards[0]?.cardId, opponentReveal.cards[0]?.cardId);
   });
 
   test("does not reshow a closed reveal", () => {
