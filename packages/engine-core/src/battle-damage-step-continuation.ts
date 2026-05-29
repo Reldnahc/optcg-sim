@@ -3,7 +3,7 @@ import type { GameState } from "@optcg/types";
 import { reifyCardRef } from "./action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
-  hasUnsupportedBattleEffectMetadata,
+  getUnsupportedBattleEffectMetadataReason,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
 } from "./battle-support.js";
@@ -33,8 +33,10 @@ export const getUnsupportedDamageStepContinuationReason = (
     return "Battle requires unsupported trigger or replacement processing.";
   }
   const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
-  if (hasUnsupportedBattleEffectMetadata(combatMetadataState)) {
-    return "Battle requires unsupported effect metadata.";
+  const unsupportedEffectMetadataReason =
+    getUnsupportedBattleEffectMetadataReason(combatMetadataState);
+  if (unsupportedEffectMetadataReason !== undefined) {
+    return unsupportedEffectMetadataReason;
   }
   const attacker = reifyCardRef(state, battle.attacker);
   const target = reifyCardRef(state, battle.currentTarget);

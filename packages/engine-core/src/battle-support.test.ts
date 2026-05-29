@@ -9,7 +9,10 @@ import {
   p1,
   resolvedCard,
 } from "./action-test-fixtures.js";
-import { hasUnsupportedBattleEffectMetadata } from "./battle-support.js";
+import {
+  getUnsupportedBattleEffectMetadataReason,
+  hasUnsupportedBattleEffectMetadata,
+} from "./battle-support.js";
 
 test("battle effect metadata ignores implemented-dsl combat cards with only battle-neutral effects", () => {
   const state = createActiveState();
@@ -65,6 +68,113 @@ test("battle effect metadata ignores implemented-dsl combat cards with only batt
   };
 
   assert.equal(hasUnsupportedBattleEffectMetadata(state), false);
+});
+
+test("battle effect metadata ignores supported main-only unblockable grants", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const leader = p1State.leader;
+  const implemented = resolvedCard({
+    cardId: leader.cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "[Main] Your [Monkey.D.Luffy] Leader gains [Unblockable] during this turn.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-unblockable-leader",
+    },
+  });
+  state.cardManifest.cards[leader.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-main-unblockable-leader": {
+      cardId: leader.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "main-unblockable" as EffectDefinition["effects"][number]["id"],
+          category: "activate",
+          trigger: { type: "main" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: {
+            type: "giveKeyword",
+            target: { type: "myLeader" },
+            keyword: "unblockable",
+            duration: { type: "untilEndOfTurn" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: implemented.support.sourceTextHash,
+        rulesVersion: implemented.support.rulesVersion,
+        effectDefinitionsVersion: "0.1.0",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+
+  assert.equal(getUnsupportedBattleEffectMetadataReason(state), undefined);
+  assert.equal(hasUnsupportedBattleEffectMetadata(state), false);
+});
+
+test("battle effect metadata diagnostics identify unsupported battle effect source", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const leader = p1State.leader;
+  const implemented = resolvedCard({
+    cardId: leader.cardId,
+    category: "leader",
+    power: 5000,
+    effectText: "",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-end-of-battle-unblockable-leader",
+    },
+  });
+  state.cardManifest.cards[leader.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-end-of-battle-unblockable-leader": {
+      cardId: leader.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "end-of-battle-unblockable" as EffectDefinition["effects"][number]["id"],
+          category: "auto",
+          trigger: { type: "endOfBattle" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: {
+            type: "giveKeyword",
+            target: { type: "self" },
+            keyword: "unblockable",
+            duration: { type: "untilEndOfTurn" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: implemented.support.sourceTextHash,
+        rulesVersion: implemented.support.rulesVersion,
+        effectDefinitionsVersion: "0.1.0",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+
+  assert.equal(
+    getUnsupportedBattleEffectMetadataReason(state),
+    [
+      "Battle requires unsupported effect metadata",
+      `card=${String(leader.cardId)}`,
+      "effect=end-of-battle-unblockable",
+      "trigger=endOfBattle",
+      "category=auto",
+      "reason=unsupported battle timing effect",
+    ].join("; "),
+  );
+  assert.equal(hasUnsupportedBattleEffectMetadata(state), true);
 });
 
 test("battle effect metadata ignores supported field-removal protection with continuous base power", () => {

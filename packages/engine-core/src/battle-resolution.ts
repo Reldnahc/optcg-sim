@@ -30,7 +30,7 @@ import { reifyCardRef, reindexZoneCards } from "./action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   expireBattleDurationStateForCleanup,
-  hasUnsupportedBattleEffectMetadata,
+  getUnsupportedBattleEffectMetadataReason,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
   withSupportedBattleRuntimeMetadataHidden,
@@ -176,19 +176,16 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  if (
-    hasUnsupportedBattleEffectMetadata(
+  const unsupportedEffectMetadataReason =
+    getUnsupportedBattleEffectMetadataReason(
       withDamageDeferredEffectQueueMetadataHidden(
         withSupportedBattleRuntimeMetadataHidden(
           withAllAttackTimingCombatMetadataHidden(state),
         ),
       ),
-    )
-  ) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported effect metadata.",
     );
+  if (unsupportedEffectMetadataReason !== undefined) {
+    return unsupportedBattleResolution(state, unsupportedEffectMetadataReason);
   }
 
   const initialBattle = resolutionState.battle;

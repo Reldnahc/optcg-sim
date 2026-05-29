@@ -139,45 +139,57 @@ const hasThisBattleDuration = (value: unknown): boolean => {
   return Object.values(value).some((entry) => hasThisBattleDuration(entry));
 };
 
-const hasUnsupportedBattleEffectBody = (value: unknown): boolean => {
+const battleEffectBodyIssue = (value: unknown): string | undefined => {
   if (!isRecord(value)) {
-    return false;
+    return undefined;
   }
 
   const type = value["type"];
-  if (type === "protectFromKO") {
-    return value["sourceKind"] !== "cardEffect";
+  if (type === "protectFromKO" && value["sourceKind"] !== "cardEffect") {
+    return "unsupported protectFromKO sourceKind";
   }
   if (
     type === "cannotBeBlockedBy" ||
     type === "cannotBeAttacked" ||
     type === "cannotBlock"
   ) {
-    return true;
+    return `unsupported restriction body ${type}`;
   }
   if (type === "giveKeyword" && value["keyword"] === "unblockable") {
-    return true;
+    return "unsupported keyword body giveKeyword:unblockable";
   }
 
   const operation = value["operation"];
   if (isRecord(operation)) {
     if (operation["type"] === "restriction") {
-      return true;
+      return "unsupported continuous restriction operation";
     }
     if (operation["type"] === "protection") {
-      return !isBattleNeutralFieldRemovalProtection(operation["protection"]);
+      return isBattleNeutralFieldRemovalProtection(operation["protection"])
+        ? undefined
+        : "unsupported continuous protection operation";
     }
-    if (isRecord(operation["protection"])) {
-      return !isBattleNeutralFieldRemovalProtection(operation["protection"]);
+    if (
+      isRecord(operation["protection"]) &&
+      !isBattleNeutralFieldRemovalProtection(operation["protection"])
+    ) {
+      return "unsupported continuous protection operation";
     }
   }
-  if (isRecord(value["protection"])) {
-    return !isBattleNeutralFieldRemovalProtection(value["protection"]);
+  if (
+    isRecord(value["protection"]) &&
+    !isBattleNeutralFieldRemovalProtection(value["protection"])
+  ) {
+    return "unsupported protection body";
   }
 
-  return Object.values(value).some((entry) =>
-    hasUnsupportedBattleEffectBody(entry),
-  );
+  for (const entry of Object.values(value)) {
+    const nested = battleEffectBodyIssue(entry);
+    if (nested !== undefined) {
+      return nested;
+    }
+  }
+  return undefined;
 };
 
 const isSupportedBattleRuntimeEffect = (
@@ -255,6 +267,61 @@ const supportsBattleRuntimeSanitization = (
   card: ResolvedCard | undefined,
 ): card is ResolvedCard => hasSupportedBattleRuntimeDefinition(manifest, card);
 
+const battleRelevantMetadataTrigger = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  effect.trigger.type === "counter" ||
+  effect.trigger.type === "onBlock" ||
+  effect.trigger.type === "onKO" ||
+  effect.trigger.type === "endOfBattle" ||
+  effect.trigger.type === "whenAttacking" ||
+  effect.trigger.type === "onOpponentAttack" ||
+  effect.category === "replacement";
+
+const battleMetadataIssueForEffect = (
+  effect: EffectDefinition["effects"][number],
+): string | undefined => {
+  if (
+    isSupportedBattleRuntimeEffect(effect) ||
+    isSupportedPermanentContinuousEffectBlock(effect)
+  ) {
+    return undefined;
+  }
+
+  if (battleRelevantMetadataTrigger(effect)) {
+    return "unsupported battle timing effect";
+  }
+
+  const bodyIssue = hasThisBattleDuration(effect.effect)
+    ? "unsupported thisBattle duration"
+    : battleEffectBodyIssue(effect.effect);
+  if (bodyIssue === undefined) {
+    return undefined;
+  }
+
+  if (effect.trigger.type === "permanent") {
+    return bodyIssue;
+  }
+  if (effect.trigger.type === "onPlay") {
+    return bodyIssue;
+  }
+  return undefined;
+};
+
+const battleMetadataIssueMessage = (
+  cardId: CardInstance["cardId"],
+  effect: EffectDefinition["effects"][number],
+  issue: string,
+): string =>
+  [
+    "Battle requires unsupported effect metadata",
+    `card=${String(cardId)}`,
+    `effect=${String(effect.id)}`,
+    `trigger=${effect.trigger.type}`,
+    `category=${effect.category}`,
+    `reason=${issue}`,
+  ].join("; ");
+
 const sanitizeResolvedCardForCombatView = (
   card: ResolvedCard,
 ): ResolvedCard => {
@@ -325,9 +392,12 @@ export const withSupportedBattleRuntimeMetadataHidden = (
   };
 };
 
-export const hasUnsupportedBattleEffectMetadata = (
+export const hasUnsupportedBattleEffectMetadata = (state: GameState): boolean =>
+  getUnsupportedBattleEffectMetadataReason(state) !== undefined;
+
+export const getUnsupportedBattleEffectMetadataReason = (
   state: GameState,
-): boolean => {
+): string | undefined => {
   const combatCardIds = new Set<CardInstance["cardId"]>();
   for (const player of Object.values(state.players)) {
     combatCardIds.add(player.leader.cardId);
@@ -343,7 +413,11 @@ export const hasUnsupportedBattleEffectMetadata = (
       hasUnsupportedSupportGateText(card.effectText, card) &&
       !hasBattleSafeImplementedDslDefinitionForText(state, cardId)
     ) {
-      return true;
+      return [
+        "Battle requires unsupported effect metadata",
+        `card=${String(cardId)}`,
+        "reason=unsupported support-gate text",
+      ].join("; ");
     }
   }
 
@@ -354,29 +428,14 @@ export const hasUnsupportedBattleEffectMetadata = (
       continue;
     }
     for (const effect of definition.effects) {
-      if (
-        isSupportedBattleRuntimeEffect(effect) ||
-        isSupportedPermanentContinuousEffectBlock(effect)
-      ) {
-        continue;
-      }
-      if (
-        effect.trigger.type === "counter" ||
-        effect.trigger.type === "onBlock" ||
-        effect.trigger.type === "onKO" ||
-        effect.trigger.type === "endOfBattle" ||
-        effect.trigger.type === "whenAttacking" ||
-        effect.trigger.type === "onOpponentAttack" ||
-        effect.category === "replacement" ||
-        hasThisBattleDuration(effect.effect) ||
-        hasUnsupportedBattleEffectBody(effect.effect)
-      ) {
-        return true;
+      const issue = battleMetadataIssueForEffect(effect);
+      if (issue !== undefined) {
+        return battleMetadataIssueMessage(definition.cardId, effect, issue);
       }
     }
   }
 
-  return false;
+  return undefined;
 };
 
 export const isSupportedBattleResolutionEnvelope = (

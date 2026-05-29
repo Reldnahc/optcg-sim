@@ -34,6 +34,7 @@ import {
   type CounterEventTrailingSequence,
 } from "./battle-counter-event-trailing-sequence.js";
 import {
+  getUnsupportedBattleEffectMetadataReason,
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
@@ -307,8 +308,10 @@ export const applyUseCounter = (
     );
   }
   const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
-  if (hasUnsupportedBattleEffectMetadata(combatMetadataState)) {
-    return illegalAction(state, "Battle requires unsupported effect metadata.");
+  const unsupportedEffectMetadataReason =
+    getUnsupportedBattleEffectMetadataReason(combatMetadataState);
+  if (unsupportedEffectMetadataReason !== undefined) {
+    return illegalAction(state, unsupportedEffectMetadataReason);
   }
   const unsupportedCombatViewReason =
     getUnsupportedCombatViewMetadataReason(combatMetadataState);

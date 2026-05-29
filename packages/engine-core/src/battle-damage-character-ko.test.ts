@@ -541,12 +541,12 @@ test("invalid supported battle runtime metadata on a non-K.O. combat participant
 
   const result = resolveSupportedVanillaBattle(state);
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "illegalAction",
-      reason: "Battle requires unsupported effect metadata.",
-    },
-  ]);
+  const error = must(result.errors?.[0], "unsupported metadata error");
+  assert.equal(error.type, "illegalAction");
+  assert.match(
+    error.reason,
+    /^Battle requires unsupported effect metadata; card=p1-a; reason=unsupported support-gate text$/u,
+  );
   assert.deepEqual(result.events, []);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
