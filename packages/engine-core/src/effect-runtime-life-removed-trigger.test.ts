@@ -9,6 +9,7 @@ import {
   p1,
   p2,
   resolvedCard,
+  reviewedMainEventDrawDefinition,
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
 } from "./action-test-fixtures.js";
@@ -329,6 +330,71 @@ test("opponent activation reaction may choose zero revealed Life cards", () => {
         effect.modifier.layer === "powerAdd" &&
         effect.modifier.operation.type === "addPower" &&
         effect.modifier.operation.value === 0 &&
+        effect.source.instanceId === source.instanceId,
+    ),
+    true,
+  );
+});
+
+test("opponent activation reaction queues after the opponent Event main effect", () => {
+  const { source, state } = setupOpponentActivationRevealPowerState();
+  state.eventJournal = [];
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  p1State.hand = p1State.hand.map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  const p2State = must(state.players[p2], "p2");
+  const eventCard = must(p2State.hand[0], "event");
+  const eventSupport = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 0,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-opponent-main-event",
+      rulesVersion: "opponent-main-event-rules",
+      sourceTextHash: "opponent-main-event-source",
+    },
+  });
+  const eventDefinition = reviewedMainEventDrawDefinition(
+    eventCard.cardId,
+    eventSupport.support,
+  );
+  state.cardManifest.cards[eventCard.cardId] = eventSupport;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-opponent-main-event": eventDefinition,
+  };
+
+  const played = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+
+  assert.equal(played.errors, undefined);
+  assert.equal(
+    played.events.some((event) => event.type === "effectResolved"),
+    true,
+  );
+  const decision = must(played.state.pendingDecision, "reaction reveal");
+  assert.equal(decision.type, "chooseQuantity");
+
+  const resolved = applyAction(played.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    resolved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "powerAdd" &&
+        effect.modifier.operation.type === "addPower" &&
+        effect.modifier.operation.value === 4000 &&
         effect.source.instanceId === source.instanceId,
     ),
     true,

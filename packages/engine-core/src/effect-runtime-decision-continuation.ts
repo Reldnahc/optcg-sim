@@ -24,21 +24,33 @@ export const continueRuntimeAfterDecisionResult = (
     return result;
   }
 
-  const queued = processEffectRuntime(result.state);
-  if (queued.errors !== undefined) {
-    return toEngineResult(originalState, [], nonEmptyErrors(queued.errors));
-  }
-  if (queued.events.length === 0) {
-    return result;
-  }
+  return continueRuntimeUntilIdle(originalState, result);
+};
 
-  const resolved = processEffectRuntime(queued.state);
-  if (resolved.errors !== undefined) {
-    return toEngineResult(originalState, [], nonEmptyErrors(resolved.errors));
+export const continueRuntimeUntilIdle = (
+  originalState: GameState,
+  result: EngineResult,
+): EngineResult => {
+  let current = result;
+  for (let stepCount = 0; stepCount < 20; stepCount += 1) {
+    if (
+      current.errors !== undefined ||
+      current.state.pendingDecision !== undefined
+    ) {
+      return current;
+    }
+    const next = processEffectRuntime(current.state);
+    if (next.errors !== undefined) {
+      return toEngineResult(originalState, [], nonEmptyErrors(next.errors));
+    }
+    if (next.events.length === 0) {
+      return current;
+    }
+    current = toEngineResult(next.state, [...current.events, ...next.events]);
   }
-  return toEngineResult(resolved.state, [
-    ...result.events,
-    ...queued.events,
-    ...resolved.events,
-  ]);
+  return toEngineResult(
+    originalState,
+    [],
+    [{ type: "illegalAction", reason: "Runtime continuation did not settle." }],
+  );
 };

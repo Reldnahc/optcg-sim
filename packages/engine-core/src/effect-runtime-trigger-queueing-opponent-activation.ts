@@ -22,21 +22,30 @@ import {
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
 
-const queuedTriggerEventIds = (state: GameState): Set<string> =>
+const queuedOpponentActivationTriggerEventIds = (
+  state: GameState,
+): Set<string> =>
   new Set(
     state.eventJournal.flatMap((event) => {
       if (event.type !== "effectQueued") {
         return [];
       }
-      const payload = event.payload as { triggerEventId?: unknown };
-      return typeof payload.triggerEventId === "string"
+      const payload = event.payload as {
+        queueEntryId?: unknown;
+        timingWindowId?: unknown;
+        triggerEventId?: unknown;
+      };
+      const queuedByOpponentActivation =
+        typeof payload.queueEntryId === "string"
+          ? payload.queueEntryId.includes(":opponentActivated:")
+          : typeof payload.timingWindowId === "string" &&
+            payload.timingWindowId.endsWith(":opponentActivated");
+      return queuedByOpponentActivation &&
+        typeof payload.triggerEventId === "string"
         ? [payload.triggerEventId]
         : [];
     }),
   );
-
-const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
-  Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 1);
 
 const opponentActivationFromEvent = (
   event: EngineEvent,
@@ -88,10 +97,9 @@ export const createOpponentActivationTriggerQueueing = (
     if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
       return undefined;
     }
-    const alreadyQueued = queuedTriggerEventIds(state);
+    const alreadyQueued = queuedOpponentActivationTriggerEventIds(state);
     const activationEvents = state.eventJournal.filter(
       (event) =>
-        isRecentRuntimeEvent(state, event) &&
         !alreadyQueued.has(String(event.id)) &&
         opponentActivationFromEvent(event) !== undefined,
     );

@@ -49,6 +49,7 @@ import {
   detectPendingRuntimeWork,
   processEffectRuntime,
 } from "./effect-runtime.js";
+import { continueRuntimeUntilIdle } from "./effect-runtime-decision-continuation.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -652,11 +653,36 @@ export const applyBattleDecisionResponse = (
   const actionState = hideCurrentAttackTimingCombatMetadata(state);
   const resolveWithOriginalManifest = (
     resolverState: GameState,
-  ): EngineResult =>
-    resolveSupportedBattleWithAttackTimingMetadata({
-      ...resolverState,
+  ): EngineResult => {
+    const runtime = continueRuntimeUntilIdle(
+      state,
+      toEngineResult(
+        {
+          ...resolverState,
+          cardManifest: state.cardManifest,
+        },
+        [],
+      ),
+    );
+    if (
+      runtime.errors !== undefined ||
+      runtime.state.pendingDecision !== undefined ||
+      detectPendingRuntimeWork(runtime.state) !== undefined
+    ) {
+      return runtime;
+    }
+    const resolved = resolveSupportedBattleWithAttackTimingMetadata({
+      ...runtime.state,
       cardManifest: state.cardManifest,
     });
+    return resolved.errors === undefined
+      ? toEngineResult(resolved.state, [...runtime.events, ...resolved.events])
+      : toEngineResult(
+          resolved.state,
+          [...runtime.events, ...resolved.events],
+          toErrorTuple(resolved.errors),
+        );
+  };
   const counterResponse = applyCounterStepDecisionResponse(
     actionState,
     action,
@@ -686,7 +712,16 @@ export const continueAttackTimingBattleIfReady = (
     return null;
   }
   const battle = state.battle;
-  if (battle === undefined || battle.step !== "attack") {
+  if (battle === undefined) {
+    return null;
+  }
+  if (battle.step === "block" && battle.blocker !== undefined) {
+    return withOriginalManifestResult(
+      resolveSupportedVanillaBattle(state),
+      state,
+    );
+  }
+  if (battle.step !== "attack") {
     return null;
   }
   if (!battleParticipantsRemainLegal(state)) {

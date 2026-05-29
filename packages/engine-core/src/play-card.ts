@@ -50,7 +50,7 @@ import {
   getSupportedPlayMetadata,
   type SupportedPlayMetadata,
 } from "./play-card-support.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+import { continueRuntimeUntilIdle } from "./effect-runtime-decision-continuation.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { findRuntimePlaySelectedOverflowEnterRested } from "./runtime-play-selected-overflow-entry-state.js";
@@ -250,23 +250,19 @@ const resolvePlayCardEffectRuntime = (
     return toEngineResult(acceptedState, acceptedEvents);
   }
 
-  const queued = processEffectRuntime(acceptedState);
-  if (queued.errors !== undefined) {
-    return toEngineResult(originalState, [], toErrorTuple(queued.errors));
+  const continued = continueRuntimeUntilIdle(
+    originalState,
+    toEngineResult(acceptedState, acceptedEvents),
+  );
+  if (continued.errors !== undefined) {
+    return toEngineResult(originalState, [], toErrorTuple(continued.errors));
   }
-
-  const resolved = processEffectRuntime(queued.state);
-  if (resolved.errors !== undefined) {
-    return toEngineResult(originalState, [], toErrorTuple(resolved.errors));
-  }
-
-  const events = [...acceptedEvents, ...queued.events, ...resolved.events];
   const stateWithJournal: GameState = {
-    ...resolved.state,
-    eventJournal: [...originalState.eventJournal, ...events],
+    ...continued.state,
+    eventJournal: [...originalState.eventJournal, ...continued.events],
   };
   assertGameStateInvariants(stateWithJournal);
-  return toEngineResult(stateWithJournal, events);
+  return toEngineResult(stateWithJournal, continued.events);
 };
 
 const toErrorTuple = (

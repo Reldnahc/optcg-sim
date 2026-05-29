@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { EffectDefinition, SelectionSetId } from "@optcg/types";
+
 import { applyAction } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 import {
@@ -164,6 +166,123 @@ test("conditional continuous blocker grant opens Block Step decision and can be 
   assert.equal(
     must(result.state.players[p2], "p2 result").trash.some(
       (card) => card.instanceId === defenderBlocker.instanceId,
+    ),
+    true,
+  );
+});
+
+test("blocker activation queues opponent activation reactions before battle resolves", () => {
+  const { opened, p1State, defenderBlocker, decision } =
+    setupOpenedBlockStepDecision();
+  const source = must(p1State.characters[0], "reaction source");
+  const topLife = must(p1State.life[0], "top life").card;
+  const revealedTopLifeSet = "set:revealed-top-life" as SelectionSetId;
+  opened.state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-blocker-opponent-activation",
+      rulesVersion: "blocker-opponent-activation-rules",
+      sourceTextHash: "blocker-opponent-activation-source",
+    },
+  });
+  opened.state.cardManifest.cards[topLife.cardId] = resolvedCard({
+    cardId: topLife.cardId,
+    category: "character",
+    cost: 4,
+  });
+  opened.state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  opened.state.cardManifest.effectDefinitions = {
+    "def-blocker-opponent-activation": {
+      cardId: source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "blocker-opponent-activation-reaction" as EffectDefinition["effects"][number]["id"],
+          category: "auto",
+          trigger: {
+            type: "opponentActivated",
+            activations: ["event", "blocker"],
+          },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "revealTop",
+                  player: "self",
+                  zone: "life",
+                  count: 1,
+                  min: 0,
+                  saveAs: revealedTopLifeSet,
+                  visibility: "bothPlayers",
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "modifyPower",
+                  target: { type: "self" },
+                  value: {
+                    type: "sumSelectedCardCosts",
+                    selection: revealedTopLifeSet,
+                    multiplier: 1000,
+                  },
+                  duration: { type: "thisTurn" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "blocker-opponent-activation-source",
+        rulesVersion: "blocker-opponent-activation-rules",
+        effectDefinitionsVersion: "0.1.0",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+
+  const blocked = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [cardRef(defenderBlocker, p2)] },
+  });
+
+  assert.equal(blocked.errors, undefined);
+  assert.equal(
+    blocked.events.some((event) => event.type === "blockerActivated"),
+    true,
+  );
+  assert.equal(
+    must(blocked.state.battle, "battle").blocker?.cardId,
+    defenderBlocker.cardId,
+  );
+  const pending = must(blocked.state.pendingDecision, "reaction reveal");
+  assert.equal(pending.type, "chooseQuantity");
+
+  const resolved = applyAction(blocked.state, {
+    type: "respondToDecision",
+    decisionId: pending.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
+  assert.equal(
+    resolved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "powerAdd" &&
+        effect.modifier.operation.type === "addPower" &&
+        effect.modifier.operation.value === 4000 &&
+        effect.source.instanceId === source.instanceId,
     ),
     true,
   );
