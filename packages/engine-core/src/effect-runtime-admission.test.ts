@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition } from "@optcg/types";
+import type {
+  EffectDefinition,
+  ReplacementTrigger,
+  Target,
+} from "@optcg/types";
 
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 
@@ -96,6 +100,47 @@ test("runtime admission accepts DON deck movement as a reusable auto body", () =
         effect,
         sourcePresencePolicy: "noSourceRequired",
         trigger: { type: "trigger" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
+test("runtime admission accepts opponent field-removal replacement with reusable life movement body", () => {
+  const target: Target = {
+    type: "all",
+    zone: "characterArea",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      typesAny: ["Sky Island"],
+      power: { min: 6000 },
+    },
+  };
+  const when: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    target,
+  };
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "replacement",
+        trigger: { type: "replacement", replacement: when },
+        optional: true,
+        sourcePresencePolicy: "resolveFromLastKnownInformation",
+        effect: {
+          type: "replacement",
+          when,
+          instead: {
+            type: "moveCards",
+            count: 1,
+            from: { player: "self", zone: "life", position: "top" },
+            to: { player: "self", zone: "hand" },
+            order: "original",
+          },
+        },
       }),
     ),
     { supported: true },

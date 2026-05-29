@@ -19,6 +19,7 @@ import {
 } from "./action-results.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { executeNoChoiceEffectPrimitive } from "./effect-runtime-draw-primitives.js";
+import { executeMoveCardsPrimitive } from "./effect-runtime-move-cards.js";
 import {
   detectSupportedSelectedTargetKoReplacementCandidate,
   type SelectedTargetKoReplacementCandidate,
@@ -255,7 +256,7 @@ const toReplacementDrawSourceSnapshot = (
   };
 };
 
-const replacementDrawTransformedPayload = (
+const replacementInsteadTransformedPayload = (
   candidate: SelectedTargetKoReplacementCandidate,
 ) => ({
   controllerId: candidate.controllerId,
@@ -294,7 +295,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     ...process,
     usedReplacementIds: [...process.usedReplacementIds, candidate.id],
   };
-  const transformedPayload = replacementDrawTransformedPayload(candidate);
+  const transformedPayload = replacementInsteadTransformedPayload(candidate);
   appendEvent(
     state,
     events,
@@ -338,25 +339,40 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     sourcePresencePolicy: "resolveFromLastKnownInformation",
     causedBy: { type: "replacement", replacementId: candidate.id },
   };
-  const drawn = executeNoChoiceEffectPrimitive(
+  const replaced = executeReplacementInsteadEffect(
     { ...state, eventJournal: [...state.eventJournal, ...events] },
     replacementEntry,
     candidate.replacementEffect.instead,
   );
-  if (drawn.errors !== undefined) {
+  if (replaced.errors !== undefined) {
     return {
       error:
-        drawn.errors[0] ??
+        replaced.errors[0] ??
         acceptedReplacementError(effectId, "unsupported-effect-shape"),
     };
   }
 
-  events.push(...rebaseEvents(state, drawn.events, events.length + 1));
+  events.push(...rebaseEvents(state, replaced.events, events.length + 1));
   return {
     state: {
-      ...drawn.state,
+      ...replaced.state,
       eventJournal: [...state.eventJournal, ...events],
     },
     process: usedProcess,
   };
+};
+
+const executeReplacementInsteadEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+) => {
+  if (effect.type === "moveCards") {
+    return executeMoveCardsPrimitive(state, entry, effect, {
+      incrementStateSeq: false,
+    });
+  }
+  return executeNoChoiceEffectPrimitive(state, entry, effect, {
+    incrementStateSeq: false,
+  });
 };

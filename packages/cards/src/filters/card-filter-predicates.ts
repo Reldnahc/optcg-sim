@@ -337,7 +337,7 @@ function parsePowerPredicate(
   current: CardFilter,
 ): ReturnType<PredicateParser> {
   const thresholdMatch =
-    /^(?<value>[1-9]\d*) power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
+    /^(?<value>[1-9]\d*) (?:base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
       text,
     );
   const thresholdValueText = thresholdMatch?.groups?.["value"];
@@ -362,7 +362,9 @@ function parsePowerPredicate(
     };
   }
 
-  const match = /^(?<value>[1-9]\d*) power\b\s*(?<rest>.*)$/i.exec(text);
+  const match = /^(?<value>[1-9]\d*) (?:base )?power\b\s*(?<rest>.*)$/i.exec(
+    text,
+  );
   const valueText = match?.groups?.["value"];
   const restText = match?.groups?.["rest"];
   if (valueText === undefined) {

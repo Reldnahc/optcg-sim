@@ -101,11 +101,14 @@ export function parseEffectLineDetailed(
       block: {
         category:
           expression.blockPatch?.category ?? entryPoint.node.category ?? "auto",
-        trigger: entryPoint.node.trigger,
+        trigger: expression.blockPatch?.trigger ?? entryPoint.node.trigger,
         ...(condition === undefined ? {} : { condition }),
         ...(expression.blockPatch?.cost === undefined
           ? {}
           : { cost: expression.blockPatch.cost }),
+        ...(expression.blockPatch?.optional === undefined
+          ? {}
+          : { optional: expression.blockPatch.optional }),
         sourcePresencePolicy: sourcePresencePolicy(entryPoint.evidence),
         ...markerParse.patch,
         effect: expression.effect,
@@ -227,9 +230,17 @@ function firstExpressionParse(
 
 function sourcePresencePolicy(
   evidence: readonly string[],
-): "mustRemainInSameZone" | "resolveFromDestinationZone" | "noSourceRequired" {
+):
+  | "mustRemainInSameZone"
+  | "resolveFromDestinationZone"
+  | "resolveFromLastKnownInformation"
+  | "noSourceRequired" {
   if (evidence.includes("sourcePresence:noSourceRequired")) {
     return "noSourceRequired";
+  }
+
+  if (evidence.includes("sourcePresence:resolveFromLastKnownInformation")) {
+    return "resolveFromLastKnownInformation";
   }
 
   if (evidence.includes("sourcePresence:resolveFromDestination")) {

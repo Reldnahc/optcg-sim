@@ -50,6 +50,14 @@ const addActiveDonFromDonDeckEffect = (): Effect => ({
   destinationState: "active",
 });
 
+const lifeTopToHandEffect = (count: number): Effect => ({
+  type: "moveCards",
+  count,
+  from: { player: "self", zone: "life", position: "top" },
+  to: { player: "self", zone: "hand" },
+  order: "original",
+});
+
 const setupDeckTopTrashDefinition = (
   state: GameState,
   source: CardInstance,
@@ -284,4 +292,70 @@ test("moveCards DON deck to cost area resolves from a trigger body", () => {
   assert.equal(moved.state, "active");
   assert.equal(moved.zone.zone, "costArea");
   assert.equal(moved.zone.slot, "cost");
+});
+
+test("moveCards top life to hand resolves without revealing hidden card identity publicly", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const topLife = must(p1State.life[0], "top life").card;
+  const secondLife = must(p1State.life[1], "second life").card;
+  const definition = setupMoveCardsDefinition(
+    state,
+    source,
+    lifeTopToHandEffect(1),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-life-to-hand"),
+      timingWindowId: toTimingWindowId("window-life-to-hand"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "life move effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "life-to-hand-test" },
+    },
+  ];
+
+  const result = processEffectRuntime(state);
+  const player = must(result.state.players[p1], "p1 result");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(player.life.length, p1State.life.length - 1);
+  assert.equal(
+    must(player.hand[0], "new hand top").instanceId,
+    topLife.instanceId,
+  );
+  assert.equal(
+    must(player.life[0], "remaining top life").card.instanceId,
+    secondLife.instanceId,
+  );
+  assert.deepEqual(
+    result.events.map((event) => [event.type, event.visibility]),
+    [
+      ["cardMoved", { type: "public" }],
+      ["cardMoved", { type: "private", playerId: p1 }],
+      ["effectResolved", { type: "public" }],
+      ["ruleProcessingChecked", { type: "replayOnly" }],
+    ],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    from: { zone: "life", playerId: p1, slot: "life", index: 0 },
+    to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+    reason: "moveCards",
+  });
+  assert.deepEqual(result.events[1]?.payload, {
+    instanceId: topLife.instanceId,
+    cardId: topLife.cardId,
+    from: { zone: "life", playerId: p1, slot: "life", index: 0 },
+    to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+    reason: "moveCards",
+  });
 });

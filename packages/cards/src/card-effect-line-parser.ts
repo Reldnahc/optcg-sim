@@ -14,6 +14,7 @@ import {
 import {
   parseImplicitPermanentEntryPoint,
   parseRecognizedUnsupportedEntryPoint,
+  parseReplacementEntryPoint,
   parseRulesStartOfGameEntryPoint,
   parseSupportedEntryPoint,
 } from "./entry-points/index.js";
@@ -69,6 +70,7 @@ import {
   instructionExpressionSegmentParser,
   optionalCostedEffectExpressionParser,
   playStageFromDeckExpressionParser,
+  replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
@@ -180,6 +182,7 @@ const defaultRegistry = {
     parseRulesStartOfGameEntryPoint,
     parseSupportedEntryPoint,
     parseRecognizedUnsupportedEntryPoint,
+    parseReplacementEntryPoint,
     parseImplicitPermanentEntryPoint,
   ],
   markers: [parseAttachedDonMarker, parseOncePerTurnMarker],
@@ -215,6 +218,7 @@ const defaultRegistry = {
         generalExpressionParser,
       ],
     }),
+    replacementInsteadExpressionParser,
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,
       connectors: [parseAndConnector],

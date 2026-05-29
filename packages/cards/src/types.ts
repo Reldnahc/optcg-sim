@@ -22,6 +22,7 @@ export type PrimitiveEvidence =
   | "entry:eventCounter"
   | "entry:startOfGame"
   | "entry:implicitPermanent"
+  | "entry:replacement"
   | "entrySupport:unsupported"
   | "marker:oncePerTurn"
   | "marker:attachedDon"
@@ -32,12 +33,15 @@ export type PrimitiveEvidence =
   | "count:positiveInteger"
   | "sourcePresence:mustRemain"
   | "sourcePresence:resolveFromDestination"
+  | "sourcePresence:resolveFromLastKnownInformation"
   | "sourcePresence:noSourceRequired"
   | "composition:wrapperBody"
   | "composition:entryExpression"
+  | "composition:replacementInstead"
   | "expression:sequence"
   | "expression:conditional"
   | "expression:conditionalContinuous"
+  | "expression:replacement"
   | "connector:then"
   | "connector:andOrdered"
   | "condition:synthetic:C"
@@ -96,10 +100,12 @@ export type PrimitiveEvidence =
   | "look:topDeck"
   | "zone:deck"
   | "zone:hand"
+  | "zone:life"
   | "zone:trash"
   | "zone:donDeck"
   | "zone:leaderArea"
   | "zone:characterArea"
+  | "zone:stageArea"
   | "zone:costArea"
   | "filter:name"
   | "filter:anyOf"
@@ -159,6 +165,7 @@ export type PrimitiveEvidence =
   | "target:yourLeader"
   | "target:yourNamedCards"
   | "target:yourCharacters"
+  | "target:yourStages"
   | "target:thisCharacter"
   | "reference:thatCharacter"
   | "duration:whileConditionTrue"
@@ -176,6 +183,9 @@ export type PrimitiveEvidence =
   | "protectionSource:opponentEffects"
   | "protectionSource:effects"
   | "protectionSource:battle"
+  | "replacement:wouldMoveZone"
+  | "replacement:fieldRemoval"
+  | "replacementSource:opponent"
   | "condition:onlyMatchingFieldCards"
   | "instruction:activateReferencedEffect"
   | "instruction:modifyCost"
@@ -227,6 +237,8 @@ export interface ExpressionParseResult {
     readonly category?: EffectCategory;
     readonly condition?: Condition;
     readonly cost?: EffectBlockCost;
+    readonly optional?: boolean;
+    readonly trigger?: Trigger;
   };
 }
 

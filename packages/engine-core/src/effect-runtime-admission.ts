@@ -9,6 +9,7 @@ import {
   type AutoRuntimeEntryAdapter,
 } from "./effect-runtime-block-support.js";
 import { isSupportedPermanentContinuousEffectBlock } from "./effect-runtime-continuous.js";
+import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 import { isSupportedStartOfGameEffectBlock } from "./start-of-game-effects.js";
 
@@ -52,6 +53,12 @@ export const evaluateEffectBlockRuntimeSupport = (
     return isSupportedPermanentContinuousEffectBlock(block)
       ? { supported: true }
       : { supported: false, reason: "unsupported permanent effect body" };
+  }
+
+  if (block.category === "replacement") {
+    return isSupportedReplacementEffectBlock(block)
+      ? { supported: true }
+      : { supported: false, reason: "unsupported replacement effect body" };
   }
 
   return unsupportedEnvelope();

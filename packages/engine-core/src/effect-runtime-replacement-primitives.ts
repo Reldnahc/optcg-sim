@@ -13,6 +13,9 @@ import type {
   Target,
 } from "@optcg/types";
 
+import { isSupportedLifeTopToHandEffect } from "./effect-runtime-move-cards.js";
+import { resolvePublicTargetCandidates } from "./target-selection.js";
+
 export type SelectedTargetKoReplacementDetectionFailureReason =
   | "unsupported-replacement-process"
   | "missing-card"
@@ -217,12 +220,18 @@ const isSelfTarget = (
   target: Target,
 ): target is Extract<Target, { type: "self" }> => target.type === "self";
 
-const isSupportedReplacementEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
+type SupportedReplacementEffectBlock = EffectDefinition["effects"][number] & {
+  trigger: Extract<
+    EffectDefinition["effects"][number]["trigger"],
+    { type: "replacement" }
+  >;
   sourcePresencePolicy: "resolveFromLastKnownInformation";
   effect: Extract<Effect, { type: "replacement" }>;
-} =>
+};
+
+const isSupportedSelfKoDrawReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
   effect.category === "replacement" &&
   effect.trigger.type === "replacement" &&
   effect.trigger.replacement.type === "wouldBeKOd" &&
@@ -241,12 +250,48 @@ const isSupportedReplacementEffect = (
   effect.effect.instead.count === 1 &&
   effect.effect.instead.player === "self";
 
+const isSupportedOpponentFieldRemovalLifeReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  effect.category === "replacement" &&
+  effect.trigger.type === "replacement" &&
+  effect.trigger.replacement.type === "wouldMoveZone" &&
+  effect.trigger.replacement.from === "characterArea" &&
+  effect.trigger.replacement.target.type === "all" &&
+  effect.trigger.replacement.target.zone === "characterArea" &&
+  effect.trigger.replacement.target.player === "self" &&
+  effect.optional === true &&
+  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.cost === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.oncePerTurn === undefined &&
+  effect.effect.type === "replacement" &&
+  effect.effect.when.type === "wouldMoveZone" &&
+  effect.effect.when.from === "characterArea" &&
+  effect.effect.when.target.type === "all" &&
+  effect.effect.when.target.zone === "characterArea" &&
+  effect.effect.when.target.player === "self" &&
+  isSupportedLifeTopToHandEffect(effect.effect.instead);
+
+const isSupportedReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedSelfKoDrawReplacementEffect(effect) ||
+  isSupportedOpponentFieldRemovalLifeReplacementEffect(effect);
+
 const isReplacementTriggerEffect = (
   effect: EffectDefinition["effects"][number],
 ): boolean =>
   effect.category === "replacement" ||
   effect.trigger.type === "replacement" ||
   effect.effect.type === "replacement";
+
+export const isSupportedReplacementEffectBlock = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedReplacementEffect(effect);
 
 const validateKoReplacementTarget = (
   state: GameState,
@@ -347,6 +392,12 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
 
   const effect = unused[0];
   if (effect === undefined) return { ok: true };
+  if (
+    isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) &&
+    !opponentFieldRemovalReplacementApplies(state, process, located, effect)
+  ) {
+    return { ok: true };
+  }
   return {
     ok: true,
     candidate: {
@@ -357,4 +408,69 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
       replacementEffect: effect.effect,
     },
   };
+};
+
+const opponentFieldRemovalReplacementApplies = (
+  state: GameState,
+  process: ReplacementProcess,
+  located: LocatedCard,
+  effect: SupportedReplacementEffectBlock,
+): boolean => {
+  if (
+    !isOpponentControlledFieldRemovalProcess(process, located.card.controller)
+  ) {
+    return false;
+  }
+  const target = effect.trigger.replacement;
+  if (target.type !== "wouldMoveZone" || target.target.type !== "all") {
+    return false;
+  }
+  const request = {
+    timing: "onResolution",
+    chooser: "self",
+    player: target.target.player,
+    zone: target.target.zone,
+    min: 0,
+    max: 99,
+    allowFewerIfUnavailable: true,
+    visibility: "public",
+    ...(target.target.filter === undefined
+      ? {}
+      : { filter: target.target.filter }),
+  } as const;
+  const candidates = resolvePublicTargetCandidates(state, request, {
+    sourceControllerId: located.card.controller,
+  });
+  if (!candidates.ok) {
+    return false;
+  }
+  return candidates.candidates.some(
+    (candidate) => candidate.card.instanceId === located.card.instanceId,
+  );
+};
+
+const isOpponentControlledFieldRemovalProcess = (
+  process: ReplacementProcess,
+  targetControllerId: PlayerId,
+): boolean => {
+  const payload = process.payload;
+  if (typeof payload !== "object" || payload === null) {
+    return false;
+  }
+  if (!("fieldRemovalAttempt" in payload)) {
+    return false;
+  }
+  const attempt = payload.fieldRemovalAttempt;
+  if (typeof attempt !== "object" || attempt === null) {
+    return false;
+  }
+  if (
+    !("processFamily" in attempt) ||
+    attempt.processFamily !== "fieldRemoval" ||
+    !("sourceControllerId" in attempt) ||
+    typeof attempt.sourceControllerId !== "string"
+  ) {
+    return false;
+  }
+  return attempt.sourceControllerId !== targetControllerId;
 };
