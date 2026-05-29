@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   EffectDefinition,
   ReplacementTrigger,
+  SelectionSetId,
   Target,
 } from "@optcg/types";
 
@@ -177,6 +178,84 @@ test("battle effect metadata ignores supported field-removal replacement primiti
               to: { player: "self", zone: "hand" },
               order: "original",
             },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: implemented.support.sourceTextHash,
+        rulesVersion: implemented.support.rulesVersion,
+        effectDefinitionsVersion: "0.1.0",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+
+  assert.equal(getUnsupportedBattleEffectMetadataReason(state), undefined);
+  assert.equal(hasUnsupportedBattleEffectMetadata(state), false);
+});
+
+test("battle effect metadata ignores supported opponent activation reaction primitives", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const source = p1State.leader;
+  const revealedTopLifeSet = "set:revealed-top-life" as SelectionSetId;
+  const implemented = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "When your opponent activates an Event or [Blocker], reveal up to 1 card from the top of your Life cards. This Character gains +1000 power during this turn per 1 cost on the revealed card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-opponent-activation-reaction",
+    },
+  });
+
+  state.cardManifest.cards[source.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-opponent-activation-reaction": {
+      cardId: source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "opponent-activation-reaction" as EffectDefinition["effects"][number]["id"],
+          category: "auto",
+          trigger: {
+            type: "opponentActivated",
+            activations: ["event", "blocker"],
+          },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "revealTop",
+                  player: "self",
+                  zone: "life",
+                  count: 1,
+                  min: 0,
+                  saveAs: revealedTopLifeSet,
+                  visibility: "bothPlayers",
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "modifyPower",
+                  target: { type: "self" },
+                  value: {
+                    type: "sumSelectedCardCosts",
+                    selection: revealedTopLifeSet,
+                    multiplier: 1000,
+                  },
+                  duration: { type: "thisTurn" },
+                },
+              },
+            ],
           },
         },
       ],

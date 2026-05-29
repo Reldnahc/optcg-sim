@@ -10,6 +10,7 @@ import type {
 } from "@optcg/types";
 
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
+import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedPermanentContinuousEffectBlock } from "./effect-runtime-continuous.js";
 import {
@@ -199,6 +200,11 @@ const isSupportedBattleRuntimeEffect = (
   isSupportedQueuedEffectConditionShape(effect.condition) &&
   (isSupportedWhenAttackingCompatibleQueuedEffect(effect) ||
     isSupportedOnOpponentAttackCompatibleQueuedEffect(effect) ||
+    isSupportedAutoRuntimeEffectBlock(effect, {
+      category: "auto",
+      sourcePresencePolicies: ["mustRemainInSameZone"],
+      triggerType: "opponentActivated",
+    }) ||
     isSupportedOnKOCompatibleQueuedEffect(effect));
 
 const isBattleNeutralTrigger = (
