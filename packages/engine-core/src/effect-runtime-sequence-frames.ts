@@ -2851,7 +2851,10 @@ export const resumeSequenceFrameAfterChooseQuantity = (
           state: GameState;
         },
       ),
-    segmentKey,
+    resolveSequenceForFrame: (effect, frame) =>
+      resolveSequenceForPath(effect, frame.effectPath),
+    segmentKey: (frame, segment, index) =>
+      segmentKeyForPath(frame.effectPath, segment, index),
     sequenceRuntimeError,
     state,
     createTrashDecision,

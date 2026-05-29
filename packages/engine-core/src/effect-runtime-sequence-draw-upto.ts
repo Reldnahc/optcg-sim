@@ -57,7 +57,12 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     ledgers: SegmentLedgers;
     state: GameState;
   }) => SequenceFrameResumeResult;
+  resolveSequenceForFrame: (
+    effect: SequenceEffect,
+    frame: EffectExecutionFrame,
+  ) => SequenceEffect | undefined;
   segmentKey: (
+    frame: EffectExecutionFrame,
     segment: SequenceEffect["effects"][number],
     index: number,
   ) => string;
@@ -127,8 +132,9 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
       ok: false,
     };
   }
+  const sequence = params.resolveSequenceForFrame(supportedBlock.effect, frame);
   const pausedSegment =
-    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    sequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "drawUpTo" &&
@@ -168,7 +174,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
           quantity,
           ledgers,
           params.emptySegmentResult,
-          params.segmentKey,
+          (segment, index) => params.segmentKey(frame, segment, index),
         )
       : pausedSegment.effect.type === "moveCards"
         ? applyResolvedQuantityMoveCardsSegment(
@@ -181,7 +187,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
             quantity,
             ledgers,
             params.emptySegmentResult,
-            params.segmentKey,
+            (segment, index) => params.segmentKey(frame, segment, index),
           )
         : applyResolvedQuantityRevealTopSegment(
             params.state,
@@ -193,7 +199,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
             quantity,
             ledgers,
             params.emptySegmentResult,
-            params.segmentKey,
+            (segment, index) => params.segmentKey(frame, segment, index),
           );
   if (!resolved.ok) {
     return {

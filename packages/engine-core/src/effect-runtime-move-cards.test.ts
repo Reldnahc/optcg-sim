@@ -638,3 +638,99 @@ test("optional moveCards deck top to life top resumes into following trashFromHa
     trashSelection.instanceId,
   );
 });
+
+test("nested conditional up-to moveCards quantity resumes from the nested path", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const topLife = must(p1State.life[0], "top life").card;
+  const topDeck = must(p1State.deck[0], "top deck");
+  const definition = setupMoveCardsDefinition(state, source, {
+    type: "sequence",
+    effects: [
+      {
+        id: "cost:life-to-hand",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "moveCards",
+            count: 1,
+            chooser: "self",
+            from: { player: "self", zone: "life", position: "top" },
+            to: { player: "self", zone: "hand" },
+            order: "chooserChoice",
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "conditional:add-life",
+        connector: "ifYouDo",
+        effect: {
+          type: "conditional",
+          if: { type: "yourTurn" },
+          then: deckTopToLifeTopEffect(1),
+        },
+      },
+    ],
+  });
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-nested-life-play"),
+      timingWindowId: toTimingWindowId("window-nested-life-play"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "sequence effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "nested-life-play-test" },
+    },
+  ];
+
+  const costPaused = processEffectRuntime(state);
+  assert.equal(costPaused.errors, undefined);
+  const costDecision = must(costPaused.state.pendingDecision, "cost decision");
+  assert.equal(costDecision.type, "payCost");
+
+  const costPaid = applyAction(costPaused.state, {
+    type: "respondToDecision",
+    decisionId: costDecision.id,
+    response: {
+      type: "payment",
+      optionId: "moveCards:top",
+      selectedCardInstanceIds: [topLife.instanceId],
+    },
+  });
+  const quantityDecision = must(
+    costPaid.state.pendingDecision,
+    "quantity decision",
+  );
+  assert.equal(costPaid.errors, undefined);
+  assert.equal(quantityDecision.type, "chooseQuantity");
+
+  const quantityChosen = applyAction(costPaid.state, {
+    type: "respondToDecision",
+    decisionId: quantityDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+  const afterQuantity = must(
+    quantityChosen.state.players[p1],
+    "after quantity",
+  );
+
+  assert.equal(quantityChosen.errors, undefined);
+  assert.equal(quantityChosen.state.pendingDecision, undefined);
+  assert.equal(quantityChosen.state.effectQueue.length, 0);
+  assert.equal(
+    must(afterQuantity.life[0], "new top life").card.instanceId,
+    topDeck.instanceId,
+  );
+});
