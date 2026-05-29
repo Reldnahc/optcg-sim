@@ -161,7 +161,7 @@ describe("hand layout", () => {
 
     assert.doesNotMatch(pointerDownSource, /stopPropagation\(\)/u);
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
-    assert.match(pointerDownSource, /setPointerCapture\(event\.pointerId\)/u);
+    assert.doesNotMatch(pointerDownSource, /setPointerCapture/u);
   });
 
   test("card pointer reorder previews during drag and commits once on release", async () => {

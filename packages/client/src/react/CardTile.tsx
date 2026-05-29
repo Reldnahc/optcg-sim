@@ -217,9 +217,6 @@ export const CardTile = ({
         }
         const rect = event.currentTarget.getBoundingClientRect();
         lastPointerMoveRef.current = undefined;
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }
         setPointerDrag({
           pointerId: event.pointerId,
           originX: event.clientX,
