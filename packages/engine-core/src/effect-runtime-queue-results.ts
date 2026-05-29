@@ -407,7 +407,7 @@ export const createEffectRuntimeQueueResults = (
   const createChooseQuantityDecision = (
     state: GameState,
     entry: EffectQueueEntry,
-    effect: Extract<Effect, { type: "drawUpTo" }>,
+    bounds: { min: number; max: number },
   ): EngineResult => {
     const decisionId =
       `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
@@ -424,8 +424,8 @@ export const createEffectRuntimeQueueResults = (
       causedBy,
       visibility: { type: "private", playerId: entry.controllerId },
       mode: "upTo",
-      min: 0,
-      max: effect.count,
+      min: bounds.min,
+      max: bounds.max,
     };
     const events: EngineEvent[] = [];
     appendEvent(
@@ -454,10 +454,10 @@ export const createEffectRuntimeQueueResults = (
     );
   };
 
-  const resolveQueuedDrawUpToQuantity = (
+  const resolveQueuedQuantity = (
     state: GameState,
     entry: EffectQueueEntry,
-    effect: Extract<Effect, { type: "drawUpTo" }>,
+    bounds: { min: number; max: number },
   ): number | undefined => {
     const expectedDecisionId =
       `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
@@ -483,8 +483,8 @@ export const createEffectRuntimeQueueResults = (
         responseType !== "chooseQuantity" ||
         typeof quantity !== "number" ||
         !Number.isInteger(quantity) ||
-        quantity < 0 ||
-        quantity > effect.count
+        quantity < bounds.min ||
+        quantity > bounds.max
       ) {
         continue;
       }
@@ -682,7 +682,7 @@ export const createEffectRuntimeQueueResults = (
             ])
           : unsupportedEffectQueueResult(originalState);
       }
-      const moveCardsEffect = resolveMoveCardsEffect(queuedEffect, selected);
+      let moveCardsEffect = resolveMoveCardsEffect(queuedEffect, selected);
       const playSourceEffect = resolveQueuedPlaySourceEffect(
         nextState,
         selected,
@@ -692,14 +692,45 @@ export const createEffectRuntimeQueueResults = (
         nextState,
         selected,
       );
+      let resolvedMoveCardsAsNoop = false;
+      if (
+        moveCardsEffect !== undefined &&
+        (moveCardsEffect.min ?? moveCardsEffect.count) < moveCardsEffect.count
+      ) {
+        const min = moveCardsEffect.min ?? moveCardsEffect.count;
+        const max = moveCardsEffect.count;
+        const resolvedQuantity = resolveQueuedQuantity(nextState, selected, {
+          min,
+          max,
+        });
+        if (resolvedQuantity === undefined) {
+          const quantityDecision = createChooseQuantityDecision(
+            nextState,
+            selected,
+            { min, max },
+          );
+          return {
+            ...quantityDecision,
+            events: [...allEvents, ...quantityDecision.events],
+          };
+        }
+        if (resolvedQuantity === 0) {
+          moveCardsEffect = undefined;
+          resolvedMoveCardsAsNoop = true;
+        } else {
+          moveCardsEffect = {
+            ...moveCardsEffect,
+            count: resolvedQuantity,
+          };
+        }
+      }
       let resolutionEventsForTrigger: EngineEvent[] = [];
       let removedSelectedFromQueue = false;
       if (drawUpToEffect !== undefined) {
-        const resolvedQuantity = resolveQueuedDrawUpToQuantity(
-          nextState,
-          selected,
-          drawUpToEffect,
-        );
+        const resolvedQuantity = resolveQueuedQuantity(nextState, selected, {
+          min: 0,
+          max: drawUpToEffect.count,
+        });
         if (resolvedQuantity !== undefined) {
           const resolvingEntry: EffectQueueEntry = {
             ...selected,
@@ -728,7 +759,7 @@ export const createEffectRuntimeQueueResults = (
           const quantityDecision = createChooseQuantityDecision(
             nextState,
             selected,
-            drawUpToEffect,
+            { min: 0, max: drawUpToEffect.count },
           );
           return {
             ...quantityDecision,
@@ -740,6 +771,7 @@ export const createEffectRuntimeQueueResults = (
         if (
           drawEffect === undefined &&
           moveCardsEffect === undefined &&
+          !resolvedMoveCardsAsNoop &&
           playSourceEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {

@@ -315,7 +315,19 @@ test("moveCards DON deck to cost area resolves from a trigger body", () => {
   const { state, movedDon } = triggerDonMoveQueueState();
   const originalDonDeckSize = must(state.players[p1], "p1").donDeck.length;
 
-  const result = processEffectRuntime(state);
+  const quantityPrompt = processEffectRuntime(state);
+  const decision = must(
+    quantityPrompt.state.pendingDecision,
+    "DON quantity decision",
+  );
+  assert.equal(quantityPrompt.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+
+  const result = applyAction(quantityPrompt.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
   const player = must(result.state.players[p1], "p1 result");
   const moved = must(player.costArea.at(-1), "moved DON");
 
@@ -522,7 +534,19 @@ test("moveCards deck top to life top keeps card identity hidden publicly", () =>
     },
   ];
 
-  const result = processEffectRuntime(state);
+  const quantityPrompt = processEffectRuntime(state);
+  const decision = must(
+    quantityPrompt.state.pendingDecision,
+    "deck-to-life quantity decision",
+  );
+  assert.equal(quantityPrompt.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+
+  const result = applyAction(quantityPrompt.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
   const player = must(result.state.players[p1], "p1 result");
 
   assert.equal(result.errors, undefined);
@@ -541,6 +565,92 @@ test("moveCards deck top to life top keeps card identity hidden publicly", () =>
         JSON.stringify(event.payload).includes(String(topDeck.cardId)),
     ),
     false,
+  );
+});
+
+test("conditional queued up-to deck top to life top asks quantity and can choose zero", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const originalDeck = reindexCards(
+    [...p1State.deck, ...p1State.hand.slice(1, 3)],
+    "deck",
+  );
+  const originalLife = p1State.life.slice(0, 2).map((life, index) => ({
+    ...life,
+    card: {
+      ...life.card,
+      zone: {
+        zone: "life" as const,
+        playerId: p1,
+        slot: "life" as const,
+        index,
+      },
+    },
+  }));
+  p1State.deck = originalDeck;
+  p1State.life = originalLife;
+  p1State.hand = reindexCards([source, ...p1State.hand.slice(3)], "hand");
+  const definition = setupMoveCardsDefinition(
+    state,
+    must(p1State.hand[0], "reindexed source"),
+    deckTopToLifeTopEffect(1),
+  );
+  const effectBlock = must(definition.effects[0], "move effect");
+  effectBlock.condition = {
+    type: "lifeCount",
+    player: "self",
+    op: "lte",
+    value: 2,
+  };
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-conditional-deck-to-life"),
+      timingWindowId: toTimingWindowId("window-conditional-deck-to-life"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: effectBlock.id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "conditional-deck-life-test" },
+    },
+  ];
+
+  const quantityPrompt = processEffectRuntime(state);
+  const decision = must(
+    quantityPrompt.state.pendingDecision,
+    "quantity decision",
+  );
+
+  assert.equal(quantityPrompt.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+  assert.equal(decision.min, 0);
+  assert.equal(decision.max, 1);
+
+  const declined = applyAction(quantityPrompt.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 0 },
+  });
+  const declinedP1 = must(declined.state.players[p1], "declined p1");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.equal(declined.state.effectQueue.length, 0);
+  assert.equal(declined.state.status.type, "active");
+  assert.deepEqual(
+    declinedP1.deck.map((card) => card.instanceId),
+    originalDeck.map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    declinedP1.life.map((life) => life.card.instanceId),
+    originalLife.map((life) => life.card.instanceId),
   );
 });
 
