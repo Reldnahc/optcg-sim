@@ -1112,6 +1112,11 @@ const conditionalThenSingleEffectPath = (
   index: number,
 ): string[] => [...effectPath, String(index), "then", "single"];
 
+const nestedSequencePath = (
+  effectPath: readonly string[],
+  index: number,
+): string[] => [...effectPath, String(index), "nested", "sequence"];
+
 const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
   type: "sequence",
   effects: [{ connector: "always", effect }],
@@ -1133,21 +1138,32 @@ const resolveSequenceForPath = (
   let index = rootSequenceEffectPath.length;
   while (index < effectPath.length) {
     const segmentIndex = Number(effectPath[index]);
-    const thenToken = effectPath[index + 1];
+    const branchToken = effectPath[index + 1];
     const sequenceToken = effectPath[index + 2];
-    if (!Number.isSafeInteger(segmentIndex) || thenToken !== "then") {
+    if (!Number.isSafeInteger(segmentIndex)) {
       return undefined;
     }
     const segment = current.effects[segmentIndex];
-    if (segment === undefined || segment.effect.type !== "conditional") {
+    if (segment === undefined) {
       return undefined;
     }
-    if (sequenceToken === "sequence") {
+    if (branchToken === "nested" && sequenceToken === "sequence") {
+      if (segment.effect.type !== "sequence") {
+        return undefined;
+      }
+      current = segment.effect;
+    } else if (branchToken === "then" && sequenceToken === "sequence") {
+      if (segment.effect.type !== "conditional") {
+        return undefined;
+      }
       if (segment.effect.then.type !== "sequence") {
         return undefined;
       }
       current = segment.effect.then;
-    } else if (sequenceToken === "single") {
+    } else if (branchToken === "then" && sequenceToken === "single") {
+      if (segment.effect.type !== "conditional") {
+        return undefined;
+      }
       if (segment.effect.then.type === "sequence") {
         return undefined;
       }
@@ -1172,12 +1188,15 @@ const conditionalParentForPath = (
     return undefined;
   }
   const branchToken = effectPath[effectPath.length - 1];
-  const thenToken = effectPath[effectPath.length - 2];
+  const parentToken = effectPath[effectPath.length - 2];
   const parentIndexToken = effectPath[effectPath.length - 3];
   const parentIndex = Number(parentIndexToken);
   if (
-    thenToken !== "then" ||
-    (branchToken !== "sequence" && branchToken !== "single") ||
+    !(
+      (parentToken === "then" &&
+        (branchToken === "sequence" || branchToken === "single")) ||
+      (parentToken === "nested" && branchToken === "sequence")
+    ) ||
     !Number.isSafeInteger(parentIndex)
   ) {
     return undefined;
@@ -1239,10 +1258,7 @@ const continueParentSequencesAfterNestedCompletion = (params: {
       parent.parentPath,
     );
     const parentSegment = parentEffect?.effects[parent.parentIndex];
-    if (
-      parentSegment === undefined ||
-      parentSegment.effect.type !== "conditional"
-    ) {
+    if (parentSegment === undefined) {
       return { ok: false };
     }
     nextLedgers = {
@@ -2170,6 +2186,47 @@ const continueNoDecisionSegments = (
       });
       nextState = restricted.state;
       nextLedgers = restricted.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "sequence") {
+      const path = nestedSequencePath(effectPath, index);
+      const nested = continueNoDecisionSegments(
+        nextState,
+        entry,
+        segment.effect,
+        0,
+        nextLedgers,
+        createTrashDecision,
+        incrementStateSeqForDraw,
+        path,
+      );
+      if (!nested.ok) {
+        return { ok: false };
+      }
+      if (nested.kind === "paused") {
+        return {
+          events: [...events, ...nested.events],
+          kind: "paused",
+          ok: true,
+          state: nested.state,
+        };
+      }
+      const changedState =
+        nested.events.length > 0 || nested.state !== nextState;
+      nextState = nested.state;
+      nextLedgers = {
+        ...nested.ledgers,
+        segmentResults: {
+          ...nested.ledgers.segmentResults,
+          [ledgerKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState,
+          },
+        },
+      };
+      events.push(...nested.events);
       continue;
     }
     if (segment.effect.type === "conditional") {

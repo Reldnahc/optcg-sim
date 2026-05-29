@@ -154,10 +154,68 @@ const reduceOpponentPowerThenKoZeroPowerSequence = (): Extract<
   ],
 });
 
-test("all-target K.O. sequence filters against current computed power", () => {
-  const state = sequenceQueueState(
-    reduceOpponentPowerThenKoZeroPowerSequence(),
-  );
+const optionalCostThenNestedReduceOpponentPowerThenKoZeroPowerSequence =
+  (): Extract<Effect, { type: "sequence" }> => ({
+    type: "sequence",
+    effects: [
+      {
+        id: "turn-life-face-up",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "turnLifeFaceUp",
+            count: 1,
+            player: "self",
+            position: "top",
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "body:after-cost",
+        connector: "ifYouDo",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "all",
+                  zone: "characterArea",
+                  player: "opponent",
+                  filter: { categories: ["character"] },
+                },
+                value: -2000,
+                duration: { type: "thisTurn" },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "ko",
+                target: {
+                  type: "all",
+                  zone: "characterArea",
+                  player: "opponent",
+                  filter: {
+                    categories: ["character"],
+                    currentPower: { max: 0 },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+const assertZeroPowerKoAfterLifeFaceUpCost = (effect: Effect): void => {
+  const state = sequenceQueueState(effect);
   const p2State = must(state.players[p2], "p2");
   const koTarget = withCardInZone({
     state,
@@ -216,5 +274,17 @@ test("all-target K.O. sequence filters against current computed power", () => {
   assert.equal(
     result.events.filter((event) => event.type === "cardKOd").length,
     1,
+  );
+};
+
+test("all-target K.O. sequence filters against current computed power", () => {
+  assertZeroPowerKoAfterLifeFaceUpCost(
+    reduceOpponentPowerThenKoZeroPowerSequence(),
+  );
+});
+
+test("optional-cost nested all-target K.O. sequence filters against current computed power", () => {
+  assertZeroPowerKoAfterLifeFaceUpCost(
+    optionalCostThenNestedReduceOpponentPowerThenKoZeroPowerSequence(),
   );
 });
