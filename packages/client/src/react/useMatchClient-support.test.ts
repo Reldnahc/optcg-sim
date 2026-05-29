@@ -15,6 +15,7 @@ import {
   activeCardCostGlobalActions,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+  prominentDecisionPrompt,
   resolvingEffectSourceInstanceIds,
 } from "./useMatchClient-support.js";
 import type {
@@ -206,6 +207,39 @@ describe("match client support helpers", () => {
     });
 
     assert.deepEqual(activeSource, ["active-source"]);
+  });
+
+  test("projected pending decision source drives active card highlighting directly", () => {
+    const activeSource = resolvingEffectSourceInstanceIds({
+      pendingDecision: {
+        ...decision("decision:search"),
+        source: {
+          instanceId: "projected-source" as InstanceId,
+          cardId: "OP13-089" as CardId,
+          playerId: "p1" as PlayerId,
+        },
+      },
+      events: [],
+    });
+
+    assert.deepEqual(activeSource, ["projected-source"]);
+  });
+
+  test("prominent decision prompt uses action-oriented cost labels", () => {
+    assert.equal(
+      prominentDecisionPrompt({
+        pendingDecision: payCostDecision("decision:return-don"),
+        activeCardCostGroup: returnDonGroup,
+      }),
+      "Return 2 DON!!",
+    );
+    assert.equal(
+      prominentDecisionPrompt({
+        pendingDecision: decision("decision:search"),
+        activeCardCostGroup: undefined,
+      }),
+      "Choose a card",
+    );
   });
 
   test("resolved effects and unrelated decisions do not keep stale active cards", () => {

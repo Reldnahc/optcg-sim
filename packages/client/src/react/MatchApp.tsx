@@ -116,6 +116,7 @@ export const MatchApp = (): React.JSX.Element => {
     cardCostSelection,
     clientState,
     decisionModal,
+    decisionPrompt,
     pendingChoiceInstanceIds,
     decisionSelectedInstanceIds,
     selectedCardInstanceId,
@@ -550,6 +551,7 @@ export const MatchApp = (): React.JSX.Element => {
       ) : (
         <BoardLayout
           board={displayBoard}
+          decisionPrompt={decisionPrompt}
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}

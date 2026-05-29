@@ -426,6 +426,23 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-tile[^"]*is-active/u);
   });
 
+  test("board layout renders prominent pending decision prompt above hand", () => {
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: board(),
+        decisionPrompt: "Trash 1 card from hand",
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="decision-status-prompt"/u);
+    assert.equal(markup.includes("Trash 1 card from hand"), true);
+  });
+
   test("selected DON attachment is rendered as a selected-card menu action", () => {
     const layout = board();
     const attachActions: readonly ClientActionModel[] = [

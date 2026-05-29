@@ -81,6 +81,26 @@
   bottom: calc(var(--card-height) + 4px);
 }
 
+.decision-status-prompt {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--card-height) + 30px);
+  left: 0;
+  z-index: 12;
+  pointer-events: none;
+  color: #59ff8f;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  text-shadow:
+    -1px -1px 0 #06110a,
+    1px -1px 0 #06110a,
+    -1px 1px 0 #06110a,
+    1px 1px 0 #06110a,
+    0 0 10px rgba(89, 255, 143, 0.55);
+}
+
 .hand-cards {
   display: flex;
   flex-wrap: nowrap;

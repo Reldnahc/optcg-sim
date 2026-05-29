@@ -10,6 +10,7 @@ import { Zone } from "./Zone.js";
 
 export interface BoardLayoutProps {
   board: BoardViewModel;
+  decisionPrompt?: string | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
@@ -54,6 +55,7 @@ const handCount = (
 
 export const BoardLayout = ({
   board,
+  decisionPrompt,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
@@ -84,6 +86,11 @@ export const BoardLayout = ({
       />
       {handCount("Opponent", board.opponent.handCount)}
       {handCount("Player", board.self.hand.length)}
+      {decisionPrompt === undefined ? null : (
+        <div className="decision-status-prompt" role="status">
+          {decisionPrompt}
+        </div>
+      )}
       <HandRow
         label="Player hand"
         cards={board.self.hand}

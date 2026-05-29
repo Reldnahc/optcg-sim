@@ -62,6 +62,7 @@ import {
   lobbyIdFromUrl,
   matchIdFromUrl,
   resolvingEffectSourceInstanceIds,
+  prominentDecisionPrompt,
   seatIdFromUrl,
   setLobbyLocation,
   setMatchLocation,
@@ -249,6 +250,10 @@ export const useMatchClient = (): MatchClientUi => {
           activeDecisionDraft?.kind === "selectCards"
         ? activeDecisionDraft.selectedInstanceIds.map(String)
         : [];
+  const decisionPrompt = prominentDecisionPrompt({
+    pendingDecision,
+    activeCardCostGroup,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -983,6 +988,7 @@ export const useMatchClient = (): MatchClientUi => {
     state: {
       ...(clientState === undefined ? {} : { clientState }),
       ...(board === undefined ? {} : { board }),
+      ...(decisionPrompt === undefined ? {} : { decisionPrompt }),
       ...(selectedCardInstanceId === undefined
         ? {}
         : { selectedCardInstanceId }),

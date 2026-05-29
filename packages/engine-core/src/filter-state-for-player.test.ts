@@ -540,6 +540,12 @@ test("selectTargets projection exposes public target candidates without private 
     playerId: p1,
     prompt: "Select targets.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    source: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+      zone: p1State.leader.zone,
+    },
     min: 1,
     max: 1,
     candidates: [

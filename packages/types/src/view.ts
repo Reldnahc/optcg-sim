@@ -96,6 +96,7 @@ export interface PublicDecision<TType extends string = string> {
   playerId: PlayerId;
   prompt: string;
   causedBy: CausalityRef;
+  source?: CardRef;
   timeoutMs?: number;
 }
 

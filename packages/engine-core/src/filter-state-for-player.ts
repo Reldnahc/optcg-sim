@@ -25,6 +25,7 @@ import type {
 import { getLegalActions } from "./actions.js";
 import { toCardRef, zonesEqual } from "./action-state.js";
 import { computeView } from "./compute-view.js";
+import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
 
 interface ComputedBoardCardStats {
   currentPower?: number;
@@ -626,6 +627,14 @@ const toPublicDecision = (
     playerId: pending.playerId,
     prompt: pending.prompt,
     causedBy: toPublicDecisionCausedBy(pending),
+    ...(() => {
+      const source = publicDecisionSourceFromEffectQueue({
+        state,
+        pending,
+        visibleCards: visibleCardsForPlayer(state, playerId),
+      });
+      return source === undefined ? {} : { source };
+    })(),
     ...(pending.timeoutMs === undefined
       ? {}
       : { timeoutMs: pending.timeoutMs }),

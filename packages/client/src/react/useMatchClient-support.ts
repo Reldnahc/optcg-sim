@@ -23,6 +23,7 @@ import type {
 export interface MatchClientUiState {
   clientState?: MatchClientSessionState;
   board?: BoardViewModel;
+  decisionPrompt?: string;
   selectedCardInstanceId?: string;
   selectedDonInstanceIds: string[];
   decisionDraft?: DecisionDraft;
@@ -174,6 +175,9 @@ export const resolvingEffectSourceInstanceIds = ({
   if (pendingDecision === undefined) {
     return [];
   }
+  if (pendingDecision.source !== undefined) {
+    return [String(pendingDecision.source.instanceId)];
+  }
   const pendingId = String(pendingDecision.id);
   const decisionEventIndex = events.findLastIndex(
     (event) =>
@@ -195,6 +199,49 @@ export const resolvingEffectSourceInstanceIds = ({
     }
   }
   return [];
+};
+
+const countLabel = (count: number, singular: string, plural: string): string =>
+  `${String(count)} ${count === 1 ? singular : plural}`;
+
+export const prominentDecisionPrompt = ({
+  pendingDecision,
+  activeCardCostGroup,
+}: {
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined;
+  activeCardCostGroup: OptionalCardCostGroup | undefined;
+}): string | undefined => {
+  if (activeCardCostGroup !== undefined) {
+    const count = activeCardCostGroup.requiredCount;
+    if (activeCardCostGroup.operation === "returnDon") {
+      return `Return ${countLabel(count, "DON!!", "DON!!")}`;
+    }
+    if (activeCardCostGroup.operation === "trash") {
+      return `Trash ${countLabel(count, "card", "cards")} from hand`;
+    }
+    if (
+      activeCardCostGroup.operation === "moveCards" &&
+      activeCardCostGroup.source?.zone === "trash"
+    ) {
+      return `Place ${countLabel(count, "card", "cards")} from trash`;
+    }
+    return activeCardCostGroup.chooseLabel;
+  }
+  if (pendingDecision === undefined) {
+    return undefined;
+  }
+  if (pendingDecision.type === "selectCards") {
+    const firstCandidate = pendingDecision.candidates[0]?.card;
+    if (firstCandidate?.zone?.zone === "hand") {
+      return `Choose ${countLabel(pendingDecision.max, "card", "cards")} from hand`;
+    }
+    if (firstCandidate?.zone?.zone === "trash") {
+      return `Choose ${countLabel(pendingDecision.max, "card", "cards")} from trash`;
+    }
+  }
+  return pendingDecision.prompt.replace(/\.$/u, "");
 };
 
 export const chooseNoDecisionLabel = (
