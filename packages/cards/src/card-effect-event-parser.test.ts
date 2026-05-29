@@ -1186,4 +1186,49 @@ describe("card effect event parser", () => {
       ]),
     );
   });
+
+  it("parses life-removed reactions into trigger, sequence, draw, and draw-prevention primitives", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] When a card is removed from your or your opponent's Life cards, draw 1 card. Then, you cannot draw cards using your own effects during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "lifeRemoved", players: ["self", "opponent"] },
+        condition: { type: "yourTurn" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "draw", player: "self", count: 1 },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "preventDraw",
+                player: "self",
+                source: "ownEffects",
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:yourTurn",
+        "condition:yourTurn",
+        "trigger:lifeRemoved",
+        "expression:sequence",
+        "instruction:draw",
+        "instruction:preventDraw",
+        "target:player",
+        "duration:thisTurn",
+      ]),
+    );
+  });
 });

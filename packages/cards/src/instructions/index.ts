@@ -25,6 +25,7 @@ export {
 export { parsePlayFromHandInstruction } from "./play-from-hand.js";
 export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
 export { parsePlaySourceInstruction } from "./play-source.js";
+export { parsePreventDrawInstruction } from "./prevent-draw.js";
 export {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,

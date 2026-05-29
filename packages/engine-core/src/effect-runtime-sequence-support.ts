@@ -44,6 +44,7 @@ type DirectContinuousEffect = Extract<
       | "modifyPower"
       | "giveKeyword"
       | "modifyCost"
+      | "preventDraw"
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
@@ -866,7 +867,7 @@ export const toSupportedSequenceBlock = (
       return false;
     },
   );
-  return allSegmentsSupported && supportState.hasPendingDecisionSegment
+  return allSegmentsSupported
     ? (flattenedBlock as SupportedSequenceBlock)
     : undefined;
 };
@@ -886,7 +887,8 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
     | "onKO"
     | "main"
     | "trigger"
-    | "counter",
+    | "counter"
+    | "lifeRemoved",
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions = {},
 ): effect is SupportedSequenceBlock =>

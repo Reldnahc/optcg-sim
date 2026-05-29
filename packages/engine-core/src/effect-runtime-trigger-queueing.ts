@@ -11,6 +11,7 @@ import type {
 
 import { createAttackTriggerQueueing } from "./effect-runtime-trigger-queueing-attack.js";
 import { createKOTriggerQueueing } from "./effect-runtime-trigger-queueing-ko.js";
+import { createLifeRemovedTriggerQueueing } from "./effect-runtime-trigger-queueing-life-removed.js";
 import { createMainEventTriggerQueueing } from "./effect-runtime-trigger-queueing-main-event.js";
 import { createOnPlayTriggerQueueing } from "./effect-runtime-trigger-queueing-on-play.js";
 
@@ -49,6 +50,11 @@ export type MainEventTriggerQueueingFailureReason =
   | "unsupported-main-event-definition"
   | "multiple-main-event-effects";
 
+export type LifeRemovedTriggerQueueingFailureReason =
+  | "invalid-life-removed-event"
+  | "missing-card-definition"
+  | "unsupported-life-removed-definition";
+
 interface OnPlayTriggerQueueingErrorDetails {
   reason: OnPlayTriggerQueueingFailureReason;
 }
@@ -67,6 +73,10 @@ interface OnKOTriggerCandidateDetectionErrorDetails {
 
 interface MainEventTriggerQueueingErrorDetails {
   reason: MainEventTriggerQueueingFailureReason;
+}
+
+interface LifeRemovedTriggerQueueingErrorDetails {
+  reason: LifeRemovedTriggerQueueingFailureReason;
 }
 
 export interface BattleKOTriggerCandidate {
@@ -116,6 +126,7 @@ export interface EffectRuntimeTriggerQueueingHelpers {
   queueMainEventTriggers: (state: GameState) => EngineResult | undefined;
   queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
   queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;
+  queueLifeRemovedTriggers: (state: GameState) => EngineResult | undefined;
   queueEffectResolvedCustomTriggers: (
     state: GameState,
     resolvedEntry: EffectQueueEntry,
@@ -163,6 +174,14 @@ const mainEventTriggerQueueingError = (
   details: { reason } satisfies MainEventTriggerQueueingErrorDetails,
 });
 
+const lifeRemovedTriggerQueueingError = (
+  reason: LifeRemovedTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "life-removed-trigger-queueing",
+  details: { reason } satisfies LifeRemovedTriggerQueueingErrorDetails,
+});
+
 export const createEffectRuntimeTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,
 ): EffectRuntimeTriggerQueueingHelpers => {
@@ -173,6 +192,10 @@ export const createEffectRuntimeTriggerQueueing = (
   const { queueMainEventTriggers } = createMainEventTriggerQueueing(
     dependencies,
     mainEventTriggerQueueingError,
+  );
+  const { queueLifeRemovedTriggers } = createLifeRemovedTriggerQueueing(
+    dependencies,
+    lifeRemovedTriggerQueueingError,
   );
   const { queueWhenAttackingTriggers, queueOnOpponentAttackTriggers } =
     createAttackTriggerQueueing(
@@ -191,6 +214,7 @@ export const createEffectRuntimeTriggerQueueing = (
     queueBattleKOTriggers,
     queueOnPlayTriggers,
     queueMainEventTriggers,
+    queueLifeRemovedTriggers,
     queueWhenAttackingTriggers,
     queueOnOpponentAttackTriggers,
     queueEffectResolvedCustomTriggers,

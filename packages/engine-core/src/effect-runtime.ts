@@ -427,6 +427,7 @@ export const detectBattleKOTriggerCandidates =
 export const queueBattleKOTriggers = triggerQueueing.queueBattleKOTriggers;
 const queueOnPlayTriggers = triggerQueueing.queueOnPlayTriggers;
 const queueMainEventTriggers = triggerQueueing.queueMainEventTriggers;
+const queueLifeRemovedTriggers = triggerQueueing.queueLifeRemovedTriggers;
 const queueWhenAttackingTriggers = triggerQueueing.queueWhenAttackingTriggers;
 const queueOnOpponentAttackTriggers =
   triggerQueueing.queueOnOpponentAttackTriggers;
@@ -497,6 +498,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromWhenAttacking = queueWhenAttackingTriggers(state);
   if (queuedFromWhenAttacking !== undefined) {
     return queuedFromWhenAttacking;
+  }
+  const queuedFromLifeRemoved = queueLifeRemovedTriggers(state);
+  if (queuedFromLifeRemoved !== undefined) {
+    return queuedFromLifeRemoved;
   }
   const resumedSequenceQuantity = resumeSequenceFrameAfterChooseQuantity(state);
   if (resumedSequenceQuantity !== undefined) {

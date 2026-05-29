@@ -159,6 +159,15 @@ const isSupportedContinuousKeywordModifier = (
   effect.modifier.operation.type === "addKeyword" &&
   supportedContinuousKeywordGrants.has(effect.modifier.operation.keyword);
 
+const isSupportedPlayerDrawRestriction = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.layer === "restriction" &&
+  effect.modifier.target.type === "player" &&
+  effect.modifier.operation.type === "restriction" &&
+  effect.modifier.operation.restriction === "cannotDrawByOwnEffects";
+
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
 ): boolean =>
@@ -236,6 +245,11 @@ const assertSupportedContinuousEffects = (state: GameState): void => {
       throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
     }
     if (isSupportedContinuousCostModifier(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
+    }
+    if (isSupportedPlayerDrawRestriction(effect)) {
       if (!durationIsActive(state, effect)) continue;
       recordConditionPasses(state, effect);
       continue;

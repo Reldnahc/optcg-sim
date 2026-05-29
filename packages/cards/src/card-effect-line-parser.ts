@@ -41,6 +41,7 @@ import {
   parsePreventThatCharacterRefreshInstruction,
   parsePlayFromTrashInstruction,
   parsePlaySourceInstruction,
+  parsePreventDrawInstruction,
   parseRestOpponentCharactersInstruction,
   parseReturnToOwnerHandInstruction,
   parseSetBasePowerInstruction,
@@ -70,6 +71,7 @@ import {
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
+  lifeRemovedReactionExpressionParser,
   optionalCostedEffectExpressionParser,
   playStageFromDeckExpressionParser,
   replacementInsteadExpressionParser,
@@ -118,6 +120,7 @@ const instructionParsers = [
   parsePlayFromHandInstruction,
   parsePlayFromTrashInstruction,
   parsePlaySourceInstruction,
+  parsePreventDrawInstruction,
   parseModifyPowerInstruction,
   parseTargetedModifyCostInstruction,
   parseModifyCostInstruction,
@@ -223,6 +226,9 @@ const defaultRegistry = {
       ],
     }),
     replacementInsteadExpressionParser,
+    lifeRemovedReactionExpressionParser({
+      expressions: [generalExpressionParser],
+    }),
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,
       connectors: [parseAndConnector],

@@ -95,6 +95,9 @@ const autoAdapterFor = (
   if (block.trigger.type === "counter") {
     return autoAdapter("counter", ["resolveFromDestinationZone"]);
   }
+  if (block.trigger.type === "lifeRemoved") {
+    return autoAdapter("lifeRemoved", ["mustRemainInSameZone"]);
+  }
   return undefined;
 };
 

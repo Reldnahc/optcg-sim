@@ -80,6 +80,9 @@ const executeDrawEffect = (
   if (effect.count === 0) {
     return toEngineResult(state, []);
   }
+  if (isDrawPreventedByOwnEffects(state, entry, playerId)) {
+    return toEngineResult(state, []);
+  }
 
   const player = state.players[playerId];
   const events: EngineEvent[] = [];
@@ -153,6 +156,49 @@ const executeDrawEffect = (
 
   return toEngineResult(nextState, events);
 };
+
+const targetPlayerForDrawRestriction = (
+  state: GameState,
+  effect: GameState["continuousEffects"][number],
+): PlayerId | undefined => {
+  const target = effect.modifier.target;
+  if (target.type !== "player") {
+    return undefined;
+  }
+  switch (target.player) {
+    case "self":
+    case "controller":
+      return effect.controller;
+    case "owner":
+      return effect.source.playerId;
+    case "opponent":
+      return getOpponentId(state, effect.controller) ?? undefined;
+    case "turnPlayer":
+      return state.turn.turnPlayerId;
+    case "nonTurnPlayer":
+      return getOpponentId(state, state.turn.turnPlayerId) ?? undefined;
+    default:
+      return undefined;
+  }
+};
+
+const isDrawPreventedByOwnEffects = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  playerId: PlayerId,
+): boolean =>
+  entry.controllerId === playerId &&
+  state.continuousEffects.some((effect) => {
+    if (
+      effect.modifier.layer !== "restriction" ||
+      effect.modifier.operation.type !== "restriction" ||
+      effect.modifier.operation.restriction !== "cannotDrawByOwnEffects" ||
+      effect.modifier.target.type !== "player"
+    ) {
+      return false;
+    }
+    return targetPlayerForDrawRestriction(state, effect) === playerId;
+  });
 
 export const executeDrawPrimitiveForResolvedQuantity = (
   state: GameState,
