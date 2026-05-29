@@ -522,7 +522,7 @@ export const MatchApp = (): React.JSX.Element => {
       height: 420,
     },
     model: {
-      title: "Opponent revealed",
+      title: reveal.title,
       cards: reveal.cards.map((card) => cardModel(card)),
     },
   }));

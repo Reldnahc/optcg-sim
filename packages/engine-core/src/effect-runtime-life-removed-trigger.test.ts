@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition } from "@optcg/types";
+import type { CardInstance, EffectDefinition } from "@optcg/types";
 
 import {
   createActiveState,
@@ -19,6 +19,11 @@ import {
   processEffectRuntime,
 } from "./effect-runtime.js";
 import { applyAction } from "./actions.js";
+import {
+  cardRef,
+  installSupportedCounterEvent,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 import {
   queueDrawForP1,
   toCardId,
@@ -166,20 +171,11 @@ test("lifeRemoved reaction queues from Life movement and prevents later own-effe
   );
 });
 
-const setupOpponentActivationRevealPowerState = () => {
-  const state = createActiveState();
-  state.turn.turnPlayerId = p1;
-  state.eventJournal = [];
+const installOpponentActivationRevealPowerDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): void => {
   const p1State = must(state.players[p1], "p1");
-  const source = withCardInZone({
-    state,
-    playerId: p1,
-    card: must(p1State.hand[0], "source"),
-    zone: "characterArea",
-  });
-  p1State.hand = p1State.hand.filter(
-    (card) => card.instanceId !== source.instanceId,
-  );
   const topLife = must(p1State.life[0], "top life").card;
   const supportCard = resolvedCard({
     cardId: source.cardId,
@@ -254,6 +250,23 @@ const setupOpponentActivationRevealPowerState = () => {
     cardId: toCardId("opponent-event"),
     category: "event",
   });
+};
+
+const setupOpponentActivationRevealPowerState = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.eventJournal = [];
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  installOpponentActivationRevealPowerDefinition(state, source);
   state.eventJournal.push({
     id: toEngineEventId("event:opponent-event-played"),
     seq: 1,
@@ -301,6 +314,47 @@ test("opponent activation reaction can reveal Life and applies dynamic power fro
     ),
     true,
   );
+});
+
+test("opponent activation reaction queues after the opponent Counter Event activation", () => {
+  const state = setupAttackState();
+  state.eventJournal = [];
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p1State.characters[0], "reaction source");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installOpponentActivationRevealPowerDefinition(state, source);
+  installSupportedCounterEvent(state, counterEvent, 2000);
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: must(opened.state.battle, "battle").currentTarget,
+  });
+  assert.equal(countered.errors, undefined);
+  const counterPass = must(countered.state.pendingDecision, "counter pass");
+  assert.equal(counterPass.type, "selectCards");
+
+  const reacted = applyAction(countered.state, {
+    type: "respondToDecision",
+    decisionId: counterPass.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(reacted.errors, undefined);
+  const reactionDecision = must(
+    reacted.state.pendingDecision,
+    "reaction reveal",
+  );
+  assert.equal(reactionDecision.type, "chooseQuantity");
+  assert.equal(reactionDecision.playerId, p1);
 });
 
 test("opponent activation reaction may choose zero revealed Life cards", () => {

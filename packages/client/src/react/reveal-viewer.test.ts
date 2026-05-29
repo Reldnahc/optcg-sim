@@ -63,6 +63,7 @@ describe("reveal viewer", () => {
       throw new Error("Expected opponent reveal.");
     }
     assert.equal(reveal.revealId, "reveal:search-reveal:selected:choice-1");
+    assert.equal(reveal.title, "Opponent revealed");
     assert.equal(reveal.cards[0]?.playerId, p1);
   });
 
@@ -96,6 +97,8 @@ describe("reveal viewer", () => {
     }
     assert.equal(ownerReveal.revealId, "reveal:sequence:life-reaction:0");
     assert.equal(opponentReveal.revealId, "reveal:sequence:life-reaction:0");
+    assert.equal(ownerReveal.title, "Revealed");
+    assert.equal(opponentReveal.title, "Revealed");
     assert.equal(ownerReveal.cards[0]?.cardId, opponentReveal.cards[0]?.cardId);
   });
 

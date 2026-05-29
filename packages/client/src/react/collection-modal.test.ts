@@ -320,9 +320,15 @@ describe("collection modal", () => {
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
     );
+    const revealViewerSource = await readFile(
+      join(sourceDirectory, "reveal-viewer.ts"),
+      "utf8",
+    );
 
     assert.match(source, /opponentRevealsFromEvents/u);
-    assert.match(source, /Opponent revealed/u);
+    assert.match(source, /title: reveal\.title/u);
+    assert.match(revealViewerSource, /Opponent revealed/u);
+    assert.match(revealViewerSource, /Revealed/u);
     assert.match(source, /updateRevealWindowState/u);
     assert.match(source, /RevealWindowHost/u);
     assert.doesNotMatch(source, /opponentRevealModal/u);

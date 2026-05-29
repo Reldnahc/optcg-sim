@@ -2,6 +2,7 @@ import type { CardRef, EngineEvent, PlayerId } from "@optcg/types";
 
 export interface OpponentRevealViewModel {
   revealId: string;
+  title: "Opponent revealed" | "Revealed";
   cards: readonly CardRef[];
 }
 
@@ -113,7 +114,11 @@ export const opponentRevealsFromEvents = (
       (showToBothPlayers || cards.every((card) => card.playerId !== playerId))
     ) {
       seenRevealIds.add(revealId);
-      reveals.push({ revealId, cards });
+      reveals.push({
+        revealId,
+        title: showToBothPlayers ? "Revealed" : "Opponent revealed",
+        cards,
+      });
     }
   }
   return reveals;

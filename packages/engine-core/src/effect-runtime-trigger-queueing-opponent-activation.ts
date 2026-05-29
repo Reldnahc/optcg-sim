@@ -47,19 +47,44 @@ const queuedOpponentActivationTriggerEventIds = (
     }),
   );
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const playerIdFromPayload = (
+  payload: Record<string, unknown>,
+): PlayerId | undefined => {
+  const playerId = payload["playerId"];
+  return typeof playerId === "string" ? (playerId as PlayerId) : undefined;
+};
+
 const opponentActivationFromEvent = (
+  state: GameState,
   event: EngineEvent,
 ): { kind: OpponentActivationKind; playerId: PlayerId } | undefined => {
   if (event.visibility.type !== "public") {
     return undefined;
   }
   if (event.type === "cardPlayed") {
-    const payload = event.payload as {
-      category?: unknown;
-      playerId?: PlayerId;
-    };
-    return payload.category === "event" && payload.playerId !== undefined
-      ? { kind: "event", playerId: payload.playerId }
+    if (!isRecord(event.payload)) {
+      return undefined;
+    }
+    const playerId = playerIdFromPayload(event.payload);
+    return event.payload["category"] === "event" && playerId !== undefined
+      ? { kind: "event", playerId }
+      : undefined;
+  }
+  if (event.type === "counterUsed") {
+    if (!isRecord(event.payload)) {
+      return undefined;
+    }
+    const playerId = playerIdFromPayload(event.payload);
+    const cardId = event.payload["cardId"];
+    const metadata =
+      typeof cardId === "string"
+        ? state.cardManifest.cards[cardId as CardInstance["cardId"]]
+        : undefined;
+    return metadata?.category === "event" && playerId !== undefined
+      ? { kind: "event", playerId }
       : undefined;
   }
   if (event.type === "blockerActivated") {
@@ -71,9 +96,6 @@ const opponentActivationFromEvent = (
   }
   return undefined;
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
@@ -137,7 +159,7 @@ export const createOpponentActivationTriggerQueueing = (
       (event) =>
         isRecentRuntimeEvent(state, event) &&
         !alreadyQueued.has(String(event.id)) &&
-        opponentActivationFromEvent(event) !== undefined,
+        opponentActivationFromEvent(state, event) !== undefined,
     );
     if (activationEvents.length === 0) {
       return undefined;
@@ -147,7 +169,7 @@ export const createOpponentActivationTriggerQueueing = (
     const events: EngineEvent[] = [];
     const sources = fieldTriggerSources(state);
     for (const event of activationEvents) {
-      const activation = opponentActivationFromEvent(event);
+      const activation = opponentActivationFromEvent(state, event);
       if (activation === undefined) {
         return toEngineResult(
           state,
