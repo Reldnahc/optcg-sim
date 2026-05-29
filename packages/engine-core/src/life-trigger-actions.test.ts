@@ -801,6 +801,74 @@ test("activated life trigger can play its source card from the trigger zone", ()
   );
 });
 
+test("life trigger playSource queues On Play after the card enters the field", () => {
+  const lifeCardId = toCardId("trigger-play-this-card-on-play");
+  const triggerDefinition = supportedLifeTriggerDefinition(
+    lifeCardId,
+    {
+      type: "playSource",
+      source: { type: "triggerCard" },
+      ignoreCost: true,
+    },
+    "noSourceRequired",
+  );
+  const onPlayDefinition = effectDefinition(
+    lifeCardId,
+    { type: "onPlay" },
+    { type: "draw", count: 1, player: "self" },
+  );
+  const triggerEffect = must(triggerDefinition.effects[0], "trigger effect");
+  const onPlayEffect = must(onPlayDefinition.effects[0], "on-play effect");
+  const definition: EffectDefinition = {
+    ...triggerDefinition,
+    effects: [
+      triggerEffect,
+      {
+        ...onPlayEffect,
+        id: `${String(lifeCardId)}:effect:on-play-draw` as EffectBlock["id"],
+      },
+    ],
+  };
+  const { state, lifeInstanceId } = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-play-this-card-on-play",
+    triggerText: "[Trigger] Play this card.",
+    definition,
+  });
+  must(state.players[p2], "p2").characters = [];
+  state.cardManifest.cards[lifeCardId] = {
+    ...must(state.cardManifest.cards[lifeCardId], "trigger source metadata"),
+    cost: 1,
+  };
+  ensurePlayerDeckCountFromHand(state, p2, 1);
+  const startingHandCount = must(state.players[p2], "p2 before").hand.length;
+  const decision = must(state.pendingDecision, "life trigger decision");
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  const p2State = must(result.state.players[p2], "p2 after");
+  const eventTypes = result.events.map((event) => event.type);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    p2State.characters.some(
+      (character) => character.instanceId === lifeInstanceId,
+    ),
+    true,
+  );
+  assert.equal(p2State.hand.length, startingHandCount + 1);
+  assert.equal(eventTypes.includes("cardPlayed"), true);
+  assert.equal(
+    eventTypes.filter((eventType) => eventType === "effectQueued").length,
+    2,
+  );
+  assert.equal(eventTypes.includes("cardDrawn"), true);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.revealedCards.length, 0);
+});
+
 test("activated life trigger can pay a sequence cost before playing its source card", () => {
   const lifeCardId = toCardId("trigger-pay-play-this-card");
   const definition = supportedLifeTriggerDefinition(

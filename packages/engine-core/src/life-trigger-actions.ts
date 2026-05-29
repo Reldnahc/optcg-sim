@@ -33,6 +33,7 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import { assertGameStateInvariants } from "./invariants.js";
 
@@ -605,7 +606,10 @@ const applyActivatedTriggerResponse = (
   if (resolved.errors !== undefined) {
     return toEngineResult(state, [], toErrorTuple(resolved.errors));
   }
-  return toEngineResult(resolved.state, [...events, ...resolved.events]);
+  return continueRuntimeAfterDecisionResult(
+    state,
+    toEngineResult(resolved.state, [...events, ...resolved.events]),
+  );
 };
 
 export const applyLifeTriggerDecisionResponse = (
