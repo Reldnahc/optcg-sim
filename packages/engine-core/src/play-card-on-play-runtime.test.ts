@@ -364,6 +364,105 @@ test("supported implemented-dsl Character On Play drawUpTo playCard reachability
   );
 });
 
+test("false On Play life condition silently drains queued deck-to-life effect after playCard", () => {
+  const state = setupMainPlayState();
+  addExtraDeckCard(state);
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "conditional on-play character");
+  const extraLife = must(p1State.deck[0], "extra life");
+  p1State.deck = p1State.deck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "deck", playerId: p1, slot: "deck", index },
+  }));
+  p1State.life = [
+    ...p1State.life,
+    {
+      card: {
+        ...extraLife,
+        zone: {
+          zone: "life",
+          playerId: p1,
+          slot: "life",
+          index: p1State.life.length,
+        },
+      },
+      faceUp: false,
+    },
+  ];
+  const beforeDeck = p1State.deck.map((card) => card.instanceId);
+  const beforeLife = p1State.life.map((life) => life.card.instanceId);
+  const resolved = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 0,
+    power: 2000,
+    effectText:
+      "[On Play] If you have 2 or less Life cards, add up to 1 card from the top of your deck to the top of your Life cards.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-on-play-false-life-deck-to-life",
+      rulesVersion: "r1",
+      sourceTextHash: "source-hash",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(character.cardId, resolved.support);
+  state.cardManifest.effectDefinitionsVersion =
+    base.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-on-play-false-life-deck-to-life": {
+      ...base,
+      effects: [
+        {
+          ...must(base.effects[0], "base effect"),
+          id: "on-play-false-life-deck-to-life" as EffectDefinition["effects"][number]["id"],
+          condition: {
+            type: "lifeCount",
+            player: "self",
+            op: "lte",
+            value: 2,
+          },
+          effect: {
+            type: "moveCards",
+            count: 1,
+            min: 0,
+            from: { player: "self", zone: "deck", position: "top" },
+            to: { player: "self", zone: "life", position: "top" },
+            order: "original",
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.cards[character.cardId] = resolved;
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: character.instanceId,
+  });
+  const resultP1 = must(result.state.players[p1], "result p1");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.status.type, "active");
+  assert.deepEqual(
+    resultP1.deck.map((card) => card.instanceId),
+    beforeDeck,
+  );
+  assert.deepEqual(
+    resultP1.life.map((life) => life.card.instanceId),
+    beforeLife,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
+  assert.equal(
+    result.events.filter((event) => event.type === "effectQueued").length,
+    1,
+  );
+});
+
 test("choice custom Event and unsupported On Play effects fail closed without mutation", () => {
   const cases: Array<{
     name: string;

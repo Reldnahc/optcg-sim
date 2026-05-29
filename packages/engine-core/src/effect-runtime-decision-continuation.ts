@@ -44,6 +44,10 @@ export const continueRuntimeUntilIdle = (
       return toEngineResult(originalState, [], nonEmptyErrors(next.errors));
     }
     if (next.events.length === 0) {
+      if (next.stateHash !== current.stateHash) {
+        current = toEngineResult(next.state, current.events);
+        continue;
+      }
       return current;
     }
     current = toEngineResult(next.state, [...current.events, ...next.events]);
