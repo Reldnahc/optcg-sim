@@ -77,8 +77,8 @@
 
 .life-card-position {
   position: absolute;
-  top: calc(var(--life-card-index) * 12%);
-  left: 50%;
+  top: var(--life-card-y-offset);
+  left: calc(50% + var(--life-card-x-offset));
   transform: translateX(-50%);
 }
 
