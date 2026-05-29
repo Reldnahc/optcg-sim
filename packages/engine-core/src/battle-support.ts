@@ -205,6 +205,11 @@ const isSupportedBattleRuntimeEffect = (
       sourcePresencePolicies: ["mustRemainInSameZone"],
       triggerType: "opponentActivated",
     }) ||
+    isSupportedAutoRuntimeEffectBlock(effect, {
+      category: "auto",
+      sourcePresencePolicies: ["mustRemainInSameZone"],
+      triggerType: "lifeRemoved",
+    }) ||
     isSupportedOnKOCompatibleQueuedEffect(effect));
 
 const isBattleNeutralTrigger = (

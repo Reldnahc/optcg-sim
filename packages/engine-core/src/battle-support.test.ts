@@ -273,6 +273,69 @@ test("battle effect metadata ignores supported opponent activation reaction prim
   assert.equal(hasUnsupportedBattleEffectMetadata(state), false);
 });
 
+test("battle effect metadata ignores supported Life-removed reaction primitives", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const source = p1State.leader;
+  const implemented = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "[Your Turn] When a card is removed from your or your opponent's Life cards, draw 1 card. Then, you cannot draw cards using your own effects during this turn.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-life-removed-reaction",
+    },
+  });
+
+  state.cardManifest.cards[source.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-life-removed-reaction": {
+      cardId: source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "life-removed-reaction" as EffectDefinition["effects"][number]["id"],
+          category: "auto",
+          trigger: { type: "lifeRemoved", players: ["self", "opponent"] },
+          condition: { type: "yourTurn" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", player: "self", count: 1 },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "preventDraw",
+                  player: "self",
+                  source: "ownEffects",
+                  duration: { type: "thisTurn" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: implemented.support.sourceTextHash,
+        rulesVersion: implemented.support.rulesVersion,
+        effectDefinitionsVersion: "0.1.0",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+
+  assert.equal(getUnsupportedBattleEffectMetadataReason(state), undefined);
+  assert.equal(hasUnsupportedBattleEffectMetadata(state), false);
+});
+
 test("battle effect metadata diagnostics identify unsupported battle effect source", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");
