@@ -97,28 +97,16 @@
   align-items: flex-start;
 }
 
-.decision-order-card {
+.decision-order-card-slot {
   position: relative;
   width: auto;
   height: var(--card-height);
   aspect-ratio: 5 / 7;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: grab;
 }
 
-.decision-order-card.is-pointer-reorderable {
-  touch-action: none;
-}
-
-.decision-order-card.is-pointer-reorder-dragging {
-  z-index: 40;
-  cursor: grabbing;
-}
-
-.decision-order-card .decision-card-placeholder {
-  box-sizing: border-box;
+.decision-order-card-slot .card-tile-shell {
+  width: 100%;
+  height: 100%;
 }
 
 .decision-placement-toggle {

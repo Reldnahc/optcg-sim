@@ -1,21 +1,13 @@
-import { useState } from "react";
-import type { CSSProperties } from "react";
+import { Fragment } from "react";
 
 import type { CardRef, InstanceId } from "@optcg/types";
 
 import type { DecisionModalModel } from "../interactions/decision-modal.js";
+import type { ClientCardModel } from "../view-model.js";
+import { CardTile } from "./CardTile.js";
 import { ModalFrame } from "./ModalFrame.js";
-import { reorderPlacementFromPointer } from "./drag-reorder.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
-
-interface PointerReorderDrag {
-  pointerId: number;
-  originX: number;
-  originY: number;
-  currentX: number;
-  currentY: number;
-  moved: boolean;
-}
+import { useCardReorderPreview } from "./useCardReorderPreview.js";
 
 export interface DecisionModalHostProps {
   model?: DecisionModalModel | undefined;
@@ -37,165 +29,18 @@ export interface DecisionModalHostProps {
   onConfirm: () => void;
 }
 
-interface DecisionOrderCardProps {
-  card: CardRef;
-  display: { name: string; imageUrl?: string };
-  index: number;
-  isBottom: boolean;
-  disabled: boolean;
-  topOrBottomPlacement: boolean;
-  onMoveOrderedCard: (
-    draggedId: InstanceId,
-    targetId: InstanceId,
-    placement: ReorderPlacement,
-  ) => void;
-  onToggleBottomPlacement: (instanceId: InstanceId) => void;
-}
-
-const DecisionOrderCard = ({
-  card,
-  display,
-  index,
-  isBottom,
-  disabled,
-  topOrBottomPlacement,
-  onMoveOrderedCard,
-  onToggleBottomPlacement,
-}: DecisionOrderCardProps): React.JSX.Element => {
-  const [pointerDrag, setPointerDrag] = useState<
-    PointerReorderDrag | undefined
-  >(undefined);
-  const pointerReorderEnabled = !disabled;
-  const pointerDragStyle =
-    pointerDrag?.moved === true
-      ? ({
-          transform: `translate(${String(
-            pointerDrag.currentX - pointerDrag.originX,
-          )}px, ${String(pointerDrag.currentY - pointerDrag.originY)}px)`,
-        } satisfies CSSProperties)
-      : undefined;
-  return (
-    <div
-      className={`decision-order-card is-pointer-reorderable ${
-        isBottom ? "is-bottom" : ""
-      } ${pointerDrag?.moved === true ? "is-pointer-reorder-dragging" : ""}`}
-      data-decision-order-instance-id={String(card.instanceId)}
-      style={pointerDragStyle}
-      onPointerDown={(event) => {
-        if (!pointerReorderEnabled || event.button !== 0) {
-          return;
-        }
-        const target = event.target;
-        if (
-          target instanceof HTMLElement &&
-          target.closest(".decision-placement-toggle") !== null
-        ) {
-          return;
-        }
-        event.stopPropagation();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        setPointerDrag({
-          pointerId: event.pointerId,
-          originX: event.clientX,
-          originY: event.clientY,
-          currentX: event.clientX,
-          currentY: event.clientY,
-          moved: false,
-        });
-      }}
-      onPointerMove={(event) => {
-        if (
-          pointerDrag === undefined ||
-          pointerDrag.pointerId !== event.pointerId
-        ) {
-          return;
-        }
-        const deltaX = event.clientX - pointerDrag.originX;
-        const deltaY = event.clientY - pointerDrag.originY;
-        const moved =
-          pointerDrag.moved || Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4;
-        if (moved) {
-          event.preventDefault();
-        }
-        setPointerDrag({
-          ...pointerDrag,
-          currentX: event.clientX,
-          currentY: event.clientY,
-          moved,
-        });
-      }}
-      onPointerUp={(event) => {
-        if (
-          pointerDrag === undefined ||
-          pointerDrag.pointerId !== event.pointerId
-        ) {
-          return;
-        }
-        event.currentTarget.releasePointerCapture(event.pointerId);
-        setPointerDrag(undefined);
-        if (!pointerDrag.moved || !pointerReorderEnabled) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        const previousPointerEvents = event.currentTarget.style.pointerEvents;
-        event.currentTarget.style.pointerEvents = "none";
-        const targetElement = document
-          .elementFromPoint(event.clientX, event.clientY)
-          ?.closest<HTMLElement>("[data-decision-order-instance-id]");
-        event.currentTarget.style.pointerEvents = previousPointerEvents;
-        if (targetElement == null) {
-          return;
-        }
-        const targetInstanceId =
-          targetElement.dataset["decisionOrderInstanceId"];
-        if (
-          targetInstanceId === undefined ||
-          targetInstanceId === String(card.instanceId)
-        ) {
-          return;
-        }
-        onMoveOrderedCard(
-          card.instanceId,
-          targetInstanceId as InstanceId,
-          reorderPlacementFromPointer(
-            targetElement.getBoundingClientRect(),
-            event.clientX,
-            event.clientY,
-          ),
-        );
-      }}
-      onPointerCancel={(event) => {
-        if (pointerDrag?.pointerId === event.pointerId) {
-          setPointerDrag(undefined);
-        }
-      }}
-    >
-      <span className="decision-order-badge">{index + 1}</span>
-      {display.imageUrl === undefined ? (
-        <span className="decision-card-placeholder">{display.name}</span>
-      ) : (
-        <img
-          className="decision-card-face"
-          src={display.imageUrl}
-          alt={display.name}
-        />
-      )}
-      {topOrBottomPlacement ? (
-        <button
-          className="decision-placement-toggle"
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            onToggleBottomPlacement(card.instanceId);
-          }}
-        >
-          {isBottom ? "Bottom" : "Top"}
-        </button>
-      ) : null}
-    </div>
-  );
-};
+const toDecisionOrderClientCard = (
+  card: CardRef,
+  display: { name: string; imageUrl?: string },
+): ClientCardModel => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  name: display.name,
+  category: "unknown",
+  ...(display.imageUrl === undefined ? {} : { imageUrl: display.imageUrl }),
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
 
 export const DecisionModalHost = ({
   model,
@@ -210,6 +55,34 @@ export const DecisionModalHost = ({
   onToggleBottomPlacement,
   onConfirm,
 }: DecisionModalHostProps): React.JSX.Element | null => {
+  const orderedCards =
+    model?.kind === "orderCards"
+      ? model.orderedInstanceIds.flatMap((instanceId) => {
+          const card = model.cards.find(
+            (candidate) => candidate.instanceId === instanceId,
+          );
+          if (card === undefined) {
+            return [];
+          }
+          const display = cardDisplay?.(card) ?? {
+            name: String(card.cardId),
+          };
+          return [toDecisionOrderClientCard(card, display)];
+        })
+      : [];
+  const orderReorder = useCardReorderPreview(
+    orderedCards,
+    model?.kind === "orderCards" && !disabled
+      ? (draggedInstanceId, targetInstanceId, placement) => {
+          onMoveOrderedCard(
+            draggedInstanceId as InstanceId,
+            targetInstanceId as InstanceId,
+            placement,
+          );
+        }
+      : undefined,
+  );
+
   if (model === undefined) {
     return null;
   }
@@ -259,29 +132,44 @@ export const DecisionModalHost = ({
               : "Drag cards into order."}
           </p>
           <div className="decision-order-card-grid">
-            {model.orderedInstanceIds.map((instanceId, index) => {
-              const card = model.cards.find(
-                (candidate) => candidate.instanceId === instanceId,
+            {orderedCards.map((card, index) => {
+              const instanceId = String(card.instanceId);
+              const isBottom = model.bottomInstanceIds.includes(
+                card.instanceId,
               );
-              if (card === undefined) {
-                return null;
-              }
-              const display = cardDisplay?.(card) ?? {
-                name: String(card.cardId),
-              };
-              const isBottom = model.bottomInstanceIds.includes(instanceId);
               return (
-                <DecisionOrderCard
-                  key={String(instanceId)}
-                  card={card}
-                  display={display}
-                  index={index}
-                  isBottom={isBottom}
-                  disabled={disabled}
-                  topOrBottomPlacement={model.placement?.type === "topOrBottom"}
-                  onMoveOrderedCard={onMoveOrderedCard}
-                  onToggleBottomPlacement={onToggleBottomPlacement}
-                />
+                <Fragment key={instanceId}>
+                  {orderReorder.placeholderBefore(instanceId) ? (
+                    <div className="hand-drag-placeholder" aria-hidden="true" />
+                  ) : null}
+                  <div className="decision-order-card-slot">
+                    <CardTile
+                      card={card}
+                      selectionOrderLabel={String(index + 1)}
+                      disabled={disabled}
+                      reorderable={!disabled}
+                      onPreviewMoveNear={orderReorder.onPreviewMoveNear}
+                      onMoveNear={orderReorder.onMoveNear}
+                      onReorderCancel={orderReorder.onReorderCancel}
+                      onHover={() => undefined}
+                    />
+                    {model.placement?.type === "topOrBottom" ? (
+                      <button
+                        className="decision-placement-toggle"
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          onToggleBottomPlacement(card.instanceId);
+                        }}
+                      >
+                        {isBottom ? "Bottom" : "Top"}
+                      </button>
+                    ) : null}
+                  </div>
+                  {orderReorder.placeholderAfter(instanceId) ? (
+                    <div className="hand-drag-placeholder" aria-hidden="true" />
+                  ) : null}
+                </Fragment>
               );
             })}
           </div>

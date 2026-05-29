@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
@@ -8,6 +8,7 @@ import {
 } from "./card-row-layout.js";
 import { CardTile } from "./CardTile.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
+import { useCardReorderPreview } from "./useCardReorderPreview.js";
 
 export type HandOverflowDirection = "left" | "right";
 
@@ -58,12 +59,6 @@ export interface HandRowProps {
     | undefined;
 }
 
-interface HandDragPreview {
-  draggedInstanceId: string;
-  targetInstanceId: string;
-  placement: ReorderPlacement;
-}
-
 export const HandRow = ({
   label,
   cards,
@@ -87,9 +82,7 @@ export const HandRow = ({
     laneExtension: 0,
     edgePacked: false,
   });
-  const [dragPreview, setDragPreview] = useState<
-    HandDragPreview | undefined
-  >(undefined);
+  const cardReorder = useCardReorderPreview(cards, onMoveCard);
 
   useLayoutEffect(() => {
     const rowElement = rowRef.current;
@@ -131,19 +124,6 @@ export const HandRow = ({
     };
   }, [cards.length, overflowDirection]);
 
-  useEffect(() => {
-    if (dragPreview === undefined) {
-      return;
-    }
-    const cardIds = new Set(cards.map((card) => String(card.instanceId)));
-    if (
-      !cardIds.has(dragPreview.draggedInstanceId) ||
-      !cardIds.has(dragPreview.targetInstanceId)
-    ) {
-      setDragPreview(undefined);
-    }
-  }, [cards, dragPreview]);
-
   const handCardsClassName = [
     "hand-cards",
     `hand-cards-overlap-${overflowDirection}`,
@@ -164,12 +144,8 @@ export const HandRow = ({
       <div ref={cardsRef} className={handCardsClassName} style={handStyle}>
         {cards.map((card) => {
           const instanceId = String(card.instanceId);
-          const placeholderBefore =
-            dragPreview?.targetInstanceId === instanceId &&
-            dragPreview.placement === "before";
-          const placeholderAfter =
-            dragPreview?.targetInstanceId === instanceId &&
-            dragPreview.placement === "after";
+          const placeholderBefore = cardReorder.placeholderBefore(instanceId);
+          const placeholderAfter = cardReorder.placeholderAfter(instanceId);
           return (
             <Fragment key={instanceId}>
               {placeholderBefore ? (
@@ -190,28 +166,9 @@ export const HandRow = ({
                 onAttachedDonClick={onCardClick}
                 onHover={onCardPreview}
                 reorderable={onMoveCard !== undefined}
-                onPreviewMoveNear={
-                  onMoveCard === undefined
-                    ? undefined
-                    : (draggedInstanceId, targetInstanceId, placement) => {
-                        setDragPreview({
-                          draggedInstanceId,
-                          targetInstanceId,
-                          placement,
-                        });
-                      }
-                }
-                onMoveNear={
-                  onMoveCard === undefined
-                    ? undefined
-                    : (draggedInstanceId, targetInstanceId, placement) => {
-                        setDragPreview(undefined);
-                        onMoveCard(draggedInstanceId, targetInstanceId, placement);
-                      }
-                }
-                onReorderCancel={() => {
-                  setDragPreview(undefined);
-                }}
+                onPreviewMoveNear={cardReorder.onPreviewMoveNear}
+                onMoveNear={cardReorder.onMoveNear}
+                onReorderCancel={cardReorder.onReorderCancel}
                 onClick={
                   onCardClick === undefined
                     ? undefined

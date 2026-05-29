@@ -130,19 +130,27 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   assert.match(markup, /decision-order-hint/u);
   assert.equal(markup.includes("top-card.png"), true);
   assert.equal(markup.includes("bottom-card.png"), true);
-  assert.match(markup, /decision-order-badge/u);
+  assert.match(markup, /selection-order-badge/u);
+  assert.match(markup, /card-tile-shell/u);
   assert.match(markup, /is-pointer-reorderable/u);
   assert.doesNotMatch(markup, /draggable=/u);
   assert.doesNotMatch(markup, /decision-order-row/u);
 });
 
-test("return-to-deck order modal uses pointer reorder instead of native drag", async () => {
+test("return-to-deck order modal shares CardTile reorder instead of custom drag", async () => {
   const source = await readFile(
     join(sourceDirectory, "DecisionModalHost.tsx"),
     "utf8",
   );
 
-  assert.match(source, /onPointerDown/u);
+  assert.match(source, /CardTile/u);
+  assert.match(source, /useCardReorderPreview/u);
+  assert.match(source, /onPreviewMoveNear/u);
+  assert.match(source, /onMoveNear/u);
+  assert.doesNotMatch(source, /PointerReorderDrag/u);
+  assert.doesNotMatch(source, /data-decision-order-instance-id/u);
+  assert.doesNotMatch(source, /reorderPlacementFromPointer/u);
+  assert.doesNotMatch(source, /DecisionOrderCard/u);
   assert.doesNotMatch(source, /onDragStart/u);
   assert.doesNotMatch(source, /onDragOver/u);
   assert.doesNotMatch(source, /onDrop/u);
