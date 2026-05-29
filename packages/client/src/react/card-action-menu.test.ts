@@ -594,7 +594,7 @@ describe("card action menu", () => {
     assert.match(markup, /--life-card-y-offset:36%;z-index:1/u);
   });
 
-  test("life zones compact vertically without shifting sideways above five life", () => {
+  test("life zones compact vertically per count without shifting sideways above five life", () => {
     const layout = board();
     layout.self.lifeCount = 10;
     layout.self.lifeCards = hiddenLifeCards(10, "hidden-life-self");
@@ -615,5 +615,20 @@ describe("card action menu", () => {
     assert.match(markup, /--life-card-y-offset:30%;z-index:5/u);
     assert.match(markup, /--life-card-y-offset:54%;z-index:1/u);
     assert.equal(markup.includes("--life-card-x-offset"), false);
+
+    layout.self.lifeCount = 6;
+    layout.self.lifeCards = hiddenLifeCards(6, "hidden-life-self");
+    const sixLifeMarkup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+    assert.match(sixLifeMarkup, /--life-card-y-offset:50%;z-index:1/u);
+    assert.equal(sixLifeMarkup.includes("--life-card-x-offset"), false);
   });
 });
