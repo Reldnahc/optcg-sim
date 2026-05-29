@@ -72,6 +72,38 @@ const opponentActivationFromEvent = (
   return undefined;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const sourceFieldEntryEventSeq = (
+  state: GameState,
+  source: CardInstance,
+): number | undefined => {
+  for (let index = state.eventJournal.length - 1; index >= 0; index -= 1) {
+    const event = state.eventJournal[index];
+    if (event?.type !== "cardPlayed" || !isRecord(event.payload)) {
+      continue;
+    }
+    if (
+      event.payload["instanceId"] === source.instanceId &&
+      event.payload["cardId"] === source.cardId &&
+      event.payload["playerId"] === source.controller
+    ) {
+      return event.seq;
+    }
+  }
+  return undefined;
+};
+
+const didActivationHappenAfterSourceEntered = (
+  state: GameState,
+  event: EngineEvent,
+  source: CardInstance,
+): boolean => {
+  const fieldEntrySeq = sourceFieldEntryEventSeq(state, source);
+  return fieldEntrySeq === undefined || event.seq > fieldEntrySeq;
+};
+
 const isOpponentActivationForSource = (
   state: GameState,
   source: CardInstance,
@@ -127,6 +159,7 @@ export const createOpponentActivationTriggerQueueing = (
       for (const source of sources) {
         if (
           isCardEffectInvalidated(state, source) ||
+          !didActivationHappenAfterSourceEntered(state, event, source) ||
           !isOpponentActivationForSource(state, source, activation)
         ) {
           continue;

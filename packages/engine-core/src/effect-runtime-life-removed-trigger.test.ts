@@ -336,6 +336,31 @@ test("opponent activation reaction may choose zero revealed Life cards", () => {
   );
 });
 
+test("opponent activation reaction ignores activations before the source entered field", () => {
+  const { source, state } = setupOpponentActivationRevealPowerState();
+  state.eventJournal.push({
+    id: toEngineEventId("event:reaction-source-played-after-opponent-event"),
+    seq: 2,
+    type: "cardPlayed",
+    payload: {
+      playerId: p1,
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      category: "character",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:reaction-source-entry" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.events.length, 0);
+});
+
 test("opponent activation reaction queues after the opponent Event main effect", () => {
   const { source, state } = setupOpponentActivationRevealPowerState();
   state.eventJournal = [];
