@@ -46,4 +46,12 @@ describe("optional choose-one trash cost parser", () => {
       rest: "Draw 1 card.",
     });
   });
+
+  it("does not silently drop unsupported field trash predicates", () => {
+    expect(
+      parseOptionalChooseOneTrashCost({
+        text: "You may trash 1 of your {Celestial Dragons} type Characters with 5000 power or less or 1 card from your hand: Draw 1 card.",
+      }),
+    ).toBeUndefined();
+  });
 });

@@ -18,7 +18,10 @@ export function parseYourFieldReplacementTarget(
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: predicateText });
+  const predicates = parseCardFilterPredicates(
+    { text: predicateText },
+    { powerSemantics: "current" },
+  );
   const category = predicates?.filter.categories?.[0];
   if (
     predicates === undefined ||

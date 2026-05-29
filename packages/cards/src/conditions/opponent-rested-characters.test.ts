@@ -58,6 +58,36 @@ describe("opponent rested Characters condition parser", () => {
     expect(singular).toEqual(plural);
   });
 
+  it("parses field Character power predicates as current power unless base is explicit", () => {
+    const currentPower = parseOpponentRestedCharactersCondition({
+      text: "your opponent has 2 or more rested Characters with 3000 power or less",
+    });
+    expect(currentPower).toMatchObject({
+      condition: {
+        filter: {
+          categories: ["character"],
+          state: "rested",
+          currentPower: { max: 3000 },
+        },
+      },
+    });
+    expect(currentPower?.evidence).toContain("filter:currentPower");
+
+    const basePower = parseOpponentRestedCharactersCondition({
+      text: "your opponent has 2 or more rested Characters with 3000 base power or less",
+    });
+    expect(basePower).toMatchObject({
+      condition: {
+        filter: {
+          categories: ["character"],
+          state: "rested",
+          power: { max: 3000 },
+        },
+      },
+    });
+    expect(basePower?.evidence).toContain("filter:power");
+  });
+
   it("rejects unsupported condition wording", () => {
     expect(
       parseOpponentRestedCharactersCondition({

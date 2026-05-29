@@ -12,7 +12,10 @@ export const parseLeaderNameCondition: ConditionParser = (
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: predicateText });
+  const predicates = parseCardFilterPredicates(
+    { text: predicateText },
+    { powerSemantics: "current" },
+  );
   if (predicates === undefined || predicates.rest.length > 0) {
     return undefined;
   }

@@ -130,12 +130,18 @@ function parseFieldTrashCostOption(
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: predicateText });
+  const predicates = parseCardFilterPredicates(
+    { text: predicateText },
+    { powerSemantics: "current" },
+  );
   if (
     predicates === undefined ||
     predicates.rest.length > 0 ||
     predicates.filter.categories?.[0] !== "character" ||
-    predicates.filter.typesAny?.[0] === undefined
+    predicates.filter.typesAny?.[0] === undefined ||
+    Object.keys(predicates.filter).some(
+      (key) => key !== "categories" && key !== "typesAny",
+    )
   ) {
     return undefined;
   }

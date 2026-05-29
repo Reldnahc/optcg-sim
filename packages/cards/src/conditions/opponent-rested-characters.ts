@@ -29,7 +29,10 @@ export const parseOpponentRestedCharactersCondition: ConditionParser = (
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: comparison.rest });
+  const predicates = parseCardFilterPredicates(
+    { text: comparison.rest },
+    { powerSemantics: "current" },
+  );
   if (
     predicates === undefined ||
     predicates.rest.length > 0 ||

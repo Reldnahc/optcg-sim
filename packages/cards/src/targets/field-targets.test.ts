@@ -47,6 +47,26 @@ describe("field target parsers", () => {
     });
   });
 
+  it("parses opponent field target power predicates as current power unless base is explicit", () => {
+    const currentPower = parseOpponentCharactersTarget({
+      text: "of your opponent's Characters with 3000 power or less",
+    });
+    expect(currentPower).toMatchObject({
+      filter: { categories: ["character"], currentPower: { max: 3000 } },
+      rest: "",
+    });
+    expect(currentPower?.evidence).toContain("filter:currentPower");
+
+    const basePower = parseOpponentCharactersTarget({
+      text: "of your opponent's Characters with 3000 base power or less",
+    });
+    expect(basePower).toMatchObject({
+      filter: { categories: ["character"], power: { max: 3000 } },
+      rest: "",
+    });
+    expect(basePower?.evidence).toContain("filter:power");
+  });
+
   it("parses your Leader target and leaves modifier text", () => {
     expect(
       parseYourLeaderTarget({

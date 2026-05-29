@@ -198,7 +198,10 @@ const parseRestedDonAttachmentTarget = (
       readonly savedTargetZone: "characterArea";
     }
   | undefined => {
-  const parsed = parseCardFilterPredicates({ text: targetText });
+  const parsed = parseCardFilterPredicates(
+    { text: targetText },
+    { powerSemantics: "current" },
+  );
   const rest = parsed?.rest.trim().replace(/\.$/u, "");
   if (parsed === undefined || rest !== "") {
     return undefined;
