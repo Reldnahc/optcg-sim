@@ -3,11 +3,13 @@ import { test } from "vitest";
 
 import type {
   CardInstance,
+  CardRef,
   Effect,
   EffectDefinition,
   GameState,
 } from "@optcg/types";
 
+import { applyAction } from "./actions.js";
 import {
   createActiveState,
   must,
@@ -22,6 +24,13 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
+
+const handRef = (card: CardInstance, playerId = p1): CardRef => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: card.zone,
+});
 
 const reindexCards = (
   cards: readonly CardInstance[],
@@ -530,5 +539,101 @@ test("moveCards deck top to life top keeps card identity hidden publicly", () =>
         JSON.stringify(event.payload).includes(String(topDeck.cardId)),
     ),
     false,
+  );
+});
+
+test("optional moveCards deck top to life top resumes into following trashFromHand segment", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const trashSelection = must(p1State.hand[1], "trash selection");
+  const topDeck = must(p1State.deck[0], "top deck");
+  const originalLifeTop = must(p1State.life[0], "life top").card;
+  const definition = setupMoveCardsDefinition(state, source, {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: lifeTopToTrashEffect(1),
+      },
+      {
+        connector: "then",
+        effect: deckTopToLifeTopEffect(1),
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "trashFromHand",
+          player: "self",
+          chooser: "self",
+          count: 1,
+        },
+      },
+    ],
+  });
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-deck-life-trash-hand"),
+      timingWindowId: toTimingWindowId("window-deck-life-trash-hand"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "sequence effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "deck-life-trash-hand-test" },
+    },
+  ];
+
+  const paused = processEffectRuntime(state);
+  const quantityDecision = must(
+    paused.state.pendingDecision,
+    "quantity decision",
+  );
+  const afterFirstSegment = must(paused.state.players[p1], "after first");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(quantityDecision.type, "chooseQuantity");
+  assert.equal(
+    must(afterFirstSegment.trash[0], "trashed life").instanceId,
+    originalLifeTop.instanceId,
+  );
+
+  const quantityResolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: quantityDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+  const trashDecision = must(
+    quantityResolved.state.pendingDecision,
+    "trash decision",
+  );
+  const afterMove = must(quantityResolved.state.players[p1], "after move");
+
+  assert.equal(quantityResolved.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.equal(
+    must(afterMove.life[0], "new life top").card.instanceId,
+    topDeck.instanceId,
+  );
+
+  const completed = applyAction(quantityResolved.state, {
+    type: "respondToDecision",
+    decisionId: trashDecision.id,
+    response: { type: "cards", cards: [handRef(trashSelection)] },
+  });
+  const completedPlayer = must(completed.state.players[p1], "completed p1");
+
+  assert.equal(completed.errors, undefined);
+  assert.equal(completed.state.pendingDecision, undefined);
+  assert.equal(completed.state.effectQueue.length, 0);
+  assert.equal(
+    must(completedPlayer.trash[0], "trashed hand").instanceId,
+    trashSelection.instanceId,
   );
 });

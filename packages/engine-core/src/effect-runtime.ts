@@ -25,6 +25,7 @@ import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-proce
 import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence-frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-queueing.js";
+import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
 
 export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
 export { executeAcceptedSelectedTargetKoReplacementProcess } from "./effect-runtime-ko-replacement-process.js";
@@ -509,7 +510,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   if (queuedFromOpponentActivation !== undefined) {
     return queuedFromOpponentActivation;
   }
-  const resumedSequenceQuantity = resumeSequenceFrameAfterChooseQuantity(state);
+  const resumedSequenceQuantity = resumeSequenceFrameAfterChooseQuantity(
+    state,
+    createSupportedTrashFromHandChoiceDecision,
+  );
   if (resumedSequenceQuantity !== undefined) {
     if (!resumedSequenceQuantity.ok) {
       return toEngineResult(state, [], [resumedSequenceQuantity.error]);

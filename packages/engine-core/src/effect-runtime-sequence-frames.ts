@@ -2834,6 +2834,7 @@ export const resumeSequenceFrameAfterPlaySelectedOverflow = (
 
 export const resumeSequenceFrameAfterChooseQuantity = (
   state: GameState,
+  createTrashDecision: CreateTrashFromHandSequenceDecision,
 ): SequenceFrameResumeResult => {
   return resumeDrawUpToQuantitySequenceFrame({
     emptySegmentResult,
@@ -2854,6 +2855,6 @@ export const resumeSequenceFrameAfterChooseQuantity = (
     segmentKey,
     sequenceRuntimeError,
     state,
-    unsupportedTrashDecision: createUnsupportedTrashDecision,
+    createTrashDecision,
   });
 };

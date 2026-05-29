@@ -71,7 +71,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
       | "segment-execution-failed",
   ) => EngineError;
   state: GameState;
-  unsupportedTrashDecision: unknown;
+  createTrashDecision: unknown;
 }): SequenceFrameResumeResult => {
   const latestResolved = [...params.state.eventJournal]
     .reverse()
@@ -205,7 +205,7 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     };
   }
   return params.resumeSequenceFrameFromLedgers({
-    createTrashDecision: params.unsupportedTrashDecision,
+    createTrashDecision: params.createTrashDecision,
     effectBlock: supportedBlock,
     entry,
     finalizeCompleted: true,
