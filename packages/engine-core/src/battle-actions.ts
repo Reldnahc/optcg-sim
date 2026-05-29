@@ -43,7 +43,6 @@ import {
   applyCounterStepDecisionResponse,
   applyUseCounter,
   createCounterStepPassDecision,
-  finalizePendingCounterEventUse,
   getCounterStepDecisionLegalActions,
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
@@ -718,25 +717,6 @@ export const continueAttackTimingBattleIfReady = (
     return null;
   }
   if (battle.step === "counter") {
-    const finalizedCounterEvent = finalizePendingCounterEventUse(state);
-    if (finalizedCounterEvent !== null) {
-      if (
-        finalizedCounterEvent.errors !== undefined ||
-        finalizedCounterEvent.state.pendingDecision !== undefined ||
-        detectPendingRuntimeWork(finalizedCounterEvent.state) !== undefined
-      ) {
-        return finalizedCounterEvent;
-      }
-      const continued = continueAttackTimingBattleIfReady(
-        finalizedCounterEvent.state,
-      );
-      return continued === null
-        ? finalizedCounterEvent
-        : {
-            ...continued,
-            events: [...finalizedCounterEvent.events, ...continued.events],
-          };
-    }
     const decision = createCounterStepPassDecision(state, {
       requirePotentialCounterActions: false,
     });

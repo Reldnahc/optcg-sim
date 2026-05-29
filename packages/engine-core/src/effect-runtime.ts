@@ -494,10 +494,6 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
   }
-  const queuedFromOpponentActivation = queueOpponentActivationTriggers(state);
-  if (queuedFromOpponentActivation !== undefined) {
-    return queuedFromOpponentActivation;
-  }
   const queuedFromMainEvent = queueMainEventTriggers(state);
   if (queuedFromMainEvent !== undefined) {
     return queuedFromMainEvent;
@@ -509,6 +505,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromLifeRemoved = queueLifeRemovedTriggers(state);
   if (queuedFromLifeRemoved !== undefined) {
     return queuedFromLifeRemoved;
+  }
+  const queuedFromOpponentActivation = queueOpponentActivationTriggers(state);
+  if (queuedFromOpponentActivation !== undefined) {
+    return queuedFromOpponentActivation;
   }
   const resumedSequenceQuantity = resumeSequenceFrameAfterChooseQuantity(
     state,

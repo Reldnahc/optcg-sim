@@ -316,7 +316,7 @@ test("opponent activation reaction can reveal Life and applies dynamic power fro
   );
 });
 
-test("opponent activation reaction queues immediately after the opponent Counter Event activation", () => {
+test("opponent activation reaction queues after the opponent Counter Event effect", () => {
   const state = setupAttackState();
   state.eventJournal = [];
   const p1State = must(state.players[p1], "p1");
@@ -345,6 +345,7 @@ test("opponent activation reaction queues immediately after the opponent Counter
       "counterUsed",
       "cardMoved",
       "cardTrashed",
+      "effectResolved",
       "effectQueued",
       "decisionCreated",
     ],
@@ -363,10 +364,6 @@ test("opponent activation reaction queues immediately after the opponent Counter
   });
 
   assert.equal(resumedCounter.errors, undefined);
-  assert.equal(
-    resumedCounter.events.some((event) => event.type === "effectResolved"),
-    true,
-  );
   const counterPass = must(
     resumedCounter.state.pendingDecision,
     "counter pass",
@@ -476,7 +473,7 @@ test("opponent activation reaction ignores stale activation events after their t
   assert.equal(result.events.length, 0);
 });
 
-test("opponent activation reaction queues before the opponent Event main effect", () => {
+test("opponent activation reaction queues after the opponent Event main effect", () => {
   const { source, state } = setupOpponentActivationRevealPowerState();
   state.eventJournal = [];
   state.turn.turnPlayerId = p2;
@@ -517,11 +514,11 @@ test("opponent activation reaction queues before the opponent Event main effect"
   assert.equal(played.errors, undefined);
   assert.equal(
     played.events.some((event) => event.type === "effectResolved"),
-    false,
+    true,
   );
   assert.equal(
     played.events.some((event) => event.type === "cardDrawn"),
-    false,
+    true,
   );
   const decision = must(played.state.pendingDecision, "reaction reveal");
   assert.equal(decision.type, "chooseQuantity");
@@ -533,10 +530,6 @@ test("opponent activation reaction queues before the opponent Event main effect"
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(
-    resolved.events.some((event) => event.type === "cardDrawn"),
-    true,
-  );
   assert.equal(
     resolved.state.continuousEffects.some(
       (effect) =>
