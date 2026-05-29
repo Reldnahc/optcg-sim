@@ -72,6 +72,7 @@ import { createTopDeckPlacementDecision } from "./effect-runtime-top-deck-placem
 import {
   applyDrawSegment,
   applyMoveCardsSegment,
+  applyRevealTopSequenceSegment,
   removeFrame,
   replaceQueueEntry,
   resolvingEntryFor,
@@ -100,7 +101,6 @@ type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
-type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
 type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
@@ -370,119 +370,6 @@ const applyAttachSelectedDonSequenceSegment = (params: {
       ...nextState,
       eventJournal: [...params.state.eventJournal, ...events],
     },
-  };
-};
-
-const applyRevealTopSequenceSegment = (params: {
-  effect: RevealTopEffect;
-  emptySegmentResult: () => SequenceSegmentResult;
-  entry: EffectQueueEntry;
-  index: number;
-  ledgers: SegmentLedgers;
-  segment: SequenceEffect["effects"][number];
-  segmentKey: (
-    segment: SequenceEffect["effects"][number],
-    index: number,
-  ) => string;
-  state: GameState;
-}): {
-  events: EngineEvent[];
-  ledgers: SegmentLedgers;
-  state: GameState;
-} => {
-  const player = params.state.players[params.entry.controllerId];
-  if (player === undefined || params.effect.player !== "self") {
-    return {
-      events: [],
-      ledgers: params.ledgers,
-      state: params.state,
-    };
-  }
-  const sourceZone = params.effect.zone ?? "deck";
-  const sourceCards =
-    sourceZone === "life"
-      ? player.life.map((lifeCard) => lifeCard.card)
-      : player.deck;
-  const revealedCards = sourceCards
-    .slice(0, params.effect.count)
-    .map((card) => toCardRef(card, params.entry.controllerId));
-  const revealId = `reveal:sequence:${String(params.entry.id)}:${String(params.index)}`;
-  const events: EngineEvent[] = [];
-  if (revealedCards.length > 0) {
-    appendEvent(
-      params.state,
-      events,
-      "cardRevealed",
-      {
-        revealId,
-        cards: revealedCards,
-        origin:
-          sourceZone === "life"
-            ? { zone: "life", playerId: params.entry.controllerId }
-            : "topOfDeck",
-        selectionSetId: params.effect.saveAs,
-      },
-      { type: "public" },
-    );
-    const event = events[0];
-    if (event !== undefined) {
-      event.causedBy = {
-        type: "effect",
-        queueEntryId: params.entry.id,
-        effectId: params.entry.effectBlockId,
-      };
-    }
-  }
-
-  const nextState =
-    revealedCards.length === 0
-      ? params.state
-      : {
-          ...params.state,
-          seq: toStateSeq(params.state.seq + 1),
-          revealedCards: [
-            ...params.state.revealedCards,
-            {
-              id: revealId,
-              cards: revealedCards,
-              visibility: { type: "public" as const },
-              origin:
-                sourceZone === "life"
-                  ? ({
-                      zone: "life",
-                      playerId: params.entry.controllerId,
-                    } as const)
-                  : ("topOfDeck" as const),
-              createdAtStateSeq: toStateSeq(params.state.seq + 1),
-              cleanupPolicy: "returnToOrigin" as const,
-            },
-          ],
-          eventJournal: [...params.state.eventJournal, ...events],
-        };
-
-  return {
-    events,
-    ledgers: {
-      ...params.ledgers,
-      savedReferences: {
-        ...params.ledgers.savedReferences,
-        [params.effect.saveAs]: {
-          kind: "selectedCards",
-          cards: revealedCards,
-        },
-      },
-      segmentResults: {
-        ...params.ledgers.segmentResults,
-        [params.segmentKey(params.segment, params.index)]: {
-          ...params.emptySegmentResult(),
-          attempted: true,
-          succeeded: true,
-          changedState: revealedCards.length > 0,
-          selectedCards: revealedCards,
-        },
-      },
-    },
-    state: nextState,
   };
 };
 
@@ -1573,16 +1460,54 @@ const continueNoDecisionSegments = (
       continue;
     }
     if (segment.effect.type === "revealTop") {
-      const revealed = applyRevealTopSequenceSegment({
-        effect: segment.effect,
-        emptySegmentResult,
+      if (
+        segment.effect.min !== undefined &&
+        segment.effect.min < segment.effect.count
+      ) {
+        const quantityDecision = createChooseQuantityDecisionForSequenceSegment(
+          nextState,
+          entry,
+          index,
+          segment.effect.count,
+        );
+        const decision = quantityDecision.state.pendingDecision;
+        if (decision === undefined) {
+          return { ok: false };
+        }
+        const frame = frameForPausedSequenceDecision({
+          decision,
+          entry,
+          effectPath: [...effectPath],
+          index,
+          savedReferences: nextLedgers.savedReferences,
+          segmentResults: nextLedgers.segmentResults,
+          state: quantityDecision.state,
+        });
+        return {
+          events: [...events, ...quantityDecision.events],
+          kind: "paused",
+          ok: true,
+          state: stateWithPausedSequenceFrame(
+            quantityDecision.state,
+            entry,
+            frame,
+          ),
+        };
+      }
+      const revealed = applyRevealTopSequenceSegment(
+        nextState,
         entry,
+        segment as SupportedSequenceSegment & {
+          effect: Extract<Effect, { type: "revealTop" }>;
+        },
         index,
-        ledgers: nextLedgers,
-        segment,
-        segmentKey: ledgerKey,
-        state: nextState,
-      });
+        nextLedgers,
+        emptySegmentResult,
+        ledgerKey,
+      );
+      if (!revealed.ok) {
+        return { ok: false };
+      }
       nextState = revealed.state;
       nextLedgers = revealed.ledgers;
       events.push(...revealed.events);

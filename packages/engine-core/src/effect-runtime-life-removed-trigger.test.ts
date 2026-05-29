@@ -16,6 +16,7 @@ import {
   executeNoChoiceEffectPrimitive,
   processEffectRuntime,
 } from "./effect-runtime.js";
+import { applyAction } from "./actions.js";
 import {
   queueDrawForP1,
   toCardId,
@@ -163,7 +164,7 @@ test("lifeRemoved reaction queues from Life movement and prevents later own-effe
   );
 });
 
-test("opponent activation reaction reveals Life and applies dynamic power from revealed cost", () => {
+const setupOpponentActivationRevealPowerState = () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   state.eventJournal = [];
@@ -265,12 +266,27 @@ test("opponent activation reaction reveals Life and applies dynamic power from r
     causedBy: { type: "ruleProcess", name: "test:opponent-event" },
     createdAtStateSeq: state.seq,
   });
+  return { source, state };
+};
 
+test("opponent activation reaction can reveal Life and applies dynamic power from revealed cost", () => {
+  const { source, state } = setupOpponentActivationRevealPowerState();
   const queued = processEffectRuntime(state);
   assert.equal(queued.errors, undefined);
   assert.equal(queued.state.effectQueue.length, 1);
 
-  const resolved = processEffectRuntime(queued.state);
+  const paused = processEffectRuntime(queued.state);
+  const decision = must(paused.state.pendingDecision, "reveal quantity");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+  assert.equal(decision.min, 0);
+  assert.equal(decision.max, 1);
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
   assert.equal(resolved.errors, undefined);
   assert.equal(resolved.state.revealedCards.length, 1);
   assert.equal(
@@ -279,6 +295,40 @@ test("opponent activation reaction reveals Life and applies dynamic power from r
         effect.modifier.layer === "powerAdd" &&
         effect.modifier.operation.type === "addPower" &&
         effect.modifier.operation.value === 4000 &&
+        effect.source.instanceId === source.instanceId,
+    ),
+    true,
+  );
+});
+
+test("opponent activation reaction may choose zero revealed Life cards", () => {
+  const { source, state } = setupOpponentActivationRevealPowerState();
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+
+  const paused = processEffectRuntime(queued.state);
+  const decision = must(paused.state.pendingDecision, "reveal quantity");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 0 },
+  });
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.revealedCards.length, 0);
+  assert.equal(
+    resolved.state.eventJournal.some((event) => event.type === "cardRevealed"),
+    false,
+  );
+  assert.equal(
+    resolved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "powerAdd" &&
+        effect.modifier.operation.type === "addPower" &&
+        effect.modifier.operation.value === 0 &&
         effect.source.instanceId === source.instanceId,
     ),
     true,

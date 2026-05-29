@@ -12,6 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { toCardRef } from "./action-state.js";
+import { appendEvent, toStateSeq } from "./action-results.js";
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
@@ -21,6 +22,7 @@ import { executeMoveCardsPrimitive } from "./effect-runtime-move-cards.js";
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 
 export type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -31,6 +33,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
     | MoveCardsEffect
+    | RevealTopEffect
     | Extract<Effect, { type: "trashFromHand" }>
     | Extract<SequenceEffect["effects"][number]["effect"], { type: "payCost" }>
     | Extract<Effect, { type: "selectCards" }>;
@@ -144,6 +147,142 @@ export const applyResolvedQuantityMoveCardsSegment = (
     segmentKey,
   );
 };
+
+export const applyResolvedQuantityRevealTopSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SupportedSequenceSegment & { effect: RevealTopEffect },
+  index: number,
+  quantity: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const player = state.players[entry.controllerId];
+  if (
+    player === undefined ||
+    segment.effect.player !== "self" ||
+    !Number.isInteger(quantity) ||
+    quantity < 0 ||
+    quantity > segment.effect.count
+  ) {
+    return { ok: false };
+  }
+  const sourceZone = segment.effect.zone ?? "deck";
+  const sourceCards =
+    sourceZone === "life"
+      ? player.life.map((lifeCard) => lifeCard.card)
+      : player.deck;
+  const revealedCards = sourceCards
+    .slice(0, quantity)
+    .map((card) => toCardRef(card, entry.controllerId));
+  const revealId = `reveal:sequence:${String(entry.id)}:${String(index)}`;
+  const origin =
+    sourceZone === "life"
+      ? ({ zone: "life", playerId: entry.controllerId } as const)
+      : ("topOfDeck" as const);
+  const events: EngineEvent[] = [];
+  if (revealedCards.length > 0) {
+    appendEvent(
+      state,
+      events,
+      "cardRevealed",
+      {
+        revealId,
+        cards: revealedCards,
+        origin,
+        selectionSetId: segment.effect.saveAs,
+      },
+      { type: "public" },
+    );
+    const event = events[0];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      };
+    }
+  }
+  const nextSeq = toStateSeq(state.seq + 1);
+  const nextState =
+    revealedCards.length === 0
+      ? state
+      : {
+          ...state,
+          seq: nextSeq,
+          revealedCards: [
+            ...state.revealedCards,
+            {
+              id: revealId,
+              cards: revealedCards,
+              visibility: { type: "public" as const },
+              origin,
+              createdAtStateSeq: nextSeq,
+              cleanupPolicy: "returnToOrigin" as const,
+            },
+          ],
+          eventJournal: [...state.eventJournal, ...events],
+        };
+  return {
+    events,
+    ledgers: {
+      ...ledgers,
+      savedReferences: {
+        ...ledgers.savedReferences,
+        [segment.effect.saveAs]: {
+          kind: "selectedCards",
+          cards: revealedCards,
+        },
+      },
+      segmentResults: {
+        ...ledgers.segmentResults,
+        [segmentKey(segment, index)]: {
+          ...emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: revealedCards.length > 0,
+          selectedCards: revealedCards,
+        },
+      },
+    },
+    ok: true,
+    state: nextState,
+  };
+};
+
+export const applyRevealTopSequenceSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SupportedSequenceSegment & { effect: RevealTopEffect },
+  index: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+) =>
+  applyResolvedQuantityRevealTopSegment(
+    state,
+    entry,
+    segment,
+    index,
+    segment.effect.count,
+    ledgers,
+    emptySegmentResult,
+    segmentKey,
+  );
 
 export const resolvingEntryFor = (
   entry: EffectQueueEntry,
