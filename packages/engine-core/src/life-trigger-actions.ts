@@ -26,7 +26,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reifyCardRef, reindexZoneCards } from "./action-state.js";
+import { addCardsToHand, reifyCardRef } from "./action-state.js";
 import { isSupportedBattleResolutionEnvelope } from "./battle-support.js";
 import {
   processEffectRuntime,
@@ -673,12 +673,8 @@ export const applyLifeTriggerDecisionResponse = (
       index: 0,
     },
   };
-  const nextHand = reindexZoneCards(
-    [movedCard, ...player.hand],
-    "hand",
-    decision.playerId,
-    "hand",
-  );
+  const nextHand = addCardsToHand(player.hand, [movedCard], decision.playerId);
+  const handCard = nextHand[nextHand.length - 1] ?? movedCard;
   const events: EngineEvent[] = [];
   appendEvent(
     state,
@@ -698,7 +694,7 @@ export const applyLifeTriggerDecisionResponse = (
     "cardMoved",
     {
       from: { zone: "life", playerId: decision.playerId, slot: "life" },
-      to: movedCard.zone,
+      to: handCard.zone,
       reason: "battleDamage",
     },
     { type: "public" },

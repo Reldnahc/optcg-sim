@@ -15,7 +15,11 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { reindexZoneCards, zonesEqual } from "./action-state.js";
+import {
+  addCardsToHand,
+  reindexZoneCards,
+  zonesEqual,
+} from "./action-state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { applyTurnLifeFaceUpPayment } from "./effect-runtime-life-face-up-cost.js";
 import {
@@ -223,12 +227,7 @@ const applyMoveCardsPayment = (params: {
           },
         },
       })),
-    hand: reindexZoneCards(
-      [...params.player.hand, movedCard],
-      "hand",
-      params.playerId,
-      "hand",
-    ),
+    hand: addCardsToHand(params.player.hand, [movedCard], params.playerId),
   };
 };
 

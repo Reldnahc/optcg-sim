@@ -234,8 +234,8 @@ test("double attack leader damage processes two life cards sequentially", () => 
   const nextP2 = must(result.state.players[p2], "p2");
   assert.equal(nextP2.life.length, beforeLife - 2);
   assert.equal(nextP2.hand.length, beforeHand + 2);
-  assert.equal(nextP2.hand[0]?.instanceId, secondLife);
-  assert.equal(nextP2.hand[1]?.instanceId, topLife);
+  assert.equal(nextP2.hand[beforeHand]?.instanceId, topLife);
+  assert.equal(nextP2.hand[beforeHand + 1]?.instanceId, secondLife);
   const movementEvents = result.events.filter(
     (event) =>
       event.type === "cardMoved" && event.visibility.type === "private",
@@ -743,7 +743,7 @@ test("declining first Double Attack Life Trigger moves it to hand then resumes t
   assert.equal(result.state.battle, undefined);
   const nextP2 = must(result.state.players[p2], "next p2");
   assert.equal(nextP2.hand.length, beforeHand + 1);
-  assert.equal(nextP2.hand[0]?.instanceId, firstLife.instanceId);
+  assert.equal(nextP2.hand[beforeHand]?.instanceId, firstLife.instanceId);
   assert.equal(
     nextP2.life.some(
       (lifeCard) => lifeCard.card.instanceId === secondLife.instanceId,

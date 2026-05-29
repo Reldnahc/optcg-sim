@@ -19,6 +19,7 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import {
+  addCardsToHand,
   cardMatchesSearchFilter,
   isSupportedSearchCardFilter,
   reindexZoneCards,
@@ -953,7 +954,9 @@ export const applySupportedSearchRevealChoiceResponse = (
           ...player,
           deck: deckWhileOrdering,
           hand:
-            movedCard === undefined ? player.hand : [...player.hand, movedCard],
+            movedCard === undefined
+              ? player.hand
+              : addCardsToHand(player.hand, [movedCard], decision.playerId),
         },
       },
       pendingDecision: orderDecision,
@@ -990,7 +993,9 @@ export const applySupportedSearchRevealChoiceResponse = (
         ...player,
         deck: deckBeforeRemainderTrash,
         hand:
-          movedCard === undefined ? player.hand : [...player.hand, movedCard],
+          movedCard === undefined
+            ? player.hand
+            : addCardsToHand(player.hand, [movedCard], decision.playerId),
       },
     },
   };

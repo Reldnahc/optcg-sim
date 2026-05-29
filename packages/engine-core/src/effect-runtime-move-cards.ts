@@ -12,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { toEngineResult, toStateSeq } from "./action-results.js";
-import { reindexZoneCards } from "./action-state.js";
+import { addCardsToHand, reindexZoneCards } from "./action-state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 
@@ -391,12 +391,7 @@ const executeLifeToHandMove = (
     remainingLifeAfterPositionMove(player.life, movedCount, position),
     playerId,
   );
-  const nextHand = reindexZoneCards(
-    [...movedCards, ...player.hand],
-    "hand",
-    playerId,
-    "hand",
-  );
+  const nextHand = addCardsToHand(player.hand, movedCards, playerId);
   const events: EngineEvent[] = [];
   for (const [index, movedCard] of movedCards.entries()) {
     const fromIndex =
@@ -411,7 +406,7 @@ const executeLifeToHandMove = (
       zone: "hand" as const,
       playerId,
       slot: "hand" as const,
-      index,
+      index: player.hand.length + index,
     };
     events.push({
       id: `event:${String(state.seq)}:${String(index * 2 + 1)}:cardMoved` as EngineEvent["id"],

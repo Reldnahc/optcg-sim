@@ -334,6 +334,7 @@ test("moveCards top life to hand resolves without revealing hidden card identity
   const source = must(p1State.hand[0], "source");
   const topLife = must(p1State.life[0], "top life").card;
   const secondLife = must(p1State.life[1], "second life").card;
+  const originalHandLength = p1State.hand.length;
   const definition = setupMoveCardsDefinition(
     state,
     source,
@@ -364,7 +365,7 @@ test("moveCards top life to hand resolves without revealing hidden card identity
   assert.equal(result.errors, undefined);
   assert.equal(player.life.length, p1State.life.length - 1);
   assert.equal(
-    must(player.hand[0], "new hand top").instanceId,
+    must(player.hand.at(-1), "new hand card").instanceId,
     topLife.instanceId,
   );
   assert.equal(
@@ -382,14 +383,14 @@ test("moveCards top life to hand resolves without revealing hidden card identity
   );
   assert.deepEqual(result.events[0]?.payload, {
     from: { zone: "life", playerId: p1, slot: "life", index: 0 },
-    to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+    to: { zone: "hand", playerId: p1, slot: "hand", index: originalHandLength },
     reason: "moveCards",
   });
   assert.deepEqual(result.events[1]?.payload, {
     instanceId: topLife.instanceId,
     cardId: topLife.cardId,
     from: { zone: "life", playerId: p1, slot: "life", index: 0 },
-    to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+    to: { zone: "hand", playerId: p1, slot: "hand", index: originalHandLength },
     reason: "moveCards",
   });
 });
@@ -429,7 +430,7 @@ test("moveCards bottom life to hand moves the bottom Life card without public id
   assert.equal(result.errors, undefined);
   assert.equal(player.life.length, p1State.life.length - 1);
   assert.equal(
-    must(player.hand[0], "new hand top").instanceId,
+    must(player.hand.at(-1), "new hand card").instanceId,
     bottomLife.instanceId,
   );
   assert.equal(

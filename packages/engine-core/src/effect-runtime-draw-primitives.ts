@@ -12,7 +12,11 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { getOpponentId, reindexZoneCards } from "./action-state.js";
+import {
+  addCardsToHand,
+  getOpponentId,
+  reindexZoneCards,
+} from "./action-state.js";
 
 export type DrawExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -113,7 +117,7 @@ const executeDrawEffect = (
       },
     };
     nextDeck = remaining;
-    nextHand = [...nextHand, moved];
+    nextHand = addCardsToHand(nextHand, [moved], playerId);
 
     appendEvent(state, events, "cardDrawn", { playerId });
     appendEvent(
@@ -148,7 +152,7 @@ const executeDrawEffect = (
       [playerId]: {
         ...player,
         deck: reindexZoneCards(nextDeck, "deck", playerId, "deck"),
-        hand: reindexZoneCards(nextHand, "hand", playerId, "hand"),
+        hand: nextHand,
       },
     },
     eventJournal: [...state.eventJournal, ...events],

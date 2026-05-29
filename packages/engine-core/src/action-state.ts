@@ -101,6 +101,13 @@ export const reindexZoneCards = (
     zone: { zone, playerId, slot, index },
   }));
 
+export const addCardsToHand = (
+  hand: readonly CardInstance[],
+  cards: readonly CardInstance[],
+  playerId: PlayerId,
+): CardInstance[] =>
+  reindexZoneCards([...hand, ...cards], "hand", playerId, "hand");
+
 export const reorderDeckSlice = (params: {
   readonly deck: readonly CardInstance[];
   readonly destination: "top" | "bottom";

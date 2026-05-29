@@ -22,6 +22,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  addCardsToHand,
   cardMatchesHandSelectionFilter,
   getOpponentId,
   reindexZoneCards,
@@ -512,11 +513,10 @@ const applyTrashToHandMoveSelectedSegment = (params: {
     params.entry.controllerId,
     "trash",
   );
-  const nextHand = reindexZoneCards(
-    [...player.hand, ...movedCards],
-    "hand",
+  const nextHand = addCardsToHand(
+    player.hand,
+    movedCards,
     params.entry.controllerId,
-    "hand",
   );
   const eventBaseState: GameState = {
     ...params.state,
@@ -627,11 +627,10 @@ const applyBounceToOwnerHandSequenceSegment = (params: {
       target.playerId,
       "character",
     );
-    const nextHand = reindexZoneCards(
-      [...player.hand, { ...card, attachedDon: [] }],
-      "hand",
+    const nextHand = addCardsToHand(
+      player.hand,
+      [{ ...card, attachedDon: [] }],
       target.playerId,
-      "hand",
     );
     const nextCostArea = player.costArea.map((don) =>
       attachedDonIds.has(don.instanceId)

@@ -26,7 +26,11 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reifyCardRef, reindexZoneCards } from "./action-state.js";
+import {
+  addCardsToHand,
+  reifyCardRef,
+  reindexZoneCards,
+} from "./action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   expireBattleDurationStateForCleanup,
@@ -564,12 +568,7 @@ const processLeaderDamagePoint = ({
     };
     const nextHand = attackerHasBanish
       ? damaged.hand
-      : reindexZoneCards(
-          [movedLifeCard, ...damaged.hand],
-          "hand",
-          targetPlayerId,
-          "hand",
-        );
+      : addCardsToHand(damaged.hand, [movedLifeCard], targetPlayerId);
     const nextTrash = attackerHasBanish
       ? reindexZoneCards(
           [movedLifeCard, ...damaged.trash],
@@ -621,7 +620,7 @@ const processLeaderDamagePoint = ({
           zone: attackerHasBanish ? "trash" : "hand",
           playerId: targetPlayerId,
           slot: attackerHasBanish ? "trash" : "hand",
-          index: 0,
+          index: attackerHasBanish ? 0 : nextHand.length - 1,
         },
         reason: "battleDamage",
       },
@@ -640,7 +639,9 @@ const processLeaderDamagePoint = ({
           slot: "life",
           index: 0,
         },
-        to: movedLifeCard.zone,
+        to: attackerHasBanish
+          ? movedLifeCard.zone
+          : (nextHand[nextHand.length - 1]?.zone ?? movedLifeCard.zone),
         reason: "battleDamage",
       },
       { type: "private", playerId: targetPlayerId },

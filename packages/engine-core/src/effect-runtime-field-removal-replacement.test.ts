@@ -202,7 +202,7 @@ test("accepted opponent field-removal replacement moves top life to hand instead
     true,
   );
   assert.equal(
-    must(nextP2.hand[0], "new hand top").instanceId,
+    must(nextP2.hand.at(-1), "new hand card").instanceId,
     topLife.instanceId,
   );
   assert.equal(nextP2.life.length, p2State.life.length - 1);
