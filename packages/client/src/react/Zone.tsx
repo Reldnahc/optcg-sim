@@ -116,16 +116,11 @@ export const Zone = ({
     "--card-row-overlap": `${rowLayout.overlap.toFixed(2)}px`,
   } as CSSProperties & Record<"--card-row-overlap", string>;
   const lifeCardStyle = (index: number, count: number): CSSProperties => {
-    const splitStack = count > 5;
-    const rowIndex = splitStack ? index % 5 : index;
-    const xOffset = splitStack ? (index < 5 ? "-9%" : "9%") : "0%";
-    const yStep = splitStack ? 9 : 12;
+    const yStep = count > 5 ? 6 : 12;
     return {
-      "--life-card-x-offset": xOffset,
-      "--life-card-y-offset": `${String(rowIndex * yStep)}%`,
+      "--life-card-y-offset": `${String(index * yStep)}%`,
       zIndex: count - index,
-    } as CSSProperties &
-      Record<"--life-card-x-offset" | "--life-card-y-offset", string>;
+    } as CSSProperties & Record<"--life-card-y-offset", string>;
   };
   const displayedStackCount = stackCount ?? cards.length;
 

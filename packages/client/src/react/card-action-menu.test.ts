@@ -590,17 +590,11 @@ describe("card action menu", () => {
     assert.equal(markup.includes(">Hidden card<"), false);
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 4);
     assert.equal((markup.match(/hidden-life-opponent-/gu) ?? []).length, 5);
-    assert.match(
-      markup,
-      /--life-card-x-offset:0%;--life-card-y-offset:0%;z-index:4/u,
-    );
-    assert.match(
-      markup,
-      /--life-card-x-offset:0%;--life-card-y-offset:36%;z-index:1/u,
-    );
+    assert.match(markup, /--life-card-y-offset:0%;z-index:4/u);
+    assert.match(markup, /--life-card-y-offset:36%;z-index:1/u);
   });
 
-  test("life zones compact and split horizontally when rendering six or more life", () => {
+  test("life zones compact vertically without shifting sideways above five life", () => {
     const layout = board();
     layout.self.lifeCount = 10;
     layout.self.lifeCards = hiddenLifeCards(10, "hidden-life-self");
@@ -617,14 +611,9 @@ describe("card action menu", () => {
     );
 
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 10);
-    assert.match(
-      markup,
-      /--life-card-x-offset:-9%;--life-card-y-offset:0%;z-index:10/u,
-    );
-    assert.match(
-      markup,
-      /--life-card-x-offset:9%;--life-card-y-offset:0%;z-index:5/u,
-    );
-    assert.match(markup, /--life-card-y-offset:36%;z-index:1/u);
+    assert.match(markup, /--life-card-y-offset:0%;z-index:10/u);
+    assert.match(markup, /--life-card-y-offset:30%;z-index:5/u);
+    assert.match(markup, /--life-card-y-offset:54%;z-index:1/u);
+    assert.equal(markup.includes("--life-card-x-offset"), false);
   });
 });
