@@ -42,6 +42,7 @@ import {
 import {
   applyCounterStepDecisionResponse,
   applyUseCounter,
+  createCounterStepPassDecision,
   getCounterStepDecisionLegalActions,
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
@@ -714,6 +715,36 @@ export const continueAttackTimingBattleIfReady = (
   const battle = state.battle;
   if (battle === undefined) {
     return null;
+  }
+  if (battle.step === "counter") {
+    const decision = createCounterStepPassDecision(state, {
+      requirePotentialCounterActions: false,
+    });
+    if (decision === null) {
+      return withOriginalManifestResult(
+        resolveSupportedVanillaBattle(state),
+        state,
+      );
+    }
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: decision.id,
+        decisionType: decision.type,
+        playerId: decision.playerId,
+      },
+      { type: "public" },
+    );
+    const counterState: GameState = {
+      ...state,
+      pendingDecision: decision,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    assertGameStateInvariants(counterState);
+    return toEngineResult(counterState, events);
   }
   if (battle.step === "block" && battle.blocker !== undefined) {
     return withOriginalManifestResult(

@@ -901,7 +901,9 @@ const resolveCounterCardUse = (params: {
   if (trashedCard === undefined) {
     return illegalAction(state, "Counter card movement failed.");
   }
-  if (state.cardManifest.cards[handCard.cardId]?.category === "event") {
+  const isCounterEvent =
+    state.cardManifest.cards[handCard.cardId]?.category === "event";
+  if (isCounterEvent) {
     appendEvent(
       state,
       events,
@@ -927,9 +929,7 @@ const resolveCounterCardUse = (params: {
       ((battle as EngineInternalBattleState).counterPower ?? 0) + counterValue;
   }
   const counterEventPowerRecord =
-    applyCounterPower &&
-    !usesBattleCounterPower &&
-    state.cardManifest.cards[handCard.cardId]?.category === "event"
+    applyCounterPower && !usesBattleCounterPower && isCounterEvent
       ? createCounterEventPowerRecord(
           state,
           decisionPlayerId,
@@ -963,8 +963,9 @@ const resolveCounterCardUse = (params: {
         : [...state.continuousEffects, counterEventPowerRecord],
     eventJournal: [...state.eventJournal, ...events],
   };
-  if (pendingDecision !== undefined && trailingSequence === undefined) {
-    nextState.pendingDecision = pendingDecision;
+  const resumePendingDecision = isCounterEvent ? undefined : pendingDecision;
+  if (resumePendingDecision !== undefined && trailingSequence === undefined) {
+    nextState.pendingDecision = resumePendingDecision;
   } else {
     delete nextState.pendingDecision;
   }
@@ -974,7 +975,7 @@ const resolveCounterCardUse = (params: {
       decisionPlayerId,
       trashedCard,
       trailingSequence,
-      pendingDecision,
+      resumePendingDecision,
     );
     if (trailing === null) {
       return illegalAction(state, "Unsupported Counter Event trailing effect.");

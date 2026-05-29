@@ -316,7 +316,7 @@ test("opponent activation reaction can reveal Life and applies dynamic power fro
   );
 });
 
-test("opponent activation reaction queues after the opponent Counter Event activation", () => {
+test("opponent activation reaction queues immediately after the opponent Counter Event activation", () => {
   const state = setupAttackState();
   state.eventJournal = [];
   const p1State = must(state.players[p1], "p1");
@@ -339,22 +339,26 @@ test("opponent activation reaction queues after the opponent Counter Event activ
     target: must(opened.state.battle, "battle").currentTarget,
   });
   assert.equal(countered.errors, undefined);
-  const counterPass = must(countered.state.pendingDecision, "counter pass");
-  assert.equal(counterPass.type, "selectCards");
-
-  const reacted = applyAction(countered.state, {
-    type: "respondToDecision",
-    decisionId: counterPass.id,
-    response: { type: "cards", cards: [] },
-  });
-
-  assert.equal(reacted.errors, undefined);
   const reactionDecision = must(
-    reacted.state.pendingDecision,
+    countered.state.pendingDecision,
     "reaction reveal",
   );
   assert.equal(reactionDecision.type, "chooseQuantity");
   assert.equal(reactionDecision.playerId, p1);
+
+  const resumedCounter = applyAction(countered.state, {
+    type: "respondToDecision",
+    decisionId: reactionDecision.id,
+    response: { type: "chooseQuantity", quantity: 0 },
+  });
+
+  assert.equal(resumedCounter.errors, undefined);
+  const counterPass = must(
+    resumedCounter.state.pendingDecision,
+    "counter pass",
+  );
+  assert.equal(counterPass.type, "selectCards");
+  assert.equal(counterPass.playerId, p2);
 });
 
 test("opponent activation reaction may choose zero revealed Life cards", () => {

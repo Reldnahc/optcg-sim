@@ -713,7 +713,7 @@ const applyRespondToDecision = (
   }
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
-    return battleResult;
+    return continueRuntimeAndAttackTimingAfterDecision(state, battleResult);
   }
   const lifeTriggerResult = applyLifeTriggerDecisionResponse(state, action);
   if (lifeTriggerResult !== null) {
@@ -852,7 +852,10 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
     return applyRespondToDecision(state, action);
   }
   if (action.type === "useCounter") {
-    return applyUseCounter(state, action);
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      applyUseCounter(state, action),
+    );
   }
   if (state.pendingDecision !== undefined) {
     return illegalAction(

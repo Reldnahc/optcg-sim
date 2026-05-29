@@ -559,7 +559,13 @@ test("supported Counter Event appears in defender legal actions and resolves to 
   assert.equal(battleCounterPower(used.state.battle), 2000);
   assert.deepEqual(
     used.events.map((event) => event.type),
-    ["counterUsed", "cardMoved", "cardTrashed", "effectResolved"],
+    [
+      "counterUsed",
+      "cardMoved",
+      "cardTrashed",
+      "effectResolved",
+      "decisionCreated",
+    ],
   );
   const replay = applyAction(structuredClone(opened.state), {
     type: "useCounter",
@@ -1013,6 +1019,7 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
       "cardMoved",
       "cardTrashed",
       "effectResolved",
+      "decisionCreated",
     ],
   );
   assert.equal(
