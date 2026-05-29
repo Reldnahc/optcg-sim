@@ -64,6 +64,7 @@ const setupSequenceDefinition = (
   const supportCard = resolvedCard({
     cardId: source.cardId,
     category: "character",
+    power: 5000,
     support: {
       status: "implemented-dsl",
       effectDefinitionId,
@@ -192,7 +193,7 @@ const returnTwoDonDrawThenRestTargetSequence = (): Extract<
                       visibility: "public",
                       filter: {
                         categories: ["character"],
-                        power: { max: 5000 },
+                        currentPower: { max: 5000 },
                       },
                     },
                   },
@@ -244,7 +245,18 @@ const payReturnDonWithFirstCostDon = (state: GameState): EngineResult => {
 test("returning two DON resumes dependent draw and target-rest body", () => {
   const state = sequenceQueueState(returnTwoDonDrawThenRestTargetSequence());
   placeActiveDon(state, 2);
+  const beforeP1 = must(state.players[p1], "before p1");
   const p2State = must(state.players[p2], "p2");
+  state.cardManifest.cards[beforeP1.leader.cardId] = resolvedCard({
+    cardId: beforeP1.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
   const target = withCardInZone({
     state,
     playerId: p2,
@@ -257,7 +269,6 @@ test("returning two DON resumes dependent draw and target-rest body", () => {
     category: "character",
     power: 5000,
   });
-  const beforeP1 = must(state.players[p1], "before p1");
   const beforeDeckCount = beforeP1.deck.length;
 
   const returnDonPaused = processEffectRuntime(state);

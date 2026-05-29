@@ -12,6 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { getOpponentId, toCardRef } from "./action-state.js";
+import { computeView } from "./compute-view.js";
 
 export type TargetCandidateResolutionErrorReason =
   | "invalidTargetCount"
@@ -36,6 +37,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "colorsAny",
   "cost",
+  "currentPower",
   "names",
   "power",
   "state",
@@ -98,7 +100,7 @@ const hasOnlySupportedFilterKeys = (filter: CardFilter): boolean =>
   );
 
 const hasSupportedNumericFilter = (
-  filter: CardFilter["cost"] | CardFilter["power"],
+  filter: CardFilter["cost"] | CardFilter["power"] | CardFilter["currentPower"],
 ): boolean => {
   if (filter === undefined) {
     return true;
@@ -131,7 +133,8 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
       filter.state === "active" ||
       filter.state === "rested") &&
     hasSupportedNumericFilter(filter.cost) &&
-    hasSupportedNumericFilter(filter.power));
+    hasSupportedNumericFilter(filter.power) &&
+    hasSupportedNumericFilter(filter.currentPower));
 
 const numericFilterMatches = (
   value: number | undefined,
@@ -161,6 +164,7 @@ const numericFilterMatches = (
 };
 
 const cardMatchesFilter = (
+  state: GameState,
   instance: CardInstance,
   card: ResolvedCard,
   filter: CardFilter | undefined,
@@ -194,9 +198,21 @@ const cardMatchesFilter = (
     return false;
   }
 
-  return (
-    numericFilterMatches(card.cost, filter.cost) &&
-    numericFilterMatches(card.power, filter.power)
+  if (!numericFilterMatches(card.cost, filter.cost)) {
+    return false;
+  }
+  if (!numericFilterMatches(card.power, filter.power)) {
+    return false;
+  }
+  if (filter.currentPower === undefined) {
+    return true;
+  }
+  return numericFilterMatches(
+    computeView(state, {
+      supportStatusPolicy: "ignore",
+      unsupportedCombatKeywordPolicy: "ignore",
+    }).cards[instance.instanceId]?.currentPower,
+    filter.currentPower,
   );
 };
 
@@ -272,7 +288,7 @@ export const resolvePublicTargetCandidates = (
 
     if (
       metadata === undefined ||
-      cardMatchesFilter(card, metadata, request.filter)
+      cardMatchesFilter(state, card, metadata, request.filter)
     ) {
       candidates.push({
         card: toCardRef(card, targetPlayerId),

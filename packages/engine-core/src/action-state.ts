@@ -155,7 +155,11 @@ const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
 const isSupportedNumericFilter = (
-  value: CardFilter["cost"] | CardFilter["power"] | undefined,
+  value:
+    | CardFilter["cost"]
+    | CardFilter["power"]
+    | CardFilter["currentPower"]
+    | undefined,
 ): boolean => {
   if (value === undefined) {
     return true;
@@ -277,6 +281,9 @@ const cardMatchesBaseFilter = (
       if (filter.power.max !== undefined && power > filter.power.max)
         return false;
     }
+  }
+  if (filter.currentPower !== undefined) {
+    return false;
   }
   return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
 };

@@ -67,7 +67,7 @@ describe("card filter predicate parser", () => {
     });
   });
 
-  it("parses power thresholds as the same reusable power predicate family", () => {
+  it("parses power thresholds as printed/base power predicates by default", () => {
     expect(
       parseCardFilterPredicates({
         text: "Characters with 3000 power or less",
@@ -99,6 +99,49 @@ describe("card filter predicate parser", () => {
         "filter:category:character",
         "filter:power",
         "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
+  it("can parse field-target power thresholds as current-power predicates", () => {
+    expect(
+      parseCardFilterPredicates(
+        {
+          text: "Characters with 3000 power or less",
+        },
+        { powerSemantics: "current" },
+      ),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        currentPower: { max: 3000 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses base power thresholds as printed/base power predicates", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters with 3000 base power or less",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        power: { max: 3000 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:lte",
         "condition:threshold:positiveInteger",
       ],
       rest: "",

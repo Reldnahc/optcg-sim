@@ -17,7 +17,7 @@ describe("K.O. instruction parser", () => {
           player: "opponent",
           filter: {
             categories: ["character"],
-            power: { max: 0 },
+            currentPower: { max: 0 },
           },
         },
       },
@@ -27,7 +27,7 @@ describe("K.O. instruction parser", () => {
         "player:opponent",
         "zone:characterArea",
         "filter:category:character",
-        "filter:power",
+        "filter:currentPower",
         "condition:comparator:lte",
         "condition:threshold:nonNegativeInteger",
       ],

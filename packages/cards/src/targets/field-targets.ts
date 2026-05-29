@@ -63,7 +63,10 @@ export function parseOpponentFieldTarget(
   const predicates =
     targetText === undefined
       ? undefined
-      : parseCardFilterPredicates({ text: targetText });
+      : parseCardFilterPredicates(
+          { text: targetText },
+          { powerSemantics: "current" },
+        );
   const category = predicates?.filter.categories?.[0];
   if (predicates === undefined || category === undefined) {
     return undefined;

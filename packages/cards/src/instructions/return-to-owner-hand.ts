@@ -20,7 +20,10 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: cardinality.rest });
+  const predicates = parseCardFilterPredicates(
+    { text: cardinality.rest },
+    { powerSemantics: "current" },
+  );
   if (predicates === undefined || predicates.rest.length > 0) {
     return undefined;
   }

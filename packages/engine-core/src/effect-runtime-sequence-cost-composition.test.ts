@@ -106,6 +106,7 @@ const setupSequenceDefinition = (
   const supportCard = resolvedCard({
     cardId: source.cardId,
     category: "character",
+    power: 5000,
     support: {
       status: "implemented-dsl",
       effectDefinitionId,
@@ -467,7 +468,7 @@ const conditionalReturnDonLeaderOrCharacterPowerSequence = (): Extract<
                 visibility: "public",
                 filter: {
                   categories: ["character"],
-                  power: { max: 3000 },
+                  currentPower: { max: 3000 },
                 },
               },
             },
@@ -799,6 +800,11 @@ test("conditional return-DON sequence resolves choose-from-zones continuous targ
     power: 5000,
   });
   const p2State = must(state.players[p2], "p2");
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
   const koTarget = withCardInZone({
     state,
     playerId: p2,
@@ -846,7 +852,7 @@ test("conditional return-DON sequence resolves choose-from-zones continuous targ
   assert.equal(koTargetDecision.type, "selectTargets");
   assert.deepEqual(koTargetDecision.request.filter, {
     categories: ["character"],
-    power: { max: 3000 },
+    currentPower: { max: 3000 },
   });
   assert.equal(powerRecord.modifier.layer, "powerAdd");
   assert.equal(powerRecord.modifier.target.type, "exactCard");

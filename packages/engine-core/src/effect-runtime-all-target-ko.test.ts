@@ -147,7 +147,7 @@ const reduceOpponentPowerThenKoZeroPowerSequence = (): Extract<
           type: "all",
           zone: "characterArea",
           player: "opponent",
-          filter: { categories: ["character"], power: { max: 0 } },
+          filter: { categories: ["character"], currentPower: { max: 0 } },
         },
       },
     },

@@ -23,7 +23,10 @@ export function parseAllFieldTarget(
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: ownership.rest });
+  const predicates = parseCardFilterPredicates(
+    { text: ownership.rest },
+    { powerSemantics: "current" },
+  );
   if (predicates === undefined) {
     return undefined;
   }

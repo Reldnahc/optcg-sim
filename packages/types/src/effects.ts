@@ -309,6 +309,9 @@ export interface CardFilter {
   attributesAll?: Attribute[];
   cost?: { op: Comparator; value: number } | { min?: number; max?: number };
   power?: { op: Comparator; value: number } | { min?: number; max?: number };
+  currentPower?:
+    | { op: Comparator; value: number }
+    | { min?: number; max?: number };
   counter?: { op: Comparator; value: number } | { min?: number; max?: number };
   hasKeywords?: Keyword[];
   lacksKeywords?: Keyword[];

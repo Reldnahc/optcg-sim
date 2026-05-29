@@ -17,6 +17,7 @@ import {
   resolvedCard,
   toCardId,
 } from "./action-test-fixtures.js";
+import { cardRef } from "./battle-actions-test-fixtures.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
 const publicCharacterRequest = (
@@ -135,6 +136,90 @@ describe("resolvePublicTargetCandidates", () => {
       ok: true,
       candidates: [{ card: refs[1], visibility: { type: "public" } }],
     });
+  });
+
+  test("distinguishes current power from printed/base power filters", () => {
+    const state = createActiveState();
+    const printedLow = toCardId("printed-low");
+    const reducedHigh = toCardId("reduced-high");
+    addManifestCard(state, {
+      cardId: printedLow,
+      category: "character",
+      cost: 2,
+      power: 3000,
+    });
+    addManifestCard(state, {
+      cardId: reducedHigh,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    const player = must(state.players[p1], "p1");
+    addManifestCard(state, {
+      cardId: player.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    const opponent = must(state.players[p2], "p2");
+    addManifestCard(state, {
+      cardId: opponent.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p1, [printedLow, reducedHigh]);
+    const highCharacter = must(player.characters[1], "reduced high character");
+    state.continuousEffects.push({
+      id: "current-power-targeting-reduction",
+      source: cardRef(player.leader, p1),
+      sourceSnapshot: {
+        instanceId: player.leader.instanceId,
+        cardId: player.leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: player.leader.zone,
+        category: "leader",
+        colors: ["yellow"],
+        power: 5000,
+        keywords: [],
+      },
+      controller: p1,
+      modifier: {
+        layer: "powerAdd",
+        target: {
+          type: "exactCard",
+          card: cardRef(highCharacter, p1),
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "test:current-power-targeting",
+          },
+          createdAtStateSeq: state.seq,
+        },
+        operation: { type: "addPower", value: -3000 },
+      },
+      duration: { type: "thisTurn" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    });
+
+    const currentPowerResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: { categories: ["character"], currentPower: { max: 3000 } },
+      }),
+      { sourceControllerId: p1 },
+    );
+    const basePowerResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: { categories: ["character"], power: { max: 3000 } },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(currentPowerResult)).toEqual([refs[0], refs[1]]);
+    expect(targetCards(basePowerResult)).toEqual([refs[0]]);
   });
 
   test("matches public target candidates through reusable metadata and state filters", () => {

@@ -523,7 +523,7 @@ describe("card effect event parser", () => {
                               zone: "characterArea",
                               filter: {
                                 categories: ["character"],
-                                power: { max: 3000 },
+                                currentPower: { max: 3000 },
                               },
                             },
                           },
@@ -551,7 +551,7 @@ describe("card effect event parser", () => {
         "target:yourLeaderOrCharacters",
         "duration:thisTurn",
         "instruction:ko",
-        "filter:power",
+        "filter:currentPower",
         "condition:comparator:lte",
       ]),
     );
@@ -604,7 +604,7 @@ describe("card effect event parser", () => {
                           filter: {
                             categories: ["character"],
                             state: "rested",
-                            power: { max: 6000 },
+                            currentPower: { max: 6000 },
                           },
                         },
                       },
@@ -630,7 +630,7 @@ describe("card effect event parser", () => {
         "cardinality:upTo",
         "target:opponentCharacters",
         "filter:state:rested",
-        "filter:power",
+        "filter:currentPower",
         "duration:opponentNextRefreshPhase",
       ]),
     );
@@ -686,7 +686,7 @@ describe("card effect event parser", () => {
                               visibility: "public",
                               filter: {
                                 categories: ["character"],
-                                power: { max: 5000 },
+                                currentPower: { max: 5000 },
                               },
                             },
                           },
@@ -713,7 +713,7 @@ describe("card effect event parser", () => {
         "instruction:rest",
         "cardinality:upTo",
         "target:opponentCharacters",
-        "filter:power",
+        "filter:currentPower",
         "condition:comparator:lte",
       ]),
     );

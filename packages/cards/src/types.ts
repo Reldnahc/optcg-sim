@@ -124,6 +124,7 @@ export type PrimitiveEvidence =
   | "filter:type"
   | "filter:cost"
   | "filter:power"
+  | "filter:currentPower"
   | "filter:differentNames"
   | "filter:category:stage"
   | "filter:category:character"

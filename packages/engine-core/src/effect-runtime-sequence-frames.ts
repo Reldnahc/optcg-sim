@@ -852,7 +852,7 @@ const applyAllTargetTrashSequenceSegment = (params: {
 
 const numericFilterMatches = (
   value: number | undefined,
-  filter: CardFilter["power"],
+  filter: CardFilter["power"] | CardFilter["currentPower"],
 ): boolean => {
   if (filter === undefined) return true;
   if (value === undefined) return false;
@@ -869,9 +869,9 @@ const numericFilterMatches = (
   return true;
 };
 
-const withoutPowerFilter = (filter: CardFilter): CardFilter => {
-  const { power, ...rest } = filter;
-  void power;
+const withoutCurrentPowerFilter = (filter: CardFilter): CardFilter => {
+  const { currentPower, ...rest } = filter;
+  void currentPower;
   return rest;
 };
 
@@ -889,12 +889,12 @@ const cardMatchesAllKoFilter = (
       state,
       playerId,
       card,
-      withoutPowerFilter(filter),
+      withoutCurrentPowerFilter(filter),
     )
   ) {
     return false;
   }
-  if (filter.power === undefined) {
+  if (filter.currentPower === undefined) {
     return true;
   }
   const view = computeView(state, {
@@ -903,7 +903,7 @@ const cardMatchesAllKoFilter = (
   });
   return numericFilterMatches(
     view.cards[card.instanceId]?.currentPower,
-    filter.power,
+    filter.currentPower,
   );
 };
 

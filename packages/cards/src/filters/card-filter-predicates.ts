@@ -11,6 +11,7 @@ export interface CardFilterPredicateParseResult {
 type PredicateParser = (
   text: string,
   current: CardFilter,
+  options: CardFilterPredicateParseOptions,
 ) =>
   | {
       readonly filter: CardFilter;
@@ -18,6 +19,10 @@ type PredicateParser = (
       readonly rest: string;
     }
   | undefined;
+
+export interface CardFilterPredicateParseOptions {
+  readonly powerSemantics?: "printed" | "current";
+}
 
 const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
@@ -39,8 +44,9 @@ const predicateParsers: readonly PredicateParser[] = [
 
 export function parseCardFilterPredicates(
   input: ParseInput,
+  options: CardFilterPredicateParseOptions = {},
 ): CardFilterPredicateParseResult | undefined {
-  const first = parseConjunctiveCardFilterPredicates(input.text);
+  const first = parseConjunctiveCardFilterPredicates(input.text, options);
   if (first === undefined) {
     return undefined;
   }
@@ -56,7 +62,7 @@ export function parseCardFilterPredicates(
       break;
     }
 
-    const right = parseConjunctiveCardFilterPredicates(rightText);
+    const right = parseConjunctiveCardFilterPredicates(rightText, options);
     if (right === undefined) {
       break;
     }
@@ -79,6 +85,7 @@ export function parseCardFilterPredicates(
 
 function parseConjunctiveCardFilterPredicates(
   text: string,
+  options: CardFilterPredicateParseOptions,
 ): CardFilterPredicateParseResult | undefined {
   let rest = text.trim();
   let filter: CardFilter = {};
@@ -86,7 +93,7 @@ function parseConjunctiveCardFilterPredicates(
   let parsedAny = false;
 
   while (rest.length > 0) {
-    const parsed = parseNextPredicate(rest, filter);
+    const parsed = parseNextPredicate(rest, filter, options);
 
     if (parsed === undefined) {
       break;
@@ -101,9 +108,13 @@ function parseConjunctiveCardFilterPredicates(
   return parsedAny ? { filter, evidence, rest } : undefined;
 }
 
-function parseNextPredicate(text: string, filter: CardFilter) {
+function parseNextPredicate(
+  text: string,
+  filter: CardFilter,
+  options: CardFilterPredicateParseOptions,
+) {
   for (const parser of predicateParsers) {
-    const parsed = parser(text, filter);
+    const parsed = parser(text, filter, options);
     if (parsed !== undefined) {
       return parsed;
     }
@@ -115,7 +126,7 @@ function parseNextPredicate(text: string, filter: CardFilter) {
   }
 
   for (const parser of predicateParsers) {
-    const parsed = parser(normalized, filter);
+    const parsed = parser(normalized, filter, options);
     if (parsed !== undefined) {
       return parsed;
     }
@@ -335,16 +346,24 @@ function parseRestedCharacterPredicate(
 function parsePowerPredicate(
   text: string,
   current: CardFilter,
+  options: CardFilterPredicateParseOptions,
 ): ReturnType<PredicateParser> {
   const thresholdMatch =
-    /^(?<value>0|[1-9]\d*) (?:base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
+    /^(?<value>0|[1-9]\d*) (?<base>base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
       text,
     );
   const thresholdValueText = thresholdMatch?.groups?.["value"];
+  const isBasePower = thresholdMatch?.groups?.["base"] !== undefined;
   const direction = thresholdMatch?.groups?.["direction"];
   if (thresholdValueText !== undefined && direction !== undefined) {
     const op: Comparator =
       direction.toLowerCase() === "or more" ? "gte" : "lte";
+    const powerFilter =
+      op === "gte"
+        ? { min: Number.parseInt(thresholdValueText, 10) }
+        : { max: Number.parseInt(thresholdValueText, 10) };
+    const useCurrentPower =
+      !isBasePower && options.powerSemantics === "current";
     const thresholdEvidence: PrimitiveEvidence =
       thresholdValueText === "0"
         ? "condition:threshold:nonNegativeInteger"
@@ -352,13 +371,12 @@ function parsePowerPredicate(
     return {
       filter: {
         ...current,
-        power:
-          op === "gte"
-            ? { min: Number.parseInt(thresholdValueText, 10) }
-            : { max: Number.parseInt(thresholdValueText, 10) },
+        ...(useCurrentPower
+          ? { currentPower: powerFilter }
+          : { power: powerFilter }),
       },
       evidence: [
-        "filter:power",
+        useCurrentPower ? "filter:currentPower" : "filter:power",
         op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
         thresholdEvidence,
       ],
@@ -366,10 +384,10 @@ function parsePowerPredicate(
     };
   }
 
-  const match = /^(?<value>0|[1-9]\d*) (?:base )?power\b\s*(?<rest>.*)$/i.exec(
-    text,
-  );
+  const match =
+    /^(?<value>0|[1-9]\d*) (?<base>base )?power\b\s*(?<rest>.*)$/i.exec(text);
   const valueText = match?.groups?.["value"];
+  const isExactBasePower = match?.groups?.["base"] !== undefined;
   const restText = match?.groups?.["rest"];
   if (valueText === undefined) {
     return undefined;
@@ -378,13 +396,31 @@ function parsePowerPredicate(
     valueText === "0"
       ? "condition:threshold:nonNegativeInteger"
       : "condition:threshold:positiveInteger";
+  const useCurrentPower =
+    !isExactBasePower && options.powerSemantics === "current";
 
   return {
     filter: {
       ...current,
-      power: { op: "eq", value: Number.parseInt(valueText, 10) },
+      ...(useCurrentPower
+        ? {
+            currentPower: {
+              op: "eq",
+              value: Number.parseInt(valueText, 10),
+            },
+          }
+        : {
+            power: {
+              op: "eq",
+              value: Number.parseInt(valueText, 10),
+            },
+          }),
     },
-    evidence: ["filter:power", "condition:comparator:eq", thresholdEvidence],
+    evidence: [
+      useCurrentPower ? "filter:currentPower" : "filter:power",
+      "condition:comparator:eq",
+      thresholdEvidence,
+    ],
     rest: restText ?? "",
   };
 }
