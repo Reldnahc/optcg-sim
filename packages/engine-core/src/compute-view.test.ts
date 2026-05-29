@@ -447,13 +447,13 @@ const unsupportedContinuousEffectCases: Array<{
       }),
   },
   {
-    label: "keyword modifier",
+    label: "keyword modifier with unsupported target",
     createEffect: (state) =>
       continuousPowerEffectRecord(state, {
         id: "unsupported-keyword-add",
         modifier: {
           layer: "keywordAdd",
-          target: { type: "self" },
+          target: { type: "myLeader" },
           operation: { type: "addKeyword", keyword: "unblockable" },
         },
       }),
@@ -1033,7 +1033,7 @@ test("active defender printed blocker has canBlock false for stale battle refs",
   );
 });
 
-test("fails closed for unsupported unblockable keyword while blocker metadata is supported", () => {
+test("fails closed for unsupported Double Attack keyword while blocker metadata is supported", () => {
   const state = createState();
   const brokenManifest = {
     ...state.cardManifest,
@@ -1041,7 +1041,7 @@ test("fails closed for unsupported unblockable keyword while blocker metadata is
   };
   brokenManifest.cards[toCardId("leader-red")] = {
     ...must(brokenManifest.cards[toCardId("leader-red")], "leader-red"),
-    printedKeywords: ["unblockable"],
+    printedKeywords: ["doubleAttack"],
   };
   state.cardManifest = brokenManifest;
 

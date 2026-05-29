@@ -30,10 +30,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;
 };
 
-const unsupportedCombatKeywords = new Set<Keyword>([
-  "doubleAttack",
-  "unblockable",
-]);
+const unsupportedCombatKeywords = new Set<Keyword>(["doubleAttack"]);
 interface ComputeViewOptions {
   supportStatusPolicy?: "throw" | "ignore";
   unsupportedCombatKeywordPolicy?: "throw" | "ignore";
@@ -45,6 +42,7 @@ const supportedContinuousKeywordGrants = new Set<Keyword>([
   "rush",
   "rushCharacter",
   "doubleAttack",
+  "unblockable",
 ]);
 const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
   "categories",
@@ -554,6 +552,25 @@ const canAttackNow = (
   return true;
 };
 
+const findLeaderOrCharacter = (
+  state: GameState,
+  ref: Pick<CardRef, "instanceId" | "cardId" | "playerId">,
+): CardInstance | undefined => {
+  const player = state.players[ref.playerId];
+  if (player === undefined) return undefined;
+  if (
+    player.leader.instanceId === ref.instanceId &&
+    player.leader.cardId === ref.cardId
+  ) {
+    return player.leader;
+  }
+  return player.characters.find(
+    (character) =>
+      character.instanceId === ref.instanceId &&
+      character.cardId === ref.cardId,
+  );
+};
+
 const legalTargetsForAttacker = (
   state: GameState,
   attacker: CardInstance,
@@ -632,6 +649,15 @@ const canBlockNow = (
   if (battle === undefined || battle.step !== "block") return false;
   if (!isCardRefLive(state, battle.attacker)) return false;
   if (!isCardRefLive(state, battle.currentTarget)) return false;
+  const attacker = findLeaderOrCharacter(state, battle.attacker);
+  if (attacker === undefined) return false;
+  const attackerMetadata = resolveCombatMetadata(state, attacker);
+  const attackerKeywords = computedKeywordsForCard(
+    state,
+    attacker,
+    attackerMetadata,
+  );
+  if (attackerKeywords.includes("unblockable")) return false;
   const defenderId = battle.currentTarget.playerId;
   return card.controller === defenderId;
 };

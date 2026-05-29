@@ -231,6 +231,7 @@ const allowlistedKeywordGrantCases: Keyword[] = [
   "rush",
   "rushCharacter",
   "doubleAttack",
+  "unblockable",
 ];
 
 for (const keyword of allowlistedKeywordGrantCases) {
@@ -378,32 +379,44 @@ test("conditional blocker grant contributes to computed canBlock without printed
   );
 });
 
-test("unsupported conditional keyword grants fail closed without mutation or events", () => {
-  const unsupportedKeyword = createState();
-  const keywordP1 = must(unsupportedKeyword.players[p1], "keyword p1 state");
-  keywordP1.characters = [withCharacter(p1, 0)];
-  const keywordSource = must(keywordP1.characters[0], "keyword source");
-  addTrashMarker(unsupportedKeyword, p1);
-  unsupportedKeyword.continuousEffects = [
-    continuousKeywordEffectRecord(unsupportedKeyword, "unblockable", {
-      source: keywordSource,
-      id: "unsupported-unblockable-keyword-grant",
-      condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+test("unblockable attacker suppresses computed blocker eligibility", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.globalTurn = 3;
+  state.turn.turnPlayerId = p1;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p2State.characters = [withCharacter(p2, 0)];
+  const defender = must(p2State.characters[0], "defender character");
+  state.battle = {
+    attacker: battleRef(p1State.leader),
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
+    step: "block",
+    damageCount: 1,
+  };
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(state, "blocker", {
+      source: defender,
+    }),
+    continuousKeywordEffectRecord(state, "unblockable", {
+      source: p1State.leader,
+      id: "unblockable-attacker",
     }),
   ];
-  const unsupportedKeywordBefore = structuredClone(unsupportedKeyword);
-  const unsupportedKeywordHash = hashCanonicalStateValue(unsupportedKeyword);
 
-  assert.throws(
-    () => computeView(unsupportedKeyword),
-    /unsupported continuous/i,
-  );
-  assert.deepEqual(unsupportedKeyword, unsupportedKeywordBefore);
+  const view = computeView(state);
+
+  assert.equal(view.cards[defender.instanceId]?.canBlock, false);
   assert.equal(
-    hashCanonicalStateValue(unsupportedKeyword),
-    unsupportedKeywordHash,
+    view.cards[p1State.leader.instanceId]?.keywords.includes("unblockable"),
+    true,
   );
+});
 
+test("unsupported conditional keyword grant conditions fail closed without mutation or events", () => {
   const unsupportedCondition = createState();
   const conditionP1 = must(
     unsupportedCondition.players[p1],

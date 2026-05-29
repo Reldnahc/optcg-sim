@@ -572,7 +572,7 @@ test("derives keyword and protection continuous records from one reviewed perman
   assert.equal(second.source.instanceId, source.instanceId);
 });
 
-test("fails closed for unreviewed permanent metadata and unsupported keyword", () => {
+test("fails closed for unreviewed permanent metadata and unsupported keyword target", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
   const source = withCharacter(p1, toCardId("char-vanilla"), 0);
@@ -596,7 +596,7 @@ test("fails closed for unreviewed permanent metadata and unsupported keyword", (
   if (seq?.type === "sequence") {
     const first = seq.effects[0];
     if (first?.effect.type === "giveKeyword") {
-      first.effect.keyword = "unblockable";
+      first.effect.target = { type: "opponentLeader" };
     }
   }
   state.cardManifest.effectDefinitions = { "def:perm:bad": invalid };

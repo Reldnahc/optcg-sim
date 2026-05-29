@@ -84,6 +84,23 @@ export function parseOpponentFieldTarget(
 export function parseYourLeaderTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
+  const namedMatch = /^your \[(?<name>[^\]]+)\] Leader\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  const name = namedMatch?.groups?.["name"]?.trim();
+  if (name !== undefined && name.length > 0) {
+    return {
+      target: {
+        type: "all",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], names: [name] },
+      },
+      evidence: ["target:yourLeader", "filter:name", "filter:category:leader"],
+      rest: namedMatch?.groups?.["rest"]?.trim() ?? "",
+    };
+  }
+
   const match = /^your Leader\b\s*(?<rest>.*)$/i.exec(input.text);
   if (match === null) {
     return undefined;

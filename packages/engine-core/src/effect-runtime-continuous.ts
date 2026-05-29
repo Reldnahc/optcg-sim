@@ -459,6 +459,7 @@ const supportedDerivedKeywords = new Set<Keyword>([
   "rush",
   "rushCharacter",
   "doubleAttack",
+  "unblockable",
 ]);
 
 const unsupportedDerivedMessage = (reason: string): string =>

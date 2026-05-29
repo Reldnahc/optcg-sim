@@ -230,6 +230,53 @@ export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
 
 export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionParser =
   (input, context) => {
+    const leaderTarget = parseYourLeaderTarget(input);
+    if (leaderTarget?.target !== undefined) {
+      const leaderActionMatch = /^gains\s+(?<rest>.*)$/i.exec(
+        leaderTarget.rest,
+      );
+      const leaderKeywordText = leaderActionMatch?.groups?.["rest"];
+      if (leaderKeywordText === undefined) {
+        return undefined;
+      }
+      const keyword = parseKeyword({ text: leaderKeywordText });
+      if (keyword !== undefined) {
+        const explicitDuration =
+          keyword.rest.length === 0
+            ? undefined
+            : parseExplicitFieldEffectDuration({ text: keyword.rest });
+        if (keyword.rest.length > 0 && explicitDuration === undefined) {
+          return undefined;
+        }
+        if (
+          explicitDuration !== undefined &&
+          explicitDuration.rest.length > 0
+        ) {
+          return undefined;
+        }
+
+        return {
+          effect: {
+            type: "giveKeyword",
+            target: leaderTarget.target,
+            keyword: keyword.keyword,
+            duration:
+              explicitDuration?.duration ??
+              continuousDuration(context.condition),
+          },
+          evidence: [
+            "instruction:giveKeyword",
+            ...leaderTarget.evidence,
+            ...keyword.evidence,
+            ...(explicitDuration?.evidence ?? [
+              continuousDurationEvidence(context.condition),
+            ]),
+          ],
+          rest: "",
+        };
+      }
+    }
+
     const namedAndSelfMatch =
       /^All of your \[(?<name>[^\]]+)\] cards and this Character gain (?<keyword>\[[^\]]+\])\.?$/i.exec(
         input.text,

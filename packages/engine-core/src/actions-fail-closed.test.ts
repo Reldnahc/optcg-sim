@@ -30,7 +30,7 @@ test("illegal actions return errors and do not mutate input state", () => {
   assert.equal(JSON.stringify(state), before);
 });
 
-test("getLegalActions omits declareAttack and blocker responses for unsupported implemented-dsl combat metadata", () => {
+test("getLegalActions omits blocker responses for unsupported implemented-dsl combat metadata", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -43,7 +43,7 @@ test("getLegalActions omits declareAttack and blocker responses for unsupported 
       cardId: attacker.cardId,
       category: "character",
       power: 7000,
-      printedKeywords: ["unblockable"],
+      printedKeywords: ["doubleAttack"],
     }),
     support: {
       cardId: attacker.cardId,
@@ -60,7 +60,7 @@ test("getLegalActions omits declareAttack and blocker responses for unsupported 
       cardId: defenderBlocker.cardId,
       category: "character",
       power: 3000,
-      printedKeywords: ["blocker", "unblockable"],
+      printedKeywords: ["blocker", "doubleAttack"],
     }),
     support: {
       cardId: defenderBlocker.cardId,
@@ -77,7 +77,7 @@ test("getLegalActions omits declareAttack and blocker responses for unsupported 
     getLegalActions(state, p1).some(
       (action) => action.type === "declareAttack",
     ),
-    false,
+    true,
   );
   assert.equal(
     getLegalActions(state, p2).some(

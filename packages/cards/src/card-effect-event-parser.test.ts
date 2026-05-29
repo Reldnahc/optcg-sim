@@ -4,6 +4,45 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect event parser", () => {
+  it("parses Main Event named Leader keyword grant as target, keyword, and duration primitives", () => {
+    const result = parseCardEffectLine(
+      "[Main] Your [Monkey.D.Luffy] Leader gains [Unblockable] during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "giveKeyword",
+          target: {
+            type: "all",
+            zone: "leaderArea",
+            player: "self",
+            filter: {
+              categories: ["leader"],
+              names: ["Monkey.D.Luffy"],
+            },
+          },
+          keyword: "unblockable",
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "instruction:giveKeyword",
+        "target:yourLeader",
+        "filter:name",
+        "filter:category:leader",
+        "keyword:anySupported",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses Main Event rest-DON cost, leader condition, and Stage K.O. target primitives", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 1 of your DON!! cards: If your Leader is [Imu], K.O. up to 1 of your opponent's Stages with a cost of 7.",
