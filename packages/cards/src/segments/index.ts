@@ -6,7 +6,10 @@ export { costedEffectExpressionParser } from "./costed-effect.js";
 export { optionalCostedEffectExpressionParser } from "./optional-costed-effect.js";
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export { replacementInsteadExpressionParser } from "./replacement-effect.js";
-export { lifeRemovedReactionExpressionParser } from "./event-reaction.js";
+export {
+  lifeRemovedReactionExpressionParser,
+  opponentEventOrBlockerActivatedExpressionParser,
+} from "./event-reaction.js";
 export { returnToOwnerHandCostedEffectExpressionParser } from "./return-to-owner-hand-costed-effect.js";
 export { revealTopPlayRestedExpressionParser } from "./reveal-top-play-rested.js";
 export { searchRevealExpressionParser } from "./search-reveal.js";

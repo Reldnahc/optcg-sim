@@ -98,6 +98,9 @@ const autoAdapterFor = (
   if (block.trigger.type === "lifeRemoved") {
     return autoAdapter("lifeRemoved", ["mustRemainInSameZone"]);
   }
+  if (block.trigger.type === "opponentActivated") {
+    return autoAdapter("opponentActivated", ["mustRemainInSameZone"]);
+  }
   return undefined;
 };
 

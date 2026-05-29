@@ -195,6 +195,7 @@ const supportedCounterEventPower = (
     effect.failurePolicy !== undefined ||
     effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
     parsed.power.duration.type !== "thisBattle" ||
+    typeof parsed.power.value !== "number" ||
     !Number.isInteger(parsed.power.value) ||
     parsed.power.value <= 0 ||
     (options.evaluateCondition &&

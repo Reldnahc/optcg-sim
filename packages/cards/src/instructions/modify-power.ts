@@ -18,6 +18,7 @@ import {
   parseYourNamedCardsTarget,
 } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
+import { revealedTopLifeSet } from "./reveal-top.js";
 
 export const modifyPowerInstructionPrimitive = {
   primitiveId: "instruction:modifyPower",
@@ -120,6 +121,11 @@ export const parseModifyPowerInstruction: InstructionParser = (input) => {
 };
 
 const parsePowerGainInstruction: InstructionParser = (input) => {
+  const dynamicRevealedCostPower = parseThisCharacterRevealedCostPower(input);
+  if (dynamicRevealedCostPower !== undefined) {
+    return dynamicRevealedCostPower;
+  }
+
   const cardinality = parseUpToCardinality(input);
   if (cardinality !== undefined) {
     const target =
@@ -167,6 +173,42 @@ const parsePowerGainInstruction: InstructionParser = (input) => {
       "instruction:modifyPower",
       ...directTarget.evidence,
       ...parsed.evidence,
+    ],
+    rest: "",
+  };
+};
+
+const parseThisCharacterRevealedCostPower: InstructionParser = (input) => {
+  const match =
+    /^This Character gains \+(?<amount>\d+) power during this turn per 1 cost on the revealed card\.?$/iu.exec(
+      input.text.trim(),
+    );
+  const rawAmount = match?.groups?.["amount"];
+  if (rawAmount === undefined) {
+    return undefined;
+  }
+  const amount = Number(rawAmount);
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower",
+      target: { type: "self" },
+      value: {
+        type: "sumSelectedCardCosts",
+        selection: revealedTopLifeSet,
+        multiplier: amount,
+      },
+      duration: { type: "thisTurn" },
+    },
+    evidence: [
+      "instruction:modifyPower",
+      "target:thisCharacter",
+      "value:dynamic:selectedCardCost",
+      "modifier:positivePower",
+      "duration:thisTurn",
     ],
     rest: "",
   };

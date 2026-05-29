@@ -1,6 +1,10 @@
 import type { Effect } from "@optcg/types";
 
-import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
+import {
+  parseAndConnector,
+  parseSentenceConnector,
+  parseThenConnector,
+} from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
   parseHandCountCondition,
@@ -13,6 +17,7 @@ import {
 } from "./conditions/index.js";
 import {
   parseImplicitPermanentEntryPoint,
+  parseImplicitReactionEntryPoint,
   parseRecognizedUnsupportedEntryPoint,
   parseReplacementEntryPoint,
   parseRulesStartOfGameEntryPoint,
@@ -42,6 +47,7 @@ import {
   parsePlayFromTrashInstruction,
   parsePlaySourceInstruction,
   parsePreventDrawInstruction,
+  parseRevealTopInstruction,
   parseRestOpponentCharactersInstruction,
   parseReturnToOwnerHandInstruction,
   parseSetBasePowerInstruction,
@@ -73,6 +79,7 @@ import {
   instructionExpressionSegmentParser,
   lifeRemovedReactionExpressionParser,
   optionalCostedEffectExpressionParser,
+  opponentEventOrBlockerActivatedExpressionParser,
   playStageFromDeckExpressionParser,
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
@@ -121,6 +128,7 @@ const instructionParsers = [
   parsePlayFromTrashInstruction,
   parsePlaySourceInstruction,
   parsePreventDrawInstruction,
+  parseRevealTopInstruction,
   parseModifyPowerInstruction,
   parseTargetedModifyCostInstruction,
   parseModifyCostInstruction,
@@ -155,7 +163,7 @@ const continuousInstructionParsers = [
 
 const generalExpressionParser = (input: ParseInput) =>
   parseExpression(input.text, {
-    connectors: [parseThenConnector, parseAndConnector],
+    connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
     segments: [
       conditionalExpressionSegmentParser({
         conditions: conditionParsers,
@@ -190,6 +198,7 @@ const defaultRegistry = {
     parseSupportedEntryPoint,
     parseRecognizedUnsupportedEntryPoint,
     parseReplacementEntryPoint,
+    parseImplicitReactionEntryPoint,
     parseImplicitPermanentEntryPoint,
   ],
   markers: [parseAttachedDonMarker, parseOncePerTurnMarker],
@@ -227,6 +236,9 @@ const defaultRegistry = {
     }),
     replacementInsteadExpressionParser,
     lifeRemovedReactionExpressionParser({
+      expressions: [generalExpressionParser],
+    }),
+    opponentEventOrBlockerActivatedExpressionParser({
       expressions: [generalExpressionParser],
     }),
     conditionalContinuousExpressionParser({

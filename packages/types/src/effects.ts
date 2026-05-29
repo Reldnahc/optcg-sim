@@ -42,6 +42,7 @@ export type Trigger =
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
   | { type: "lifeRemoved"; players: PlayerRef[] }
+  | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }
   | { type: "activateMain" }
   | { type: "main" }
@@ -270,6 +271,14 @@ export interface CardSelectionRequest {
   visibility?: "public" | "privateToChooser";
   remainingCards?: SearchRequest["remainingCards"];
 }
+
+export type OpponentActivationKind = "event" | "blocker";
+
+export type DynamicNumberValue = {
+  type: "sumSelectedCardCosts";
+  selection: SelectionSetId;
+  multiplier: number;
+};
 
 export type Target =
   | { type: "self" }
@@ -594,7 +603,9 @@ export type Effect =
   | {
       type: "revealTop";
       player: PlayerRef;
+      zone?: Zone;
       count: number;
+      min?: number;
       saveAs: SelectionSetId;
       visibility: Visibility;
     }
@@ -663,7 +674,12 @@ export type Effect =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
-  | { type: "modifyPower"; target: Target; value: number; duration: Duration }
+  | {
+      type: "modifyPower";
+      target: Target;
+      value: number | DynamicNumberValue;
+      duration: Duration;
+    }
   | { type: "setPowerToZero"; target: Target; duration: Duration }
   | { type: "setBasePower"; target: Target; value: number; duration: Duration }
   | {

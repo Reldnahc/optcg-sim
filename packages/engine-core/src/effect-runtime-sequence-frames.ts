@@ -398,7 +398,12 @@ const applyRevealTopSequenceSegment = (params: {
       state: params.state,
     };
   }
-  const revealedCards = player.deck
+  const sourceZone = params.effect.zone ?? "deck";
+  const sourceCards =
+    sourceZone === "life"
+      ? player.life.map((lifeCard) => lifeCard.card)
+      : player.deck;
+  const revealedCards = sourceCards
     .slice(0, params.effect.count)
     .map((card) => toCardRef(card, params.entry.controllerId));
   const revealId = `reveal:sequence:${String(params.entry.id)}:${String(params.index)}`;
@@ -411,7 +416,10 @@ const applyRevealTopSequenceSegment = (params: {
       {
         revealId,
         cards: revealedCards,
-        origin: "topOfDeck",
+        origin:
+          sourceZone === "life"
+            ? { zone: "life", playerId: params.entry.controllerId }
+            : "topOfDeck",
         selectionSetId: params.effect.saveAs,
       },
       { type: "public" },
@@ -438,7 +446,13 @@ const applyRevealTopSequenceSegment = (params: {
               id: revealId,
               cards: revealedCards,
               visibility: { type: "public" as const },
-              origin: "topOfDeck" as const,
+              origin:
+                sourceZone === "life"
+                  ? ({
+                      zone: "life",
+                      playerId: params.entry.controllerId,
+                    } as const)
+                  : ("topOfDeck" as const),
               createdAtStateSeq: toStateSeq(params.state.seq + 1),
               cleanupPolicy: "returnToOrigin" as const,
             },
@@ -2010,6 +2024,8 @@ const continueNoDecisionSegments = (
         nextState,
         entry,
         segment.effect,
+        undefined,
+        { savedReferences: nextLedgers.savedReferences },
       );
       if (records === null) {
         return { ok: false };
@@ -2229,6 +2245,8 @@ const continueNoDecisionSegments = (
           nextState,
           entry,
           segment.effect.then,
+          undefined,
+          { savedReferences: nextLedgers.savedReferences },
         );
         if (records === null) {
           return { ok: false };

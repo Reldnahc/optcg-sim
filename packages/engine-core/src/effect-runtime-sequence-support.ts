@@ -492,9 +492,16 @@ const isSupportedRevealTopSegment = (
 ): effect is RevealTopEffect =>
   effect.type === "revealTop" &&
   effect.player === "self" &&
+  (effect.zone === undefined ||
+    effect.zone === "deck" ||
+    effect.zone === "life") &&
   effect.visibility === "bothPlayers" &&
   Number.isInteger(effect.count) &&
-  effect.count > 0;
+  effect.count > 0 &&
+  (effect.min === undefined ||
+    (Number.isInteger(effect.min) &&
+      effect.min >= 0 &&
+      effect.min <= effect.count));
 
 const isSupportedSelectFromSetSegment = (
   effect: SequenceSegmentEffect,
@@ -888,7 +895,8 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
     | "main"
     | "trigger"
     | "counter"
-    | "lifeRemoved",
+    | "lifeRemoved"
+    | "opponentActivated",
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions = {},
 ): effect is SupportedSequenceBlock =>

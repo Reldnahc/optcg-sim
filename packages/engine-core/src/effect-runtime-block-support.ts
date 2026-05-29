@@ -88,14 +88,16 @@ const isQueuedAutoSequenceTriggerType = (
   | "main"
   | "trigger"
   | "counter"
-  | "lifeRemoved" =>
+  | "lifeRemoved"
+  | "opponentActivated" =>
   triggerType === "onPlay" ||
   triggerType === "whenAttacking" ||
   triggerType === "onKO" ||
   triggerType === "main" ||
   triggerType === "trigger" ||
   triggerType === "counter" ||
-  triggerType === "lifeRemoved";
+  triggerType === "lifeRemoved" ||
+  triggerType === "opponentActivated";
 
 const isSupportedSequenceBody = (
   block: EffectBlock,

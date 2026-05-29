@@ -1231,4 +1231,62 @@ describe("card effect event parser", () => {
       ]),
     );
   });
+
+  it("parses opponent Event or Blocker activation reactions into reveal and dynamic power primitives", () => {
+    const result = parseCardEffectLine(
+      "When your opponent activates an Event or [Blocker], reveal up to 1 card from the top of your Life cards. This Character gains +1000 power during this turn per 1 cost on the revealed card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "opponentActivated",
+          activations: ["event", "blocker"],
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "life",
+                count: 1,
+                min: 0,
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "modifyPower",
+                target: { type: "self" },
+                value: {
+                  type: "sumSelectedCardCosts",
+                  multiplier: 1000,
+                },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitReaction",
+        "trigger:opponentActivated",
+        "activation:event",
+        "activation:blocker",
+        "instruction:revealTop",
+        "zone:life",
+        "connector:sentence",
+        "instruction:modifyPower",
+        "value:dynamic:selectedCardCost",
+      ]),
+    );
+  });
 });

@@ -14,6 +14,7 @@ import { createKOTriggerQueueing } from "./effect-runtime-trigger-queueing-ko.js
 import { createLifeRemovedTriggerQueueing } from "./effect-runtime-trigger-queueing-life-removed.js";
 import { createMainEventTriggerQueueing } from "./effect-runtime-trigger-queueing-main-event.js";
 import { createOnPlayTriggerQueueing } from "./effect-runtime-trigger-queueing-on-play.js";
+import { createOpponentActivationTriggerQueueing } from "./effect-runtime-trigger-queueing-opponent-activation.js";
 
 export type OnPlayTriggerQueueingFailureReason =
   | "invalid-card-played-event"
@@ -55,6 +56,10 @@ export type LifeRemovedTriggerQueueingFailureReason =
   | "missing-card-definition"
   | "unsupported-life-removed-definition";
 
+export type OpponentActivationTriggerQueueingFailureReason =
+  | "invalid-opponent-activation-event"
+  | "unsupported-opponent-activation-definition";
+
 interface OnPlayTriggerQueueingErrorDetails {
   reason: OnPlayTriggerQueueingFailureReason;
 }
@@ -77,6 +82,10 @@ interface MainEventTriggerQueueingErrorDetails {
 
 interface LifeRemovedTriggerQueueingErrorDetails {
   reason: LifeRemovedTriggerQueueingFailureReason;
+}
+
+interface OpponentActivationTriggerQueueingErrorDetails {
+  reason: OpponentActivationTriggerQueueingFailureReason;
 }
 
 export interface BattleKOTriggerCandidate {
@@ -127,6 +136,9 @@ export interface EffectRuntimeTriggerQueueingHelpers {
   queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
   queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;
   queueLifeRemovedTriggers: (state: GameState) => EngineResult | undefined;
+  queueOpponentActivationTriggers: (
+    state: GameState,
+  ) => EngineResult | undefined;
   queueEffectResolvedCustomTriggers: (
     state: GameState,
     resolvedEntry: EffectQueueEntry,
@@ -182,6 +194,16 @@ const lifeRemovedTriggerQueueingError = (
   details: { reason } satisfies LifeRemovedTriggerQueueingErrorDetails,
 });
 
+const opponentActivationTriggerQueueingError = (
+  reason: OpponentActivationTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "opponent-activation-trigger-queueing",
+  details: {
+    reason,
+  } satisfies OpponentActivationTriggerQueueingErrorDetails,
+});
+
 export const createEffectRuntimeTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,
 ): EffectRuntimeTriggerQueueingHelpers => {
@@ -197,6 +219,11 @@ export const createEffectRuntimeTriggerQueueing = (
     dependencies,
     lifeRemovedTriggerQueueingError,
   );
+  const { queueOpponentActivationTriggers } =
+    createOpponentActivationTriggerQueueing(
+      dependencies,
+      opponentActivationTriggerQueueingError,
+    );
   const { queueWhenAttackingTriggers, queueOnOpponentAttackTriggers } =
     createAttackTriggerQueueing(
       dependencies,
@@ -215,6 +242,7 @@ export const createEffectRuntimeTriggerQueueing = (
     queueOnPlayTriggers,
     queueMainEventTriggers,
     queueLifeRemovedTriggers,
+    queueOpponentActivationTriggers,
     queueWhenAttackingTriggers,
     queueOnOpponentAttackTriggers,
     queueEffectResolvedCustomTriggers,

@@ -18,6 +18,7 @@ import {
 } from "./effect-runtime.js";
 import {
   queueDrawForP1,
+  toCardId,
   toEffectId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
@@ -159,5 +160,127 @@ test("lifeRemoved reaction queues from Life movement and prevents later own-effe
   assert.equal(
     must(blockedDraw.state.players[p2], "p2 unaffected").hand.length,
     must(resolved.state.players[p2], "p2 before unrelated").hand.length,
+  );
+});
+
+test("opponent activation reaction reveals Life and applies dynamic power from revealed cost", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.eventJournal = [];
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const topLife = must(p1State.life[0], "top life").card;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-opponent-activation",
+      rulesVersion: "opponent-activation-rules",
+      sourceTextHash: "opponent-activation-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...must(baseDefinition.effects[0], "base draw effect"),
+        id: toEffectId("opponent-activation-reveal-power"),
+        trigger: {
+          type: "opponentActivated",
+          activations: ["event", "blocker"],
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "life",
+                count: 1,
+                min: 0,
+                saveAs: "set:revealed-top-life" as never,
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "modifyPower",
+                target: { type: "self" },
+                value: {
+                  type: "sumSelectedCardCosts",
+                  selection: "set:revealed-top-life" as never,
+                  multiplier: 1000,
+                },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-opponent-activation": definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.cardManifest.cards[topLife.cardId] = resolvedCard({
+    cardId: topLife.cardId,
+    category: "character",
+    cost: 4,
+  });
+  state.cardManifest.cards[toCardId("opponent-event")] = resolvedCard({
+    cardId: toCardId("opponent-event"),
+    category: "event",
+  });
+  state.eventJournal.push({
+    id: toEngineEventId("event:opponent-event-played"),
+    seq: 1,
+    type: "cardPlayed",
+    payload: {
+      playerId: p2,
+      instanceId: "opponent-event-instance",
+      cardId: "opponent-event",
+      category: "event",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:opponent-event" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+
+  const resolved = processEffectRuntime(queued.state);
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.revealedCards.length, 1);
+  assert.equal(
+    resolved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "powerAdd" &&
+        effect.modifier.operation.type === "addPower" &&
+        effect.modifier.operation.value === 4000 &&
+        effect.source.instanceId === source.instanceId,
+    ),
+    true,
   );
 });

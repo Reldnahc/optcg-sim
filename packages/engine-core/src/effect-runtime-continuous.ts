@@ -6,6 +6,7 @@ import type {
   Duration,
   EffectDefinition,
   Effect,
+  EffectExecutionFrame,
   EffectQueueEntry,
   GameState,
   Keyword,
@@ -170,6 +171,41 @@ const isSupportedCostModifierEffect = (
       effect.filter === undefined &&
       isSupportedTarget(effect.target)));
 
+const isSupportedPowerValue = (
+  value: Extract<Effect, { type: "modifyPower" }>["value"],
+): boolean =>
+  (typeof value === "number" && Number.isSafeInteger(value)) ||
+  (typeof value === "object" &&
+    Number.isSafeInteger(value.multiplier) &&
+    value.multiplier > 0);
+
+type ContinuousResolutionContext = {
+  savedReferences?: EffectExecutionFrame["savedReferences"];
+};
+
+const resolvePowerValue = (
+  state: GameState,
+  value: Extract<Effect, { type: "modifyPower" }>["value"],
+  context: ContinuousResolutionContext | undefined,
+): number | null => {
+  if (typeof value === "number") {
+    return value;
+  }
+  const reference = context?.savedReferences?.[value.selection];
+  if (reference?.kind !== "selectedCards") {
+    return null;
+  }
+  let totalCost = 0;
+  for (const card of reference.cards) {
+    const cost = state.cardManifest.cards[card.cardId]?.cost;
+    if (cost === undefined || !Number.isSafeInteger(cost)) {
+      return null;
+    }
+    totalCost += cost;
+  }
+  return totalCost * value.multiplier;
+};
+
 const isSupportedChooseFromZonesTarget = (
   target: Extract<Target, { type: "chooseFromZones" }>,
 ): boolean =>
@@ -225,8 +261,8 @@ export const isSupportedContinuousQueueEffect = (
   if (!isSupportedDuration(effect.duration)) return false;
   if (
     effect.type === "modifyPower" &&
-    effect.target.type !== "myLeader" &&
-    !isSupportedTarget(effect.target)
+    (!isSupportedPowerValue(effect.value) ||
+      (effect.target.type !== "myLeader" && !isSupportedTarget(effect.target)))
   ) {
     return false;
   }
@@ -283,6 +319,7 @@ const toExactCardTarget = (
 });
 
 const mapEffectToModifier = (
+  state: GameState,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "giveKeyword" }>
@@ -293,12 +330,17 @@ const mapEffectToModifier = (
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
   target: TargetSpec,
-): ContinuousEffectRecord["modifier"] => {
+  context?: ContinuousResolutionContext,
+): ContinuousEffectRecord["modifier"] | null => {
   if (effect.type === "modifyPower") {
+    const value = resolvePowerValue(state, effect.value, context);
+    if (value === null) {
+      return null;
+    }
     return {
       layer: "powerAdd",
       target,
-      operation: { type: "addPower", value: effect.value },
+      operation: { type: "addPower", value },
     };
   }
   if (effect.type === "giveKeyword") {
@@ -364,20 +406,27 @@ const createRecord = (
     | Extract<Effect, { type: "cannotBlock" }>,
   target: TargetSpec,
   index: number,
-): ContinuousEffectRecord => ({
-  id: `continuous:${String(entry.id)}:${String(index)}`,
-  source: entry.source,
-  sourceSnapshot: entry.sourceSnapshot,
-  controller: entry.controllerId,
-  modifier: mapEffectToModifier(effect, target),
-  duration: effect.duration,
-  createdBy: {
-    type: "effect",
-    queueEntryId: entry.id,
-    effectId: entry.effectBlockId,
-  },
-  createdAtStateSeq: state.seq,
-});
+  context?: ContinuousResolutionContext,
+): ContinuousEffectRecord | null => {
+  const modifier = mapEffectToModifier(state, effect, target, context);
+  if (modifier === null) {
+    return null;
+  }
+  return {
+    id: `continuous:${String(entry.id)}:${String(index)}`,
+    source: entry.source,
+    sourceSnapshot: entry.sourceSnapshot,
+    controller: entry.controllerId,
+    modifier,
+    duration: effect.duration,
+    createdBy: {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    },
+    createdAtStateSeq: state.seq,
+  };
+};
 
 const isPublicResolvableFieldObject = (
   state: GameState,
@@ -402,28 +451,29 @@ export const createContinuousRecordsForResolvedEffect = (
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
   chosenTargets?: readonly CardRef[],
+  context?: ContinuousResolutionContext,
 ): ContinuousEffectRecord[] | null => {
   if (effect.type === "preventDraw") {
-    return [
-      createRecord(
-        state,
-        entry,
-        effect,
-        { type: "player", player: effect.player },
-        0,
-      ),
-    ];
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      { type: "player", player: effect.player },
+      0,
+      context,
+    );
+    return record === null ? null : [record];
   }
   if (effect.type === "modifyCost" && effect.target?.type !== "choose") {
-    return [
-      createRecord(
-        state,
-        entry,
-        effect,
-        costModifierTargetForEffect(effect),
-        0,
-      ),
-    ];
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      costModifierTargetForEffect(effect),
+      0,
+      context,
+    );
+    return record === null ? null : [record];
   }
   const target = effect.target;
   if (target === undefined) {
@@ -439,15 +489,18 @@ export const createContinuousRecordsForResolvedEffect = (
       if (!isPublicResolvableFieldObject(state, chosen)) {
         return null;
       }
-      records.push(
-        createRecord(
-          state,
-          entry,
-          effect,
-          toExactCardTarget(entry, chosen, state, index),
-          index,
-        ),
+      const record = createRecord(
+        state,
+        entry,
+        effect,
+        toExactCardTarget(entry, chosen, state, index),
+        index,
+        context,
       );
+      if (record === null) {
+        return null;
+      }
+      records.push(record);
     }
     return records;
   }
@@ -456,27 +509,28 @@ export const createContinuousRecordsForResolvedEffect = (
     if (leader === undefined) {
       return null;
     }
-    return [
-      createRecord(
-        state,
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      toExactCardTarget(
         entry,
-        effect,
-        toExactCardTarget(
-          entry,
-          {
-            instanceId: leader.instanceId,
-            cardId: leader.cardId,
-            playerId: entry.controllerId,
-            zone: leader.zone,
-          },
-          state,
-          0,
-        ),
+        {
+          instanceId: leader.instanceId,
+          cardId: leader.cardId,
+          playerId: entry.controllerId,
+          zone: leader.zone,
+        },
+        state,
         0,
       ),
-    ];
+      0,
+      context,
+    );
+    return record === null ? null : [record];
   }
-  return [createRecord(state, entry, effect, target, 0)];
+  const record = createRecord(state, entry, effect, target, 0, context);
+  return record === null ? null : [record];
 };
 
 const supportedDerivedKeywords = new Set<Keyword>([
@@ -572,6 +626,11 @@ const effectToDerivedModifier = (
   effect: Effect,
 ): ContinuousEffectRecord["modifier"] | null => {
   if (effect.type === "modifyPower") {
+    if (typeof effect.value !== "number") {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported dynamic power value"),
+      );
+    }
     if (
       effect.target.type !== "self" &&
       effect.target.type !== "myLeader" &&
