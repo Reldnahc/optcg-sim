@@ -288,6 +288,12 @@ export const autoPayCostActionIndex = (
   const paymentActions = actions.filter(
     (action) => action.decisionPayment?.kind !== "paymentDeclined",
   );
+  const hasDeclineAction = actions.some(
+    (action) => action.decisionPayment?.kind === "paymentDeclined",
+  );
+  if (hasDeclineAction) {
+    return undefined;
+  }
   if (paymentActions.length !== 1) {
     return undefined;
   }

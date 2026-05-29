@@ -123,10 +123,7 @@ export const BoardLayout = ({
         <div className="playmat-zone opponent-life">
           <Zone
             label="Life"
-            cards={hiddenCards(
-              board.opponent.lifeCount,
-              "hidden-life-opponent",
-            )}
+            cards={board.opponent.lifeCards}
             size="small"
             displayMode="life"
             onCardPreview={onPreviewCard}
@@ -249,7 +246,7 @@ export const BoardLayout = ({
         <div className="playmat-zone player-life">
           <Zone
             label="Life"
-            cards={hiddenCards(board.self.lifeCount, "hidden-life-self")}
+            cards={board.self.lifeCards}
             size="small"
             displayMode="life"
             onCardPreview={onPreviewCard}

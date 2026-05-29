@@ -531,7 +531,7 @@ describe("DON payment interaction", () => {
 });
 
 describe("generic no-choice payment interaction", () => {
-  test("auto-submits the generic no-choice pay-cost action", () => {
+  test("does not auto-submit optional generic no-choice pay-cost actions", () => {
     const actions: readonly ClientActionModel[] = [
       {
         index: 1,
@@ -539,6 +539,14 @@ describe("generic no-choice payment interaction", () => {
         label: "Decline cost",
         decisionPayment: { kind: "paymentDeclined" },
       },
+      { index: 2, type: "respondToDecision", label: "Pay cost" },
+    ];
+
+    assert.equal(autoPayCostActionIndex(payCostDecision, actions), undefined);
+  });
+
+  test("auto-submits mandatory generic no-choice pay-cost actions", () => {
+    const actions: readonly ClientActionModel[] = [
       { index: 2, type: "respondToDecision", label: "Pay cost" },
     ];
 

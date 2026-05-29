@@ -42,6 +42,7 @@ export interface ClientPlayerZonesModel {
   deckCount: number;
   donDeckCount: number;
   lifeCount: number;
+  lifeCards: ClientCardModel[];
 }
 
 export interface ClientActionModel {
@@ -155,6 +156,34 @@ const attachDonCards = (
   }),
 });
 
+const hiddenLifeCard = (prefix: string, index: number): ClientCardModel => ({
+  instanceId: `${prefix}-${String(index)}` as InstanceId,
+  cardId: "hidden" as CardId,
+  name: "Hidden card",
+  category: "hidden",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
+const lifeCards = (
+  life: MatchSnapshot["players"][PlayerId]["view"]["self"]["life"],
+  catalog: MatchCardCatalog,
+  prefix: string,
+): ClientCardModel[] => {
+  const faceUpByIndex = new Map(
+    life.faceUpCards.flatMap((card) => {
+      const index = card.zone.index;
+      return typeof index === "number"
+        ? ([[index, cardModel(card, catalog)]] as const)
+        : [];
+    }),
+  );
+  return Array.from(
+    { length: Math.min(life.count, 10) },
+    (_, index) => faceUpByIndex.get(index) ?? hiddenLifeCard(prefix, index),
+  );
+};
+
 const selfZones = (
   view: MatchSnapshot["players"][PlayerId]["view"],
   catalog: MatchCardCatalog,
@@ -185,6 +214,7 @@ const selfZones = (
     deckCount: view.self.deckCount,
     donDeckCount: view.self.donDeckCount,
     lifeCount: view.self.life.count,
+    lifeCards: lifeCards(view.self.life, catalog, "hidden-life-self"),
   };
 };
 
@@ -219,6 +249,7 @@ const opponentZones = (
     deckCount: view.opponent.deckCount,
     donDeckCount: view.opponent.donDeckCount,
     lifeCount: view.opponent.life.count,
+    lifeCards: lifeCards(view.opponent.life, catalog, "hidden-life-opponent"),
     handCount: view.opponent.handCount,
   };
 };

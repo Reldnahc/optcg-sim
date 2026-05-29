@@ -27,6 +27,16 @@ const card = (index: number): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const hiddenLifeCards = (count: number, prefix: string): ClientCardModel[] =>
+  Array.from({ length: count }, (_, index) => ({
+    instanceId: `${prefix}-${String(index)}` as InstanceId,
+    cardId: "hidden" as CardId,
+    name: "Hidden card",
+    category: "hidden",
+    attachedDonCount: 0,
+    attachedDonCards: [],
+  }));
+
 const board = (): BoardViewModel => ({
   playerId: "p1" as PlayerId,
   self: {
@@ -38,6 +48,7 @@ const board = (): BoardViewModel => ({
     deckCount: 40,
     donDeckCount: 10,
     lifeCount: 5,
+    lifeCards: hiddenLifeCards(5, "hidden-life-self"),
   },
   opponent: {
     leader: card(200),
@@ -48,6 +59,7 @@ const board = (): BoardViewModel => ({
     deckCount: 40,
     donDeckCount: 10,
     lifeCount: 5,
+    lifeCards: hiddenLifeCards(5, "hidden-life-opponent"),
   },
   actionsByCardInstanceId: {},
 });

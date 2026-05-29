@@ -248,6 +248,76 @@ describe("board view model", () => {
     assert.deepEqual(model.self.leader.attachedDonCards, []);
   });
 
+  test("projects face-up life cards into indexed life positions", () => {
+    const view = minimalView();
+    view.self.life = {
+      count: 3,
+      faceUpCards: [
+        {
+          ...card("life-face-up", "OP15-116", "life"),
+          zone: { playerId: p1, zone: "life", slot: "life", index: 1 },
+        },
+      ],
+    };
+    view.opponent.life = {
+      count: 2,
+      faceUpCards: [
+        {
+          ...card("opponent-life-face-up", "OP15-117", "life", p2),
+          zone: { playerId: p2, zone: "life", slot: "life", index: 0 },
+        },
+      ],
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+    const catalog: MatchCardCatalog = {
+      players: {
+        [p1]: {
+          cards: {
+            ["OP15-116" as CardId]: {
+              cardId: "OP15-116" as CardId,
+              name: "Face-up Life",
+              category: "Event",
+              imageUrl: "https://cdn.example/life.png",
+            },
+          },
+        },
+        [p2]: {
+          cards: {
+            ["OP15-117" as CardId]: {
+              cardId: "OP15-117" as CardId,
+              name: "Opponent Face-up Life",
+              category: "Event",
+            },
+          },
+        },
+      },
+    };
+
+    const model = createBoardViewModel({ snapshot, catalog, playerId: p1 });
+
+    assert.deepEqual(
+      model.self.lifeCards.map((lifeCard) => lifeCard.name),
+      ["Hidden card", "Face-up Life", "Hidden card"],
+    );
+    assert.equal(
+      model.self.lifeCards[1]?.imageUrl,
+      "https://cdn.example/life.png",
+    );
+    assert.deepEqual(
+      model.opponent.lifeCards.map((lifeCard) => lifeCard.name),
+      ["Opponent Face-up Life", "Hidden card"],
+    );
+  });
+
   test("projects public battle attacker and current target for both seats", () => {
     const view = minimalView();
     view.battle = {

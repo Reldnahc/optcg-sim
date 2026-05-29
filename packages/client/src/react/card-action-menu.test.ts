@@ -28,6 +28,16 @@ const card = (instanceId: string, name = instanceId): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const hiddenLifeCards = (count: number, prefix: string): ClientCardModel[] =>
+  Array.from({ length: count }, (_, index) => ({
+    instanceId: `${prefix}-${String(index)}` as InstanceId,
+    cardId: "hidden" as CardId,
+    name: "Hidden card",
+    category: "hidden",
+    attachedDonCount: 0,
+    attachedDonCards: [],
+  }));
+
 const board = (): BoardViewModel => ({
   playerId: "p1" as PlayerId,
   self: {
@@ -39,6 +49,7 @@ const board = (): BoardViewModel => ({
     deckCount: 40,
     donDeckCount: 10,
     lifeCount: 5,
+    lifeCards: hiddenLifeCards(5, "hidden-life-self"),
   },
   opponent: {
     leader: card("opponent-leader", "Opponent Leader"),
@@ -49,6 +60,7 @@ const board = (): BoardViewModel => ({
     deckCount: 40,
     donDeckCount: 10,
     lifeCount: 5,
+    lifeCards: hiddenLifeCards(5, "hidden-life-opponent"),
   },
   actionsByCardInstanceId: {},
 });
@@ -557,6 +569,8 @@ describe("card action menu", () => {
     const layout = board();
     layout.self.lifeCount = 4;
     layout.opponent.lifeCount = 5;
+    layout.self.lifeCards = hiddenLifeCards(4, "hidden-life-self");
+    layout.opponent.lifeCards = hiddenLifeCards(5, "hidden-life-opponent");
 
     const markup = renderToStaticMarkup(
       createElement(BoardLayout, {
