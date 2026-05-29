@@ -164,12 +164,49 @@ describe("hand layout", () => {
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
   });
 
+  test("card pointer reorder moves cards during drag and releases without another reorder", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardTile.tsx"),
+      "utf8",
+    );
+    const pointerMoveStart = source.indexOf("onPointerMove={(event) => {");
+    const pointerUpStart = source.indexOf("onPointerUp={(event) => {");
+    const pointerCancelStart = source.indexOf("onPointerCancel={(event) => {");
+    assert.notEqual(pointerMoveStart, -1);
+    assert.notEqual(pointerUpStart, -1);
+    assert.notEqual(pointerCancelStart, -1);
+    const pointerMoveSource = source.slice(pointerMoveStart, pointerUpStart);
+    const pointerUpSource = source.slice(pointerUpStart, pointerCancelStart);
+
+    assert.match(source, /const pointerReorderDragThreshold = 2;/u);
+    assert.match(source, /const moveCardNearPointer =/u);
+    assert.match(
+      source,
+      /onMoveNear\(draggedInstanceId, targetInstanceId, placement\);/u,
+    );
+    assert.match(pointerMoveSource, /moveCardNearPointer/u);
+    assert.doesNotMatch(pointerUpSource, /onMoveNear\(/u);
+  });
+
   test("card images do not start native browser image dragging", async () => {
     const styles = await readFile(cardStylesPath, "utf8");
 
     assert.match(styles, /\.card-face\s*\{[^}]*pointer-events:\s*none;/u);
     assert.match(styles, /\.card-face\s*\{[^}]*user-select:\s*none;/u);
     assert.match(styles, /\.card-face\s*\{[^}]*-webkit-user-drag:\s*none;/u);
+  });
+
+  test("hand cards animate into reordered slots while the dragged card stays direct", async () => {
+    const styles = await readFile(cardStylesPath, "utf8");
+
+    assert.match(
+      styles,
+      /\.hand-cards\s+\.card-tile-shell\s*\{[^}]*transition:\s*margin-left 80ms ease,\s*transform 80ms ease;/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile-shell\.is-pointer-reorder-dragging\s*\{[^}]*transition:\s*none;/u,
+    );
   });
 
   test("board layout wires hand rearranging only to the player hand", async () => {

@@ -5,6 +5,8 @@ import type { ClientActionModel, ClientCardModel } from "../view-model.js";
 import { reorderPlacementFromPointer } from "./drag-reorder.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 
+const pointerReorderDragThreshold = 2;
+
 interface PointerReorderDrag {
   pointerId: number;
   originX: number;
@@ -59,6 +61,7 @@ export const CardTile = ({
     PointerReorderDrag | undefined
   >(undefined);
   const suppressClickRef = useRef(false);
+  const lastPointerMoveRef = useRef<string | undefined>(undefined);
   const pointerReorderEnabled = reorderable && onMoveNear !== undefined;
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
@@ -86,6 +89,47 @@ export const CardTile = ({
           )}px, ${String(pointerDrag.currentY - pointerDrag.originY)}px)`,
         } satisfies CSSProperties)
       : undefined;
+  const moveCardNearPointer = (
+    hostElement: HTMLElement,
+    clientX: number,
+    clientY: number,
+  ): void => {
+    if (!pointerReorderEnabled) {
+      return;
+    }
+    const previousPointerEvents = hostElement.style.pointerEvents;
+    let targetElement: HTMLElement | null | undefined;
+    try {
+      hostElement.style.pointerEvents = "none";
+      targetElement = document
+        .elementFromPoint(clientX, clientY)
+        ?.closest<HTMLElement>("[data-card-instance-id]");
+    } finally {
+      hostElement.style.pointerEvents = previousPointerEvents;
+    }
+    if (targetElement == null) {
+      return;
+    }
+    const targetInstanceId = targetElement.dataset["cardInstanceId"];
+    const draggedInstanceId = String(card.instanceId);
+    if (
+      targetInstanceId === undefined ||
+      targetInstanceId === draggedInstanceId
+    ) {
+      return;
+    }
+    const placement = reorderPlacementFromPointer(
+      targetElement.getBoundingClientRect(),
+      clientX,
+      clientY,
+    );
+    const moveKey = `${targetInstanceId}:${placement}`;
+    if (lastPointerMoveRef.current === moveKey) {
+      return;
+    }
+    lastPointerMoveRef.current = moveKey;
+    onMoveNear(draggedInstanceId, targetInstanceId, placement);
+  };
   return (
     <div
       className={`card-tile-shell ${
@@ -110,6 +154,7 @@ export const CardTile = ({
         ) {
           return;
         }
+        lastPointerMoveRef.current = undefined;
         setPointerDrag({
           pointerId: event.pointerId,
           originX: event.clientX,
@@ -129,13 +174,20 @@ export const CardTile = ({
         const deltaX = event.clientX - pointerDrag.originX;
         const deltaY = event.clientY - pointerDrag.originY;
         const moved =
-          pointerDrag.moved || Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4;
+          pointerDrag.moved ||
+          Math.abs(deltaX) > pointerReorderDragThreshold ||
+          Math.abs(deltaY) > pointerReorderDragThreshold;
         if (moved) {
           event.preventDefault();
           event.stopPropagation();
           if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.setPointerCapture(event.pointerId);
           }
+          moveCardNearPointer(
+            event.currentTarget,
+            event.clientX,
+            event.clientY,
+          );
         }
         setPointerDrag({
           ...pointerDrag,
@@ -155,42 +207,18 @@ export const CardTile = ({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
         setPointerDrag(undefined);
+        lastPointerMoveRef.current = undefined;
         suppressClickRef.current = pointerDrag.moved;
         if (!pointerDrag.moved || !pointerReorderEnabled) {
           return;
         }
         event.preventDefault();
         event.stopPropagation();
-        const previousPointerEvents = event.currentTarget.style.pointerEvents;
-        event.currentTarget.style.pointerEvents = "none";
-        const targetElement = document
-          .elementFromPoint(event.clientX, event.clientY)
-          ?.closest<HTMLElement>("[data-card-instance-id]");
-        event.currentTarget.style.pointerEvents = previousPointerEvents;
-        if (targetElement == null) {
-          return;
-        }
-        const targetInstanceId = targetElement.dataset["cardInstanceId"];
-        const draggedInstanceId = String(card.instanceId);
-        if (
-          targetInstanceId === undefined ||
-          targetInstanceId === draggedInstanceId
-        ) {
-          return;
-        }
-        onMoveNear(
-          draggedInstanceId,
-          targetInstanceId,
-          reorderPlacementFromPointer(
-            targetElement.getBoundingClientRect(),
-            event.clientX,
-            event.clientY,
-          ),
-        );
       }}
       onPointerCancel={(event) => {
         if (pointerDrag?.pointerId === event.pointerId) {
           setPointerDrag(undefined);
+          lastPointerMoveRef.current = undefined;
         }
       }}
     >

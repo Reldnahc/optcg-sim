@@ -6,6 +6,10 @@
   flex: 0 0 auto;
 }
 
+.hand-cards .card-tile-shell {
+  transition: margin-left 80ms ease, transform 80ms ease;
+}
+
 .card-tile-shell.is-pointer-reorderable {
   touch-action: none;
 }
@@ -16,6 +20,7 @@
 
 .card-tile-shell.is-pointer-reorder-dragging {
   z-index: 40;
+  transition: none;
 }
 
 .card-tile-shell.is-pointer-reorder-dragging .card-tile {
