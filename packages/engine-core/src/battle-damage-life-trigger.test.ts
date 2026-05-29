@@ -234,7 +234,7 @@ test("respondToDecision addToHand declines life trigger and moves taken card to 
   assert.equal(result.stateHash, replay.stateHash);
   const nextP2 = must(result.state.players[p2], "next p2");
   assert.equal(nextP2.hand.length, beforeHandCount + 1);
-  const movedCard = must(nextP2.hand[0], "moved life trigger card");
+  const movedCard = must(nextP2.hand.at(-1), "moved life trigger card");
   assert.equal(movedCard.cardId, opened.lifeCardId);
   assert.equal(movedCard.zone.zone, "hand");
   assert.equal(
@@ -259,7 +259,10 @@ test("respondToDecision addToHand declines life trigger and moves taken card to 
       (event) =>
         event.type === "cardMoved" &&
         event.visibility.type === "private" &&
-        (event.payload as { cardId?: string }).cardId === opened.lifeCardId,
+        (event.payload as { cardId?: string; to?: { index?: number } })
+          .cardId === opened.lifeCardId &&
+        (event.payload as { to?: { index?: number } }).to?.index ===
+          beforeHandCount,
     ),
     true,
   );

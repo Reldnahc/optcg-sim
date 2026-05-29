@@ -491,7 +491,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
     ],
     eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
     stateHash:
-      "01d5501a62a1523d3df8434f684b5c78b3ba0867bb00c95b0e58f49bd3b662f6",
+      "fadc01490a3918c48773d11bdeff7f7156a6a9e640c115e97f5c20a6205c0127",
   });
 
   const openedForActivation = openLifeTrigger();

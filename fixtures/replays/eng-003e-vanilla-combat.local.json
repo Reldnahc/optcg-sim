@@ -581,11 +581,11 @@
             "stateSeq": 4,
             "actionSeq": 3,
             "turnNumber": 3,
-            "fullStateHash": "e3c6f9f52094b8a38860bdf95b9639385a70fdc8f2064dbf5b9fc284dbbe1b89",
+            "fullStateHash": "2d298672faa8bcce0480cb8c6fc8cc23ab91baa9f69526daa483d9a40a9297ad",
             "snapshotRef": "leader-damage:action-1"
           }
         ],
-        "finalStateHash": "e3c6f9f52094b8a38860bdf95b9639385a70fdc8f2064dbf5b9fc284dbbe1b89",
+        "finalStateHash": "2d298672faa8bcce0480cb8c6fc8cc23ab91baa9f69526daa483d9a40a9297ad",
         "finalStatus": { "type": "active" }
       }
     },

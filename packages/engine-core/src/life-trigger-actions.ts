@@ -707,7 +707,7 @@ export const applyLifeTriggerDecisionResponse = (
       instanceId: movedCard.instanceId,
       cardId: movedCard.cardId,
       from: { zone: "life", playerId: decision.playerId, slot: "life" },
-      to: movedCard.zone,
+      to: handCard.zone,
       reason: "lifeTriggerDeclined",
     },
     { type: "private", playerId: decision.playerId },
