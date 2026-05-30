@@ -9,6 +9,7 @@ import { describe, test } from "vitest";
 import type { CardId, InstanceId } from "@optcg/types";
 
 import { CollectionModalHost } from "./CollectionModalHost.js";
+import { defaultCollectionWindowRect } from "./collection-window-model.js";
 import { Zone } from "./Zone.js";
 import type { ClientCardModel } from "../view-model.js";
 
@@ -31,6 +32,13 @@ const card = (instanceId: string, name: string): ClientCardModel => ({
 });
 
 describe("collection modal", () => {
+  test("collection windows default to the center of the viewport", () => {
+    assert.deepEqual(
+      defaultCollectionWindowRect({ width: 1280, height: 800 }),
+      { x: 360, y: 170, width: 560, height: 460 },
+    );
+  });
+
   test("trash stack displays only the newest card", () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {

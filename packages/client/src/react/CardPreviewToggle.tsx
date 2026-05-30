@@ -1,18 +1,18 @@
 export interface CardPreviewToggleProps {
-  enabled: boolean;
+  open: boolean;
   onToggle: () => void;
 }
 
 export const CardPreviewToggle = ({
-  enabled,
+  open,
   onToggle,
 }: CardPreviewToggleProps): React.JSX.Element => (
   <button
-    className={`card-preview-toggle ${enabled ? "is-enabled" : ""}`}
+    className={`card-preview-toggle ${open ? "is-open" : ""}`}
     type="button"
-    aria-label={`${enabled ? "Disable" : "Enable"} card preview on hover`}
-    aria-pressed={enabled}
-    title={`${enabled ? "Disable" : "Enable"} card preview on hover`}
+    aria-label={`${open ? "Close" : "Open"} preview`}
+    aria-pressed={open}
+    title={`${open ? "Close" : "Open"} preview`}
     onClick={onToggle}
   >
     <svg aria-hidden="true" viewBox="0 0 24 24">

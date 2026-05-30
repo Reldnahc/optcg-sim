@@ -31,6 +31,7 @@ export interface UseControlDockTabsInput {
   groupedInfoWindowIds: readonly InfoWindowTabId[];
   visibleInfoWindowIds: readonly InfoWindowTabId[];
   previewCard?: ClientCardModel | undefined;
+  showPreviewWindow: boolean;
   showActionLogWindow: boolean;
   showSettingsWindow: boolean;
   actionLogEntries: readonly ActionLogEntry[];
@@ -69,6 +70,7 @@ export const useControlDockTabs = ({
   groupedInfoWindowIds,
   visibleInfoWindowIds,
   previewCard,
+  showPreviewWindow,
   showActionLogWindow,
   showSettingsWindow,
   actionLogEntries,
@@ -142,7 +144,7 @@ export const useControlDockTabs = ({
   const dockTabForWindowKey = (
     windowKey: string,
   ): ControlDockTab | undefined => {
-    if (windowKey === cardPreviewWindowKey && previewCard !== undefined) {
+    if (windowKey === cardPreviewWindowKey && showPreviewWindow) {
       return {
         id: windowKey,
         title: "Preview",

@@ -86,7 +86,41 @@ describe("reveal window state store", () => {
       [...matchOne.loadOpenWindowIds()],
       ["action-log", "collection:Player trash"],
     );
-    assert.deepEqual([...matchTwo.loadOpenWindowIds()], []);
+    assert.deepEqual(
+      [...matchTwo.loadOpenWindowIds()],
+      ["card-preview", "action-log", "settings"],
+    );
+  });
+
+  test("defaults unsaved windows to preview open and log settings docked", () => {
+    const storage = createMemoryClientStorage();
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual(
+      [...store.loadOpenWindowIds()],
+      ["card-preview", "action-log", "settings"],
+    );
+    assert.deepEqual(
+      [...store.loadDockedWindowIds()],
+      ["action-log", "settings"],
+    );
+  });
+
+  test("preserves an intentionally saved empty window layout", () => {
+    const storage = createMemoryClientStorage();
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    store.saveOpenWindowIds(new Set());
+    store.saveDockedWindowIds(new Set());
+
+    assert.deepEqual([...store.loadOpenWindowIds()], []);
+    assert.deepEqual([...store.loadDockedWindowIds()], []);
   });
 
   test("persists info window tab config by match", () => {

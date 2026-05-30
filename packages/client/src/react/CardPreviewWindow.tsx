@@ -16,7 +16,7 @@ export interface CardPreviewWindowProps {
 }
 
 export interface CardPreviewContentProps {
-  card: ClientCardModel;
+  card?: ClientCardModel | undefined;
 }
 
 export const defaultCardPreviewWindowRect: WindowRect = {
@@ -30,29 +30,35 @@ export const CardPreviewContent = ({
   card,
 }: CardPreviewContentProps): React.JSX.Element => (
   <article className="card-preview-content">
-    <div className="card-preview-image-frame">
-      {card.imageUrl === undefined ? (
-        <div className="card-preview-placeholder">{card.name}</div>
-      ) : (
-        <img src={card.imageUrl} alt={card.name} />
-      )}
-    </div>
-    <div className="card-preview-text">
-      <h2>{card.name}</h2>
-      <p>{card.category}</p>
-      {card.effectText === undefined ? null : (
-        <section>
-          <h3>Effect</h3>
-          <p>{card.effectText}</p>
-        </section>
-      )}
-      {card.triggerText === undefined ? null : (
-        <section>
-          <h3>Trigger</h3>
-          <p>{card.triggerText}</p>
-        </section>
-      )}
-    </div>
+    {card === undefined ? (
+      <div className="card-preview-empty">Hover a card to preview it</div>
+    ) : (
+      <>
+        <div className="card-preview-image-frame">
+          {card.imageUrl === undefined ? (
+            <div className="card-preview-placeholder">{card.name}</div>
+          ) : (
+            <img src={card.imageUrl} alt={card.name} />
+          )}
+        </div>
+        <div className="card-preview-text">
+          <h2>{card.name}</h2>
+          <p>{card.category}</p>
+          {card.effectText === undefined ? null : (
+            <section>
+              <h3>Effect</h3>
+              <p>{card.effectText}</p>
+            </section>
+          )}
+          {card.triggerText === undefined ? null : (
+            <section>
+              <h3>Trigger</h3>
+              <p>{card.triggerText}</p>
+            </section>
+          )}
+        </div>
+      </>
+    )}
   </article>
 );
 
@@ -68,10 +74,6 @@ export const CardPreviewWindow = ({
   onDragMove,
   onDragEnd,
 }: CardPreviewWindowProps): React.JSX.Element | null => {
-  if (card === undefined) {
-    return null;
-  }
-
   return (
     <FloatingWindow
       title="Preview"

@@ -28,6 +28,8 @@ const windowRectsKeyPrefix = "optcg:client:floating-window-rects";
 const openWindowsKeyPrefix = "optcg:client:open-floating-windows";
 const dockedWindowsKeyPrefix = "optcg:client:docked-floating-windows";
 const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
+const defaultOpenWindowIds = ["card-preview", "action-log", "settings"];
+const defaultDockedWindowIds = ["action-log", "settings"];
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
   activeTabId: "preview",
@@ -71,8 +73,14 @@ const parseStringArray = (value: string | null): string[] => {
   }
 };
 
-const loadSet = (storage: ClientStorage, key: string): Set<string> =>
-  new Set(parseStringArray(storage.getItem(key)));
+const loadSet = (
+  storage: ClientStorage,
+  key: string,
+  defaultValues: readonly string[] = [],
+): Set<string> => {
+  const value = storage.getItem(key);
+  return new Set(value === null ? defaultValues : parseStringArray(value));
+};
 
 const saveSet = (
   storage: ClientStorage,
@@ -195,13 +203,13 @@ export const createRevealWindowStateStore = ({
     storage.setItem(windowRectsKey(matchId), JSON.stringify(rects));
   },
   loadOpenWindowIds() {
-    return loadSet(storage, openWindowsKey(matchId));
+    return loadSet(storage, openWindowsKey(matchId), defaultOpenWindowIds);
   },
   saveOpenWindowIds(windowIds) {
     saveSet(storage, openWindowsKey(matchId), windowIds);
   },
   loadDockedWindowIds() {
-    return loadSet(storage, dockedWindowsKey(matchId));
+    return loadSet(storage, dockedWindowsKey(matchId), defaultDockedWindowIds);
   },
   saveDockedWindowIds(windowIds) {
     saveSet(storage, dockedWindowsKey(matchId), windowIds);

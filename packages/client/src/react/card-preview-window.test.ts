@@ -49,6 +49,21 @@ describe("card preview window", () => {
     assert.match(markup, /Add 1 card\./u);
   });
 
+  test("renders an empty preview window before a card is hovered", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CardPreviewWindow, {
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /floating-window/u);
+    assert.match(markup, /card-preview-window/u);
+    assert.match(markup, /Preview/);
+    assert.match(markup, /Hover a card to preview it/u);
+  });
+
   test("minimized preview stays mounted as a draggable bar", async () => {
     const markup = renderToStaticMarkup(
       createElement(CardPreviewWindow, {
@@ -121,48 +136,55 @@ describe("card preview window", () => {
     assert.match(matchApp, /InfoTabbedWindow/u);
   });
 
-  test("preview toggle controls whether hover preview is enabled", () => {
-    const enabledMarkup = renderToStaticMarkup(
+  test("preview toggle controls whether the preview window is open", () => {
+    const openMarkup = renderToStaticMarkup(
       createElement(CardPreviewToggle, {
-        enabled: true,
+        open: true,
         onToggle: () => undefined,
       }),
     );
-    const disabledMarkup = renderToStaticMarkup(
+    const closedMarkup = renderToStaticMarkup(
       createElement(CardPreviewToggle, {
-        enabled: false,
+        open: false,
         onToggle: () => undefined,
       }),
     );
 
-    assert.match(enabledMarkup, /card-preview-toggle is-enabled/u);
-    assert.match(enabledMarkup, /aria-pressed="true"/u);
-    assert.match(enabledMarkup, /Disable card preview on hover/u);
-    assert.match(disabledMarkup, /aria-pressed="false"/u);
-    assert.match(disabledMarkup, /Enable card preview on hover/u);
+    assert.match(openMarkup, /card-preview-toggle is-open/u);
+    assert.match(openMarkup, /aria-pressed="true"/u);
+    assert.match(openMarkup, /Close preview/u);
+    assert.match(closedMarkup, /aria-pressed="false"/u);
+    assert.match(closedMarkup, /Open preview/u);
   });
 
-  test("match app remembers the last hovered card and reopens preview when re-enabled", async () => {
+  test("match app treats preview as a normal open window", async () => {
     const source = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
     );
 
-    assert.match(source, /lastPreviewCard/u);
+    assert.match(source, /const \[previewOpen/u);
     assert.match(source, /const previewHoveredCard/u);
-    assert.match(source, /if\s*\(!previewEnabled\)\s*\{\s*return;/u);
-    assert.match(source, /setPreviewCard\(undefined\);/u);
-    assert.match(source, /setPreviewCard\(lastPreviewCard\);/u);
+    assert.match(
+      source,
+      /updateFloatingWindowOpen\(cardPreviewWindowKey, true\)/u,
+    );
+    assert.doesNotMatch(source, /lastPreviewCard/u);
+    assert.doesNotMatch(source, /previewEnabled/u);
   });
 
-  test("closing the preview window disables hover preview", async () => {
+  test("closing the preview window closes its normal window state", async () => {
     const source = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
     );
 
     assert.match(source, /const closeCardPreview/u);
-    assert.match(source, /setPreviewEnabled\(false\);/u);
+    assert.match(source, /setPreviewOpen\(false\);/u);
+    assert.match(
+      source,
+      /updateFloatingWindowOpen\(cardPreviewWindowKey, false\)/u,
+    );
     assert.match(source, /onClose=\{closeCardPreview\}/u);
   });
 

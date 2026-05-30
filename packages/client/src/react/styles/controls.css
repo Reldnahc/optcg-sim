@@ -80,7 +80,7 @@
 }
 
 .card-preview-toggle:hover,
-.card-preview-toggle.is-enabled,
+.card-preview-toggle.is-open,
 .action-log-toggle:hover,
 .action-log-toggle.is-open,
 .control-icon-button:hover {

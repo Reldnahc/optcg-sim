@@ -24,6 +24,7 @@ import { CollectionModalHost } from "./CollectionModalHost.js";
 import {
   collectionModalFromWindowKey,
   collectionWindowKey,
+  defaultCollectionWindowRect,
 } from "./collection-window-model.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
@@ -78,10 +79,7 @@ export const MatchApp = (): React.JSX.Element => {
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
-  const [lastPreviewCard, setLastPreviewCard] = useState<
-    ClientCardModel | undefined
-  >(undefined);
-  const [previewEnabled, setPreviewEnabled] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMinimized, setPreviewMinimized] = useState(false);
   const [actionLogOpen, setActionLogOpen] = useState(false);
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
@@ -219,34 +217,21 @@ export const MatchApp = (): React.JSX.Element => {
   const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
     cardModelFromCatalog(matchState?.cards, card);
   const previewHoveredCard = (card: ClientCardModel): void => {
-    setLastPreviewCard(card);
-    if (!previewEnabled) {
-      return;
-    }
     setPreviewCard(card);
-    setInfoWindowActiveTab("preview");
-    setInfoWindowMinimized(false);
-  };
-  useEffect(() => {
-    if (previewEnabled) {
-      return;
+    if (previewOpen) {
+      setInfoWindowActiveTab("preview");
+      setInfoWindowMinimized(false);
     }
-    setPreviewCard(undefined);
+  };
+  const openCardPreview = (): void => {
+    setPreviewOpen(true);
     setPreviewMinimized(false);
-  }, [previewEnabled]);
-  const togglePreviewEnabled = (): void => {
-    setPreviewEnabled((current) => {
-      const next = !current;
-      if (next) {
-        setPreviewCard(lastPreviewCard);
-        setPreviewMinimized(false);
-      }
-      return next;
-    });
+    setInfoWindowMinimized(false);
+    setInfoWindowActiveTab("preview");
+    updateFloatingWindowOpen(cardPreviewWindowKey, true);
   };
   const closeCardPreview = (): void => {
-    setPreviewEnabled(false);
-    setPreviewCard(undefined);
+    setPreviewOpen(false);
     setPreviewMinimized(false);
     setInfoWindowActiveTab("log");
     setGroupedInfoWindowIds(
@@ -255,6 +240,14 @@ export const MatchApp = (): React.JSX.Element => {
         "preview",
       ),
     );
+    updateFloatingWindowOpen(cardPreviewWindowKey, false);
+  };
+  const togglePreviewOpen = (): void => {
+    if (previewOpen) {
+      closeCardPreview();
+      return;
+    }
+    openCardPreview();
   };
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
@@ -354,7 +347,7 @@ export const MatchApp = (): React.JSX.Element => {
           }),
     [matchState, playerSnapshot],
   );
-  const showPreviewWindow = previewCard !== undefined;
+  const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
   const visibleInfoWindowIds = visibleInfoWindowIdsFromState({
@@ -388,6 +381,7 @@ export const MatchApp = (): React.JSX.Element => {
     groupedInfoWindowIds,
     visibleInfoWindowIds,
     previewCard,
+    showPreviewWindow,
     showActionLogWindow,
     showSettingsWindow,
     actionLogEntries,
@@ -613,14 +607,16 @@ export const MatchApp = (): React.JSX.Element => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
     }
+    const nextPreviewOpen = activeOpenWindowIds.has(cardPreviewWindowKey);
     const nextActionLogOpen = activeOpenWindowIds.has(actionLogWindowKey);
     const nextSettingsOpen = activeOpenWindowIds.has(settingsWindowKey);
+    setPreviewOpen(nextPreviewOpen);
     setActionLogOpen(nextActionLogOpen);
     setSettingsOpen(nextSettingsOpen);
-    if (nextActionLogOpen && previewCard === undefined) {
+    if (nextActionLogOpen && !nextPreviewOpen) {
       setInfoWindowActiveTab("log");
     }
-  }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope, previewCard]);
+  }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope]);
   useEffect(() => {
     const dockRect = currentControlDockSlotRect();
     if (dockRect !== undefined) {
@@ -702,8 +698,8 @@ export const MatchApp = (): React.JSX.Element => {
         }}
         previewControl={
           <CardPreviewToggle
-            enabled={previewEnabled}
-            onToggle={togglePreviewEnabled}
+            open={previewOpen}
+            onToggle={togglePreviewOpen}
           />
         }
         actionLogControl={
@@ -761,7 +757,8 @@ export const MatchApp = (): React.JSX.Element => {
           initialRect={
             collectionViewerWindowKey === undefined
               ? undefined
-              : activeFloatingWindowRects[collectionViewerWindowKey]
+              : (activeFloatingWindowRects[collectionViewerWindowKey] ??
+                defaultCollectionWindowRect())
           }
           onToggleMinimized={() => {
             setCollectionMinimized((current) => !current);
