@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { CardRef, InstanceId } from "@optcg/types";
+import type { InstanceId } from "@optcg/types";
 
-import {
-  createActionLogEntries,
-  type ActionLogCardMention,
-} from "../action-log.js";
+import { createActionLogEntries } from "../action-log.js";
 import {
   createCollectionDecisionSurface,
   usesCollectionCardCostSurface,
@@ -18,6 +15,11 @@ import {
 } from "./ActionLogWindow.js";
 import { BoardLayout } from "./BoardLayout.js";
 import { createBrowserPersistentStorage } from "./browser-storage.js";
+import {
+  actionLogCardModel,
+  cardDisplayFromCatalog,
+  cardModelFromCatalog,
+} from "./card-model.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
 import {
   CardPreviewWindow,
@@ -45,45 +47,34 @@ import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
+  groupedInfoWindowIds as groupedInfoWindowIdsFromState,
+  groupedInfoWindowIdsAfterDrop,
+  groupedInfoWindowIdsAfterTabDragOut,
   infoWindowDefaultSize,
   infoWindowKey,
   infoWindowKeyForTab,
   infoWindowRect,
   settingsWindowKey,
+  standaloneInfoWindowIds as standaloneInfoWindowIdsFromState,
   visibleInfoWindowIds as visibleInfoWindowIdsFromState,
 } from "./info-window-model.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
+import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
 import { usePoppedOutWindowDrag } from "./use-popped-out-window-drag.js";
+import {
+  emptyFloatingWindowRectState,
+  emptyRevealWindowState,
+  type FloatingWindowRectState,
+  type RevealWindowState,
+} from "./window-state-model.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
-
-interface RevealWindowState {
-  scope?: string | undefined;
-  dismissed: Set<string>;
-  minimized: Set<string>;
-}
-
-interface FloatingWindowRectState {
-  scope?: string | undefined;
-  rects: Record<string, WindowRect>;
-  openWindowIds: Set<string>;
-}
-
-const emptyRevealWindowState: RevealWindowState = {
-  dismissed: new Set(),
-  minimized: new Set(),
-};
-
-const emptyFloatingWindowRectState: FloatingWindowRectState = {
-  rects: {},
-  openWindowIds: new Set(),
-};
 
 const revealWindowKey = (revealId: string): string => `reveal:${revealId}`;
 
@@ -143,11 +134,11 @@ export const MatchApp = (): React.JSX.Element => {
   );
   const {
     activeTabId: infoWindowActiveTab,
-    grouped: infoWindowsGrouped,
+    groupedTabIds: configuredGroupedInfoWindowIds,
     load: loadInfoWindowConfig,
     reset: resetInfoWindowConfig,
     setActiveTab: setInfoWindowActiveTab,
-    setGrouped: setInfoWindowsGrouped,
+    setGroupedTabIds: setGroupedInfoWindowIds,
   } = useInfoWindowConfig(revealWindowStateStore);
   useEffect(() => {
     if (matchScope === undefined || revealWindowStateStore === undefined) {
@@ -344,77 +335,19 @@ export const MatchApp = (): React.JSX.Element => {
     client.state.actionInFlight ||
     concedeAction === undefined ||
     matchState?.snapshot.status !== "active";
-  const pendingRollbackRequest = matchState?.snapshot.rollback?.pendingRequest;
-  const rollbackStatus =
-    pendingRollbackRequest === undefined || currentPlayerId === undefined
-      ? undefined
-      : pendingRollbackRequest.requestedBy === currentPlayerId
-        ? {
-            message: "Rollback requested. Waiting for opponent.",
-            canCancel: true,
-          }
-        : pendingRollbackRequest.approvingPlayerId === currentPlayerId
-          ? {
-              message: "Opponent requested a rollback.",
-              canCancel: false,
-            }
-          : undefined;
+  const rollbackStatus = rollbackStatusForPlayer(
+    matchState?.snapshot,
+    currentPlayerId,
+  );
   useEffect(() => {
     if (concedeDisabled) {
       setConcedeConfirming(false);
     }
   }, [concedeDisabled]);
-  const cardDisplay = (card: CardRef): { name: string; imageUrl?: string } => {
-    const catalogEntry =
-      matchState?.cards.players[card.playerId]?.cards[card.cardId];
-    if (catalogEntry === undefined) {
-      return { name: String(card.cardId) };
-    }
-    return {
-      name: catalogEntry.name,
-      ...(catalogEntry.imageUrl === undefined
-        ? {}
-        : { imageUrl: catalogEntry.imageUrl }),
-    };
-  };
-  const cardModel = (card: CardRef): ClientCardModel => {
-    const catalogEntry =
-      matchState?.cards.players[card.playerId]?.cards[card.cardId];
-    return {
-      instanceId: card.instanceId,
-      cardId: card.cardId,
-      name: catalogEntry?.name ?? String(card.cardId),
-      category: catalogEntry?.category ?? "unknown",
-      ...(catalogEntry?.effectText === undefined
-        ? {}
-        : { effectText: catalogEntry.effectText }),
-      ...(catalogEntry?.triggerText === undefined
-        ? {}
-        : { triggerText: catalogEntry.triggerText }),
-      ...(catalogEntry?.imageUrl === undefined
-        ? {}
-        : { imageUrl: catalogEntry.imageUrl }),
-      attachedDonCount: 0,
-      attachedDonCards: [],
-    };
-  };
-  const actionLogCardModel = (
-    card: ActionLogCardMention["card"],
-  ): ClientCardModel => ({
-    instanceId:
-      card.instanceId ??
-      (`action-log:${card.playerId}:${card.cardId}` as InstanceId),
-    cardId: card.cardId,
-    name: card.name,
-    category: card.category,
-    ...(card.effectText === undefined ? {} : { effectText: card.effectText }),
-    ...(card.triggerText === undefined
-      ? {}
-      : { triggerText: card.triggerText }),
-    ...(card.imageUrl === undefined ? {} : { imageUrl: card.imageUrl }),
-    attachedDonCount: 0,
-    attachedDonCards: [],
-  });
+  const cardDisplay = (card: Parameters<typeof cardDisplayFromCatalog>[1]) =>
+    cardDisplayFromCatalog(matchState?.cards, card);
+  const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
+    cardModelFromCatalog(matchState?.cards, card);
   const previewHoveredCard = (card: ClientCardModel): void => {
     setLastPreviewCard(card);
     if (!previewEnabled) {
@@ -446,7 +379,12 @@ export const MatchApp = (): React.JSX.Element => {
     setPreviewCard(undefined);
     setPreviewMinimized(false);
     setInfoWindowActiveTab("log");
-    setInfoWindowsGrouped(false);
+    setGroupedInfoWindowIds(
+      groupedInfoWindowIdsAfterTabDragOut(
+        configuredGroupedInfoWindowIds,
+        "preview",
+      ),
+    );
   };
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
@@ -571,13 +509,32 @@ export const MatchApp = (): React.JSX.Element => {
     showActionLogWindow,
     showSettingsWindow,
   });
-  const showTabbedInfoWindow =
-    infoWindowsGrouped && visibleInfoWindowIds.length >= 2;
+  const configuredVisibleGroupedInfoWindowIds = groupedInfoWindowIdsFromState(
+    visibleInfoWindowIds,
+    configuredGroupedInfoWindowIds,
+  );
+  const groupedInfoWindowIds =
+    configuredVisibleGroupedInfoWindowIds.length >= 2
+      ? configuredVisibleGroupedInfoWindowIds
+      : [];
+  const standaloneInfoWindowIds = standaloneInfoWindowIdsFromState(
+    visibleInfoWindowIds,
+    groupedInfoWindowIds,
+  );
+  const showTabbedInfoWindow = groupedInfoWindowIds.length >= 2;
+  const groupedInfoWindowRect =
+    activeFloatingWindowRects[infoWindowKey] ??
+    (groupedInfoWindowIds[0] === undefined
+      ? undefined
+      : infoWindowRect(groupedInfoWindowIds[0], activeFloatingWindowRects));
   const groupableInfoWindows: GroupableWindow<InfoWindowTabId>[] =
     visibleInfoWindowIds.map((id) => ({
       id,
       visible: true,
-      rect: infoWindowRect(id, activeFloatingWindowRects),
+      rect:
+        groupedInfoWindowIds.includes(id) && groupedInfoWindowRect !== undefined
+          ? groupedInfoWindowRect
+          : infoWindowRect(id, activeFloatingWindowRects),
     }));
   const matchingCombineDropTarget = (
     draggedWindowId: InfoWindowTabId,
@@ -599,29 +556,49 @@ export const MatchApp = (): React.JSX.Element => {
     if (targetWindowId === undefined) {
       return;
     }
-    const targetRect = infoWindowRect(
-      targetWindowId,
-      activeFloatingWindowRects,
-    );
+    const targetRect =
+      groupedInfoWindowIds.includes(targetWindowId) &&
+      groupedInfoWindowRect !== undefined
+        ? groupedInfoWindowRect
+        : infoWindowRect(targetWindowId, activeFloatingWindowRects);
     updateFloatingWindowRect(infoWindowKey, targetRect);
     setInfoWindowActiveTab(draggedWindowId);
     setInfoWindowMinimized(false);
     setPreviewMinimized(false);
     setActionLogMinimized(false);
-    setInfoWindowsGrouped(true);
+    setGroupedInfoWindowIds(
+      groupedInfoWindowIdsAfterDrop({
+        visibleInfoWindowIds,
+        currentGroupedInfoWindowIds: groupedInfoWindowIds,
+        draggedWindowId,
+        targetWindowId,
+      }),
+    );
   };
   const splitInfoWindowTab = (
     tabId: InfoWindowTabId,
     point: TabDragOutPoint,
   ): void => {
     const windowKey = infoWindowKeyForTab(tabId);
+    const remainingGroupedWindowIds = groupedInfoWindowIdsAfterTabDragOut(
+      groupedInfoWindowIds,
+      tabId,
+    );
     const remainingWindowId =
-      visibleInfoWindowIds.find((windowId) => windowId !== tabId) ?? tabId;
-    const remainingWindowKey = infoWindowKeyForTab(remainingWindowId);
+      remainingGroupedWindowIds[0] ??
+      groupedInfoWindowIds.find((windowId) => windowId !== tabId);
     const groupRect =
       activeFloatingWindowRects[infoWindowKey] ??
       infoWindowRect(tabId, activeFloatingWindowRects);
-    updateFloatingWindowRect(remainingWindowKey, groupRect);
+    if (
+      remainingGroupedWindowIds.length === 0 &&
+      remainingWindowId !== undefined
+    ) {
+      updateFloatingWindowRect(
+        infoWindowKeyForTab(remainingWindowId),
+        groupRect,
+      );
+    }
     const poppedOutSize = infoWindowDefaultSize(tabId);
     const poppedOutRect = splitWindowRectFromPoint(point, poppedOutSize);
     updateFloatingWindowRect(windowKey, poppedOutRect);
@@ -633,9 +610,9 @@ export const MatchApp = (): React.JSX.Element => {
       width: poppedOutSize.width,
       height: poppedOutSize.height,
     });
-    setInfoWindowsGrouped(false);
+    setGroupedInfoWindowIds(remainingGroupedWindowIds);
     setInfoWindowMinimized(false);
-    setInfoWindowActiveTab(remainingWindowId);
+    setInfoWindowActiveTab(remainingWindowId ?? tabId);
     if (tabId === "log") {
       setActionLogOpen(true);
       updateFloatingWindowOpen(actionLogWindowKey, true);
@@ -646,11 +623,18 @@ export const MatchApp = (): React.JSX.Element => {
     }
   };
   useEffect(() => {
-    if (visibleInfoWindowIds.length < 2) {
-      setInfoWindowsGrouped(false);
+    if (
+      configuredGroupedInfoWindowIds.length > 0 &&
+      configuredVisibleGroupedInfoWindowIds.length < 2
+    ) {
+      setGroupedInfoWindowIds([]);
       setCombineDropTarget(undefined);
     }
-  }, [visibleInfoWindowIds.length]);
+  }, [
+    configuredGroupedInfoWindowIds.length,
+    configuredVisibleGroupedInfoWindowIds.length,
+    setGroupedInfoWindowIds,
+  ]);
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
@@ -856,6 +840,7 @@ export const MatchApp = (): React.JSX.Element => {
           entries={actionLogEntries}
           logOpen={showActionLogWindow}
           settingsOpen={showSettingsWindow}
+          tabIds={groupedInfoWindowIds}
           activeTabId={infoWindowActiveTab}
           minimized={infoWindowMinimized}
           initialRect={
@@ -875,14 +860,21 @@ export const MatchApp = (): React.JSX.Element => {
             if (tabId === "settings") {
               setSettingsOpen(false);
               setInfoWindowActiveTab("preview");
-              setInfoWindowsGrouped(false);
+              setGroupedInfoWindowIds(
+                groupedInfoWindowIdsAfterTabDragOut(
+                  groupedInfoWindowIds,
+                  "settings",
+                ),
+              );
               updateFloatingWindowOpen(settingsWindowKey, false);
               return;
             }
             setActionLogOpen(false);
             setActionLogMinimized(false);
             setInfoWindowActiveTab("preview");
-            setInfoWindowsGrouped(false);
+            setGroupedInfoWindowIds(
+              groupedInfoWindowIdsAfterTabDragOut(groupedInfoWindowIds, "log"),
+            );
             updateFloatingWindowOpen(actionLogWindowKey, false);
           }}
           onRectChange={(rect) => {
@@ -897,7 +889,7 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      {showActionLogWindow && !showTabbedInfoWindow ? (
+      {standaloneInfoWindowIds.includes("log") ? (
         <ActionLogWindow
           entries={actionLogEntries}
           className={
@@ -915,7 +907,9 @@ export const MatchApp = (): React.JSX.Element => {
             setActionLogOpen(false);
             setActionLogMinimized(false);
             setInfoWindowActiveTab("preview");
-            setInfoWindowsGrouped(false);
+            setGroupedInfoWindowIds(
+              groupedInfoWindowIdsAfterTabDragOut(groupedInfoWindowIds, "log"),
+            );
             updateFloatingWindowOpen(actionLogWindowKey, false);
           }}
           onRectChange={(rect) => {
@@ -935,7 +929,7 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      {showPreviewWindow && !showTabbedInfoWindow ? (
+      {standaloneInfoWindowIds.includes("preview") ? (
         <CardPreviewWindow
           card={previewCard}
           className={
@@ -963,7 +957,7 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      {showSettingsWindow && !showTabbedInfoWindow ? (
+      {standaloneInfoWindowIds.includes("settings") ? (
         <SettingsWindow
           className={
             combineDropTarget === "settings"
@@ -977,7 +971,12 @@ export const MatchApp = (): React.JSX.Element => {
           onClose={() => {
             setSettingsOpen(false);
             setInfoWindowActiveTab("preview");
-            setInfoWindowsGrouped(false);
+            setGroupedInfoWindowIds(
+              groupedInfoWindowIdsAfterTabDragOut(
+                groupedInfoWindowIds,
+                "settings",
+              ),
+            );
             updateFloatingWindowOpen(settingsWindowKey, false);
           }}
           onRectChange={(rect) => {

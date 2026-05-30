@@ -46,6 +46,7 @@ describe("settings window", () => {
         entries: [],
         logOpen: true,
         settingsOpen: true,
+        tabIds: ["log", "settings"],
         activeTabId: "settings",
         minimized: false,
         onActiveTabChange: () => undefined,

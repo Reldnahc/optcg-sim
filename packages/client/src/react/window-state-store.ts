@@ -18,7 +18,7 @@ export interface RevealWindowStateStore {
 
 export interface InfoWindowConfig {
   activeTabId: "preview" | "log" | "settings";
-  grouped: boolean;
+  groupedTabIds: readonly ("preview" | "log" | "settings")[];
 }
 
 const keyPrefix = "optcg:client:reveal-window-state";
@@ -28,8 +28,15 @@ const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
   activeTabId: "preview",
-  grouped: false,
+  groupedTabIds: [],
 };
+
+const allInfoWindowTabIds = ["preview", "log", "settings"] as const;
+
+const isInfoWindowTabId = (
+  value: unknown,
+): value is (typeof allInfoWindowTabIds)[number] =>
+  value === "preview" || value === "log" || value === "settings";
 
 const setKey = (matchId: MatchId, name: "dismissed" | "minimized"): string =>
   `${keyPrefix}:${String(matchId)}:${name}`;
@@ -111,10 +118,9 @@ const isInfoWindowConfig = (value: unknown): value is InfoWindowConfig => {
   }
   const candidate = value as Partial<Record<keyof InfoWindowConfig, unknown>>;
   return (
-    (candidate.activeTabId === "preview" ||
-      candidate.activeTabId === "log" ||
-      candidate.activeTabId === "settings") &&
-    typeof candidate.grouped === "boolean"
+    isInfoWindowTabId(candidate.activeTabId) &&
+    Array.isArray(candidate.groupedTabIds) &&
+    candidate.groupedTabIds.every(isInfoWindowTabId)
   );
 };
 
@@ -124,7 +130,34 @@ const parseInfoWindowConfig = (value: string | null): InfoWindowConfig => {
   }
   try {
     const parsed = JSON.parse(value) as unknown;
-    return isInfoWindowConfig(parsed) ? parsed : defaultInfoWindowConfig;
+    if (isInfoWindowConfig(parsed)) {
+      return {
+        activeTabId: parsed.activeTabId,
+        groupedTabIds: [
+          ...new Set(
+            parsed.groupedTabIds.filter((tabId) =>
+              allInfoWindowTabIds.includes(tabId),
+            ),
+          ),
+        ],
+      };
+    }
+    if (typeof parsed === "object" && parsed !== null) {
+      const candidate = parsed as {
+        activeTabId?: unknown;
+        grouped?: unknown;
+      };
+      if (
+        isInfoWindowTabId(candidate.activeTabId) &&
+        typeof candidate.grouped === "boolean"
+      ) {
+        return {
+          activeTabId: candidate.activeTabId,
+          groupedTabIds: candidate.grouped ? [...allInfoWindowTabIds] : [],
+        };
+      }
+    }
+    return defaultInfoWindowConfig;
   } catch {
     return defaultInfoWindowConfig;
   }

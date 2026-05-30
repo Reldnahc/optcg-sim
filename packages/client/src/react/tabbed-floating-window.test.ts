@@ -55,12 +55,13 @@ describe("tabbed floating window", () => {
 
     assert.match(infoWindowModel, /const infoWindowKey = "info-window";/u);
     assert.match(matchApp, /infoWindowKey/u);
-    assert.match(matchApp, /infoWindowsGrouped/u);
+    assert.match(matchApp, /groupedInfoWindowIds/u);
     assert.match(
       matchApp,
-      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped\s*&&\s*visibleInfoWindowIds\.length\s*>=\s*2/u,
+      /showTabbedInfoWindow\s*=\s*groupedInfoWindowIds\.length\s*>=\s*2/u,
     );
     assert.match(matchApp, /InfoTabbedWindow/u);
+    assert.match(matchApp, /tabIds=\{groupedInfoWindowIds\}/u);
     assert.match(matchApp, /tryGroupInfoWindow\("preview", rect\)/u);
     assert.match(matchApp, /tryGroupInfoWindow\("log", rect\)/u);
     assert.match(matchApp, /tryGroupInfoWindow\("settings", rect\)/u);
@@ -71,7 +72,7 @@ describe("tabbed floating window", () => {
     );
     assert.doesNotMatch(
       matchApp,
-      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped\s*&&\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
+      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped/u,
     );
   });
 

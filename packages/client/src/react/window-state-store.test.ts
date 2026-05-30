@@ -102,16 +102,33 @@ describe("reveal window state store", () => {
 
     matchOne.saveInfoWindowConfig({
       activeTabId: "settings",
-      grouped: true,
+      groupedTabIds: ["preview", "settings"],
     });
 
     assert.deepEqual(matchOne.loadInfoWindowConfig(), {
       activeTabId: "settings",
-      grouped: true,
+      groupedTabIds: ["preview", "settings"],
     });
     assert.deepEqual(matchTwo.loadInfoWindowConfig(), {
       activeTabId: "preview",
-      grouped: false,
+      groupedTabIds: [],
+    });
+  });
+
+  test("loads legacy boolean info window grouping as all known tabs", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:info-window-config:match-1",
+      JSON.stringify({ activeTabId: "log", grouped: true }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual(store.loadInfoWindowConfig(), {
+      activeTabId: "log",
+      groupedTabIds: ["preview", "log", "settings"],
     });
   });
 
@@ -161,7 +178,7 @@ describe("reveal window state store", () => {
 
     assert.deepEqual(store.loadInfoWindowConfig(), {
       activeTabId: "preview",
-      grouped: false,
+      groupedTabIds: [],
     });
   });
 });

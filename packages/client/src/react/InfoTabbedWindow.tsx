@@ -17,6 +17,7 @@ export interface InfoTabbedWindowProps {
   entries: readonly ActionLogEntry[];
   logOpen: boolean;
   settingsOpen: boolean;
+  tabIds: readonly InfoWindowTabId[];
   activeTabId: InfoWindowTabId;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
@@ -39,6 +40,7 @@ export const InfoTabbedWindow = ({
   entries,
   logOpen,
   settingsOpen,
+  tabIds,
   activeTabId,
   minimized,
   initialRect,
@@ -50,15 +52,16 @@ export const InfoTabbedWindow = ({
   onRequestRollback,
   onPreviewCard,
 }: InfoTabbedWindowProps): React.JSX.Element | null => {
+  const tabIdSet = new Set(tabIds);
   const tabs: FloatingWindowTab[] = [];
-  if (previewCard !== undefined) {
+  if (tabIdSet.has("preview") && previewCard !== undefined) {
     tabs.push({
       id: "preview",
       title: "Preview",
       content: <CardPreviewContent card={previewCard} />,
     });
   }
-  if (logOpen) {
+  if (tabIdSet.has("log") && logOpen) {
     tabs.push({
       id: "log",
       title: "Log",
@@ -71,7 +74,7 @@ export const InfoTabbedWindow = ({
       ),
     });
   }
-  if (settingsOpen) {
+  if (tabIdSet.has("settings") && settingsOpen) {
     tabs.push({
       id: "settings",
       title: "Settings",

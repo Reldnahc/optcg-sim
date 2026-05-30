@@ -8,16 +8,16 @@ import type {
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
   activeTabId: "preview",
-  grouped: false,
+  groupedTabIds: [],
 };
 
 export interface InfoWindowConfigControls {
   activeTabId: InfoWindowTabId;
-  grouped: boolean;
+  groupedTabIds: readonly InfoWindowTabId[];
   load: () => void;
   reset: () => void;
   setActiveTab: (activeTabId: InfoWindowTabId) => void;
-  setGrouped: (grouped: boolean) => void;
+  setGroupedTabIds: (groupedTabIds: readonly InfoWindowTabId[]) => void;
 }
 
 export const useInfoWindowConfig = (
@@ -50,19 +50,19 @@ export const useInfoWindowConfig = (
     },
     [updateConfig],
   );
-  const setGrouped = useCallback(
-    (grouped: boolean): void => {
-      updateConfig((current) => ({ ...current, grouped }));
+  const setGroupedTabIds = useCallback(
+    (groupedTabIds: readonly InfoWindowTabId[]): void => {
+      updateConfig((current) => ({ ...current, groupedTabIds }));
     },
     [updateConfig],
   );
 
   return {
     activeTabId: config.activeTabId,
-    grouped: config.grouped,
+    groupedTabIds: config.groupedTabIds,
     load,
     reset,
     setActiveTab,
-    setGrouped,
+    setGroupedTabIds,
   };
 };
