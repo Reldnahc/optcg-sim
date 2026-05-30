@@ -148,9 +148,9 @@ export interface SelectCardsDecision extends BaseDecision {
       enterRested: boolean;
     };
     playSourceOverflow?: {
+      queueEntryId: QueueEntryId;
       source: CardRef;
       enterRested: boolean;
-      queueEntryId: QueueEntryId;
     };
   };
 }

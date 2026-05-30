@@ -428,3 +428,40 @@ test("TYP-009A optional cost uses payCost with a canonical decline response", ()
   expect(activationDecline.type).toBe("optionalActivation");
   void malformedDecline;
 });
+
+test("select cards decision can carry runtime play-source overflow metadata", () => {
+  const decision: SelectCardsDecision = {
+    id: "decision-play-source-overflow-1" as DecisionId,
+    type: "selectCards",
+    playerId: "player-1" as PlayerId,
+    prompt: "Choose a Character to trash.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: "queue-1" as QueueEntryId,
+      effectId: "effect-1" as EffectId,
+    },
+    visibility: { type: "private", playerId: "player-1" as PlayerId },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      zone: "characterArea",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+    },
+    candidates: [],
+    runtime: {
+      playSourceOverflow: {
+        queueEntryId: "queue-1" as QueueEntryId,
+        source: {
+          instanceId: "card-1" as CardRef["instanceId"],
+          cardId: "OP01-001" as CardId,
+          playerId: "player-1" as PlayerId,
+        },
+        enterRested: false,
+      },
+    },
+  };
+
+  expect(decision.runtime?.playSourceOverflow?.queueEntryId).toBe("queue-1");
+});

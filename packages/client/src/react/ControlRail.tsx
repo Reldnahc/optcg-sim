@@ -350,9 +350,8 @@ export const ControlRail = ({
                           return;
                         }
                         const reorderTarget = tabReorderTargetFromPointer({
-                          entries: tabReorderEntriesFromTabList(
-                            tabStripElement,
-                          ),
+                          entries:
+                            tabReorderEntriesFromTabList(tabStripElement),
                           draggedId: start.tabId,
                           clientX: event.clientX,
                         });

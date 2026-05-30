@@ -145,10 +145,7 @@ export const InfoTabbedWindow = ({
         }
       }}
       onTabReorder={(draggedTabId, targetTabId, placement) => {
-        if (
-          isInfoWindowTabId(draggedTabId) &&
-          isInfoWindowTabId(targetTabId)
-        ) {
+        if (isInfoWindowTabId(draggedTabId) && isInfoWindowTabId(targetTabId)) {
           onTabReorder?.(draggedTabId, targetTabId, placement);
         }
       }}

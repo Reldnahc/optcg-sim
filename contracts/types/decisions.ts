@@ -4,6 +4,7 @@ import type {
   InstanceId,
   PlayerRef,
   PlayerId,
+  QueueEntryId,
   Zone,
 } from "./primitives.js";
 import type { CardRef } from "./card-metadata.js";
@@ -144,6 +145,11 @@ export interface SelectCardsDecision extends BaseDecision {
   candidates: CardSelectionCandidate[];
   runtime?: {
     playSelectedOverflow?: {
+      enterRested: boolean;
+    };
+    playSourceOverflow?: {
+      queueEntryId: QueueEntryId;
+      source: CardRef;
       enterRested: boolean;
     };
   };

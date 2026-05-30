@@ -168,9 +168,9 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
 
-  test("match app unarms concede confirmation after a short timeout", async () => {
+  test("concede confirmation unarms after a short timeout", async () => {
     const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+      join(sourceDirectory, "use-concede-confirmation.ts"),
       "utf8",
     );
 

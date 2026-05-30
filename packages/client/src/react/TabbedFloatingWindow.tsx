@@ -147,8 +147,7 @@ export const TabbedFloatingWindow = ({
                 if (tabStripElement === null) {
                   return;
                 }
-                const tabStripRect =
-                  tabDragRectFromElement(tabStripElement);
+                const tabStripRect = tabDragRectFromElement(tabStripElement);
                 const intent = tabDragIntentFromPoint({
                   point: { x: event.clientX, y: event.clientY },
                   tabStripRect,

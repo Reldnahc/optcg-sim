@@ -9,7 +9,10 @@ import {
 } from "../interactions/decision-surface.js";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
-import { ActionLogWindow, defaultActionLogWindowRect } from "./ActionLogWindow.js";
+import {
+  ActionLogWindow,
+  defaultActionLogWindowRect,
+} from "./ActionLogWindow.js";
 import { BoardLayout } from "./BoardLayout.js";
 import { createBrowserPersistentStorage } from "./browser-storage.js";
 import {
@@ -18,7 +21,10 @@ import {
   cardModelFromCatalog,
 } from "./card-model.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
-import { CardPreviewWindow, defaultCardPreviewWindowRect } from "./CardPreviewWindow.js";
+import {
+  CardPreviewWindow,
+  defaultCardPreviewWindowRect,
+} from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import {
@@ -49,9 +55,7 @@ import {
   visibleInfoWindowIds as visibleInfoWindowIdsFromState,
 } from "./info-window-model.js";
 import { createInfoWindowToolbarControls } from "./info-window-toolbar-controls.js";
-import {
-  opponentRevealWindowsFromState,
-} from "./opponent-reveal-windows.js";
+import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
 import { OpponentRevealWindowLayer } from "./OpponentRevealWindowLayer.js";
 import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
@@ -63,12 +67,11 @@ import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowDragOut } from "./use-info-window-drag-out.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
+import { useConcedeConfirmation } from "./use-concede-confirmation.js";
 import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
-
-const concedeConfirmationTimeoutMs = 3000;
 
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
@@ -191,39 +194,23 @@ export const MatchApp = (): React.JSX.Element => {
     () => client.globalActions().find((action) => action.type === "concede"),
     [client],
   );
-  const [concedeConfirming, setConcedeConfirming] = useState(false);
-  useEffect(() => {
-    if (concedeAction === undefined) {
-      setConcedeConfirming(false);
-    }
-  }, [concedeAction]);
-  useEffect(() => {
-    if (!concedeConfirming) {
-      return;
-    }
-    const timeoutId = globalThis.setTimeout(() => {
-      setConcedeConfirming(false);
-    }, concedeConfirmationTimeoutMs);
-    return () => {
-      globalThis.clearTimeout(timeoutId);
-    };
-  }, [concedeConfirming]);
   const visibleGlobalActions = globalActions.filter(
     (action) => action.type !== "concede",
   );
-  const concedeDisabled =
-    client.state.actionInFlight ||
-    concedeAction === undefined ||
-    matchState?.snapshot.status !== "active";
+  const {
+    concedeDisabled,
+    concedeConfirming,
+    resetConcedeConfirmation,
+    requestConcedeConfirmation,
+  } = useConcedeConfirmation({
+    actionAvailable: concedeAction !== undefined,
+    actionInFlight: client.state.actionInFlight,
+    matchActive: matchState?.snapshot.status === "active",
+  });
   const rollbackStatus = rollbackStatusForPlayer(
     matchState?.snapshot,
     currentPlayerId,
   );
-  useEffect(() => {
-    if (concedeDisabled) {
-      setConcedeConfirming(false);
-    }
-  }, [concedeDisabled]);
   const cardDisplay = (card: Parameters<typeof cardDisplayFromCatalog>[1]) =>
     cardDisplayFromCatalog(matchState?.cards, card);
   const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
@@ -601,7 +588,11 @@ export const MatchApp = (): React.JSX.Element => {
       onInfoWindowDragMove: updateInfoWindowDragTargets,
       onInfoWindowDragEnd: completeInfoWindowDrag,
       onInfoGroupDragEnd: completePoppedOutInfoGroupDrag,
-      onDockInfoWindowGroupSplit: ({ windowKeys, rect, replacedWindowKeys }) => {
+      onDockInfoWindowGroupSplit: ({
+        windowKeys,
+        rect,
+        replacedWindowKeys,
+      }) => {
         dockFloatingWindows({
           windowKeys,
           rect,
@@ -703,11 +694,11 @@ export const MatchApp = (): React.JSX.Element => {
           dockedInfoTabIds.length >= 2 ? dragOutDockGroup : undefined
         }
         onAction={(actionIndex) => {
-          setConcedeConfirming(false);
+          resetConcedeConfirmation();
           void client.submitAction(actionIndex);
         }}
         onNewMatch={() => {
-          setConcedeConfirming(false);
+          resetConcedeConfirmation();
           void client.createNewMatch();
         }}
         rollbackStatus={rollbackStatus}
@@ -718,7 +709,10 @@ export const MatchApp = (): React.JSX.Element => {
           <CardPreviewToggle open={previewOpen} onToggle={togglePreviewOpen} />
         }
         actionLogControl={
-          <ActionLogToggle open={actionLogOpen} onToggle={toggleActionLogOpen} />
+          <ActionLogToggle
+            open={actionLogOpen}
+            onToggle={toggleActionLogOpen}
+          />
         }
         settingsControl={
           <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
@@ -726,14 +720,9 @@ export const MatchApp = (): React.JSX.Element => {
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
         onConcede={() => {
-          if (concedeAction === undefined || concedeDisabled) {
+          if (concedeAction === undefined || !requestConcedeConfirmation()) {
             return;
           }
-          if (!concedeConfirming) {
-            setConcedeConfirming(true);
-            return;
-          }
-          setConcedeConfirming(false);
           void client.submitAction(concedeAction.index);
         }}
       />
@@ -802,7 +791,10 @@ export const MatchApp = (): React.JSX.Element => {
                     setCollectionModal(undefined);
                   }
                   if (collectionViewerWindowKey !== undefined) {
-                    updateCollectionWindowOpen(collectionViewerWindowKey, false);
+                    updateCollectionWindowOpen(
+                      collectionViewerWindowKey,
+                      false,
+                    );
                   }
                 }
               : undefined
