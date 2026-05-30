@@ -10,6 +10,24 @@ import type {
 
 const pointerReorderDragThreshold = 2;
 const handCardReorderDraggingClassName = "is-hand-card-reorder-dragging";
+type ClientKeyword = NonNullable<ClientCardModel["keywords"]>[number];
+
+const keywordLabel = (keyword: ClientKeyword): string => {
+  switch (keyword) {
+    case "rush":
+      return "rush";
+    case "rushCharacter":
+      return "rush character";
+    case "doubleAttack":
+      return "double attack";
+    case "banish":
+      return "banish";
+    case "blocker":
+      return "blocker";
+    case "unblockable":
+      return "unblockable";
+  }
+};
 
 interface PointerReorderDrag {
   pointerId: number;
@@ -159,7 +177,9 @@ export const CardTile = ({
     }
     document.documentElement.classList.add(handCardReorderDraggingClassName);
     return () => {
-      document.documentElement.classList.remove(handCardReorderDraggingClassName);
+      document.documentElement.classList.remove(
+        handCardReorderDraggingClassName,
+      );
     };
   }, [pointerReorderDragging]);
 
@@ -334,6 +354,15 @@ export const CardTile = ({
             }`}
           >
             {costDeltaText}
+          </span>
+        )}
+        {card.keywords === undefined || card.keywords.length === 0 ? null : (
+          <span className="keyword-badges" aria-label="Card keywords">
+            {card.keywords.map((keyword) => (
+              <span key={keyword} className="keyword-badge">
+                {keywordLabel(keyword)}
+              </span>
+            ))}
           </span>
         )}
       </button>

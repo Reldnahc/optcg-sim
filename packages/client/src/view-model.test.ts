@@ -69,6 +69,7 @@ const minimalView = (): PlayerView => ({
       currentPower: 7000,
       printedCost: 5,
       currentCost: 4,
+      keywords: ["blocker"],
     },
     characters: [
       {
@@ -77,6 +78,7 @@ const minimalView = (): PlayerView => ({
         currentPower: 4000,
         printedCost: 3,
         currentCost: 5,
+        keywords: ["doubleAttack"],
       },
     ],
     costArea: [
@@ -208,6 +210,7 @@ describe("board view model", () => {
     assert.equal(model.self.leader.printedCost, 5);
     assert.equal(model.self.leader.currentCost, 4);
     assert.equal(model.self.leader.costDelta, -1);
+    assert.deepEqual(model.self.leader.keywords, ["blocker"]);
     const character = model.self.characters[0];
     if (character === undefined) {
       throw new Error("Expected the character in the view model.");
@@ -218,6 +221,7 @@ describe("board view model", () => {
     assert.equal(character.printedCost, 3);
     assert.equal(character.currentCost, 5);
     assert.equal(character.costDelta, 2);
+    assert.deepEqual(character.keywords, ["doubleAttack"]);
     assert.equal(JSON.stringify(model).includes("deckOrder"), false);
   });
 

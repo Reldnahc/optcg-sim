@@ -1,6 +1,7 @@
 import type {
   CardId,
   InstanceId,
+  Keyword,
   PlayerId,
   PublicCardView,
   PublicLegalAction,
@@ -27,6 +28,7 @@ export interface ClientCardModel {
   printedCost?: number;
   currentCost?: number;
   costDelta?: number;
+  keywords?: Keyword[];
   state?: PublicCardView["state"];
   attachedDonCount: number;
   attachedDonCards: ClientCardModel[];
@@ -133,6 +135,9 @@ const cardModel = (
       ? {}
       : { currentCost: card.currentCost }),
     ...(costDelta === undefined ? {} : { costDelta }),
+    ...(card.keywords === undefined || card.keywords.length === 0
+      ? {}
+      : { keywords: [...card.keywords] }),
     attachedDonCount: card.attachedDonCount,
     attachedDonCards: [],
   };

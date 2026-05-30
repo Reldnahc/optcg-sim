@@ -227,6 +227,34 @@
   color: #ff5f68;
 }
 
+.keyword-badges {
+  position: absolute;
+  right: 2px;
+  bottom: 14px;
+  left: 2px;
+  z-index: 7;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 3px;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.keyword-badge {
+  color: #42e67c;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: lowercase;
+  text-shadow:
+    -1px -1px 0 #050805,
+    1px -1px 0 #050805,
+    -1px 1px 0 #050805,
+    1px 1px 0 #050805,
+    0 0 5px rgba(66, 230, 124, 0.65);
+}
+
 .card-action-popover {
   position: absolute;
   z-index: 20;

@@ -9,7 +9,7 @@ import type {
   StateSeq,
   Zone,
 } from "./primitives.js";
-import type { CardRef, ZoneRef } from "./card-metadata.js";
+import type { CardRef, Keyword, ZoneRef } from "./card-metadata.js";
 import type { CardSelectionCandidate, TargetCandidate } from "./decisions.js";
 import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
@@ -51,6 +51,7 @@ export interface PublicCardView {
   currentPower?: number;
   printedCost?: number;
   currentCost?: number;
+  keywords?: Keyword[];
 }
 
 export interface PublicLifeView {

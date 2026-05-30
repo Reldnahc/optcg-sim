@@ -388,6 +388,42 @@ describe("card action menu", () => {
     assert.equal(markup.includes("-1"), true);
   });
 
+  test("renders field card keyword labels as green badges", async () => {
+    const layout = board();
+    layout.self.leader = {
+      ...layout.self.leader,
+      keywords: ["blocker"],
+    };
+    layout.self.characters = [
+      {
+        ...card("self-character", "Keyword Character"),
+        keywords: ["doubleAttack", "rush"],
+      },
+    ];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedCardInstanceId: undefined,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(markup, /class="[^"]*keyword-badges/u);
+    assert.equal(markup.includes("blocker"), true);
+    assert.equal(markup.includes("double attack"), true);
+    assert.equal(markup.includes("rush"), true);
+    assert.match(styles, /\.keyword-badge\s*\{[^}]*color:\s*#42e67c;/u);
+  });
+
   test("power delta badge sits near the top-right power area", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "card.css"),

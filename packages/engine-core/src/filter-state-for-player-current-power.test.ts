@@ -7,6 +7,7 @@ import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
 import {
   cardRef,
   continuousEffectRecord,
+  continuousKeywordEffectRecord,
   setupAttackState,
   withWhenAttackingDrawEffect,
 } from "./battle-actions-test-fixtures.js";
@@ -41,6 +42,13 @@ test("projects computed current power only for public board card views", () => {
     continuousEffectRecord(state, "player-view-leader-power", {
       type: "permanent",
     }),
+    continuousKeywordEffectRecord(
+      state,
+      "player-view-character-keyword",
+      p1Character,
+      "blocker",
+      { duration: { type: "permanent" } },
+    ),
   ];
 
   const beforeLeaderPower = must(
@@ -53,6 +61,9 @@ test("projects computed current power only for public board card views", () => {
   assert.equal(view.self.leader.printedPower, 5000);
   assert.equal(must(view.self.characters[0], "self char").currentPower, 7000);
   assert.equal(must(view.self.characters[0], "self char").printedPower, 7000);
+  assert.deepEqual(must(view.self.characters[0], "self char").keywords, [
+    "blocker",
+  ]);
   assert.equal(view.opponent.leader.currentPower, 5000);
   assert.equal(
     must(view.opponent.characters[0], "opponent char").currentPower,
@@ -103,6 +114,11 @@ test("projects computed current power only for public board card views", () => {
     p1State.leader.instanceId,
   );
   assert.equal(doubleAttackView.self.leader.currentPower, 7000);
+  assert.deepEqual(doubleAttackView.self.leader.keywords, ["doubleAttack"]);
+  assert.equal(
+    "keywords" in must(doubleAttackView.self.hand[0], "self hand"),
+    false,
+  );
 });
 
 test("projects setBasePower modifiers as current power in public board card views", () => {

@@ -2,7 +2,6 @@ import type {
   CardInstance,
   CardSelectionCandidate,
   CardRef,
-  ComputedGameView,
   EngineEvent,
   EventVisibility,
   GameState,
@@ -12,7 +11,6 @@ import type {
   PlayerId,
   PlayerState,
   PlayerView,
-  PublicCardView,
   PublicChooseTriggerOrderDecision,
   PublicDecision,
   PublicLegalAction,
@@ -24,100 +22,15 @@ import type {
 
 import { getLegalActions } from "./actions.js";
 import { toCardRef, zonesEqual } from "./action-state.js";
-import { computeView } from "./compute-view.js";
+import {
+  computedBoardCardStatsByInstance,
+  toBoardPublicCardView,
+  toPublicCardView,
+  toPublicLifeView,
+} from "./public-card-view.js";
+import type { ComputedBoardCardStats } from "./public-card-view.js";
 import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
 import { toPublicTimerState } from "./public-timers.js";
-
-interface ComputedBoardCardStats {
-  currentPower?: number;
-  currentCost?: number;
-}
-
-const toPublicCardView = (card: CardInstance): PublicCardView => ({
-  instanceId: card.instanceId,
-  cardId: card.cardId,
-  owner: card.owner,
-  controller: card.controller,
-  zone: card.zone,
-  attachedDonCount: card.attachedDon.length,
-  attachedDonIds: [...card.attachedDon],
-  ...(card.state === undefined ? {} : { state: card.state }),
-  ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
-});
-
-const toBoardPublicCardView = (
-  card: CardInstance,
-  state: GameState,
-  computedStatsByInstance:
-    | ReadonlyMap<InstanceId, ComputedBoardCardStats>
-    | undefined,
-): PublicCardView => {
-  const computedStats = computedStatsByInstance?.get(card.instanceId);
-  const metadata = state.cardManifest.cards[card.cardId];
-  const printedPower = metadata?.power;
-  const printedCost = metadata?.cost;
-  return {
-    ...toPublicCardView(card),
-    ...(printedPower === undefined ? {} : { printedPower }),
-    ...(computedStats?.currentPower === undefined
-      ? {}
-      : { currentPower: computedStats.currentPower }),
-    ...(printedCost === undefined ? {} : { printedCost }),
-    ...(computedStats?.currentCost === undefined
-      ? {}
-      : { currentCost: computedStats.currentCost }),
-  };
-};
-
-const toPublicLifeView = (player: PlayerState) => ({
-  count: player.life.length,
-  faceUpCards: player.life
-    .filter((lifeCard) => lifeCard.faceUp)
-    .map((lifeCard) => toPublicCardView(lifeCard.card)),
-});
-
-const boardCardsForState = (state: GameState): CardInstance[] =>
-  Object.values(state.players).flatMap((player) => [
-    player.leader,
-    ...player.characters,
-  ]);
-
-const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
-  return boardCardsForState(state).every((card) => {
-    const resolved = state.cardManifest.cards[card.cardId];
-    if (resolved === undefined) return false;
-    if (resolved.category !== "leader" && resolved.category !== "character") {
-      return false;
-    }
-    if (resolved.power === undefined) return false;
-    return true;
-  });
-};
-
-const computedBoardCardStatsByInstance = (
-  state: GameState,
-): ReadonlyMap<InstanceId, ComputedBoardCardStats> | undefined => {
-  if (!hasComputableBoardPowerMetadata(state)) {
-    return undefined;
-  }
-  const view: ComputedGameView = computeView(state, {
-    supportStatusPolicy: "ignore",
-    unsupportedCombatKeywordPolicy: "ignore",
-  });
-  return new Map<InstanceId, ComputedBoardCardStats>(
-    Object.values(view.cards).map((card) => [
-      card.instanceId,
-      {
-        ...(card.currentPower === undefined
-          ? {}
-          : { currentPower: card.currentPower }),
-        ...(card.currentCost === undefined
-          ? {}
-          : { currentCost: card.currentCost }),
-      },
-    ]),
-  );
-};
 
 const toVisiblePlayerState = (
   state: GameState,

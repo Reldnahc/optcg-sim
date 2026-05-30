@@ -40,6 +40,9 @@
 - Duplicate envelopes with the same canonical request hash return the stored result and do not re-apply.
 - Duplicate envelopes with a different canonical request hash reject with `idempotencyConflict`.
 - Sequence mismatches reject before request application.
+- Every live client envelope must include `expectedStateSeq`, including `respondToDecision`; missing sequence is invalid rather than defaulted.
+- Canonical request hashing omits `undefined` object properties, rejects unsupported non-JSON values, and must match after browser JSON serialization and server JSON parsing.
+- Runtime logs/metrics must distinguish accepted and rejected actions, include action processing timing, and carry `matchId`, `stateSeq`, and `actionSeq` when available.
 - The current dev snapshot/catalog path remains filtered and is the only client-facing state delivery in this slice.
 - Persistence must model both action records and decision-response records; recovery can be shallow initially, but typed seams for locks, decisions, and rehydration must exist.
 
@@ -104,6 +107,20 @@ import type { SessionActionRequest } from "./session-types.js";
 describe("session action envelopes", () => {
   test("canonical JSON is stable for object key order", () => {
     expect(canonicalJson({ b: 2, a: 1 })).toBe(canonicalJson({ a: 1, b: 2 }));
+  });
+
+  test("canonical JSON omits undefined object fields like JSON transport", () => {
+    expect(canonicalJson({ a: 1, b: undefined })).toBe(canonicalJson({ a: 1 }));
+    expect(canonicalJson({ nested: { b: undefined, a: [2, 1] } })).toBe(
+      '{"nested":{"a":[2,1]}}',
+    );
+  });
+
+  test("canonical JSON rejects unsupported non-JSON values", () => {
+    expect(() => canonicalJson(undefined)).toThrow(TypeError);
+    expect(() => canonicalJson({ value: () => undefined })).toThrow(TypeError);
+    expect(() => canonicalJson({ value: Symbol("x") })).toThrow(TypeError);
+    expect(() => canonicalJson({ value: 1n })).toThrow(TypeError);
   });
 
   test("request hash is based on the current dev request payload only", () => {
@@ -172,21 +189,30 @@ export type DisconnectPolicyMode =
   | "ranked-forfeit";
 
 export type MatchCreationSource =
-  | { type: "dev" }
-  | { type: "customLobby"; lobbyId: string }
-  | { type: "queue"; ticketIds: readonly string[]; ladderId?: string };
+  | { readonly type: "dev" }
+  | {
+      readonly type: "customLobby";
+      readonly lobbyId: string;
+      readonly lobbyConfigId: string;
+    }
+  | {
+      readonly type: "queue";
+      readonly ticketIds: readonly string[];
+      readonly ladderId: string;
+      readonly queueSnapshotId: string;
+    };
 
 export interface MatchSessionMetadata {
-  matchId: MatchId;
-  gameType: GameType;
-  formatId: string;
-  createdAt: string;
-  playerIds: readonly PlayerId[];
-  creationSource: MatchCreationSource;
-  disconnectPolicyMode: DisconnectPolicyMode;
-  rollbackPolicyMode: RollbackPolicyMode;
-  spectatorPolicyMode: SpectatorPolicyMode;
-  ownerInstanceId?: string;
+  readonly matchId: MatchId;
+  readonly gameType: GameType;
+  readonly formatId: string;
+  readonly createdAt: string;
+  readonly playerIds: readonly PlayerId[];
+  readonly creationSource: MatchCreationSource;
+  readonly disconnectPolicyMode: DisconnectPolicyMode;
+  readonly rollbackPolicyMode: RollbackPolicyMode;
+  readonly spectatorPolicyMode: SpectatorPolicyMode;
+  readonly ownerInstanceId?: string;
 }
 
 export type SessionActionRequest =
@@ -305,15 +331,27 @@ export interface MatchPersistence {
 
 ```ts
 export const canonicalJson = (value: unknown): string => {
+  if (value === undefined) {
+    throw new TypeError("Cannot canonicalize undefined as a JSON value.");
+  }
   if (Array.isArray(value)) {
     return `[${value.map(canonicalJson).join(",")}]`;
   }
   if (value !== null && typeof value === "object") {
     const record = value as Record<string, unknown>;
     return `{${Object.keys(record)
+      .filter((key) => record[key] !== undefined)
       .sort()
       .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
       .join(",")}}`;
+  }
+  if (
+    typeof value === "function" ||
+    typeof value === "symbol" ||
+    typeof value === "bigint" ||
+    (typeof value === "number" && !Number.isFinite(value))
+  ) {
+    throw new TypeError("Cannot canonicalize unsupported non-JSON value.");
   }
   return JSON.stringify(value);
 };
@@ -388,16 +426,14 @@ const submitRequest = (
 
 const envelope = (
   request: SessionActionRequest,
+  expectedStateSeq: number,
   clientActionId = "client-action-1",
 ) => ({
   protocolVersion: "dev",
   matchId,
   playerId: request.playerId,
   clientActionId,
-  expectedStateSeq:
-    "expectedStateSeq" in request && request.expectedStateSeq !== undefined
-      ? request.expectedStateSeq
-      : 0,
+  expectedStateSeq,
   requestHash: requestHash(request),
   request,
 });
@@ -406,7 +442,7 @@ describe("match session runtime", () => {
   test("returns the same result for duplicate client action id and hash", () => {
     const local = createLocalDevMatch({ matchId });
     const runtime = createMatchSessionRuntime({ local });
-    const input = envelope(submitRequest(local.state.seq));
+    const input = envelope(submitRequest(local.state.seq), local.state.seq);
 
     const first = runtime.applyEnvelope(input);
     const second = runtime.applyEnvelope(input);
@@ -417,7 +453,7 @@ describe("match session runtime", () => {
   test("rejects duplicate client action id with different request hash", () => {
     const local = createLocalDevMatch({ matchId });
     const runtime = createMatchSessionRuntime({ local });
-    const input = envelope(submitRequest(local.state.seq));
+    const input = envelope(submitRequest(local.state.seq), local.state.seq);
     runtime.applyEnvelope(input);
 
     const second = runtime.applyEnvelope({
@@ -433,7 +469,7 @@ describe("match session runtime", () => {
     const local = createLocalDevMatch({ matchId });
     const runtime = createMatchSessionRuntime({ local });
     const result = runtime.applyEnvelope(
-      envelope(submitRequest(local.state.seq)),
+      envelope(submitRequest(local.state.seq), local.state.seq),
     );
 
     expect("state" in result).toBe(false);
@@ -551,6 +587,7 @@ git commit -m "Add active match session store"
 Tests must cover:
 
 - saving/loading a server-only snapshot with `GameState`;
+- preserving immutable match metadata by copying it on save/load so mutating the construction input after match start cannot change stored metadata;
 - appending an action record;
 - appending a decision record;
 - listing active match ids;
@@ -725,10 +762,15 @@ Expected: FAIL because the dev server does not route through the session service
 `DevSocketEnvelope` keeps its current four `type` variants and adds:
 
 - `requestHash: string`
+- `expectedStateSeq: number`
 - optional `expectedDecisionId: string`
 - optional `sentAtClientTime: string`
 
 Do not replace current `actionIndex` or `decisionId` payloads with raw `Action`.
+Reject any socket request that is missing `clientActionId`, `requestHash`, or
+`expectedStateSeq`. For `respondToDecision`, also validate
+`expectedDecisionId` against the current pending decision id before applying the
+response.
 
 - [ ] **Step 4: Implement `SessionService`**
 
@@ -784,9 +826,10 @@ git commit -m "Route dev websocket through session service"
 Tests must prove each live request type sends:
 
 - `clientActionId`;
-- current `expectedStateSeq` when available;
+- current `expectedStateSeq` as a required field;
 - `expectedDecisionId` for decision responses;
 - stable `requestHash`;
+- server/browser hash parity after client payload JSON serialization and server JSON parsing, including omitted versus explicit `undefined` fields;
 - no raw `GameState`.
 
 - [ ] **Step 2: Run client tests**
@@ -799,9 +842,9 @@ Expected: FAIL because the client does not send all envelope metadata yet.
 
 - [ ] **Step 3: Update transport/controller**
 
-Use a browser-safe canonical hash equivalent to the server `canonicalJson` behavior. If sharing the exact helper would violate package boundaries, duplicate the small stable stringifier in client transport tests and document that production protocol should move it to a shared package later.
+Use a browser-safe canonical hash equivalent to the server `canonicalJson` behavior in production client transport code and tests. If sharing the exact helper would violate package boundaries, duplicate the small stable stringifier in client transport code and its tests, and document that production protocol should move it to a shared package later.
 
-Controller calls should pass the current snapshot sequence. Decision responses should pass the current pending decision id as `expectedDecisionId`.
+Controller calls must pass the current snapshot sequence for every live request. Decision responses should pass the current pending decision id as `expectedDecisionId`.
 
 - [ ] **Step 4: Run client tests**
 
@@ -837,7 +880,7 @@ Tests must cover:
 - `appendDecision` writes to `match:{matchId}:decisions`;
 - `loadSnapshot` loads state/meta/manifest/actions/decisions;
 - `listActiveMatchIds` uses scan-style iteration, not `KEYS`;
-- `tryAcquireRecoveryLock` uses owner and TTL semantics;
+- `tryAcquireRecoveryLock` uses an atomic owner lock with TTL (`SET NX PX` or an equivalent single atomic operation);
 - `freezeMatch` writes lock/freeze metadata.
 
 - [ ] **Step 2: Run Redis tests**
@@ -850,7 +893,7 @@ Expected: FAIL because the adapter does not exist.
 
 - [ ] **Step 3: Implement adapter behind `RedisLike`**
 
-Define a narrow `RedisLike` interface with only the operations required. The interface should model scan iteration and `set` with `NX`/`PX`-style options if the selected Redis client supports them. Do not call Redis `KEYS` in production code.
+Define a narrow `RedisLike` interface with only the operations required. The interface must model scan iteration and atomic `set` with `NX`/`PX`-style options or an equivalent single atomic lock operation. Do not call Redis `KEYS` in production code.
 
 Use spec-shaped keys:
 
@@ -883,9 +926,28 @@ git commit -m "Add Redis active match persistence"
 **Files:**
 
 - Modify: `packages/match-server/src/index.ts`
+- Modify: `packages/match-server/src/match-session.ts`
+- Modify: `packages/match-server/src/session-service.ts`
 - Test: package export/cohesion tests if present.
 
-- [ ] **Step 1: Export server-safe infrastructure**
+- [ ] **Step 1: Add observability tests**
+
+Add focused tests or explicit test seams proving session handling records:
+
+- accepted action count;
+- rejected action count by rejection reason;
+- action processing duration;
+- structured log context containing `matchId`, `stateSeq`, and `actionSeq` when available.
+
+The observability path must not expose `GameState` or hidden card data.
+
+- [ ] **Step 2: Implement observability seams**
+
+Use a narrow match-server-local metrics/logger interface or callback. Keep it
+server-only. Do not import client, React, Redis, or engine internals into the
+observability abstraction.
+
+- [ ] **Step 3: Export server-safe infrastructure**
 
 Export:
 
@@ -900,7 +962,7 @@ Export:
 
 Only export `redis-match-persistence` if server bootstrapping needs it from outside the package. Do not allow client code to import match-server modules.
 
-- [ ] **Step 2: Run focused verification**
+- [ ] **Step 4: Run focused verification**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server test
@@ -909,7 +971,7 @@ corepack pnpm --filter @optcg/client exec vitest run --root ../.. packages/clien
 
 Expected: PASS.
 
-- [ ] **Step 3: Run repo verification**
+- [ ] **Step 5: Run repo verification**
 
 ```powershell
 corepack pnpm typecheck
@@ -921,10 +983,10 @@ git diff --check
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```powershell
-git add packages/match-server/src/index.ts
+git add packages/match-server/src/index.ts packages/match-server/src/match-session.ts packages/match-server/src/session-service.ts
 git commit -m "Export match server infrastructure"
 ```
 
@@ -940,6 +1002,10 @@ git commit -m "Export match server infrastructure"
 - Strengthened Redis requirements: actions, decisions, manifest, locks, TTL/owner semantics, and scan-style discovery.
 - Required Vitest-style tests.
 - Replaced plain `JSON.stringify` hashing with stable canonical request hashing.
+- Tightened canonical hashing to omit undefined object fields, reject non-JSON values, and prove browser/server parity.
+- Required `expectedStateSeq` in every live envelope, including decision responses.
+- Required atomic Redis owner locks with TTL using `SET NX PX` or an equivalent single operation.
+- Added observability requirements for accepted/rejected counts, processing timing, and match/action log context.
 
 ## Residual Risks
 
