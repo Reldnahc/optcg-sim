@@ -30,6 +30,23 @@ type PendingRequest = {
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/u, "");
 
+const createClientActionId = (): string => {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes.set([((bytes.at(6) ?? 0) & 0x0f) | 0x40], 6);
+  bytes.set([((bytes.at(8) ?? 0) & 0x3f) | 0x80], 8);
+  const hex = Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(
+    12,
+    16,
+  )}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
 const socketRoot = (baseUrl: string): string => {
   if (baseUrl.length === 0) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -60,7 +77,7 @@ const messageError = (value: unknown): string =>
 export const createDevWebSocketMatchTransport = ({
   baseUrl,
   WebSocket: WebSocketImpl = WebSocket,
-  randomUUID = () => crypto.randomUUID(),
+  randomUUID = createClientActionId,
 }: DevWebSocketMatchTransportOptions): MatchLiveTransport => ({
   connect({ matchId, playerId, sessionToken, onStateSync, onError }) {
     const url = new URL(
