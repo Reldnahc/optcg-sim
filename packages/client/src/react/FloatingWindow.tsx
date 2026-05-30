@@ -36,7 +36,9 @@ export interface FloatingWindowProps {
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => void) | undefined;
+  headerContent?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -135,7 +137,9 @@ export const FloatingWindow = ({
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragMove,
   onDragEnd,
+  headerContent,
   children,
 }: FloatingWindowProps): React.JSX.Element => {
   const [rect, setRect] = useState(() =>
@@ -150,6 +154,48 @@ export const FloatingWindow = ({
     },
     [onRectChange],
   );
+
+  const handleDragPointerDown = (
+    event: React.PointerEvent<HTMLElement>,
+  ): void => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStart.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      rect,
+    };
+  };
+
+  const handleDragPointerMove = (
+    event: React.PointerEvent<HTMLElement>,
+  ): void => {
+    const start = dragStart.current;
+    if (start === undefined || start.pointerId !== event.pointerId) {
+      return;
+    }
+    const nextRect = dragRect(
+      start,
+      event.clientX,
+      event.clientY,
+      minWidth,
+      minHeight,
+    );
+    updateRect(nextRect);
+    onDragMove?.(nextRect);
+  };
+
+  const handleDragPointerUp = (
+    event: React.PointerEvent<HTMLElement>,
+  ): void => {
+    completeDrag(event.pointerId, event.clientX, event.clientY);
+  };
+
+  const handleDragPointerCancel = (
+    event: React.PointerEvent<HTMLElement>,
+  ): void => {
+    stopInteraction(event.pointerId);
+  };
 
   const stopInteraction = useCallback((pointerId: number) => {
     if (dragStart.current?.pointerId === pointerId) {
@@ -226,43 +272,29 @@ export const FloatingWindow = ({
       }}
     >
       <div className="floating-window-header">
-        <button
-          className="floating-window-drag-handle"
-          type="button"
-          aria-label={`Move ${title}`}
-          onPointerDown={(event) => {
-            event.currentTarget.setPointerCapture(event.pointerId);
-            dragStart.current = {
-              pointerId: event.pointerId,
-              clientX: event.clientX,
-              clientY: event.clientY,
-              rect,
-            };
-          }}
-          onPointerMove={(event) => {
-            const start = dragStart.current;
-            if (start === undefined || start.pointerId !== event.pointerId) {
-              return;
-            }
-            updateRect(
-              dragRect(
-                start,
-                event.clientX,
-                event.clientY,
-                minWidth,
-                minHeight,
-              ),
-            );
-          }}
-          onPointerUp={(event) => {
-            completeDrag(event.pointerId, event.clientX, event.clientY);
-          }}
-          onPointerCancel={(event) => {
-            stopInteraction(event.pointerId);
-          }}
-        >
-          <span>{title}</span>
-        </button>
+        {headerContent === undefined ? (
+          <button
+            className="floating-window-drag-handle"
+            type="button"
+            aria-label={`Move ${title}`}
+            onPointerDown={handleDragPointerDown}
+            onPointerMove={handleDragPointerMove}
+            onPointerUp={handleDragPointerUp}
+            onPointerCancel={handleDragPointerCancel}
+          >
+            <span>{title}</span>
+          </button>
+        ) : (
+          <div
+            className="floating-window-drag-handle floating-window-header-content"
+            onPointerDown={handleDragPointerDown}
+            onPointerMove={handleDragPointerMove}
+            onPointerUp={handleDragPointerUp}
+            onPointerCancel={handleDragPointerCancel}
+          >
+            {headerContent}
+          </div>
+        )}
         {onToggleMinimized === undefined ? null : (
           <button
             className="floating-window-minimize"

@@ -39,6 +39,12 @@
   white-space: nowrap;
 }
 
+.floating-window-header-content {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+}
+
 .floating-window-minimize,
 .floating-window-close {
   display: grid;

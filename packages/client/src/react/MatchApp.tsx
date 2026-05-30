@@ -130,6 +130,9 @@ export const MatchApp = (): React.JSX.Element => {
     useState<InfoWindowTabId>("preview");
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
   const [infoWindowsGrouped, setInfoWindowsGrouped] = useState(false);
+  const [combineDropTarget, setCombineDropTarget] = useState<
+    InfoWindowTabId | undefined
+  >(undefined);
   const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
     board,
@@ -581,14 +584,30 @@ export const MatchApp = (): React.JSX.Element => {
         : defaultActionLogWindowRect;
     return { width: rect.width, height: rect.height };
   };
+  const matchingCombineDropTarget = (
+    draggedWindowId: InfoWindowTabId,
+    rect: WindowRect,
+  ): InfoWindowTabId | undefined => {
+    const targetWindowId = draggedWindowId === "preview" ? "log" : "preview";
+    const targetVisible =
+      targetWindowId === "preview" ? showPreviewWindow : showActionLogWindow;
+    return targetVisible && rectsOverlap(rect, infoWindowRect(targetWindowId))
+      ? targetWindowId
+      : undefined;
+  };
+  const updateCombineDropTarget = (
+    draggedWindowId: InfoWindowTabId,
+    rect: WindowRect,
+  ): void => {
+    setCombineDropTarget(matchingCombineDropTarget(draggedWindowId, rect));
+  };
   const tryGroupInfoWindow = (
     draggedWindowId: InfoWindowTabId,
     rect: WindowRect,
   ): void => {
-    const targetWindowId = draggedWindowId === "preview" ? "log" : "preview";
-    const targetVisible =
-      targetWindowId === "preview" ? showPreviewWindow : showActionLogWindow;
-    if (!targetVisible || !rectsOverlap(rect, infoWindowRect(targetWindowId))) {
+    const targetWindowId = matchingCombineDropTarget(draggedWindowId, rect);
+    setCombineDropTarget(undefined);
+    if (targetWindowId === undefined) {
       return;
     }
     const targetRect = infoWindowRect(targetWindowId);
@@ -620,6 +639,7 @@ export const MatchApp = (): React.JSX.Element => {
   useEffect(() => {
     if (!showPreviewWindow || !showActionLogWindow) {
       setInfoWindowsGrouped(false);
+      setCombineDropTarget(undefined);
     }
   }, [showPreviewWindow, showActionLogWindow]);
   useEffect(() => {
@@ -855,6 +875,9 @@ export const MatchApp = (): React.JSX.Element => {
       {showActionLogWindow && !showTabbedInfoWindow ? (
         <ActionLogWindow
           entries={actionLogEntries}
+          className={
+            combineDropTarget === "log" ? "is-combine-drop-target" : undefined
+          }
           minimized={actionLogMinimized}
           initialRect={
             activeFloatingWindowRects[actionLogWindowKey] ??
@@ -873,6 +896,9 @@ export const MatchApp = (): React.JSX.Element => {
           onRectChange={(rect) => {
             updateFloatingWindowRect(actionLogWindowKey, rect);
           }}
+          onDragMove={(rect) => {
+            updateCombineDropTarget("log", rect);
+          }}
           onDragEnd={(rect) => {
             tryGroupInfoWindow("log", rect);
           }}
@@ -887,6 +913,11 @@ export const MatchApp = (): React.JSX.Element => {
       {showPreviewWindow && !showTabbedInfoWindow ? (
         <CardPreviewWindow
           card={previewCard}
+          className={
+            combineDropTarget === "preview"
+              ? "is-combine-drop-target"
+              : undefined
+          }
           minimized={previewMinimized}
           initialRect={
             activeFloatingWindowRects[cardPreviewWindowKey] ??
@@ -898,6 +929,9 @@ export const MatchApp = (): React.JSX.Element => {
           onClose={closeCardPreview}
           onRectChange={(rect) => {
             updateFloatingWindowRect(cardPreviewWindowKey, rect);
+          }}
+          onDragMove={(rect) => {
+            updateCombineDropTarget("preview", rect);
           }}
           onDragEnd={(rect) => {
             tryGroupInfoWindow("preview", rect);

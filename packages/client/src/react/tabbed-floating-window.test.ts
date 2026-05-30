@@ -36,6 +36,9 @@ describe("tabbed floating window", () => {
 
     assert.match(markup, /floating-window/u);
     assert.match(markup, /tabbed-floating-window/u);
+    assert.match(markup, /floating-window-header-tabs/u);
+    assert.match(markup, /floating-window-header-tabs[\s\S]*role="tablist"/u);
+    assert.doesNotMatch(markup, /floating-window-body[\s\S]*role="tablist"/u);
     assert.match(markup, /role="tablist"/u);
     assert.match(markup, /aria-label="Window tabs"/u);
     assert.match(markup, /aria-selected="true"[^>]*>Log<\/button>/u);
@@ -77,6 +80,52 @@ describe("tabbed floating window", () => {
     assert.match(infoWindow, /onTabDragOut/u);
   });
 
+  test("tabbed windows expose visual state for tab tear-out feedback", () => {
+    const markup = renderToStaticMarkup(
+      createElement(TabbedFloatingWindow, {
+        tabs: [
+          {
+            id: "preview",
+            title: "Preview",
+            content: createElement("p", undefined, "Preview content"),
+          },
+          {
+            id: "log",
+            title: "Log",
+            content: createElement("p", undefined, "Log content"),
+          },
+        ],
+        activeTabId: "preview",
+        draggingTabId: "log",
+        minimized: false,
+        onActiveTabChange: () => undefined,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /is-tab-tearing-out/u);
+    assert.match(
+      markup,
+      /floating-window-tab is-tab-dragging[^>]*>Log<\/button>/u,
+    );
+  });
+
+  test("match app exposes combine drop feedback classes", async () => {
+    const [matchApp, tabbedStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "styles", "tabbed-floating-window.css"),
+        "utf8",
+      ),
+    ]);
+
+    assert.match(matchApp, /combineDropTarget/u);
+    assert.match(matchApp, /is-combine-drop-target/u);
+    assert.match(tabbedStyles, /\.is-combine-drop-target/u);
+    assert.match(tabbedStyles, /\.is-tab-tearing-out/u);
+  });
+
   test("tabbed window styles keep the shell compact", async () => {
     const [floatingStyles, tabbedStyles] = await Promise.all([
       readFile(join(sourceDirectory, "styles", "floating-window.css"), "utf8"),
@@ -94,7 +143,7 @@ describe("tabbed floating window", () => {
       floatingStyles,
       /\.floating-window\s*\{[^}]*min-height:\s*180px;/u,
     );
-    assert.match(tabbedStyles, /\.floating-window-tab-strip\s*\{/u);
+    assert.match(tabbedStyles, /\.floating-window-header-tabs\s*\{/u);
     assert.match(tabbedStyles, /\.floating-window-tab-panel\s*\{/u);
   });
 });

@@ -4,11 +4,13 @@ import type { WindowRect } from "./FloatingWindow.js";
 
 export interface ActionLogWindowProps {
   entries: readonly ActionLogEntry[];
+  className?: string | undefined;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
   onToggleMinimized: () => void;
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => void) | undefined;
   onRequestRollback?: (rollbackPointId: string) => void;
   onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
@@ -130,18 +132,22 @@ export const ActionLogContent = ({
 
 export const ActionLogWindow = ({
   entries,
+  className,
   minimized,
   initialRect = defaultActionLogWindowRect,
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragMove,
   onDragEnd,
   onRequestRollback,
   onPreviewCard,
 }: ActionLogWindowProps): React.JSX.Element => (
   <FloatingWindow
     title="Log"
-    className="action-log-window"
+    className={["action-log-window", className ?? ""]
+      .filter(Boolean)
+      .join(" ")}
     initialRect={initialRect}
     minWidth={240}
     minHeight={180}
@@ -149,6 +155,7 @@ export const ActionLogWindow = ({
     onToggleMinimized={onToggleMinimized}
     onClose={onClose}
     onRectChange={onRectChange}
+    onDragMove={onDragMove}
     onDragEnd={onDragEnd}
   >
     <ActionLogContent

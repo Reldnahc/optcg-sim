@@ -4,11 +4,13 @@ import type { WindowRect } from "./FloatingWindow.js";
 
 export interface CardPreviewWindowProps {
   card?: ClientCardModel | undefined;
+  className?: string | undefined;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
   onToggleMinimized: () => void;
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => void) | undefined;
 }
 
@@ -55,11 +57,13 @@ export const CardPreviewContent = ({
 
 export const CardPreviewWindow = ({
   card,
+  className,
   minimized,
   initialRect = defaultCardPreviewWindowRect,
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragMove,
   onDragEnd,
 }: CardPreviewWindowProps): React.JSX.Element | null => {
   if (card === undefined) {
@@ -69,7 +73,9 @@ export const CardPreviewWindow = ({
   return (
     <FloatingWindow
       title="Preview"
-      className="card-preview-window"
+      className={["card-preview-window", className ?? ""]
+        .filter(Boolean)
+        .join(" ")}
       initialRect={initialRect}
       minWidth={220}
       minHeight={180}
@@ -77,6 +83,7 @@ export const CardPreviewWindow = ({
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
       onRectChange={onRectChange}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
       <CardPreviewContent card={card} />
