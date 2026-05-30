@@ -4,6 +4,8 @@ import type { WindowRect } from "./FloatingWindow.js";
 import { resizeDockedWindowRects } from "./control-panel-layout.js";
 import {
   emptyFloatingWindowRectState,
+  floatingWindowStateAfterCollectionOpenChange,
+  floatingWindowStateAfterOpenChange,
   type FloatingWindowRectState,
 } from "./window-state-model.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
@@ -107,31 +109,14 @@ export const useFloatingWindowState = ({
         return;
       }
       setFloatingWindowRects((current) => {
-        const base =
-          current.scope === matchScope
-            ? current
-            : {
-                scope: matchScope,
-                rects: {},
-                openWindowIds: new Set<string>(),
-                dockedWindowIds: new Set<string>(),
-              };
-        const openWindowIds = new Set(base.openWindowIds);
-        const dockedWindowIds = new Set(base.dockedWindowIds);
-        if (open) {
-          openWindowIds.add(key);
-        } else {
-          openWindowIds.delete(key);
-          dockedWindowIds.delete(key);
-        }
-        const next = {
+        const next = floatingWindowStateAfterOpenChange({
+          current,
           scope: matchScope,
-          rects: base.rects,
-          openWindowIds,
-          dockedWindowIds,
-        };
-        revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
-        revealWindowStateStore?.saveDockedWindowIds(dockedWindowIds);
+          windowKey: key,
+          open,
+        });
+        revealWindowStateStore?.saveOpenWindowIds(next.openWindowIds);
+        revealWindowStateStore?.saveDockedWindowIds(next.dockedWindowIds);
         return next;
       });
     },
@@ -144,36 +129,14 @@ export const useFloatingWindowState = ({
         return;
       }
       setFloatingWindowRects((current) => {
-        const base =
-          current.scope === matchScope
-            ? current
-            : {
-                scope: matchScope,
-                rects: {},
-                openWindowIds: new Set<string>(),
-                dockedWindowIds: new Set<string>(),
-              };
-        const openWindowIds = new Set(
-          [...base.openWindowIds].filter(
-            (windowId) => !windowId.startsWith("collection:"),
-          ),
-        );
-        const dockedWindowIds = new Set(
-          [...base.dockedWindowIds].filter(
-            (windowId) => !windowId.startsWith("collection:"),
-          ),
-        );
-        if (open) {
-          openWindowIds.add(key);
-        }
-        const next = {
+        const next = floatingWindowStateAfterCollectionOpenChange({
+          current,
           scope: matchScope,
-          rects: base.rects,
-          openWindowIds,
-          dockedWindowIds,
-        };
-        revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
-        revealWindowStateStore?.saveDockedWindowIds(dockedWindowIds);
+          windowKey: key,
+          open,
+        });
+        revealWindowStateStore?.saveOpenWindowIds(next.openWindowIds);
+        revealWindowStateStore?.saveDockedWindowIds(next.dockedWindowIds);
         return next;
       });
     },

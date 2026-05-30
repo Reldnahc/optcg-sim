@@ -87,16 +87,6 @@ export const MatchApp = (): React.JSX.Element => {
   const [combineDropTarget, setCombineDropTarget] = useState<
     InfoWindowTabId | undefined
   >(undefined);
-  const {
-    controlRailWidth,
-    controlDockHeight,
-    controlDockActive,
-    startControlRailResize,
-    startControlDockResize,
-    updateControlDockTarget,
-    completeControlDockDrop,
-    currentControlDockSlotRect,
-  } = useControlPanelLayout();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const {
     board,
@@ -125,6 +115,16 @@ export const MatchApp = (): React.JSX.Element => {
           }),
     [matchState?.matchId],
   );
+  const {
+    controlRailWidth,
+    controlDockHeight,
+    controlDockActive,
+    startControlRailResize,
+    startControlDockResize,
+    updateControlDockTarget,
+    completeControlDockDrop,
+    currentControlDockSlotRect,
+  } = useControlPanelLayout({ layoutStore: revealWindowStateStore });
   const {
     activeTabId: infoWindowActiveTab,
     groupedTabIds: configuredGroupedInfoWindowIds,

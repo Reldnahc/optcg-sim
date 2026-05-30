@@ -310,7 +310,7 @@ describe("collection modal", () => {
       "utf8",
     );
     const windowStateHook = await readFile(
-      join(sourceDirectory, "use-floating-window-state.ts"),
+      join(sourceDirectory, "window-state-model.ts"),
       "utf8",
     );
     const storeSource = await readFile(
@@ -322,7 +322,7 @@ describe("collection modal", () => {
     assert.match(source, /collectionModalFromWindowKey/u);
     assert.match(source, /persistedCollectionModal/u);
     assert.match(source, /updateCollectionWindowOpen\(key, nextOpen\)/u);
-    assert.match(windowStateHook, /windowId\.startsWith\("collection:"\)/u);
+    assert.match(windowStateHook, /id\.startsWith\("collection:"\)/u);
     assert.match(storeSource, /loadOpenWindowIds/u);
     assert.match(storeSource, /saveOpenWindowIds/u);
   });

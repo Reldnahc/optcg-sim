@@ -123,6 +123,43 @@ describe("reveal window state store", () => {
     assert.deepEqual([...store.loadDockedWindowIds()], []);
   });
 
+  test("persists control panel width and dock height by match", () => {
+    const storage = createMemoryClientStorage();
+    const matchOne = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+    const matchTwo = createRevealWindowStateStore({
+      storage,
+      matchId: "match-2" as MatchId,
+    });
+
+    matchOne.saveControlPanelLayout({
+      controlRailWidth: 340,
+      controlDockHeight: 420,
+    });
+
+    assert.deepEqual(matchOne.loadControlPanelLayout(), {
+      controlRailWidth: 340,
+      controlDockHeight: 420,
+    });
+    assert.deepEqual(matchTwo.loadControlPanelLayout(), {});
+  });
+
+  test("fails closed to empty control panel layout for malformed stored data", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:control-panel-layout:match-1",
+      JSON.stringify({ controlRailWidth: "340", controlDockHeight: 420 }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual(store.loadControlPanelLayout(), {});
+  });
+
   test("persists info window tab config by match", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({

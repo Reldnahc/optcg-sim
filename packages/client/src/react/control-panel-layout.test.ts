@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 
 import {
@@ -10,6 +13,8 @@ import {
   resolveControlDockSnapRect,
   resizeDockedWindowRects,
 } from "./control-panel-layout.js";
+
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 describe("control panel layout", () => {
   test("resizes the rail from the left edge without crossing the playmat", () => {
@@ -117,5 +122,20 @@ describe("control panel layout", () => {
       }),
       preview: { x: 50, y: 60, width: 320, height: 240 },
     });
+  });
+
+  test("control panel layout is loaded and saved through the match layout store", async () => {
+    const [hookSource, appSource] = await Promise.all([
+      readFile(join(sourceDirectory, "use-control-panel-layout.ts"), "utf8"),
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+    ]);
+
+    assert.match(hookSource, /layoutStore\?: RevealWindowStateStore/u);
+    assert.match(hookSource, /loadControlPanelLayout\(\)/u);
+    assert.match(hookSource, /saveControlPanelLayout/u);
+    assert.match(
+      appSource,
+      /useControlPanelLayout\(\{\s*layoutStore: revealWindowStateStore,?\s*\}\)/u,
+    );
   });
 });

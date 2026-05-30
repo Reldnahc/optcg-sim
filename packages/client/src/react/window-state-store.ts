@@ -16,6 +16,8 @@ export interface RevealWindowStateStore {
   saveDockedWindowIds: (windowIds: ReadonlySet<string>) => void;
   loadInfoWindowConfig: () => InfoWindowConfig;
   saveInfoWindowConfig: (config: InfoWindowConfig) => void;
+  loadControlPanelLayout: () => ControlPanelLayoutConfig;
+  saveControlPanelLayout: (layout: ControlPanelLayoutConfig) => void;
 }
 
 export interface InfoWindowConfig {
@@ -23,11 +25,17 @@ export interface InfoWindowConfig {
   groupedTabIds: readonly ("preview" | "log" | "settings")[];
 }
 
+export interface ControlPanelLayoutConfig {
+  controlRailWidth?: number | undefined;
+  controlDockHeight?: number | undefined;
+}
+
 const keyPrefix = "optcg:client:reveal-window-state";
 const windowRectsKeyPrefix = "optcg:client:floating-window-rects";
 const openWindowsKeyPrefix = "optcg:client:open-floating-windows";
 const dockedWindowsKeyPrefix = "optcg:client:docked-floating-windows";
 const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
+const controlPanelLayoutKeyPrefix = "optcg:client:control-panel-layout";
 const defaultOpenWindowIds = ["card-preview", "action-log", "settings"];
 const defaultDockedWindowIds = ["action-log", "settings"];
 
@@ -57,6 +65,9 @@ const dockedWindowsKey = (matchId: MatchId): string =>
 
 const infoWindowConfigKey = (matchId: MatchId): string =>
   `${infoWindowConfigKeyPrefix}:${String(matchId)}`;
+
+const controlPanelLayoutKey = (matchId: MatchId): string =>
+  `${controlPanelLayoutKeyPrefix}:${String(matchId)}`;
 
 const parseStringArray = (value: string | null): string[] => {
   if (value === null) {
@@ -177,6 +188,49 @@ const parseInfoWindowConfig = (value: string | null): InfoWindowConfig => {
   }
 };
 
+const optionalPositiveNumber = (value: unknown): number | undefined | false => {
+  if (value === undefined) {
+    return undefined;
+  }
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : false;
+};
+
+const parseControlPanelLayout = (
+  value: string | null,
+): ControlPanelLayoutConfig => {
+  if (value === null) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      return {};
+    }
+    const candidate = parsed as Record<string, unknown>;
+    const controlRailWidth = optionalPositiveNumber(
+      candidate["controlRailWidth"],
+    );
+    const controlDockHeight = optionalPositiveNumber(
+      candidate["controlDockHeight"],
+    );
+    if (controlRailWidth === false || controlDockHeight === false) {
+      return {};
+    }
+    return {
+      ...(controlRailWidth === undefined ? {} : { controlRailWidth }),
+      ...(controlDockHeight === undefined ? {} : { controlDockHeight }),
+    };
+  } catch {
+    return {};
+  }
+};
+
 export const createRevealWindowStateStore = ({
   storage,
   matchId,
@@ -219,5 +273,13 @@ export const createRevealWindowStateStore = ({
   },
   saveInfoWindowConfig(config) {
     storage.setItem(infoWindowConfigKey(matchId), JSON.stringify(config));
+  },
+  loadControlPanelLayout() {
+    return parseControlPanelLayout(
+      storage.getItem(controlPanelLayoutKey(matchId)),
+    );
+  },
+  saveControlPanelLayout(layout) {
+    storage.setItem(controlPanelLayoutKey(matchId), JSON.stringify(layout));
   },
 });
