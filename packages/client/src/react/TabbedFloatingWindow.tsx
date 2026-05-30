@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
@@ -18,7 +18,6 @@ export interface TabbedFloatingWindowProps {
   minWidth?: number | undefined;
   minHeight?: number | undefined;
   minimized: boolean;
-  draggingTabId?: string | undefined;
   onActiveTabChange: (tabId: string) => void;
   onToggleMinimized: () => void;
   onClose: () => void;
@@ -43,7 +42,6 @@ export const TabbedFloatingWindow = ({
   minWidth = 260,
   minHeight = 180,
   minimized,
-  draggingTabId,
   onActiveTabChange,
   onToggleMinimized,
   onClose,
@@ -52,23 +50,15 @@ export const TabbedFloatingWindow = ({
 }: TabbedFloatingWindowProps): React.JSX.Element | null => {
   const tabDragStart = useRef<TabDragStart | undefined>(undefined);
   const suppressTabClick = useRef(false);
-  const [internalDraggingTabId, setInternalDraggingTabId] = useState<
-    string | undefined
-  >(undefined);
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   if (activeTab === undefined) {
     return null;
   }
-  const feedbackDraggingTabId = draggingTabId ?? internalDraggingTabId;
 
   return (
     <FloatingWindow
       title={activeTab.title}
-      className={[
-        "tabbed-floating-window",
-        feedbackDraggingTabId === undefined ? "" : "is-tab-tearing-out",
-        className ?? "",
-      ]
+      className={["tabbed-floating-window", className ?? ""]
         .filter(Boolean)
         .join(" ")}
       initialRect={initialRect}
@@ -90,7 +80,6 @@ export const TabbedFloatingWindow = ({
               className={[
                 "floating-window-tab",
                 tab.id === activeTab.id ? "is-active" : "",
-                tab.id === feedbackDraggingTabId ? "is-tab-dragging" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -122,14 +111,18 @@ export const TabbedFloatingWindow = ({
                   Math.abs(event.clientX - start.clientX) +
                   Math.abs(event.clientY - start.clientY);
                 if (distance >= tabDragOutDistance) {
-                  setInternalDraggingTabId(tab.id);
+                  tabDragStart.current = undefined;
+                  suppressTabClick.current = true;
+                  onTabDragOut?.(tab.id, {
+                    x: event.clientX,
+                    y: event.clientY,
+                  });
                 }
               }}
               onPointerUp={(event) => {
                 event.stopPropagation();
                 const start = tabDragStart.current;
                 tabDragStart.current = undefined;
-                setInternalDraggingTabId(undefined);
                 if (
                   start === undefined ||
                   start.pointerId !== event.pointerId ||
@@ -142,10 +135,6 @@ export const TabbedFloatingWindow = ({
                   Math.abs(event.clientY - start.clientY);
                 if (distance >= tabDragOutDistance) {
                   suppressTabClick.current = true;
-                  onTabDragOut?.(tab.id, {
-                    x: event.clientX,
-                    y: event.clientY,
-                  });
                   return;
                 }
                 onActiveTabChange(tab.id);
@@ -155,7 +144,6 @@ export const TabbedFloatingWindow = ({
                 if (tabDragStart.current?.pointerId === event.pointerId) {
                   tabDragStart.current = undefined;
                 }
-                setInternalDraggingTabId(undefined);
               }}
               onClick={() => {
                 if (suppressTabClick.current) {

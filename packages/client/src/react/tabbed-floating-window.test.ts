@@ -80,7 +80,7 @@ describe("tabbed floating window", () => {
     assert.match(infoWindow, /onTabDragOut/u);
   });
 
-  test("tabbed windows expose visual state for tab tear-out feedback", () => {
+  test("tabbed windows pop tabs out immediately instead of showing tear-out feedback", async () => {
     const markup = renderToStaticMarkup(
       createElement(TabbedFloatingWindow, {
         tabs: [
@@ -96,19 +96,27 @@ describe("tabbed floating window", () => {
           },
         ],
         activeTabId: "preview",
-        draggingTabId: "log",
         minimized: false,
         onActiveTabChange: () => undefined,
         onToggleMinimized: () => undefined,
         onClose: () => undefined,
       }),
     );
+    const [tabbedWindow, tabbedStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "TabbedFloatingWindow.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "styles", "tabbed-floating-window.css"),
+        "utf8",
+      ),
+    ]);
 
-    assert.match(markup, /is-tab-tearing-out/u);
+    assert.doesNotMatch(markup, /is-tab-tearing-out/u);
+    assert.match(tabbedWindow, /onPointerMove[\s\S]*onTabDragOut/u);
     assert.match(
-      markup,
-      /floating-window-tab is-tab-dragging[^>]*>Log<\/button>/u,
+      tabbedWindow,
+      /tabDragStart\.current\s*=\s*undefined;[\s\S]*onTabDragOut/u,
     );
+    assert.doesNotMatch(tabbedStyles, /\.is-tab-tearing-out/u);
   });
 
   test("match app exposes combine drop feedback classes", async () => {
@@ -123,7 +131,6 @@ describe("tabbed floating window", () => {
     assert.match(matchApp, /combineDropTarget/u);
     assert.match(matchApp, /is-combine-drop-target/u);
     assert.match(tabbedStyles, /\.is-combine-drop-target/u);
-    assert.match(tabbedStyles, /\.is-tab-tearing-out/u);
   });
 
   test("tabbed window styles keep the shell compact", async () => {

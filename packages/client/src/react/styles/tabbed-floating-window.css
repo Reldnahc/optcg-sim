@@ -38,17 +38,6 @@
   background: #79ff9a;
 }
 
-.floating-window-tab.is-tab-dragging {
-  color: #fff;
-  background: rgba(121, 255, 154, 0.35);
-  transform: translateY(-2px);
-}
-
-.is-tab-tearing-out {
-  outline: 2px solid rgba(121, 255, 154, 0.8);
-  outline-offset: 4px;
-}
-
 .is-combine-drop-target {
   outline: 3px solid #79ff9a;
   outline-offset: 5px;
