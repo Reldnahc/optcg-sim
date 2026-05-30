@@ -5,6 +5,7 @@ import {
   dockedInfoWindowTabIds,
   groupedInfoWindowIdsAfterDockDrop,
   groupedInfoWindowIdsAfterDrop,
+  groupedInfoWindowIdsAfterDockTabDragOut,
   groupedInfoWindowIdsAfterTabDragOut,
   standaloneInfoWindowIds,
 } from "./info-window-model.js";
@@ -85,6 +86,24 @@ describe("info window model", () => {
           "settings",
         ],
       },
+    );
+  });
+
+  test("dragging an info tab out of the control dock removes it from the saved group", () => {
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDockTabDragOut(allInfoTabs, "settings"),
+      ["preview", "log"],
+    );
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDockTabDragOut(["preview", "log"], "action-log"),
+      [],
+    );
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDockTabDragOut(
+        ["preview", "log"],
+        "collection:Player trash",
+      ),
+      ["preview", "log"],
     );
   });
 });

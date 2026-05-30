@@ -42,6 +42,7 @@ import {
   cardPreviewWindowKey,
   groupedInfoWindowIds as groupedInfoWindowIdsFromState,
   groupedInfoWindowIdsAfterDrop,
+  groupedInfoWindowIdsAfterDockTabDragOut,
   groupedInfoWindowIdsAfterTabDragOut,
   infoWindowDefaultSize,
   infoWindowKey,
@@ -494,6 +495,9 @@ export const MatchApp = (): React.JSX.Element => {
     const nextRect = splitWindowRectFromPoint(point, dockedSize);
     updateFloatingWindowRect(windowKey, nextRect);
     setControlDockActiveTabId(undefined);
+    setGroupedInfoWindowIds(
+      groupedInfoWindowIdsAfterDockTabDragOut(groupedInfoWindowIds, windowKey),
+    );
     startPoppedOutDrag({
       pointerId: point.pointerId,
       windowKey,

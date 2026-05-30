@@ -29,6 +29,21 @@ export const infoWindowKeyForTab = (tabId: InfoWindowTabId): string => {
   }
 };
 
+export const infoWindowTabIdForKey = (
+  windowKey: string,
+): InfoWindowTabId | undefined => {
+  switch (windowKey) {
+    case cardPreviewWindowKey:
+      return "preview";
+    case actionLogWindowKey:
+      return "log";
+    case settingsWindowKey:
+      return "settings";
+    default:
+      return undefined;
+  }
+};
+
 export const visibleInfoWindowIds = ({
   showPreviewWindow,
   showActionLogWindow,
@@ -67,6 +82,19 @@ export const groupedInfoWindowIdsAfterTabDragOut = (
     (windowId) => windowId !== draggedTabId,
   );
   return remainingIds.length >= 2 ? remainingIds : [];
+};
+
+export const groupedInfoWindowIdsAfterDockTabDragOut = (
+  currentGroupedInfoWindowIds: readonly InfoWindowTabId[],
+  draggedWindowKey: string,
+): InfoWindowTabId[] => {
+  const draggedTabId = infoWindowTabIdForKey(draggedWindowKey);
+  return draggedTabId === undefined
+    ? [...currentGroupedInfoWindowIds]
+    : groupedInfoWindowIdsAfterTabDragOut(
+        currentGroupedInfoWindowIds,
+        draggedTabId,
+      );
 };
 
 export const groupedInfoWindowIdsAfterDrop = ({
