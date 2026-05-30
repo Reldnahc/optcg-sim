@@ -130,7 +130,11 @@ export const BoardLayout = ({
             cards={board.opponent.lifeCards}
             size="small"
             displayMode="life"
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            actionDisabled={actionDisabled}
             onCardPreview={onPreviewCard}
+            onCardClick={onCardClick}
           />
         </div>
         <div className="playmat-zone opponent-deck">
@@ -255,7 +259,11 @@ export const BoardLayout = ({
             cards={board.self.lifeCards}
             size="small"
             displayMode="life"
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            actionDisabled={actionDisabled}
             onCardPreview={onPreviewCard}
+            onCardClick={onCardClick}
           />
         </div>
         <div className="playmat-zone player-leader">

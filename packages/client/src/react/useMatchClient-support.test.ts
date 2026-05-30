@@ -8,6 +8,7 @@ import type {
   InstanceId,
   PlayerId,
   PlayerView,
+  PublicSelectCardsDecision,
   Zone,
 } from "@optcg/types";
 
@@ -15,9 +16,12 @@ import {
   activeCardCostGlobalActions,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+  applyPendingDecisionLifeChoiceCards,
   prominentDecisionPrompt,
   resolvingEffectSourceInstanceIds,
+  zoneClickVisibleInstanceIds,
 } from "./useMatchClient-support.js";
+import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import type {
   OptionalCardCostChoice,
   OptionalCardCostGroup,
@@ -75,6 +79,18 @@ const decision = (id: string): NonNullable<PlayerView["pendingDecision"]> => ({
   choices: [],
 });
 
+const selectCardsDecision = (id: string): PublicSelectCardsDecision => ({
+  id: id as DecisionId,
+  type: "selectCards",
+  playerId: "p1" as PlayerId,
+  prompt: "Choose a card.",
+  causedBy: { type: "ruleProcess", name: "privateCausality" },
+  min: 0,
+  max: 1,
+  candidates: [],
+  choices: [],
+});
+
 const targetDecision = (
   id: string,
 ): NonNullable<PlayerView["pendingDecision"]> => ({
@@ -110,6 +126,49 @@ const payCostDecision = (
   prompt: "Pay cost.",
   causedBy: { type: "ruleProcess", name: "privateCausality" },
 });
+
+const hiddenLifeCard = (id: string, cardId = "hidden"): ClientCardModel => ({
+  instanceId: id as InstanceId,
+  cardId: cardId as CardId,
+  name: "Hidden card",
+  category: "hidden",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
+const boardWithLife = (): BoardViewModel => {
+  const selfLeader = hiddenLifeCard("self-leader", "SELF-LEADER");
+  const opponentLeader = hiddenLifeCard("opponent-leader", "OPP-LEADER");
+  return {
+    playerId: "p1" as PlayerId,
+    self: {
+      leader: selfLeader,
+      hand: [],
+      characters: [],
+      costArea: [],
+      trash: [],
+      deckCount: 0,
+      donDeckCount: 0,
+      lifeCount: 2,
+      lifeCards: [
+        hiddenLifeCard("hidden-life-self-0"),
+        hiddenLifeCard("hidden-life-self-1"),
+      ],
+    },
+    opponent: {
+      leader: opponentLeader,
+      handCount: 0,
+      characters: [],
+      costArea: [],
+      trash: [],
+      deckCount: 0,
+      donDeckCount: 0,
+      lifeCount: 0,
+      lifeCards: [],
+    },
+    actionsByCardInstanceId: {},
+  };
+};
 
 const activeSourceEvents = (decisionId: string): EngineEvent[] => [
   event({
@@ -292,5 +351,48 @@ describe("match client support helpers", () => {
         ["active-source"],
       );
     }
+  });
+
+  test("pending life card choices render as hidden clickable zone cards", () => {
+    const board = boardWithLife();
+    const pendingDecision: PublicSelectCardsDecision = {
+      ...selectCardsDecision("decision:life-cost"),
+      candidates: [
+        {
+          card: {
+            instanceId: "real-life-top" as InstanceId,
+            cardId: "SECRET-LIFE" as CardId,
+            playerId: "p1" as PlayerId,
+            zone: { zone: "life", playerId: "p1" as PlayerId, index: 0 },
+          },
+        },
+      ],
+      choices: [
+        {
+          card: {
+            instanceId: "real-life-top" as InstanceId,
+            cardId: "SECRET-LIFE" as CardId,
+            playerId: "p1" as PlayerId,
+            zone: { zone: "life", playerId: "p1" as PlayerId, index: 0 },
+          },
+          selectable: true,
+        },
+      ],
+    };
+
+    const updated = applyPendingDecisionLifeChoiceCards(board, pendingDecision);
+    assert.ok(updated);
+
+    const firstLifeCard = updated.self.lifeCards[0];
+    assert.ok(firstLifeCard);
+    assert.equal(firstLifeCard.instanceId, "real-life-top");
+    assert.equal(firstLifeCard.cardId, "hidden");
+    assert.equal(firstLifeCard.category, "hidden");
+    assert.deepEqual(zoneClickVisibleInstanceIds(updated), [
+      "real-life-top",
+      "hidden-life-self-1",
+      "self-leader",
+      "opponent-leader",
+    ]);
   });
 });

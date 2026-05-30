@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type {
+  CardId,
   DecisionId,
   EngineEvent,
   InstanceId,
@@ -166,15 +167,80 @@ export const zoneClickVisibleInstanceIds = (
   }
   return [
     ...board.self.hand,
+    ...board.self.lifeCards,
     board.self.leader,
     ...board.self.characters,
     ...(board.self.stage === undefined ? [] : [board.self.stage]),
     ...board.self.costArea,
+    ...board.opponent.lifeCards,
     board.opponent.leader,
     ...board.opponent.characters,
     ...(board.opponent.stage === undefined ? [] : [board.opponent.stage]),
     ...board.opponent.costArea,
   ].map((card) => String(card.instanceId));
+};
+
+const hiddenLifeChoiceCard = (
+  instanceId: InstanceId,
+): BoardViewModel["self"]["lifeCards"][number] => ({
+  instanceId,
+  cardId: "hidden" as CardId,
+  name: "Hidden card",
+  category: "hidden",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
+const overlayLifeChoiceCards = (
+  cards: readonly BoardViewModel["self"]["lifeCards"][number][],
+  choicesByIndex: ReadonlyMap<number, InstanceId>,
+): BoardViewModel["self"]["lifeCards"] =>
+  cards.map((card, index) => {
+    const instanceId = choicesByIndex.get(index);
+    return instanceId === undefined ? card : hiddenLifeChoiceCard(instanceId);
+  });
+
+export const applyPendingDecisionLifeChoiceCards = (
+  board: BoardViewModel | undefined,
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined,
+): BoardViewModel | undefined => {
+  if (
+    board === undefined ||
+    pendingDecision === undefined ||
+    pendingDecision.type !== "selectCards"
+  ) {
+    return board;
+  }
+  const selfChoices = new Map<number, InstanceId>();
+  const opponentChoices = new Map<number, InstanceId>();
+  for (const candidate of pendingDecision.candidates) {
+    const card = candidate.card;
+    if (card.zone?.zone !== "life" || typeof card.zone.index !== "number") {
+      continue;
+    }
+    const choices =
+      card.playerId === board.playerId ? selfChoices : opponentChoices;
+    choices.set(card.zone.index, card.instanceId);
+  }
+  if (selfChoices.size === 0 && opponentChoices.size === 0) {
+    return board;
+  }
+  return {
+    ...board,
+    self: {
+      ...board.self,
+      lifeCards: overlayLifeChoiceCards(board.self.lifeCards, selfChoices),
+    },
+    opponent: {
+      ...board.opponent,
+      lifeCards: overlayLifeChoiceCards(
+        board.opponent.lifeCards,
+        opponentChoices,
+      ),
+    },
+  };
 };
 
 export const decisionCandidateInstanceIds = (

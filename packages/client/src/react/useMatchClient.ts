@@ -53,6 +53,7 @@ import {
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   buildGlobalActions,
   activeCardInstanceIdsForUi,
+  applyPendingDecisionLifeChoiceCards,
   cardActionsForInstance,
   decisionCandidateInstanceIds,
   decisionHasCandidate,
@@ -108,7 +109,7 @@ export const useMatchClient = (): MatchClientUi => {
     playerSnapshot,
     pendingDecision,
   });
-  const board = !isMatchClientState(clientState)
+  const baseBoard = !isMatchClientState(clientState)
     ? undefined
     : createBoardViewModel({
         snapshot: clientState.snapshot,
@@ -116,6 +117,7 @@ export const useMatchClient = (): MatchClientUi => {
         playerId: clientState.seat.playerId,
         activeCardInstanceIds,
       });
+  const board = applyPendingDecisionLifeChoiceCards(baseBoard, pendingDecision);
   const liveConnectionKey = !isMatchClientState(clientState)
     ? undefined
     : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;

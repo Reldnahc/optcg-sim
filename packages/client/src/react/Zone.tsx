@@ -199,7 +199,24 @@ export const Zone = ({
                     className="life-card-position"
                     style={lifeCardStyle(index, visibleCards.length)}
                   >
-                    <CardTile card={card} onHover={onCardPreview} />
+                    <CardTile
+                      card={card}
+                      selected={decisionSelectedInstanceIds.includes(
+                        instanceId,
+                      )}
+                      pendingChoice={pendingChoiceInstanceIds.includes(
+                        instanceId,
+                      )}
+                      disabled={actionDisabled}
+                      onHover={onCardPreview}
+                      onClick={
+                        onCardClick === undefined
+                          ? undefined
+                          : () => {
+                              onCardClick(instanceId);
+                            }
+                      }
+                    />
                   </div>
                 );
               })
