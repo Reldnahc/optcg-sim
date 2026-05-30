@@ -1,0 +1,42 @@
+.tabbed-floating-window .floating-window-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0;
+}
+
+.floating-window-tab-strip {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  border-bottom: 1px solid rgba(244, 238, 231, 0.18);
+  padding: 4px;
+  overflow-x: auto;
+}
+
+.floating-window-tab {
+  min-width: 0;
+  border: 0;
+  border-radius: 3px;
+  padding: 4px 9px;
+  color: rgba(244, 238, 231, 0.75);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.floating-window-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.floating-window-tab.is-active {
+  color: #111;
+  background: #79ff9a;
+}
+
+.floating-window-tab-panel {
+  min-height: 0;
+  padding: 8px;
+  overflow: auto;
+}

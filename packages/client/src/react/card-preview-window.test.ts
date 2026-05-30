@@ -41,7 +41,8 @@ describe("card preview window", () => {
 
     assert.match(markup, /floating-window/u);
     assert.match(markup, /card-preview-window/u);
-    assert.match(markup, /Card Preview/u);
+    assert.match(markup, /Preview/u);
+    assert.doesNotMatch(markup, /Card Preview/u);
     assert.match(markup, /Preview Card/u);
     assert.match(markup, /https:\/\/example\.test\/card\.png/u);
     assert.match(markup, /Draw 1 card\./u);
@@ -64,8 +65,8 @@ describe("card preview window", () => {
 
     assert.match(markup, /floating-window is-minimized card-preview-window/u);
     assert.match(markup, /floating-window-drag-handle/u);
-    assert.match(markup, /aria-label="Restore Card Preview"/u);
-    assert.match(markup, /aria-label="Close Card Preview"/u);
+    assert.match(markup, /aria-label="Restore Preview"/u);
+    assert.match(markup, /aria-label="Close Preview"/u);
     assert.match(markup, />-</u);
     assert.match(markup, />x</u);
     assert.equal(markup.includes("Draw 1 card."), false);
@@ -117,6 +118,7 @@ describe("card preview window", () => {
     assert.match(matchApp, /previewControl=/u);
     assert.match(matchApp, /CardPreviewToggle/u);
     assert.match(matchApp, /CardPreviewWindow/u);
+    assert.match(matchApp, /InfoTabbedWindow/u);
   });
 
   test("preview toggle controls whether hover preview is enabled", () => {

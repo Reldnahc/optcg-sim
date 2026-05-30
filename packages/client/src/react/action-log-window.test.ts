@@ -30,7 +30,8 @@ describe("action log window", () => {
 
     assert.match(markup, /floating-window/u);
     assert.match(markup, /action-log-window/u);
-    assert.match(markup, /Action Log/u);
+    assert.match(markup, /Log/u);
+    assert.doesNotMatch(markup, /Action Log/u);
     assert.match(markup, /Game started/u);
     assert.match(markup, /Card played/u);
   });

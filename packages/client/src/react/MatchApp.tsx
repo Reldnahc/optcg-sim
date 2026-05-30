@@ -24,6 +24,8 @@ import { DecisionModalHost } from "./DecisionModalHost.js";
 import { moveIdNear } from "./drag-reorder.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
+import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
 import { useMatchClient } from "./useMatchClient.js";
@@ -54,6 +56,7 @@ const emptyFloatingWindowRectState: FloatingWindowRectState = {
 
 const cardPreviewWindowKey = "card-preview";
 const actionLogWindowKey = "action-log";
+const infoWindowKey = "info-window";
 const collectionWindowKey = (title: string): string => `collection:${title}`;
 const revealWindowKey = (revealId: string): string => `reveal:${revealId}`;
 
@@ -112,6 +115,9 @@ export const MatchApp = (): React.JSX.Element => {
   const [previewMinimized, setPreviewMinimized] = useState(false);
   const [actionLogOpen, setActionLogOpen] = useState(false);
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
+  const [infoWindowActiveTab, setInfoWindowActiveTab] =
+    useState<InfoWindowTabId>("preview");
+  const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
   const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
     board,
@@ -402,6 +408,8 @@ export const MatchApp = (): React.JSX.Element => {
       return;
     }
     setPreviewCard(card);
+    setInfoWindowActiveTab("preview");
+    setInfoWindowMinimized(false);
   };
   useEffect(() => {
     if (previewEnabled) {
@@ -424,6 +432,7 @@ export const MatchApp = (): React.JSX.Element => {
     setPreviewEnabled(false);
     setPreviewCard(undefined);
     setPreviewMinimized(false);
+    setInfoWindowActiveTab("log");
   };
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
@@ -540,12 +549,19 @@ export const MatchApp = (): React.JSX.Element => {
           }),
     [matchState, playerSnapshot],
   );
+  const showPreviewWindow = previewCard !== undefined;
+  const showActionLogWindow = actionLogOpen;
+  const showTabbedInfoWindow = showPreviewWindow && showActionLogWindow;
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
     }
-    setActionLogOpen(activeOpenWindowIds.has(actionLogWindowKey));
-  }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope]);
+    const nextActionLogOpen = activeOpenWindowIds.has(actionLogWindowKey);
+    setActionLogOpen(nextActionLogOpen);
+    if (nextActionLogOpen && previewCard === undefined) {
+      setInfoWindowActiveTab("log");
+    }
+  }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope, previewCard]);
   return (
     <main className="match-app">
       {displayBoard === undefined ? (
@@ -612,6 +628,10 @@ export const MatchApp = (): React.JSX.Element => {
               setActionLogOpen(nextOpen);
               updateFloatingWindowOpen(actionLogWindowKey, nextOpen);
               setActionLogMinimized(false);
+              setInfoWindowMinimized(false);
+              if (nextOpen) {
+                setInfoWindowActiveTab("log");
+              }
             }}
           />
         }
@@ -724,7 +744,43 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ))}
-      {actionLogOpen ? (
+      {showTabbedInfoWindow ? (
+        <InfoTabbedWindow
+          previewCard={previewCard}
+          entries={actionLogEntries}
+          activeTabId={infoWindowActiveTab}
+          minimized={infoWindowMinimized}
+          initialRect={
+            activeFloatingWindowRects[infoWindowKey] ??
+            activeFloatingWindowRects[actionLogWindowKey] ??
+            activeFloatingWindowRects[cardPreviewWindowKey]
+          }
+          onActiveTabChange={setInfoWindowActiveTab}
+          onToggleMinimized={() => {
+            setInfoWindowMinimized((current) => !current);
+          }}
+          onCloseActiveTab={(tabId) => {
+            if (tabId === "preview") {
+              closeCardPreview();
+              return;
+            }
+            setActionLogOpen(false);
+            setActionLogMinimized(false);
+            setInfoWindowActiveTab("preview");
+            updateFloatingWindowOpen(actionLogWindowKey, false);
+          }}
+          onRectChange={(rect) => {
+            updateFloatingWindowRect(infoWindowKey, rect);
+          }}
+          onRequestRollback={(rollbackPointId) => {
+            void client.requestRollback(rollbackPointId);
+          }}
+          onPreviewCard={(card) => {
+            previewHoveredCard(actionLogCardModel(card));
+          }}
+        />
+      ) : null}
+      {showActionLogWindow && !showTabbedInfoWindow ? (
         <ActionLogWindow
           entries={actionLogEntries}
           minimized={actionLogMinimized}
@@ -735,6 +791,7 @@ export const MatchApp = (): React.JSX.Element => {
           onClose={() => {
             setActionLogOpen(false);
             setActionLogMinimized(false);
+            setInfoWindowActiveTab("preview");
             updateFloatingWindowOpen(actionLogWindowKey, false);
           }}
           onRectChange={(rect) => {
@@ -748,18 +805,20 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      <CardPreviewWindow
-        card={previewCard}
-        minimized={previewMinimized}
-        initialRect={activeFloatingWindowRects[cardPreviewWindowKey]}
-        onToggleMinimized={() => {
-          setPreviewMinimized((current) => !current);
-        }}
-        onClose={closeCardPreview}
-        onRectChange={(rect) => {
-          updateFloatingWindowRect(cardPreviewWindowKey, rect);
-        }}
-      />
+      {showPreviewWindow && !showTabbedInfoWindow ? (
+        <CardPreviewWindow
+          card={previewCard}
+          minimized={previewMinimized}
+          initialRect={activeFloatingWindowRects[cardPreviewWindowKey]}
+          onToggleMinimized={() => {
+            setPreviewMinimized((current) => !current);
+          }}
+          onClose={closeCardPreview}
+          onRectChange={(rect) => {
+            updateFloatingWindowRect(cardPreviewWindowKey, rect);
+          }}
+        />
+      ) : null}
     </main>
   );
 };
