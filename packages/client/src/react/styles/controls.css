@@ -229,6 +229,29 @@
   border-bottom: 1px solid rgba(244, 238, 231, 0.22);
 }
 
+.control-dock-window-grab-nub {
+  position: relative;
+  flex: 0 0 16px;
+  border: 0;
+  border-right: 1px solid rgba(244, 238, 231, 0.14);
+  background: transparent;
+  cursor: grab;
+}
+
+.control-dock-window-grab-nub:active {
+  cursor: grabbing;
+}
+
+.control-dock-window-grab-nub::before {
+  position: absolute;
+  top: 7px;
+  left: 6px;
+  width: 2px;
+  height: 14px;
+  border-left: 2px dotted rgba(255, 255, 255, 0.58);
+  content: "";
+}
+
 .control-dock-window-tab {
   min-width: 0;
   max-width: 112px;

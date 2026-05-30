@@ -30,6 +30,7 @@ export interface ControlRailProps {
   onDockTabDragOut?:
     | ((tabId: string, point: TabDragOutPoint) => void)
     | undefined;
+  onDockGroupDragOut?: ((point: TabDragOutPoint) => void) | undefined;
   rollbackStatus?:
     | {
         message: string;
@@ -61,6 +62,7 @@ export const ControlRail = ({
   onDockTabChange,
   onDockTabClose,
   onDockTabDragOut,
+  onDockGroupDragOut,
   rollbackStatus,
   onCancelRollback,
   concedeDisabled = true,
@@ -73,6 +75,14 @@ export const ControlRail = ({
   const tabDragStart = useRef<
     | {
         tabId: string;
+        pointerId: number;
+        clientX: number;
+        clientY: number;
+      }
+    | undefined
+  >(undefined);
+  const groupDragStart = useRef<
+    | {
         pointerId: number;
         clientX: number;
         clientY: number;
@@ -204,6 +214,70 @@ export const ControlRail = ({
           ) : (
             <section className="control-dock-window">
               <div className="control-dock-window-tabs" role="tablist">
+                {onDockGroupDragOut === undefined ? null : (
+                  <button
+                    className="control-dock-window-grab-nub"
+                    type="button"
+                    aria-label="Pop out docked window group"
+                    title="Pop out docked window group"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      groupDragStart.current = {
+                        pointerId: event.pointerId,
+                        clientX: event.clientX,
+                        clientY: event.clientY,
+                      };
+                    }}
+                    onPointerMove={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const start = groupDragStart.current;
+                      if (
+                        start === undefined ||
+                        start.pointerId !== event.pointerId
+                      ) {
+                        return;
+                      }
+                      const distance =
+                        Math.abs(event.clientX - start.clientX) +
+                        Math.abs(event.clientY - start.clientY);
+                      if (distance < tabDragOutDistance) {
+                        return;
+                      }
+                      groupDragStart.current = undefined;
+                      if (
+                        event.currentTarget.hasPointerCapture(event.pointerId)
+                      ) {
+                        event.currentTarget.releasePointerCapture(
+                          event.pointerId,
+                        );
+                      }
+                      onDockGroupDragOut({
+                        x: event.clientX,
+                        y: event.clientY,
+                        pointerId: event.pointerId,
+                      });
+                    }}
+                    onPointerUp={(event) => {
+                      event.stopPropagation();
+                      if (
+                        groupDragStart.current?.pointerId === event.pointerId
+                      ) {
+                        groupDragStart.current = undefined;
+                      }
+                    }}
+                    onPointerCancel={(event) => {
+                      event.stopPropagation();
+                      if (
+                        groupDragStart.current?.pointerId === event.pointerId
+                      ) {
+                        groupDragStart.current = undefined;
+                      }
+                    }}
+                  />
+                )}
                 {dockTabs.map((tab) => {
                   const selected = tab.id === activeDockTab.id;
                   return (

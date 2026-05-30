@@ -28,12 +28,8 @@ import {
 } from "./collection-window-model.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
-import { dockWindowPoppedOutSize } from "./dock-window-popout.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import {
-  combineDropTargetForWindow,
-  splitWindowRectFromPoint,
-} from "./floating-window-grouping.js";
+import { combineDropTargetForWindow } from "./floating-window-grouping.js";
 import type { GroupableWindow } from "./floating-window-grouping.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
@@ -42,9 +38,7 @@ import {
   cardPreviewWindowKey,
   groupedInfoWindowIds as groupedInfoWindowIdsFromState,
   groupedInfoWindowIdsAfterDrop,
-  groupedInfoWindowIdsAfterDockTabDragOut,
   groupedInfoWindowIdsAfterTabDragOut,
-  infoWindowDefaultSize,
   infoWindowKey,
   infoWindowKeyForTab,
   infoWindowRect,
@@ -59,14 +53,13 @@ import { OpponentRevealWindowLayer } from "./OpponentRevealWindowLayer.js";
 import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
-import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
+import { useInfoWindowDragOut } from "./use-info-window-drag-out.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
 import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
-import { usePoppedOutWindowDrag } from "./use-popped-out-window-drag.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
@@ -173,9 +166,6 @@ export const MatchApp = (): React.JSX.Element => {
       ? clientState
       : undefined;
   const currentPlayerId = client.currentPlayerId;
-  const startPoppedOutDrag = usePoppedOutWindowDrag({
-    onRectChange: updateFloatingWindowRect,
-  });
   const { displayBoard, moveHandCard } = useOrderedHandBoard({
     board,
     matchScope,
@@ -487,26 +477,6 @@ export const MatchApp = (): React.JSX.Element => {
     setControlDockActiveTabId(windowKey);
     return undefined;
   };
-  const dragOutDockWindow = (
-    windowKey: string,
-    point: TabDragOutPoint,
-  ): void => {
-    const dockedSize = dockWindowPoppedOutSize(windowKey);
-    const nextRect = splitWindowRectFromPoint(point, dockedSize);
-    updateFloatingWindowRect(windowKey, nextRect);
-    setControlDockActiveTabId(undefined);
-    setGroupedInfoWindowIds(
-      groupedInfoWindowIdsAfterDockTabDragOut(groupedInfoWindowIds, windowKey),
-    );
-    startPoppedOutDrag({
-      pointerId: point.pointerId,
-      windowKey,
-      offsetX: dockedSize.width / 2,
-      offsetY: 20,
-      width: dockedSize.width,
-      height: dockedSize.height,
-    });
-  };
   const dockInfoWindowTabs = (
     draggedWindowIds: readonly InfoWindowTabId[],
     dockRect: WindowRect,
@@ -547,53 +517,40 @@ export const MatchApp = (): React.JSX.Element => {
     setCombineDropTarget(undefined);
     return undefined;
   };
-  const splitInfoWindowTab = (
-    tabId: InfoWindowTabId,
-    point: TabDragOutPoint,
-  ): void => {
-    const windowKey = infoWindowKeyForTab(tabId);
-    const remainingGroupedWindowIds = groupedInfoWindowIdsAfterTabDragOut(
-      groupedInfoWindowIds,
-      tabId,
+  const completePoppedOutInfoGroupDrag = (
+    rect: WindowRect,
+  ): WindowRect | undefined => {
+    const dockRect = completeControlDockDrop(rect);
+    if (dockRect === undefined) {
+      return undefined;
+    }
+    dockInfoWindowTabs(
+      dockedInfoTabIds.length >= 2 ? dockedInfoTabIds : groupedInfoWindowIds,
+      dockRect,
     );
-    const remainingWindowId =
-      remainingGroupedWindowIds[0] ??
-      groupedInfoWindowIds.find((windowId) => windowId !== tabId);
-    const groupRect =
-      activeFloatingWindowRects[infoWindowKey] ??
-      infoWindowRect(tabId, activeFloatingWindowRects);
-    if (
-      remainingGroupedWindowIds.length === 0 &&
-      remainingWindowId !== undefined
-    ) {
-      updateFloatingWindowRect(
-        infoWindowKeyForTab(remainingWindowId),
-        groupRect,
-      );
-    }
-    const poppedOutSize = infoWindowDefaultSize(tabId);
-    const poppedOutRect = splitWindowRectFromPoint(point, poppedOutSize);
-    updateFloatingWindowRect(windowKey, poppedOutRect);
-    startPoppedOutDrag({
-      pointerId: point.pointerId,
-      windowKey,
-      offsetX: poppedOutSize.width / 2,
-      offsetY: 20,
-      width: poppedOutSize.width,
-      height: poppedOutSize.height,
-    });
-    setGroupedInfoWindowIds(remainingGroupedWindowIds);
-    setInfoWindowMinimized(false);
-    setInfoWindowActiveTab(remainingWindowId ?? tabId);
-    if (tabId === "log") {
-      setActionLogOpen(true);
-      updateFloatingWindowOpen(actionLogWindowKey, true);
-    }
-    if (tabId === "settings") {
-      setSettingsOpen(true);
-      updateFloatingWindowOpen(settingsWindowKey, true);
-    }
+    setCombineDropTarget(undefined);
+    return undefined;
   };
+  const { dragOutDockGroup, dragOutDockWindow, splitInfoWindowTab } =
+    useInfoWindowDragOut({
+      activeFloatingWindowRects,
+      dockedInfoTabIds,
+      groupedInfoWindowIds,
+      currentControlDockSlotRect,
+      updateFloatingWindowRect,
+      updateFloatingWindowOpen,
+      setControlDockActiveTabId,
+      setGroupedInfoWindowIds,
+      setInfoWindowActiveTab,
+      setInfoWindowMinimized,
+      setActionLogOpen,
+      setSettingsOpen,
+      onControlWindowDragMove: updateControlDockTarget,
+      onDockableWindowDragEnd: completeDockableWindowDrag,
+      onInfoWindowDragMove: updateInfoWindowDragTargets,
+      onInfoWindowDragEnd: completeInfoWindowDrag,
+      onInfoGroupDragEnd: completePoppedOutInfoGroupDrag,
+    });
   useEffect(() => {
     if (
       configuredGroupedInfoWindowIds.length > 0 &&
@@ -683,6 +640,9 @@ export const MatchApp = (): React.JSX.Element => {
         onDockTabChange={setControlDockActiveTabId}
         onDockTabClose={closeDockWindow}
         onDockTabDragOut={dragOutDockWindow}
+        onDockGroupDragOut={
+          dockedInfoTabIds.length >= 2 ? dragOutDockGroup : undefined
+        }
         onAction={(actionIndex) => {
           setConcedeConfirming(false);
           void client.submitAction(actionIndex);

@@ -198,15 +198,29 @@ describe("tabbed floating window", () => {
   });
 
   test("match app keeps popped-out tabs attached to the drag gesture", async () => {
-    const [matchApp, poppedOutDragHook] = await Promise.all([
+    const [
+      matchApp,
+      infoDragOutHook,
+      poppedOutDragHook,
+      routedPoppedOutDragHook,
+    ] = await Promise.all([
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "use-info-window-drag-out.ts"), "utf8"),
       readFile(join(sourceDirectory, "use-popped-out-window-drag.ts"), "utf8"),
+      readFile(
+        join(sourceDirectory, "use-routed-popped-out-window-drag.ts"),
+        "utf8",
+      ),
     ]);
 
-    assert.match(matchApp, /usePoppedOutWindowDrag/u);
-    assert.match(matchApp, /pointerId: point\.pointerId/u);
+    assert.match(matchApp, /useInfoWindowDragOut/u);
+    assert.match(infoDragOutHook, /useRoutedPoppedOutWindowDrag/u);
+    assert.match(infoDragOutHook, /onInfoGroupDragEnd,\s*\}/u);
+    assert.match(infoDragOutHook, /pointerId: point\.pointerId/u);
     assert.match(poppedOutDragHook, /poppedOutDrag/u);
     assert.match(poppedOutDragHook, /setPoppedOutDrag/u);
+    assert.match(routedPoppedOutDragHook, /onDragMove\(windowKey, rect\)/u);
+    assert.match(routedPoppedOutDragHook, /onDragEnd\(windowKey, rect\)/u);
     assert.match(
       poppedOutDragHook,
       /document\.addEventListener\("pointermove"/u,
@@ -221,6 +235,8 @@ describe("tabbed floating window", () => {
       /document\.addEventListener\([\s\S]*"mouseup"/u,
     );
     assert.match(poppedOutDragHook, /onRectChange\(drag\.windowKey/u);
+    assert.match(poppedOutDragHook, /onDragMove\?\.\(drag\.windowKey/u);
+    assert.match(poppedOutDragHook, /onDragEnd\?\.\(drag\.windowKey/u);
     assert.doesNotMatch(
       poppedOutDragHook,
       /document\.addEventListener\("pointercancel"/u,

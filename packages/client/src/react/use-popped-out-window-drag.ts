@@ -13,10 +13,16 @@ export interface PoppedOutDragState {
 
 export interface PoppedOutWindowDragOptions {
   onRectChange: (windowKey: string, rect: WindowRect) => void;
+  onDragMove?: ((windowKey: string, rect: WindowRect) => void) | undefined;
+  onDragEnd?:
+    | ((windowKey: string, rect: WindowRect) => WindowRect | undefined)
+    | undefined;
 }
 
 export const usePoppedOutWindowDrag = ({
   onRectChange,
+  onDragMove,
+  onDragEnd,
 }: PoppedOutWindowDragOptions): ((drag: PoppedOutDragState) => void) => {
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
   const [poppedOutDrag, setPoppedOutDrag] = useState<
@@ -39,13 +45,16 @@ export const usePoppedOutWindowDrag = ({
       const movePoppedOutWindowTo = (
         clientX: number,
         clientY: number,
-      ): void => {
-        onRectChange(drag.windowKey, {
+      ): WindowRect => {
+        const nextRect = {
           x: Math.max(0, clientX - drag.offsetX),
           y: Math.max(0, clientY - drag.offsetY),
           width: drag.width,
           height: drag.height,
-        });
+        };
+        onRectChange(drag.windowKey, nextRect);
+        onDragMove?.(drag.windowKey, nextRect);
+        return nextRect;
       };
       const movePoppedOutWindow = (event: PointerEvent): void => {
         if (event.pointerId !== drag.pointerId) {
@@ -60,10 +69,30 @@ export const usePoppedOutWindowDrag = ({
         if (event.pointerId !== drag.pointerId) {
           return;
         }
+        const droppedRect = {
+          x: Math.max(0, event.clientX - drag.offsetX),
+          y: Math.max(0, event.clientY - drag.offsetY),
+          width: drag.width,
+          height: drag.height,
+        };
+        const resolvedRect = onDragEnd?.(drag.windowKey, droppedRect);
+        if (resolvedRect !== undefined) {
+          onRectChange(drag.windowKey, resolvedRect);
+        }
         clearListeners();
         setPoppedOutDrag(undefined);
       };
-      const stopPoppedOutDragFromMouse = (): void => {
+      const stopPoppedOutDragFromMouse = (event: MouseEvent): void => {
+        const droppedRect = {
+          x: Math.max(0, event.clientX - drag.offsetX),
+          y: Math.max(0, event.clientY - drag.offsetY),
+          width: drag.width,
+          height: drag.height,
+        };
+        const resolvedRect = onDragEnd?.(drag.windowKey, droppedRect);
+        if (resolvedRect !== undefined) {
+          onRectChange(drag.windowKey, resolvedRect);
+        }
         clearListeners();
         setPoppedOutDrag(undefined);
       };
@@ -91,7 +120,7 @@ export const usePoppedOutWindowDrag = ({
       );
       document.addEventListener("mouseup", stopPoppedOutDragFromMouse, true);
     },
-    [clearListeners, onRectChange],
+    [clearListeners, onDragEnd, onDragMove, onRectChange],
   );
 
   useEffect(() => {
