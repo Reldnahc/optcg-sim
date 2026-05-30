@@ -44,6 +44,7 @@ import {
   detectPendingRuntimeWork,
   executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,
+  resumePlaySourceOverflowDecision,
 } from "./effect-runtime.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
@@ -741,6 +742,23 @@ const applyRespondToDecision = (
 
   const playCardResult = applyPlayCardDecisionResponse(state, action);
   if (playCardResult !== null) {
+    if (
+      decision.type === "selectCards" &&
+      playCardResult.errors === undefined &&
+      playCardResult.state.pendingDecision === undefined
+    ) {
+      const resumedPlaySource = resumePlaySourceOverflowDecision(
+        state,
+        decision,
+        playCardResult,
+      );
+      if (resumedPlaySource !== undefined) {
+        return continueRuntimeAndAttackTimingAfterDecision(
+          state,
+          resumedPlaySource,
+        );
+      }
+    }
     if (
       decision.type === "selectCards" &&
       playCardResult.errors === undefined &&

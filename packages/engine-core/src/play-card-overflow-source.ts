@@ -3,7 +3,7 @@ import type { CardInstance, GameState, PlayerId } from "@optcg/types";
 export type PlayCardOverflowSource = {
   sourceCard: CardInstance;
   sourceIndex: number;
-  sourceZone: "hand" | "trash";
+  sourceZone: "hand" | "trash" | "noZone";
 };
 
 export const findPlayCardOverflowSource = (

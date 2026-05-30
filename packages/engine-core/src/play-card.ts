@@ -2,6 +2,7 @@
 import type {
   Action,
   CardInstance,
+  CardRef,
   CausalityRef,
   EffectQueueEntry,
   EngineError,
@@ -33,7 +34,9 @@ import {
   getPlayCardPendingDecisionLegalActions,
   parseCharacterOverflowDecisionInstanceId,
   getRuntimePlaySelectedOverflowDecisionId,
+  getRuntimePlaySourceOverflowDecisionId,
   parseRuntimePlaySelectedOverflowDecisionInstanceId,
+  parseRuntimePlaySourceOverflowDecisionInstanceId,
 } from "./play-card-legal-actions.js";
 import { findPlayCardOverflowSource } from "./play-card-overflow-source.js";
 import {
@@ -298,7 +301,9 @@ export const applyPlayCardDecisionResponse = (
   if (
     decision.type === "selectCards" &&
     (parseCharacterOverflowDecisionInstanceId(decision.id) !== null ||
-      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) !== null)
+      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) !==
+        null ||
+      parseRuntimePlaySourceOverflowDecisionInstanceId(decision.id) !== null)
   ) {
     return applyCharacterOverflowResponse(state, action);
   }
@@ -318,6 +323,11 @@ const createCharacterOverflowDecisionResult = (params: {
   decisionIdOverride?: NonNullable<GameState["pendingDecision"]>["id"];
   causedBy?: CausalityRef;
   runtimePlaySelectedEnterRested?: boolean;
+  runtimePlaySourceOverflow?: {
+    source: CardRef;
+    enterRested: boolean;
+    queueEntryId: EffectQueueEntry["id"];
+  };
 }): EngineResult => {
   const {
     state,
@@ -332,6 +342,7 @@ const createCharacterOverflowDecisionResult = (params: {
       actionId: `action:${String(state.actionSeq + 1)}`,
     },
     runtimePlaySelectedEnterRested,
+    runtimePlaySourceOverflow,
   } = params;
   const decisionId =
     decisionIdOverride ?? getCharacterOverflowDecisionId(state, enteringCard);
@@ -357,13 +368,21 @@ const createCharacterOverflowDecisionResult = (params: {
       card: toCardRef(character, playerId),
       visibility: { type: "public" },
     })),
-    ...(runtimePlaySelectedEnterRested === undefined
+    ...(runtimePlaySelectedEnterRested === undefined &&
+    runtimePlaySourceOverflow === undefined
       ? {}
       : {
           runtime: {
-            playSelectedOverflow: {
-              enterRested: runtimePlaySelectedEnterRested,
-            },
+            ...(runtimePlaySelectedEnterRested === undefined
+              ? {}
+              : {
+                  playSelectedOverflow: {
+                    enterRested: runtimePlaySelectedEnterRested,
+                  },
+                }),
+            ...(runtimePlaySourceOverflow === undefined
+              ? {}
+              : { playSourceOverflow: runtimePlaySourceOverflow }),
           },
         }),
   };
@@ -436,6 +455,11 @@ const placePlayedCardResult = (params: {
   characterOverflowCausedBy?: CausalityRef;
   enterRested?: boolean;
   runtimePlaySelectedEnterRested?: boolean;
+  runtimePlaySourceOverflow?: {
+    source: CardRef;
+    enterRested: boolean;
+    queueEntryId: EffectQueueEntry["id"];
+  };
   resolveOnPlayRuntime?: boolean;
   incrementActionSeq?: boolean;
 }): EngineResult => {
@@ -454,6 +478,7 @@ const placePlayedCardResult = (params: {
     characterOverflowCausedBy,
     enterRested,
     runtimePlaySelectedEnterRested,
+    runtimePlaySourceOverflow,
     resolveOnPlayRuntime = true,
     incrementActionSeq = true,
   } = params;
@@ -478,6 +503,9 @@ const placePlayedCardResult = (params: {
       ...(runtimePlaySelectedEnterRested === undefined
         ? {}
         : { runtimePlaySelectedEnterRested }),
+      ...(runtimePlaySourceOverflow === undefined
+        ? {}
+        : { runtimePlaySourceOverflow }),
     });
   }
 
@@ -876,12 +904,6 @@ export const applyRuntimePlaySource = (params: {
       "playSource supports only Character and Stage cards.",
     );
   }
-  if (supported.category === "character" && player.characters.length >= 5) {
-    return illegalAction(
-      state,
-      "playSource character overflow is unsupported.",
-    );
-  }
   if (
     !ignoreCost &&
     getActiveDonCount(player.costArea) <
@@ -905,6 +927,27 @@ export const applyRuntimePlaySource = (params: {
     enterRested,
     resolveOnPlayRuntime: false,
     incrementActionSeq: false,
+    ...(supported.category === "character"
+      ? {
+          characterOverflowDecisionIdOverride:
+            getRuntimePlaySourceOverflowDecisionId(state, sourceCard),
+          characterOverflowCausedBy: {
+            type: "effect" as const,
+            queueEntryId: entry.id,
+            effectId: entry.effectBlockId,
+          },
+          runtimePlaySourceOverflow: {
+            source: {
+              instanceId: sourceCard.instanceId,
+              cardId: sourceCard.cardId,
+              playerId: entry.controllerId,
+              zone: sourceCard.zone,
+            },
+            enterRested,
+            queueEntryId: entry.id,
+          },
+        }
+      : {}),
   });
 };
 
@@ -926,7 +969,9 @@ const applyCharacterOverflowResponse = (
     decision === undefined ||
     decision.type !== "selectCards" ||
     (parseCharacterOverflowDecisionInstanceId(decision.id) === null &&
-      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) === null)
+      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) ===
+        null &&
+      parseRuntimePlaySourceOverflowDecisionInstanceId(decision.id) === null)
   ) {
     return illegalAction(state, "Unsupported decision type.");
   }
@@ -940,15 +985,46 @@ const applyCharacterOverflowResponse = (
   if (player === undefined) {
     return illegalAction(state, "Decision player does not exist.");
   }
-  const runtimeOverflow =
+  const runtimePlaySelectedOverflow =
     parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) !== null;
+  const runtimePlaySourceOverflow =
+    parseRuntimePlaySourceOverflowDecisionInstanceId(decision.id) !== null;
+  const runtimeOverflow =
+    runtimePlaySelectedOverflow || runtimePlaySourceOverflow;
   const playCardInstanceId =
     parseCharacterOverflowDecisionInstanceId(decision.id) ??
-    parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id);
+    parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) ??
+    parseRuntimePlaySourceOverflowDecisionInstanceId(decision.id);
   if (playCardInstanceId === null) {
     return illegalAction(state, "Unsupported overflow decision context.");
   }
-  const source = findPlayCardOverflowSource(player, playCardInstanceId);
+  const runtimePlaySource = decision.runtime?.playSourceOverflow;
+  const runtimePlaySourceZone =
+    runtimePlaySource?.source.zone ??
+    (runtimePlaySource === undefined
+      ? undefined
+      : {
+          zone: "noZone" as const,
+          playerId: runtimePlaySource.source.playerId,
+          slot: "temporary" as const,
+        });
+  const source =
+    runtimePlaySourceOverflow &&
+    runtimePlaySource !== undefined &&
+    runtimePlaySourceZone !== undefined
+      ? {
+          sourceCard: {
+            instanceId: runtimePlaySource.source.instanceId,
+            cardId: runtimePlaySource.source.cardId,
+            owner: runtimePlaySource.source.playerId,
+            controller: runtimePlaySource.source.playerId,
+            attachedDon: [] as CardInstance["attachedDon"],
+            zone: runtimePlaySourceZone,
+          },
+          sourceIndex: -1,
+          sourceZone: "noZone" as const,
+        }
+      : findPlayCardOverflowSource(player, playCardInstanceId);
   if (source === null) {
     return illegalAction(state, "Decision card not found.");
   }
@@ -987,7 +1063,8 @@ const applyCharacterOverflowResponse = (
     return illegalAction(state, "Overflow Character selection is invalid.");
   }
   const runtimeEnterRested = runtimeOverflow
-    ? (decision.runtime?.playSelectedOverflow?.enterRested ??
+    ? (runtimePlaySource?.enterRested ??
+      decision.runtime?.playSelectedOverflow?.enterRested ??
       findRuntimePlaySelectedOverflowEnterRested(state, decision.id) ??
       false)
     : null;

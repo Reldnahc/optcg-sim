@@ -7,6 +7,7 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  SelectCardsDecision,
   QueueEntryId,
 } from "@optcg/types";
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
@@ -94,6 +95,11 @@ export interface EffectRuntimeQueueResults {
     state: GameState,
     orderedIds: readonly QueueEntryId[],
   ) => EngineResult;
+  resumePlaySourceOverflowDecision: (
+    originalState: GameState,
+    decision: SelectCardsDecision,
+    playCardResult: EngineResult,
+  ) => EngineResult | undefined;
 }
 
 const isActiveDoubleAttackDamageProcess = (state: GameState): boolean =>
@@ -836,11 +842,29 @@ export const createEffectRuntimeQueueResults = (
           enterRested: playSourceEffect.enterRested === true,
           ignoreCost: true,
         });
-        if (
-          resolution.errors !== undefined ||
-          resolution.state.pendingDecision
-        ) {
+        if (resolution.errors !== undefined) {
           return unsupportedEffectQueueResult(originalState);
+        }
+        if (resolution.state.pendingDecision !== undefined) {
+          if (
+            resolution.state.pendingDecision.type !== "selectCards" ||
+            resolution.state.pendingDecision.runtime?.playSourceOverflow ===
+              undefined
+          ) {
+            return unsupportedEffectQueueResult(originalState);
+          }
+          const pendingState = resolution.state.effectQueue.some(
+            (entry) => entry.id === selected.id,
+          )
+            ? resolution.state
+            : {
+                ...resolution.state,
+                effectQueue: [...resolution.state.effectQueue, selected],
+              };
+          return toEngineResult(pendingState, [
+            ...allEvents,
+            ...resolution.events,
+          ]);
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);
@@ -1106,8 +1130,95 @@ export const createEffectRuntimeQueueResults = (
     orderedIds: readonly QueueEntryId[],
   ): EngineResult => processNoChoiceEffectQueue(state, orderedIds);
 
+  const resumePlaySourceOverflowDecision = (
+    originalState: GameState,
+    decision: SelectCardsDecision,
+    playCardResult: EngineResult,
+  ): EngineResult | undefined => {
+    const runtime = decision.runtime?.playSourceOverflow;
+    if (runtime === undefined) {
+      return undefined;
+    }
+    if (
+      playCardResult.errors !== undefined ||
+      playCardResult.state.pendingDecision !== undefined
+    ) {
+      return playCardResult;
+    }
+    const selected = originalState.effectQueue.find(
+      (entry) => entry.id === runtime.queueEntryId,
+    );
+    if (selected === undefined) {
+      return unsupportedEffectQueueResult(originalState);
+    }
+
+    let nextState: GameState = {
+      ...playCardResult.state,
+      effectQueue: playCardResult.state.effectQueue.filter(
+        (entry) => entry.id !== selected.id,
+      ),
+    };
+    const resolvedEvents: EngineEvent[] = [];
+    const resolvedEventBaseState: GameState = {
+      ...nextState,
+      seq: toStateSeq(nextState.seq - 1),
+    };
+    appendEvent(
+      resolvedEventBaseState,
+      resolvedEvents,
+      "effectResolved",
+      {
+        queueEntryId: selected.id,
+        timingWindowId: selected.timingWindowId,
+        generation: selected.generation,
+        effectBlockId: selected.effectBlockId,
+        ...(selected.triggerEventId === undefined
+          ? {}
+          : { triggerEventId: selected.triggerEventId }),
+        sourcePresencePolicy: selected.sourcePresencePolicy,
+        orderingGroup: selected.orderingGroup,
+        status: "resolved" as const,
+      },
+      { type: "public" },
+    );
+    const resolvedEvent = resolvedEvents[0];
+    if (resolvedEvent !== undefined) {
+      resolvedEvent.causedBy = {
+        type: "effect",
+        queueEntryId: selected.id,
+        effectId: selected.effectBlockId,
+      };
+      nextState = {
+        ...nextState,
+        eventJournal: [...nextState.eventJournal, resolvedEvent],
+      };
+    }
+    const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+    nextState = cleanup.state;
+    const allEvents = [
+      ...playCardResult.events,
+      ...resolvedEvents,
+      ...cleanup.events,
+    ];
+
+    const triggered = dependencies.queueEffectResolvedCustomTriggers(
+      nextState,
+      selected,
+      allEvents,
+    );
+    if (triggered !== undefined) {
+      if (triggered.errors !== undefined) {
+        return triggered;
+      }
+      nextState = triggered.state;
+      allEvents.push(...triggered.events);
+    }
+    return toEngineResult(nextState, allEvents);
+  };
+
   return {
     processNoChoiceEffectQueue,
     processEffectRuntimeAfterTriggerOrderChoice,
+    resumePlaySourceOverflowDecision,
   };
 };

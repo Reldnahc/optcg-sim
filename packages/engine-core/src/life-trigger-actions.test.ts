@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardInstance,
   Effect,
   EffectBlock,
   EffectDefinition,
@@ -798,6 +799,119 @@ test("activated life trigger can play its source card from the trigger zone", ()
           type === "cardTrashed",
       ),
     ["cardMoved", "cardPlayed"],
+  );
+});
+
+test("conditional life trigger playSource opens Character overflow and finishes after the response", () => {
+  const lifeCardId = toCardId("trigger-conditional-play-source-overflow");
+  const triggerDefinition = supportedLifeTriggerDefinition(
+    lifeCardId,
+    {
+      type: "playSource",
+      source: { type: "triggerCard" },
+      ignoreCost: true,
+    },
+    "noSourceRequired",
+  );
+  const triggerEffect = must(triggerDefinition.effects[0], "trigger effect");
+  const definition: EffectDefinition = {
+    ...triggerDefinition,
+    effects: [
+      {
+        ...triggerEffect,
+        condition: {
+          type: "hasCardInZone",
+          zone: "leaderArea",
+          player: "self",
+          filter: {
+            categories: ["leader"],
+            names: ["Monkey.D.Luffy"],
+          },
+        },
+      },
+    ],
+  };
+  const { state, lifeInstanceId } = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-conditional-play-source-overflow",
+    triggerText:
+      "[Trigger] If your Leader is [Monkey.D.Luffy], play this card.",
+    definition,
+  });
+  const p2State = must(state.players[p2], "p2");
+  const p2LeaderMetadata = must(
+    state.cardManifest.cards[p2State.leader.cardId],
+    "p2 leader metadata",
+  );
+  state.cardManifest.cards[p2State.leader.cardId] = {
+    ...p2LeaderMetadata,
+    name: "Monkey.D.Luffy",
+  };
+  state.cardManifest.cards[lifeCardId] = {
+    ...must(state.cardManifest.cards[lifeCardId], "trigger source metadata"),
+    cost: 1,
+  };
+  const existingCharacter = must(p2State.characters[0], "existing character");
+  const overflowCharacters: CardInstance[] = [
+    existingCharacter,
+    ...p2State.hand.slice(0, 4),
+  ].map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index,
+    },
+    state: "active",
+    attachedDon: [],
+    turnPlayed: 1,
+  }));
+  assert.equal(overflowCharacters.length, 5);
+  p2State.characters = overflowCharacters;
+  p2State.hand = p2State.hand.slice(4).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const decision = must(state.pendingDecision, "life trigger decision");
+
+  const opened = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+
+  assert.equal(opened.errors, undefined);
+  const overflow = must(opened.state.pendingDecision, "overflow decision");
+  assert.equal(overflow.type, "selectCards");
+  const trashedForOverflow = must(
+    overflow.candidates[0],
+    "overflow target",
+  ).card;
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: overflow.id,
+    response: { type: "cards", cards: [trashedForOverflow] },
+  });
+  const resolvedP2 = must(resolved.state.players[p2], "resolved p2");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(
+    resolvedP2.characters.some(
+      (character) => character.instanceId === lifeInstanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    resolvedP2.trash.some(
+      (card) => card.instanceId === trashedForOverflow.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    resolved.events.some((event) => event.type === "effectResolved"),
+    true,
   );
 });
 

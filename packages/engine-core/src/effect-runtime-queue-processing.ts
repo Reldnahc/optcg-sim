@@ -9,6 +9,7 @@ import type {
   QueueEntryId,
   ResolvedCard,
   SelectTargetsDecision,
+  SelectCardsDecision,
   CardRef,
 } from "@optcg/types";
 
@@ -64,6 +65,11 @@ export interface EffectRuntimeQueueProcessing {
     state: GameState,
     orderedIds: readonly QueueEntryId[],
   ) => EngineResult;
+  resumePlaySourceOverflowDecision: (
+    originalState: GameState,
+    decision: SelectCardsDecision,
+    playCardResult: EngineResult,
+  ) => EngineResult | undefined;
 }
 
 export const createEffectRuntimeQueueProcessing = (
@@ -125,5 +131,7 @@ export const createEffectRuntimeQueueProcessing = (
     processNoChoiceEffectQueue: queueResults.processNoChoiceEffectQueue,
     processEffectRuntimeAfterTriggerOrderChoice:
       queueResults.processEffectRuntimeAfterTriggerOrderChoice,
+    resumePlaySourceOverflowDecision:
+      queueResults.resumePlaySourceOverflowDecision,
   };
 };

@@ -453,6 +453,8 @@ export const continueSelectedTargetEffect = (
 ) => queueProcessing.continueSelectedTargetEffect(state, decision, targets);
 export const finalizeSelectedTargetEffectResolution =
   queueProcessing.finalizeSelectedTargetEffectResolution;
+export const resumePlaySourceOverflowDecision =
+  queueProcessing.resumePlaySourceOverflowDecision;
 const processNoChoiceEffectQueue = queueProcessing.processNoChoiceEffectQueue;
 
 const toErrorTuple = (
