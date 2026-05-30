@@ -7,7 +7,12 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { createCanonicalDonPaymentActions } from "../index.js";
+import {
+  createCanonicalDonPaymentActions,
+  createCollapsedAttackActions,
+  createCollapsedCounterActions,
+  selectedDonAttachmentMenuAction,
+} from "../index.js";
 import type {
   BoardViewModel,
   ClientActionModel,
@@ -119,6 +124,39 @@ export const isSelfAttachmentTarget = (
     board.self.characters.some(
       (card) => String(card.instanceId) === instanceId,
     ));
+
+export const cardActionsForInstance = ({
+  board,
+  instanceId,
+  selectedCardInstanceId,
+  selectedDonInstanceIds,
+  legalActions,
+}: {
+  board: BoardViewModel | undefined;
+  instanceId: string;
+  selectedCardInstanceId: string | undefined;
+  selectedDonInstanceIds: readonly string[];
+  legalActions: MatchClientState["snapshot"]["players"][PlayerId]["actions"];
+}): ClientActionModel[] => {
+  const base = board?.actionsByCardInstanceId[instanceId] ?? [];
+  const collapsedActions = createCollapsedCounterActions(
+    createCollapsedAttackActions(base),
+  );
+  if (
+    selectedCardInstanceId === instanceId &&
+    isSelfAttachmentTarget(board, instanceId)
+  ) {
+    const attachAction = selectedDonAttachmentMenuAction(
+      selectedDonInstanceIds,
+      legalActions,
+      instanceId,
+    );
+    return attachAction === undefined
+      ? collapsedActions
+      : [...collapsedActions, attachAction];
+  }
+  return collapsedActions;
+};
 
 export const zoneClickVisibleInstanceIds = (
   board: BoardViewModel | undefined,

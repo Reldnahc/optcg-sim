@@ -26,14 +26,11 @@ import {
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
   createAttackTargetChoice,
-  createCollapsedAttackActions,
   counterTargetActionForInstance,
   counterTargetInstanceIds,
   COUNTER_TARGET_CHOICE_ACTION_INDEX,
-  createCollapsedCounterActions,
   createCounterTargetChoice,
   chooseDecisionTrigger,
-  selectedDonAttachmentMenuAction,
   moveOrderedCardNear,
   setOrderedCardsPlacementDestination,
   setDecisionActionOption,
@@ -56,6 +53,7 @@ import {
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   buildGlobalActions,
   activeCardInstanceIdsForUi,
+  cardActionsForInstance,
   decisionCandidateInstanceIds,
   decisionHasCandidate,
   isMatchClientState,
@@ -721,7 +719,13 @@ export const useMatchClient = (): MatchClientUi => {
         }
         return;
       }
-      if (isSelectableCostAreaDon(board, instanceId)) {
+      if (
+        isSelectableCostAreaDon(
+          board,
+          instanceId,
+          playerSnapshot?.actions ?? [],
+        )
+      ) {
         setSelectedCardInstanceId(undefined);
         setActiveAttackTargetChoice(undefined);
         setActiveCounterTargetChoice(undefined);
@@ -753,6 +757,7 @@ export const useMatchClient = (): MatchClientUi => {
       pendingDecisionInteractionMode,
       modalResponseActions,
       selectedDonInstanceIds.length,
+      playerSnapshot?.actions,
       submitAction,
       submitDecisionDraft,
     ],
@@ -782,25 +787,20 @@ export const useMatchClient = (): MatchClientUi => {
   ]);
 
   const cardActions = useCallback(
-    (instanceId: string): ClientActionModel[] => {
-      const base = board?.actionsByCardInstanceId[instanceId] ?? [];
-      const collapsedActions = createCollapsedCounterActions(
-        createCollapsedAttackActions(base),
-      );
-      if (
-        selectedCardInstanceId === instanceId &&
-        isSelfAttachmentTarget(board, instanceId)
-      ) {
-        const attachAction = selectedDonAttachmentMenuAction(
-          selectedDonInstanceIds,
-        );
-        return attachAction === undefined
-          ? collapsedActions
-          : [...collapsedActions, attachAction];
-      }
-      return collapsedActions;
-    },
-    [board, selectedCardInstanceId, selectedDonInstanceIds],
+    (instanceId: string): ClientActionModel[] =>
+      cardActionsForInstance({
+        board,
+        instanceId,
+        selectedCardInstanceId,
+        selectedDonInstanceIds,
+        legalActions: playerSnapshot?.actions ?? [],
+      }),
+    [
+      board,
+      playerSnapshot?.actions,
+      selectedCardInstanceId,
+      selectedDonInstanceIds,
+    ],
   );
 
   const globalActions = useCallback((): ClientActionModel[] => {

@@ -113,6 +113,25 @@ describe("DON selection interaction", () => {
     assert.equal(isSelectableCostAreaDon(model, "opponent-active-don"), false);
   });
 
+  test("cost-area DON selection requires a current legal attach action when actions are provided", () => {
+    const model = board();
+    const actions: ClientVisibleAction[] = [
+      {
+        index: 7,
+        type: "attachDon",
+        label: "Attach DON!!",
+        attachment: {
+          donInstanceId: "active-don" as InstanceId,
+          targetInstanceId: "leader-1" as InstanceId,
+        },
+      },
+    ];
+
+    assert.equal(isSelectableCostAreaDon(model, "active-don", actions), true);
+    assert.equal(isSelectableCostAreaDon(model, "rested-don", actions), false);
+    assert.equal(isSelectableCostAreaDon(model, "active-don", []), false);
+  });
+
   test("creates a normal card menu action for selected DON attachment", () => {
     assert.equal(selectedDonAttachmentMenuAction([]), undefined);
     assert.deepEqual(selectedDonAttachmentMenuAction(["don-1"]), {
@@ -125,5 +144,45 @@ describe("DON selection interaction", () => {
       type: "attachDon",
       label: "Attach 2 selected DON!!",
     });
+  });
+
+  test("selected DON attachment menu requires each selected DON to have a legal target action", () => {
+    const actions: ClientVisibleAction[] = [
+      {
+        index: 7,
+        type: "attachDon",
+        label: "Attach DON!!",
+        attachment: {
+          donInstanceId: "don-1" as InstanceId,
+          targetInstanceId: "leader-1" as InstanceId,
+        },
+      },
+      {
+        index: 8,
+        type: "attachDon",
+        label: "Attach DON!!",
+        attachment: {
+          donInstanceId: "don-2" as InstanceId,
+          targetInstanceId: "leader-1" as InstanceId,
+        },
+      },
+    ];
+
+    assert.deepEqual(
+      selectedDonAttachmentMenuAction(["don-1", "don-2"], actions, "leader-1"),
+      {
+        index: ATTACH_SELECTED_DON_ACTION_INDEX,
+        type: "attachDon",
+        label: "Attach 2 selected DON!!",
+      },
+    );
+    assert.equal(
+      selectedDonAttachmentMenuAction(["don-1", "don-2"], actions, "char-1"),
+      undefined,
+    );
+    assert.equal(
+      selectedDonAttachmentMenuAction(["don-1", "don-3"], actions, "leader-1"),
+      undefined,
+    );
   });
 });

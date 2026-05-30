@@ -24,9 +24,19 @@ export const findAttachDonActionIndex = (
       action.attachment.targetInstanceId === (targetInstanceId as InstanceId),
   )?.index;
 
+const hasAttachDonActionForDon = (
+  actions: readonly ClientVisibleAction[],
+  donInstanceId: string,
+): boolean =>
+  actions.some(
+    (action) =>
+      action.attachment?.donInstanceId === (donInstanceId as InstanceId),
+  );
+
 export const isSelectableCostAreaDon = (
   board: BoardViewModel | undefined,
   instanceId: string,
+  legalActions?: readonly ClientVisibleAction[],
 ): boolean => {
   const card = board?.self.costArea.find(
     (candidate) => String(candidate.instanceId) === instanceId,
@@ -34,14 +44,32 @@ export const isSelectableCostAreaDon = (
   return (
     card !== undefined &&
     card.state === "active" &&
-    (String(card.cardId) === "DON" || card.category.toLowerCase() === "don")
+    (String(card.cardId) === "DON" || card.category.toLowerCase() === "don") &&
+    (legalActions === undefined ||
+      hasAttachDonActionForDon(legalActions, instanceId))
   );
 };
 
 export const selectedDonAttachmentMenuAction = (
   selectedDonInstanceIds: readonly string[],
+  legalActions?: readonly ClientVisibleAction[],
+  targetInstanceId?: string,
 ): ClientActionModel | undefined => {
   if (selectedDonInstanceIds.length === 0) {
+    return undefined;
+  }
+  if (
+    legalActions !== undefined &&
+    targetInstanceId !== undefined &&
+    !selectedDonInstanceIds.every(
+      (donInstanceId) =>
+        findAttachDonActionIndex(
+          legalActions,
+          donInstanceId,
+          targetInstanceId,
+        ) !== undefined,
+    )
+  ) {
     return undefined;
   }
   return {
