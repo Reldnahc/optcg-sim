@@ -182,6 +182,10 @@ export interface ChooseReplacementDecision extends BaseDecision {
   type: "chooseReplacement";
   processId: string;
   replacementIds: string[];
+  replacementOptions?: Array<{
+    replacementId: string;
+    label: string;
+  }>;
   mandatory: boolean;
 }
 

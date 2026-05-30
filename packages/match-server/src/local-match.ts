@@ -465,8 +465,25 @@ const responseLabel = (
       return action.response.choice === "activateTrigger"
         ? "Activate trigger"
         : "Add to hand";
-    case "replacement":
-      return "Use replacement";
+    case "replacement": {
+      const response = action.response;
+      if (response.replacementId === undefined) {
+        return "Do not replace";
+      }
+      const pending = state.pendingDecision;
+      if (
+        pending?.type === "chooseReplacement" &&
+        pending.id === action.decisionId
+      ) {
+        const option = pending.replacementOptions?.find(
+          (candidate) => candidate.replacementId === response.replacementId,
+        );
+        if (option !== undefined) {
+          return option.label;
+        }
+      }
+      return "Use replacement effect";
+    }
     case "mulligan":
       return action.response.keep ? "Keep hand" : "Mulligan hand";
     case "loopCount":

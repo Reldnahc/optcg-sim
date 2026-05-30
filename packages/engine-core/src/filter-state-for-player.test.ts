@@ -643,6 +643,12 @@ test("chooseReplacement projection is private and metadata-only without routing 
     visibility: { type: "private", playerId: p2 },
     processId: "process:ko:replacement",
     replacementIds: ["replacement:would-be-ko-draw-1"],
+    replacementOptions: [
+      {
+        replacementId: "replacement:would-be-ko-draw-1",
+        label: "Add 1 card from Life to hand instead",
+      },
+    ],
     mandatory: false,
   };
 
@@ -682,6 +688,14 @@ test("chooseReplacement projection is private and metadata-only without routing 
   assert.equal(JSON.stringify(forDecisionPlayer).includes("processId"), false);
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes("replacementIds"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("replacementOptions"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("Add 1 card from Life"),
     false,
   );
   assert.equal(JSON.stringify(forDecisionPlayer).includes("mandatory"), false);

@@ -438,6 +438,12 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
     visibility: { type: "private", playerId: p2 },
     processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
     replacementIds: [String(effectBlock.id)],
+    replacementOptions: [
+      {
+        replacementId: String(effectBlock.id),
+        label: "Draw 1 card instead",
+      },
+    ],
     mandatory: false,
   });
   assert.deepEqual(result.decisions, [result.state.pendingDecision]);

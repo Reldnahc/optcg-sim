@@ -19,7 +19,10 @@ import {
 } from "./action-results.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { executeNoChoiceEffectPrimitive } from "./effect-runtime-draw-primitives.js";
-import { executeMoveCardsPrimitive } from "./effect-runtime-move-cards.js";
+import {
+  executeMoveCardsPrimitive,
+  isSupportedLifeTopToHandEffect,
+} from "./effect-runtime-move-cards.js";
 import {
   detectSupportedSelectedTargetKoReplacementCandidate,
   type SelectedTargetKoReplacementCandidate,
@@ -177,6 +180,7 @@ export const pauseSelectedTargetKoReplacementProcess = (
   process: ReplacementProcess,
   candidate: SelectedTargetKoReplacementCandidate,
 ): { state: GameState; paused: true } => {
+  const replacementLabel = replacementOptionLabel(candidate);
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: toDecisionId(`decision:chooseReplacement:${process.id}`),
     type: "chooseReplacement",
@@ -186,6 +190,12 @@ export const pauseSelectedTargetKoReplacementProcess = (
     visibility: { type: "private", playerId: candidate.controllerId },
     processId: process.id,
     replacementIds: [candidate.id],
+    replacementOptions: [
+      {
+        replacementId: candidate.id,
+        label: replacementLabel,
+      },
+    ],
     mandatory: false,
   };
   appendEvent(
@@ -224,6 +234,33 @@ export const pauseSelectedTargetKoReplacementProcess = (
     },
     paused: true,
   };
+};
+
+const plural = (
+  count: number,
+  singular: string,
+  pluralLabel: string,
+): string => (count === 1 ? singular : pluralLabel);
+
+const replacementOptionLabel = (
+  candidate: SelectedTargetKoReplacementCandidate,
+): string => {
+  const instead = candidate.replacementEffect.instead;
+  if (instead.type === "draw") {
+    return `Draw ${String(instead.count)} ${plural(
+      instead.count,
+      "card",
+      "cards",
+    )} instead`;
+  }
+  if (isSupportedLifeTopToHandEffect(instead)) {
+    return `Add ${String(instead.count)} ${plural(
+      instead.count,
+      "card",
+      "cards",
+    )} from Life to hand instead`;
+  }
+  return "Use replacement effect";
 };
 
 const acceptedReplacementError = (
