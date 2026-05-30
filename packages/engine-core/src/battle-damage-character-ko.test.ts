@@ -86,6 +86,7 @@ const addOpponentFieldRemovalLifeReplacement = (
 ): EffectId => {
   const targetCardId = toCardId("battle-sky-island-target");
   target.cardId = targetCardId;
+  const replacementSource = must(state.players[p2], "p2").leader;
   const replacementTarget: Target = {
     type: "all",
     zone: "characterArea",
@@ -108,15 +109,20 @@ const addOpponentFieldRemovalLifeReplacement = (
       cardId: target.cardId,
       category: "character",
       power: 6000,
-      support: {
-        status: "implemented-dsl",
-        effectDefinitionId,
-        rulesVersion: "battle-field-removal-replacement-rules",
-        sourceTextHash: "battle-field-removal-replacement-source",
-      },
     }),
     types: ["Sky Island"],
   };
+  state.cardManifest.cards[replacementSource.cardId] = resolvedCard({
+    cardId: replacementSource.cardId,
+    category: "leader",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "battle-field-removal-replacement-rules",
+      sourceTextHash: "battle-field-removal-replacement-source",
+    },
+  });
   const effectBlock: EffectDefinition["effects"][number] = {
     id: effectId,
     category: "replacement",
@@ -138,7 +144,7 @@ const addOpponentFieldRemovalLifeReplacement = (
   state.cardManifest.effectDefinitions = {
     ...state.cardManifest.effectDefinitions,
     [effectDefinitionId]: {
-      cardId: target.cardId,
+      cardId: replacementSource.cardId,
       implementationStatus: "implemented-dsl",
       effects: [effectBlock],
       metadata: {

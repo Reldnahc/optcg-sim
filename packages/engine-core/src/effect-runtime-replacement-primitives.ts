@@ -74,6 +74,13 @@ type ReplacementLookup =
   | { ok: true; definition: EffectDefinition }
   | { ok: false; error: EngineError };
 
+type LocatedReplacementSource = {
+  card: CardInstance;
+  playerId: PlayerId;
+  ref: CardRef;
+  resolved: ResolvedCard;
+};
+
 const detectionError = (
   effectId: string,
   reason: SelectedTargetKoReplacementDetectionFailureReason,
@@ -216,6 +223,54 @@ const findCardByInstanceId = (
   return null;
 };
 
+const toPublicFieldCardRef = (
+  card: CardInstance,
+  playerId: PlayerId,
+): CardRef => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: card.zone,
+});
+
+const replacementSourcesForController = (
+  state: GameState,
+  playerId: PlayerId,
+  effectId: string,
+):
+  | { ok: true; sources: LocatedReplacementSource[] }
+  | { ok: false; error: EngineError } => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return failure(effectId, "missing-card");
+  }
+  const cards = [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+  ];
+  const sources: LocatedReplacementSource[] = [];
+  for (const card of cards) {
+    const resolved = state.cardManifest.cards[card.cardId];
+    if (resolved === undefined) {
+      continue;
+    }
+    if (
+      resolved.support.status === "vanilla-confirmed" &&
+      resolved.support.effectDefinitionId === undefined
+    ) {
+      continue;
+    }
+    sources.push({
+      card,
+      playerId,
+      ref: toPublicFieldCardRef(card, playerId),
+      resolved,
+    });
+  }
+  return { ok: true, sources };
+};
+
 const isSelfTarget = (
   target: Target,
 ): target is Extract<Target, { type: "self" }> => target.type === "self";
@@ -351,62 +406,74 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
 
   const targetLookup = validateKoReplacementTarget(state, effectId, target);
   if (!targetLookup.ok) return targetLookup;
-  const { located, ref, resolved } = targetLookup;
+  const { located, resolved } = targetLookup;
   if (
     resolved.support.status === "vanilla-confirmed" &&
     (resolved.support.customHandlerIds?.length ?? 0) > 0
   ) {
     return failure(effectId, "unsupported-ko-replacement-shape");
   }
-  if (
-    resolved.support.status === "vanilla-confirmed" &&
-    resolved.support.effectDefinitionId === undefined
-  ) {
-    return { ok: true };
-  }
-
-  const lookup = resolveReviewedImplementedDslEffectDefinition(
-    resolved,
-    state.cardManifest,
+  const sourceLookup = replacementSourcesForController(
+    state,
+    located.card.controller,
     effectId,
   );
-  if (!lookup.ok) return lookup;
+  if (!sourceLookup.ok) return sourceLookup;
 
-  const replacementEffects = lookup.definition.effects.filter(
-    isReplacementTriggerEffect,
-  );
-  if (replacementEffects.length === 0) return { ok: true };
+  const applicable: SelectedTargetKoReplacementCandidate[] = [];
+  for (const source of sourceLookup.sources) {
+    const lookup = resolveReviewedImplementedDslEffectDefinition(
+      source.resolved,
+      state.cardManifest,
+      effectId,
+    );
+    if (!lookup.ok) return lookup;
 
-  const supported = replacementEffects.filter(isSupportedReplacementEffect);
-  if (supported.length !== replacementEffects.length) {
-    return failure(effectId, "unsupported-ko-replacement-shape");
+    const replacementEffects = lookup.definition.effects.filter(
+      isReplacementTriggerEffect,
+    );
+    if (replacementEffects.length === 0) continue;
+
+    const supported = replacementEffects.filter(isSupportedReplacementEffect);
+    if (supported.length !== replacementEffects.length) {
+      return failure(effectId, "unsupported-ko-replacement-shape");
+    }
+
+    const unused = supported.filter(
+      (effect) => !process.usedReplacementIds.includes(String(effect.id)),
+    );
+    if (unused.length === 0) continue;
+    for (const effect of unused) {
+      if (
+        isSupportedSelfKoDrawReplacementEffect(effect) &&
+        source.card.instanceId !== located.card.instanceId
+      ) {
+        continue;
+      }
+      if (
+        isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) &&
+        !opponentFieldRemovalReplacementApplies(state, process, located, effect)
+      ) {
+        continue;
+      }
+      applicable.push({
+        id: String(effect.id),
+        effectBlockId: effect.id,
+        controllerId: source.card.controller,
+        source: source.ref,
+        replacementEffect: effect.effect,
+      });
+    }
   }
-
-  const unused = supported.filter(
-    (effect) => !process.usedReplacementIds.includes(String(effect.id)),
-  );
-  if (unused.length === 0) return { ok: true };
-  if (unused.length > 1) {
+  if (applicable.length === 0) return { ok: true };
+  if (applicable.length > 1) {
     return failure(effectId, "multiple-applicable-ko-replacements");
   }
-
-  const effect = unused[0];
-  if (effect === undefined) return { ok: true };
-  if (
-    isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) &&
-    !opponentFieldRemovalReplacementApplies(state, process, located, effect)
-  ) {
-    return { ok: true };
-  }
+  const candidate = applicable[0];
+  if (candidate === undefined) return { ok: true };
   return {
     ok: true,
-    candidate: {
-      id: String(effect.id),
-      effectBlockId: effect.id,
-      controllerId: located.card.controller,
-      source: ref,
-      replacementEffect: effect.effect,
-    },
+    candidate,
   };
 };
 
