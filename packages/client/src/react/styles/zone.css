@@ -51,10 +51,6 @@
   justify-content: flex-start;
 }
 
-.zone-cards-overlap.is-overlapping {
-  gap: 0;
-}
-
 .zone-cards-overlap.is-overlapping .card-tile-shell + .card-tile-shell {
   margin-left: calc(-1 * var(--card-row-overlap));
 }

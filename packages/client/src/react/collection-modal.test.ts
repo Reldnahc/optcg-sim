@@ -151,6 +151,20 @@ describe("collection modal", () => {
     assert.match(styles, /\.zone-cards-overlap\s*\{[^}]*overflow:\s*visible;/u);
   });
 
+  test("overlap zones keep hand-style spacing while applying row overlap", async () => {
+    const styles = await readFile(zoneStylesPath, "utf8");
+
+    assert.match(styles, /\.zone-cards\s*\{[^}]*gap:\s*5px;/u);
+    assert.match(
+      styles,
+      /\.zone-cards-overlap\.is-overlapping \.card-tile-shell \+ \.card-tile-shell\s*\{[^}]*margin-left:\s*calc\(-1 \* var\(--card-row-overlap\)\);/u,
+    );
+    assert.doesNotMatch(
+      styles,
+      /\.zone-cards-overlap\.is-overlapping\s*\{[^}]*gap:\s*0;/u,
+    );
+  });
+
   test("slot mode renders exactly the requested number of equal card slots", async () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
