@@ -68,6 +68,11 @@
   cursor: grabbing;
 }
 
+:root.is-hand-card-reorder-dragging,
+:root.is-hand-card-reorder-dragging * {
+  cursor: grabbing !important;
+}
+
 .card-tile {
   position: relative;
   width: 100%;

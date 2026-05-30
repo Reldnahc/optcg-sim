@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
@@ -9,6 +9,7 @@ import type {
 } from "./drag-reorder.js";
 
 const pointerReorderDragThreshold = 2;
+const handCardReorderDraggingClassName = "is-hand-card-reorder-dragging";
 
 interface PointerReorderDrag {
   pointerId: number;
@@ -91,6 +92,7 @@ export const CardTile = ({
   );
   const pointerReorderEnabled = reorderable && onMoveNear !== undefined;
   const hasCardMenuActions = actions.length > 0 && onAction !== undefined;
+  const pointerReorderDragging = pointerDrag?.moved === true;
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
   const image =
@@ -150,12 +152,23 @@ export const CardTile = ({
     };
     onPreviewMoveNear?.(draggedInstanceId, target.targetId, target.placement);
   };
+
+  useEffect(() => {
+    if (!pointerReorderDragging) {
+      return;
+    }
+    document.documentElement.classList.add(handCardReorderDraggingClassName);
+    return () => {
+      document.documentElement.classList.remove(handCardReorderDraggingClassName);
+    };
+  }, [pointerReorderDragging]);
+
   return (
     <div
       className={`card-tile-shell ${
         pointerReorderEnabled ? "is-pointer-reorderable" : ""
       } ${hasCardMenuActions ? "has-card-menu-actions" : ""} ${
-        pointerDrag?.moved === true ? "is-pointer-reorder-dragging" : ""
+        pointerReorderDragging ? "is-pointer-reorder-dragging" : ""
       }`}
       data-card-instance-id={String(card.instanceId)}
       style={pointerDragStyle}

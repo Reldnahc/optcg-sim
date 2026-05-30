@@ -183,6 +183,21 @@ describe("hand layout", () => {
     );
   });
 
+  test("hand card drag applies a page-level grabbing cursor while hit testing ignores the dragged card", async () => {
+    const [source, styles] = await Promise.all([
+      readFile(join(sourceDirectory, "CardTile.tsx"), "utf8"),
+      readFile(cardStylesPath, "utf8"),
+    ]);
+
+    assert.match(source, /document\.documentElement\.classList\.add/u);
+    assert.match(source, /document\.documentElement\.classList\.remove/u);
+    assert.match(source, /is-hand-card-reorder-dragging/u);
+    assert.match(
+      styles,
+      /:root\.is-hand-card-reorder-dragging,\s*:root\.is-hand-card-reorder-dragging \*\s*\{[^}]*cursor:\s*grabbing !important;/u,
+    );
+  });
+
   test("card tiles use pointer reorder instead of native drag", async () => {
     const source = await readFile(
       join(sourceDirectory, "CardTile.tsx"),
