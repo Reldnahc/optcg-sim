@@ -421,14 +421,14 @@ export const createActionLogEntries = ({
 }: CreateActionLogEntriesInput): ActionLogEntry[] =>
   events
     .slice(-80)
-    .map((event) => {
+    .map((event, index) => {
       const rollbackPoint = rollbackPoints.find(
         (point) =>
           point.eventId === String(event.id) || point.eventSeq === event.seq,
       );
       const cardMentions = eventCardMentions(event, catalog);
       return {
-        id: String(event.id),
+        id: `${String(event.id)}:${String(index)}`,
         seq: event.seq,
         text: eventText(event, catalog),
         ...(cardMentions.length === 0 ? {} : { cardMentions }),

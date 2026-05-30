@@ -74,6 +74,28 @@ describe("action log", () => {
     );
   });
 
+  test("keeps log row ids unique when engine event ids repeat", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          id: "event:64:1:decisionResolved" as EngineEvent["id"],
+          type: "decisionResolved",
+          seq: 64,
+          payload: { selectedCount: 1 },
+        }),
+        event({
+          id: "event:64:1:decisionResolved" as EngineEvent["id"],
+          type: "decisionResolved",
+          seq: 64,
+          payload: { selectedCount: 0 },
+        }),
+      ],
+      catalog,
+    });
+
+    assert.equal(new Set(entries.map((entry) => entry.id)).size, 2);
+  });
+
   test("names cards from visible event payload identity", () => {
     const entries = createActionLogEntries({
       events: [
@@ -266,7 +288,7 @@ describe("action log", () => {
 
     assert.deepEqual(entries, [
       {
-        id: "event:play-card",
+        id: "event:play-card:0",
         seq: 7,
         text: "Played Saint Shepherd Ju Peter",
         cardMentions: [
