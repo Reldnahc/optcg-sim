@@ -382,6 +382,15 @@ describe("hand layout", () => {
       appShellStyles,
       /\.hand-count\s*\{[^}]*position:\s*absolute;/u,
     );
+    assert.match(appShellStyles, /\.hand-count\s*\{[^}]*right:\s*8px;/u);
+    assert.match(
+      appShellStyles,
+      /\.opponent-hand-count\s*\{[^}]*top:\s*calc\(var\(--card-height\) \+ 8px\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /\.player-hand-count\s*\{[^}]*bottom:\s*calc\(var\(--card-height\) \+ 8px\);/u,
+    );
     assert.match(
       appShellStyles,
       /\.hand-rail:hover\s+\.hand-count\s*\{[^}]*opacity:\s*1;/u,

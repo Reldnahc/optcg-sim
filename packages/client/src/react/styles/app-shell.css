@@ -65,8 +65,7 @@
 
 .hand-count {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 8px;
 }
 
 .hand-rail:hover .hand-count {
@@ -74,11 +73,11 @@
 }
 
 .opponent-hand-count {
-  top: calc(var(--card-height) + 4px);
+  top: calc(var(--card-height) + 8px);
 }
 
 .player-hand-count {
-  bottom: calc(var(--card-height) + 4px);
+  bottom: calc(var(--card-height) + 8px);
 }
 
 .decision-status-prompt {
