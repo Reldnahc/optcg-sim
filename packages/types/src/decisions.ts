@@ -142,6 +142,11 @@ export interface SelectCardsDecision extends BaseDecision {
   type: "selectCards";
   request: CardSelectionRequest;
   candidates: CardSelectionCandidate[];
+  runtime?: {
+    playSelectedOverflow?: {
+      enterRested: boolean;
+    };
+  };
 }
 
 export interface ChooseEffectOptionDecision extends BaseDecision {

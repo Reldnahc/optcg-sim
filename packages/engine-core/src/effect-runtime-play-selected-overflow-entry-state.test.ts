@@ -34,31 +34,42 @@ const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
 
 const playSelectedSequence = (params: {
   enterRested?: boolean;
+  sourceZone?: "hand" | "trash";
 }): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
     {
-      id: "select-character-from-trash",
+      id: `select-character-from-${params.sourceZone ?? "trash"}`,
       connector: "always",
-      saveResultAs: "trashSelection:play",
+      saveResultAs:
+        params.sourceZone === "hand"
+          ? "handSelection:play"
+          : "trashSelection:play",
       effect: {
         type: "selectCards",
-        zone: "trash",
+        zone: params.sourceZone ?? "trash",
         player: "self",
         chooser: "self",
         min: 1,
         max: 1,
         filter: { categories: ["character"] },
-        saveAs: "trashSelection:play" as HandSelectionId,
-        visibility: "bothPlayers",
+        saveAs:
+          params.sourceZone === "hand"
+            ? ("handSelection:play" as HandSelectionId)
+            : ("trashSelection:play" as HandSelectionId),
+        visibility:
+          params.sourceZone === "hand" ? "chooserOnly" : "bothPlayers",
       },
     },
     {
-      id: "play-character-from-trash",
+      id: `play-character-from-${params.sourceZone ?? "trash"}`,
       connector: "ifPossible",
       effect: {
         type: "playSelected",
-        selection: "trashSelection:play" as HandSelectionId,
+        selection:
+          params.sourceZone === "hand"
+            ? ("handSelection:play" as HandSelectionId)
+            : ("trashSelection:play" as HandSelectionId),
         ignoreCost: true,
         ...(params.enterRested === undefined
           ? {}
@@ -159,6 +170,26 @@ const moveSupportedCharacterToTrash = (state: GameState): CardInstance => {
   return trashCharacter;
 };
 
+const makeSupportedHandCharacterCandidate = (
+  state: GameState,
+): CardInstance => {
+  const player = must(state.players[p1], "p1");
+  const handCharacter: CardInstance = {
+    ...must(player.hand[0], "hand character"),
+    cardId: "hand-character-overflow-entry-state" as CardId,
+    state: "active",
+    attachedDon: [],
+  };
+  player.hand = reindexHand([handCharacter, ...player.hand.slice(1)]);
+  state.cardManifest.cards[handCharacter.cardId] = resolvedCard({
+    cardId: handCharacter.cardId,
+    category: "character",
+    cost: 1,
+    power: 1000,
+  });
+  return player.hand[0] ?? handCharacter;
+};
+
 const fillCharacterAreaToFive = (state: GameState): void => {
   const player = must(state.players[p1], "p1");
   const nextCharacters = [...player.characters];
@@ -187,12 +218,17 @@ const fillCharacterAreaToFive = (state: GameState): void => {
 
 const resolveOverflowingPlaySelected = (params: {
   enterRested?: boolean;
+  mutateOverflowState?: (state: GameState) => void;
+  sourceZone?: "hand" | "trash";
 }): {
   played: CardInstance | undefined;
   result: ReturnType<typeof applyAction>;
 } => {
   const state = sequenceQueueState(playSelectedSequence(params));
-  const trashCharacter = moveSupportedCharacterToTrash(state);
+  const selectedCharacter =
+    params.sourceZone === "hand"
+      ? makeSupportedHandCharacterCandidate(state)
+      : moveSupportedCharacterToTrash(state);
   fillCharacterAreaToFive(state);
   const paused = processEffectRuntime(state);
   const selection = must(paused.state.pendingDecision, "selection");
@@ -205,6 +241,7 @@ const resolveOverflowingPlaySelected = (params: {
   });
   const overflow = must(opened.state.pendingDecision, "overflow");
   assert.equal(overflow.type, "selectCards");
+  params.mutateOverflowState?.(opened.state);
   const overflowTarget = must(overflow.candidates[0], "overflow target").card;
   const result = applyAction(opened.state, {
     type: "respondToDecision",
@@ -212,13 +249,53 @@ const resolveOverflowingPlaySelected = (params: {
     response: { type: "cards", cards: [overflowTarget] },
   });
   const played = must(result.state.players[p1], "p1").characters.find(
-    (card) => card.instanceId === trashCharacter.instanceId,
+    (card) => card.instanceId === selectedCharacter.instanceId,
   );
   return { played, result };
 };
 
 test("playSelected without enterRested stays active after overflow", () => {
   const { played, result } = resolveOverflowingPlaySelected({});
+
+  assert.equal(result.errors, undefined);
+  assert.equal(played?.state, "active");
+});
+
+test("hand-origin playSelected without enterRested stays active after overflow", () => {
+  const { played, result } = resolveOverflowingPlaySelected({
+    sourceZone: "hand",
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(played?.state, "active");
+});
+
+test("playSelected overflow without recoverable entry-state metadata does not invent rested entry", () => {
+  const { played, result } = resolveOverflowingPlaySelected({
+    mutateOverflowState: (state) => {
+      const player = must(state.players[p1], "p1");
+      const source = must(player.characters[0], "source");
+      const sourceMetadata = must(
+        state.cardManifest.cards[source.cardId],
+        "source metadata",
+      );
+      const definitionId = must(
+        sourceMetadata.support.effectDefinitionId,
+        "definition id",
+      );
+      const definition = must(
+        state.cardManifest.effectDefinitions?.[definitionId],
+        "definition",
+      );
+      state.cardManifest.effectDefinitions = {
+        ...state.cardManifest.effectDefinitions,
+        [definitionId]: {
+          ...definition,
+          implementationStatus: "unsupported",
+        },
+      };
+    },
+  });
 
   assert.equal(result.errors, undefined);
   assert.equal(played?.state, "active");

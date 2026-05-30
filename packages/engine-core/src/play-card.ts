@@ -317,6 +317,7 @@ const createCharacterOverflowDecisionResult = (params: {
   incrementActionSeq?: boolean;
   decisionIdOverride?: NonNullable<GameState["pendingDecision"]>["id"];
   causedBy?: CausalityRef;
+  runtimePlaySelectedEnterRested?: boolean;
 }): EngineResult => {
   const {
     state,
@@ -330,6 +331,7 @@ const createCharacterOverflowDecisionResult = (params: {
       type: "playerAction",
       actionId: `action:${String(state.actionSeq + 1)}`,
     },
+    runtimePlaySelectedEnterRested,
   } = params;
   const decisionId =
     decisionIdOverride ?? getCharacterOverflowDecisionId(state, enteringCard);
@@ -355,6 +357,15 @@ const createCharacterOverflowDecisionResult = (params: {
       card: toCardRef(character, playerId),
       visibility: { type: "public" },
     })),
+    ...(runtimePlaySelectedEnterRested === undefined
+      ? {}
+      : {
+          runtime: {
+            playSelectedOverflow: {
+              enterRested: runtimePlaySelectedEnterRested,
+            },
+          },
+        }),
   };
   appendEvent(
     state,
@@ -424,6 +435,7 @@ const placePlayedCardResult = (params: {
   >["id"];
   characterOverflowCausedBy?: CausalityRef;
   enterRested?: boolean;
+  runtimePlaySelectedEnterRested?: boolean;
   resolveOnPlayRuntime?: boolean;
   incrementActionSeq?: boolean;
 }): EngineResult => {
@@ -441,6 +453,7 @@ const placePlayedCardResult = (params: {
     characterOverflowDecisionIdOverride,
     characterOverflowCausedBy,
     enterRested,
+    runtimePlaySelectedEnterRested,
     resolveOnPlayRuntime = true,
     incrementActionSeq = true,
   } = params;
@@ -462,6 +475,9 @@ const placePlayedCardResult = (params: {
       ...(characterOverflowCausedBy === undefined
         ? {}
         : { causedBy: characterOverflowCausedBy }),
+      ...(runtimePlaySelectedEnterRested === undefined
+        ? {}
+        : { runtimePlaySelectedEnterRested }),
     });
   }
 
@@ -825,6 +841,7 @@ export const applyRuntimePlaySelected = (params: {
             type: "ruleProcess" as const,
             name: "effectRuntime:playSelectedOverflow",
           },
+          runtimePlaySelectedEnterRested: enterRested,
         }
       : {}),
   });
@@ -970,7 +987,9 @@ const applyCharacterOverflowResponse = (
     return illegalAction(state, "Overflow Character selection is invalid.");
   }
   const runtimeEnterRested = runtimeOverflow
-    ? (findRuntimePlaySelectedOverflowEnterRested(state, decision.id) ?? true)
+    ? (decision.runtime?.playSelectedOverflow?.enterRested ??
+      findRuntimePlaySelectedOverflowEnterRested(state, decision.id) ??
+      false)
     : null;
 
   const events: EngineEvent[] = [];
