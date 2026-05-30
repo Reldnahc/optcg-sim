@@ -2,7 +2,14 @@ import { useRef, type ReactNode } from "react";
 
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 import type { WindowPoint } from "./floating-window-grouping.js";
+import {
+  tabDragIntentFromPoint,
+  tabDragRectFromElement,
+  tabReorderEntriesFromTabList,
+  tabReorderTargetFromPointer,
+} from "./tab-drag.js";
 
 export interface TabDragOutPoint extends WindowPoint {
   pointerId: number;
@@ -29,17 +36,20 @@ export interface TabbedFloatingWindowProps {
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
+  onTabReorder?:
+    | ((
+        draggedTabId: string,
+        targetTabId: string,
+        placement: ReorderPlacement,
+      ) => void)
+    | undefined;
   onTabDragOut?: ((tabId: string, point: TabDragOutPoint) => void) | undefined;
 }
 
 interface TabDragStart {
   tabId: string;
   pointerId: number;
-  clientX: number;
-  clientY: number;
 }
-
-const tabDragOutDistance = 32;
 
 const releaseTabPointerCapture = (
   element: HTMLElement,
@@ -65,6 +75,7 @@ export const TabbedFloatingWindow = ({
   onRectChange,
   onDragMove,
   onDragEnd,
+  onTabReorder,
   onTabDragOut,
 }: TabbedFloatingWindowProps): React.JSX.Element | null => {
   const tabDragStart = useRef<TabDragStart | undefined>(undefined);
@@ -99,6 +110,7 @@ export const TabbedFloatingWindow = ({
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              data-tab-id={tab.id}
               className={[
                 "floating-window-tab",
                 tab.id === activeTab.id ? "is-active" : "",
@@ -116,8 +128,6 @@ export const TabbedFloatingWindow = ({
                 tabDragStart.current = {
                   tabId: tab.id,
                   pointerId: event.pointerId,
-                  clientX: event.clientX,
-                  clientY: event.clientY,
                 };
               }}
               onPointerMove={(event) => {
@@ -131,10 +141,19 @@ export const TabbedFloatingWindow = ({
                 ) {
                   return;
                 }
-                const distance =
-                  Math.abs(event.clientX - start.clientX) +
-                  Math.abs(event.clientY - start.clientY);
-                if (distance >= tabDragOutDistance) {
+                const tabStripElement = event.currentTarget.closest(
+                  ".floating-window-header-tabs",
+                );
+                if (tabStripElement === null) {
+                  return;
+                }
+                const tabStripRect =
+                  tabDragRectFromElement(tabStripElement);
+                const intent = tabDragIntentFromPoint({
+                  point: { x: event.clientX, y: event.clientY },
+                  tabStripRect,
+                });
+                if (intent === "dragOut") {
                   tabDragStart.current = undefined;
                   suppressTabClick.current = true;
                   releaseTabPointerCapture(
@@ -146,7 +165,25 @@ export const TabbedFloatingWindow = ({
                     y: event.clientY,
                     pointerId: event.pointerId,
                   });
+                  return;
                 }
+                const reorderTarget = tabReorderTargetFromPointer({
+                  entries: tabReorderEntriesFromTabList(tabStripElement),
+                  draggedId: start.tabId,
+                  clientX: event.clientX,
+                });
+                if (
+                  reorderTarget === undefined ||
+                  reorderTarget.targetId === start.tabId
+                ) {
+                  return;
+                }
+                suppressTabClick.current = true;
+                onTabReorder?.(
+                  start.tabId,
+                  reorderTarget.targetId,
+                  reorderTarget.placement,
+                );
               }}
               onPointerUp={(event) => {
                 event.stopPropagation();
@@ -159,11 +196,7 @@ export const TabbedFloatingWindow = ({
                 ) {
                   return;
                 }
-                const distance =
-                  Math.abs(event.clientX - start.clientX) +
-                  Math.abs(event.clientY - start.clientY);
-                if (distance >= tabDragOutDistance) {
-                  suppressTabClick.current = true;
+                if (suppressTabClick.current) {
                   return;
                 }
                 onActiveTabChange(tab.id);

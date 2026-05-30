@@ -117,6 +117,30 @@ describe("control rail window dock", () => {
     assert.match(dragOutSource, /startPoppedOutDrag/u);
   });
 
+  test("docked tabs reorder inside the tab strip before dragging out", async () => {
+    const [controlRailSource, matchAppSource, floatingStateSource] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "ControlRail.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "use-floating-window-state.ts"), "utf8"),
+      ]);
+
+    assert.match(controlRailSource, /onDockTabReorder/u);
+    assert.match(controlRailSource, /tabDragIntentFromPoint/u);
+    assert.match(controlRailSource, /tabReorderTargetFromPointer/u);
+    assert.match(controlRailSource, /tabStripRect/u);
+    assert.match(matchAppSource, /onDockTabReorder/u);
+    assert.match(
+      matchAppSource,
+      /activeDockedWindowIds\.has\(infoWindowKey\)/u,
+    );
+    assert.match(floatingStateSource, /reorderDockedWindow/u);
+    assert.match(
+      controlRailSource,
+      /intent\s*===\s*"dragOut"[\s\S]*onDockTabDragOut/u,
+    );
+  });
+
   test("dock drop handlers do not return the dock rect to the floating shell", async () => {
     const matchAppSource = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),

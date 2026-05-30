@@ -3,6 +3,13 @@ import { useRef, type CSSProperties, type ReactNode } from "react";
 import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
+import {
+  tabDragIntentFromPoint,
+  tabDragRectFromElement,
+  tabReorderEntriesFromTabList,
+  tabReorderTargetFromPointer,
+} from "./tab-drag.js";
 
 export interface ControlDockTab {
   id: string;
@@ -29,6 +36,13 @@ export interface ControlRailProps {
   onDockTabClose?: ((tabId: string) => void) | undefined;
   onDockTabDragOut?:
     | ((tabId: string, point: TabDragOutPoint) => void)
+    | undefined;
+  onDockTabReorder?:
+    | ((
+        draggedTabId: string,
+        targetTabId: string,
+        placement: ReorderPlacement,
+      ) => void)
     | undefined;
   onDockGroupDragOut?: ((point: TabDragOutPoint) => void) | undefined;
   rollbackStatus?:
@@ -62,6 +76,7 @@ export const ControlRail = ({
   onDockTabChange,
   onDockTabClose,
   onDockTabDragOut,
+  onDockTabReorder,
   onDockGroupDragOut,
   rollbackStatus,
   onCancelRollback,
@@ -76,8 +91,6 @@ export const ControlRail = ({
     | {
         tabId: string;
         pointerId: number;
-        clientX: number;
-        clientY: number;
       }
     | undefined
   >(undefined);
@@ -283,6 +296,7 @@ export const ControlRail = ({
                   return (
                     <button
                       key={tab.id}
+                      data-tab-id={tab.id}
                       className={[
                         "control-dock-window-tab",
                         selected ? "is-active" : "",
@@ -300,8 +314,6 @@ export const ControlRail = ({
                         tabDragStart.current = {
                           tabId: tab.id,
                           pointerId: event.pointerId,
-                          clientX: event.clientX,
-                          clientY: event.clientY,
                         };
                       }}
                       onPointerMove={(event) => {
@@ -315,26 +327,56 @@ export const ControlRail = ({
                         ) {
                           return;
                         }
-                        const distance =
-                          Math.abs(event.clientX - start.clientX) +
-                          Math.abs(event.clientY - start.clientY);
-                        if (distance < tabDragOutDistance) {
+                        const tabStripElement = event.currentTarget.closest(
+                          ".control-dock-window-tabs",
+                        );
+                        if (tabStripElement === null) {
                           return;
                         }
-                        tabDragStart.current = undefined;
-                        suppressTabClick.current = true;
-                        if (
-                          event.currentTarget.hasPointerCapture(event.pointerId)
-                        ) {
-                          event.currentTarget.releasePointerCapture(
-                            event.pointerId,
-                          );
-                        }
-                        onDockTabDragOut?.(tab.id, {
-                          x: event.clientX,
-                          y: event.clientY,
-                          pointerId: event.pointerId,
+                        const tabStripRect =
+                          tabDragRectFromElement(tabStripElement);
+                        const intent = tabDragIntentFromPoint({
+                          point: { x: event.clientX, y: event.clientY },
+                          tabStripRect,
                         });
+                        if (intent === "dragOut") {
+                          tabDragStart.current = undefined;
+                          suppressTabClick.current = true;
+                          if (
+                            event.currentTarget.hasPointerCapture(
+                              event.pointerId,
+                            )
+                          ) {
+                            event.currentTarget.releasePointerCapture(
+                              event.pointerId,
+                            );
+                          }
+                          onDockTabDragOut?.(tab.id, {
+                            x: event.clientX,
+                            y: event.clientY,
+                            pointerId: event.pointerId,
+                          });
+                          return;
+                        }
+                        const reorderTarget = tabReorderTargetFromPointer({
+                          entries: tabReorderEntriesFromTabList(
+                            tabStripElement,
+                          ),
+                          draggedId: start.tabId,
+                          clientX: event.clientX,
+                        });
+                        if (
+                          reorderTarget === undefined ||
+                          reorderTarget.targetId === start.tabId
+                        ) {
+                          return;
+                        }
+                        suppressTabClick.current = true;
+                        onDockTabReorder?.(
+                          start.tabId,
+                          reorderTarget.targetId,
+                          reorderTarget.placement,
+                        );
                       }}
                       onPointerUp={(event) => {
                         event.stopPropagation();
@@ -347,11 +389,7 @@ export const ControlRail = ({
                         ) {
                           return;
                         }
-                        const distance =
-                          Math.abs(event.clientX - start.clientX) +
-                          Math.abs(event.clientY - start.clientY);
-                        if (distance >= tabDragOutDistance) {
-                          suppressTabClick.current = true;
+                        if (suppressTabClick.current) {
                           return;
                         }
                         onDockTabChange?.(tab.id);

@@ -1,4 +1,5 @@
 import type { WindowRect } from "./FloatingWindow.js";
+import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
 
 export interface RevealWindowState {
   scope?: string | undefined;
@@ -98,5 +99,34 @@ export const floatingWindowStateAfterCollectionOpenChange = ({
     rects: base.rects,
     openWindowIds,
     dockedWindowIds,
+  };
+};
+
+export const floatingWindowStateAfterDockedWindowReorder = ({
+  current,
+  scope,
+  draggedWindowKey,
+  targetWindowKey,
+  placement,
+}: {
+  current: FloatingWindowRectState;
+  scope: string;
+  draggedWindowKey: string;
+  targetWindowKey: string;
+  placement: ReorderPlacement;
+}): FloatingWindowRectState => {
+  const base = scopedFloatingWindowState({ current, scope });
+  return {
+    scope,
+    rects: base.rects,
+    openWindowIds: new Set(base.openWindowIds),
+    dockedWindowIds: new Set(
+      moveIdNear(
+        [...base.dockedWindowIds],
+        draggedWindowKey,
+        targetWindowKey,
+        placement,
+      ),
+    ),
   };
 };

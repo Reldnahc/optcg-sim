@@ -10,6 +10,7 @@ import {
   groupedInfoWindowIdsAfterDockTabDragOut,
   groupedInfoWindowIdsAfterTabDragOut,
   standaloneInfoWindowIds,
+  groupedInfoWindowIds,
 } from "./info-window-model.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 
@@ -161,6 +162,42 @@ describe("info window model", () => {
         dockedWindowIds: new Set(["info-window"]),
       }),
       ["preview", "log"],
+    );
+  });
+
+  test("docked grouped info tabs preserve their saved group order", () => {
+    assert.deepEqual(
+      dockedInfoWindowTabIds(new Set(["info-window"]), [
+        "settings",
+        "preview",
+        "log",
+      ]),
+      ["settings", "preview", "log"],
+    );
+  });
+
+  test("floating grouped info tabs preserve their saved group order", () => {
+    assert.deepEqual(groupedInfoWindowIds(allInfoTabs, ["settings", "log"]), [
+      "settings",
+      "log",
+    ]);
+    assert.deepEqual(
+      floatingGroupedInfoWindowIds({
+        visibleIds: allInfoTabs,
+        groupedIds: ["settings", "preview", "log"],
+        dockedWindowIds: new Set(),
+      }),
+      ["settings", "preview", "log"],
+    );
+  });
+
+  test("individually docked info tabs preserve the docked window order", () => {
+    assert.deepEqual(
+      dockedInfoWindowTabIds(
+        new Set(["settings", "card-preview", "action-log"]),
+        [],
+      ),
+      ["settings", "preview", "log"],
     );
   });
 });

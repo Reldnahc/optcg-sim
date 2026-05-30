@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import {
+  floatingWindowStateAfterDockedWindowReorder,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
   type FloatingWindowRectState,
@@ -66,6 +67,32 @@ describe("floating window state model", () => {
     assert.deepEqual(
       [...reopened.dockedWindowIds],
       ["collection:Player trash"],
+    );
+  });
+
+  test("reordering docked windows preserves the requested dock tab order", () => {
+    const current: FloatingWindowRectState = {
+      scope: "match-1",
+      rects: {},
+      openWindowIds: new Set(["action-log", "settings", "collection:Trash"]),
+      dockedWindowIds: new Set(["action-log", "settings", "collection:Trash"]),
+    };
+
+    const next = floatingWindowStateAfterDockedWindowReorder({
+      current,
+      scope: "match-1",
+      draggedWindowKey: "collection:Trash",
+      targetWindowKey: "action-log",
+      placement: "before",
+    });
+
+    assert.deepEqual(
+      [...next.dockedWindowIds],
+      ["collection:Trash", "action-log", "settings"],
+    );
+    assert.deepEqual(
+      [...next.openWindowIds],
+      ["action-log", "settings", "collection:Trash"],
     );
   });
 });

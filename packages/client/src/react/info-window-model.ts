@@ -62,8 +62,15 @@ export const groupedInfoWindowIds = (
   visibleIds: readonly InfoWindowTabId[],
   groupedIds: readonly InfoWindowTabId[],
 ): InfoWindowTabId[] => {
-  const groupedIdSet = new Set(groupedIds);
-  return visibleIds.filter((id) => groupedIdSet.has(id));
+  const visibleIdSet = new Set(visibleIds);
+  const seenIds = new Set<InfoWindowTabId>();
+  return groupedIds.filter((id) => {
+    if (!visibleIdSet.has(id) || seenIds.has(id)) {
+      return false;
+    }
+    seenIds.add(id);
+    return true;
+  });
 };
 
 export const floatingGroupedInfoWindowIds = ({
@@ -177,18 +184,25 @@ export const dockedInfoWindowTabIds = (
   dockedWindowIds: ReadonlySet<string>,
   currentGroupedInfoWindowIds: readonly InfoWindowTabId[],
 ): InfoWindowTabId[] => {
-  const dockedIds = new Set<InfoWindowTabId>();
-  if (dockedWindowIds.has(infoWindowKey)) {
-    for (const windowId of currentGroupedInfoWindowIds) {
-      dockedIds.add(windowId);
+  const dockedIds: InfoWindowTabId[] = [];
+  const addDockedId = (windowId: InfoWindowTabId): void => {
+    if (!dockedIds.includes(windowId)) {
+      dockedIds.push(windowId);
+    }
+  };
+  for (const dockedWindowId of dockedWindowIds) {
+    if (dockedWindowId === infoWindowKey) {
+      for (const windowId of currentGroupedInfoWindowIds) {
+        addDockedId(windowId);
+      }
+      continue;
+    }
+    const tabId = infoWindowTabIdForKey(dockedWindowId);
+    if (tabId !== undefined) {
+      addDockedId(tabId);
     }
   }
-  for (const windowId of infoWindowTabIds) {
-    if (dockedWindowIds.has(infoWindowKeyForTab(windowId))) {
-      dockedIds.add(windowId);
-    }
-  }
-  return infoWindowTabIds.filter((windowId) => dockedIds.has(windowId));
+  return dockedIds;
 };
 
 export const groupedInfoWindowIdsAfterDockDrop = ({

@@ -98,6 +98,26 @@ describe("tabbed floating window", () => {
     assert.match(infoWindow, /onTabDragOut/u);
   });
 
+  test("tabbed windows reorder tabs before dragging them out of the tab strip", async () => {
+    const [tabbedWindow, infoWindow, matchApp] = await Promise.all([
+      readFile(join(sourceDirectory, "TabbedFloatingWindow.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "InfoTabbedWindow.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+    ]);
+
+    assert.match(tabbedWindow, /tabDragIntentFromPoint/u);
+    assert.match(tabbedWindow, /tabReorderTargetFromPointer/u);
+    assert.match(tabbedWindow, /onTabReorder/u);
+    assert.match(tabbedWindow, /tabStripRect/u);
+    assert.match(infoWindow, /onTabReorder/u);
+    assert.match(matchApp, /moveIdNear/u);
+    assert.match(matchApp, /onTabReorder/u);
+    assert.doesNotMatch(
+      tabbedWindow,
+      /distance\s*>?=\s*tabDragOutDistance[\s\S]*onTabDragOut/u,
+    );
+  });
+
   test("tab drag-out releases pointer capture before popping out", async () => {
     const tabbedWindow = await readFile(
       join(sourceDirectory, "TabbedFloatingWindow.tsx"),
@@ -204,6 +224,48 @@ describe("tabbed floating window", () => {
       markup,
       /class="[^"]*info-tabbed-window[^"]*is-combine-drop-target/u,
     );
+  });
+
+  test("grouped info windows render tabs in the saved tab order", () => {
+    const markup = renderToStaticMarkup(
+      createElement(InfoTabbedWindow, {
+        entries: [],
+        logOpen: true,
+        settingsOpen: true,
+        tabIds: ["settings", "log"],
+        activeTabId: "settings",
+        minimized: false,
+        onActiveTabChange: () => undefined,
+        onToggleMinimized: () => undefined,
+        onCloseActiveTab: () => undefined,
+      }),
+    );
+
+    assert.ok(
+      markup.indexOf('data-tab-id="settings"') <
+        markup.indexOf('data-tab-id="log"'),
+    );
+  });
+
+  test("grouped info windows keep an empty preview tab visible", () => {
+    const markup = renderToStaticMarkup(
+      createElement(InfoTabbedWindow, {
+        entries: [],
+        logOpen: true,
+        settingsOpen: false,
+        tabIds: ["preview", "log"],
+        activeTabId: "preview",
+        minimized: false,
+        onActiveTabChange: () => undefined,
+        onToggleMinimized: () => undefined,
+        onCloseActiveTab: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /data-tab-id="preview"/u);
+    assert.match(markup, /aria-selected="true"[^>]*>Preview<\/button>/u);
+    assert.match(markup, /Hover a card to preview it/u);
+    assert.match(markup, /data-tab-id="log"/u);
   });
 
   test("match app keeps popped-out tabs attached to the drag gesture", async () => {

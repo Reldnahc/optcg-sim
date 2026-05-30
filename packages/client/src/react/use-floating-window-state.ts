@@ -2,8 +2,10 @@ import { useCallback, useState } from "react";
 
 import type { WindowRect } from "./FloatingWindow.js";
 import { resizeDockedWindowRects } from "./control-panel-layout.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 import {
   emptyFloatingWindowRectState,
+  floatingWindowStateAfterDockedWindowReorder,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
   type FloatingWindowRectState,
@@ -31,6 +33,11 @@ export interface FloatingWindowStateController {
     rect: WindowRect;
     replacedWindowKeys: readonly string[];
   }) => void;
+  reorderDockedWindow: (
+    draggedWindowKey: string,
+    targetWindowKey: string,
+    placement: ReorderPlacement,
+  ) => void;
   updateDockedWindowRects: (dockRect: WindowRect) => void;
 }
 
@@ -296,6 +303,30 @@ export const useFloatingWindowState = ({
     [activeDockedWindowIds.size, matchScope, revealWindowStateStore],
   );
 
+  const reorderDockedWindow = useCallback(
+    (
+      draggedWindowKey: string,
+      targetWindowKey: string,
+      placement: ReorderPlacement,
+    ): void => {
+      if (matchScope === undefined) {
+        return;
+      }
+      setFloatingWindowRects((current) => {
+        const next = floatingWindowStateAfterDockedWindowReorder({
+          current,
+          scope: matchScope,
+          draggedWindowKey,
+          targetWindowKey,
+          placement,
+        });
+        revealWindowStateStore?.saveDockedWindowIds(next.dockedWindowIds);
+        return next;
+      });
+    },
+    [matchScope, revealWindowStateStore],
+  );
+
   return {
     floatingWindowRects,
     activeFloatingWindowRects,
@@ -309,6 +340,7 @@ export const useFloatingWindowState = ({
     dockFloatingWindow,
     dockFloatingWindows,
     dockFloatingWindowGroup,
+    reorderDockedWindow,
     updateDockedWindowRects,
   };
 };

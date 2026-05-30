@@ -29,6 +29,7 @@ import {
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
 import { combineDropTargetForWindow } from "./floating-window-grouping.js";
 import type { GroupableWindow } from "./floating-window-grouping.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
@@ -40,6 +41,7 @@ import {
   groupedInfoWindowIdsAfterDrop,
   groupedInfoWindowIdsAfterTabDragOut,
   infoWindowKey,
+  infoWindowTabIdForKey,
   infoWindowKeyForTab,
   infoWindowRect,
   settingsWindowKey,
@@ -138,6 +140,7 @@ export const MatchApp = (): React.JSX.Element => {
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
     dockFloatingWindows,
+    reorderDockedWindow,
     updateDockedWindowRects,
   } = useFloatingWindowState({ matchScope, revealWindowStateStore });
   const {
@@ -532,6 +535,43 @@ export const MatchApp = (): React.JSX.Element => {
     setCombineDropTarget(undefined);
     return undefined;
   };
+  const reorderInfoWindowTabs = (
+    draggedTabId: InfoWindowTabId,
+    targetTabId: InfoWindowTabId,
+    placement: ReorderPlacement,
+  ): void => {
+    setGroupedInfoWindowIds(
+      moveIdNear(groupedInfoWindowIds, draggedTabId, targetTabId, placement),
+    );
+    setInfoWindowActiveTab(draggedTabId);
+  };
+  const reorderDockTab = (
+    draggedWindowKey: string,
+    targetWindowKey: string,
+    placement: ReorderPlacement,
+  ): void => {
+    const draggedInfoTabId = infoWindowTabIdForKey(draggedWindowKey);
+    const targetInfoTabId = infoWindowTabIdForKey(targetWindowKey);
+    if (
+      draggedInfoTabId !== undefined &&
+      targetInfoTabId !== undefined &&
+      activeDockedWindowIds.has(infoWindowKey) &&
+      dockedInfoTabIds.includes(draggedInfoTabId) &&
+      dockedInfoTabIds.includes(targetInfoTabId)
+    ) {
+      setGroupedInfoWindowIds(
+        moveIdNear(
+          dockedInfoTabIds,
+          draggedInfoTabId,
+          targetInfoTabId,
+          placement,
+        ),
+      );
+      setInfoWindowActiveTab(draggedInfoTabId);
+    }
+    reorderDockedWindow(draggedWindowKey, targetWindowKey, placement);
+    setControlDockActiveTabId(draggedWindowKey);
+  };
   const { dragOutDockGroup, dragOutDockWindow, splitInfoWindowTab } =
     useInfoWindowDragOut({
       activeFloatingWindowRects,
@@ -648,6 +688,7 @@ export const MatchApp = (): React.JSX.Element => {
         onDockTabChange={setControlDockActiveTabId}
         onDockTabClose={closeDockWindow}
         onDockTabDragOut={dragOutDockWindow}
+        onDockTabReorder={reorderDockTab}
         onDockGroupDragOut={
           dockedInfoTabIds.length >= 2 ? dragOutDockGroup : undefined
         }
@@ -861,6 +902,7 @@ export const MatchApp = (): React.JSX.Element => {
           onDragMove={updateControlDockTarget}
           onDragEnd={completeInfoGroupDrag}
           onTabDragOut={splitInfoWindowTab}
+          onTabReorder={reorderInfoWindowTabs}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
           }}

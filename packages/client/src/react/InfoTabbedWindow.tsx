@@ -9,6 +9,7 @@ import type {
   TabDragOutPoint,
 } from "./TabbedFloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import type { ReorderPlacement } from "./drag-reorder.js";
 
 export type InfoWindowTabId = "preview" | "log" | "settings";
 
@@ -31,6 +32,13 @@ export interface InfoTabbedWindowProps {
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
   onTabDragOut?:
     | ((tabId: InfoWindowTabId, point: TabDragOutPoint) => void)
+    | undefined;
+  onTabReorder?:
+    | ((
+        draggedTabId: InfoWindowTabId,
+        targetTabId: InfoWindowTabId,
+        placement: ReorderPlacement,
+      ) => void)
     | undefined;
   onRequestRollback?: (rollbackPointId: string) => void;
   onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
@@ -57,38 +65,48 @@ export const InfoTabbedWindow = ({
   onDragMove,
   onDragEnd,
   onTabDragOut,
+  onTabReorder,
   onRequestRollback,
   onPreviewCard,
 }: InfoTabbedWindowProps): React.JSX.Element | null => {
-  const tabIdSet = new Set(tabIds);
-  const tabs: FloatingWindowTab[] = [];
-  if (tabIdSet.has("preview") && previewCard !== undefined) {
-    tabs.push({
-      id: "preview",
-      title: "Preview",
-      content: <CardPreviewContent card={previewCard} />,
-    });
-  }
-  if (tabIdSet.has("log") && logOpen) {
-    tabs.push({
-      id: "log",
-      title: "Log",
-      content: (
-        <ActionLogContent
-          entries={entries}
-          onRequestRollback={onRequestRollback}
-          onPreviewCard={onPreviewCard}
-        />
-      ),
-    });
-  }
-  if (tabIdSet.has("settings") && settingsOpen) {
-    tabs.push({
-      id: "settings",
-      title: "Settings",
-      content: <SettingsContent />,
-    });
-  }
+  const tabs = tabIds.flatMap((tabId): FloatingWindowTab[] => {
+    switch (tabId) {
+      case "preview":
+        return [
+          {
+            id: "preview",
+            title: "Preview",
+            content: <CardPreviewContent card={previewCard} />,
+          },
+        ];
+      case "log":
+        return logOpen
+          ? [
+              {
+                id: "log",
+                title: "Log",
+                content: (
+                  <ActionLogContent
+                    entries={entries}
+                    onRequestRollback={onRequestRollback}
+                    onPreviewCard={onPreviewCard}
+                  />
+                ),
+              },
+            ]
+          : [];
+      case "settings":
+        return settingsOpen
+          ? [
+              {
+                id: "settings",
+                title: "Settings",
+                content: <SettingsContent />,
+              },
+            ]
+          : [];
+    }
+  });
 
   const activeTab = tabs.some((tab) => tab.id === activeTabId)
     ? activeTabId
@@ -124,6 +142,14 @@ export const InfoTabbedWindow = ({
       onTabDragOut={(tabId, point) => {
         if (isInfoWindowTabId(tabId)) {
           onTabDragOut?.(tabId, point);
+        }
+      }}
+      onTabReorder={(draggedTabId, targetTabId, placement) => {
+        if (
+          isInfoWindowTabId(draggedTabId) &&
+          isInfoWindowTabId(targetTabId)
+        ) {
+          onTabReorder?.(draggedTabId, targetTabId, placement);
         }
       }}
     />
