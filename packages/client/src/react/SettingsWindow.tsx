@@ -3,6 +3,7 @@ import type { WindowRect } from "./FloatingWindow.js";
 
 export interface SettingsWindowProps {
   className?: string | undefined;
+  docked?: boolean | undefined;
   initialRect?: WindowRect | undefined;
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
@@ -23,6 +24,7 @@ export const SettingsContent = (): React.JSX.Element => (
 
 export const SettingsWindow = ({
   className,
+  docked = false,
   initialRect = defaultSettingsWindowRect,
   onClose,
   onRectChange,
@@ -35,6 +37,7 @@ export const SettingsWindow = ({
     initialRect={initialRect}
     minWidth={220}
     minHeight={120}
+    docked={docked}
     onClose={onClose}
     onRectChange={onRectChange}
     onDragMove={onDragMove}

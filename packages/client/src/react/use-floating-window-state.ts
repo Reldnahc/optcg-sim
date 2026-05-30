@@ -19,6 +19,11 @@ export interface FloatingWindowStateController {
   updateFloatingWindowOpen: (key: string, open: boolean) => void;
   updateCollectionWindowOpen: (key: string, open: boolean) => void;
   dockFloatingWindow: (key: string, rect: WindowRect) => void;
+  dockFloatingWindowGroup: (input: {
+    windowKey: string;
+    rect: WindowRect;
+    replacedWindowKeys: readonly string[];
+  }) => void;
   updateDockedWindowRects: (dockRect: WindowRect) => void;
 }
 
@@ -204,6 +209,51 @@ export const useFloatingWindowState = ({
     [matchScope, revealWindowStateStore],
   );
 
+  const dockFloatingWindowGroup = useCallback(
+    ({
+      windowKey,
+      rect,
+      replacedWindowKeys,
+    }: {
+      windowKey: string;
+      rect: WindowRect;
+      replacedWindowKeys: readonly string[];
+    }): void => {
+      if (matchScope === undefined) {
+        return;
+      }
+      setFloatingWindowRects((current) => {
+        const base =
+          current.scope === matchScope
+            ? current
+            : {
+                scope: matchScope,
+                rects: {},
+                openWindowIds: new Set<string>(),
+                dockedWindowIds: new Set<string>(),
+              };
+        const dockedWindowIds = new Set(base.dockedWindowIds);
+        for (const replacedWindowKey of replacedWindowKeys) {
+          dockedWindowIds.delete(replacedWindowKey);
+        }
+        dockedWindowIds.add(windowKey);
+        const openWindowIds = new Set(base.openWindowIds);
+        openWindowIds.add(windowKey);
+        const next = {
+          scope: matchScope,
+          rects: { ...base.rects, [windowKey]: rect },
+          openWindowIds,
+          dockedWindowIds,
+        };
+        revealWindowStateStore?.saveWindowRects(next.rects);
+        revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
+        revealWindowStateStore?.saveDockedWindowIds(dockedWindowIds);
+        return next;
+      });
+    },
+    [matchScope, revealWindowStateStore],
+  );
+
   const updateDockedWindowRects = useCallback(
     (dockRect: WindowRect): void => {
       if (matchScope === undefined || activeDockedWindowIds.size === 0) {
@@ -239,6 +289,7 @@ export const useFloatingWindowState = ({
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
     dockFloatingWindow,
+    dockFloatingWindowGroup,
     updateDockedWindowRects,
   };
 };

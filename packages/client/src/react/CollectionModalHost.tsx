@@ -23,6 +23,7 @@ export interface CollectionModalHostProps {
   presentation?: "window" | "modal" | undefined;
   disabled?: boolean | undefined;
   minimized?: boolean | undefined;
+  docked?: boolean | undefined;
   initialRect?: WindowRect | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
@@ -39,6 +40,7 @@ export const CollectionModalHost = ({
   presentation = "window",
   disabled = false,
   minimized = false,
+  docked = false,
   initialRect,
   onToggleMinimized,
   onClose,
@@ -120,6 +122,7 @@ export const CollectionModalHost = ({
       title={model.title}
       className="floating-window-collection collection-modal"
       initialRect={initialRect}
+      docked={docked}
       minimized={minimized}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}

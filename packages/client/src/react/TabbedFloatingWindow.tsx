@@ -21,6 +21,7 @@ export interface TabbedFloatingWindowProps {
   initialRect?: WindowRect | undefined;
   minWidth?: number | undefined;
   minHeight?: number | undefined;
+  docked?: boolean | undefined;
   minimized: boolean;
   onActiveTabChange: (tabId: string) => void;
   onToggleMinimized: () => void;
@@ -56,6 +57,7 @@ export const TabbedFloatingWindow = ({
   initialRect,
   minWidth = 260,
   minHeight = 180,
+  docked = false,
   minimized,
   onActiveTabChange,
   onToggleMinimized,
@@ -81,6 +83,7 @@ export const TabbedFloatingWindow = ({
       initialRect={initialRect}
       minWidth={minWidth}
       minHeight={minHeight}
+      docked={docked}
       minimized={minimized}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}

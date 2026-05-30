@@ -161,6 +161,18 @@ describe("tabbed floating window", () => {
     assert.match(tabbedStyles, /\.is-combine-drop-target/u);
   });
 
+  test("match app converts occupied dock drops into info window tabs", async () => {
+    const matchApp = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(matchApp, /groupedInfoWindowIdsAfterDockDrop/u);
+    assert.match(matchApp, /activeDockedWindowIds/u);
+    assert.match(matchApp, /dockInfoWindowGroup/u);
+    assert.match(matchApp, /completeInfoGroupDrag/u);
+  });
+
   test("grouped info windows can show combine drop feedback on the parent shell", () => {
     const markup = renderToStaticMarkup(
       createElement(InfoTabbedWindow, {

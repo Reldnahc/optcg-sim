@@ -19,6 +19,7 @@ export interface InfoTabbedWindowProps {
   settingsOpen: boolean;
   tabIds: readonly InfoWindowTabId[];
   className?: string | undefined;
+  docked?: boolean | undefined;
   activeTabId: InfoWindowTabId;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
@@ -45,6 +46,7 @@ export const InfoTabbedWindow = ({
   settingsOpen,
   tabIds,
   className,
+  docked = false,
   activeTabId,
   minimized,
   initialRect,
@@ -105,6 +107,7 @@ export const InfoTabbedWindow = ({
       initialRect={initialRect}
       minWidth={260}
       minHeight={180}
+      docked={docked}
       minimized={minimized}
       onActiveTabChange={(tabId) => {
         if (isInfoWindowTabId(tabId)) {

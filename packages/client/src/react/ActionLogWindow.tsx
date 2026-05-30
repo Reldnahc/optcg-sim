@@ -5,6 +5,7 @@ import type { WindowRect } from "./FloatingWindow.js";
 export interface ActionLogWindowProps {
   entries: readonly ActionLogEntry[];
   className?: string | undefined;
+  docked?: boolean | undefined;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
   onToggleMinimized: () => void;
@@ -134,6 +135,7 @@ export const ActionLogContent = ({
 export const ActionLogWindow = ({
   entries,
   className,
+  docked = false,
   minimized,
   initialRect = defaultActionLogWindowRect,
   onToggleMinimized,
@@ -150,6 +152,7 @@ export const ActionLogWindow = ({
     initialRect={initialRect}
     minWidth={240}
     minHeight={180}
+    docked={docked}
     minimized={minimized}
     onToggleMinimized={onToggleMinimized}
     onClose={onClose}

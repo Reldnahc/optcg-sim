@@ -2,6 +2,8 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import {
+  dockedInfoWindowTabIds,
+  groupedInfoWindowIdsAfterDockDrop,
   groupedInfoWindowIdsAfterDrop,
   groupedInfoWindowIdsAfterTabDragOut,
   standaloneInfoWindowIds,
@@ -41,6 +43,48 @@ describe("info window model", () => {
         targetWindowId: "log",
       }),
       ["preview", "log", "settings"],
+    );
+  });
+
+  test("dropping onto a docked standalone info window creates a docked tab group", () => {
+    assert.deepEqual(dockedInfoWindowTabIds(new Set(["action-log"]), []), [
+      "log",
+    ]);
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDockDrop({
+        visibleInfoWindowIds: allInfoTabs,
+        currentGroupedInfoWindowIds: [],
+        dockedWindowIds: new Set(["action-log"]),
+        draggedWindowIds: ["preview"],
+      }),
+      {
+        groupedIds: ["preview", "log"],
+        replacedWindowKeys: ["action-log", "card-preview"],
+      },
+    );
+  });
+
+  test("dropping onto an existing docked info tab group joins that group", () => {
+    assert.deepEqual(
+      dockedInfoWindowTabIds(new Set(["info-window"]), ["preview", "log"]),
+      ["preview", "log"],
+    );
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDockDrop({
+        visibleInfoWindowIds: allInfoTabs,
+        currentGroupedInfoWindowIds: ["preview", "log"],
+        dockedWindowIds: new Set(["info-window"]),
+        draggedWindowIds: ["settings"],
+      }),
+      {
+        groupedIds: ["preview", "log", "settings"],
+        replacedWindowKeys: [
+          "info-window",
+          "card-preview",
+          "action-log",
+          "settings",
+        ],
+      },
     );
   });
 });

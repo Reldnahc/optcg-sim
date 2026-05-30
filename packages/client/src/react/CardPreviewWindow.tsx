@@ -5,6 +5,7 @@ import type { WindowRect } from "./FloatingWindow.js";
 export interface CardPreviewWindowProps {
   card?: ClientCardModel | undefined;
   className?: string | undefined;
+  docked?: boolean | undefined;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
   onToggleMinimized: () => void;
@@ -58,6 +59,7 @@ export const CardPreviewContent = ({
 export const CardPreviewWindow = ({
   card,
   className,
+  docked = false,
   minimized,
   initialRect = defaultCardPreviewWindowRect,
   onToggleMinimized,
@@ -79,6 +81,7 @@ export const CardPreviewWindow = ({
       initialRect={initialRect}
       minWidth={220}
       minHeight={180}
+      docked={docked}
       minimized={minimized}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}

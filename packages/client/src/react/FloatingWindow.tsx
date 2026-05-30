@@ -32,6 +32,7 @@ export interface FloatingWindowProps {
   initialRect?: WindowRect | undefined;
   minWidth?: number | undefined;
   minHeight?: number | undefined;
+  docked?: boolean | undefined;
   minimized?: boolean | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
@@ -133,6 +134,7 @@ export const FloatingWindow = ({
   initialRect = defaultRect,
   minWidth = 280,
   minHeight = 180,
+  docked = false,
   minimized = false,
   onToggleMinimized,
   onClose,
@@ -142,8 +144,15 @@ export const FloatingWindow = ({
   headerContent,
   children,
 }: FloatingWindowProps): React.JSX.Element => {
+  const effectiveMinWidth = docked ? 0 : minWidth;
+  const effectiveMinHeight = docked ? 0 : minHeight;
   const [rect, setRect] = useState(() =>
-    clampRectToViewport(initialRect, minWidth, minHeight, currentViewport()),
+    clampRectToViewport(
+      initialRect,
+      effectiveMinWidth,
+      effectiveMinHeight,
+      currentViewport(),
+    ),
   );
   const dragStart = useRef<PointerStart | undefined>(undefined);
   const resizeStart = useRef<PointerStart | undefined>(undefined);
@@ -156,15 +165,20 @@ export const FloatingWindow = ({
   );
   useEffect(() => {
     setRect(
-      clampRectToViewport(initialRect, minWidth, minHeight, currentViewport()),
+      clampRectToViewport(
+        initialRect,
+        effectiveMinWidth,
+        effectiveMinHeight,
+        currentViewport(),
+      ),
     );
   }, [
+    effectiveMinHeight,
+    effectiveMinWidth,
     initialRect.height,
     initialRect.width,
     initialRect.x,
     initialRect.y,
-    minHeight,
-    minWidth,
   ]);
 
   const handleDragPointerDown = (
@@ -190,8 +204,8 @@ export const FloatingWindow = ({
       start,
       event.clientX,
       event.clientY,
-      minWidth,
-      minHeight,
+      effectiveMinWidth,
+      effectiveMinHeight,
     );
     updateRect(nextRect);
     onDragMove?.(nextRect);
@@ -226,8 +240,8 @@ export const FloatingWindow = ({
           start,
           clientX,
           clientY,
-          minWidth,
-          minHeight,
+          effectiveMinWidth,
+          effectiveMinHeight,
         );
         const action =
           typeof window === "undefined"
@@ -255,8 +269,8 @@ export const FloatingWindow = ({
             updateRect(
               clampRectToViewport(
                 resolvedRect,
-                minWidth,
-                minHeight,
+                effectiveMinWidth,
+                effectiveMinHeight,
                 currentViewport(),
               ),
             );
@@ -266,8 +280,8 @@ export const FloatingWindow = ({
       stopInteraction(pointerId);
     },
     [
-      minHeight,
-      minWidth,
+      effectiveMinHeight,
+      effectiveMinWidth,
       onClose,
       onDragEnd,
       onToggleMinimized,
@@ -280,6 +294,7 @@ export const FloatingWindow = ({
     <section
       className={[
         "floating-window",
+        docked ? "is-docked" : "",
         minimized ? "is-minimized" : "",
         className ?? "",
       ]
@@ -342,43 +357,48 @@ export const FloatingWindow = ({
       {minimized ? null : (
         <>
           <div className="floating-window-body">{children}</div>
-          <button
-            className="floating-window-resize-handle"
-            type="button"
-            aria-label={`Resize ${title}`}
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              resizeStart.current = {
-                pointerId: event.pointerId,
-                clientX: event.clientX,
-                clientY: event.clientY,
-                rect,
-              };
-            }}
-            onPointerMove={(event) => {
-              const start = resizeStart.current;
-              if (start === undefined || start.pointerId !== event.pointerId) {
-                return;
-              }
-              updateRect(
-                clampRect(
-                  {
-                    ...start.rect,
-                    width: start.rect.width + event.clientX - start.clientX,
-                    height: start.rect.height + event.clientY - start.clientY,
-                  },
-                  minWidth,
-                  minHeight,
-                ),
-              );
-            }}
-            onPointerUp={(event) => {
-              stopInteraction(event.pointerId);
-            }}
-            onPointerCancel={(event) => {
-              stopInteraction(event.pointerId);
-            }}
-          />
+          {docked ? null : (
+            <button
+              className="floating-window-resize-handle"
+              type="button"
+              aria-label={`Resize ${title}`}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                resizeStart.current = {
+                  pointerId: event.pointerId,
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  rect,
+                };
+              }}
+              onPointerMove={(event) => {
+                const start = resizeStart.current;
+                if (
+                  start === undefined ||
+                  start.pointerId !== event.pointerId
+                ) {
+                  return;
+                }
+                updateRect(
+                  clampRect(
+                    {
+                      ...start.rect,
+                      width: start.rect.width + event.clientX - start.clientX,
+                      height: start.rect.height + event.clientY - start.clientY,
+                    },
+                    effectiveMinWidth,
+                    effectiveMinHeight,
+                  ),
+                );
+              }}
+              onPointerUp={(event) => {
+                stopInteraction(event.pointerId);
+              }}
+              onPointerCancel={(event) => {
+                stopInteraction(event.pointerId);
+              }}
+            />
+          )}
         </>
       )}
     </section>

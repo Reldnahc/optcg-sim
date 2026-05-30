@@ -86,6 +86,70 @@ export const groupedInfoWindowIdsAfterDrop = ({
   return visibleInfoWindowIds.filter((windowId) => groupedIdSet.has(windowId));
 };
 
+export const dockedInfoWindowTabIds = (
+  dockedWindowIds: ReadonlySet<string>,
+  currentGroupedInfoWindowIds: readonly InfoWindowTabId[],
+): InfoWindowTabId[] => {
+  const dockedIds = new Set<InfoWindowTabId>();
+  if (dockedWindowIds.has(infoWindowKey)) {
+    for (const windowId of currentGroupedInfoWindowIds) {
+      dockedIds.add(windowId);
+    }
+  }
+  for (const windowId of infoWindowTabIds) {
+    if (dockedWindowIds.has(infoWindowKeyForTab(windowId))) {
+      dockedIds.add(windowId);
+    }
+  }
+  return infoWindowTabIds.filter((windowId) => dockedIds.has(windowId));
+};
+
+export const groupedInfoWindowIdsAfterDockDrop = ({
+  visibleInfoWindowIds,
+  currentGroupedInfoWindowIds,
+  dockedWindowIds,
+  draggedWindowIds,
+}: {
+  visibleInfoWindowIds: readonly InfoWindowTabId[];
+  currentGroupedInfoWindowIds: readonly InfoWindowTabId[];
+  dockedWindowIds: ReadonlySet<string>;
+  draggedWindowIds: readonly InfoWindowTabId[];
+}):
+  | {
+      groupedIds: InfoWindowTabId[];
+      replacedWindowKeys: string[];
+    }
+  | undefined => {
+  const draggedIdSet = new Set(draggedWindowIds);
+  const dockedIds = dockedInfoWindowTabIds(
+    dockedWindowIds,
+    currentGroupedInfoWindowIds,
+  ).filter((windowId) => !draggedIdSet.has(windowId));
+  if (dockedIds.length === 0) {
+    return undefined;
+  }
+  const groupedIdSet = new Set([
+    ...currentGroupedInfoWindowIds,
+    ...dockedIds,
+    ...draggedWindowIds,
+  ]);
+  const groupedIds = visibleInfoWindowIds.filter((windowId) =>
+    groupedIdSet.has(windowId),
+  );
+  if (groupedIds.length < 2) {
+    return undefined;
+  }
+  const replacedWindowKeySet = new Set<string>([
+    ...(dockedWindowIds.has(infoWindowKey) ? [infoWindowKey] : []),
+    ...dockedIds.map(infoWindowKeyForTab),
+    ...draggedWindowIds.map(infoWindowKeyForTab),
+  ]);
+  return {
+    groupedIds,
+    replacedWindowKeys: [...replacedWindowKeySet],
+  };
+};
+
 export const defaultInfoWindowRect = (
   windowId: InfoWindowTabId,
 ): WindowRect => {

@@ -111,4 +111,25 @@ describe("floating window", () => {
       { x: 960, y: 580, width: 320, height: 220 },
     );
   });
+
+  test("docked windows use the supplied dock rectangle without min-size expansion", () => {
+    const markup = renderToStaticMarkup(
+      createElement(
+        FloatingWindow,
+        {
+          title: "Docked",
+          initialRect: { x: 1000, y: 420, width: 220, height: 160 },
+          minWidth: 300,
+          minHeight: 260,
+          docked: true,
+          onClose: () => undefined,
+        },
+        createElement("p", undefined, "Dock body"),
+      ),
+    );
+
+    assert.match(markup, /width:220px/u);
+    assert.match(markup, /height:160px/u);
+    assert.doesNotMatch(markup, /floating-window-resize-handle/u);
+  });
 });
