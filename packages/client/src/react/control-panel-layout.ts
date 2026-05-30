@@ -1,5 +1,5 @@
 import type { WindowRect } from "./FloatingWindow.js";
-import { rectsOverlap } from "./floating-window-grouping.js";
+import { rectsMeaningfullyOverlap } from "./floating-window-grouping.js";
 
 export const defaultControlRailWidth = 260;
 export const minControlRailWidth = 220;
@@ -107,7 +107,9 @@ export const resolveControlDockSnapRect = ({
   rect: WindowRect;
   dockRect: WindowRect;
 }): WindowRect | undefined =>
-  rectsOverlap(rect, dockRect) ? controlDockSlotRect({ dockRect }) : undefined;
+  rectsMeaningfullyOverlap(rect, dockRect)
+    ? controlDockSlotRect({ dockRect })
+    : undefined;
 
 export const resizeDockedWindowRects = ({
   rects,

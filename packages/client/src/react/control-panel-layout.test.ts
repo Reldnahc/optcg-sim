@@ -106,6 +106,16 @@ describe("control panel layout", () => {
     );
   });
 
+  test("does not snap when a floating window only grazes the control dock edge", () => {
+    assert.equal(
+      resolveControlDockSnapRect({
+        rect: { x: 1350, y: 590, width: 320, height: 260 },
+        dockRect: { x: 1090, y: 590, width: 330, height: 220 },
+      }),
+      undefined,
+    );
+  });
+
   test("resizes docked windows to the current control dock slot", () => {
     const next = resizeDockedWindowRects({
       rects: {

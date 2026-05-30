@@ -3,6 +3,7 @@ import { describe, test } from "vitest";
 
 import {
   combineDropTargetForWindow,
+  rectsMeaningfullyOverlap,
   rectsOverlap,
   splitWindowRectFromPoint,
 } from "./floating-window-grouping.js";
@@ -37,17 +38,17 @@ describe("floating window grouping", () => {
     assert.equal(
       combineDropTargetForWindow(
         "preview",
-        { x: 50, y: 50, width: 200, height: 160 },
+        { x: 50, y: 50, width: 240, height: 180 },
         [
           {
             id: "preview",
             visible: true,
-            rect: { x: 50, y: 50, width: 200, height: 160 },
+            rect: { x: 50, y: 50, width: 240, height: 180 },
           },
           {
             id: "log",
             visible: true,
-            rect: { x: 200, y: 90, width: 240, height: 200 },
+            rect: { x: 120, y: 90, width: 240, height: 200 },
           },
           {
             id: "trash",
@@ -73,6 +74,42 @@ describe("floating window grouping", () => {
             id: "log",
             visible: false,
             rect: { x: 80, y: 80, width: 100, height: 100 },
+          },
+        ],
+      ),
+      undefined,
+    );
+  });
+
+  test("combine targets require substantial overlap instead of edge contact", () => {
+    assert.equal(
+      rectsOverlap(
+        { x: 100, y: 100, width: 300, height: 240 },
+        { x: 360, y: 100, width: 300, height: 240 },
+      ),
+      true,
+    );
+    assert.equal(
+      rectsMeaningfullyOverlap(
+        { x: 100, y: 100, width: 300, height: 240 },
+        { x: 360, y: 100, width: 300, height: 240 },
+      ),
+      false,
+    );
+    assert.equal(
+      combineDropTargetForWindow(
+        "preview",
+        { x: 100, y: 100, width: 300, height: 240 },
+        [
+          {
+            id: "preview",
+            visible: true,
+            rect: { x: 100, y: 100, width: 300, height: 240 },
+          },
+          {
+            id: "log",
+            visible: true,
+            rect: { x: 360, y: 100, width: 300, height: 240 },
           },
         ],
       ),
