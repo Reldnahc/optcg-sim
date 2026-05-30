@@ -12,11 +12,17 @@ import {
 } from "../interactions/decision-surface.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
-import { ActionLogWindow } from "./ActionLogWindow.js";
+import {
+  ActionLogWindow,
+  defaultActionLogWindowRect,
+} from "./ActionLogWindow.js";
 import { BoardLayout } from "./BoardLayout.js";
 import { createBrowserPersistentStorage } from "./browser-storage.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
-import { CardPreviewWindow } from "./CardPreviewWindow.js";
+import {
+  CardPreviewWindow,
+  defaultCardPreviewWindowRect,
+} from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
@@ -24,6 +30,11 @@ import { DecisionModalHost } from "./DecisionModalHost.js";
 import { moveIdNear } from "./drag-reorder.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import {
+  rectsOverlap,
+  splitWindowRectFromPoint,
+} from "./floating-window-grouping.js";
+import type { WindowPoint } from "./floating-window-grouping.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
@@ -118,6 +129,7 @@ export const MatchApp = (): React.JSX.Element => {
   const [infoWindowActiveTab, setInfoWindowActiveTab] =
     useState<InfoWindowTabId>("preview");
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
+  const [infoWindowsGrouped, setInfoWindowsGrouped] = useState(false);
   const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
     board,
@@ -433,6 +445,7 @@ export const MatchApp = (): React.JSX.Element => {
     setPreviewCard(undefined);
     setPreviewMinimized(false);
     setInfoWindowActiveTab("log");
+    setInfoWindowsGrouped(false);
   };
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
@@ -551,7 +564,64 @@ export const MatchApp = (): React.JSX.Element => {
   );
   const showPreviewWindow = previewCard !== undefined;
   const showActionLogWindow = actionLogOpen;
-  const showTabbedInfoWindow = showPreviewWindow && showActionLogWindow;
+  const showTabbedInfoWindow =
+    infoWindowsGrouped && showPreviewWindow && showActionLogWindow;
+  const infoWindowRect = (windowId: InfoWindowTabId): WindowRect =>
+    windowId === "preview"
+      ? (activeFloatingWindowRects[cardPreviewWindowKey] ??
+        defaultCardPreviewWindowRect)
+      : (activeFloatingWindowRects[actionLogWindowKey] ??
+        defaultActionLogWindowRect);
+  const infoWindowDefaultSize = (
+    windowId: InfoWindowTabId,
+  ): { width: number; height: number } => {
+    const rect =
+      windowId === "preview"
+        ? defaultCardPreviewWindowRect
+        : defaultActionLogWindowRect;
+    return { width: rect.width, height: rect.height };
+  };
+  const tryGroupInfoWindow = (
+    draggedWindowId: InfoWindowTabId,
+    rect: WindowRect,
+  ): void => {
+    const targetWindowId = draggedWindowId === "preview" ? "log" : "preview";
+    const targetVisible =
+      targetWindowId === "preview" ? showPreviewWindow : showActionLogWindow;
+    if (!targetVisible || !rectsOverlap(rect, infoWindowRect(targetWindowId))) {
+      return;
+    }
+    const targetRect = infoWindowRect(targetWindowId);
+    updateFloatingWindowRect(infoWindowKey, targetRect);
+    setInfoWindowActiveTab(draggedWindowId);
+    setInfoWindowMinimized(false);
+    setPreviewMinimized(false);
+    setActionLogMinimized(false);
+    setInfoWindowsGrouped(true);
+  };
+  const splitInfoWindowTab = (
+    tabId: InfoWindowTabId,
+    point: WindowPoint,
+  ): void => {
+    const windowKey =
+      tabId === "preview" ? cardPreviewWindowKey : actionLogWindowKey;
+    updateFloatingWindowRect(
+      windowKey,
+      splitWindowRectFromPoint(point, infoWindowDefaultSize(tabId)),
+    );
+    setInfoWindowsGrouped(false);
+    setInfoWindowMinimized(false);
+    setInfoWindowActiveTab(tabId === "preview" ? "log" : "preview");
+    if (tabId === "log") {
+      setActionLogOpen(true);
+      updateFloatingWindowOpen(actionLogWindowKey, true);
+    }
+  };
+  useEffect(() => {
+    if (!showPreviewWindow || !showActionLogWindow) {
+      setInfoWindowsGrouped(false);
+    }
+  }, [showPreviewWindow, showActionLogWindow]);
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
@@ -767,11 +837,13 @@ export const MatchApp = (): React.JSX.Element => {
             setActionLogOpen(false);
             setActionLogMinimized(false);
             setInfoWindowActiveTab("preview");
+            setInfoWindowsGrouped(false);
             updateFloatingWindowOpen(actionLogWindowKey, false);
           }}
           onRectChange={(rect) => {
             updateFloatingWindowRect(infoWindowKey, rect);
           }}
+          onTabDragOut={splitInfoWindowTab}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
           }}
@@ -784,7 +856,10 @@ export const MatchApp = (): React.JSX.Element => {
         <ActionLogWindow
           entries={actionLogEntries}
           minimized={actionLogMinimized}
-          initialRect={activeFloatingWindowRects[actionLogWindowKey]}
+          initialRect={
+            activeFloatingWindowRects[actionLogWindowKey] ??
+            defaultActionLogWindowRect
+          }
           onToggleMinimized={() => {
             setActionLogMinimized((current) => !current);
           }}
@@ -792,10 +867,14 @@ export const MatchApp = (): React.JSX.Element => {
             setActionLogOpen(false);
             setActionLogMinimized(false);
             setInfoWindowActiveTab("preview");
+            setInfoWindowsGrouped(false);
             updateFloatingWindowOpen(actionLogWindowKey, false);
           }}
           onRectChange={(rect) => {
             updateFloatingWindowRect(actionLogWindowKey, rect);
+          }}
+          onDragEnd={(rect) => {
+            tryGroupInfoWindow("log", rect);
           }}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
@@ -809,13 +888,19 @@ export const MatchApp = (): React.JSX.Element => {
         <CardPreviewWindow
           card={previewCard}
           minimized={previewMinimized}
-          initialRect={activeFloatingWindowRects[cardPreviewWindowKey]}
+          initialRect={
+            activeFloatingWindowRects[cardPreviewWindowKey] ??
+            defaultCardPreviewWindowRect
+          }
           onToggleMinimized={() => {
             setPreviewMinimized((current) => !current);
           }}
           onClose={closeCardPreview}
           onRectChange={(rect) => {
             updateFloatingWindowRect(cardPreviewWindowKey, rect);
+          }}
+          onDragEnd={(rect) => {
+            tryGroupInfoWindow("preview", rect);
           }}
         />
       ) : null}

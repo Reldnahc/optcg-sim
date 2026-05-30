@@ -5,6 +5,7 @@ import { CardPreviewContent } from "./CardPreviewWindow.js";
 import { TabbedFloatingWindow } from "./TabbedFloatingWindow.js";
 import type { FloatingWindowTab } from "./TabbedFloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import type { WindowPoint } from "./floating-window-grouping.js";
 
 export type InfoWindowTabId = "preview" | "log";
 
@@ -18,6 +19,7 @@ export interface InfoTabbedWindowProps {
   onToggleMinimized: () => void;
   onCloseActiveTab: (tabId: InfoWindowTabId) => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onTabDragOut?: ((tabId: InfoWindowTabId, point: WindowPoint) => void) | undefined;
   onRequestRollback?: (rollbackPointId: string) => void;
   onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
 }
@@ -35,6 +37,7 @@ export const InfoTabbedWindow = ({
   onToggleMinimized,
   onCloseActiveTab,
   onRectChange,
+  onTabDragOut,
   onRequestRollback,
   onPreviewCard,
 }: InfoTabbedWindowProps): React.JSX.Element | null => {
@@ -81,6 +84,11 @@ export const InfoTabbedWindow = ({
         onCloseActiveTab(activeTab);
       }}
       onRectChange={onRectChange}
+      onTabDragOut={(tabId, point) => {
+        if (isInfoWindowTabId(tabId)) {
+          onTabDragOut?.(tabId, point);
+        }
+      }}
     />
   );
 };

@@ -44,17 +44,37 @@ describe("tabbed floating window", () => {
     assert.doesNotMatch(markup, /Preview content/u);
   });
 
-  test("match app combines preview and log into one tabbed info window", async () => {
+  test("match app keeps windows independent until explicit drag grouping", async () => {
     const matchApp = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
     );
 
     assert.match(matchApp, /const infoWindowKey = "info-window";/u);
+    assert.match(matchApp, /infoWindowsGrouped/u);
+    assert.match(
+      matchApp,
+      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped\s*&&\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
+    );
     assert.match(matchApp, /InfoTabbedWindow/u);
-    assert.match(matchApp, /showTabbedInfoWindow/u);
-    assert.match(matchApp, /setInfoWindowActiveTab\("preview"\)/u);
-    assert.match(matchApp, /setInfoWindowActiveTab\("log"\)/u);
+    assert.match(matchApp, /tryGroupInfoWindow\("preview", rect\)/u);
+    assert.match(matchApp, /tryGroupInfoWindow\("log", rect\)/u);
+    assert.match(matchApp, /splitInfoWindowTab/u);
+    assert.doesNotMatch(
+      matchApp,
+      /showTabbedInfoWindow\s*=\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
+    );
+  });
+
+  test("tabbed windows expose tab drag-out callbacks for splitting", async () => {
+    const [tabbedWindow, infoWindow] = await Promise.all([
+      readFile(join(sourceDirectory, "TabbedFloatingWindow.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "InfoTabbedWindow.tsx"), "utf8"),
+    ]);
+
+    assert.match(tabbedWindow, /onTabDragOut/u);
+    assert.match(tabbedWindow, /setPointerCapture/u);
+    assert.match(infoWindow, /onTabDragOut/u);
   });
 
   test("tabbed window styles keep the shell compact", async () => {

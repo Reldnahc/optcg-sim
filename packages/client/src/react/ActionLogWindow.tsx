@@ -9,6 +9,7 @@ export interface ActionLogWindowProps {
   onToggleMinimized: () => void;
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => void) | undefined;
   onRequestRollback?: (rollbackPointId: string) => void;
   onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
 }
@@ -18,6 +19,13 @@ export interface ActionLogContentProps {
   onRequestRollback?: ((rollbackPointId: string) => void) | undefined;
   onPreviewCard?: ((card: ActionLogCardMention["card"]) => void) | undefined;
 }
+
+export const defaultActionLogWindowRect: WindowRect = {
+  x: 960,
+  y: 80,
+  width: 360,
+  height: 520,
+};
 
 const textParts = (
   text: string,
@@ -123,10 +131,11 @@ export const ActionLogContent = ({
 export const ActionLogWindow = ({
   entries,
   minimized,
-  initialRect = { x: 960, y: 80, width: 360, height: 520 },
+  initialRect = defaultActionLogWindowRect,
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragEnd,
   onRequestRollback,
   onPreviewCard,
 }: ActionLogWindowProps): React.JSX.Element => (
@@ -140,6 +149,7 @@ export const ActionLogWindow = ({
     onToggleMinimized={onToggleMinimized}
     onClose={onClose}
     onRectChange={onRectChange}
+    onDragEnd={onDragEnd}
   >
     <ActionLogContent
       entries={entries}

@@ -36,6 +36,7 @@ export interface FloatingWindowProps {
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => void) | undefined;
   children?: React.ReactNode;
 }
 
@@ -134,6 +135,7 @@ export const FloatingWindow = ({
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragEnd,
   children,
 }: FloatingWindowProps): React.JSX.Element => {
   const [rect, setRect] = useState(() =>
@@ -189,10 +191,20 @@ export const FloatingWindow = ({
         if (action === "close") {
           onClose?.();
         }
+        if (action === undefined) {
+          onDragEnd?.(droppedRect);
+        }
       }
       stopInteraction(pointerId);
     },
-    [minHeight, minWidth, onClose, onToggleMinimized, stopInteraction],
+    [
+      minHeight,
+      minWidth,
+      onClose,
+      onDragEnd,
+      onToggleMinimized,
+      stopInteraction,
+    ],
   );
 
   return (

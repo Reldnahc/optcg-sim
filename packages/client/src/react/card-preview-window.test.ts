@@ -175,7 +175,7 @@ describe("card preview window", () => {
     assert.match(matchApp, /const cardPreviewWindowKey = "card-preview";/u);
     assert.match(
       matchApp,
-      /initialRect=\{activeFloatingWindowRects\[cardPreviewWindowKey\]\}/u,
+      /activeFloatingWindowRects\[cardPreviewWindowKey\]\s*\?\?\s*defaultCardPreviewWindowRect/u,
     );
     assert.match(
       matchApp,

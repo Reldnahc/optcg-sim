@@ -193,7 +193,7 @@ describe("action log window", () => {
     assert.match(matchApp, /const actionLogWindowKey = "action-log";/u);
     assert.match(
       matchApp,
-      /initialRect=\{activeFloatingWindowRects\[actionLogWindowKey\]\}/u,
+      /activeFloatingWindowRects\[actionLogWindowKey\]\s*\?\?\s*defaultActionLogWindowRect/u,
     );
     assert.match(
       matchApp,
