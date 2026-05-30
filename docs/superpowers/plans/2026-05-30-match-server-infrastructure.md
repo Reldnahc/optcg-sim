@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the first production-shaped match-server infrastructure spine: authoritative match sessions, sequence-aware idempotent actions, persistence adapter boundaries, and restart recovery hooks.
+**Goal:** Build the first production-shaped match-server infrastructure spine: authoritative match sessions, sequence-aware idempotent client envelopes, active-match persistence boundaries, and restart recovery hooks.
 
-**Architecture:** Keep gameplay authority in `engine-core`; wrap the existing `local-match` behavior in a match-server session runtime that owns transport/session/persistence concerns. Add storage as an interface with an in-memory adapter first, then a Redis adapter behind the same contract. Preserve the current dev WebSocket/client flow by routing it through the new session service rather than rewriting the UI.
+**Architecture:** The match server owns sessions, transport, sequencing, persistence, recovery, and filtered delivery. `engine-core` remains the only gameplay authority. This first slice wraps the current dev server action shapes (`submitAction`, `respondToDecision`, `requestRollback`, `cancelRollback`) instead of inventing a raw engine `Action` transport; later production protocol work can swap the payload adapter without changing the session/persistence spine.
 
-**Tech Stack:** TypeScript, Node, existing `@optcg/engine-core`, existing `@optcg/types`, existing match-server WebSocket code, Redis adapter using the repo's existing package/dependency pattern.
+**Tech Stack:** TypeScript, Node, Vitest, existing `@optcg/types`, existing `@optcg/engine-core`, existing match-server WebSocket code, in-memory persistence for tests/dev, Redis persistence behind an adapter contract.
 
 ---
 
@@ -18,129 +18,163 @@
 - `specs/29-game-types-queues-and-lobbies.md` sections `s004` through `s010`
 - `docs/code-standard.md` package boundary, hidden-info, and deterministic-engine guidance
 
-## Non-Goals For This Plan
+## Non-Goals
 
 - No account system.
 - No ranked queue implementation.
 - No Postgres completed replay storage.
-- No production lobby password hashing beyond preserving room for the field.
+- No production lobby password hashing.
 - No client UI redesign.
-- No engine/card-rule behavior changes except test fixtures needed to drive session paths.
-- No hidden-state leakage into client snapshots.
+- No card or engine gameplay behavior changes.
+- No raw `GameState` in client-visible results or WebSocket messages.
+
+## Required Invariants
+
+- `GameState` is server-only. It may appear in active persistence snapshots and recovery internals, never in `SessionActionResult`, client transport messages, `PlayerView`, or `DevMatchSnapshot` payloads.
+- The session runtime wraps current dev request shapes:
+  - `submitAction`: `playerId`, `actionIndex`, optional `expectedStateSeq`
+  - `respondToDecision`: `playerId`, `decisionId`, `response`
+  - `requestRollback`: `playerId`, `rollbackPointId`, optional `expectedStateSeq`
+  - `cancelRollback`: `playerId`, optional `expectedStateSeq`
+- The action envelope is idempotent by `(matchId, playerId, clientActionId)`.
+- Duplicate envelopes with the same canonical request hash return the stored result and do not re-apply.
+- Duplicate envelopes with a different canonical request hash reject with `idempotencyConflict`.
+- Sequence mismatches reject before request application.
+- The current dev snapshot/catalog path remains filtered and is the only client-facing state delivery in this slice.
+- Persistence must model both action records and decision-response records; recovery can be shallow initially, but typed seams for locks, decisions, and rehydration must exist.
 
 ## File Structure
 
-Create focused match-server infrastructure files:
+Create:
 
 - `packages/match-server/src/session-types.ts`
-  - Owns match session metadata, action envelope, action result, persistence record types, and repository interfaces.
+  - Session metadata, dev request union, envelope, filtered result, stored record, persistence interface.
+- `packages/match-server/src/canonical-json.ts`
+  - Stable JSON stringifier used for client/server request hashing.
 - `packages/match-server/src/action-envelope.ts`
-  - Canonical action hashing, idempotency key helpers, stale/future-state validation helpers.
+  - Request hashing, idempotency keys, stale/future validation helpers.
 - `packages/match-server/src/match-session.ts`
-  - `MatchSessionRuntime` class/function wrapper around current local match state application.
+  - `MatchSessionRuntime` wrapping current local dev request handlers.
 - `packages/match-server/src/match-session-store.ts`
-  - In-memory `MatchSessionStore` adapter for active dev/test matches.
+  - In-memory active session store.
 - `packages/match-server/src/match-persistence.ts`
-  - Persistence interface and in-memory implementation for recovery tests.
-- `packages/match-server/src/redis-match-persistence.ts`
-  - Redis-backed persistence adapter. Add only after the in-memory contract is tested.
+  - Persistence interface test double and in-memory adapter.
 - `packages/match-server/src/match-recovery.ts`
-  - Recovery orchestration: scan metadata, lock, load snapshot/logs, rehydrate/freeze.
+  - Active match recovery orchestration shell with lock/freeze seams.
 - `packages/match-server/src/session-service.ts`
-  - High-level service for create/join/load/action used by dev HTTP/WebSocket server.
+  - High-level service used by dev HTTP/WebSocket server.
+- `packages/match-server/src/redis-match-persistence.ts`
+  - Redis adapter using scan-style active match discovery and owner locks.
 
-Modify existing files narrowly:
+Modify:
 
-- `packages/match-server/src/local-match.ts`
-  - Export or route minimal helpers required by `MatchSessionRuntime`; do not expand gameplay logic.
 - `packages/match-server/src/dev-http-server.ts`
-  - Replace ad hoc match map/action handling with `SessionService` calls.
+  - Route socket requests through `SessionService`.
+- `packages/match-server/src/dev-socket-envelope.ts`
+  - Add sequence/hash fields to current socket envelopes.
 - `packages/match-server/src/index.ts`
-  - Export the new infrastructure types/helpers.
+  - Export infrastructure APIs that are safe for server-side consumers.
 - `packages/client/src/transport.ts`
-  - Add protocol-shaped action envelope fields if not already represented.
+  - Add envelope metadata to live request inputs/results.
 - `packages/client/src/transport-ws.ts`
-  - Send `clientActionId`, `expectedStateSeq`, and `expectedDecisionId`.
+  - Generate `clientActionId`, `expectedStateSeq`, and canonical request hash.
 - `packages/client/src/controller.ts`
-  - Generate action IDs and preserve idempotent resend behavior.
-
-Test files:
-
-- `packages/match-server/src/action-envelope.test.ts`
-- `packages/match-server/src/match-session.test.ts`
-- `packages/match-server/src/match-session-store.test.ts`
-- `packages/match-server/src/match-persistence.test.ts`
-- `packages/match-server/src/match-recovery.test.ts`
-- `packages/match-server/src/dev-http-server.test.ts` updates only where current routes/messages change.
-- `packages/client/src/transport-ws.test.ts` and `packages/client/src/controller.test.ts` for envelope generation.
+  - Pass the current snapshot sequence and pending decision id where applicable.
 
 ---
 
-### Task 1: Add Session And Envelope Types
+## Task 1: Session Types And Canonical Request Hashing
 
 **Files:**
 
 - Create: `packages/match-server/src/session-types.ts`
+- Create: `packages/match-server/src/canonical-json.ts`
+- Create: `packages/match-server/src/action-envelope.ts`
 - Test: `packages/match-server/src/action-envelope.test.ts`
 
-- [ ] **Step 1: Write the failing envelope/type behavior test**
+- [ ] **Step 1: Write failing hash/idempotency tests**
 
 ```ts
-import { describe, test } from "node:test";
-import assert from "node:assert/strict";
-import type { Action, MatchId, PlayerId } from "@optcg/types";
-import { actionHash, idempotencyKey } from "./action-envelope.js";
+import { describe, expect, test } from "vitest";
+import type { MatchId, PlayerId } from "@optcg/types";
+import { canonicalJson } from "./canonical-json.js";
+import { idempotencyKey, requestHash } from "./action-envelope.js";
+import type { SessionActionRequest } from "./session-types.js";
 
-describe("match action envelope helpers", () => {
-  test("hashes only the action payload, not transport metadata", () => {
-    const action: Action = { type: "pass" };
-
-    const first = actionHash(action);
-    const second = actionHash({ ...action });
-
-    assert.equal(first, second);
+describe("session action envelopes", () => {
+  test("canonical JSON is stable for object key order", () => {
+    expect(canonicalJson({ b: 2, a: 1 })).toBe(canonicalJson({ a: 1, b: 2 }));
   });
 
-  test("keys idempotency by match player and client action id", () => {
-    const key = idempotencyKey({
-      matchId: "match-1" as MatchId,
+  test("request hash is based on the current dev request payload only", () => {
+    const first: SessionActionRequest = {
+      type: "submitAction",
       playerId: "p1" as PlayerId,
-      clientActionId: "client-action-1",
-    });
+      actionIndex: 3,
+      expectedStateSeq: 8,
+    };
+    const second: SessionActionRequest = {
+      expectedStateSeq: 8,
+      actionIndex: 3,
+      playerId: "p1" as PlayerId,
+      type: "submitAction",
+    };
 
-    assert.equal(key, "match-1:p1:client-action-1");
+    expect(requestHash(first)).toBe(requestHash(second));
+  });
+
+  test("idempotency key is match player and client action id", () => {
+    expect(
+      idempotencyKey({
+        matchId: "match-1" as MatchId,
+        playerId: "p1" as PlayerId,
+        clientActionId: "client-action-1",
+      }),
+    ).toBe("match-1:p1:client-action-1");
   });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
-
-Run:
+- [ ] **Step 2: Run the failing test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/action-envelope.test.ts
 ```
 
-Expected: FAIL because `action-envelope.ts` does not exist.
+Expected: FAIL because the new files do not exist.
 
-- [ ] **Step 3: Add session infrastructure types**
+- [ ] **Step 3: Implement `session-types.ts`**
 
-Create `packages/match-server/src/session-types.ts`:
+Use current dev request shapes and protocol-shaped metadata. `SessionActionResult` must not contain `GameState`.
 
 ```ts
 import type {
-  Action,
+  DecisionId,
+  DecisionResponse,
   GameState,
   MatchCardManifest,
   MatchId,
   PlayerId,
 } from "@optcg/types";
+import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
 
 export type GameType = "ranked" | "unranked" | "custom" | "dev";
-
 export type SpectatorPolicyMode = "disabled" | "live-filtered";
+export type RollbackPolicyMode =
+  | "disabled"
+  | "mutual-consent"
+  | "host-consent"
+  | "admin-only";
 
-export type RollbackPolicyMode = "disabled" | "mutual-consent" | "host-consent";
+export type DisconnectPolicyMode =
+  | "dev-none"
+  | "casual-timeout"
+  | "ranked-forfeit";
+
+export type MatchCreationSource =
+  | { type: "dev" }
+  | { type: "customLobby"; lobbyId: string }
+  | { type: "queue"; ticketIds: readonly string[]; ladderId?: string };
 
 export interface MatchSessionMetadata {
   matchId: MatchId;
@@ -148,12 +182,37 @@ export interface MatchSessionMetadata {
   formatId: string;
   createdAt: string;
   playerIds: readonly PlayerId[];
+  creationSource: MatchCreationSource;
+  disconnectPolicyMode: DisconnectPolicyMode;
   rollbackPolicyMode: RollbackPolicyMode;
   spectatorPolicyMode: SpectatorPolicyMode;
   ownerInstanceId?: string;
-  lobbyId?: string;
-  queueTicketIds?: readonly string[];
 }
+
+export type SessionActionRequest =
+  | {
+      type: "submitAction";
+      playerId: PlayerId;
+      actionIndex: number;
+      expectedStateSeq?: number;
+    }
+  | {
+      type: "respondToDecision";
+      playerId: PlayerId;
+      decisionId: DecisionId;
+      response: DecisionResponse;
+    }
+  | {
+      type: "requestRollback";
+      playerId: PlayerId;
+      rollbackPointId: string;
+      expectedStateSeq?: number;
+    }
+  | {
+      type: "cancelRollback";
+      playerId: PlayerId;
+      expectedStateSeq?: number;
+    };
 
 export interface ClientActionEnvelope {
   protocolVersion: string;
@@ -162,19 +221,21 @@ export interface ClientActionEnvelope {
   clientActionId: string;
   expectedStateSeq: number;
   expectedDecisionId?: string;
-  actionHash: string;
+  requestHash: string;
   sentAtClientTime?: string;
-  action: Action;
+  request: SessionActionRequest;
 }
 
 export type ActionRejectionReason =
   | "staleState"
   | "futureState"
   | "idempotencyConflict"
-  | "notYourSeat"
+  | "notYourTurn"
   | "illegalAction"
   | "pendingDecisionMismatch"
+  | "rateLimited"
   | "matchFrozen"
+  | "unsupportedCard"
   | "serverError";
 
 export interface SessionActionResult {
@@ -183,12 +244,13 @@ export interface SessionActionResult {
   clientActionId: string;
   accepted: boolean;
   stateSeq: number;
-  actionSeq: number;
+  actionSeq?: number;
   reason?: ActionRejectionReason;
-  state?: GameState;
+  snapshot?: DevMatchSnapshot;
+  errors: readonly string[];
 }
 
-export interface StoredActionRecord {
+export interface StoredSessionRecord {
   envelope: ClientActionEnvelope;
   result: SessionActionResult;
   recordedAt: string;
@@ -198,17 +260,39 @@ export interface MatchPersistenceSnapshot {
   metadata: MatchSessionMetadata;
   state: GameState;
   manifest: MatchCardManifest;
-  actions: readonly StoredActionRecord[];
+  actions: readonly StoredSessionRecord[];
+  decisions: readonly StoredSessionRecord[];
+}
+
+export interface RecoveryLock {
+  matchId: MatchId;
+  ownerInstanceId: string;
+  acquiredAt: string;
+  expiresAt: string;
 }
 
 export interface MatchPersistence {
   saveSnapshot(input: MatchPersistenceSnapshot): Promise<void>;
   appendAction(input: {
     matchId: MatchId;
-    record: StoredActionRecord;
+    record: StoredSessionRecord;
+  }): Promise<void>;
+  appendDecision(input: {
+    matchId: MatchId;
+    record: StoredSessionRecord;
   }): Promise<void>;
   loadSnapshot(matchId: MatchId): Promise<MatchPersistenceSnapshot | undefined>;
   listActiveMatchIds(): Promise<MatchId[]>;
+  tryAcquireRecoveryLock(input: {
+    matchId: MatchId;
+    ownerInstanceId: string;
+    now: string;
+    ttlMs: number;
+  }): Promise<RecoveryLock | undefined>;
+  releaseRecoveryLock(input: {
+    matchId: MatchId;
+    ownerInstanceId: string;
+  }): Promise<void>;
   freezeMatch(input: {
     matchId: MatchId;
     reason: string;
@@ -217,16 +301,32 @@ export interface MatchPersistence {
 }
 ```
 
-- [ ] **Step 4: Add action envelope helpers**
+- [ ] **Step 4: Implement stable canonical JSON and hashing**
 
-Create `packages/match-server/src/action-envelope.ts`:
+```ts
+export const canonicalJson = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+};
+```
 
 ```ts
 import { createHash } from "node:crypto";
-import type { Action, MatchId, PlayerId } from "@optcg/types";
+import type { MatchId, PlayerId } from "@optcg/types";
+import { canonicalJson } from "./canonical-json.js";
+import type { SessionActionRequest } from "./session-types.js";
 
-export const actionHash = (action: Action): string =>
-  createHash("sha256").update(JSON.stringify(action)).digest("hex");
+export const requestHash = (request: SessionActionRequest): string =>
+  createHash("sha256").update(canonicalJson(request)).digest("hex");
 
 export const idempotencyKey = (input: {
   matchId: MatchId;
@@ -236,9 +336,7 @@ export const idempotencyKey = (input: {
   `${String(input.matchId)}:${String(input.playerId)}:${input.clientActionId}`;
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
-
-Run:
+- [ ] **Step 5: Run the test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/action-envelope.test.ts
@@ -249,208 +347,125 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add packages/match-server/src/session-types.ts packages/match-server/src/action-envelope.ts packages/match-server/src/action-envelope.test.ts
-git commit -m "Add match session envelope types"
+git add packages/match-server/src/session-types.ts packages/match-server/src/canonical-json.ts packages/match-server/src/action-envelope.ts packages/match-server/src/action-envelope.test.ts
+git commit -m "Add session envelope hashing types"
 ```
 
 ---
 
-### Task 2: Implement Idempotent Match Session Runtime
+## Task 2: Idempotent Session Runtime Around Current Dev Requests
 
 **Files:**
 
 - Create: `packages/match-server/src/match-session.ts`
 - Test: `packages/match-server/src/match-session.test.ts`
-- Modify: `packages/match-server/src/local-match.ts` only if a helper export is required.
+- Modify: `packages/match-server/src/local-match.ts` only if additional type exports are required.
 
-- [ ] **Step 1: Write failing tests for accepted, stale, future, and duplicate actions**
+- [ ] **Step 1: Write failing runtime tests**
+
+Use a real `LocalDevMatch` and the current `applyLocalDevAction` style. Do not use raw engine `Action`.
 
 ```ts
-import { describe, test } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, test } from "vitest";
 import type { MatchId, PlayerId } from "@optcg/types";
-import { actionHash } from "./action-envelope.js";
+import { requestHash } from "./action-envelope.js";
 import { createMatchSessionRuntime } from "./match-session.js";
 import { createLocalDevMatch } from "./local-match.js";
+import type { SessionActionRequest } from "./session-types.js";
 
 const matchId = "match-1" as MatchId;
 const p1 = "p1" as PlayerId;
 
-const envelope = (stateSeq: number, clientActionId = "a1") => {
-  const action = { type: "pass" } as const;
-  return {
-    protocolVersion: "dev",
-    matchId,
-    playerId: p1,
-    clientActionId,
-    expectedStateSeq: stateSeq,
-    actionHash: actionHash(action),
-    action,
-  };
-};
+const submitRequest = (
+  stateSeq: number,
+  actionIndex = 0,
+): SessionActionRequest => ({
+  type: "submitAction",
+  playerId: p1,
+  actionIndex,
+  expectedStateSeq: stateSeq,
+});
+
+const envelope = (
+  request: SessionActionRequest,
+  clientActionId = "client-action-1",
+) => ({
+  protocolVersion: "dev",
+  matchId,
+  playerId: request.playerId,
+  clientActionId,
+  expectedStateSeq:
+    "expectedStateSeq" in request && request.expectedStateSeq !== undefined
+      ? request.expectedStateSeq
+      : 0,
+  requestHash: requestHash(request),
+  request,
+});
 
 describe("match session runtime", () => {
-  test("accepts a new sequence-matching action once", () => {
+  test("returns the same result for duplicate client action id and hash", () => {
     const local = createLocalDevMatch({ matchId });
     const runtime = createMatchSessionRuntime({ local });
-
-    const result = runtime.applyEnvelope(envelope(local.state.seq));
-
-    assert.equal(result.accepted, true);
-    assert.equal(result.clientActionId, "a1");
-  });
-
-  test("returns the stored result for duplicate client action id and hash", () => {
-    const local = createLocalDevMatch({ matchId });
-    const runtime = createMatchSessionRuntime({ local });
-    const input = envelope(local.state.seq);
+    const input = envelope(submitRequest(local.state.seq));
 
     const first = runtime.applyEnvelope(input);
     const second = runtime.applyEnvelope(input);
 
-    assert.deepEqual(second, first);
+    expect(second).toEqual(first);
   });
 
-  test("rejects duplicate client action id with different hash", () => {
+  test("rejects duplicate client action id with different request hash", () => {
     const local = createLocalDevMatch({ matchId });
     const runtime = createMatchSessionRuntime({ local });
-    const input = envelope(local.state.seq);
+    const input = envelope(submitRequest(local.state.seq));
     runtime.applyEnvelope(input);
 
     const second = runtime.applyEnvelope({
       ...input,
-      actionHash: "different",
+      requestHash: "different",
     });
 
-    assert.equal(second.accepted, false);
-    assert.equal(second.reason, "idempotencyConflict");
+    expect(second.accepted).toBe(false);
+    expect(second.reason).toBe("idempotencyConflict");
   });
 
-  test("rejects stale and future sequence actions without applying them", () => {
+  test("does not expose raw GameState in action results", () => {
     const local = createLocalDevMatch({ matchId });
     const runtime = createMatchSessionRuntime({ local });
+    const result = runtime.applyEnvelope(
+      envelope(submitRequest(local.state.seq)),
+    );
 
-    const stale = runtime.applyEnvelope(envelope(local.state.seq - 1, "old"));
-    const future = runtime.applyEnvelope(envelope(local.state.seq + 1, "new"));
-
-    assert.equal(stale.reason, "staleState");
-    assert.equal(future.reason, "futureState");
+    expect("state" in result).toBe(false);
+    expect(result.snapshot?.players).toBeDefined();
   });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
-
-Run:
+- [ ] **Step 2: Run the failing test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-session.test.ts
 ```
 
-Expected: FAIL because `match-session.ts` does not exist or because local factory signatures need adapting.
+Expected: FAIL because `match-session.ts` does not exist.
 
-- [ ] **Step 3: Implement minimal runtime wrapper**
+- [ ] **Step 3: Implement the runtime wrapper**
 
-Create `packages/match-server/src/match-session.ts`:
+`createMatchSessionRuntime` should dispatch by `request.type`:
 
-```ts
-import type { LocalDevMatch } from "./local-match.js";
-import { applyLocalDevAction } from "./local-match.js";
-import type {
-  ClientActionEnvelope,
-  SessionActionResult,
-  StoredActionRecord,
-} from "./session-types.js";
+- `submitAction` -> `applyLocalDevAction(local, request)`
+- `respondToDecision` -> `applyLocalDevDecision(local, request)`
+- `requestRollback` -> `requestLocalDevRollback(local, request)`
+- `cancelRollback` -> `cancelLocalDevRollback(local, request)`
 
-export interface MatchSessionRuntime {
-  readonly local: LocalDevMatch;
-  applyEnvelope(envelope: ClientActionEnvelope): SessionActionResult;
-  actionRecords(): readonly StoredActionRecord[];
-}
+The result must include `snapshot`, `errors`, `stateSeq`, and `actionSeq`; it must not include `GameState`.
 
-export const createMatchSessionRuntime = (input: {
-  local: LocalDevMatch;
-  now?: () => string;
-}): MatchSessionRuntime => {
-  const records = new Map<string, StoredActionRecord>();
-  const now = input.now ?? (() => new Date().toISOString());
+- [ ] **Step 4: Add stale/future request tests**
 
-  const runtime: MatchSessionRuntime = {
-    local: input.local,
-    applyEnvelope(envelope) {
-      const key = `${String(envelope.matchId)}:${String(envelope.playerId)}:${envelope.clientActionId}`;
-      const existing = records.get(key);
-      if (existing !== undefined) {
-        if (existing.envelope.actionHash !== envelope.actionHash) {
-          return {
-            type: "actionResult",
-            matchId: envelope.matchId,
-            clientActionId: envelope.clientActionId,
-            accepted: false,
-            stateSeq: input.local.state.seq,
-            actionSeq: input.local.state.actionSeq,
-            reason: "idempotencyConflict",
-          };
-        }
-        return existing.result;
-      }
+Add tests that send `submitAction` envelopes with `expectedStateSeq` lower and higher than `local.state.seq`. The session runtime should reject before calling local application and should return `staleState` or `futureState`.
 
-      if (envelope.expectedStateSeq < input.local.state.seq) {
-        return {
-          type: "actionResult",
-          matchId: envelope.matchId,
-          clientActionId: envelope.clientActionId,
-          accepted: false,
-          stateSeq: input.local.state.seq,
-          actionSeq: input.local.state.actionSeq,
-          reason: "staleState",
-        };
-      }
-
-      if (envelope.expectedStateSeq > input.local.state.seq) {
-        return {
-          type: "actionResult",
-          matchId: envelope.matchId,
-          clientActionId: envelope.clientActionId,
-          accepted: false,
-          stateSeq: input.local.state.seq,
-          actionSeq: input.local.state.actionSeq,
-          reason: "futureState",
-        };
-      }
-
-      const applied = applyLocalDevAction(input.local, {
-        playerId: envelope.playerId,
-        action: envelope.action,
-      });
-      const result: SessionActionResult = {
-        type: "actionResult",
-        matchId: envelope.matchId,
-        clientActionId: envelope.clientActionId,
-        accepted: applied.errors === undefined,
-        stateSeq: input.local.state.seq,
-        actionSeq: input.local.state.actionSeq,
-        ...(applied.errors === undefined
-          ? { state: input.local.state }
-          : { reason: "illegalAction" }),
-      };
-      records.set(key, { envelope, result, recordedAt: now() });
-      return result;
-    },
-    actionRecords() {
-      return [...records.values()];
-    },
-  };
-
-  return runtime;
-};
-```
-
-If `LocalDevMatch` is not exported, export only its type from `local-match.ts`.
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run:
+- [ ] **Step 5: Run runtime tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-session.test.ts
@@ -458,16 +473,16 @@ corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```powershell
 git add packages/match-server/src/match-session.ts packages/match-server/src/match-session.test.ts packages/match-server/src/local-match.ts
-git commit -m "Add idempotent match session runtime"
+git commit -m "Add idempotent dev match session runtime"
 ```
 
 ---
 
-### Task 3: Add Active Match Store
+## Task 3: Active Session Store
 
 **Files:**
 
@@ -477,71 +492,37 @@ git commit -m "Add idempotent match session runtime"
 - [ ] **Step 1: Write failing store tests**
 
 ```ts
-import { describe, test } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, test } from "vitest";
 import type { MatchId } from "@optcg/types";
 import { createInMemoryMatchSessionStore } from "./match-session-store.js";
 
 describe("in-memory match session store", () => {
-  test("stores and loads sessions by match id", () => {
+  test("stores loads deletes and lists sessions by match id", () => {
     const store = createInMemoryMatchSessionStore<string>();
+
     store.set("match-1" as MatchId, "session");
 
-    assert.equal(store.get("match-1" as MatchId), "session");
-  });
-
-  test("lists active match ids", () => {
-    const store = createInMemoryMatchSessionStore<string>();
-    store.set("match-1" as MatchId, "one");
-    store.set("match-2" as MatchId, "two");
-
-    assert.deepEqual(store.listMatchIds(), ["match-1", "match-2"]);
+    expect(store.get("match-1" as MatchId)).toBe("session");
+    expect(store.listMatchIds()).toEqual(["match-1"]);
+    store.delete("match-1" as MatchId);
+    expect(store.get("match-1" as MatchId)).toBeUndefined();
   });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run the failing test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-session-store.test.ts
 ```
 
-Expected: FAIL because store module does not exist.
+Expected: FAIL because the store does not exist.
 
-- [ ] **Step 3: Implement store**
+- [ ] **Step 3: Implement the store**
 
-```ts
-import type { MatchId } from "@optcg/types";
+Create a generic in-memory store with `get`, `set`, `delete`, and `listMatchIds`.
 
-export interface MatchSessionStore<TSession> {
-  get(matchId: MatchId): TSession | undefined;
-  set(matchId: MatchId, session: TSession): void;
-  delete(matchId: MatchId): void;
-  listMatchIds(): MatchId[];
-}
-
-export const createInMemoryMatchSessionStore = <
-  TSession,
->(): MatchSessionStore<TSession> => {
-  const sessions = new Map<string, TSession>();
-  return {
-    get(matchId) {
-      return sessions.get(String(matchId));
-    },
-    set(matchId, session) {
-      sessions.set(String(matchId), session);
-    },
-    delete(matchId) {
-      sessions.delete(String(matchId));
-    },
-    listMatchIds() {
-      return [...sessions.keys()] as MatchId[];
-    },
-  };
-};
-```
-
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run the test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-session-store.test.ts
@@ -558,146 +539,38 @@ git commit -m "Add active match session store"
 
 ---
 
-### Task 4: Add Persistence Interface And In-Memory Adapter
+## Task 4: Persistence Contract And In-Memory Adapter
 
 **Files:**
 
 - Create: `packages/match-server/src/match-persistence.ts`
 - Test: `packages/match-server/src/match-persistence.test.ts`
 
-- [ ] **Step 1: Write failing persistence tests**
+- [ ] **Step 1: Write failing contract tests**
 
-```ts
-import { describe, test } from "node:test";
-import assert from "node:assert/strict";
-import type { MatchId } from "@optcg/types";
-import { createInMemoryMatchPersistence } from "./match-persistence.js";
-import type { MatchPersistenceSnapshot } from "./session-types.js";
+Tests must cover:
 
-const snapshot = (): MatchPersistenceSnapshot =>
-  ({
-    metadata: {
-      matchId: "match-1" as MatchId,
-      gameType: "dev",
-      formatId: "dev",
-      createdAt: "2026-05-30T00:00:00.000Z",
-      playerIds: ["p1", "p2"],
-      rollbackPolicyMode: "mutual-consent",
-      spectatorPolicyMode: "disabled",
-    },
-    state: {
-      seq: 1,
-      actionSeq: 0,
-      players: {},
-      turn: { turnPlayerId: "p1", phase: "main", globalTurn: 1 },
-    },
-    manifest: { cards: {}, effectDefinitions: {} },
-    actions: [],
-  }) as MatchPersistenceSnapshot;
+- saving/loading a server-only snapshot with `GameState`;
+- appending an action record;
+- appending a decision record;
+- listing active match ids;
+- acquiring a recovery lock once;
+- rejecting lock acquisition by another owner before expiry;
+- freezing a match.
 
-describe("in-memory match persistence", () => {
-  test("saves and loads active match snapshots", async () => {
-    const persistence = createInMemoryMatchPersistence();
-
-    await persistence.saveSnapshot(snapshot());
-    const loaded = await persistence.loadSnapshot("match-1" as MatchId);
-
-    assert.equal(loaded?.metadata.matchId, "match-1");
-  });
-
-  test("appends action records without dropping the snapshot", async () => {
-    const persistence = createInMemoryMatchPersistence();
-    await persistence.saveSnapshot(snapshot());
-
-    await persistence.appendAction({
-      matchId: "match-1" as MatchId,
-      record: {
-        envelope: {
-          protocolVersion: "dev",
-          matchId: "match-1" as MatchId,
-          playerId: "p1",
-          clientActionId: "a1",
-          expectedStateSeq: 1,
-          actionHash: "hash",
-          action: { type: "pass" },
-        },
-        result: {
-          type: "actionResult",
-          matchId: "match-1" as MatchId,
-          clientActionId: "a1",
-          accepted: true,
-          stateSeq: 2,
-          actionSeq: 1,
-        },
-        recordedAt: "2026-05-30T00:00:01.000Z",
-      },
-    });
-
-    const loaded = await persistence.loadSnapshot("match-1" as MatchId);
-    assert.equal(loaded?.actions.length, 1);
-  });
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run the failing test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-persistence.test.ts
 ```
 
-Expected: FAIL because `match-persistence.ts` does not exist.
+Expected: FAIL because persistence does not exist.
 
 - [ ] **Step 3: Implement in-memory persistence**
 
-```ts
-import type { MatchId } from "@optcg/types";
-import type {
-  MatchPersistence,
-  MatchPersistenceSnapshot,
-  StoredActionRecord,
-} from "./session-types.js";
+Implement the full `MatchPersistence` interface from Task 1. Store actions and decisions separately. Store freeze records internally so tests can assert they were written through an exported test-only inspection function or a returned fake adapter helper.
 
-export const createInMemoryMatchPersistence = (): MatchPersistence => {
-  const snapshots = new Map<string, MatchPersistenceSnapshot>();
-  const frozen = new Map<string, { reason: string; frozenAt: string }>();
-
-  return {
-    async saveSnapshot(input) {
-      snapshots.set(String(input.metadata.matchId), {
-        ...input,
-        actions: [...input.actions],
-      });
-    },
-    async appendAction(input: {
-      matchId: MatchId;
-      record: StoredActionRecord;
-    }) {
-      const current = snapshots.get(String(input.matchId));
-      if (current === undefined) {
-        return;
-      }
-      snapshots.set(String(input.matchId), {
-        ...current,
-        actions: [...current.actions, input.record],
-      });
-    },
-    async loadSnapshot(matchId) {
-      return snapshots.get(String(matchId));
-    },
-    async listActiveMatchIds() {
-      return [...snapshots.keys()] as MatchId[];
-    },
-    async freezeMatch(input) {
-      frozen.set(String(input.matchId), {
-        reason: input.reason,
-        frozenAt: input.frozenAt,
-      });
-    },
-  };
-};
-```
-
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run persistence tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-persistence.test.ts
@@ -709,107 +582,46 @@ Expected: PASS.
 
 ```powershell
 git add packages/match-server/src/match-persistence.ts packages/match-server/src/match-persistence.test.ts
-git commit -m "Add match persistence boundary"
+git commit -m "Add active match persistence contract"
 ```
 
 ---
 
-### Task 5: Persist Session Snapshots And Accepted Actions
+## Task 5: Persist Accepted Session Records
 
 **Files:**
 
 - Modify: `packages/match-server/src/match-session.ts`
 - Test: `packages/match-server/src/match-session.test.ts`
 
-- [ ] **Step 1: Add failing persistence integration test**
+- [ ] **Step 1: Add failing persistence tests**
 
-Add to `match-session.test.ts`:
+Add tests proving:
 
-```ts
-test("persists the snapshot and accepted action record", async () => {
-  const local = createLocalDevMatch({ matchId });
-  const persistence = createInMemoryMatchPersistence();
-  const runtime = createMatchSessionRuntime({
-    local,
-    persistence,
-    metadata: {
-      matchId,
-      gameType: "dev",
-      formatId: "dev",
-      createdAt: "2026-05-30T00:00:00.000Z",
-      playerIds: ["p1", "p2"],
-      rollbackPolicyMode: "mutual-consent",
-      spectatorPolicyMode: "disabled",
-    },
-  });
+- accepted `submitAction` records are appended through `appendAction`;
+- accepted `respondToDecision` records are appended through `appendDecision`;
+- rejected duplicate/stale/future requests are not appended;
+- saved snapshots include metadata, manifest, state, actions, and decisions.
 
-  await runtime.saveSnapshot();
-  runtime.applyEnvelope(envelope(local.state.seq));
-  await runtime.flushPersistence();
-
-  const loaded = await persistence.loadSnapshot(matchId);
-  assert.equal(loaded?.actions.length, 1);
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run the failing tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-session.test.ts
 ```
 
-Expected: FAIL because persistence wiring does not exist.
+Expected: FAIL because runtime persistence is not wired.
 
-- [ ] **Step 3: Extend runtime constructor and persistence methods**
+- [ ] **Step 3: Wire persistence into the runtime**
 
-Update `MatchSessionRuntime`:
+Add optional `metadata` and `persistence` constructor fields. Add:
 
-```ts
-export interface MatchSessionRuntime {
-  readonly local: LocalDevMatch;
-  applyEnvelope(envelope: ClientActionEnvelope): SessionActionResult;
-  actionRecords(): readonly StoredActionRecord[];
-  saveSnapshot(): Promise<void>;
-  flushPersistence(): Promise<void>;
-}
-```
+- `saveSnapshot(): Promise<void>`
+- `flushPersistence(): Promise<void>`
+- pending record queues split by action versus decision request type.
 
-Add optional constructor fields:
+Only append records after successful request application. Keep raw `GameState` inside `saveSnapshot`; do not put it in `SessionActionResult`.
 
-```ts
-persistence?: MatchPersistence;
-metadata?: MatchSessionMetadata;
-```
-
-In `applyEnvelope`, push newly accepted action records into a `pendingPersistenceRecords` array. Implement:
-
-```ts
-async saveSnapshot() {
-  if (input.persistence === undefined || input.metadata === undefined) {
-    return;
-  }
-  await input.persistence.saveSnapshot({
-    metadata: input.metadata,
-    state: input.local.state,
-    manifest: input.local.state.cardManifest,
-    actions: [...records.values()],
-  });
-},
-async flushPersistence() {
-  if (input.persistence === undefined) {
-    pendingPersistenceRecords.length = 0;
-    return;
-  }
-  for (const record of pendingPersistenceRecords.splice(0)) {
-    await input.persistence.appendAction({
-      matchId: record.envelope.matchId,
-      record,
-    });
-  }
-},
-```
-
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run runtime tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-session.test.ts
@@ -821,12 +633,12 @@ Expected: PASS.
 
 ```powershell
 git add packages/match-server/src/match-session.ts packages/match-server/src/match-session.test.ts
-git commit -m "Persist match session action records"
+git commit -m "Persist accepted match session records"
 ```
 
 ---
 
-### Task 6: Add Recovery Orchestration Skeleton
+## Task 6: Recovery Orchestration With Lock And Freeze Seams
 
 **Files:**
 
@@ -835,87 +647,37 @@ git commit -m "Persist match session action records"
 
 - [ ] **Step 1: Write failing recovery tests**
 
-```ts
-import { describe, test } from "node:test";
-import assert from "node:assert/strict";
-import type { MatchId } from "@optcg/types";
-import { createInMemoryMatchPersistence } from "./match-persistence.js";
-import { recoverActiveMatches } from "./match-recovery.js";
+Tests must cover:
 
-describe("match recovery", () => {
-  test("returns no recovered sessions when persistence is empty", async () => {
-    const recovered = await recoverActiveMatches({
-      persistence: createInMemoryMatchPersistence(),
-    });
+- empty persistence returns no recovered matches;
+- a listed match with no snapshot calls `freezeMatch`;
+- lock acquisition failure skips the match without freezing;
+- a valid snapshot returns a recovered summary including `matchId`, `stateSeq`, action count, and decision count.
 
-    assert.equal(recovered.length, 0);
-  });
+Use a fake `MatchPersistence` in the missing-snapshot test whose `listActiveMatchIds()` returns a match id and whose `loadSnapshot()` returns `undefined`.
 
-  test("freezes a match when snapshot recovery fails", async () => {
-    const persistence = createInMemoryMatchPersistence();
-    await persistence.freezeMatch({
-      matchId: "match-1" as MatchId,
-      reason: "preexisting",
-      frozenAt: "2026-05-30T00:00:00.000Z",
-    });
-
-    const recovered = await recoverActiveMatches({ persistence });
-
-    assert.deepEqual(recovered, []);
-  });
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run the failing test**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-recovery.test.ts
 ```
 
-Expected: FAIL because recovery module does not exist.
+Expected: FAIL because recovery does not exist.
 
 - [ ] **Step 3: Implement recovery shell**
 
-```ts
-import type { MatchId } from "@optcg/types";
-import type { MatchPersistence } from "./session-types.js";
+`recoverActiveMatches` must:
 
-export interface RecoveredMatchSummary {
-  matchId: MatchId;
-  stateSeq: number;
-  actionCount: number;
-}
+1. call `listActiveMatchIds`;
+2. call `tryAcquireRecoveryLock` per match;
+3. load the snapshot;
+4. freeze if snapshot is missing;
+5. return recovered summaries for valid snapshots;
+6. release the lock after successful shallow recovery.
 
-export const recoverActiveMatches = async (input: {
-  persistence: MatchPersistence;
-  now?: () => string;
-}): Promise<RecoveredMatchSummary[]> => {
-  const now = input.now ?? (() => new Date().toISOString());
-  const matchIds = await input.persistence.listActiveMatchIds();
-  const recovered: RecoveredMatchSummary[] = [];
+Do not implement full deterministic replay in this task. The returned summary must include enough data for later room rehydration.
 
-  for (const matchId of matchIds) {
-    const snapshot = await input.persistence.loadSnapshot(matchId);
-    if (snapshot === undefined) {
-      await input.persistence.freezeMatch({
-        matchId,
-        reason: "missing active match snapshot",
-        frozenAt: now(),
-      });
-      continue;
-    }
-    recovered.push({
-      matchId,
-      stateSeq: snapshot.state.seq,
-      actionCount: snapshot.actions.length,
-    });
-  }
-
-  return recovered;
-};
-```
-
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run recovery tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/match-recovery.test.ts
@@ -927,171 +689,70 @@ Expected: PASS.
 
 ```powershell
 git add packages/match-server/src/match-recovery.ts packages/match-server/src/match-recovery.test.ts
-git commit -m "Add active match recovery shell"
+git commit -m "Add active match recovery orchestration"
 ```
 
 ---
 
-### Task 7: Route Dev Server Through Session Service
+## Task 7: Route Dev WebSocket Through Session Service
 
 **Files:**
 
 - Create: `packages/match-server/src/session-service.ts`
+- Modify: `packages/match-server/src/dev-socket-envelope.ts`
 - Modify: `packages/match-server/src/dev-http-server.ts`
 - Test: `packages/match-server/src/dev-http-server.test.ts`
 
-- [ ] **Step 1: Add failing dev-server behavior test**
+- [ ] **Step 1: Add failing dev server tests**
 
-Add or update a test in `dev-http-server.test.ts` to assert duplicate WebSocket action delivery does not apply twice:
+Tests must prove:
 
-```ts
-test("duplicate client action ids return the same result without applying twice", async () => {
-  const harness = await startDevHttpServerHarness();
-  const created = await harness.createMatch();
-  const first = await harness.sendWsAction({
-    matchId: created.matchId,
-    sessionToken: created.seats[0].sessionToken,
-    clientActionId: "duplicate-action",
-    action: { type: "pass" },
-  });
-  const second = await harness.sendWsAction({
-    matchId: created.matchId,
-    sessionToken: created.seats[0].sessionToken,
-    clientActionId: "duplicate-action",
-    action: { type: "pass" },
-  });
+- duplicate `clientActionId` with the same request hash returns the same result and does not apply twice;
+- duplicate `clientActionId` with a different request hash rejects;
+- accepted result messages contain `snapshot`/existing filtered sync data and do not contain raw `state`;
+- `respondToDecision`, `requestRollback`, and `cancelRollback` still work through the new service.
 
-  assert.equal(second.type, "actionResult");
-  assert.equal(second.clientActionId, first.clientActionId);
-  assert.equal(second.stateSeq, first.stateSeq);
-});
-```
-
-If the harness currently lacks `clientActionId`, add it to the test harness request object in the same test file.
-
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run dev server tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/dev-http-server.test.ts
 ```
 
-Expected: FAIL because raw dev actions are not idempotent yet.
+Expected: FAIL because the dev server does not route through the session service.
 
-- [ ] **Step 3: Implement `SessionService`**
+- [ ] **Step 3: Extend socket envelope validation**
 
-Create `packages/match-server/src/session-service.ts`:
+`DevSocketEnvelope` keeps its current four `type` variants and adds:
 
-```ts
-import type { MatchId } from "@optcg/types";
-import { actionHash } from "./action-envelope.js";
-import { createMatchSessionRuntime } from "./match-session.js";
-import type { MatchSessionRuntime } from "./match-session.js";
-import { createInMemoryMatchSessionStore } from "./match-session-store.js";
-import type {
-  ClientActionEnvelope,
-  MatchPersistence,
-  MatchSessionMetadata,
-  SessionActionResult,
-} from "./session-types.js";
-import type { LocalDevMatch } from "./local-match.js";
+- `requestHash: string`
+- optional `expectedDecisionId: string`
+- optional `sentAtClientTime: string`
 
-export interface SessionService {
-  registerLocalMatch(input: {
-    local: LocalDevMatch;
-    metadata: MatchSessionMetadata;
-  }): MatchSessionRuntime;
-  applyEnvelope(envelope: ClientActionEnvelope): Promise<SessionActionResult>;
-}
+Do not replace current `actionIndex` or `decisionId` payloads with raw `Action`.
 
-export const createSessionService = (
-  input: {
-    persistence?: MatchPersistence;
-  } = {},
-): SessionService => {
-  const store = createInMemoryMatchSessionStore<MatchSessionRuntime>();
-  return {
-    registerLocalMatch({ local, metadata }) {
-      const runtime = createMatchSessionRuntime({
-        local,
-        metadata,
-        persistence: input.persistence,
-      });
-      store.set(metadata.matchId, runtime);
-      return runtime;
-    },
-    async applyEnvelope(envelope) {
-      const runtime = store.get(envelope.matchId);
-      if (runtime === undefined) {
-        return {
-          type: "actionResult",
-          matchId: envelope.matchId,
-          clientActionId: envelope.clientActionId,
-          accepted: false,
-          stateSeq: envelope.expectedStateSeq,
-          actionSeq: 0,
-          reason: "serverError",
-        };
-      }
-      const expectedHash = actionHash(envelope.action);
-      if (expectedHash !== envelope.actionHash) {
-        return {
-          type: "actionResult",
-          matchId: envelope.matchId,
-          clientActionId: envelope.clientActionId,
-          accepted: false,
-          stateSeq: runtime.local.state.seq,
-          actionSeq: runtime.local.state.actionSeq,
-          reason: "idempotencyConflict",
-        };
-      }
-      const result = runtime.applyEnvelope(envelope);
-      await runtime.flushPersistence();
-      return result;
-    },
-  };
-};
-```
+- [ ] **Step 4: Implement `SessionService`**
 
-- [ ] **Step 4: Wire `dev-http-server.ts` through `SessionService`**
+The service owns:
 
-Add one `const sessionService = createSessionService({ persistence })` near the current local match map setup. When creating a match, register the local match:
+- active session store;
+- register local dev match with complete `MatchSessionMetadata`;
+- apply envelope;
+- verify `requestHash` against `requestHash(envelope.request)`;
+- flush persistence after accepted requests.
 
-```ts
-sessionService.registerLocalMatch({
-  local: match,
-  metadata: {
-    matchId,
-    gameType: "dev",
-    formatId: "dev",
-    createdAt: new Date().toISOString(),
-    playerIds: ["p1", "p2"],
-    rollbackPolicyMode: "mutual-consent",
-    spectatorPolicyMode: "disabled",
-  },
-});
-```
+- [ ] **Step 5: Wire `dev-http-server.ts`**
 
-In the WebSocket action handler, build a `ClientActionEnvelope`:
+When a match is created, register it with metadata:
 
-```ts
-const envelope: ClientActionEnvelope = {
-  protocolVersion: "dev",
-  matchId,
-  playerId,
-  clientActionId: message.clientActionId,
-  expectedStateSeq: message.expectedStateSeq,
-  ...(message.expectedDecisionId === undefined
-    ? {}
-    : { expectedDecisionId: message.expectedDecisionId }),
-  actionHash: message.actionHash,
-  action: message.action,
-};
-const result = await sessionService.applyEnvelope(envelope);
-```
+- `gameType: "dev"`
+- `formatId: "dev"`
+- `creationSource: { type: "dev" }`
+- `disconnectPolicyMode: "dev-none"`
+- rollback and spectator policies matching current dev behavior.
 
-Keep snapshot broadcasting through the existing filtered snapshot path after accepted actions.
+After accepted requests, continue broadcasting existing filtered snapshots and card catalogs.
 
-- [ ] **Step 5: Run dev server tests**
+- [ ] **Step 6: Run dev server tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/dev-http-server.test.ts
@@ -1099,16 +760,16 @@ corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add packages/match-server/src/session-service.ts packages/match-server/src/dev-http-server.ts packages/match-server/src/dev-http-server.test.ts
-git commit -m "Route dev matches through session service"
+git add packages/match-server/src/session-service.ts packages/match-server/src/dev-socket-envelope.ts packages/match-server/src/dev-http-server.ts packages/match-server/src/dev-http-server.test.ts
+git commit -m "Route dev websocket through session service"
 ```
 
 ---
 
-### Task 8: Update Client WebSocket Transport To Send Action Envelopes
+## Task 8: Client WebSocket Envelope Metadata
 
 **Files:**
 
@@ -1118,92 +779,31 @@ git commit -m "Route dev matches through session service"
 - Test: `packages/client/src/transport-ws.test.ts`
 - Test: `packages/client/src/controller.test.ts`
 
-- [ ] **Step 1: Write failing client envelope test**
+- [ ] **Step 1: Add failing client transport tests**
 
-Add to `transport-ws.test.ts`:
+Tests must prove each live request type sends:
 
-```ts
-test("sends client action id expected state sequence and action hash", async () => {
-  const sent = await captureNextWebSocketSend(async (transport) => {
-    await transport.sendAction({
-      matchId: "match-1" as MatchId,
-      sessionToken: "token",
-      playerId: "p1" as PlayerId,
-      expectedStateSeq: 7,
-      action: { type: "pass" },
-    });
-  });
+- `clientActionId`;
+- current `expectedStateSeq` when available;
+- `expectedDecisionId` for decision responses;
+- stable `requestHash`;
+- no raw `GameState`.
 
-  assert.equal(sent.type, "action");
-  assert.equal(typeof sent.clientActionId, "string");
-  assert.equal(sent.expectedStateSeq, 7);
-  assert.equal(typeof sent.actionHash, "string");
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run client tests**
 
 ```powershell
-corepack pnpm --filter @optcg/client exec vitest run --root ../.. packages/client/src/transport-ws.test.ts
+corepack pnpm --filter @optcg/client exec vitest run --root ../.. packages/client/src/transport-ws.test.ts packages/client/src/controller.test.ts
 ```
 
-Expected: FAIL because the transport does not send the full envelope yet.
+Expected: FAIL because the client does not send all envelope metadata yet.
 
-- [ ] **Step 3: Update transport send action input**
+- [ ] **Step 3: Update transport/controller**
 
-In `packages/client/src/transport.ts`, ensure `sendAction` input includes:
+Use a browser-safe canonical hash equivalent to the server `canonicalJson` behavior. If sharing the exact helper would violate package boundaries, duplicate the small stable stringifier in client transport tests and document that production protocol should move it to a shared package later.
 
-```ts
-playerId: PlayerId;
-expectedStateSeq: number;
-expectedDecisionId?: string;
-clientActionId?: string;
-```
+Controller calls should pass the current snapshot sequence. Decision responses should pass the current pending decision id as `expectedDecisionId`.
 
-In `transport-ws.ts`, generate a client action id if absent:
-
-```ts
-const clientActionId = input.clientActionId ?? crypto.randomUUID();
-const actionHash = await hashAction(input.action);
-socket.send(
-  JSON.stringify({
-    type: "action",
-    matchId: input.matchId,
-    playerId: input.playerId,
-    sessionToken: input.sessionToken,
-    clientActionId,
-    expectedStateSeq: input.expectedStateSeq,
-    ...(input.expectedDecisionId === undefined
-      ? {}
-      : { expectedDecisionId: input.expectedDecisionId }),
-    actionHash,
-    action: input.action,
-  }),
-);
-```
-
-Use the repo's existing hash helper if present; otherwise add a browser-safe SHA-256 helper in `transport-ws.ts` with Web Crypto.
-
-- [ ] **Step 4: Update controller call site**
-
-In `packages/client/src/controller.ts`, pass current view state seq and pending decision id:
-
-```ts
-await transport.sendAction({
-  matchId: current.matchId,
-  sessionToken: current.sessionToken,
-  playerId: current.playerId,
-  expectedStateSeq: current.view.seq,
-  ...(current.view.pendingDecision === undefined
-    ? {}
-    : { expectedDecisionId: current.view.pendingDecision.id }),
-  action,
-});
-```
-
-Use actual existing controller state property names. Do not introduce guessed state fields if the current controller already stores them under different names.
-
-- [ ] **Step 5: Run client tests**
+- [ ] **Step 4: Run client tests**
 
 ```powershell
 corepack pnpm --filter @optcg/client exec vitest run --root ../.. packages/client/src/transport-ws.test.ts packages/client/src/controller.test.ts
@@ -1211,148 +811,55 @@ corepack pnpm --filter @optcg/client exec vitest run --root ../.. packages/clien
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```powershell
 git add packages/client/src/transport.ts packages/client/src/transport-ws.ts packages/client/src/controller.ts packages/client/src/transport-ws.test.ts packages/client/src/controller.test.ts
-git commit -m "Send sequence-aware action envelopes"
+git commit -m "Send idempotent websocket request envelopes"
 ```
 
 ---
 
-### Task 9: Add Redis Match Persistence Adapter
+## Task 9: Redis Active Match Persistence Adapter
 
 **Files:**
 
 - Create: `packages/match-server/src/redis-match-persistence.ts`
 - Test: `packages/match-server/src/redis-match-persistence.test.ts`
-- Modify: `packages/match-server/package.json` only if a Redis client dependency is not already present.
+- Modify: `packages/match-server/package.json` and lockfile only if a Redis dependency is required.
 
-- [ ] **Step 1: Write adapter contract test using a fake Redis client**
+- [ ] **Step 1: Write fake-client Redis adapter tests**
 
-```ts
-import { describe, test } from "node:test";
-import assert from "node:assert/strict";
-import type { MatchId } from "@optcg/types";
-import { createRedisMatchPersistence } from "./redis-match-persistence.js";
+Tests must cover:
 
-class FakeRedis {
-  readonly values = new Map<string, string>();
-  async set(key: string, value: string): Promise<void> {
-    this.values.set(key, value);
-  }
-  async get(key: string): Promise<string | null> {
-    return this.values.get(key) ?? null;
-  }
-  async keys(pattern: string): Promise<string[]> {
-    const prefix = pattern.replace("*", "");
-    return [...this.values.keys()].filter((key) => key.startsWith(prefix));
-  }
-  async rPush(key: string, value: string): Promise<void> {
-    const current = JSON.parse(this.values.get(key) ?? "[]") as string[];
-    current.push(value);
-    this.values.set(key, JSON.stringify(current));
-  }
-  async lRange(key: string): Promise<string[]> {
-    return JSON.parse(this.values.get(key) ?? "[]") as string[];
-  }
-}
+- `saveSnapshot` writes `state`, `meta`, and `manifest`;
+- `appendAction` writes to `match:{matchId}:actions`;
+- `appendDecision` writes to `match:{matchId}:decisions`;
+- `loadSnapshot` loads state/meta/manifest/actions/decisions;
+- `listActiveMatchIds` uses scan-style iteration, not `KEYS`;
+- `tryAcquireRecoveryLock` uses owner and TTL semantics;
+- `freezeMatch` writes lock/freeze metadata.
 
-describe("redis match persistence", () => {
-  test("uses spec-shaped active match keys", async () => {
-    const redis = new FakeRedis();
-    const persistence = createRedisMatchPersistence({ redis });
-
-    await persistence.freezeMatch({
-      matchId: "match-1" as MatchId,
-      reason: "test",
-      frozenAt: "2026-05-30T00:00:00.000Z",
-    });
-
-    assert.equal(redis.values.has("match:match-1:locks"), true);
-  });
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run Redis tests**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server exec vitest run --root ../.. packages/match-server/src/redis-match-persistence.test.ts
 ```
 
-Expected: FAIL because Redis adapter does not exist.
+Expected: FAIL because the adapter does not exist.
 
-- [ ] **Step 3: Implement Redis adapter behind a minimal client interface**
+- [ ] **Step 3: Implement adapter behind `RedisLike`**
 
-```ts
-import type { MatchId } from "@optcg/types";
-import type {
-  MatchPersistence,
-  MatchPersistenceSnapshot,
-  StoredActionRecord,
-} from "./session-types.js";
+Define a narrow `RedisLike` interface with only the operations required. The interface should model scan iteration and `set` with `NX`/`PX`-style options if the selected Redis client supports them. Do not call Redis `KEYS` in production code.
 
-export interface RedisLike {
-  set(key: string, value: string): Promise<unknown>;
-  get(key: string): Promise<string | null>;
-  keys(pattern: string): Promise<string[]>;
-  rPush(key: string, value: string): Promise<unknown>;
-  lRange(key: string, start: number, stop: number): Promise<string[]>;
-}
+Use spec-shaped keys:
 
-const key = (matchId: MatchId, suffix: string): string =>
-  `match:${String(matchId)}:${suffix}`;
-
-export const createRedisMatchPersistence = (input: {
-  redis: RedisLike;
-}): MatchPersistence => ({
-  async saveSnapshot(snapshot) {
-    const matchId = snapshot.metadata.matchId;
-    await input.redis.set(
-      key(matchId, "state"),
-      JSON.stringify(snapshot.state),
-    );
-    await input.redis.set(
-      key(matchId, "meta"),
-      JSON.stringify(snapshot.metadata),
-    );
-    await input.redis.set(
-      key(matchId, "manifest"),
-      JSON.stringify(snapshot.manifest),
-    );
-  },
-  async appendAction({ matchId, record }) {
-    await input.redis.rPush(key(matchId, "actions"), JSON.stringify(record));
-  },
-  async loadSnapshot(matchId) {
-    const [state, metadata, manifest, actions] = await Promise.all([
-      input.redis.get(key(matchId, "state")),
-      input.redis.get(key(matchId, "meta")),
-      input.redis.get(key(matchId, "manifest")),
-      input.redis.lRange(key(matchId, "actions"), 0, -1),
-    ]);
-    if (state === null || metadata === null || manifest === null) {
-      return undefined;
-    }
-    return {
-      state: JSON.parse(state),
-      metadata: JSON.parse(metadata),
-      manifest: JSON.parse(manifest),
-      actions: actions.map((entry) => JSON.parse(entry) as StoredActionRecord),
-    } satisfies MatchPersistenceSnapshot;
-  },
-  async listActiveMatchIds() {
-    const keys = await input.redis.keys("match:*:meta");
-    return keys.map((candidate) => candidate.split(":")[1] as MatchId);
-  },
-  async freezeMatch({ matchId, reason, frozenAt }) {
-    await input.redis.set(
-      key(matchId, "locks"),
-      JSON.stringify({ reason, frozenAt }),
-    );
-  },
-});
-```
+- `match:{matchId}:state`
+- `match:{matchId}:meta`
+- `match:{matchId}:manifest`
+- `match:{matchId}:actions`
+- `match:{matchId}:decisions`
+- `match:{matchId}:locks`
 
 - [ ] **Step 4: Run Redis adapter tests**
 
@@ -1366,35 +873,34 @@ Expected: PASS.
 
 ```powershell
 git add packages/match-server/src/redis-match-persistence.ts packages/match-server/src/redis-match-persistence.test.ts packages/match-server/package.json pnpm-lock.yaml
-git commit -m "Add Redis active match persistence adapter"
+git commit -m "Add Redis active match persistence"
 ```
 
 ---
 
-### Task 10: Export Infrastructure And Run Full Verification
+## Task 10: Exports And Verification
 
 **Files:**
 
 - Modify: `packages/match-server/src/index.ts`
-- Test: existing package export/cohesion tests if present.
+- Test: package export/cohesion tests if present.
 
-- [ ] **Step 1: Export public infrastructure modules**
+- [ ] **Step 1: Export server-safe infrastructure**
 
-In `packages/match-server/src/index.ts`:
+Export:
 
-```ts
-export * from "./action-envelope.js";
-export * from "./match-persistence.js";
-export * from "./match-recovery.js";
-export * from "./match-session.js";
-export * from "./match-session-store.js";
-export * from "./session-service.js";
-export * from "./session-types.js";
-```
+- `action-envelope`
+- `canonical-json`
+- `match-persistence`
+- `match-recovery`
+- `match-session`
+- `match-session-store`
+- `session-service`
+- `session-types`
 
-Do not export `redis-match-persistence.ts` if package policy treats Redis as deployment wiring only. If it should be public for server bootstrapping, export it explicitly and test that server-only code does not enter client bundles.
+Only export `redis-match-persistence` if server bootstrapping needs it from outside the package. Do not allow client code to import match-server modules.
 
-- [ ] **Step 2: Run focused test suite**
+- [ ] **Step 2: Run focused verification**
 
 ```powershell
 corepack pnpm --filter @optcg/match-server test
@@ -1413,9 +919,9 @@ corepack pnpm run contracts
 git diff --check
 ```
 
-Expected: all pass. If `corepack pnpm verify` is feasible, run it after the listed commands.
+Expected: PASS.
 
-- [ ] **Step 4: Commit exports**
+- [ ] **Step 4: Commit**
 
 ```powershell
 git add packages/match-server/src/index.ts
@@ -1424,20 +930,19 @@ git commit -m "Export match server infrastructure"
 
 ---
 
-## Plan Self-Review
+## Review Feedback Addressed
 
-Spec coverage:
+- Removed raw `GameState` from client-visible action results. It remains only in server-only persistence snapshots.
+- Replaced invented raw engine `Action` transport snippets with current dev request shapes.
+- Added complete immutable session metadata fields: creation source, disconnect policy, queue/lobby room for later, rollback policy, spectator policy.
+- Added action and decision persistence records.
+- Added recovery lock/freeze seams and a real missing-snapshot test requirement.
+- Strengthened Redis requirements: actions, decisions, manifest, locks, TTL/owner semantics, and scan-style discovery.
+- Required Vitest-style tests.
+- Replaced plain `JSON.stringify` hashing with stable canonical request hashing.
 
-- Match server owns sessions, action sequencing, reconnect/recovery surfaces: Tasks 1, 2, 3, 6, 7.
-- Action envelope and idempotency: Tasks 1, 2, 7, 8.
-- Redis active match persistence keys: Tasks 4, 5, 9.
-- Dev flow preservation: Tasks 7 and 8 route existing dev server/client through the new service.
-- Hidden info boundary: This plan does not project raw state to clients; existing filtered snapshot path remains the client output.
-- Recovery foundation: Task 6 adds recovery skeleton; full deterministic replay-through is intentionally not completed in this first slice.
+## Residual Risks
 
-Risk notes:
-
-- `local-match.ts` may need small exports. Do not move gameplay logic into new session files.
-- `actionHash` using `JSON.stringify` is acceptable only if existing action object construction is stable. If a canonical JSON helper already exists, use that instead.
-- Redis adapter tests should use a fake client, not a live Docker Redis dependency, so CI remains stable.
-- Full process restart replay from action logs is not complete until a later task replays accepted actions from the last clean snapshot.
+- Full deterministic replay-through from snapshot plus action/decision logs is still a later implementation slice. This plan creates typed seams and shallow recovery summaries only.
+- The client and server will temporarily duplicate canonical JSON hashing unless a later shared package is introduced.
+- The dev protocol remains dev-shaped; production queue/lobby creation can use the same session runtime after an API layer creates immutable `MatchSessionMetadata`.
