@@ -40,6 +40,10 @@ const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   }));
 
 const playSelectedSequence = (params: {
+  filter?: Extract<
+    Extract<Effect, { type: "sequence" }>["effects"][number]["effect"],
+    { type: "selectCards" }
+  >["filter"];
   max: number;
   min: number;
   pauseAfter?: boolean;
@@ -62,7 +66,7 @@ const playSelectedSequence = (params: {
         chooser: "self",
         min: params.min,
         max: params.max,
-        filter: { categories: ["character"] },
+        filter: params.filter ?? { categories: ["character"] },
         saveAs: "handSelection:play" as HandSelectionId,
         visibility: "chooserOnly",
       },
@@ -415,6 +419,72 @@ test("Character playSelected plays selected hand card rested without cost paymen
     false,
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("hand playSelected filters out Events that match non-category predicates", () => {
+  const state = sequenceQueueState(
+    playSelectedSequence({
+      min: 0,
+      max: 1,
+      filter: {
+        categories: ["character"],
+        colorsAny: ["black"],
+        typesAny: ["Five Elders"],
+        custom: "costLteSelfDonFieldCount",
+      },
+    }),
+  );
+  const player = must(state.players[p1], "p1");
+  const event = {
+    ...must(player.hand[0], "event candidate"),
+    cardId: "play-filter-event" as CardId,
+  };
+  const character = {
+    ...must(player.hand[1], "character candidate"),
+    cardId: "play-filter-character" as CardId,
+  };
+  player.hand = [event, character, ...player.hand.slice(2)];
+  player.costArea = Array.from({ length: 3 }, (_, index) => ({
+    ...player.leader,
+    instanceId: `don-for-filter-${String(index)}` as CardInstance["instanceId"],
+    cardId: `don-for-filter-${String(index)}` as CardId,
+    zone: {
+      zone: "costArea",
+      playerId: p1,
+      slot: "cost" as const,
+      index,
+    },
+    state: "active" as const,
+    attachedDon: [],
+  }));
+  state.cardManifest.cards[event.cardId] = {
+    ...resolvedCard({
+      cardId: event.cardId,
+      category: "event",
+      cost: 1,
+    }),
+    colors: ["black"],
+    types: ["Five Elders"],
+  };
+  state.cardManifest.cards[character.cardId] = {
+    ...resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 1,
+      power: 1000,
+    }),
+    colors: ["black"],
+    types: ["Five Elders"],
+  };
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selection");
+
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    [character.instanceId],
+  );
 });
 
 test("Character playSelected triggers its On Play after the parent sequence resolves", () => {

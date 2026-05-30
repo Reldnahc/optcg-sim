@@ -10,6 +10,7 @@ import {
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
   defaultDevDonCounts,
+  defaultDevEffectDefinitionsVersion,
   parseDevDecklistText,
   resolveDevDonCounts,
   type DevDeckCardEntry,
@@ -86,6 +87,10 @@ describe("default dev manifest boundary", () => {
       secondPlayer: 10,
     });
     assert.deepEqual(resolveDevDonCounts(defaultDevDonCounts), [6, 10]);
+  });
+
+  test("dev generated effect definition cache version invalidates parser-output changes", () => {
+    assert.equal(defaultDevEffectDefinitionsVersion, "generated-dev-v3");
   });
 
   test("dev RNG seed is fresh for each generated setup", () => {

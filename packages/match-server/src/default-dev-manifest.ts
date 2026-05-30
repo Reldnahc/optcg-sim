@@ -111,6 +111,8 @@ export const defaultDevDonCounts: DevDonCounts = {
   secondPlayer: 10,
 };
 
+export const defaultDevEffectDefinitionsVersion = "generated-dev-v3";
+
 const assertValidDevDonCount = (value: number, label: string): number => {
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`${label} must be a positive integer.`);
@@ -191,7 +193,7 @@ export const createDefaultDevMatchSetup = async (
     devDonCount,
     versions: {
       cardDataVersion: "live-poneglyph-dev-v1",
-      effectDefinitionsVersion: "generated-dev-v2",
+      effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
     },
     ...(cache === undefined ? {} : { cache }),
     ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
