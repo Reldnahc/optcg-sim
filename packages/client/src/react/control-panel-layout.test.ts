@@ -2,8 +2,10 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import {
+  controlDockHeightFromDrag,
   controlDockSlotRect,
   controlRailWidthFromDrag,
+  defaultControlDockHeight,
   defaultControlRailWidth,
   resolveControlDockSnapRect,
   resizeDockedWindowRects,
@@ -44,6 +46,38 @@ describe("control panel layout", () => {
         playmatRight: 980,
       }),
       220,
+    );
+  });
+
+  test("resizes the dock slot vertically inside the control panel", () => {
+    assert.equal(
+      controlDockHeightFromDrag({
+        startHeight: defaultControlDockHeight,
+        startClientY: 620,
+        currentClientY: 540,
+        controlPanelHeight: 680,
+      }),
+      400,
+    );
+
+    assert.equal(
+      controlDockHeightFromDrag({
+        startHeight: defaultControlDockHeight,
+        startClientY: 620,
+        currentClientY: 260,
+        controlPanelHeight: 680,
+      }),
+      520,
+    );
+
+    assert.equal(
+      controlDockHeightFromDrag({
+        startHeight: defaultControlDockHeight,
+        startClientY: 620,
+        currentClientY: 900,
+        controlPanelHeight: 680,
+      }),
+      180,
     );
   });
 

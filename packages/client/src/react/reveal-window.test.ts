@@ -15,6 +15,7 @@ const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const revealStylesPath = join(sourceDirectory, "styles", "reveal-window.css");
 const mainPath = join(sourceDirectory, "main.tsx");
 const matchAppPath = join(sourceDirectory, "MatchApp.tsx");
+const revealLayerPath = join(sourceDirectory, "OpponentRevealWindowLayer.tsx");
 
 const card = (imageUrl: string): ClientCardModel => ({
   instanceId: "revealed-1" as InstanceId,
@@ -63,10 +64,10 @@ describe("reveal window", () => {
   });
 
   test("large reveal card sizing is isolated from collection grid sizing", async () => {
-    const [styles, mainSource, matchAppSource] = await Promise.all([
+    const [styles, mainSource, revealLayerSource] = await Promise.all([
       readFile(revealStylesPath, "utf8"),
       readFile(mainPath, "utf8"),
-      readFile(matchAppPath, "utf8"),
+      readFile(revealLayerPath, "utf8"),
     ]);
 
     assert.match(styles, /\.reveal-window-card-spot/u);
@@ -76,36 +77,40 @@ describe("reveal window", () => {
     );
     assert.match(styles, /\.reveal-window-card-spot\s+\.card-tile-shell/u);
     assert.match(mainSource, /styles\/reveal-window\.css/u);
-    assert.match(matchAppSource, /RevealWindowHost/u);
+    assert.match(revealLayerSource, /RevealWindowHost/u);
   });
 
   test("match app renders one reveal window for each active reveal", async () => {
-    const source = await readFile(matchAppPath, "utf8");
+    const [matchAppSource, revealLayerSource] = await Promise.all([
+      readFile(matchAppPath, "utf8"),
+      readFile(revealLayerPath, "utf8"),
+    ]);
 
-    assert.match(source, /opponentRevealWindows\s*[\s\S]*\.filter/u);
-    assert.match(source, /activeDockedWindowIds\.has\(revealWindowKey/u);
-    assert.match(source, /\.map\(\(revealWindow\) =>/u);
-    assert.doesNotMatch(source, /model=\{opponentRevealWindow\}/u);
+    assert.match(matchAppSource, /OpponentRevealWindowLayer/u);
+    assert.match(revealLayerSource, /windows\s*[\s\S]*\.filter/u);
+    assert.match(
+      revealLayerSource,
+      /activeDockedWindowIds\.has\(revealWindowKey/u,
+    );
+    assert.match(revealLayerSource, /\.map\(\(revealWindow\) =>/u);
+    assert.doesNotMatch(revealLayerSource, /model=\{opponentRevealWindow\}/u);
   });
 
   test("reveal windows use persisted floating window rectangle wiring", async () => {
-    const [matchAppSource, revealWindowSource] = await Promise.all([
-      readFile(matchAppPath, "utf8"),
-      readFile(join(sourceDirectory, "RevealWindowHost.tsx"), "utf8"),
-    ]);
+    const [revealLayerSource, revealWindowSource, revealWindowModelSource] =
+      await Promise.all([
+        readFile(revealLayerPath, "utf8"),
+        readFile(join(sourceDirectory, "RevealWindowHost.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "opponent-reveal-windows.ts"), "utf8"),
+      ]);
 
     assert.match(
-      matchAppSource,
+      revealWindowModelSource,
       /const revealWindowKey = \(revealId: string\)/u,
     );
-    assert.match(
-      matchAppSource,
-      /activeFloatingWindowRects\[revealWindowKey\(revealWindow\.revealId\)\]/u,
-    );
-    assert.match(
-      matchAppSource,
-      /updateFloatingWindowRect\(\s*revealWindowKey\(revealWindow\.revealId\),\s*rect,\s*\)/u,
-    );
+    assert.match(revealLayerSource, /const windowKey = revealWindowKey/u);
+    assert.match(revealLayerSource, /activeFloatingWindowRects\[windowKey\]/u);
+    assert.match(revealLayerSource, /onRectChange\(windowKey, rect\)/u);
     assert.match(
       revealWindowSource,
       /onRectChange\?: \(\(rect: WindowRect\) => void\)/u,

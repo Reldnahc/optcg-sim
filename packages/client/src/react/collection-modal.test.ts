@@ -328,13 +328,23 @@ describe("collection modal", () => {
       join(sourceDirectory, "reveal-viewer.ts"),
       "utf8",
     );
+    const opponentRevealWindowsSource = await readFile(
+      join(sourceDirectory, "opponent-reveal-windows.ts"),
+      "utf8",
+    );
+    const revealWindowLayerSource = await readFile(
+      join(sourceDirectory, "OpponentRevealWindowLayer.tsx"),
+      "utf8",
+    );
 
-    assert.match(source, /opponentRevealsFromEvents/u);
-    assert.match(source, /title: reveal\.title/u);
+    assert.match(source, /opponentRevealWindowsFromState/u);
+    assert.match(opponentRevealWindowsSource, /opponentRevealsFromEvents/u);
+    assert.match(opponentRevealWindowsSource, /title: reveal\.title/u);
     assert.match(revealViewerSource, /Opponent revealed/u);
     assert.match(revealViewerSource, /Revealed/u);
     assert.match(source, /updateRevealWindowState/u);
-    assert.match(source, /RevealWindowHost/u);
+    assert.match(source, /OpponentRevealWindowLayer/u);
+    assert.match(revealWindowLayerSource, /RevealWindowHost/u);
     assert.doesNotMatch(source, /opponentRevealModal/u);
     assert.match(source, /activeRevealWindowState\.minimized/u);
   });

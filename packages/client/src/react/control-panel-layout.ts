@@ -5,6 +5,9 @@ export const defaultControlRailWidth = 260;
 export const minControlRailWidth = 220;
 export const controlRailRightInset = 8;
 export const controlRailPlaymatGap = 8;
+export const defaultControlDockHeight = 320;
+export const minControlDockHeight = 180;
+export const controlDockVerticalReservedSpace = 160;
 
 export interface ControlRailWidthInput {
   requestedWidth: number;
@@ -51,6 +54,44 @@ export const controlRailWidthFromDrag = ({
     requestedWidth: startWidth + startClientX - currentClientX,
     viewportWidth,
     playmatRight,
+  });
+
+export const maxControlDockHeight = ({
+  controlPanelHeight,
+}: {
+  controlPanelHeight: number;
+}): number =>
+  Math.max(
+    minControlDockHeight,
+    controlPanelHeight - controlDockVerticalReservedSpace,
+  );
+
+export const clampControlDockHeight = ({
+  requestedHeight,
+  controlPanelHeight,
+}: {
+  requestedHeight: number;
+  controlPanelHeight: number;
+}): number =>
+  Math.min(
+    Math.max(minControlDockHeight, requestedHeight),
+    maxControlDockHeight({ controlPanelHeight }),
+  );
+
+export const controlDockHeightFromDrag = ({
+  startHeight,
+  startClientY,
+  currentClientY,
+  controlPanelHeight,
+}: {
+  startHeight: number;
+  startClientY: number;
+  currentClientY: number;
+  controlPanelHeight: number;
+}): number =>
+  clampControlDockHeight({
+    requestedHeight: startHeight + startClientY - currentClientY,
+    controlPanelHeight,
   });
 
 export const controlDockSlotRect = ({

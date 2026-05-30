@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
 
 import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
+import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
 
 export interface ControlDockTab {
   id: string;
@@ -14,14 +15,21 @@ export interface ControlRailProps {
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
   width?: number | undefined;
+  dockHeight?: number | undefined;
   dockActive?: boolean | undefined;
   dockTabs?: readonly ControlDockTab[] | undefined;
   activeDockTabId?: string | undefined;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
   onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onDockResizePointerDown?:
+    | ((event: React.PointerEvent<HTMLButtonElement>) => void)
+    | undefined;
   onDockTabChange?: ((tabId: string) => void) | undefined;
   onDockTabClose?: ((tabId: string) => void) | undefined;
+  onDockTabDragOut?:
+    | ((tabId: string, point: TabDragOutPoint) => void)
+    | undefined;
   rollbackStatus?:
     | {
         message: string;
@@ -42,14 +50,17 @@ export const ControlRail = ({
   globalActions,
   disabled,
   width,
+  dockHeight,
   dockActive = false,
   dockTabs = [],
   activeDockTabId,
   onAction,
   onNewMatch,
   onResizePointerDown,
+  onDockResizePointerDown,
   onDockTabChange,
   onDockTabClose,
+  onDockTabDragOut,
   rollbackStatus,
   onCancelRollback,
   concedeDisabled = true,
@@ -59,10 +70,27 @@ export const ControlRail = ({
   previewControl,
   actionLogControl,
 }: ControlRailProps): React.JSX.Element => {
+  const tabDragStart = useRef<
+    | {
+        tabId: string;
+        pointerId: number;
+        clientX: number;
+        clientY: number;
+      }
+    | undefined
+  >(undefined);
+  const suppressTabClick = useRef(false);
   const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
   const activeDockTab =
     dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
   const hasDockedWindow = activeDockTab !== undefined;
+  const tabDragOutDistance = 32;
+  const controlsPanelStyle:
+    | (CSSProperties & { "--control-window-dock-height"?: string })
+    | undefined =
+    dockHeight === undefined
+      ? undefined
+      : { "--control-window-dock-height": `${String(dockHeight)}px` };
 
   return (
     <aside
@@ -81,7 +109,7 @@ export const ControlRail = ({
       <section className="summary-panel opponent-summary">
         <h2>Opponent</h2>
       </section>
-      <section className="controls-panel">
+      <section className="controls-panel" style={controlsPanelStyle}>
         <div className="control-tool-strip">
           {previewControl === undefined ? null : (
             <div className="control-preview-slot">{previewControl}</div>
@@ -164,6 +192,13 @@ export const ControlRail = ({
             .join(" ")}
           aria-label="Window dock"
         >
+          <button
+            className="control-window-dock-resize-handle"
+            type="button"
+            aria-label="Resize dock"
+            title="Resize dock"
+            onPointerDown={onDockResizePointerDown}
+          />
           {activeDockTab === undefined ? (
             <span>Drop windows here</span>
           ) : (
@@ -183,7 +218,83 @@ export const ControlRail = ({
                       type="button"
                       role="tab"
                       aria-selected={selected}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        suppressTabClick.current = false;
+                        tabDragStart.current = {
+                          tabId: tab.id,
+                          pointerId: event.pointerId,
+                          clientX: event.clientX,
+                          clientY: event.clientY,
+                        };
+                      }}
+                      onPointerMove={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const start = tabDragStart.current;
+                        if (
+                          start === undefined ||
+                          start.pointerId !== event.pointerId ||
+                          start.tabId !== tab.id
+                        ) {
+                          return;
+                        }
+                        const distance =
+                          Math.abs(event.clientX - start.clientX) +
+                          Math.abs(event.clientY - start.clientY);
+                        if (distance < tabDragOutDistance) {
+                          return;
+                        }
+                        tabDragStart.current = undefined;
+                        suppressTabClick.current = true;
+                        if (
+                          event.currentTarget.hasPointerCapture(event.pointerId)
+                        ) {
+                          event.currentTarget.releasePointerCapture(
+                            event.pointerId,
+                          );
+                        }
+                        onDockTabDragOut?.(tab.id, {
+                          x: event.clientX,
+                          y: event.clientY,
+                          pointerId: event.pointerId,
+                        });
+                      }}
+                      onPointerUp={(event) => {
+                        event.stopPropagation();
+                        const start = tabDragStart.current;
+                        tabDragStart.current = undefined;
+                        if (
+                          start === undefined ||
+                          start.pointerId !== event.pointerId ||
+                          start.tabId !== tab.id
+                        ) {
+                          return;
+                        }
+                        const distance =
+                          Math.abs(event.clientX - start.clientX) +
+                          Math.abs(event.clientY - start.clientY);
+                        if (distance >= tabDragOutDistance) {
+                          suppressTabClick.current = true;
+                          return;
+                        }
+                        onDockTabChange?.(tab.id);
+                      }}
+                      onPointerCancel={(event) => {
+                        event.stopPropagation();
+                        if (
+                          tabDragStart.current?.pointerId === event.pointerId
+                        ) {
+                          tabDragStart.current = undefined;
+                        }
+                      }}
                       onClick={() => {
+                        if (suppressTabClick.current) {
+                          suppressTabClick.current = false;
+                          return;
+                        }
                         onDockTabChange?.(tab.id);
                       }}
                     >
@@ -195,6 +306,7 @@ export const ControlRail = ({
                   className="control-dock-window-close"
                   type="button"
                   aria-label={`Close ${activeDockTab.title}`}
+                  title={`Close ${activeDockTab.title}`}
                   onClick={() => {
                     onDockTabClose?.(activeDockTab.id);
                   }}

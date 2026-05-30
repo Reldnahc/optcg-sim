@@ -3,16 +3,20 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { WindowRect } from "./FloatingWindow.js";
 import {
+  controlDockHeightFromDrag,
   controlDockSlotRect,
   controlRailWidthFromDrag,
+  defaultControlDockHeight,
   defaultControlRailWidth,
   resolveControlDockSnapRect,
 } from "./control-panel-layout.js";
 
 export interface ControlPanelLayoutController {
   controlRailWidth: number;
+  controlDockHeight: number;
   controlDockActive: boolean;
   startControlRailResize: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  startControlDockResize: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   updateControlDockTarget: (rect: WindowRect) => void;
   completeControlDockDrop: (rect: WindowRect) => WindowRect | undefined;
   currentControlDockSlotRect: () => WindowRect | undefined;
@@ -51,6 +55,9 @@ const playmatRightEdge = (fallbackRailWidth: number): number => {
 export const useControlPanelLayout = (): ControlPanelLayoutController => {
   const [controlRailWidth, setControlRailWidth] = useState(
     defaultControlRailWidth,
+  );
+  const [controlDockHeight, setControlDockHeight] = useState(
+    defaultControlDockHeight,
   );
   const [controlDockActive, setControlDockActive] = useState(false);
 
@@ -117,10 +124,46 @@ export const useControlPanelLayout = (): ControlPanelLayoutController => {
     [controlRailWidth],
   );
 
+  const startControlDockResize = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>): void => {
+      if (typeof document === "undefined") {
+        return;
+      }
+      event.preventDefault();
+      const controlsPanelRect = elementRect(".controls-panel");
+      if (controlsPanelRect === undefined) {
+        return;
+      }
+      const startHeight = controlDockHeight;
+      const startClientY = event.clientY;
+      const move = (moveEvent: PointerEvent): void => {
+        setControlDockHeight(
+          controlDockHeightFromDrag({
+            startHeight,
+            startClientY,
+            currentClientY: moveEvent.clientY,
+            controlPanelHeight: controlsPanelRect.height,
+          }),
+        );
+      };
+      const stop = (): void => {
+        document.removeEventListener("pointermove", move, true);
+        document.removeEventListener("pointerup", stop, true);
+        document.removeEventListener("pointercancel", stop, true);
+      };
+      document.addEventListener("pointermove", move, true);
+      document.addEventListener("pointerup", stop, true);
+      document.addEventListener("pointercancel", stop, true);
+    },
+    [controlDockHeight],
+  );
+
   return {
     controlRailWidth,
+    controlDockHeight,
     controlDockActive,
     startControlRailResize,
+    startControlDockResize,
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,

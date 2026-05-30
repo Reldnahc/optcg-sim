@@ -27,6 +27,7 @@ import {
 } from "./collection-window-model.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
+import { dockWindowPoppedOutSize } from "./dock-window-popout.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import {
   combineDropTargetForWindow,
@@ -49,8 +50,10 @@ import {
   standaloneInfoWindowIds as standaloneInfoWindowIdsFromState,
   visibleInfoWindowIds as visibleInfoWindowIdsFromState,
 } from "./info-window-model.js";
-import { RevealWindowHost } from "./RevealWindowHost.js";
-import { opponentRevealsFromEvents } from "./reveal-viewer.js";
+import {
+  opponentRevealWindowsFromState,
+} from "./opponent-reveal-windows.js";
+import { OpponentRevealWindowLayer } from "./OpponentRevealWindowLayer.js";
 import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
@@ -65,8 +68,6 @@ import { usePoppedOutWindowDrag } from "./use-popped-out-window-drag.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
-
-const revealWindowKey = (revealId: string): string => `reveal:${revealId}`;
 
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
@@ -90,8 +91,10 @@ export const MatchApp = (): React.JSX.Element => {
   >(undefined);
   const {
     controlRailWidth,
+    controlDockHeight,
     controlDockActive,
     startControlRailResize,
+    startControlDockResize,
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,
@@ -142,7 +145,6 @@ export const MatchApp = (): React.JSX.Element => {
     updateFloatingWindowRect,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
-    dockFloatingWindow,
     dockFloatingWindows,
     updateDockedWindowRects,
   } = useFloatingWindowState({ matchScope, revealWindowStateStore });
@@ -330,30 +332,14 @@ export const MatchApp = (): React.JSX.Element => {
   useEffect(() => {
     setCollectionMinimized(false);
   }, [renderedCollectionKey]);
-  const opponentReveals =
-    currentPlayerId === undefined ||
-    playerSnapshot === undefined ||
-    matchScope === undefined ||
-    revealWindowState.scope !== matchScope
-      ? []
-      : opponentRevealsFromEvents(
-          playerSnapshot.view.events,
-          currentPlayerId,
-          activeRevealWindowState.dismissed,
-        );
-  const opponentRevealWindows = opponentReveals.map((reveal, index) => ({
-    revealId: reveal.revealId,
-    initialRect: {
-      x: 380 + index * 24,
-      y: 100 + index * 24,
-      width: 300,
-      height: 420,
-    },
-    model: {
-      title: reveal.title,
-      cards: reveal.cards.map((card) => cardModel(card)),
-    },
-  }));
+  const opponentRevealWindows = opponentRevealWindowsFromState({
+    currentPlayerId,
+    playerSnapshot,
+    matchScope,
+    revealWindowState,
+    activeDismissedRevealIds: activeRevealWindowState.dismissed,
+    cardModel,
+  });
   const actionLogEntries = useMemo(
     () =>
       playerSnapshot === undefined || matchState === undefined
@@ -502,9 +488,26 @@ export const MatchApp = (): React.JSX.Element => {
     if (dockRect === undefined) {
       return undefined;
     }
-    dockFloatingWindow(windowKey, dockRect);
+    dockFloatingWindows({ windowKeys: [windowKey], rect: dockRect });
     setControlDockActiveTabId(windowKey);
-    return dockRect;
+    return undefined;
+  };
+  const dragOutDockWindow = (
+    windowKey: string,
+    point: TabDragOutPoint,
+  ): void => {
+    const dockedSize = dockWindowPoppedOutSize(windowKey);
+    const nextRect = splitWindowRectFromPoint(point, dockedSize);
+    updateFloatingWindowRect(windowKey, nextRect);
+    setControlDockActiveTabId(undefined);
+    startPoppedOutDrag({
+      pointerId: point.pointerId,
+      windowKey,
+      offsetX: dockedSize.width / 2,
+      offsetY: 20,
+      width: dockedSize.width,
+      height: dockedSize.height,
+    });
   };
   const dockInfoWindowTabs = (
     draggedWindowIds: readonly InfoWindowTabId[],
@@ -535,7 +538,7 @@ export const MatchApp = (): React.JSX.Element => {
     }
     dockInfoWindowTabs([draggedWindowId], dockRect);
     setCombineDropTarget(undefined);
-    return dockRect;
+    return undefined;
   };
   const completeInfoGroupDrag = (rect: WindowRect): WindowRect | undefined => {
     const dockRect = completeControlDockDrop(rect);
@@ -544,7 +547,7 @@ export const MatchApp = (): React.JSX.Element => {
     }
     dockInfoWindowTabs(groupedInfoWindowIds, dockRect);
     setCombineDropTarget(undefined);
-    return dockRect;
+    return undefined;
   };
   const splitInfoWindowTab = (
     tabId: InfoWindowTabId,
@@ -625,6 +628,7 @@ export const MatchApp = (): React.JSX.Element => {
     }
   }, [
     activeDockedWindowIds.size,
+    controlDockHeight,
     controlRailWidth,
     currentControlDockSlotRect,
     updateDockedWindowRects,
@@ -670,12 +674,15 @@ export const MatchApp = (): React.JSX.Element => {
         globalActions={visibleGlobalActions}
         disabled={client.state.actionInFlight}
         width={controlRailWidth}
+        dockHeight={controlDockHeight}
         dockActive={controlDockActive}
         dockTabs={controlDockTabs}
         activeDockTabId={controlDockActiveTabId}
         onResizePointerDown={startControlRailResize}
+        onDockResizePointerDown={startControlDockResize}
         onDockTabChange={setControlDockActiveTabId}
         onDockTabClose={closeDockWindow}
+        onDockTabDragOut={dragOutDockWindow}
         onAction={(actionIndex) => {
           setConcedeConfirming(false);
           void client.submitAction(actionIndex);
@@ -799,55 +806,37 @@ export const MatchApp = (): React.JSX.Element => {
           }
         />
       )}
-      {opponentRevealWindows
-        .filter(
-          (revealWindow) =>
-            !activeDockedWindowIds.has(revealWindowKey(revealWindow.revealId)),
-        )
-        .map((revealWindow) => (
-        <RevealWindowHost
-          key={revealWindow.revealId}
-          model={revealWindow.model}
-          initialRect={
-            activeFloatingWindowRects[revealWindowKey(revealWindow.revealId)] ??
-            revealWindow.initialRect
-          }
-          minimized={activeRevealWindowState.minimized.has(
-            revealWindow.revealId,
-          )}
-          onToggleMinimized={() => {
-            updateRevealWindowState((state) => {
-              if (state.minimized.has(revealWindow.revealId)) {
-                state.minimized.delete(revealWindow.revealId);
-              } else {
-                state.minimized.add(revealWindow.revealId);
-              }
-              return state;
-            });
-          }}
-          onPreviewCard={previewHoveredCard}
-          onClose={() => {
-            updateRevealWindowState((state) => {
-              state.dismissed.add(revealWindow.revealId);
-              state.minimized.delete(revealWindow.revealId);
-              return state;
-            });
-          }}
-          onRectChange={(rect) => {
-            updateFloatingWindowRect(
-              revealWindowKey(revealWindow.revealId),
-              rect,
-            );
-          }}
-          onDragMove={updateControlDockTarget}
-          onDragEnd={(rect) =>
-            completeDockableWindowDrag(
-              revealWindowKey(revealWindow.revealId),
-              rect,
-            )
-          }
-        />
-        ))}
+      <OpponentRevealWindowLayer
+        windows={opponentRevealWindows}
+        activeDockedWindowIds={activeDockedWindowIds}
+        activeFloatingWindowRects={activeFloatingWindowRects}
+        minimizedRevealIds={activeRevealWindowState.minimized}
+        onToggleMinimized={(revealId) => {
+          updateRevealWindowState((state) => {
+            if (state.minimized.has(revealId)) {
+              state.minimized.delete(revealId);
+            } else {
+              state.minimized.add(revealId);
+            }
+            return state;
+          });
+        }}
+        onPreviewCard={previewHoveredCard}
+        onClose={(revealId) => {
+          updateRevealWindowState((state) => {
+            state.dismissed.add(revealId);
+            state.minimized.delete(revealId);
+            return state;
+          });
+        }}
+        onRectChange={(windowKey, rect) => {
+          updateFloatingWindowRect(windowKey, rect);
+        }}
+        onDragMove={updateControlDockTarget}
+        onDragEnd={(windowKey, rect) =>
+          completeDockableWindowDrag(windowKey, rect)
+        }
+      />
       {showTabbedInfoWindow && dockedInfoTabIds.length === 0 ? (
         <InfoTabbedWindow
           previewCard={previewCard}
