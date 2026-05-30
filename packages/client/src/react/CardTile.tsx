@@ -359,7 +359,10 @@ export const CardTile = ({
         {card.keywords === undefined || card.keywords.length === 0 ? null : (
           <span className="keyword-badges" aria-label="Card keywords">
             {card.keywords.map((keyword) => (
-              <span key={keyword} className="keyword-badge">
+              <span
+                key={keyword}
+                className="keyword-badge keyword-badge-positive"
+              >
                 {keywordLabel(keyword)}
               </span>
             ))}

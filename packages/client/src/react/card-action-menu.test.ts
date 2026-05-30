@@ -388,7 +388,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes("-1"), true);
   });
 
-  test("renders field card keyword labels as green black-box badges", async () => {
+  test("renders field card keyword labels with the shared power and cost badge treatment", async () => {
     const layout = board();
     layout.self.leader = {
       ...layout.self.leader,
@@ -421,12 +421,13 @@ describe("card action menu", () => {
     assert.equal(markup.includes("blocker"), true);
     assert.equal(markup.includes("double attack"), true);
     assert.equal(markup.includes("rush"), true);
-    assert.match(styles, /\.keyword-badge\s*\{[^}]*border-radius:\s*3px;/u);
-    assert.match(styles, /\.keyword-badge\s*\{[^}]*padding:\s*1px 3px;/u);
-    assert.match(styles, /\.keyword-badge\s*\{[^}]*color:\s*#42e67c;/u);
     assert.match(
       styles,
-      /\.keyword-badge\s*\{[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);/u,
+      /\.power-delta,\s*\.cost-delta,\s*\.keyword-badge\s*\{[^}]*border-radius:\s*3px;[^}]*padding:\s*1px 3px;[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);[^}]*font-size:\s*10px;[^}]*font-weight:\s*800;/u,
+    );
+    assert.match(
+      styles,
+      /\.keyword-badge-positive\s*\{[^}]*color:\s*#42e67c;/u,
     );
   });
 

@@ -195,7 +195,8 @@
 }
 
 .power-delta,
-.cost-delta {
+.cost-delta,
+.keyword-badge {
   position: absolute;
   border-radius: 3px;
   padding: 1px 3px;
@@ -218,7 +219,8 @@
 }
 
 .power-delta-positive,
-.cost-delta-positive {
+.cost-delta-positive,
+.keyword-badge-positive {
   color: #42e67c;
 }
 
@@ -242,15 +244,7 @@
 }
 
 .keyword-badge {
-  border-radius: 3px;
-  padding: 1px 3px;
-  color: #42e67c;
-  background: rgba(12, 12, 12, 0.78);
-  font-size: 8px;
-  font-weight: 900;
-  line-height: 1.1;
-  text-transform: lowercase;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
+  position: static;
 }
 
 .card-action-popover {
