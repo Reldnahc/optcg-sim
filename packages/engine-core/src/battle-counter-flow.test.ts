@@ -166,7 +166,7 @@ test("counter-step legal actions expose defender pass and Character Counters wit
   ]);
 });
 
-test("counter-step legal actions suppress pass for unsupported continuation", () => {
+test("counter-step legal actions keep pass for unsupported damage continuation", () => {
   const context = setupOpenedCounterStepPassDecision();
   const p2State = must(context.openedState.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
@@ -191,6 +191,11 @@ test("counter-step legal actions suppress pass for unsupported continuation", ()
 
   assert.deepEqual(getLegalActions(context.openedState, p2), [
     { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: context.decision.id,
+      response: { type: "cards", cards: [] },
+    },
     {
       type: "useCounter",
       cardInstanceId: context.counterCard.instanceId,

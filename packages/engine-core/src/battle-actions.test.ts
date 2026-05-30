@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { EffectDefinition } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
@@ -309,6 +309,59 @@ test("unsupported trigger/blocker/counter windows fail closed without mutation",
       damageCount: 1,
     };
   });
+});
+
+test("counter-step pass remains legal even when damage continuation would fail closed", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  const unsupportedTriggerCardId = toCardId("unsupported-trigger-life");
+  p2State.life[0] = {
+    ...must(p2State.life[0], "top life"),
+    card: {
+      ...must(p2State.life[0], "top life").card,
+      cardId: unsupportedTriggerCardId,
+    },
+  };
+  state.cardManifest.cards[unsupportedTriggerCardId] = {
+    ...resolvedCard({
+      cardId: unsupportedTriggerCardId,
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: unsupported",
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  const decision = must(opened.state.pendingDecision, "counter decision");
+  const actions = getLegalActions(opened.state, p2);
+  assert.equal(
+    actions.some((action) => action.type === "useCounter"),
+    true,
+  );
+  assert.equal(
+    actions.some(
+      (action) =>
+        action.type === "respondToDecision" &&
+        action.decisionId === decision.id &&
+        action.response.type === "cards" &&
+        action.response.cards.length === 0,
+    ),
+    true,
+  );
 });
 
 test("banish combined with doubleAttack fails closed without mutation", () => {

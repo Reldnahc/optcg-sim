@@ -159,16 +159,47 @@ export const getCounterStepDecisionLegalActions = (
   ) {
     return [];
   }
-  const actions: LegalAction[] = [];
-  if (getUnsupportedDamageStepContinuationReason(state) === undefined) {
-    actions.push({
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "cards", cards: [] },
-    });
-  }
+  const actions: LegalAction[] = canOfferCounterStepPassAction(state)
+    ? [
+        {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response: { type: "cards", cards: [] },
+        },
+      ]
+    : [];
   actions.push(...getLegalCharacterCounterActions(state, decision.playerId));
   return actions;
+};
+
+const canOfferCounterStepPassAction = (state: GameState): boolean => {
+  const battle = state.battle;
+  if (
+    battle === undefined ||
+    battle.step !== "counter" ||
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    !isSupportedBattleResolutionEnvelope(battle)
+  ) {
+    return false;
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return false;
+  }
+  if (!target.isLeader && target.card.state !== "rested") {
+    return false;
+  }
+  if (battle.blocker === undefined) {
+    return true;
+  }
+  const blocker = reifyCardRef(state, battle.blocker);
+  return (
+    blocker !== null &&
+    !blocker.isLeader &&
+    sameCardRef(battle.blocker, battle.currentTarget)
+  );
 };
 
 const getLegalCharacterCounterActions = (
