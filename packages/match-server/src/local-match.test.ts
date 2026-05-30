@@ -130,7 +130,7 @@ const advanceUntilPlayable = (
     const nextAction = activeSnapshot.actions.find(
       (action) =>
         action.label.includes("Advance to main phase") ||
-        action.label.includes("End main phase"),
+        action.label.includes("End turn"),
     );
     if (nextAction === undefined) {
       return snapshot;
@@ -328,7 +328,7 @@ describe("local dev match", () => {
     assert.equal(main.turn.phase, "main");
     assert.ok(
       mustPlayerSnapshot(main, p1).actions.some((action) =>
-        action.label.includes("End main phase"),
+        action.label.includes("End turn"),
       ),
     );
   });
@@ -338,7 +338,7 @@ describe("local dev match", () => {
     const main = keepBothPlayersAndAdvance(match);
     const endMain = actionIndexByLabel(
       mustPlayerSnapshot(main, p1).actions,
-      "End main phase",
+      "End turn",
     );
 
     const result = applyLocalDevAction(match, {
@@ -353,7 +353,7 @@ describe("local dev match", () => {
     assert.equal(after.activePlayerId, p2);
     assert.ok(
       mustPlayerSnapshot(after, p2).actions.some((action) =>
-        action.label.includes("End main phase"),
+        action.label.includes("End turn"),
       ),
     );
     assert.equal(
@@ -445,7 +445,7 @@ describe("local dev match", () => {
     for (let step = 0; step < 2; step += 1) {
       const current = mustPlayerSnapshot(snapshot, snapshot.activePlayerId);
       const endMain = current.actions.find((action) =>
-        action.label.includes("End main phase"),
+        action.label.includes("End turn"),
       );
       if (endMain === undefined) {
         throw new Error("Expected end-main action while setting up attack.");
@@ -481,7 +481,7 @@ describe("local dev match", () => {
     for (let step = 0; step < 2; step += 1) {
       const current = mustPlayerSnapshot(snapshot, snapshot.activePlayerId);
       const endMain = current.actions.find((action) =>
-        action.label.includes("End main phase"),
+        action.label.includes("End turn"),
       );
       if (endMain === undefined) {
         throw new Error("Expected end-main action while setting up attack.");
@@ -513,7 +513,7 @@ describe("local dev match", () => {
     for (let step = 0; step < 2; step += 1) {
       const current = mustPlayerSnapshot(snapshot, snapshot.activePlayerId);
       const endMain = current.actions.find((action) =>
-        action.label.includes("End main phase"),
+        action.label.includes("End turn"),
       );
       if (endMain === undefined) {
         throw new Error("Expected end-main action while setting up attack.");
@@ -678,7 +678,7 @@ describe("local dev match", () => {
     const before = keepBothPlayersAndAdvance(match);
     const endMainIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
-      "End main phase",
+      "End turn",
     );
     const first = applyLocalDevAction(match, {
       playerId: p1,
@@ -705,7 +705,7 @@ describe("local dev match", () => {
     const before = keepBothPlayersAndAdvance(match);
     const endMainIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
-      "End main phase",
+      "End turn",
     );
     const applied = applyLocalDevAction(match, {
       playerId: p1,
@@ -748,7 +748,7 @@ describe("local dev match", () => {
     const before = keepBothPlayersAndAdvance(match);
     const endMainIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
-      "End main phase",
+      "End turn",
     );
     const applied = applyLocalDevAction(match, {
       playerId: p1,
@@ -855,7 +855,7 @@ describe("local dev match", () => {
     const before = keepBothPlayersAndAdvance(match);
     const endMainIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
-      "End main phase",
+      "End turn",
     );
     const applied = applyLocalDevAction(match, {
       playerId: p1,
@@ -898,7 +898,7 @@ describe("local dev match", () => {
     const before = keepBothPlayersAndAdvance(match);
     const endMainIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
-      "End main phase",
+      "End turn",
     );
     const applied = applyLocalDevAction(match, {
       playerId: p1,

@@ -513,7 +513,7 @@ const actionLabel = (state: GameState, action: LegalAction): string => {
     case "useCounter":
       return `Counter with ${instanceName(state, action.cardInstanceId)}`;
     case "endMainPhase":
-      return "End main phase";
+      return "End turn";
     case "concede":
       return "Concede";
     case "respondToDecision":
