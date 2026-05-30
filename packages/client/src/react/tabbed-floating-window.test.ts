@@ -130,7 +130,25 @@ describe("tabbed floating window", () => {
 
     assert.match(matchApp, /combineDropTarget/u);
     assert.match(matchApp, /is-combine-drop-target/u);
+    assert.match(matchApp, /groupableInfoWindows/u);
+    assert.match(matchApp, /combineDropTargetForWindow/u);
     assert.match(tabbedStyles, /\.is-combine-drop-target/u);
+  });
+
+  test("match app keeps popped-out tabs attached to the drag gesture", async () => {
+    const matchApp = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(matchApp, /poppedOutDrag/u);
+    assert.match(matchApp, /setPoppedOutDrag/u);
+    assert.match(matchApp, /document\.addEventListener\("pointermove"/u);
+    assert.match(matchApp, /document\.addEventListener\("pointerup"/u);
+    assert.match(
+      matchApp,
+      /updateFloatingWindowRect\(poppedOutDrag\.windowKey/u,
+    );
   });
 
   test("tabbed window styles keep the shell compact", async () => {

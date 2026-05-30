@@ -31,14 +31,15 @@ import { moveIdNear } from "./drag-reorder.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import {
-  rectsOverlap,
+  combineDropTargetForWindow,
   splitWindowRectFromPoint,
 } from "./floating-window-grouping.js";
-import type { WindowPoint } from "./floating-window-grouping.js";
+import type { GroupableWindow, WindowPoint } from "./floating-window-grouping.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
+import { sourceZoneCards } from "./source-zone-cards.js";
 import { useMatchClient } from "./useMatchClient.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
@@ -53,6 +54,14 @@ interface FloatingWindowRectState {
   scope?: string | undefined;
   rects: Record<string, WindowRect>;
   openWindowIds: Set<string>;
+}
+
+interface PoppedOutDragState {
+  windowKey: string;
+  offsetX: number;
+  offsetY: number;
+  width: number;
+  height: number;
 }
 
 const emptyRevealWindowState: RevealWindowState = {
@@ -132,6 +141,9 @@ export const MatchApp = (): React.JSX.Element => {
   const [infoWindowsGrouped, setInfoWindowsGrouped] = useState(false);
   const [combineDropTarget, setCombineDropTarget] = useState<
     InfoWindowTabId | undefined
+  >(undefined);
+  const [poppedOutDrag, setPoppedOutDrag] = useState<
+    PoppedOutDragState | undefined
   >(undefined);
   const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
@@ -584,17 +596,23 @@ export const MatchApp = (): React.JSX.Element => {
         : defaultActionLogWindowRect;
     return { width: rect.width, height: rect.height };
   };
+  const groupableInfoWindows: GroupableWindow<InfoWindowTabId>[] = [
+    {
+      id: "preview",
+      visible: showPreviewWindow,
+      rect: infoWindowRect("preview"),
+    },
+    {
+      id: "log",
+      visible: showActionLogWindow,
+      rect: infoWindowRect("log"),
+    },
+  ];
   const matchingCombineDropTarget = (
     draggedWindowId: InfoWindowTabId,
     rect: WindowRect,
-  ): InfoWindowTabId | undefined => {
-    const targetWindowId = draggedWindowId === "preview" ? "log" : "preview";
-    const targetVisible =
-      targetWindowId === "preview" ? showPreviewWindow : showActionLogWindow;
-    return targetVisible && rectsOverlap(rect, infoWindowRect(targetWindowId))
-      ? targetWindowId
-      : undefined;
-  };
+  ): InfoWindowTabId | undefined =>
+    combineDropTargetForWindow(draggedWindowId, rect, groupableInfoWindows);
   const updateCombineDropTarget = (
     draggedWindowId: InfoWindowTabId,
     rect: WindowRect,
@@ -624,10 +642,24 @@ export const MatchApp = (): React.JSX.Element => {
   ): void => {
     const windowKey =
       tabId === "preview" ? cardPreviewWindowKey : actionLogWindowKey;
+    const remainingWindowKey =
+      tabId === "preview" ? actionLogWindowKey : cardPreviewWindowKey;
+    const groupRect =
+      activeFloatingWindowRects[infoWindowKey] ?? infoWindowRect(tabId);
+    updateFloatingWindowRect(remainingWindowKey, groupRect);
+    const poppedOutSize = infoWindowDefaultSize(tabId);
+    const poppedOutRect = splitWindowRectFromPoint(point, poppedOutSize);
     updateFloatingWindowRect(
       windowKey,
-      splitWindowRectFromPoint(point, infoWindowDefaultSize(tabId)),
+      poppedOutRect,
     );
+    setPoppedOutDrag({
+      windowKey,
+      offsetX: poppedOutSize.width / 2,
+      offsetY: 20,
+      width: poppedOutSize.width,
+      height: poppedOutSize.height,
+    });
     setInfoWindowsGrouped(false);
     setInfoWindowMinimized(false);
     setInfoWindowActiveTab(tabId === "preview" ? "log" : "preview");
@@ -642,6 +674,30 @@ export const MatchApp = (): React.JSX.Element => {
       setCombineDropTarget(undefined);
     }
   }, [showPreviewWindow, showActionLogWindow]);
+  useEffect(() => {
+    if (poppedOutDrag === undefined || typeof document === "undefined") {
+      return;
+    }
+    const movePoppedOutWindow = (event: PointerEvent): void => {
+      updateFloatingWindowRect(poppedOutDrag.windowKey, {
+        x: Math.max(0, event.clientX - poppedOutDrag.offsetX),
+        y: Math.max(0, event.clientY - poppedOutDrag.offsetY),
+        width: poppedOutDrag.width,
+        height: poppedOutDrag.height,
+      });
+    };
+    const stopPoppedOutDrag = (): void => {
+      setPoppedOutDrag(undefined);
+    };
+    document.addEventListener("pointermove", movePoppedOutWindow);
+    document.addEventListener("pointerup", stopPoppedOutDrag);
+    document.addEventListener("pointercancel", stopPoppedOutDrag);
+    return () => {
+      document.removeEventListener("pointermove", movePoppedOutWindow);
+      document.removeEventListener("pointerup", stopPoppedOutDrag);
+      document.removeEventListener("pointercancel", stopPoppedOutDrag);
+    };
+  }, [poppedOutDrag]);
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
@@ -940,37 +996,4 @@ export const MatchApp = (): React.JSX.Element => {
       ) : null}
     </main>
   );
-};
-
-const sourceZoneCards = (
-  board: BoardViewModel,
-  source: NonNullable<
-    NonNullable<ReturnType<typeof useMatchClient>["state"]["cardCostSelection"]>
-  >["source"],
-): readonly ClientCardModel[] => {
-  if (source === undefined) {
-    return [];
-  }
-  const selfSource =
-    source.playerId === undefined || source.playerId === board.playerId;
-  const zones = selfSource ? board.self : board.opponent;
-  switch (source.zone) {
-    case "characterArea":
-      return zones.characters;
-    case "costArea":
-      return zones.costArea;
-    case "hand":
-      return selfSource ? board.self.hand : [];
-    case "leaderArea":
-      return [zones.leader];
-    case "stageArea":
-      return zones.stage === undefined ? [] : [zones.stage];
-    case "trash":
-      return zones.trash;
-    case "deck":
-    case "donDeck":
-    case "life":
-    case "noZone":
-      return [];
-  }
 };
