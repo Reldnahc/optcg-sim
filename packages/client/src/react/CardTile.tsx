@@ -90,6 +90,7 @@ export const CardTile = ({
     undefined,
   );
   const pointerReorderEnabled = reorderable && onMoveNear !== undefined;
+  const hasCardMenuActions = actions.length > 0 && onAction !== undefined;
   const isSelected =
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
   const image =
@@ -153,7 +154,9 @@ export const CardTile = ({
     <div
       className={`card-tile-shell ${
         pointerReorderEnabled ? "is-pointer-reorderable" : ""
-      } ${pointerDrag?.moved === true ? "is-pointer-reorder-dragging" : ""}`}
+      } ${hasCardMenuActions ? "has-card-menu-actions" : ""} ${
+        pointerDrag?.moved === true ? "is-pointer-reorder-dragging" : ""
+      }`}
       data-card-instance-id={String(card.instanceId)}
       style={pointerDragStyle}
       onPointerEnter={() => {

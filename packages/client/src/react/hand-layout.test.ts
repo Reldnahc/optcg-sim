@@ -11,7 +11,11 @@ import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 import { BoardLayout } from "./BoardLayout.js";
 import { HandRow, calculateHandOverlap } from "./HandRow.js";
 import { calculateCardRowLayout } from "./card-row-layout.js";
-import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+import type {
+  BoardViewModel,
+  ClientActionModel,
+  ClientCardModel,
+} from "../view-model.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
@@ -145,6 +149,38 @@ describe("hand layout", () => {
 
     assert.match(markup, /is-pointer-reorderable/u);
     assert.doesNotMatch(markup, /draggable=/u);
+  });
+
+  test("hand card cursor distinguishes action menus from plain reorderable cards", async () => {
+    const playActions: readonly ClientActionModel[] = [
+      { index: 1, type: "playCard", label: "Play" },
+    ];
+    const markup = renderToStaticMarkup(
+      createElement(HandRow, {
+        label: "Player hand",
+        cards: [card(1), card(2)],
+        overflowDirection: "left",
+        cardActions: (instanceId: string) =>
+          instanceId === "hand-1" ? playActions : [],
+        onCardAction: () => undefined,
+        onMoveCard: () => undefined,
+      }),
+    );
+    const styles = await readFile(cardStylesPath, "utf8");
+
+    assert.match(markup, /has-card-menu-actions/u);
+    assert.match(
+      styles,
+      /\.hand-cards\s+\.card-tile-shell\.is-pointer-reorderable:not\(\.has-card-menu-actions\)\s+\.card-tile\s*\{[^}]*cursor:\s*grab;/u,
+    );
+    assert.match(
+      styles,
+      /\.hand-cards\s+\.card-tile-shell\.is-pointer-reorderable\.has-card-menu-actions\s+\.card-tile\s*\{[^}]*cursor:\s*pointer;/u,
+    );
+    assert.match(
+      styles,
+      /\.hand-cards\s+\.card-tile-shell\.is-pointer-reorder-dragging\s+\.card-tile\s*\{[^}]*cursor:\s*grabbing;/u,
+    );
   });
 
   test("card tiles use pointer reorder instead of native drag", async () => {
