@@ -128,4 +128,25 @@ describe("control rail window dock", () => {
       /(?:dockFloatingWindows|dockInfoWindowTabs)\([\s\S]{0,260}return dockRect/u,
     );
   });
+
+  test("dragging one tab out of a docked group preserves any remaining dock tab", async () => {
+    const [matchAppSource, dragOutSource] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "use-info-window-drag-out.ts"), "utf8"),
+    ]);
+
+    assert.match(dragOutSource, /dockedInfoWindowStateAfterDockTabDragOut/u);
+    assert.match(dragOutSource, /replacementDockWindowKeys/u);
+    assert.match(dragOutSource, /replacedDockWindowKeys/u);
+    assert.match(dragOutSource, /onDockInfoWindowGroupSplit/u);
+    assert.match(matchAppSource, /onDockInfoWindowGroupSplit/u);
+    assert.match(
+      matchAppSource,
+      /dockFloatingWindows\(\{\s*windowKeys,\s*rect,\s*replacedWindowKeys,/u,
+    );
+    assert.match(
+      dragOutSource,
+      /dragOutDockWindow[\s\S]*updateFloatingWindowOpen\(windowKey,\s*true\)/u,
+    );
+  });
 });

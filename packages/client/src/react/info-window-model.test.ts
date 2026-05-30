@@ -3,6 +3,8 @@ import { describe, test } from "vitest";
 
 import {
   dockedInfoWindowTabIds,
+  dockedInfoWindowStateAfterDockTabDragOut,
+  floatingGroupedInfoWindowIds,
   groupedInfoWindowIdsAfterDockDrop,
   groupedInfoWindowIdsAfterDrop,
   groupedInfoWindowIdsAfterDockTabDragOut,
@@ -103,6 +105,61 @@ describe("info window model", () => {
         ["preview", "log"],
         "collection:Player trash",
       ),
+      ["preview", "log"],
+    );
+  });
+
+  test("dragging one tab out of a docked two-tab group leaves the other tab docked", () => {
+    assert.deepEqual(
+      dockedInfoWindowStateAfterDockTabDragOut(
+        ["preview", "log"],
+        "action-log",
+      ),
+      {
+        groupedIds: [],
+        replacementDockWindowKeys: ["card-preview"],
+        replacedDockWindowKeys: ["info-window"],
+      },
+    );
+  });
+
+  test("dragging one tab out of a docked three-tab group keeps the remaining group docked", () => {
+    assert.deepEqual(
+      dockedInfoWindowStateAfterDockTabDragOut(allInfoTabs, "settings"),
+      {
+        groupedIds: ["preview", "log"],
+        replacementDockWindowKeys: [],
+        replacedDockWindowKeys: [],
+      },
+    );
+  });
+
+  test("floating grouped tabs exclude tabs docked individually in the control panel", () => {
+    assert.deepEqual(
+      floatingGroupedInfoWindowIds({
+        visibleIds: allInfoTabs,
+        groupedIds: ["preview", "log"],
+        dockedWindowIds: new Set(["action-log"]),
+      }),
+      [],
+    );
+    assert.deepEqual(
+      floatingGroupedInfoWindowIds({
+        visibleIds: allInfoTabs,
+        groupedIds: allInfoTabs,
+        dockedWindowIds: new Set(["settings"]),
+      }),
+      ["preview", "log"],
+    );
+  });
+
+  test("floating grouped tabs stay available when the grouped info window itself is docked", () => {
+    assert.deepEqual(
+      floatingGroupedInfoWindowIds({
+        visibleIds: allInfoTabs,
+        groupedIds: ["preview", "log"],
+        dockedWindowIds: new Set(["info-window"]),
+      }),
       ["preview", "log"],
     );
   });

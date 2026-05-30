@@ -36,7 +36,7 @@ import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
-  groupedInfoWindowIds as groupedInfoWindowIdsFromState,
+  floatingGroupedInfoWindowIds,
   groupedInfoWindowIdsAfterDrop,
   groupedInfoWindowIdsAfterTabDragOut,
   infoWindowKey,
@@ -346,10 +346,11 @@ export const MatchApp = (): React.JSX.Element => {
     showActionLogWindow,
     showSettingsWindow,
   });
-  const configuredVisibleGroupedInfoWindowIds = groupedInfoWindowIdsFromState(
-    visibleInfoWindowIds,
-    configuredGroupedInfoWindowIds,
-  );
+  const configuredVisibleGroupedInfoWindowIds = floatingGroupedInfoWindowIds({
+    visibleIds: visibleInfoWindowIds,
+    groupedIds: configuredGroupedInfoWindowIds,
+    dockedWindowIds: activeDockedWindowIds,
+  });
   const groupedInfoWindowIds =
     configuredVisibleGroupedInfoWindowIds.length >= 2
       ? configuredVisibleGroupedInfoWindowIds
@@ -550,6 +551,13 @@ export const MatchApp = (): React.JSX.Element => {
       onInfoWindowDragMove: updateInfoWindowDragTargets,
       onInfoWindowDragEnd: completeInfoWindowDrag,
       onInfoGroupDragEnd: completePoppedOutInfoGroupDrag,
+      onDockInfoWindowGroupSplit: ({ windowKeys, rect, replacedWindowKeys }) => {
+        dockFloatingWindows({
+          windowKeys,
+          rect,
+          replacedWindowKeys,
+        });
+      },
     });
   useEffect(() => {
     if (
@@ -798,7 +806,7 @@ export const MatchApp = (): React.JSX.Element => {
           completeDockableWindowDrag(windowKey, rect)
         }
       />
-      {showTabbedInfoWindow && dockedInfoTabIds.length === 0 ? (
+      {showTabbedInfoWindow && !activeDockedWindowIds.has(infoWindowKey) ? (
         <InfoTabbedWindow
           previewCard={previewCard}
           entries={actionLogEntries}

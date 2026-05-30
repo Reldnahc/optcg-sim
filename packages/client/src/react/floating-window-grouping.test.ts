@@ -6,6 +6,7 @@ import {
   rectsOverlap,
   splitWindowRectFromPoint,
 } from "./floating-window-grouping.js";
+import { groupedInfoWindowIdsAfterDrop } from "./info-window-model.js";
 
 describe("floating window grouping", () => {
   test("groups windows only when a dropped rect overlaps another window", () => {
@@ -76,6 +77,30 @@ describe("floating window grouping", () => {
         ],
       ),
       undefined,
+    );
+  });
+
+  test("moving one tab from a group to a standalone target does not carry the whole old group", () => {
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDrop({
+        visibleInfoWindowIds: ["preview", "log", "settings"],
+        currentGroupedInfoWindowIds: ["preview", "log"],
+        draggedWindowId: "preview",
+        targetWindowId: "settings",
+      }),
+      ["preview", "settings"],
+    );
+  });
+
+  test("moving a standalone tab into an existing group keeps the target group", () => {
+    assert.deepEqual(
+      groupedInfoWindowIdsAfterDrop({
+        visibleInfoWindowIds: ["preview", "log", "settings"],
+        currentGroupedInfoWindowIds: ["preview", "log"],
+        draggedWindowId: "settings",
+        targetWindowId: "log",
+      }),
+      ["preview", "log", "settings"],
     );
   });
 });

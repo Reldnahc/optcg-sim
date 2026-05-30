@@ -3,7 +3,7 @@ import type { WindowRect } from "./FloatingWindow.js";
 import { splitWindowRectFromPoint } from "./floating-window-grouping.js";
 import {
   actionLogWindowKey,
-  groupedInfoWindowIdsAfterDockTabDragOut,
+  dockedInfoWindowStateAfterDockTabDragOut,
   groupedInfoWindowIdsAfterTabDragOut,
   infoWindowDefaultSize,
   infoWindowKey,
@@ -45,6 +45,11 @@ export interface UseInfoWindowDragOutInput {
     rect: WindowRect,
   ) => WindowRect | undefined;
   onInfoGroupDragEnd: (rect: WindowRect) => WindowRect | undefined;
+  onDockInfoWindowGroupSplit: (input: {
+    windowKeys: readonly string[];
+    rect: WindowRect;
+    replacedWindowKeys: readonly string[];
+  }) => void;
 }
 
 export const useInfoWindowDragOut = ({
@@ -65,6 +70,7 @@ export const useInfoWindowDragOut = ({
   onInfoWindowDragMove,
   onInfoWindowDragEnd,
   onInfoGroupDragEnd,
+  onDockInfoWindowGroupSplit,
 }: UseInfoWindowDragOutInput): InfoWindowDragOutControls => {
   const startPoppedOutDrag = useRoutedPoppedOutWindowDrag({
     onRectChange: updateFloatingWindowRect,
@@ -109,11 +115,25 @@ export const useInfoWindowDragOut = ({
   ): void => {
     const dockedSize = dockWindowPoppedOutSize(windowKey);
     const nextRect = splitWindowRectFromPoint(point, dockedSize);
-    updateFloatingWindowRect(windowKey, nextRect);
-    setControlDockActiveTabId(undefined);
-    setGroupedInfoWindowIds(
-      groupedInfoWindowIdsAfterDockTabDragOut(groupedInfoWindowIds, windowKey),
+    const dockDragOutState = dockedInfoWindowStateAfterDockTabDragOut(
+      groupedInfoWindowIds,
+      windowKey,
     );
+    updateFloatingWindowRect(windowKey, nextRect);
+    updateFloatingWindowOpen(windowKey, true);
+    setControlDockActiveTabId(undefined);
+    setGroupedInfoWindowIds(dockDragOutState.groupedIds);
+    const dockRect = currentControlDockSlotRect();
+    if (
+      dockRect !== undefined &&
+      dockDragOutState.replacementDockWindowKeys.length > 0
+    ) {
+      onDockInfoWindowGroupSplit({
+        windowKeys: dockDragOutState.replacementDockWindowKeys,
+        rect: dockRect,
+        replacedWindowKeys: dockDragOutState.replacedDockWindowKeys,
+      });
+    }
     startPoppedOutDrag({
       pointerId: point.pointerId,
       windowKey,
