@@ -6,6 +6,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
+import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import { TabbedFloatingWindow } from "./TabbedFloatingWindow.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
@@ -150,9 +151,35 @@ describe("tabbed floating window", () => {
 
     assert.match(matchApp, /combineDropTarget/u);
     assert.match(matchApp, /is-combine-drop-target/u);
+    assert.match(
+      matchApp,
+      /groupedInfoWindowIds\.includes\(combineDropTarget\)/u,
+    );
     assert.match(matchApp, /groupableInfoWindows/u);
     assert.match(matchApp, /combineDropTargetForWindow/u);
     assert.match(tabbedStyles, /\.is-combine-drop-target/u);
+  });
+
+  test("grouped info windows can show combine drop feedback on the parent shell", () => {
+    const markup = renderToStaticMarkup(
+      createElement(InfoTabbedWindow, {
+        entries: [],
+        logOpen: true,
+        settingsOpen: true,
+        tabIds: ["log", "settings"],
+        activeTabId: "log",
+        minimized: false,
+        className: "is-combine-drop-target",
+        onActiveTabChange: () => undefined,
+        onToggleMinimized: () => undefined,
+        onCloseActiveTab: () => undefined,
+      }),
+    );
+
+    assert.match(
+      markup,
+      /class="[^"]*info-tabbed-window[^"]*is-combine-drop-target/u,
+    );
   });
 
   test("match app keeps popped-out tabs attached to the drag gesture", async () => {

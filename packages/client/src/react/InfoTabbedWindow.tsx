@@ -18,6 +18,7 @@ export interface InfoTabbedWindowProps {
   logOpen: boolean;
   settingsOpen: boolean;
   tabIds: readonly InfoWindowTabId[];
+  className?: string | undefined;
   activeTabId: InfoWindowTabId;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
@@ -41,6 +42,7 @@ export const InfoTabbedWindow = ({
   logOpen,
   settingsOpen,
   tabIds,
+  className,
   activeTabId,
   minimized,
   initialRect,
@@ -93,7 +95,9 @@ export const InfoTabbedWindow = ({
     <TabbedFloatingWindow
       tabs={tabs}
       activeTabId={activeTab}
-      className="info-tabbed-window"
+      className={["info-tabbed-window", className ?? ""]
+        .filter(Boolean)
+        .join(" ")}
       initialRect={initialRect}
       minWidth={260}
       minHeight={180}

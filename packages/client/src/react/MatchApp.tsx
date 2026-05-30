@@ -841,6 +841,12 @@ export const MatchApp = (): React.JSX.Element => {
           logOpen={showActionLogWindow}
           settingsOpen={showSettingsWindow}
           tabIds={groupedInfoWindowIds}
+          className={
+            combineDropTarget !== undefined &&
+            groupedInfoWindowIds.includes(combineDropTarget)
+              ? "is-combine-drop-target"
+              : undefined
+          }
           activeTabId={infoWindowActiveTab}
           minimized={infoWindowMinimized}
           initialRect={
