@@ -387,4 +387,23 @@ describe("hand layout", () => {
       /\.hand-rail:hover\s+\.hand-count\s*\{[^}]*opacity:\s*1;/u,
     );
   });
+
+  test("opponent hand renders every hidden card past ten cards", () => {
+    const largeHandBoard = board();
+    largeHandBoard.opponent.handCount = 13;
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: largeHandBoard,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.equal([...markup.matchAll(/hidden-hand-opponent-/gu)].length, 13);
+    assert.match(markup, /aria-label="Opponent hand count: 13"/u);
+  });
 });

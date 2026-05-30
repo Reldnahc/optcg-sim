@@ -168,6 +168,18 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
 
+  test("match app unarms concede confirmation after a short timeout", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /const concedeConfirmationTimeoutMs = 3000;/u);
+    assert.match(source, /globalThis\.setTimeout/u);
+    assert.match(source, /setConcedeConfirming\(false\);/u);
+    assert.match(source, /globalThis\.clearTimeout\(timeoutId\);/u);
+  });
+
   test("control rail omits match fact text table", async () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {

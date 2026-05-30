@@ -31,8 +31,12 @@ export interface BoardLayoutProps {
   onBackgroundClick: () => void;
 }
 
-const hiddenCards = (count: number, prefix: string): ClientCardModel[] =>
-  Array.from({ length: Math.min(count, 10) }, (_, index) => ({
+const hiddenCards = (
+  count: number,
+  prefix: string,
+  maxRendered = count,
+): ClientCardModel[] =>
+  Array.from({ length: Math.min(count, maxRendered) }, (_, index) => ({
     instanceId: `${prefix}-${String(index)}` as ClientCardModel["instanceId"],
     cardId: "hidden" as ClientCardModel["cardId"],
     name: "Hidden card",
@@ -135,6 +139,7 @@ export const BoardLayout = ({
             cards={hiddenCards(
               board.opponent.deckCount,
               "hidden-deck-opponent",
+              10,
             )}
             size="small"
             displayMode="stack"
@@ -148,6 +153,7 @@ export const BoardLayout = ({
             cards={hiddenCards(
               board.opponent.donDeckCount,
               "hidden-don-deck-opponent",
+              10,
             )}
             size="small"
             displayMode="stack"
@@ -289,7 +295,7 @@ export const BoardLayout = ({
         <div className="playmat-zone player-deck">
           <Zone
             label="Deck"
-            cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
+            cards={hiddenCards(board.self.deckCount, "hidden-deck-self", 10)}
             size="small"
             displayMode="stack"
             stackCount={board.self.deckCount}
@@ -299,7 +305,11 @@ export const BoardLayout = ({
         <div className="playmat-zone player-don-deck">
           <Zone
             label="DON!! Deck"
-            cards={hiddenCards(board.self.donDeckCount, "hidden-don-deck-self")}
+            cards={hiddenCards(
+              board.self.donDeckCount,
+              "hidden-don-deck-self",
+              10,
+            )}
             size="small"
             displayMode="stack"
             stackCount={board.self.donDeckCount}

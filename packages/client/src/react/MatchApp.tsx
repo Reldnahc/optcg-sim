@@ -68,6 +68,8 @@ import { useRevealWindowState } from "./use-reveal-window-state.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
 
+const concedeConfirmationTimeoutMs = 3000;
+
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
   const [collectionModal, setCollectionModal] = useState<
@@ -195,6 +197,17 @@ export const MatchApp = (): React.JSX.Element => {
       setConcedeConfirming(false);
     }
   }, [concedeAction]);
+  useEffect(() => {
+    if (!concedeConfirming) {
+      return;
+    }
+    const timeoutId = globalThis.setTimeout(() => {
+      setConcedeConfirming(false);
+    }, concedeConfirmationTimeoutMs);
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [concedeConfirming]);
   const visibleGlobalActions = globalActions.filter(
     (action) => action.type !== "concede",
   );
