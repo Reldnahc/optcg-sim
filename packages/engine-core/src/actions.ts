@@ -25,6 +25,7 @@ import {
   continueAttackTimingDecisionResultIfReady,
   applyDeclareAttack,
   applyUseCounter,
+  finalizeBattleAfterReplacementResolution,
   getBattleDecisionLegalActions,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
@@ -45,7 +46,10 @@ import {
   finalizeSelectedTargetEffectResolution,
 } from "./effect-runtime.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
-import { resumeSequenceFrameAfterPlaySelectedOverflow } from "./effect-runtime-sequence-frames.js";
+import {
+  resumeSequenceFrameAfterPlaySelectedOverflow,
+  resumeSequenceFrameAfterReplacement,
+} from "./effect-runtime-sequence-frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import {
@@ -142,6 +146,23 @@ const queueEntryIdFromStoredReplacementPayload = (
     return payload.queueEntryId;
   }
   return undefined;
+};
+
+const hasBattleKoReplacementContinuation = (payload: unknown): boolean => {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("battleContinuation" in payload)
+  ) {
+    return false;
+  }
+  const continuation = payload.battleContinuation;
+  return (
+    typeof continuation === "object" &&
+    continuation !== null &&
+    "type" in continuation &&
+    continuation.type === "endBattleAfterCharacterKoAttempt"
+  );
 };
 
 const replacementProcessFromState = (
@@ -524,6 +545,10 @@ const applyChooseReplacementDecisionResponse = (
     queuedEntryId === undefined
       ? undefined
       : state.effectQueue.find((entry) => entry.id === queuedEntryId);
+  const shouldResumeSequence = hasSequenceFrameForDecision(state, decision.id);
+  const shouldFinalizeBattle =
+    queuedEntry === undefined &&
+    hasBattleKoReplacementContinuation(storedProcess.payload);
 
   if (replacementId !== undefined) {
     const applied = executeAcceptedSelectedTargetKoReplacementProcess(
@@ -540,15 +565,20 @@ const applyChooseReplacementDecisionResponse = (
       ...applied.state,
       actionSeq: state.actionSeq + 1,
     };
+    if (shouldFinalizeBattle) {
+      return finalizeBattleAfterReplacementResolution(state, nextState, events);
+    }
     return queuedEntry === undefined
       ? toEngineResult(nextState, events)
-      : finalizeSelectedTargetEffectResolution(
-          nextState,
-          state,
-          queuedEntry,
-          events,
-          events.slice(1),
-        );
+      : shouldResumeSequence
+        ? toEngineResult(nextState, events)
+        : finalizeSelectedTargetEffectResolution(
+            nextState,
+            state,
+            queuedEntry,
+            events,
+            events.slice(1),
+          );
   }
 
   const unreplaced = executeUnreplacedSelectedTargetKoProcess(
@@ -567,15 +597,20 @@ const applyChooseReplacementDecisionResponse = (
     actionSeq: state.actionSeq + 1,
     eventJournal: [...state.eventJournal, ...events],
   };
+  if (shouldFinalizeBattle) {
+    return finalizeBattleAfterReplacementResolution(state, nextState, events);
+  }
   return queuedEntry === undefined
     ? toEngineResult(nextState, events)
-    : finalizeSelectedTargetEffectResolution(
-        nextState,
-        state,
-        queuedEntry,
-        events,
-        events.slice(1),
-      );
+    : shouldResumeSequence
+      ? toEngineResult(nextState, events)
+      : finalizeSelectedTargetEffectResolution(
+          nextState,
+          state,
+          queuedEntry,
+          events,
+          events.slice(1),
+        );
 };
 
 export const getLegalActions = (
@@ -862,6 +897,27 @@ const applyRespondToDecision = (
     action,
   );
   if (replacementResult !== null) {
+    if (
+      replacementResult.errors === undefined &&
+      replacementResult.state.pendingDecision === undefined
+    ) {
+      const resumed = resumeSequenceFrameAfterReplacement(
+        replacementResult.state,
+        decision.id,
+      );
+      if (resumed !== undefined) {
+        if (!resumed.ok) {
+          return toEngineResult(state, [], [resumed.error]);
+        }
+        return continueRuntimeAndAttackTimingAfterDecision(
+          state,
+          toEngineResult(resumed.state, [
+            ...replacementResult.events,
+            ...resumed.events,
+          ]),
+        );
+      }
+    }
     return continueAfterEffectDecision(state, decision, replacementResult);
   }
   const chooseQuantityResult = applyChooseQuantityDecisionResponse(

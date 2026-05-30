@@ -743,11 +743,10 @@ test.each([
   },
 );
 
-test("saved-field-object KO consumer fail-closes if KO would pause on chooseReplacement", () => {
+test("saved-field-object KO consumer pauses for chooseReplacement and resumes after acceptance", () => {
   const { pausedState, quantityDecisionId, target } =
     setupPausedSavedTargetKoFrame();
   setupReviewedKoReplacementDefinition(pausedState, target);
-  const before = structuredClone(pausedState);
 
   const resolved = resolveWithSavedReference(pausedState, quantityDecisionId, {
     kind: "selectedTargets",
@@ -771,10 +770,11 @@ test("saved-field-object KO consumer fail-closes if KO would pause on chooseRepl
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
+  const decision = must(resolved.state.pendingDecision, "replacement decision");
+  assert.equal(decision.type, "chooseReplacement");
   assert.equal(
     resolved.events.some((event) => event.type === "decisionCreated"),
-    false,
+    true,
   );
   assert.equal(
     resolved.events.some((event) => event.type === "cardKOd"),
@@ -786,9 +786,34 @@ test("saved-field-object KO consumer fail-closes if KO would pause on chooseRepl
     ),
     true,
   );
-  assert.equal(resolved.state.effectExecutionFrames.length, 0);
-  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
-  assert.notDeepEqual(resolved.state, before);
+
+  const accepted = applyAction(resolved.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "replacement",
+      replacementId: must(decision.replacementIds[0], "replacement id"),
+    },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.equal(
+    accepted.events.some((event) => event.type === "replacementApplied"),
+    true,
+  );
+  assert.equal(
+    accepted.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(
+    must(accepted.state.players[p2], "accepted p2").characters.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    true,
+  );
+  assert.equal(accepted.state.effectExecutionFrames.length, 0);
+  assert.equal(accepted.stateHash, hashCanonicalStateValue(accepted.state));
 });
 
 test("sequence resume fail-closes sourceSegmentId mismatch and invalid objectIndex", () => {

@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardRef,
   EngineError,
   EngineEvent,
   EngineResult,
@@ -56,6 +57,11 @@ import {
   queueBattleKOTriggers,
   releaseDamageDeferredEffectQueue,
 } from "./effect-runtime.js";
+import {
+  buildKoReplacementProcess,
+  detectSupportedSelectedTargetKoReplacementCandidate,
+  pauseSelectedTargetKoReplacementProcess,
+} from "./effect-runtime-primitives.js";
 import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import {
@@ -403,6 +409,50 @@ export const resolveSupportedVanillaBattle = (
       if (koCard === undefined) {
         return illegalAction(state, "K.O. target not found.");
       }
+      appendEvent(state, events, "damageDealt", {
+        attacker: attacker.card.instanceId,
+        target: target.card.instanceId,
+        amount: 1,
+      });
+      const battleKoProcessSource: CardRef = {
+        instanceId: attacker.card.instanceId,
+        cardId: attacker.card.cardId,
+        playerId: attacker.playerId,
+        zone: attacker.card.zone,
+      };
+      const battleKoProcessTarget: CardRef = {
+        instanceId: koCard.instanceId,
+        cardId: koCard.cardId,
+        playerId: target.playerId,
+        zone: koCard.zone,
+      };
+      const battleKoProcess = buildKoReplacementProcess({
+        id: `battle:${String(state.seq)}:ko:${String(koCard.instanceId)}`,
+        effectId: "battle:character-ko-replacement",
+        source: battleKoProcessSource,
+        target: battleKoProcessTarget,
+        causedBy: { type: "ruleProcess", name: "battle:characterKO" },
+        sourceKind: "battle",
+        sourceControllerId: attacker.playerId,
+        battleContinuation: { type: "endBattleAfterCharacterKoAttempt" },
+      });
+      const replacement = detectSupportedSelectedTargetKoReplacementCandidate(
+        nextState,
+        battleKoProcess,
+      );
+      if (!replacement.ok) {
+        return toEngineResult(state, [], [replacement.error]);
+      }
+      if (replacement.candidate !== undefined) {
+        const paused = pauseSelectedTargetKoReplacementProcess(
+          nextState,
+          events,
+          battleKoProcess,
+          replacement.candidate,
+        );
+        assertGameStateInvariants(paused.state);
+        return toEngineResult(paused.state, events);
+      }
       const attachedDonIds = new Set(koCard.attachedDon);
       const nextCostArea = defender.costArea.map((card) =>
         attachedDonIds.has(card.instanceId)
@@ -419,11 +469,6 @@ export const resolveSupportedVanillaBattle = (
           },
         },
       };
-      appendEvent(state, events, "damageDealt", {
-        attacker: attacker.card.instanceId,
-        target: target.card.instanceId,
-        amount: 1,
-      });
       appendEvent(state, events, "cardKOd", {
         playerId: target.playerId,
         instanceId: target.card.instanceId,
@@ -897,5 +942,16 @@ const finalizeSupportedEndOfBattleCleanup = ({
   assertGameStateInvariants(finalizedState);
   return toEngineResult(finalizedState, events);
 };
+
+export const finalizeBattleAfterReplacementResolution = (
+  state: GameState,
+  nextState: GameState,
+  events: EngineEvent[],
+): EngineResult =>
+  finalizeSupportedEndOfBattleCleanup({
+    state,
+    nextState,
+    events,
+  });
 
 registerLifeTriggerDamageContinuationResolver(resolveSupportedVanillaBattle);

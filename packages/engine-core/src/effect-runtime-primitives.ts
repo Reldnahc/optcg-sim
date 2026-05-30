@@ -23,9 +23,11 @@ export type {
   SelectedTargetKoReplacementDetectionFailureReason,
 } from "./effect-runtime-ko-replacement-process.js";
 export {
+  buildKoReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
   executeAcceptedSelectedTargetKoReplacementProcess,
+  pauseSelectedTargetKoReplacementProcess,
 } from "./effect-runtime-ko-replacement-process.js";
 export type { SelectedTargetKoExecutionFailureReason } from "./effect-runtime-target-ko-primitives.js";
 export {

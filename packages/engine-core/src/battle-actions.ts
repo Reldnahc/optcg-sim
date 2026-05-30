@@ -29,7 +29,10 @@ import {
   withAllAttackTimingCombatMetadataHidden,
   withAllSupportedAttackTimingCombatMetadataHidden,
 } from "./attack-timing.js";
-import { resolveSupportedVanillaBattle } from "./battle-resolution.js";
+import {
+  finalizeBattleAfterReplacementResolution,
+  resolveSupportedVanillaBattle,
+} from "./battle-resolution.js";
 import {
   expireBattleDurationStateForCleanup,
   withSupportedBattleRuntimeMetadataHidden,
@@ -55,7 +58,11 @@ import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 export { applyUseCounter };
-export { expireBattleDurationStateForCleanup, resolveSupportedVanillaBattle };
+export {
+  expireBattleDurationStateForCleanup,
+  finalizeBattleAfterReplacementResolution,
+  resolveSupportedVanillaBattle,
+};
 
 const isSupportedDoubleAttackCombatMetadata = (
   metadata: ResolvedCard | undefined,

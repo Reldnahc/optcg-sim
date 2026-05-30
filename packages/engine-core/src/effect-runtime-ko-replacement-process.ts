@@ -33,15 +33,18 @@ export type {
 export { detectSupportedSelectedTargetKoReplacementCandidate };
 
 interface SelectedTargetKoReplacementPayload {
-  effectId: EffectQueueEntry["effectBlockId"];
-  queueEntryId: EffectQueueEntry["id"];
+  effectId: string;
+  queueEntryId?: EffectQueueEntry["id"];
   source: CardRef;
   target: CardRef;
   fieldRemovalAttempt: {
     processFamily: "fieldRemoval";
     classification: "moveFromFieldToTrash";
-    sourceKind: "cardEffect";
+    sourceKind: "battle" | "cardEffect";
     sourceControllerId: PlayerId;
+  };
+  battleContinuation?: {
+    type: "endBattleAfterCharacterKoAttempt";
   };
 }
 
@@ -61,33 +64,60 @@ type EngineInternalReplacementAppliedEventPayload = {
   transformedPayloadHash: string;
 };
 
+export const buildKoReplacementProcess = (params: {
+  battleContinuation?: SelectedTargetKoReplacementPayload["battleContinuation"];
+  causedBy: ReplacementProcess["causedBy"];
+  effectId: string;
+  id: ReplacementProcess["id"];
+  source: CardRef;
+  sourceControllerId: PlayerId;
+  sourceKind: "battle" | "cardEffect";
+  queueEntryId?: EffectQueueEntry["id"];
+  target: CardRef;
+}): ReplacementProcess => {
+  const payload: SelectedTargetKoReplacementPayload = {
+    effectId: params.effectId,
+    ...(params.queueEntryId === undefined
+      ? {}
+      : { queueEntryId: params.queueEntryId }),
+    source: params.source,
+    target: params.target,
+    fieldRemovalAttempt: {
+      processFamily: "fieldRemoval",
+      classification: "moveFromFieldToTrash",
+      sourceKind: params.sourceKind,
+      sourceControllerId: params.sourceControllerId,
+    },
+    ...(params.battleContinuation === undefined
+      ? {}
+      : { battleContinuation: params.battleContinuation }),
+  };
+  return {
+    id: params.id,
+    type: "ko",
+    source: params.source,
+    target: params.target,
+    payload,
+    causedBy: params.causedBy,
+    usedReplacementIds: [],
+  };
+};
+
 export const buildSelectedTargetKoReplacementProcess = (
   entry: EffectQueueEntry,
   target: CardRef,
   targetIndex: number,
-): ReplacementProcess => {
-  const payload: SelectedTargetKoReplacementPayload = {
+): ReplacementProcess =>
+  buildKoReplacementProcess({
     effectId: entry.effectBlockId,
+    id: `${entry.id}:ko:${target.instanceId}:${String(targetIndex)}`,
     queueEntryId: entry.id,
     source: entry.source,
     target,
-    fieldRemovalAttempt: {
-      processFamily: "fieldRemoval",
-      classification: "moveFromFieldToTrash",
-      sourceKind: "cardEffect",
-      sourceControllerId: entry.controllerId,
-    },
-  };
-  return {
-    id: `${entry.id}:ko:${target.instanceId}:${String(targetIndex)}`,
-    type: "ko",
-    source: entry.source,
-    target,
-    payload,
     causedBy: entry.causedBy,
-    usedReplacementIds: [],
-  };
-};
+    sourceKind: "cardEffect",
+    sourceControllerId: entry.controllerId,
+  });
 
 const findKoTargetByInstanceId = (
   state: GameState,

@@ -275,7 +275,7 @@ export const applySavedFieldObjectKoSequenceSegment = (params: {
 
   if (resolvedKo.state.pendingDecision?.type === "chooseReplacement") {
     return {
-      events: [],
+      events: resolvedKo.events,
       ledgers: {
         ...params.ledgers,
         segmentResults: {
@@ -286,7 +286,7 @@ export const applySavedFieldObjectKoSequenceSegment = (params: {
           },
         },
       },
-      state: params.state,
+      state: resolvedKo.state,
     };
   }
 

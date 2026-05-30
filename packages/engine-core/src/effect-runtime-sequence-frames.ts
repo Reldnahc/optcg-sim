@@ -977,10 +977,7 @@ const applyAllTargetKoSequenceSegment = (params: {
     },
     selectedTargets,
   );
-  if (
-    resolvedKo.errors !== undefined ||
-    resolvedKo.state.pendingDecision?.type === "chooseReplacement"
-  ) {
+  if (resolvedKo.errors !== undefined) {
     return {
       events: [],
       ledgers: {
@@ -994,6 +991,22 @@ const applyAllTargetKoSequenceSegment = (params: {
         },
       },
       state: params.state,
+    };
+  }
+  if (resolvedKo.state.pendingDecision?.type === "chooseReplacement") {
+    return {
+      events: resolvedKo.events,
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: resolvedKo.state,
     };
   }
   return {
@@ -1987,6 +2000,23 @@ const continueNoDecisionSegments = (
         nextState = resolvedKo.state;
         nextLedgers = resolvedKo.ledgers;
         events.push(...resolvedKo.events);
+        if (nextState.pendingDecision !== undefined) {
+          const frame = frameForPausedSequenceDecision({
+            decision: nextState.pendingDecision,
+            entry,
+            effectPath: [...effectPath],
+            index,
+            savedReferences: nextLedgers.savedReferences,
+            segmentResults: nextLedgers.segmentResults,
+            state: nextState,
+          });
+          return {
+            events,
+            kind: "paused",
+            ok: true,
+            state: stateWithPausedSequenceFrame(nextState, entry, frame),
+          };
+        }
         continue;
       }
       const resolvedKo = applySavedFieldObjectKoSequenceSegment({
@@ -2003,6 +2033,23 @@ const continueNoDecisionSegments = (
       nextState = resolvedKo.state;
       nextLedgers = resolvedKo.ledgers;
       events.push(...resolvedKo.events);
+      if (nextState.pendingDecision !== undefined) {
+        const frame = frameForPausedSequenceDecision({
+          decision: nextState.pendingDecision,
+          entry,
+          effectPath: [...effectPath],
+          index,
+          savedReferences: nextLedgers.savedReferences,
+          segmentResults: nextLedgers.segmentResults,
+          state: nextState,
+        });
+        return {
+          events,
+          kind: "paused",
+          ok: true,
+          state: stateWithPausedSequenceFrame(nextState, entry, frame),
+        };
+      }
       continue;
     }
     if (
@@ -2979,6 +3026,63 @@ export const resumeSequenceFrameAfterOptionalCost = (
         ...frame.segmentResults,
         [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
           segmentResult,
+      },
+    },
+    state,
+  });
+};
+
+export const resumeSequenceFrameAfterReplacement = (
+  state: GameState,
+  decisionId: NonNullable<GameState["pendingDecision"]>["id"],
+): SequenceFrameResumeResult => {
+  const frame = findSequenceFrameByDecisionId(state, decisionId);
+  if (frame === undefined) {
+    return undefined;
+  }
+  const entry = findFrameQueueEntry(state, frame);
+  if (entry === undefined) {
+    return {
+      error: sequenceRuntimeError(frame.effectBlockId, "missing-queue-entry"),
+      ok: false,
+    };
+  }
+  const effectBlock = findSequenceEffectBlock(state, entry);
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
+    return {
+      error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
+      ok: false,
+    };
+  }
+  const pausedSegment =
+    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  if (pausedSegment === undefined || pausedSegment.effect.type !== "ko") {
+    return {
+      error: sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+  return resumeSequenceFrameFromLedgers({
+    createTrashDecision: createUnsupportedTrashDecision,
+    effectBlock: supportedBlock,
+    entry,
+    finalizeCompleted: true,
+    frame,
+    ledgers: {
+      savedReferences: frame.savedReferences,
+      segmentResults: {
+        ...frame.segmentResults,
+        [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
+          {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: true,
+          },
       },
     },
     state,

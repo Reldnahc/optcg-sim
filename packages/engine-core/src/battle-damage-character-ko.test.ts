@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardInstance, Protection } from "@optcg/types";
+import type {
+  CardId,
+  CardInstance,
+  EffectDefinition,
+  EffectId,
+  Protection,
+  ReplacementTrigger,
+  Target,
+} from "@optcg/types";
 
+import { applyAction } from "./actions.js";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
@@ -12,6 +21,9 @@ import {
   effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+
+const toCardId = (value: string): CardId => value as CardId;
+const toEffectId = (value: string): EffectId => value as EffectId;
 
 const fieldRemovalProtection = (): Protection => ({
   process: "fieldRemoval",
@@ -66,6 +78,80 @@ const protectTargetFromOpponentEffectRemoval = (
       createdAtStateSeq: state.seq,
     },
   ];
+};
+
+const addOpponentFieldRemovalLifeReplacement = (
+  state: ReturnType<typeof setupAttackState>,
+  target: CardInstance,
+): EffectId => {
+  const targetCardId = toCardId("battle-sky-island-target");
+  target.cardId = targetCardId;
+  const replacementTarget: Target = {
+    type: "all",
+    zone: "characterArea",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      typesAny: ["Sky Island"],
+      power: { min: 6000 },
+    },
+  };
+  const when: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    target: replacementTarget,
+  };
+  const effectId = toEffectId("replacement:battle-field-removal-life-to-hand");
+  const effectDefinitionId = "definition:battle-field-removal-life-to-hand";
+  state.cardManifest.cards[target.cardId] = {
+    ...resolvedCard({
+      cardId: target.cardId,
+      category: "character",
+      power: 6000,
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId,
+        rulesVersion: "battle-field-removal-replacement-rules",
+        sourceTextHash: "battle-field-removal-replacement-source",
+      },
+    }),
+    types: ["Sky Island"],
+  };
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: effectId,
+    category: "replacement",
+    trigger: { type: "replacement", replacement: when },
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect: {
+      type: "replacement",
+      when,
+      instead: {
+        type: "moveCards",
+        count: 1,
+        from: { player: "self", zone: "life", position: "top" },
+        to: { player: "self", zone: "hand" },
+        order: "original",
+      },
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: {
+      cardId: target.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effectBlock],
+      metadata: {
+        sourceTextHash: "battle-field-removal-replacement-source",
+        rulesVersion: "battle-field-removal-replacement-rules",
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-05-29T00:00:00.000Z",
+      },
+    },
+  };
+  return effectId;
 };
 
 test("equal-or-greater power K.O.s rested character and returns attached DON!! rested", () => {
@@ -172,6 +258,94 @@ test("battle K.O. still removes a Character protected from opponent effect remov
       )
       .map((event) => event.type),
     ["damageDealt", "cardKOd", "cardMoved"],
+  );
+});
+
+test("battle K.O. pauses for opponent field-removal life replacement", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  const topLife = must(p2State.life[0], "top life").card;
+  const replacementId = addOpponentFieldRemovalLifeReplacement(state, target);
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  const decision = must(result.state.pendingDecision, "replacement decision");
+  assert.equal(decision.type, "chooseReplacement");
+  assert.equal(decision.playerId, p2);
+  assert.deepEqual(decision.replacementIds, [replacementId]);
+  assert.deepEqual(
+    result.events
+      .filter((event) =>
+        ["damageDealt", "decisionCreated", "cardKOd", "cardMoved"].includes(
+          event.type,
+        ),
+      )
+      .map((event) => event.type),
+    ["damageDealt", "decisionCreated"],
+  );
+
+  const accepted = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "replacement", replacementId },
+  });
+  const nextP2 = must(accepted.state.players[p2], "accepted p2");
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.equal(accepted.state.battle, undefined);
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.equal(
+    must(nextP2.hand.at(-1), "life moved to hand").instanceId,
+    topLife.instanceId,
+  );
+  assert.deepEqual(
+    accepted.events
+      .filter((event) =>
+        [
+          "decisionResolved",
+          "replacementApplied",
+          "cardMoved",
+          "cardKOd",
+          "effectResolved",
+        ].includes(event.type),
+      )
+      .map((event) => event.type),
+    [
+      "decisionResolved",
+      "replacementApplied",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+    ],
   );
 });
 
