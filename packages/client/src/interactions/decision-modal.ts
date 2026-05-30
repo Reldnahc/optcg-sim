@@ -97,6 +97,14 @@ export type DecisionModalModel =
       canConfirm: boolean;
     }
   | {
+      kind: "binaryQuantity";
+      decisionId: DecisionId;
+      prompt: string;
+      selectedQuantity: 0 | 1;
+      options: Array<{ quantity: 0 | 1; label: string }>;
+      canConfirm: boolean;
+    }
+  | {
       kind: "chooseOption";
       decisionId: DecisionId;
       prompt: string;
@@ -602,6 +610,20 @@ export const createDecisionModalModel = (
     assertDraftForDecision(decision, draft);
     if (draft.kind !== "chooseQuantity") {
       throw new Error("Decision draft is not a chooseQuantity draft.");
+    }
+    if (decision.min === 0 && decision.max === 1) {
+      const selectedQuantity = draft.quantity === 0 ? 0 : 1;
+      return {
+        kind: "binaryQuantity",
+        decisionId: decision.id,
+        prompt: decision.prompt,
+        selectedQuantity,
+        options: [
+          { quantity: 0, label: "No" },
+          { quantity: 1, label: "Yes" },
+        ],
+        canConfirm: isQuantityConfirmable(decision, draft),
+      };
     }
     return {
       kind: "chooseQuantity",

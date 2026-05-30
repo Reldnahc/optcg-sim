@@ -95,6 +95,42 @@ test("chooseQuantity modal renders a range slider over the legal range", () => {
   assert.equal(markup.includes('type="number"'), false);
 });
 
+test("binary quantity modal renders yes-no choices instead of a slider", () => {
+  const model: DecisionModalModel = {
+    kind: "binaryQuantity",
+    decisionId: "decision-quantity" as never,
+    prompt: "Choose whether to take one.",
+    selectedQuantity: 1,
+    options: [
+      { quantity: 0, label: "No" },
+      { quantity: 1, label: "Yes" },
+    ],
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /decision-option-list/u);
+  assert.match(markup, />No<\/button>/u);
+  assert.match(markup, />Yes<\/button>/u);
+  assert.match(markup, /decision-choice is-selected/u);
+  assert.doesNotMatch(markup, /type="range"/u);
+  assert.doesNotMatch(markup, /quantity-slider/u);
+});
+
 test("return-to-deck order modal renders card images with deck order badges", () => {
   const model: DecisionModalModel = {
     kind: "orderCards",

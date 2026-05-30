@@ -340,6 +340,30 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "chooseQuantity", quantity: 3 });
   });
 
+  test("zero-to-one chooseQuantity decisions render as yes-no choices", () => {
+    const decision = {
+      ...quantityDecision(),
+      max: 1,
+    } satisfies PublicChooseQuantityDecision;
+    let draft = createDecisionDraft(decision);
+    let model = createDecisionModalModel(decision, draft);
+
+    assert.equal(model.kind, "binaryQuantity");
+    assert.equal(model.selectedQuantity, 1);
+    assert.deepEqual(model.options, [
+      { quantity: 0, label: "No" },
+      { quantity: 1, label: "Yes" },
+    ]);
+
+    draft = setDecisionQuantity(draft, 0);
+    model = createDecisionModalModel(decision, draft);
+    const response = buildDecisionResponse(decision, draft);
+
+    assert.equal(model.kind, "binaryQuantity");
+    assert.equal(model.selectedQuantity, 0);
+    assert.deepEqual(response, { type: "chooseQuantity", quantity: 0 });
+  });
+
   test("chooseQuantity draft defaults to the maximum legal quantity", () => {
     const decision = quantityDecision();
     const draft = createDecisionDraft(decision);

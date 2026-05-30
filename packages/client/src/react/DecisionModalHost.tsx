@@ -241,6 +241,25 @@ export const DecisionModalHost = ({
           </span>
         </label>
       ) : null}
+      {model.kind === "binaryQuantity" ? (
+        <div className="decision-option-list">
+          {model.options.map((option) => (
+            <button
+              key={option.quantity}
+              className={`decision-choice ${
+                option.quantity === model.selectedQuantity ? "is-selected" : ""
+              }`}
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                onQuantity(option.quantity);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {model.kind === "chooseOption" ? (
         <div className="decision-option-list">
           {model.options.map((option) => (
