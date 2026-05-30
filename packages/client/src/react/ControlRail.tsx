@@ -7,8 +7,11 @@ export interface ControlRailProps {
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
+  width?: number | undefined;
+  dockActive?: boolean | undefined;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
+  onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
   rollbackStatus?:
     | {
         message: string;
@@ -28,8 +31,11 @@ export const ControlRail = ({
   errors,
   globalActions,
   disabled,
+  width,
+  dockActive = false,
   onAction,
   onNewMatch,
+  onResizePointerDown,
   rollbackStatus,
   onCancelRollback,
   concedeDisabled = true,
@@ -42,7 +48,19 @@ export const ControlRail = ({
   const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
 
   return (
-    <aside className="control-rail">
+    <aside
+      className={["control-rail", dockActive ? "is-dock-active" : ""]
+        .filter(Boolean)
+        .join(" ")}
+      style={width === undefined ? undefined : { width: `${String(width)}px` }}
+    >
+      <button
+        className="control-rail-resize-handle"
+        type="button"
+        aria-label="Resize controls"
+        title="Resize controls"
+        onPointerDown={onResizePointerDown}
+      />
       <section className="summary-panel opponent-summary">
         <h2>Opponent</h2>
       </section>
@@ -120,6 +138,9 @@ export const ControlRail = ({
           disabled={disabled}
           onAction={onAction}
         />
+        <div className="control-window-dock" aria-label="Window dock">
+          <span>Drop windows here</span>
+        </div>
       </section>
       <section className="summary-panel player-summary">
         <h2>Player</h2>

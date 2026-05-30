@@ -26,6 +26,8 @@ export interface TabbedFloatingWindowProps {
   onToggleMinimized: () => void;
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragMove?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
   onTabDragOut?: ((tabId: string, point: TabDragOutPoint) => void) | undefined;
 }
 
@@ -59,6 +61,8 @@ export const TabbedFloatingWindow = ({
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragMove,
+  onDragEnd,
   onTabDragOut,
 }: TabbedFloatingWindowProps): React.JSX.Element | null => {
   const tabDragStart = useRef<TabDragStart | undefined>(undefined);
@@ -81,6 +85,8 @@ export const TabbedFloatingWindow = ({
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
       onRectChange={onRectChange}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
       headerContent={
         <div
           className="floating-window-header-tabs"

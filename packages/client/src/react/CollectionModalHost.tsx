@@ -27,6 +27,8 @@ export interface CollectionModalHostProps {
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragMove?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
   onToggleCard?: ((instanceId: string) => void) | undefined;
   onConfirm?: (() => void) | undefined;
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
@@ -41,6 +43,8 @@ export const CollectionModalHost = ({
   onToggleMinimized,
   onClose,
   onRectChange,
+  onDragMove,
+  onDragEnd,
   onToggleCard,
   onConfirm,
   onPreviewCard,
@@ -120,6 +124,8 @@ export const CollectionModalHost = ({
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
       onRectChange={onRectChange}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
     >
       {body}
     </FloatingWindow>

@@ -37,7 +37,7 @@ describe("settings window", () => {
     assert.match(matchApp, /showSettingsWindow/u);
     assert.match(matchApp, /updateFloatingWindowOpen\(settingsWindowKey/u);
     assert.match(matchApp, /<SettingsWindow/u);
-    assert.match(matchApp, /tryGroupInfoWindow\("settings", rect\)/u);
+    assert.match(matchApp, /completeInfoWindowDrag\("settings", rect\)/u);
   });
 
   test("settings can render as a first-class tab in the shared info window", () => {
@@ -62,12 +62,13 @@ describe("settings window", () => {
   });
 
   test("match app restores settings and tab config from persisted window state", async () => {
-    const [matchApp, infoConfigHook] = await Promise.all([
+    const [matchApp, floatingWindowHook, infoConfigHook] = await Promise.all([
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "use-floating-window-state.ts"), "utf8"),
       readFile(join(sourceDirectory, "use-info-window-config.ts"), "utf8"),
     ]);
 
-    assert.match(matchApp, /loadOpenWindowIds\(\)/u);
+    assert.match(floatingWindowHook, /loadOpenWindowIds\(\)/u);
     assert.match(matchApp, /activeOpenWindowIds\.has\(settingsWindowKey\)/u);
     assert.match(matchApp, /useInfoWindowConfig/u);
     assert.match(infoConfigHook, /loadInfoWindowConfig\(\)/u);

@@ -26,6 +26,8 @@ export interface InfoTabbedWindowProps {
   onToggleMinimized: () => void;
   onCloseActiveTab: (tabId: InfoWindowTabId) => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
+  onDragMove?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
   onTabDragOut?:
     | ((tabId: InfoWindowTabId, point: TabDragOutPoint) => void)
     | undefined;
@@ -50,6 +52,8 @@ export const InfoTabbedWindow = ({
   onToggleMinimized,
   onCloseActiveTab,
   onRectChange,
+  onDragMove,
+  onDragEnd,
   onTabDragOut,
   onRequestRollback,
   onPreviewCard,
@@ -112,6 +116,8 @@ export const InfoTabbedWindow = ({
         onCloseActiveTab(activeTab);
       }}
       onRectChange={onRectChange}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
       onTabDragOut={(tabId, point) => {
         if (isInfoWindowTabId(tabId)) {
           onTabDragOut?.(tabId, point);

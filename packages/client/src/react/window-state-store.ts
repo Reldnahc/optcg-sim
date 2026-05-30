@@ -12,6 +12,8 @@ export interface RevealWindowStateStore {
   saveWindowRects: (rects: Readonly<Record<string, WindowRect>>) => void;
   loadOpenWindowIds: () => Set<string>;
   saveOpenWindowIds: (windowIds: ReadonlySet<string>) => void;
+  loadDockedWindowIds: () => Set<string>;
+  saveDockedWindowIds: (windowIds: ReadonlySet<string>) => void;
   loadInfoWindowConfig: () => InfoWindowConfig;
   saveInfoWindowConfig: (config: InfoWindowConfig) => void;
 }
@@ -24,6 +26,7 @@ export interface InfoWindowConfig {
 const keyPrefix = "optcg:client:reveal-window-state";
 const windowRectsKeyPrefix = "optcg:client:floating-window-rects";
 const openWindowsKeyPrefix = "optcg:client:open-floating-windows";
+const dockedWindowsKeyPrefix = "optcg:client:docked-floating-windows";
 const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
@@ -46,6 +49,9 @@ const windowRectsKey = (matchId: MatchId): string =>
 
 const openWindowsKey = (matchId: MatchId): string =>
   `${openWindowsKeyPrefix}:${String(matchId)}`;
+
+const dockedWindowsKey = (matchId: MatchId): string =>
+  `${dockedWindowsKeyPrefix}:${String(matchId)}`;
 
 const infoWindowConfigKey = (matchId: MatchId): string =>
   `${infoWindowConfigKeyPrefix}:${String(matchId)}`;
@@ -193,6 +199,12 @@ export const createRevealWindowStateStore = ({
   },
   saveOpenWindowIds(windowIds) {
     saveSet(storage, openWindowsKey(matchId), windowIds);
+  },
+  loadDockedWindowIds() {
+    return loadSet(storage, dockedWindowsKey(matchId));
+  },
+  saveDockedWindowIds(windowIds) {
+    saveSet(storage, dockedWindowsKey(matchId), windowIds);
   },
   loadInfoWindowConfig() {
     return parseInfoWindowConfig(storage.getItem(infoWindowConfigKey(matchId)));

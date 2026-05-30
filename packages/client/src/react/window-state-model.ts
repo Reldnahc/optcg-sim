@@ -10,6 +10,7 @@ export interface FloatingWindowRectState {
   scope?: string | undefined;
   rects: Record<string, WindowRect>;
   openWindowIds: Set<string>;
+  dockedWindowIds: Set<string>;
 }
 
 export const emptyRevealWindowState: RevealWindowState = {
@@ -20,4 +21,5 @@ export const emptyRevealWindowState: RevealWindowState = {
 export const emptyFloatingWindowRectState: FloatingWindowRectState = {
   rects: {},
   openWindowIds: new Set(),
+  dockedWindowIds: new Set(),
 };

@@ -11,7 +11,7 @@ export interface ActionLogWindowProps {
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
-  onDragEnd?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
   onRequestRollback?: (rollbackPointId: string) => void;
   onPreviewCard?: (card: ActionLogCardMention["card"]) => void;
 }

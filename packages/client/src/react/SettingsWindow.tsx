@@ -7,7 +7,7 @@ export interface SettingsWindowProps {
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
-  onDragEnd?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
 }
 
 export const defaultSettingsWindowRect: WindowRect = {

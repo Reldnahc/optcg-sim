@@ -63,9 +63,10 @@ describe("tabbed floating window", () => {
     );
     assert.match(matchApp, /InfoTabbedWindow/u);
     assert.match(matchApp, /tabIds=\{groupedInfoWindowIds\}/u);
-    assert.match(matchApp, /tryGroupInfoWindow\("preview", rect\)/u);
-    assert.match(matchApp, /tryGroupInfoWindow\("log", rect\)/u);
-    assert.match(matchApp, /tryGroupInfoWindow\("settings", rect\)/u);
+    assert.match(matchApp, /completeInfoWindowDrag\("preview", rect\)/u);
+    assert.match(matchApp, /completeInfoWindowDrag\("log", rect\)/u);
+    assert.match(matchApp, /completeInfoWindowDrag\("settings", rect\)/u);
+    assert.match(matchApp, /tryGroupInfoWindow\(draggedWindowId, rect\)/u);
     assert.match(matchApp, /splitInfoWindowTab/u);
     assert.doesNotMatch(
       matchApp,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { InstanceId } from "@optcg/types";
 
@@ -33,15 +33,12 @@ import {
 } from "./collection-window-model.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
-import { moveIdNear } from "./drag-reorder.js";
-import type { ReorderPlacement } from "./drag-reorder.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import {
   combineDropTargetForWindow,
   splitWindowRectFromPoint,
 } from "./floating-window-grouping.js";
 import type { GroupableWindow } from "./floating-window-grouping.js";
-import { orderCardsByInstanceIds } from "./hand-order-model.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import {
@@ -64,13 +61,14 @@ import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
+import { useControlPanelLayout } from "./use-control-panel-layout.js";
+import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
+import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
 import { usePoppedOutWindowDrag } from "./use-popped-out-window-drag.js";
 import {
-  emptyFloatingWindowRectState,
   emptyRevealWindowState,
-  type FloatingWindowRectState,
   type RevealWindowState,
 } from "./window-state-model.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
@@ -87,8 +85,6 @@ export const MatchApp = (): React.JSX.Element => {
   const [revealWindowState, setRevealWindowState] = useState<RevealWindowState>(
     () => emptyRevealWindowState,
   );
-  const [floatingWindowRects, setFloatingWindowRects] =
-    useState<FloatingWindowRectState>(() => emptyFloatingWindowRectState);
   const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
     undefined,
   );
@@ -103,8 +99,15 @@ export const MatchApp = (): React.JSX.Element => {
   const [combineDropTarget, setCombineDropTarget] = useState<
     InfoWindowTabId | undefined
   >(undefined);
+  const {
+    controlRailWidth,
+    controlDockActive,
+    startControlRailResize,
+    updateControlDockTarget,
+    completeControlDockDrop,
+    currentControlDockSlotRect,
+  } = useControlPanelLayout();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
     board,
     cardCostSelection,
@@ -140,10 +143,23 @@ export const MatchApp = (): React.JSX.Element => {
     setActiveTab: setInfoWindowActiveTab,
     setGroupedTabIds: setGroupedInfoWindowIds,
   } = useInfoWindowConfig(revealWindowStateStore);
+  const {
+    floatingWindowRects,
+    activeFloatingWindowRects,
+    activeOpenWindowIds,
+    activeDockedWindowIds,
+    loadFloatingWindowState,
+    resetFloatingWindowState,
+    updateFloatingWindowRect,
+    updateFloatingWindowOpen,
+    updateCollectionWindowOpen,
+    dockFloatingWindow,
+    updateDockedWindowRects,
+  } = useFloatingWindowState({ matchScope, revealWindowStateStore });
   useEffect(() => {
     if (matchScope === undefined || revealWindowStateStore === undefined) {
       setRevealWindowState(emptyRevealWindowState);
-      setFloatingWindowRects(emptyFloatingWindowRectState);
+      resetFloatingWindowState();
       resetInfoWindowConfig();
       return;
     }
@@ -152,16 +168,14 @@ export const MatchApp = (): React.JSX.Element => {
       dismissed: revealWindowStateStore.loadDismissedRevealIds(),
       minimized: revealWindowStateStore.loadMinimizedRevealIds(),
     });
-    setFloatingWindowRects({
-      scope: matchScope,
-      rects: revealWindowStateStore.loadWindowRects(),
-      openWindowIds: revealWindowStateStore.loadOpenWindowIds(),
-    });
+    loadFloatingWindowState();
     loadInfoWindowConfig();
   }, [
+    loadFloatingWindowState,
     loadInfoWindowConfig,
     matchScope,
     resetInfoWindowConfig,
+    resetFloatingWindowState,
     revealWindowStateStore,
   ]);
   const updateRevealWindowState = (
@@ -188,130 +202,14 @@ export const MatchApp = (): React.JSX.Element => {
       ? clientState
       : undefined;
   const currentPlayerId = client.currentPlayerId;
-  const activeFloatingWindowRects =
-    matchScope !== undefined && floatingWindowRects.scope === matchScope
-      ? floatingWindowRects.rects
-      : {};
-  const activeOpenWindowIds =
-    matchScope !== undefined && floatingWindowRects.scope === matchScope
-      ? floatingWindowRects.openWindowIds
-      : new Set<string>();
-  const updateFloatingWindowRect = (key: string, rect: WindowRect): void => {
-    if (matchScope === undefined) {
-      return;
-    }
-    setFloatingWindowRects((current) => {
-      const base =
-        current.scope === matchScope
-          ? current
-          : { scope: matchScope, rects: {}, openWindowIds: new Set<string>() };
-      const next = {
-        scope: matchScope,
-        rects: { ...base.rects, [key]: rect },
-        openWindowIds: new Set(base.openWindowIds),
-      };
-      revealWindowStateStore?.saveWindowRects(next.rects);
-      return next;
-    });
-  };
-  const updateFloatingWindowOpen = (key: string, open: boolean): void => {
-    if (matchScope === undefined) {
-      return;
-    }
-    setFloatingWindowRects((current) => {
-      const base =
-        current.scope === matchScope
-          ? current
-          : { scope: matchScope, rects: {}, openWindowIds: new Set<string>() };
-      const openWindowIds = new Set(base.openWindowIds);
-      if (open) {
-        openWindowIds.add(key);
-      } else {
-        openWindowIds.delete(key);
-      }
-      const next = {
-        scope: matchScope,
-        rects: base.rects,
-        openWindowIds,
-      };
-      revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
-      return next;
-    });
-  };
-  const updateCollectionWindowOpen = (key: string, open: boolean): void => {
-    if (matchScope === undefined) {
-      return;
-    }
-    setFloatingWindowRects((current) => {
-      const base =
-        current.scope === matchScope
-          ? current
-          : { scope: matchScope, rects: {}, openWindowIds: new Set<string>() };
-      const openWindowIds = new Set(
-        [...base.openWindowIds].filter(
-          (windowId) => !windowId.startsWith("collection:"),
-        ),
-      );
-      if (open) {
-        openWindowIds.add(key);
-      }
-      const next = {
-        scope: matchScope,
-        rects: base.rects,
-        openWindowIds,
-      };
-      revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
-      return next;
-    });
-  };
   const startPoppedOutDrag = usePoppedOutWindowDrag({
     onRectChange: updateFloatingWindowRect,
   });
-  const handOrderKey = `${matchScope ?? "local"}:${String(
-    currentPlayerId ?? "unknown",
-  )}`;
-  const displayBoard = useMemo(() => {
-    if (board === undefined) {
-      return undefined;
-    }
-    return {
-      ...board,
-      self: {
-        ...board.self,
-        hand: orderCardsByInstanceIds(
-          board.self.hand,
-          handOrders[handOrderKey] ?? [],
-        ),
-      },
-    };
-  }, [board, handOrderKey, handOrders]);
-  const moveHandCard = useCallback(
-    (
-      draggedInstanceId: string,
-      targetInstanceId: string,
-      placement: ReorderPlacement,
-    ): void => {
-      if (board === undefined) {
-        return;
-      }
-      setHandOrders((current) => {
-        const currentOrder = orderCardsByInstanceIds(
-          board.self.hand,
-          current[handOrderKey] ?? [],
-        ).map((card) => String(card.instanceId));
-        return {
-          ...current,
-          [handOrderKey]: moveIdNear(
-            currentOrder,
-            draggedInstanceId,
-            targetInstanceId,
-            placement,
-          ),
-        };
-      });
-    },
-    [board, handOrderKey],
-  );
+  const { displayBoard, moveHandCard } = useOrderedHandBoard({
+    board,
+    matchScope,
+    currentPlayerId,
+  });
   const playerSnapshot =
     currentPlayerId === undefined || matchState === undefined
       ? undefined
@@ -547,6 +445,13 @@ export const MatchApp = (): React.JSX.Element => {
   ): void => {
     setCombineDropTarget(matchingCombineDropTarget(draggedWindowId, rect));
   };
+  const updateInfoWindowDragTargets = (
+    draggedWindowId: InfoWindowTabId,
+    rect: WindowRect,
+  ): void => {
+    updateCombineDropTarget(draggedWindowId, rect);
+    updateControlDockTarget(rect);
+  };
   const tryGroupInfoWindow = (
     draggedWindowId: InfoWindowTabId,
     rect: WindowRect,
@@ -574,6 +479,32 @@ export const MatchApp = (): React.JSX.Element => {
         targetWindowId,
       }),
     );
+  };
+  const completeDockableWindowDrag = (
+    windowKey: string,
+    rect: WindowRect,
+  ): WindowRect | undefined => {
+    const dockRect = completeControlDockDrop(rect);
+    if (dockRect === undefined) {
+      return undefined;
+    }
+    dockFloatingWindow(windowKey, dockRect);
+    return dockRect;
+  };
+  const completeInfoWindowDrag = (
+    draggedWindowId: InfoWindowTabId,
+    rect: WindowRect,
+  ): WindowRect | undefined => {
+    const dockRect = completeDockableWindowDrag(
+      infoWindowKeyForTab(draggedWindowId),
+      rect,
+    );
+    if (dockRect !== undefined) {
+      setCombineDropTarget(undefined);
+      return dockRect;
+    }
+    tryGroupInfoWindow(draggedWindowId, rect);
+    return undefined;
   };
   const splitInfoWindowTab = (
     tabId: InfoWindowTabId,
@@ -647,6 +578,17 @@ export const MatchApp = (): React.JSX.Element => {
       setInfoWindowActiveTab("log");
     }
   }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope, previewCard]);
+  useEffect(() => {
+    const dockRect = currentControlDockSlotRect();
+    if (dockRect !== undefined) {
+      updateDockedWindowRects(dockRect);
+    }
+  }, [
+    activeDockedWindowIds.size,
+    controlRailWidth,
+    currentControlDockSlotRect,
+    updateDockedWindowRects,
+  ]);
   return (
     <main className="match-app">
       {displayBoard === undefined ? (
@@ -687,6 +629,9 @@ export const MatchApp = (): React.JSX.Element => {
         errors={client.state.errors}
         globalActions={visibleGlobalActions}
         disabled={client.state.actionInFlight}
+        width={controlRailWidth}
+        dockActive={controlDockActive}
+        onResizePointerDown={startControlRailResize}
         onAction={(actionIndex) => {
           setConcedeConfirming(false);
           void client.submitAction(actionIndex);
@@ -776,6 +721,17 @@ export const MatchApp = (): React.JSX.Element => {
                 updateFloatingWindowRect(collectionViewerWindowKey, rect);
               }
         }
+        onDragMove={
+          collectionViewerWindowKey === undefined
+            ? undefined
+            : updateControlDockTarget
+        }
+        onDragEnd={
+          collectionViewerWindowKey === undefined
+            ? undefined
+            : (rect) =>
+                completeDockableWindowDrag(collectionViewerWindowKey, rect)
+        }
         onToggleCard={(instanceId) => {
           client.toggleDecisionCard(instanceId as InstanceId);
         }}
@@ -832,6 +788,13 @@ export const MatchApp = (): React.JSX.Element => {
               rect,
             );
           }}
+          onDragMove={updateControlDockTarget}
+          onDragEnd={(rect) =>
+            completeDockableWindowDrag(
+              revealWindowKey(revealWindow.revealId),
+              rect,
+            )
+          }
         />
       ))}
       {showTabbedInfoWindow ? (
@@ -886,6 +849,8 @@ export const MatchApp = (): React.JSX.Element => {
           onRectChange={(rect) => {
             updateFloatingWindowRect(infoWindowKey, rect);
           }}
+          onDragMove={updateControlDockTarget}
+          onDragEnd={(rect) => completeDockableWindowDrag(infoWindowKey, rect)}
           onTabDragOut={splitInfoWindowTab}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
@@ -922,10 +887,10 @@ export const MatchApp = (): React.JSX.Element => {
             updateFloatingWindowRect(actionLogWindowKey, rect);
           }}
           onDragMove={(rect) => {
-            updateCombineDropTarget("log", rect);
+            updateInfoWindowDragTargets("log", rect);
           }}
           onDragEnd={(rect) => {
-            tryGroupInfoWindow("log", rect);
+            return completeInfoWindowDrag("log", rect);
           }}
           onRequestRollback={(rollbackPointId) => {
             void client.requestRollback(rollbackPointId);
@@ -956,10 +921,10 @@ export const MatchApp = (): React.JSX.Element => {
             updateFloatingWindowRect(cardPreviewWindowKey, rect);
           }}
           onDragMove={(rect) => {
-            updateCombineDropTarget("preview", rect);
+            updateInfoWindowDragTargets("preview", rect);
           }}
           onDragEnd={(rect) => {
-            tryGroupInfoWindow("preview", rect);
+            return completeInfoWindowDrag("preview", rect);
           }}
         />
       ) : null}
@@ -989,10 +954,10 @@ export const MatchApp = (): React.JSX.Element => {
             updateFloatingWindowRect(settingsWindowKey, rect);
           }}
           onDragMove={(rect) => {
-            updateCombineDropTarget("settings", rect);
+            updateInfoWindowDragTargets("settings", rect);
           }}
           onDragEnd={(rect) => {
-            tryGroupInfoWindow("settings", rect);
+            return completeInfoWindowDrag("settings", rect);
           }}
         />
       ) : null}

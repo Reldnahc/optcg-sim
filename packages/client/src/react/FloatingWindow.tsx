@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface WindowRect {
   x: number;
@@ -37,7 +37,7 @@ export interface FloatingWindowProps {
   onClose?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
-  onDragEnd?: ((rect: WindowRect) => void) | undefined;
+  onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
   headerContent?: React.ReactNode;
   children?: React.ReactNode;
 }
@@ -154,6 +154,18 @@ export const FloatingWindow = ({
     },
     [onRectChange],
   );
+  useEffect(() => {
+    setRect(
+      clampRectToViewport(initialRect, minWidth, minHeight, currentViewport()),
+    );
+  }, [
+    initialRect.height,
+    initialRect.width,
+    initialRect.x,
+    initialRect.y,
+    minHeight,
+    minWidth,
+  ]);
 
   const handleDragPointerDown = (
     event: React.PointerEvent<HTMLElement>,
@@ -238,7 +250,17 @@ export const FloatingWindow = ({
           onClose?.();
         }
         if (action === undefined) {
-          onDragEnd?.(droppedRect);
+          const resolvedRect = onDragEnd?.(droppedRect);
+          if (resolvedRect !== undefined) {
+            updateRect(
+              clampRectToViewport(
+                resolvedRect,
+                minWidth,
+                minHeight,
+                currentViewport(),
+              ),
+            );
+          }
         }
       }
       stopInteraction(pointerId);
@@ -250,6 +272,7 @@ export const FloatingWindow = ({
       onDragEnd,
       onToggleMinimized,
       stopInteraction,
+      updateRect,
     ],
   );
 

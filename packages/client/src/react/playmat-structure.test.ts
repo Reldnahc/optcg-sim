@@ -198,6 +198,22 @@ describe("playmat structure", () => {
     assert.match(controlsStyles, /\.control-rail\s*\{[^}]*width:\s*260px;/u);
   });
 
+  test("control dock is tall and flush inside the panel", async () => {
+    const controlsStyles = await readFile(controlsStylesPath, "utf8");
+
+    assert.match(controlsStyles, /--control-window-dock-height:\s*320px;/u);
+    assert.match(controlsStyles, /\.control-window-dock\s*\{[^}]*right:\s*0;/u);
+    assert.match(
+      controlsStyles,
+      /\.control-window-dock\s*\{[^}]*bottom:\s*0;/u,
+    );
+    assert.match(controlsStyles, /\.control-window-dock\s*\{[^}]*left:\s*0;/u);
+    assert.match(
+      controlsStyles,
+      /\.control-window-dock\s*\{[^}]*height:\s*var\(--control-window-dock-height\);/u,
+    );
+  });
+
   test("leader and stage zones are centered and mirrored", async () => {
     const styles = await readFile(playmatStylesPath, "utf8");
 

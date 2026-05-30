@@ -10,6 +10,27 @@
   min-height: 0;
 }
 
+.control-rail-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  z-index: 3;
+  width: 10px;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+}
+
+.control-rail-resize-handle:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(89, 255, 143, 0),
+    rgba(89, 255, 143, 0.32),
+    rgba(89, 255, 143, 0)
+  );
+}
+
 .summary-panel,
 .controls-panel,
 .loading-panel {
@@ -26,9 +47,12 @@
 }
 
 .controls-panel {
+  --control-window-dock-height: 320px;
+
   position: relative;
   overflow: auto;
   padding-top: 58px;
+  padding-bottom: calc(var(--control-window-dock-height) + 10px);
 }
 
 .control-tool-strip {
@@ -136,4 +160,37 @@
   background: rgba(110, 28, 28, 0.6);
   padding: 6px;
   font-size: 12px;
+}
+
+.control-window-dock {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  height: var(--control-window-dock-height);
+  place-items: center;
+  border: 1px dashed rgba(244, 238, 231, 0.32);
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  color: rgba(255, 255, 255, 0.42);
+  background: rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.control-window-dock span {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.control-rail.is-dock-active .control-window-dock {
+  border-color: rgba(89, 255, 143, 0.9);
+  color: rgba(89, 255, 143, 0.95);
+  background: rgba(39, 95, 62, 0.42);
 }

@@ -1,0 +1,87 @@
+import { strict as assert } from "node:assert";
+import { describe, test } from "vitest";
+
+import {
+  controlDockSlotRect,
+  controlRailWidthFromDrag,
+  defaultControlRailWidth,
+  resolveControlDockSnapRect,
+  resizeDockedWindowRects,
+} from "./control-panel-layout.js";
+
+describe("control panel layout", () => {
+  test("resizes the rail from the left edge without crossing the playmat", () => {
+    assert.equal(
+      controlRailWidthFromDrag({
+        startWidth: defaultControlRailWidth,
+        startClientX: 1200,
+        currentClientX: 1000,
+        viewportWidth: 1440,
+        playmatRight: 980,
+      }),
+      444,
+    );
+
+    assert.equal(
+      controlRailWidthFromDrag({
+        startWidth: defaultControlRailWidth,
+        startClientX: 1200,
+        currentClientX: 700,
+        viewportWidth: 1440,
+        playmatRight: 980,
+      }),
+      444,
+    );
+  });
+
+  test("shrinks the rail from the left edge down to the minimum", () => {
+    assert.equal(
+      controlRailWidthFromDrag({
+        startWidth: defaultControlRailWidth,
+        startClientX: 1200,
+        currentClientX: 1300,
+        viewportWidth: 1440,
+        playmatRight: 980,
+      }),
+      220,
+    );
+  });
+
+  test("snaps a floating window flush into the control dock when dropped over it", () => {
+    assert.deepEqual(
+      resolveControlDockSnapRect({
+        rect: { x: 1080, y: 580, width: 320, height: 260 },
+        dockRect: { x: 1090, y: 590, width: 330, height: 220 },
+      }),
+      { x: 1090, y: 590, width: 330, height: 220 },
+    );
+  });
+
+  test("does not snap when a floating window misses the control dock", () => {
+    assert.equal(
+      resolveControlDockSnapRect({
+        rect: { x: 700, y: 120, width: 320, height: 260 },
+        dockRect: { x: 1090, y: 590, width: 330, height: 220 },
+      }),
+      undefined,
+    );
+  });
+
+  test("resizes docked windows to the current control dock slot", () => {
+    const next = resizeDockedWindowRects({
+      rects: {
+        log: { x: 20, y: 30, width: 300, height: 200 },
+        preview: { x: 50, y: 60, width: 320, height: 240 },
+      },
+      dockedWindowIds: new Set(["log"]),
+      dockRect: { x: 900, y: 480, width: 420, height: 320 },
+    });
+
+    assert.deepEqual(next, {
+      log: controlDockSlotRect({
+        dockRect: { x: 900, y: 480, width: 420, height: 320 },
+      }),
+      preview: { x: 50, y: 60, width: 320, height: 240 },
+    });
+  });
+});
