@@ -45,6 +45,7 @@
 - Runtime logs/metrics must distinguish accepted and rejected actions, include action processing timing, and carry `matchId`, `stateSeq`, and `actionSeq` when available.
 - The current dev snapshot/catalog path remains filtered and is the only client-facing state delivery in this slice.
 - Persistence must model both action records and decision-response records; recovery can be shallow initially, but typed seams for locks, decisions, and rehydration must exist.
+- First-player setup is session orchestration, not engine policy. Game one randomly chooses which player is allowed to choose first/second. A rematch gives that choice to the previous game's loser. The engine receives only the resolved `firstPlayerId` after the chooser submits `goFirst` or `goSecond`.
 
 ## File Structure
 
@@ -188,6 +189,21 @@ export type DisconnectPolicyMode =
   | "casual-timeout"
   | "ranked-forfeit";
 
+export type FirstPlayerChoiceSource =
+  | "game-one-random-chooser"
+  | "rematch-previous-loser";
+
+export type FirstPlayerChoiceValue = "goFirst" | "goSecond";
+
+export interface FirstPlayerChoiceState {
+  readonly source: FirstPlayerChoiceSource;
+  readonly chooserPlayerId: PlayerId;
+  readonly choice?: FirstPlayerChoiceValue;
+  readonly resolvedFirstPlayerId?: PlayerId;
+  readonly rematchOfMatchId?: MatchId;
+  readonly previousLoserId?: PlayerId;
+}
+
 export type MatchCreationSource =
   | { readonly type: "dev" }
   | {
@@ -212,6 +228,7 @@ export interface MatchSessionMetadata {
   readonly disconnectPolicyMode: DisconnectPolicyMode;
   readonly rollbackPolicyMode: RollbackPolicyMode;
   readonly spectatorPolicyMode: SpectatorPolicyMode;
+  readonly firstPlayerChoice: FirstPlayerChoiceState;
   readonly ownerInstanceId?: string;
 }
 
@@ -748,6 +765,12 @@ Tests must prove:
 - duplicate `clientActionId` with a different request hash rejects;
 - accepted result messages contain `snapshot`/existing filtered sync data and do not contain raw `state`;
 - `respondToDecision`, `requestRollback`, and `cancelRollback` still work through the new service.
+- game-one match creation stores a `firstPlayerChoice` whose chooser was selected by server RNG, not by a client-provided `firstPlayerId`;
+- only the stored chooser can answer the first-player setup decision;
+- choosing `goFirst` resolves `firstPlayerId` to the chooser, while choosing `goSecond` resolves it to the other player;
+- engine/local match initialization receives the resolved `firstPlayerId` only after the setup choice is complete;
+- rematch creation stores `firstPlayerChoice.source: "rematch-previous-loser"` and gives the setup decision to the previous game's loser;
+- rematch creation with no single previous loser fails closed unless a later explicit session policy adds a no-contest fallback.
 
 - [ ] **Step 2: Run dev server tests**
 
@@ -778,6 +801,12 @@ The service owns:
 
 - active session store;
 - register local dev match with complete `MatchSessionMetadata`;
+- first-player setup orchestration before engine start:
+  - for game one, use server RNG to choose the player who receives the first/second setup decision;
+  - for rematches, use the previous game's loser as the chooser;
+  - accept only `goFirst` or `goSecond` from that chooser;
+  - resolve and persist concrete `firstPlayerId` before constructing the engine/local match;
+  - reject non-chooser setup responses and no-loser rematch setup without mutating match state;
 - apply envelope;
 - verify `requestHash` against `requestHash(envelope.request)`;
 - flush persistence after accepted requests.
@@ -791,6 +820,7 @@ When a match is created, register it with metadata:
 - `creationSource: { type: "dev" }`
 - `disconnectPolicyMode: "dev-none"`
 - rollback and spectator policies matching current dev behavior.
+- `firstPlayerChoice` with `source: "game-one-random-chooser"` and a server-selected `chooserPlayerId`.
 
 After accepted requests, continue broadcasting existing filtered snapshots and card catalogs.
 
@@ -1006,9 +1036,11 @@ git commit -m "Export match server infrastructure"
 - Required `expectedStateSeq` in every live envelope, including decision responses.
 - Required atomic Redis owner locks with TTL using `SET NX PX` or an equivalent single operation.
 - Added observability requirements for accepted/rejected counts, processing timing, and match/action log context.
+- Added first-player chooser orchestration: game one randomly selects the chooser, rematches give the choice to the previous loser, and the engine only receives the resolved `firstPlayerId`.
 
 ## Residual Risks
 
 - Full deterministic replay-through from snapshot plus action/decision logs is still a later implementation slice. This plan creates typed seams and shallow recovery summaries only.
 - The client and server will temporarily duplicate canonical JSON hashing unless a later shared package is introduced.
 - The dev protocol remains dev-shaped; production queue/lobby creation can use the same session runtime after an API layer creates immutable `MatchSessionMetadata`.
+- Draws, cancels, no-contests, and admin-reset rematches intentionally fail closed for first-player choice until a later session policy defines an explicit fallback.
