@@ -388,7 +388,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes("-1"), true);
   });
 
-  test("renders field card keyword labels as green badges", async () => {
+  test("renders field card keyword labels as green black-box badges", async () => {
     const layout = board();
     layout.self.leader = {
       ...layout.self.leader,
@@ -421,7 +421,13 @@ describe("card action menu", () => {
     assert.equal(markup.includes("blocker"), true);
     assert.equal(markup.includes("double attack"), true);
     assert.equal(markup.includes("rush"), true);
+    assert.match(styles, /\.keyword-badge\s*\{[^}]*border-radius:\s*3px;/u);
+    assert.match(styles, /\.keyword-badge\s*\{[^}]*padding:\s*1px 3px;/u);
     assert.match(styles, /\.keyword-badge\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(
+      styles,
+      /\.keyword-badge\s*\{[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);/u,
+    );
   });
 
   test("power delta badge sits near the top-right power area", async () => {

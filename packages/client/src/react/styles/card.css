@@ -242,17 +242,15 @@
 }
 
 .keyword-badge {
+  border-radius: 3px;
+  padding: 1px 3px;
   color: #42e67c;
+  background: rgba(12, 12, 12, 0.78);
   font-size: 8px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.1;
   text-transform: lowercase;
-  text-shadow:
-    -1px -1px 0 #050805,
-    1px -1px 0 #050805,
-    -1px 1px 0 #050805,
-    1px 1px 0 #050805,
-    0 0 5px rgba(66, 230, 124, 0.65);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
 }
 
 .card-action-popover {
