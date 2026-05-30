@@ -100,6 +100,7 @@ export const TabbedFloatingWindow = ({
               role="tab"
               aria-selected={tab.id === activeTab.id}
               onPointerDown={(event) => {
+                event.preventDefault();
                 event.stopPropagation();
                 event.currentTarget.setPointerCapture(event.pointerId);
                 suppressTabClick.current = false;
@@ -111,6 +112,7 @@ export const TabbedFloatingWindow = ({
                 };
               }}
               onPointerMove={(event) => {
+                event.preventDefault();
                 event.stopPropagation();
                 const start = tabDragStart.current;
                 if (

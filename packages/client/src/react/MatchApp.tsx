@@ -39,8 +39,19 @@ import {
   splitWindowRectFromPoint,
 } from "./floating-window-grouping.js";
 import type { GroupableWindow } from "./floating-window-grouping.js";
+import { orderCardsByInstanceIds } from "./hand-order-model.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
+import {
+  actionLogWindowKey,
+  cardPreviewWindowKey,
+  infoWindowDefaultSize,
+  infoWindowKey,
+  infoWindowKeyForTab,
+  infoWindowRect,
+  settingsWindowKey,
+  visibleInfoWindowIds as visibleInfoWindowIdsFromState,
+} from "./info-window-model.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
@@ -74,31 +85,7 @@ const emptyFloatingWindowRectState: FloatingWindowRectState = {
   openWindowIds: new Set(),
 };
 
-const cardPreviewWindowKey = "card-preview";
-const actionLogWindowKey = "action-log";
-const settingsWindowKey = "settings";
-const infoWindowKey = "info-window";
 const revealWindowKey = (revealId: string): string => `reveal:${revealId}`;
-
-const orderCardsByInstanceIds = (
-  cards: readonly ClientCardModel[],
-  order: readonly string[] = [],
-): ClientCardModel[] => {
-  const cardsById = new Map(
-    cards.map((card) => [String(card.instanceId), card]),
-  );
-  const orderedCards = order.flatMap((instanceId) => {
-    const card = cardsById.get(instanceId);
-    return card === undefined ? [] : [card];
-  });
-  const orderedIds = new Set(
-    orderedCards.map((card) => String(card.instanceId)),
-  );
-  return [
-    ...orderedCards,
-    ...cards.filter((card) => !orderedIds.has(String(card.instanceId))),
-  ];
-};
 
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
@@ -579,35 +566,19 @@ export const MatchApp = (): React.JSX.Element => {
   const showPreviewWindow = previewCard !== undefined;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
+  const visibleInfoWindowIds = visibleInfoWindowIdsFromState({
+    showPreviewWindow,
+    showActionLogWindow,
+    showSettingsWindow,
+  });
   const showTabbedInfoWindow =
-    infoWindowsGrouped && showPreviewWindow && showActionLogWindow;
-  const infoWindowRect = (windowId: InfoWindowTabId): WindowRect =>
-    windowId === "preview"
-      ? (activeFloatingWindowRects[cardPreviewWindowKey] ??
-        defaultCardPreviewWindowRect)
-      : (activeFloatingWindowRects[actionLogWindowKey] ??
-        defaultActionLogWindowRect);
-  const infoWindowDefaultSize = (
-    windowId: InfoWindowTabId,
-  ): { width: number; height: number } => {
-    const rect =
-      windowId === "preview"
-        ? defaultCardPreviewWindowRect
-        : defaultActionLogWindowRect;
-    return { width: rect.width, height: rect.height };
-  };
-  const groupableInfoWindows: GroupableWindow<InfoWindowTabId>[] = [
-    {
-      id: "preview",
-      visible: showPreviewWindow,
-      rect: infoWindowRect("preview"),
-    },
-    {
-      id: "log",
-      visible: showActionLogWindow,
-      rect: infoWindowRect("log"),
-    },
-  ];
+    infoWindowsGrouped && visibleInfoWindowIds.length >= 2;
+  const groupableInfoWindows: GroupableWindow<InfoWindowTabId>[] =
+    visibleInfoWindowIds.map((id) => ({
+      id,
+      visible: true,
+      rect: infoWindowRect(id, activeFloatingWindowRects),
+    }));
   const matchingCombineDropTarget = (
     draggedWindowId: InfoWindowTabId,
     rect: WindowRect,
@@ -628,7 +599,10 @@ export const MatchApp = (): React.JSX.Element => {
     if (targetWindowId === undefined) {
       return;
     }
-    const targetRect = infoWindowRect(targetWindowId);
+    const targetRect = infoWindowRect(
+      targetWindowId,
+      activeFloatingWindowRects,
+    );
     updateFloatingWindowRect(infoWindowKey, targetRect);
     setInfoWindowActiveTab(draggedWindowId);
     setInfoWindowMinimized(false);
@@ -640,12 +614,13 @@ export const MatchApp = (): React.JSX.Element => {
     tabId: InfoWindowTabId,
     point: TabDragOutPoint,
   ): void => {
-    const windowKey =
-      tabId === "preview" ? cardPreviewWindowKey : actionLogWindowKey;
-    const remainingWindowKey =
-      tabId === "preview" ? actionLogWindowKey : cardPreviewWindowKey;
+    const windowKey = infoWindowKeyForTab(tabId);
+    const remainingWindowId =
+      visibleInfoWindowIds.find((windowId) => windowId !== tabId) ?? tabId;
+    const remainingWindowKey = infoWindowKeyForTab(remainingWindowId);
     const groupRect =
-      activeFloatingWindowRects[infoWindowKey] ?? infoWindowRect(tabId);
+      activeFloatingWindowRects[infoWindowKey] ??
+      infoWindowRect(tabId, activeFloatingWindowRects);
     updateFloatingWindowRect(remainingWindowKey, groupRect);
     const poppedOutSize = infoWindowDefaultSize(tabId);
     const poppedOutRect = splitWindowRectFromPoint(point, poppedOutSize);
@@ -660,18 +635,22 @@ export const MatchApp = (): React.JSX.Element => {
     });
     setInfoWindowsGrouped(false);
     setInfoWindowMinimized(false);
-    setInfoWindowActiveTab(tabId === "preview" ? "log" : "preview");
+    setInfoWindowActiveTab(remainingWindowId);
     if (tabId === "log") {
       setActionLogOpen(true);
       updateFloatingWindowOpen(actionLogWindowKey, true);
     }
+    if (tabId === "settings") {
+      setSettingsOpen(true);
+      updateFloatingWindowOpen(settingsWindowKey, true);
+    }
   };
   useEffect(() => {
-    if (!showPreviewWindow || !showActionLogWindow) {
+    if (visibleInfoWindowIds.length < 2) {
       setInfoWindowsGrouped(false);
       setCombineDropTarget(undefined);
     }
-  }, [showPreviewWindow, showActionLogWindow]);
+  }, [visibleInfoWindowIds.length]);
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
@@ -871,25 +850,12 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ))}
-      {showSettingsWindow ? (
-        <SettingsWindow
-          initialRect={
-            activeFloatingWindowRects[settingsWindowKey] ??
-            defaultSettingsWindowRect
-          }
-          onClose={() => {
-            setSettingsOpen(false);
-            updateFloatingWindowOpen(settingsWindowKey, false);
-          }}
-          onRectChange={(rect) => {
-            updateFloatingWindowRect(settingsWindowKey, rect);
-          }}
-        />
-      ) : null}
       {showTabbedInfoWindow ? (
         <InfoTabbedWindow
           previewCard={previewCard}
           entries={actionLogEntries}
+          logOpen={showActionLogWindow}
+          settingsOpen={showSettingsWindow}
           activeTabId={infoWindowActiveTab}
           minimized={infoWindowMinimized}
           initialRect={
@@ -904,6 +870,13 @@ export const MatchApp = (): React.JSX.Element => {
           onCloseActiveTab={(tabId) => {
             if (tabId === "preview") {
               closeCardPreview();
+              return;
+            }
+            if (tabId === "settings") {
+              setSettingsOpen(false);
+              setInfoWindowActiveTab("preview");
+              setInfoWindowsGrouped(false);
+              updateFloatingWindowOpen(settingsWindowKey, false);
               return;
             }
             setActionLogOpen(false);
@@ -987,6 +960,34 @@ export const MatchApp = (): React.JSX.Element => {
           }}
           onDragEnd={(rect) => {
             tryGroupInfoWindow("preview", rect);
+          }}
+        />
+      ) : null}
+      {showSettingsWindow && !showTabbedInfoWindow ? (
+        <SettingsWindow
+          className={
+            combineDropTarget === "settings"
+              ? "is-combine-drop-target"
+              : undefined
+          }
+          initialRect={
+            activeFloatingWindowRects[settingsWindowKey] ??
+            defaultSettingsWindowRect
+          }
+          onClose={() => {
+            setSettingsOpen(false);
+            setInfoWindowActiveTab("preview");
+            setInfoWindowsGrouped(false);
+            updateFloatingWindowOpen(settingsWindowKey, false);
+          }}
+          onRectChange={(rect) => {
+            updateFloatingWindowRect(settingsWindowKey, rect);
+          }}
+          onDragMove={(rect) => {
+            updateCombineDropTarget("settings", rect);
+          }}
+          onDragEnd={(rect) => {
+            tryGroupInfoWindow("settings", rect);
           }}
         />
       ) : null}

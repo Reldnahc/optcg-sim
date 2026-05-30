@@ -48,24 +48,30 @@ describe("tabbed floating window", () => {
   });
 
   test("match app keeps windows independent until explicit drag grouping", async () => {
-    const matchApp = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
-      "utf8",
-    );
+    const [matchApp, infoWindowModel] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
+    ]);
 
-    assert.match(matchApp, /const infoWindowKey = "info-window";/u);
+    assert.match(infoWindowModel, /const infoWindowKey = "info-window";/u);
+    assert.match(matchApp, /infoWindowKey/u);
     assert.match(matchApp, /infoWindowsGrouped/u);
     assert.match(
       matchApp,
-      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped\s*&&\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
+      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped\s*&&\s*visibleInfoWindowIds\.length\s*>=\s*2/u,
     );
     assert.match(matchApp, /InfoTabbedWindow/u);
     assert.match(matchApp, /tryGroupInfoWindow\("preview", rect\)/u);
     assert.match(matchApp, /tryGroupInfoWindow\("log", rect\)/u);
+    assert.match(matchApp, /tryGroupInfoWindow\("settings", rect\)/u);
     assert.match(matchApp, /splitInfoWindowTab/u);
     assert.doesNotMatch(
       matchApp,
       /showTabbedInfoWindow\s*=\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
+    );
+    assert.doesNotMatch(
+      matchApp,
+      /showTabbedInfoWindow\s*=\s*infoWindowsGrouped\s*&&\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
     );
   });
 

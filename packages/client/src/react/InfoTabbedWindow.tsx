@@ -2,6 +2,7 @@ import type { ActionLogCardMention, ActionLogEntry } from "../action-log.js";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogContent } from "./ActionLogWindow.js";
 import { CardPreviewContent } from "./CardPreviewWindow.js";
+import { SettingsContent } from "./SettingsWindow.js";
 import { TabbedFloatingWindow } from "./TabbedFloatingWindow.js";
 import type {
   FloatingWindowTab,
@@ -9,11 +10,13 @@ import type {
 } from "./TabbedFloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
 
-export type InfoWindowTabId = "preview" | "log";
+export type InfoWindowTabId = "preview" | "log" | "settings";
 
 export interface InfoTabbedWindowProps {
   previewCard?: ClientCardModel | undefined;
   entries: readonly ActionLogEntry[];
+  logOpen: boolean;
+  settingsOpen: boolean;
   activeTabId: InfoWindowTabId;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
@@ -29,11 +32,13 @@ export interface InfoTabbedWindowProps {
 }
 
 const isInfoWindowTabId = (tabId: string): tabId is InfoWindowTabId =>
-  tabId === "preview" || tabId === "log";
+  tabId === "preview" || tabId === "log" || tabId === "settings";
 
 export const InfoTabbedWindow = ({
   previewCard,
   entries,
+  logOpen,
+  settingsOpen,
   activeTabId,
   minimized,
   initialRect,
@@ -53,21 +58,33 @@ export const InfoTabbedWindow = ({
       content: <CardPreviewContent card={previewCard} />,
     });
   }
-  tabs.push({
-    id: "log",
-    title: "Log",
-    content: (
-      <ActionLogContent
-        entries={entries}
-        onRequestRollback={onRequestRollback}
-        onPreviewCard={onPreviewCard}
-      />
-    ),
-  });
+  if (logOpen) {
+    tabs.push({
+      id: "log",
+      title: "Log",
+      content: (
+        <ActionLogContent
+          entries={entries}
+          onRequestRollback={onRequestRollback}
+          onPreviewCard={onPreviewCard}
+        />
+      ),
+    });
+  }
+  if (settingsOpen) {
+    tabs.push({
+      id: "settings",
+      title: "Settings",
+      content: <SettingsContent />,
+    });
+  }
 
   const activeTab = tabs.some((tab) => tab.id === activeTabId)
     ? activeTabId
-    : "log";
+    : tabs[0]?.id;
+  if (activeTab === undefined || !isInfoWindowTabId(activeTab)) {
+    return null;
+  }
 
   return (
     <TabbedFloatingWindow

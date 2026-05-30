@@ -167,12 +167,17 @@ describe("card preview window", () => {
   });
 
   test("preview window uses persisted floating window rectangle wiring", async () => {
-    const [matchApp, previewWindow] = await Promise.all([
+    const [matchApp, previewWindow, infoWindowModel] = await Promise.all([
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
       readFile(join(sourceDirectory, "CardPreviewWindow.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
     ]);
 
-    assert.match(matchApp, /const cardPreviewWindowKey = "card-preview";/u);
+    assert.match(
+      infoWindowModel,
+      /const cardPreviewWindowKey = "card-preview";/u,
+    );
+    assert.match(matchApp, /cardPreviewWindowKey/u);
     assert.match(
       matchApp,
       /activeFloatingWindowRects\[cardPreviewWindowKey\]\s*\?\?\s*defaultCardPreviewWindowRect/u,

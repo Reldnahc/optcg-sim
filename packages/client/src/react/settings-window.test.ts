@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
 import { SettingsWindow } from "./SettingsWindow.js";
+import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -36,6 +37,27 @@ describe("settings window", () => {
     assert.match(matchApp, /showSettingsWindow/u);
     assert.match(matchApp, /updateFloatingWindowOpen\(settingsWindowKey/u);
     assert.match(matchApp, /<SettingsWindow/u);
+    assert.match(matchApp, /tryGroupInfoWindow\("settings", rect\)/u);
+  });
+
+  test("settings can render as a first-class tab in the shared info window", () => {
+    const markup = renderToStaticMarkup(
+      createElement(InfoTabbedWindow, {
+        entries: [],
+        logOpen: true,
+        settingsOpen: true,
+        activeTabId: "settings",
+        minimized: false,
+        onActiveTabChange: () => undefined,
+        onToggleMinimized: () => undefined,
+        onCloseActiveTab: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /role="tablist"/u);
+    assert.match(markup, /aria-selected="true"[^>]*>Settings<\/button>/u);
+    assert.match(markup, /aria-selected="false"[^>]*>Log<\/button>/u);
+    assert.match(markup, /settings-window-content/u);
   });
 
   test("match app restores settings and tab config from persisted window state", async () => {

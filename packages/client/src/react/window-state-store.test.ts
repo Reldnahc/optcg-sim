@@ -101,12 +101,12 @@ describe("reveal window state store", () => {
     });
 
     matchOne.saveInfoWindowConfig({
-      activeTabId: "log",
+      activeTabId: "settings",
       grouped: true,
     });
 
     assert.deepEqual(matchOne.loadInfoWindowConfig(), {
-      activeTabId: "log",
+      activeTabId: "settings",
       grouped: true,
     });
     assert.deepEqual(matchTwo.loadInfoWindowConfig(), {

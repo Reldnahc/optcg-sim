@@ -17,7 +17,7 @@ export interface RevealWindowStateStore {
 }
 
 export interface InfoWindowConfig {
-  activeTabId: "preview" | "log";
+  activeTabId: "preview" | "log" | "settings";
   grouped: boolean;
 }
 
@@ -111,7 +111,9 @@ const isInfoWindowConfig = (value: unknown): value is InfoWindowConfig => {
   }
   const candidate = value as Partial<Record<keyof InfoWindowConfig, unknown>>;
   return (
-    (candidate.activeTabId === "preview" || candidate.activeTabId === "log") &&
+    (candidate.activeTabId === "preview" ||
+      candidate.activeTabId === "log" ||
+      candidate.activeTabId === "settings") &&
     typeof candidate.grouped === "boolean"
   );
 };
