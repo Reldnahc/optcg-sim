@@ -8,6 +8,8 @@ import { describe, test } from "vitest";
 
 import { SettingsWindow } from "./SettingsWindow.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
+import { ControlRail } from "./ControlRail.js";
+import { SettingsToggle } from "./SettingsToggle.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -31,13 +33,34 @@ describe("settings window", () => {
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
     ]);
 
-    assert.match(controlRail, /onSettingsOpen/u);
-    assert.match(controlRail, /onClick=\{onSettingsOpen\}/u);
+    assert.match(controlRail, /settingsControl/u);
+    assert.match(matchApp, /<SettingsToggle/u);
+    assert.match(matchApp, /toggleSettingsOpen/u);
     assert.match(matchApp, /settingsWindowKey/u);
     assert.match(matchApp, /showSettingsWindow/u);
     assert.match(matchApp, /updateFloatingWindowOpen\(settingsWindowKey/u);
     assert.match(matchApp, /<SettingsWindow/u);
     assert.match(matchApp, /completeInfoWindowDrag\("settings", rect\)/u);
+  });
+
+  test("settings icon uses the same open highlight contract as other controls", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+        settingsControl: createElement(SettingsToggle, {
+          open: true,
+          onToggle: () => undefined,
+        }),
+      }),
+    );
+
+    assert.match(markup, /class="settings-toggle is-open"/u);
+    assert.match(markup, /aria-pressed="true"/u);
+    assert.match(markup, /aria-label="Close settings"/u);
   });
 
   test("settings can render as a first-class tab in the shared info window", () => {
@@ -73,5 +96,19 @@ describe("settings window", () => {
     assert.match(matchApp, /useInfoWindowConfig/u);
     assert.match(infoConfigHook, /loadInfoWindowConfig\(\)/u);
     assert.match(infoConfigHook, /saveInfoWindowConfig/u);
+  });
+
+  test("tool strip toggles activate resurfaced info tabs", async () => {
+    const toolbarControls = await readFile(
+      join(sourceDirectory, "info-window-toolbar-controls.ts"),
+      "utf8",
+    );
+
+    assert.match(toolbarControls, /const activateInfoWindowTab/u);
+    assert.match(toolbarControls, /setInfoWindowActiveTab\(tabId\)/u);
+    assert.match(toolbarControls, /setControlDockActiveTabId\(windowKey\)/u);
+    assert.match(toolbarControls, /activateInfoWindowTab\("preview"\)/u);
+    assert.match(toolbarControls, /activateInfoWindowTab\("log"\)/u);
+    assert.match(toolbarControls, /activateInfoWindowTab\("settings"\)/u);
   });
 });

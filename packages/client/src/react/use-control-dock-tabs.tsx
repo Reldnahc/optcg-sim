@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import type { ActionLogCardMention, ActionLogEntry } from "../action-log.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
@@ -38,12 +38,14 @@ export interface UseControlDockTabsInput {
   displayBoard?: BoardViewModel | undefined;
   actionInFlight: boolean;
   opponentRevealWindows: readonly ControlDockRevealWindow[];
+  controlDockActiveTabId: string | undefined;
   closeCardPreview: () => void;
   setActionLogOpen: (open: boolean) => void;
   setActionLogMinimized: (minimized: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setInfoWindowActiveTab: (tabId: InfoWindowTabId) => void;
   setGroupedInfoWindowIds: (tabIds: InfoWindowTabId[]) => void;
+  setControlDockActiveTabId: (tabId: string | undefined) => void;
   updateFloatingWindowOpen: (windowKey: string, open: boolean) => void;
   clearCollectionModal: () => void;
   updateCollectionWindowOpen: (windowKey: string, open: boolean) => void;
@@ -77,12 +79,14 @@ export const useControlDockTabs = ({
   displayBoard,
   actionInFlight,
   opponentRevealWindows,
+  controlDockActiveTabId,
   closeCardPreview,
   setActionLogOpen,
   setActionLogMinimized,
   setSettingsOpen,
   setInfoWindowActiveTab,
   setGroupedInfoWindowIds,
+  setControlDockActiveTabId,
   updateFloatingWindowOpen,
   clearCollectionModal,
   updateCollectionWindowOpen,
@@ -91,9 +95,6 @@ export const useControlDockTabs = ({
   previewActionLogCard,
   previewCardModel,
 }: UseControlDockTabsInput): UseControlDockTabsResult => {
-  const [controlDockActiveTabId, setControlDockActiveTabId] = useState<
-    string | undefined
-  >(undefined);
   const dockedInfoTabIds = dockedInfoWindowTabIds(
     activeDockedWindowIds,
     groupedInfoWindowIds,

@@ -48,12 +48,14 @@ import {
   standaloneInfoWindowIds as standaloneInfoWindowIdsFromState,
   visibleInfoWindowIds as visibleInfoWindowIdsFromState,
 } from "./info-window-model.js";
+import { createInfoWindowToolbarControls } from "./info-window-toolbar-controls.js";
 import {
   opponentRevealWindowsFromState,
 } from "./opponent-reveal-windows.js";
 import { OpponentRevealWindowLayer } from "./OpponentRevealWindowLayer.js";
 import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
+import { SettingsToggle } from "./SettingsToggle.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
@@ -84,6 +86,9 @@ export const MatchApp = (): React.JSX.Element => {
     InfoWindowTabId | undefined
   >(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [controlDockActiveTabId, setControlDockActiveTabId] = useState<
+    string | undefined
+  >(undefined);
   const {
     board,
     cardCostSelection,
@@ -210,39 +215,31 @@ export const MatchApp = (): React.JSX.Element => {
     cardDisplayFromCatalog(matchState?.cards, card);
   const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
     cardModelFromCatalog(matchState?.cards, card);
-  const previewHoveredCard = (card: ClientCardModel): void => {
-    setPreviewCard(card);
-    if (previewOpen) {
-      setInfoWindowActiveTab("preview");
-      setInfoWindowMinimized(false);
-    }
-  };
-  const openCardPreview = (): void => {
-    setPreviewOpen(true);
-    setPreviewMinimized(false);
-    setInfoWindowMinimized(false);
-    setInfoWindowActiveTab("preview");
-    updateFloatingWindowOpen(cardPreviewWindowKey, true);
-  };
-  const closeCardPreview = (): void => {
-    setPreviewOpen(false);
-    setPreviewMinimized(false);
-    setInfoWindowActiveTab("log");
-    setGroupedInfoWindowIds(
-      groupedInfoWindowIdsAfterTabDragOut(
-        configuredGroupedInfoWindowIds,
-        "preview",
-      ),
-    );
-    updateFloatingWindowOpen(cardPreviewWindowKey, false);
-  };
-  const togglePreviewOpen = (): void => {
-    if (previewOpen) {
-      closeCardPreview();
-      return;
-    }
-    openCardPreview();
-  };
+  const {
+    previewHoveredCard,
+    showCardPreview,
+    closeCardPreview,
+    togglePreviewOpen,
+    toggleActionLogOpen,
+    toggleSettingsOpen,
+  } = createInfoWindowToolbarControls({
+    previewOpen,
+    actionLogOpen,
+    settingsOpen,
+    activeDockedWindowIds,
+    configuredGroupedInfoWindowIds,
+    setPreviewCard,
+    setPreviewOpen,
+    setPreviewMinimized,
+    setActionLogOpen,
+    setActionLogMinimized,
+    setSettingsOpen,
+    setInfoWindowMinimized,
+    setInfoWindowActiveTab,
+    setGroupedInfoWindowIds,
+    setControlDockActiveTabId,
+    updateFloatingWindowOpen,
+  });
   const collectionDecisionSurface = createCollectionDecisionSurface(
     decisionModal,
     client.currentPlayerId,
@@ -365,8 +362,6 @@ export const MatchApp = (): React.JSX.Element => {
   const showTabbedInfoWindow = groupedInfoWindowIds.length >= 2;
   const {
     controlDockTabs,
-    controlDockActiveTabId,
-    setControlDockActiveTabId,
     dockedInfoTabIds,
     closeActionLogWindow,
     closeSettingsWindow,
@@ -383,12 +378,14 @@ export const MatchApp = (): React.JSX.Element => {
     displayBoard,
     actionInFlight: client.state.actionInFlight,
     opponentRevealWindows,
+    controlDockActiveTabId,
     closeCardPreview,
     setActionLogOpen,
     setActionLogMinimized,
     setSettingsOpen,
     setInfoWindowActiveTab,
     setGroupedInfoWindowIds,
+    setControlDockActiveTabId,
     updateFloatingWindowOpen,
     clearCollectionModal: () => {
       setCollectionModal(undefined);
@@ -405,7 +402,7 @@ export const MatchApp = (): React.JSX.Element => {
       void client.requestRollback(rollbackPointId);
     },
     previewActionLogCard: (card) => {
-      previewHoveredCard(actionLogCardModel(card));
+      showCardPreview(actionLogCardModel(card));
     },
     previewCardModel: previewHoveredCard,
   });
@@ -704,31 +701,14 @@ export const MatchApp = (): React.JSX.Element => {
         onCancelRollback={() => {
           void client.cancelRollback();
         }}
-        onSettingsOpen={() => {
-          const nextOpen = !settingsOpen;
-          setSettingsOpen(nextOpen);
-          updateFloatingWindowOpen(settingsWindowKey, nextOpen);
-        }}
         previewControl={
-          <CardPreviewToggle
-            open={previewOpen}
-            onToggle={togglePreviewOpen}
-          />
+          <CardPreviewToggle open={previewOpen} onToggle={togglePreviewOpen} />
         }
         actionLogControl={
-          <ActionLogToggle
-            open={actionLogOpen}
-            onToggle={() => {
-              const nextOpen = !actionLogOpen;
-              setActionLogOpen(nextOpen);
-              updateFloatingWindowOpen(actionLogWindowKey, nextOpen);
-              setActionLogMinimized(false);
-              setInfoWindowMinimized(false);
-              if (nextOpen) {
-                setInfoWindowActiveTab("log");
-              }
-            }}
-          />
+          <ActionLogToggle open={actionLogOpen} onToggle={toggleActionLogOpen} />
+        }
+        settingsControl={
+          <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
         }
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
@@ -907,7 +887,7 @@ export const MatchApp = (): React.JSX.Element => {
             void client.requestRollback(rollbackPointId);
           }}
           onPreviewCard={(card) => {
-            previewHoveredCard(actionLogCardModel(card));
+            showCardPreview(actionLogCardModel(card));
           }}
         />
       ) : null}
@@ -940,7 +920,7 @@ export const MatchApp = (): React.JSX.Element => {
             void client.requestRollback(rollbackPointId);
           }}
           onPreviewCard={(card) => {
-            previewHoveredCard(actionLogCardModel(card));
+            showCardPreview(actionLogCardModel(card));
           }}
         />
       ) : null}

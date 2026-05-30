@@ -206,19 +206,33 @@ describe("action log window", () => {
   });
 
   test("action log window remembers whether it was open", async () => {
-    const matchApp = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
-      "utf8",
-    );
+    const [matchApp, toolbarControls] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "info-window-toolbar-controls.ts"),
+        "utf8",
+      ),
+    ]);
 
     assert.match(matchApp, /activeOpenWindowIds\.has\(actionLogWindowKey\)/u);
     assert.match(
-      matchApp,
+      toolbarControls,
       /updateFloatingWindowOpen\(actionLogWindowKey, nextOpen\)/u,
     );
-    assert.match(
-      matchApp,
-      /updateFloatingWindowOpen\(actionLogWindowKey, false\)/u,
-    );
+  });
+
+  test("clicking an action-log card explicitly opens and activates preview", async () => {
+    const [matchApp, toolbarControls] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "info-window-toolbar-controls.ts"),
+        "utf8",
+      ),
+    ]);
+
+    assert.match(toolbarControls, /showCardPreview/u);
+    assert.match(toolbarControls, /setPreviewOpen\(true\)/u);
+    assert.match(toolbarControls, /activateInfoWindowTab\("preview"\)/u);
+    assert.match(matchApp, /showCardPreview\(actionLogCardModel\(card\)\)/u);
   });
 });

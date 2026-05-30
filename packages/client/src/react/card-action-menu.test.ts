@@ -239,6 +239,10 @@ describe("card action menu", () => {
           "aria-label": "Log",
           type: "button",
         }),
+        settingsControl: createElement("button", {
+          "aria-label": "Settings",
+          type: "button",
+        }),
       }),
     );
 

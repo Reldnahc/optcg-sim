@@ -67,6 +67,7 @@
 
 .card-preview-toggle,
 .action-log-toggle,
+.settings-toggle,
 .control-icon-button {
   display: grid;
   width: 32px;
@@ -83,6 +84,8 @@
 .card-preview-toggle.is-open,
 .action-log-toggle:hover,
 .action-log-toggle.is-open,
+.settings-toggle:hover,
+.settings-toggle.is-open,
 .control-icon-button:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.14);
@@ -90,6 +93,7 @@
 
 .card-preview-toggle svg,
 .action-log-toggle svg,
+.settings-toggle svg,
 .control-icon-button svg {
   width: 21px;
   height: 21px;

@@ -158,34 +158,48 @@ describe("card preview window", () => {
   });
 
   test("match app treats preview as a normal open window", async () => {
-    const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
-      "utf8",
-    );
+    const [matchApp, toolbarControls] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "info-window-toolbar-controls.ts"),
+        "utf8",
+      ),
+    ]);
 
-    assert.match(source, /const \[previewOpen/u);
-    assert.match(source, /const previewHoveredCard/u);
+    assert.match(matchApp, /const \[previewOpen/u);
+    assert.match(matchApp, /previewHoveredCard/u);
+    assert.match(toolbarControls, /previewHoveredCard\(card\)/u);
+    const hoverBlock =
+      /previewHoveredCard\(card\) \{(?<body>[\s\S]*?)\n\s{4}\},/u.exec(
+        toolbarControls,
+      )?.groups?.["body"] ?? "";
+    assert.match(hoverBlock, /setPreviewCard\(card\);/u);
+    assert.doesNotMatch(hoverBlock, /activateInfoWindowTab/u);
+    assert.doesNotMatch(hoverBlock, /setPreviewOpen\(true\)/u);
     assert.match(
-      source,
+      toolbarControls,
       /updateFloatingWindowOpen\(cardPreviewWindowKey, true\)/u,
     );
-    assert.doesNotMatch(source, /lastPreviewCard/u);
-    assert.doesNotMatch(source, /previewEnabled/u);
+    assert.doesNotMatch(matchApp, /lastPreviewCard/u);
+    assert.doesNotMatch(matchApp, /previewEnabled/u);
   });
 
   test("closing the preview window closes its normal window state", async () => {
-    const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
-      "utf8",
-    );
+    const [matchApp, toolbarControls] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "info-window-toolbar-controls.ts"),
+        "utf8",
+      ),
+    ]);
 
-    assert.match(source, /const closeCardPreview/u);
-    assert.match(source, /setPreviewOpen\(false\);/u);
+    assert.match(toolbarControls, /const closeCardPreview/u);
+    assert.match(toolbarControls, /setPreviewOpen\(false\);/u);
     assert.match(
-      source,
+      toolbarControls,
       /updateFloatingWindowOpen\(cardPreviewWindowKey, false\)/u,
     );
-    assert.match(source, /onClose=\{closeCardPreview\}/u);
+    assert.match(matchApp, /onClose=\{closeCardPreview\}/u);
   });
 
   test("preview window uses persisted floating window rectangle wiring", async () => {
