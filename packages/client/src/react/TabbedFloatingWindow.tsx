@@ -4,6 +4,10 @@ import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import type { WindowPoint } from "./floating-window-grouping.js";
 
+export interface TabDragOutPoint extends WindowPoint {
+  pointerId: number;
+}
+
 export interface FloatingWindowTab {
   id: string;
   title: string;
@@ -22,7 +26,7 @@ export interface TabbedFloatingWindowProps {
   onToggleMinimized: () => void;
   onClose: () => void;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
-  onTabDragOut?: ((tabId: string, point: WindowPoint) => void) | undefined;
+  onTabDragOut?: ((tabId: string, point: TabDragOutPoint) => void) | undefined;
 }
 
 interface TabDragStart {
@@ -33,6 +37,15 @@ interface TabDragStart {
 }
 
 const tabDragOutDistance = 32;
+
+const releaseTabPointerCapture = (
+  element: HTMLElement,
+  pointerId: number,
+): void => {
+  if (element.hasPointerCapture(pointerId)) {
+    element.releasePointerCapture(pointerId);
+  }
+};
 
 export const TabbedFloatingWindow = ({
   tabs,
@@ -113,9 +126,14 @@ export const TabbedFloatingWindow = ({
                 if (distance >= tabDragOutDistance) {
                   tabDragStart.current = undefined;
                   suppressTabClick.current = true;
+                  releaseTabPointerCapture(
+                    event.currentTarget,
+                    event.pointerId,
+                  );
                   onTabDragOut?.(tab.id, {
                     x: event.clientX,
                     y: event.clientY,
+                    pointerId: event.pointerId,
                   });
                 }
               }}

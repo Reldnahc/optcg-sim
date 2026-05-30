@@ -10,7 +10,7 @@ import {
   createCollectionDecisionSurface,
   usesCollectionCardCostSurface,
 } from "../interactions/decision-surface.js";
-import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
 import {
   ActionLogWindow,
@@ -25,6 +25,10 @@ import {
 } from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
+import {
+  collectionModalFromWindowKey,
+  collectionWindowKey,
+} from "./collection-window-model.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import { moveIdNear } from "./drag-reorder.js";
@@ -34,13 +38,17 @@ import {
   combineDropTargetForWindow,
   splitWindowRectFromPoint,
 } from "./floating-window-grouping.js";
-import type { GroupableWindow, WindowPoint } from "./floating-window-grouping.js";
+import type { GroupableWindow } from "./floating-window-grouping.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import { RevealWindowHost } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
+import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
+import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
+import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
+import { usePoppedOutWindowDrag } from "./use-popped-out-window-drag.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
 
@@ -56,14 +64,6 @@ interface FloatingWindowRectState {
   openWindowIds: Set<string>;
 }
 
-interface PoppedOutDragState {
-  windowKey: string;
-  offsetX: number;
-  offsetY: number;
-  width: number;
-  height: number;
-}
-
 const emptyRevealWindowState: RevealWindowState = {
   dismissed: new Set(),
   minimized: new Set(),
@@ -76,23 +76,9 @@ const emptyFloatingWindowRectState: FloatingWindowRectState = {
 
 const cardPreviewWindowKey = "card-preview";
 const actionLogWindowKey = "action-log";
+const settingsWindowKey = "settings";
 const infoWindowKey = "info-window";
-const collectionWindowKey = (title: string): string => `collection:${title}`;
 const revealWindowKey = (revealId: string): string => `reveal:${revealId}`;
-
-const collectionModalFromWindowKey = (
-  key: string,
-  board: BoardViewModel,
-): CollectionModalModel | undefined => {
-  switch (key) {
-    case "collection:Player trash":
-      return { title: "Player trash", cards: board.self.trash };
-    case "collection:Opponent trash":
-      return { title: "Opponent trash", cards: board.opponent.trash };
-    default:
-      return undefined;
-  }
-};
 
 const orderCardsByInstanceIds = (
   cards: readonly ClientCardModel[],
@@ -135,16 +121,11 @@ export const MatchApp = (): React.JSX.Element => {
   const [previewMinimized, setPreviewMinimized] = useState(false);
   const [actionLogOpen, setActionLogOpen] = useState(false);
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
-  const [infoWindowActiveTab, setInfoWindowActiveTab] =
-    useState<InfoWindowTabId>("preview");
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
-  const [infoWindowsGrouped, setInfoWindowsGrouped] = useState(false);
   const [combineDropTarget, setCombineDropTarget] = useState<
     InfoWindowTabId | undefined
   >(undefined);
-  const [poppedOutDrag, setPoppedOutDrag] = useState<
-    PoppedOutDragState | undefined
-  >(undefined);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [handOrders, setHandOrders] = useState<Record<string, string[]>>({});
   const {
     board,
@@ -173,10 +154,19 @@ export const MatchApp = (): React.JSX.Element => {
           }),
     [matchState?.matchId],
   );
+  const {
+    activeTabId: infoWindowActiveTab,
+    grouped: infoWindowsGrouped,
+    load: loadInfoWindowConfig,
+    reset: resetInfoWindowConfig,
+    setActiveTab: setInfoWindowActiveTab,
+    setGrouped: setInfoWindowsGrouped,
+  } = useInfoWindowConfig(revealWindowStateStore);
   useEffect(() => {
     if (matchScope === undefined || revealWindowStateStore === undefined) {
       setRevealWindowState(emptyRevealWindowState);
       setFloatingWindowRects(emptyFloatingWindowRectState);
+      resetInfoWindowConfig();
       return;
     }
     setRevealWindowState({
@@ -189,7 +179,13 @@ export const MatchApp = (): React.JSX.Element => {
       rects: revealWindowStateStore.loadWindowRects(),
       openWindowIds: revealWindowStateStore.loadOpenWindowIds(),
     });
-  }, [matchScope, revealWindowStateStore]);
+    loadInfoWindowConfig();
+  }, [
+    loadInfoWindowConfig,
+    matchScope,
+    resetInfoWindowConfig,
+    revealWindowStateStore,
+  ]);
   const updateRevealWindowState = (
     update: (state: RevealWindowState) => RevealWindowState,
   ): void => {
@@ -290,6 +286,9 @@ export const MatchApp = (): React.JSX.Element => {
       return next;
     });
   };
+  const startPoppedOutDrag = usePoppedOutWindowDrag({
+    onRectChange: updateFloatingWindowRect,
+  });
   const handOrderKey = `${matchScope ?? "local"}:${String(
     currentPlayerId ?? "unknown",
   )}`;
@@ -579,6 +578,7 @@ export const MatchApp = (): React.JSX.Element => {
   );
   const showPreviewWindow = previewCard !== undefined;
   const showActionLogWindow = actionLogOpen;
+  const showSettingsWindow = settingsOpen;
   const showTabbedInfoWindow =
     infoWindowsGrouped && showPreviewWindow && showActionLogWindow;
   const infoWindowRect = (windowId: InfoWindowTabId): WindowRect =>
@@ -638,7 +638,7 @@ export const MatchApp = (): React.JSX.Element => {
   };
   const splitInfoWindowTab = (
     tabId: InfoWindowTabId,
-    point: WindowPoint,
+    point: TabDragOutPoint,
   ): void => {
     const windowKey =
       tabId === "preview" ? cardPreviewWindowKey : actionLogWindowKey;
@@ -649,11 +649,9 @@ export const MatchApp = (): React.JSX.Element => {
     updateFloatingWindowRect(remainingWindowKey, groupRect);
     const poppedOutSize = infoWindowDefaultSize(tabId);
     const poppedOutRect = splitWindowRectFromPoint(point, poppedOutSize);
-    updateFloatingWindowRect(
-      windowKey,
-      poppedOutRect,
-    );
-    setPoppedOutDrag({
+    updateFloatingWindowRect(windowKey, poppedOutRect);
+    startPoppedOutDrag({
+      pointerId: point.pointerId,
       windowKey,
       offsetX: poppedOutSize.width / 2,
       offsetY: 20,
@@ -675,35 +673,13 @@ export const MatchApp = (): React.JSX.Element => {
     }
   }, [showPreviewWindow, showActionLogWindow]);
   useEffect(() => {
-    if (poppedOutDrag === undefined || typeof document === "undefined") {
-      return;
-    }
-    const movePoppedOutWindow = (event: PointerEvent): void => {
-      updateFloatingWindowRect(poppedOutDrag.windowKey, {
-        x: Math.max(0, event.clientX - poppedOutDrag.offsetX),
-        y: Math.max(0, event.clientY - poppedOutDrag.offsetY),
-        width: poppedOutDrag.width,
-        height: poppedOutDrag.height,
-      });
-    };
-    const stopPoppedOutDrag = (): void => {
-      setPoppedOutDrag(undefined);
-    };
-    document.addEventListener("pointermove", movePoppedOutWindow);
-    document.addEventListener("pointerup", stopPoppedOutDrag);
-    document.addEventListener("pointercancel", stopPoppedOutDrag);
-    return () => {
-      document.removeEventListener("pointermove", movePoppedOutWindow);
-      document.removeEventListener("pointerup", stopPoppedOutDrag);
-      document.removeEventListener("pointercancel", stopPoppedOutDrag);
-    };
-  }, [poppedOutDrag]);
-  useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
     }
     const nextActionLogOpen = activeOpenWindowIds.has(actionLogWindowKey);
+    const nextSettingsOpen = activeOpenWindowIds.has(settingsWindowKey);
     setActionLogOpen(nextActionLogOpen);
+    setSettingsOpen(nextSettingsOpen);
     if (nextActionLogOpen && previewCard === undefined) {
       setInfoWindowActiveTab("log");
     }
@@ -759,6 +735,11 @@ export const MatchApp = (): React.JSX.Element => {
         rollbackStatus={rollbackStatus}
         onCancelRollback={() => {
           void client.cancelRollback();
+        }}
+        onSettingsOpen={() => {
+          const nextOpen = !settingsOpen;
+          setSettingsOpen(nextOpen);
+          updateFloatingWindowOpen(settingsWindowKey, nextOpen);
         }}
         previewControl={
           <CardPreviewToggle
@@ -890,6 +871,21 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ))}
+      {showSettingsWindow ? (
+        <SettingsWindow
+          initialRect={
+            activeFloatingWindowRects[settingsWindowKey] ??
+            defaultSettingsWindowRect
+          }
+          onClose={() => {
+            setSettingsOpen(false);
+            updateFloatingWindowOpen(settingsWindowKey, false);
+          }}
+          onRectChange={(rect) => {
+            updateFloatingWindowRect(settingsWindowKey, rect);
+          }}
+        />
+      ) : null}
       {showTabbedInfoWindow ? (
         <InfoTabbedWindow
           previewCard={previewCard}

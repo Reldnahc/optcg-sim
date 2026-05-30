@@ -102,7 +102,8 @@ export const ActionLogContent = ({
             <span className="action-log-text">
               {renderActionLogText(entry, onPreviewCard)}
             </span>
-            {rollback === undefined || onRequestRollback === undefined ? null : (
+            {rollback === undefined ||
+            onRequestRollback === undefined ? null : (
               <button
                 className="action-log-rollback"
                 type="button"
@@ -145,9 +146,7 @@ export const ActionLogWindow = ({
 }: ActionLogWindowProps): React.JSX.Element => (
   <FloatingWindow
     title="Log"
-    className={["action-log-window", className ?? ""]
-      .filter(Boolean)
-      .join(" ")}
+    className={["action-log-window", className ?? ""].filter(Boolean).join(" ")}
     initialRect={initialRect}
     minWidth={240}
     minHeight={180}

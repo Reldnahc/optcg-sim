@@ -89,6 +89,32 @@ describe("reveal window state store", () => {
     assert.deepEqual([...matchTwo.loadOpenWindowIds()], []);
   });
 
+  test("persists info window tab config by match", () => {
+    const storage = createMemoryClientStorage();
+    const matchOne = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+    const matchTwo = createRevealWindowStateStore({
+      storage,
+      matchId: "match-2" as MatchId,
+    });
+
+    matchOne.saveInfoWindowConfig({
+      activeTabId: "log",
+      grouped: true,
+    });
+
+    assert.deepEqual(matchOne.loadInfoWindowConfig(), {
+      activeTabId: "log",
+      grouped: true,
+    });
+    assert.deepEqual(matchTwo.loadInfoWindowConfig(), {
+      activeTabId: "preview",
+      grouped: false,
+    });
+  });
+
   test("fails closed to empty open window ids for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
@@ -119,6 +145,23 @@ describe("reveal window state store", () => {
 
     assert.deepEqual(store.loadWindowRects(), {
       good: { x: 10, y: 20, width: 300, height: 400 },
+    });
+  });
+
+  test("fails closed to default info window config for malformed stored data", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:info-window-config:match-1",
+      JSON.stringify({ activeTabId: "settings", grouped: "yes" }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual(store.loadInfoWindowConfig(), {
+      activeTabId: "preview",
+      grouped: false,
     });
   });
 });

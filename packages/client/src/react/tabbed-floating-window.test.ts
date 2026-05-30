@@ -80,6 +80,19 @@ describe("tabbed floating window", () => {
     assert.match(infoWindow, /onTabDragOut/u);
   });
 
+  test("tab drag-out releases pointer capture before popping out", async () => {
+    const tabbedWindow = await readFile(
+      join(sourceDirectory, "TabbedFloatingWindow.tsx"),
+      "utf8",
+    );
+
+    assert.match(tabbedWindow, /releasePointerCapture/u);
+    assert.match(
+      tabbedWindow,
+      /releaseTabPointerCapture\([\s\S]*event\.currentTarget,[\s\S]*event\.pointerId,[\s\S]*\);[\s\S]*onTabDragOut/u,
+    );
+  });
+
   test("tabbed windows pop tabs out immediately instead of showing tear-out feedback", async () => {
     const markup = renderToStaticMarkup(
       createElement(TabbedFloatingWindow, {
@@ -136,18 +149,32 @@ describe("tabbed floating window", () => {
   });
 
   test("match app keeps popped-out tabs attached to the drag gesture", async () => {
-    const matchApp = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
-      "utf8",
-    );
+    const [matchApp, poppedOutDragHook] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "use-popped-out-window-drag.ts"), "utf8"),
+    ]);
 
-    assert.match(matchApp, /poppedOutDrag/u);
-    assert.match(matchApp, /setPoppedOutDrag/u);
-    assert.match(matchApp, /document\.addEventListener\("pointermove"/u);
-    assert.match(matchApp, /document\.addEventListener\("pointerup"/u);
+    assert.match(matchApp, /usePoppedOutWindowDrag/u);
+    assert.match(matchApp, /pointerId: point\.pointerId/u);
+    assert.match(poppedOutDragHook, /poppedOutDrag/u);
+    assert.match(poppedOutDragHook, /setPoppedOutDrag/u);
     assert.match(
-      matchApp,
-      /updateFloatingWindowRect\(poppedOutDrag\.windowKey/u,
+      poppedOutDragHook,
+      /document\.addEventListener\("pointermove"/u,
+    );
+    assert.match(poppedOutDragHook, /document\.addEventListener\("pointerup"/u);
+    assert.match(
+      poppedOutDragHook,
+      /document\.addEventListener\([\s\S]*"mousemove"/u,
+    );
+    assert.match(
+      poppedOutDragHook,
+      /document\.addEventListener\([\s\S]*"mouseup"/u,
+    );
+    assert.match(poppedOutDragHook, /onRectChange\(drag\.windowKey/u);
+    assert.doesNotMatch(
+      poppedOutDragHook,
+      /document\.addEventListener\("pointercancel"/u,
     );
   });
 

@@ -12,11 +12,24 @@ export interface RevealWindowStateStore {
   saveWindowRects: (rects: Readonly<Record<string, WindowRect>>) => void;
   loadOpenWindowIds: () => Set<string>;
   saveOpenWindowIds: (windowIds: ReadonlySet<string>) => void;
+  loadInfoWindowConfig: () => InfoWindowConfig;
+  saveInfoWindowConfig: (config: InfoWindowConfig) => void;
+}
+
+export interface InfoWindowConfig {
+  activeTabId: "preview" | "log";
+  grouped: boolean;
 }
 
 const keyPrefix = "optcg:client:reveal-window-state";
 const windowRectsKeyPrefix = "optcg:client:floating-window-rects";
 const openWindowsKeyPrefix = "optcg:client:open-floating-windows";
+const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
+
+const defaultInfoWindowConfig: InfoWindowConfig = {
+  activeTabId: "preview",
+  grouped: false,
+};
 
 const setKey = (matchId: MatchId, name: "dismissed" | "minimized"): string =>
   `${keyPrefix}:${String(matchId)}:${name}`;
@@ -26,6 +39,9 @@ const windowRectsKey = (matchId: MatchId): string =>
 
 const openWindowsKey = (matchId: MatchId): string =>
   `${openWindowsKeyPrefix}:${String(matchId)}`;
+
+const infoWindowConfigKey = (matchId: MatchId): string =>
+  `${infoWindowConfigKeyPrefix}:${String(matchId)}`;
 
 const parseStringArray = (value: string | null): string[] => {
   if (value === null) {
@@ -89,6 +105,29 @@ const parseWindowRects = (value: string | null): Record<string, WindowRect> => {
   }
 };
 
+const isInfoWindowConfig = (value: unknown): value is InfoWindowConfig => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<Record<keyof InfoWindowConfig, unknown>>;
+  return (
+    (candidate.activeTabId === "preview" || candidate.activeTabId === "log") &&
+    typeof candidate.grouped === "boolean"
+  );
+};
+
+const parseInfoWindowConfig = (value: string | null): InfoWindowConfig => {
+  if (value === null) {
+    return defaultInfoWindowConfig;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isInfoWindowConfig(parsed) ? parsed : defaultInfoWindowConfig;
+  } catch {
+    return defaultInfoWindowConfig;
+  }
+};
+
 export const createRevealWindowStateStore = ({
   storage,
   matchId,
@@ -119,5 +158,11 @@ export const createRevealWindowStateStore = ({
   },
   saveOpenWindowIds(windowIds) {
     saveSet(storage, openWindowsKey(matchId), windowIds);
+  },
+  loadInfoWindowConfig() {
+    return parseInfoWindowConfig(storage.getItem(infoWindowConfigKey(matchId)));
+  },
+  saveInfoWindowConfig(config) {
+    storage.setItem(infoWindowConfigKey(matchId), JSON.stringify(config));
   },
 });
