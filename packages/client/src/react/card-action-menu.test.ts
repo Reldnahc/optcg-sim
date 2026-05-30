@@ -423,7 +423,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes("rush"), true);
     assert.match(
       styles,
-      /\.power-delta,\s*\.cost-delta,\s*\.keyword-badge\s*\{[^}]*border-radius:\s*3px;[^}]*padding:\s*1px 3px;[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);[^}]*font-size:\s*10px;[^}]*font-weight:\s*800;/u,
+      /\.power-delta,\s*\.cost-delta,\s*\.keyword-badge\s*\{[^}]*border-radius:\s*3px;[^}]*padding:\s*2px 4px;[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);[^}]*font-size:\s*12px;[^}]*font-weight:\s*800;/u,
     );
     assert.match(
       styles,
