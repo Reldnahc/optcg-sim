@@ -492,6 +492,9 @@ const opponentFieldRemovalReplacementApplies = (
   if (target.type !== "wouldMoveZone" || target.target.type !== "all") {
     return false;
   }
+  if (!canPayOpponentFieldRemovalReplacementCost(state, located, effect)) {
+    return false;
+  }
   const request = {
     timing: "onResolution",
     chooser: "self",
@@ -514,6 +517,19 @@ const opponentFieldRemovalReplacementApplies = (
   return candidates.candidates.some(
     (candidate) => candidate.card.instanceId === located.card.instanceId,
   );
+};
+
+const canPayOpponentFieldRemovalReplacementCost = (
+  state: GameState,
+  located: LocatedCard,
+  effect: SupportedReplacementEffectBlock,
+): boolean => {
+  const instead = effect.effect.instead;
+  if (!isSupportedLifeTopToHandEffect(instead)) {
+    return false;
+  }
+  const player = state.players[located.card.controller];
+  return player !== undefined && player.life.length >= instead.count;
 };
 
 const isOpponentControlledFieldRemovalProcess = (
