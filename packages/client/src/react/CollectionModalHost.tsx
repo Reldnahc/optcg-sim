@@ -35,29 +35,26 @@ export interface CollectionModalHostProps {
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
 }
 
-export const CollectionModalHost = ({
+export interface CollectionModalContentProps {
+  model: CollectionModalModel;
+  disabled?: boolean | undefined;
+  onToggleCard?: ((instanceId: string) => void) | undefined;
+  onConfirm?: (() => void) | undefined;
+  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
+}
+
+export const CollectionModalContent = ({
   model,
-  presentation = "window",
   disabled = false,
-  minimized = false,
-  docked = false,
-  initialRect,
-  onToggleMinimized,
-  onClose,
-  onRectChange,
-  onDragMove,
-  onDragEnd,
   onToggleCard,
   onConfirm,
   onPreviewCard,
-}: CollectionModalHostProps): React.JSX.Element | null => {
-  if (model === undefined) {
-    return null;
-  }
+}: CollectionModalContentProps): React.JSX.Element => {
   const selectedIds = new Set(model.selection?.selectedInstanceIds ?? []);
   const selectableIds = new Set(model.selection?.selectableInstanceIds ?? []);
   const orderedSelectionIds = model.selection?.selectedInstanceIds ?? [];
-  const body = (
+
+  return (
     <>
       <div className="collection-modal-card-grid">
         {model.cards.map((card) => {
@@ -107,6 +104,36 @@ export const CollectionModalHost = ({
         </div>
       )}
     </>
+  );
+};
+
+export const CollectionModalHost = ({
+  model,
+  presentation = "window",
+  disabled = false,
+  minimized = false,
+  docked = false,
+  initialRect,
+  onToggleMinimized,
+  onClose,
+  onRectChange,
+  onDragMove,
+  onDragEnd,
+  onToggleCard,
+  onConfirm,
+  onPreviewCard,
+}: CollectionModalHostProps): React.JSX.Element | null => {
+  if (model === undefined) {
+    return null;
+  }
+  const body = (
+    <CollectionModalContent
+      model={model}
+      disabled={disabled}
+      onToggleCard={onToggleCard}
+      onConfirm={onConfirm}
+      onPreviewCard={onPreviewCard}
+    />
   );
 
   if (presentation === "modal") {

@@ -19,6 +19,11 @@ export interface FloatingWindowStateController {
   updateFloatingWindowOpen: (key: string, open: boolean) => void;
   updateCollectionWindowOpen: (key: string, open: boolean) => void;
   dockFloatingWindow: (key: string, rect: WindowRect) => void;
+  dockFloatingWindows: (input: {
+    windowKeys: readonly string[];
+    rect: WindowRect;
+    replacedWindowKeys?: readonly string[] | undefined;
+  }) => void;
   dockFloatingWindowGroup: (input: {
     windowKey: string;
     rect: WindowRect;
@@ -254,6 +259,56 @@ export const useFloatingWindowState = ({
     [matchScope, revealWindowStateStore],
   );
 
+  const dockFloatingWindows = useCallback(
+    ({
+      windowKeys,
+      rect,
+      replacedWindowKeys = [],
+    }: {
+      windowKeys: readonly string[];
+      rect: WindowRect;
+      replacedWindowKeys?: readonly string[] | undefined;
+    }): void => {
+      if (matchScope === undefined || windowKeys.length === 0) {
+        return;
+      }
+      setFloatingWindowRects((current) => {
+        const base =
+          current.scope === matchScope
+            ? current
+            : {
+                scope: matchScope,
+                rects: {},
+                openWindowIds: new Set<string>(),
+                dockedWindowIds: new Set<string>(),
+              };
+        const dockedWindowIds = new Set(base.dockedWindowIds);
+        const openWindowIds = new Set(base.openWindowIds);
+        for (const replacedWindowKey of replacedWindowKeys) {
+          dockedWindowIds.delete(replacedWindowKey);
+        }
+        const rects = { ...base.rects };
+        for (const windowKey of windowKeys) {
+          dockedWindowIds.delete(windowKey);
+          dockedWindowIds.add(windowKey);
+          openWindowIds.add(windowKey);
+          rects[windowKey] = rect;
+        }
+        const next = {
+          scope: matchScope,
+          rects,
+          openWindowIds,
+          dockedWindowIds,
+        };
+        revealWindowStateStore?.saveWindowRects(next.rects);
+        revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
+        revealWindowStateStore?.saveDockedWindowIds(dockedWindowIds);
+        return next;
+      });
+    },
+    [matchScope, revealWindowStateStore],
+  );
+
   const updateDockedWindowRects = useCallback(
     (dockRect: WindowRect): void => {
       if (matchScope === undefined || activeDockedWindowIds.size === 0) {
@@ -289,6 +344,7 @@ export const useFloatingWindowState = ({
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
     dockFloatingWindow,
+    dockFloatingWindows,
     dockFloatingWindowGroup,
     updateDockedWindowRects,
   };

@@ -161,15 +161,17 @@ describe("tabbed floating window", () => {
     assert.match(tabbedStyles, /\.is-combine-drop-target/u);
   });
 
-  test("match app converts occupied dock drops into info window tabs", async () => {
+  test("match app docks info tabs through the generic control dock host", async () => {
     const matchApp = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
     );
 
-    assert.match(matchApp, /groupedInfoWindowIdsAfterDockDrop/u);
-    assert.match(matchApp, /activeDockedWindowIds/u);
-    assert.match(matchApp, /dockInfoWindowGroup/u);
+    assert.match(matchApp, /dockInfoWindowTabs/u);
+    assert.match(matchApp, /dockFloatingWindows/u);
+    assert.match(matchApp, /controlDockTabs/u);
+    assert.match(matchApp, /dockTabs=\{controlDockTabs\}/u);
+    assert.doesNotMatch(matchApp, /groupedInfoWindowIdsAfterDockDrop/u);
     assert.match(matchApp, /completeInfoGroupDrag/u);
   });
 

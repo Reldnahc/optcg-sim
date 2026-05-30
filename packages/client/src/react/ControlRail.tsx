@@ -3,15 +3,25 @@ import type { ReactNode } from "react";
 import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 
+export interface ControlDockTab {
+  id: string;
+  title: string;
+  content: ReactNode;
+}
+
 export interface ControlRailProps {
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
   width?: number | undefined;
   dockActive?: boolean | undefined;
+  dockTabs?: readonly ControlDockTab[] | undefined;
+  activeDockTabId?: string | undefined;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
   onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onDockTabChange?: ((tabId: string) => void) | undefined;
+  onDockTabClose?: ((tabId: string) => void) | undefined;
   rollbackStatus?:
     | {
         message: string;
@@ -33,9 +43,13 @@ export const ControlRail = ({
   disabled,
   width,
   dockActive = false,
+  dockTabs = [],
+  activeDockTabId,
   onAction,
   onNewMatch,
   onResizePointerDown,
+  onDockTabChange,
+  onDockTabClose,
   rollbackStatus,
   onCancelRollback,
   concedeDisabled = true,
@@ -46,6 +60,9 @@ export const ControlRail = ({
   actionLogControl,
 }: ControlRailProps): React.JSX.Element => {
   const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
+  const activeDockTab =
+    dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
+  const hasDockedWindow = activeDockTab !== undefined;
 
   return (
     <aside
@@ -138,8 +155,58 @@ export const ControlRail = ({
           disabled={disabled}
           onAction={onAction}
         />
-        <div className="control-window-dock" aria-label="Window dock">
-          <span>Drop windows here</span>
+        <div
+          className={[
+            "control-window-dock",
+            hasDockedWindow ? "has-docked-window" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-label="Window dock"
+        >
+          {activeDockTab === undefined ? (
+            <span>Drop windows here</span>
+          ) : (
+            <section className="control-dock-window">
+              <div className="control-dock-window-tabs" role="tablist">
+                {dockTabs.map((tab) => {
+                  const selected = tab.id === activeDockTab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      className={[
+                        "control-dock-window-tab",
+                        selected ? "is-active" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => {
+                        onDockTabChange?.(tab.id);
+                      }}
+                    >
+                      {tab.title}
+                    </button>
+                  );
+                })}
+                <button
+                  className="control-dock-window-close"
+                  type="button"
+                  aria-label={`Close ${activeDockTab.title}`}
+                  onClick={() => {
+                    onDockTabClose?.(activeDockTab.id);
+                  }}
+                >
+                  x
+                </button>
+              </div>
+              <div className="control-dock-window-body">
+                {activeDockTab.content}
+              </div>
+            </section>
+          )}
         </div>
       </section>
       <section className="summary-panel player-summary">

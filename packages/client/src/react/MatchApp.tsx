@@ -9,10 +9,7 @@ import {
 } from "../interactions/decision-surface.js";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
-import {
-  ActionLogWindow,
-  defaultActionLogWindowRect,
-} from "./ActionLogWindow.js";
+import { ActionLogWindow, defaultActionLogWindowRect } from "./ActionLogWindow.js";
 import { BoardLayout } from "./BoardLayout.js";
 import { createBrowserPersistentStorage } from "./browser-storage.js";
 import {
@@ -21,10 +18,7 @@ import {
   cardModelFromCatalog,
 } from "./card-model.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
-import {
-  CardPreviewWindow,
-  defaultCardPreviewWindowRect,
-} from "./CardPreviewWindow.js";
+import { CardPreviewWindow, defaultCardPreviewWindowRect } from "./CardPreviewWindow.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
 import {
@@ -44,7 +38,6 @@ import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
-  groupedInfoWindowIdsAfterDockDrop,
   groupedInfoWindowIds as groupedInfoWindowIdsFromState,
   groupedInfoWindowIdsAfterDrop,
   groupedInfoWindowIdsAfterTabDragOut,
@@ -62,6 +55,7 @@ import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { sourceZoneCards } from "./source-zone-cards.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
+import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
@@ -149,7 +143,7 @@ export const MatchApp = (): React.JSX.Element => {
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
     dockFloatingWindow,
-    dockFloatingWindowGroup,
+    dockFloatingWindows,
     updateDockedWindowRects,
   } = useFloatingWindowState({ matchScope, revealWindowStateStore });
   const {
@@ -328,6 +322,9 @@ export const MatchApp = (): React.JSX.Element => {
     collectionViewerKey === undefined
       ? undefined
       : collectionWindowKey(collectionViewerKey);
+  const collectionViewerDocked =
+    collectionViewerWindowKey !== undefined &&
+    activeDockedWindowIds.has(collectionViewerWindowKey);
   const collectionPresentation =
     collectionViewerKey === undefined ? "modal" : "window";
   useEffect(() => {
@@ -392,6 +389,51 @@ export const MatchApp = (): React.JSX.Element => {
     groupedInfoWindowIds,
   );
   const showTabbedInfoWindow = groupedInfoWindowIds.length >= 2;
+  const {
+    controlDockTabs,
+    controlDockActiveTabId,
+    setControlDockActiveTabId,
+    dockedInfoTabIds,
+    closeActionLogWindow,
+    closeSettingsWindow,
+    closeDockWindow,
+  } = useControlDockTabs({
+    activeDockedWindowIds,
+    groupedInfoWindowIds,
+    visibleInfoWindowIds,
+    previewCard,
+    showActionLogWindow,
+    showSettingsWindow,
+    actionLogEntries,
+    displayBoard,
+    actionInFlight: client.state.actionInFlight,
+    opponentRevealWindows,
+    closeCardPreview,
+    setActionLogOpen,
+    setActionLogMinimized,
+    setSettingsOpen,
+    setInfoWindowActiveTab,
+    setGroupedInfoWindowIds,
+    updateFloatingWindowOpen,
+    clearCollectionModal: () => {
+      setCollectionModal(undefined);
+    },
+    updateCollectionWindowOpen,
+    dismissRevealWindow: (revealId) => {
+      updateRevealWindowState((state) => {
+        state.dismissed.add(revealId);
+        state.minimized.delete(revealId);
+        return state;
+      });
+    },
+    requestRollback: (rollbackPointId) => {
+      void client.requestRollback(rollbackPointId);
+    },
+    previewActionLogCard: (card) => {
+      previewHoveredCard(actionLogCardModel(card));
+    },
+    previewCardModel: previewHoveredCard,
+  });
   const groupedInfoWindowRect =
     activeFloatingWindowRects[infoWindowKey] ??
     (groupedInfoWindowIds[0] === undefined
@@ -461,34 +503,26 @@ export const MatchApp = (): React.JSX.Element => {
       return undefined;
     }
     dockFloatingWindow(windowKey, dockRect);
+    setControlDockActiveTabId(windowKey);
     return dockRect;
   };
-  const dockInfoWindowGroup = (
+  const dockInfoWindowTabs = (
     draggedWindowIds: readonly InfoWindowTabId[],
     dockRect: WindowRect,
-  ): boolean => {
-    const dockDrop = groupedInfoWindowIdsAfterDockDrop({
-      visibleInfoWindowIds,
-      currentGroupedInfoWindowIds: groupedInfoWindowIds,
-      dockedWindowIds: activeDockedWindowIds,
-      draggedWindowIds,
-    });
-    if (dockDrop === undefined) {
-      return false;
-    }
-    dockFloatingWindowGroup({
-      windowKey: infoWindowKey,
+  ): void => {
+    const windowKeys = draggedWindowIds.map(infoWindowKeyForTab);
+    dockFloatingWindows({
+      windowKeys,
       rect: dockRect,
-      replacedWindowKeys: dockDrop.replacedWindowKeys,
+      replacedWindowKeys: [infoWindowKey],
     });
-    setGroupedInfoWindowIds(dockDrop.groupedIds);
+    setControlDockActiveTabId(windowKeys[0]);
     setInfoWindowActiveTab(
-      draggedWindowIds[0] ?? dockDrop.groupedIds[0] ?? "preview",
+      draggedWindowIds[0] ?? groupedInfoWindowIds[0] ?? "preview",
     );
     setInfoWindowMinimized(false);
     setPreviewMinimized(false);
     setActionLogMinimized(false);
-    return true;
   };
   const completeInfoWindowDrag = (
     draggedWindowId: InfoWindowTabId,
@@ -499,11 +533,7 @@ export const MatchApp = (): React.JSX.Element => {
       tryGroupInfoWindow(draggedWindowId, rect);
       return undefined;
     }
-    if (dockInfoWindowGroup([draggedWindowId], dockRect)) {
-      setCombineDropTarget(undefined);
-      return dockRect;
-    }
-    dockFloatingWindow(infoWindowKeyForTab(draggedWindowId), dockRect);
+    dockInfoWindowTabs([draggedWindowId], dockRect);
     setCombineDropTarget(undefined);
     return dockRect;
   };
@@ -512,9 +542,7 @@ export const MatchApp = (): React.JSX.Element => {
     if (dockRect === undefined) {
       return undefined;
     }
-    if (!dockInfoWindowGroup(groupedInfoWindowIds, dockRect)) {
-      dockFloatingWindow(infoWindowKey, dockRect);
-    }
+    dockInfoWindowTabs(groupedInfoWindowIds, dockRect);
     setCombineDropTarget(undefined);
     return dockRect;
   };
@@ -643,7 +671,11 @@ export const MatchApp = (): React.JSX.Element => {
         disabled={client.state.actionInFlight}
         width={controlRailWidth}
         dockActive={controlDockActive}
+        dockTabs={controlDockTabs}
+        activeDockTabId={controlDockActiveTabId}
         onResizePointerDown={startControlRailResize}
+        onDockTabChange={setControlDockActiveTabId}
+        onDockTabClose={closeDockWindow}
         onAction={(actionIndex) => {
           setConcedeConfirming(false);
           void client.submitAction(actionIndex);
@@ -713,70 +745,69 @@ export const MatchApp = (): React.JSX.Element => {
           void client.confirmDecision();
         }}
       />
-      <CollectionModalHost
-        model={renderedCollectionModal}
-        presentation={collectionPresentation}
-        disabled={client.state.actionInFlight}
-        minimized={collectionMinimized}
-        docked={
-          collectionViewerWindowKey === undefined
-            ? false
-            : activeDockedWindowIds.has(collectionViewerWindowKey)
-        }
-        initialRect={
-          collectionViewerWindowKey === undefined
-            ? undefined
-            : activeFloatingWindowRects[collectionViewerWindowKey]
-        }
-        onToggleMinimized={() => {
-          setCollectionMinimized((current) => !current);
-        }}
-        onRectChange={
-          collectionViewerWindowKey === undefined
-            ? undefined
-            : (rect) => {
-                updateFloatingWindowRect(collectionViewerWindowKey, rect);
-              }
-        }
-        onDragMove={
-          collectionViewerWindowKey === undefined
-            ? undefined
-            : updateControlDockTarget
-        }
-        onDragEnd={
-          collectionViewerWindowKey === undefined
-            ? undefined
-            : (rect) =>
-                completeDockableWindowDrag(collectionViewerWindowKey, rect)
-        }
-        onToggleCard={(instanceId) => {
-          client.toggleDecisionCard(instanceId as InstanceId);
-        }}
-        onConfirm={() => {
-          void client.confirmDecision();
-        }}
-        onPreviewCard={previewHoveredCard}
-        onClose={
-          cardCostCollectionModal === undefined &&
-          decisionCollectionModal === undefined
-            ? () => {
-                if (collectionModal !== undefined) {
-                  setCollectionModal(undefined);
+      {collectionViewerDocked && collectionPresentation === "window" ? null : (
+        <CollectionModalHost
+          model={renderedCollectionModal}
+          presentation={collectionPresentation}
+          disabled={client.state.actionInFlight}
+          minimized={collectionMinimized}
+          initialRect={
+            collectionViewerWindowKey === undefined
+              ? undefined
+              : activeFloatingWindowRects[collectionViewerWindowKey]
+          }
+          onToggleMinimized={() => {
+            setCollectionMinimized((current) => !current);
+          }}
+          onRectChange={
+            collectionViewerWindowKey === undefined
+              ? undefined
+              : (rect) => {
+                  updateFloatingWindowRect(collectionViewerWindowKey, rect);
                 }
-                if (collectionViewerWindowKey !== undefined) {
-                  updateCollectionWindowOpen(collectionViewerWindowKey, false);
+          }
+          onDragMove={
+            collectionViewerWindowKey === undefined
+              ? undefined
+              : updateControlDockTarget
+          }
+          onDragEnd={
+            collectionViewerWindowKey === undefined
+              ? undefined
+              : (rect) =>
+                  completeDockableWindowDrag(collectionViewerWindowKey, rect)
+          }
+          onToggleCard={(instanceId) => {
+            client.toggleDecisionCard(instanceId as InstanceId);
+          }}
+          onConfirm={() => {
+            void client.confirmDecision();
+          }}
+          onPreviewCard={previewHoveredCard}
+          onClose={
+            cardCostCollectionModal === undefined &&
+            decisionCollectionModal === undefined
+              ? () => {
+                  if (collectionModal !== undefined) {
+                    setCollectionModal(undefined);
+                  }
+                  if (collectionViewerWindowKey !== undefined) {
+                    updateCollectionWindowOpen(collectionViewerWindowKey, false);
+                  }
                 }
-              }
-            : undefined
-        }
-      />
-      {opponentRevealWindows.map((revealWindow) => (
+              : undefined
+          }
+        />
+      )}
+      {opponentRevealWindows
+        .filter(
+          (revealWindow) =>
+            !activeDockedWindowIds.has(revealWindowKey(revealWindow.revealId)),
+        )
+        .map((revealWindow) => (
         <RevealWindowHost
           key={revealWindow.revealId}
           model={revealWindow.model}
-          docked={activeDockedWindowIds.has(
-            revealWindowKey(revealWindow.revealId),
-          )}
           initialRect={
             activeFloatingWindowRects[revealWindowKey(revealWindow.revealId)] ??
             revealWindow.initialRect
@@ -816,8 +847,8 @@ export const MatchApp = (): React.JSX.Element => {
             )
           }
         />
-      ))}
-      {showTabbedInfoWindow ? (
+        ))}
+      {showTabbedInfoWindow && dockedInfoTabIds.length === 0 ? (
         <InfoTabbedWindow
           previewCard={previewCard}
           entries={actionLogEntries}
@@ -832,7 +863,6 @@ export const MatchApp = (): React.JSX.Element => {
           }
           activeTabId={infoWindowActiveTab}
           minimized={infoWindowMinimized}
-          docked={activeDockedWindowIds.has(infoWindowKey)}
           initialRect={
             activeFloatingWindowRects[infoWindowKey] ??
             activeFloatingWindowRects[actionLogWindowKey] ??
@@ -881,14 +911,14 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      {standaloneInfoWindowIds.includes("log") ? (
+      {standaloneInfoWindowIds.includes("log") &&
+      !dockedInfoTabIds.includes("log") ? (
         <ActionLogWindow
           entries={actionLogEntries}
           className={
             combineDropTarget === "log" ? "is-combine-drop-target" : undefined
           }
           minimized={actionLogMinimized}
-          docked={activeDockedWindowIds.has(actionLogWindowKey)}
           initialRect={
             activeFloatingWindowRects[actionLogWindowKey] ??
             defaultActionLogWindowRect
@@ -896,15 +926,7 @@ export const MatchApp = (): React.JSX.Element => {
           onToggleMinimized={() => {
             setActionLogMinimized((current) => !current);
           }}
-          onClose={() => {
-            setActionLogOpen(false);
-            setActionLogMinimized(false);
-            setInfoWindowActiveTab("preview");
-            setGroupedInfoWindowIds(
-              groupedInfoWindowIdsAfterTabDragOut(groupedInfoWindowIds, "log"),
-            );
-            updateFloatingWindowOpen(actionLogWindowKey, false);
-          }}
+          onClose={closeActionLogWindow}
           onRectChange={(rect) => {
             updateFloatingWindowRect(actionLogWindowKey, rect);
           }}
@@ -922,7 +944,8 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      {standaloneInfoWindowIds.includes("preview") ? (
+      {standaloneInfoWindowIds.includes("preview") &&
+      !dockedInfoTabIds.includes("preview") ? (
         <CardPreviewWindow
           card={previewCard}
           className={
@@ -931,7 +954,6 @@ export const MatchApp = (): React.JSX.Element => {
               : undefined
           }
           minimized={previewMinimized}
-          docked={activeDockedWindowIds.has(cardPreviewWindowKey)}
           initialRect={
             activeFloatingWindowRects[cardPreviewWindowKey] ??
             defaultCardPreviewWindowRect
@@ -951,29 +973,19 @@ export const MatchApp = (): React.JSX.Element => {
           }}
         />
       ) : null}
-      {standaloneInfoWindowIds.includes("settings") ? (
+      {standaloneInfoWindowIds.includes("settings") &&
+      !dockedInfoTabIds.includes("settings") ? (
         <SettingsWindow
           className={
             combineDropTarget === "settings"
               ? "is-combine-drop-target"
               : undefined
           }
-          docked={activeDockedWindowIds.has(settingsWindowKey)}
           initialRect={
             activeFloatingWindowRects[settingsWindowKey] ??
             defaultSettingsWindowRect
           }
-          onClose={() => {
-            setSettingsOpen(false);
-            setInfoWindowActiveTab("preview");
-            setGroupedInfoWindowIds(
-              groupedInfoWindowIdsAfterTabDragOut(
-                groupedInfoWindowIds,
-                "settings",
-              ),
-            );
-            updateFloatingWindowOpen(settingsWindowKey, false);
-          }}
+          onClose={closeSettingsWindow}
           onRectChange={(rect) => {
             updateFloatingWindowRect(settingsWindowKey, rect);
           }}

@@ -21,6 +21,26 @@ export interface RevealWindowHostProps {
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
 }
 
+export interface RevealWindowContentProps {
+  model: RevealWindowModel;
+  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
+}
+
+export const RevealWindowContent = ({
+  model,
+  onPreviewCard,
+}: RevealWindowContentProps): React.JSX.Element => (
+  <div className="reveal-window-card-spot">
+    {model.cards.map((card) => (
+      <CardTile
+        key={String(card.instanceId)}
+        card={card}
+        onHover={onPreviewCard}
+      />
+    ))}
+  </div>
+);
+
 export const RevealWindowHost = ({
   model,
   initialRect = { x: 380, y: 100, width: 300, height: 420 },
@@ -52,15 +72,7 @@ export const RevealWindowHost = ({
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
-      <div className="reveal-window-card-spot">
-        {model.cards.map((card) => (
-          <CardTile
-            key={String(card.instanceId)}
-            card={card}
-            onHover={onPreviewCard}
-          />
-        ))}
-      </div>
+      <RevealWindowContent model={model} onPreviewCard={onPreviewCard} />
     </FloatingWindow>
   );
 };

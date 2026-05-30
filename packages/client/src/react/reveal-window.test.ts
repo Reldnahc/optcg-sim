@@ -82,7 +82,9 @@ describe("reveal window", () => {
   test("match app renders one reveal window for each active reveal", async () => {
     const source = await readFile(matchAppPath, "utf8");
 
-    assert.match(source, /opponentRevealWindows\.map/u);
+    assert.match(source, /opponentRevealWindows\s*[\s\S]*\.filter/u);
+    assert.match(source, /activeDockedWindowIds\.has\(revealWindowKey/u);
+    assert.match(source, /\.map\(\(revealWindow\) =>/u);
     assert.doesNotMatch(source, /model=\{opponentRevealWindow\}/u);
   });
 
