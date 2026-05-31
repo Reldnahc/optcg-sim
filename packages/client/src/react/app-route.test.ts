@@ -1,0 +1,62 @@
+import { strict as assert } from "node:assert";
+import { describe, test } from "vitest";
+
+import {
+  appRouteFromPath,
+  appRoutePath,
+  appRoutes,
+  isShellRoute,
+} from "./app-route.js";
+
+describe("client app routes", () => {
+  test("maps public shell paths to route ids", () => {
+    assert.equal(appRouteFromPath("/").id, "dashboard");
+    assert.equal(appRouteFromPath("/play").id, "play");
+    assert.equal(appRouteFromPath("/lobbies").id, "lobbies");
+    assert.equal(appRouteFromPath("/decks").id, "decks");
+    assert.equal(appRouteFromPath("/profile").id, "profile");
+    assert.equal(appRouteFromPath("/match").id, "match");
+  });
+
+  test("preserves query strings for the match route", () => {
+    const route = appRouteFromPath("/match?matchId=abc&seat=p2");
+
+    assert.equal(route.id, "match");
+    assert.equal(route.search, "?matchId=abc&seat=p2");
+  });
+
+  test("preserves existing root match links with match or lobby query params", () => {
+    assert.equal(appRouteFromPath("/?matchId=abc&seat=p1").id, "match");
+    assert.equal(appRouteFromPath("/?lobbyId=abc&seat=p2").id, "match");
+  });
+
+  test("returns notFound for unknown paths", () => {
+    const route = appRouteFromPath("/missing");
+
+    assert.equal(route.id, "notFound");
+    assert.equal(route.path, "/missing");
+  });
+
+  test("builds canonical app paths", () => {
+    assert.equal(appRoutePath("dashboard"), "/");
+    assert.equal(appRoutePath("play"), "/play");
+    assert.equal(appRoutePath("lobbies"), "/lobbies");
+    assert.equal(appRoutePath("decks"), "/decks");
+    assert.equal(appRoutePath("profile"), "/profile");
+    assert.equal(appRoutePath("match"), "/match");
+  });
+
+  test("separates shell routes from the match-board route", () => {
+    assert.equal(isShellRoute("dashboard"), true);
+    assert.equal(isShellRoute("play"), true);
+    assert.equal(isShellRoute("lobbies"), true);
+    assert.equal(isShellRoute("decks"), true);
+    assert.equal(isShellRoute("profile"), true);
+    assert.equal(isShellRoute("notFound"), true);
+    assert.equal(isShellRoute("match"), false);
+    assert.deepEqual(
+      appRoutes.map((route) => route.id),
+      ["dashboard", "play", "lobbies", "decks", "profile", "match"],
+    );
+  });
+});
