@@ -61,12 +61,16 @@ Primary custom lobby route:
 The route renders the lobby page and joins or resumes that lobby with the local
 guest identity.
 
-Compatibility behavior:
+Removed legacy behavior:
 
-- existing `?lobbyId=<id>&seat=<playerId>` links may continue to work as a dev
-  fallback;
-- new UI should create and share seatless lobby links;
-- new code should not require `seat` to join a lobby.
+- `?lobbyId=<id>&seat=<playerId>` lobby links are not supported.
+- Client code must not read a `seat` URL parameter for lobby joining.
+- Server lobby join APIs must not accept a caller-selected lobby seat.
+- New UI must create and share only seatless lobby links.
+
+Match seats still exist as internal match authorization. The removed behavior is
+the old lobby-level direct-seat join path where the invite URL or client chose
+`p1`/`p2`.
 
 ## Guest Identity
 
@@ -166,7 +170,9 @@ Client/controller tests:
 - Guest identity is generated once and reused.
 - Creating a lobby claims a seat using guest identity and stores the lobby seat.
 - Joining a seatless lobby claims or resumes a seat without `seat` in the URL.
-- Existing direct-seat lobby links still work as a compatibility fallback.
+- Direct-seat lobby links do not join a lobby and are not emitted by new client
+  code.
+- Client route/session helpers do not use `seat` to choose a lobby seat.
 - When lobby sync includes a match ID, the client claims the matching match seat.
 
 Route/UI tests:
@@ -174,6 +180,8 @@ Route/UI tests:
 - `/lobbies/<lobbyId>` renders the lobby route.
 - The Lobbies page exposes a create custom lobby action.
 - Generated share links do not include `seat`.
+- Source scans or focused tests prevent reintroducing lobby joins that are
+  authorized by URL-provided `seat`.
 - The app shell does not import match-server or engine-core modules.
 
 ## Acceptance Criteria
