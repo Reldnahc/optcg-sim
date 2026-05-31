@@ -1,11 +1,4 @@
 import type {
-  DecisionResponse,
-  DecisionId,
-  MatchId,
-  PlayerId,
-} from "@optcg/types";
-
-import type {
   LobbyLiveTransport,
   LobbyStateSyncMessage,
   MatchActionResult,
@@ -15,6 +8,7 @@ import type {
   CancelRollbackInput,
   RequestRollbackInput,
 } from "./transport.js";
+import { requestHash } from "./session-request-hash.js";
 
 export interface DevWebSocketMatchTransportOptions {
   baseUrl: string;
@@ -193,62 +187,83 @@ export const createDevWebSocketMatchTransport = ({
       },
       submitVisibleAction(input) {
         const clientActionId = randomUUID();
-        return sendRequest(
-          {
-            type: "submitAction",
+        const request = {
+          type: "submitAction" as const,
+          playerId: input.playerId,
+          actionIndex: input.actionIndex,
+          expectedStateSeq: input.expectedStateSeq,
+        };
+        return requestHash(request).then((hash) =>
+          sendRequest(
+            {
+              ...request,
+              clientActionId,
+              matchId: input.matchId,
+              requestHash: hash,
+            },
             clientActionId,
-            matchId: input.matchId,
-            playerId: input.playerId,
-            actionIndex: input.actionIndex,
-            expectedStateSeq: input.expectedStateSeq,
-          },
-          clientActionId,
+          ),
         );
       },
-      respondToDecision(input: {
-        matchId: MatchId;
-        playerId: PlayerId;
-        decisionId: DecisionId;
-        response: DecisionResponse;
-      }) {
+      respondToDecision(input) {
         const clientActionId = randomUUID();
-        return sendRequest(
-          {
-            type: "respondToDecision",
+        const request = {
+          type: "respondToDecision" as const,
+          playerId: input.playerId,
+          decisionId: input.decisionId,
+          response: input.response,
+        };
+        return requestHash(request).then((hash) =>
+          sendRequest(
+            {
+              ...request,
+              clientActionId,
+              matchId: input.matchId,
+              expectedStateSeq: input.expectedStateSeq,
+              expectedDecisionId: input.expectedDecisionId,
+              requestHash: hash,
+            },
             clientActionId,
-            matchId: input.matchId,
-            playerId: input.playerId,
-            decisionId: input.decisionId,
-            response: input.response,
-          },
-          clientActionId,
+          ),
         );
       },
       requestRollback(input: RequestRollbackInput) {
         const clientActionId = randomUUID();
-        return sendRequest(
-          {
-            type: "requestRollback",
+        const request = {
+          type: "requestRollback" as const,
+          playerId: input.playerId,
+          rollbackPointId: input.rollbackPointId,
+          expectedStateSeq: input.expectedStateSeq,
+        };
+        return requestHash(request).then((hash) =>
+          sendRequest(
+            {
+              ...request,
+              clientActionId,
+              matchId: input.matchId,
+              requestHash: hash,
+            },
             clientActionId,
-            matchId: input.matchId,
-            playerId: input.playerId,
-            rollbackPointId: input.rollbackPointId,
-            expectedStateSeq: input.expectedStateSeq,
-          },
-          clientActionId,
+          ),
         );
       },
       cancelRollback(input: CancelRollbackInput) {
         const clientActionId = randomUUID();
-        return sendRequest(
-          {
-            type: "cancelRollback",
+        const request = {
+          type: "cancelRollback" as const,
+          playerId: input.playerId,
+          expectedStateSeq: input.expectedStateSeq,
+        };
+        return requestHash(request).then((hash) =>
+          sendRequest(
+            {
+              ...request,
+              clientActionId,
+              matchId: input.matchId,
+              requestHash: hash,
+            },
             clientActionId,
-            matchId: input.matchId,
-            playerId: input.playerId,
-            expectedStateSeq: input.expectedStateSeq,
-          },
-          clientActionId,
+          ),
         );
       },
     };

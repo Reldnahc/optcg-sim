@@ -99,6 +99,15 @@ const requireLiveConnection = (
   return liveConnection;
 };
 
+const requireCurrentSnapshot = (
+  currentState: MatchClientState | undefined,
+): MatchSnapshot => {
+  if (currentState === undefined) {
+    throw new Error("Cannot submit a live action before loading match state.");
+  }
+  return currentState.snapshot;
+};
+
 export const createMatchClientController = ({
   transport,
   liveTransport,
@@ -297,13 +306,12 @@ export const createMatchClientController = ({
     },
     async submitVisibleAction(input) {
       const credential = requireCredential(sessionStore);
+      const snapshot = requireCurrentSnapshot(currentState);
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
         actionIndex: input.actionIndex,
-        ...(currentState === undefined
-          ? {}
-          : { expectedStateSeq: currentState.snapshot.stateSeq }),
+        expectedStateSeq: snapshot.stateSeq,
       };
       const result =
         await requireLiveConnection(liveConnection).submitVisibleAction(
@@ -325,10 +333,13 @@ export const createMatchClientController = ({
     },
     async respondToDecision(input) {
       const credential = requireCredential(sessionStore);
+      const snapshot = requireCurrentSnapshot(currentState);
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
         decisionId: input.decisionId,
+        expectedStateSeq: snapshot.stateSeq,
+        expectedDecisionId: input.decisionId,
         response: input.response,
       };
       const result =
@@ -351,13 +362,12 @@ export const createMatchClientController = ({
     },
     async requestRollback(input) {
       const credential = requireCredential(sessionStore);
+      const snapshot = requireCurrentSnapshot(currentState);
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
         rollbackPointId: input.rollbackPointId,
-        ...(currentState === undefined
-          ? {}
-          : { expectedStateSeq: currentState.snapshot.stateSeq }),
+        expectedStateSeq: snapshot.stateSeq,
       };
       const result =
         await requireLiveConnection(liveConnection).requestRollback(
@@ -379,12 +389,11 @@ export const createMatchClientController = ({
     },
     async cancelRollback() {
       const credential = requireCredential(sessionStore);
+      const snapshot = requireCurrentSnapshot(currentState);
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
-        ...(currentState === undefined
-          ? {}
-          : { expectedStateSeq: currentState.snapshot.stateSeq }),
+        expectedStateSeq: snapshot.stateSeq,
       };
       const result =
         await requireLiveConnection(liveConnection).cancelRollback(

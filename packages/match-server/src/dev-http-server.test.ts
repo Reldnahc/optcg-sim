@@ -1,8 +1,10 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
+import type { CardRef, DecisionId, PlayerId } from "@optcg/types";
 
 import { createDevHttpServer } from "./dev-http-server.js";
 import { websocketTextFrame } from "./dev-http-server.js";
+import { requestHash } from "./action-envelope.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
@@ -33,6 +35,16 @@ interface CreatedDevLobbyBody {
   matchId?: string;
   seats: Record<string, { playerId?: string; claimed?: boolean }>;
 }
+
+const requireStateSeq = (
+  snapshot: { stateSeq?: number } | undefined,
+): number => {
+  const stateSeq = snapshot?.stateSeq;
+  if (stateSeq === undefined) {
+    throw new Error("Expected snapshot stateSeq.");
+  }
+  return stateSeq;
+};
 
 const webSocketUrl = (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
@@ -309,6 +321,7 @@ describe("dev HTTP server", () => {
       const firstInitial = (await firstP1Socket.next()) as {
         snapshot?: { stateSeq?: number };
       };
+      const expectedStateSeq = requireStateSeq(firstInitial.snapshot);
 
       firstP1Socket.socket.send(
         JSON.stringify({
@@ -317,7 +330,13 @@ describe("dev HTTP server", () => {
           playerId: "p1",
           clientActionId: "first-action",
           actionIndex: 0,
-          expectedStateSeq: firstInitial.snapshot?.stateSeq,
+          expectedStateSeq,
+          requestHash: requestHash({
+            type: "submitAction",
+            playerId: "p1" as PlayerId,
+            actionIndex: 0,
+            expectedStateSeq,
+          }),
         }),
       );
       const actionResult = (await firstP1Socket.next()) as {
@@ -414,6 +433,7 @@ describe("dev HTTP server", () => {
         "p1",
         "p2",
       ]);
+      const expectedStateSeq = requireStateSeq(p1Initial.snapshot);
 
       p1Socket.socket.send(
         JSON.stringify({
@@ -422,7 +442,13 @@ describe("dev HTTP server", () => {
           playerId: "p1",
           clientActionId: "client-action-1",
           actionIndex: 0,
-          expectedStateSeq: p1Initial.snapshot?.stateSeq,
+          expectedStateSeq,
+          requestHash: requestHash({
+            type: "submitAction",
+            playerId: "p1" as PlayerId,
+            actionIndex: 0,
+            expectedStateSeq,
+          }),
         }),
       );
 
@@ -470,6 +496,7 @@ describe("dev HTTP server", () => {
       const initial = (await p1Socket.next()) as {
         snapshot?: { stateSeq?: number };
       };
+      const expectedStateSeq = requireStateSeq(initial.snapshot);
       p1Socket.socket.send(
         JSON.stringify({
           type: "submitAction",
@@ -477,7 +504,13 @@ describe("dev HTTP server", () => {
           playerId: "p2",
           clientActionId: "wrong-seat-action",
           actionIndex: 0,
-          expectedStateSeq: initial.snapshot?.stateSeq,
+          expectedStateSeq,
+          requestHash: requestHash({
+            type: "submitAction",
+            playerId: "p2" as PlayerId,
+            actionIndex: 0,
+            expectedStateSeq,
+          }),
         }),
       );
 
@@ -647,6 +680,7 @@ describe("dev HTTP server", () => {
       sockets.push(p1Socket.socket);
       const stateBody = (await p1Socket.next()) as {
         snapshot?: {
+          stateSeq?: number;
           players?: Record<
             string,
             {
@@ -654,7 +688,7 @@ describe("dev HTTP server", () => {
                 pendingDecision?: {
                   id?: string;
                   type?: string;
-                  candidates?: Array<{ card?: unknown }>;
+                  candidates?: Array<{ card?: CardRef }>;
                 };
               };
             }
@@ -668,6 +702,8 @@ describe("dev HTTP server", () => {
       if (decision.id === undefined || candidate === undefined) {
         throw new Error("Missing filtered setup decision candidate.");
       }
+      const decisionId = decision.id as DecisionId;
+      const expectedStateSeq = requireStateSeq(stateBody.snapshot);
 
       p1Socket.socket.send(
         JSON.stringify({
@@ -675,8 +711,16 @@ describe("dev HTTP server", () => {
           matchId: match.matchId,
           playerId: "p1",
           clientActionId: "decision-action",
-          decisionId: decision.id,
+          decisionId,
+          expectedDecisionId: decisionId,
+          expectedStateSeq,
           response: { type: "cards", cards: [candidate] },
+          requestHash: requestHash({
+            type: "respondToDecision",
+            playerId: "p1" as PlayerId,
+            decisionId,
+            response: { type: "cards", cards: [candidate] },
+          }),
         }),
       );
       const actionResult = (await p1Socket.next()) as {
@@ -717,6 +761,7 @@ describe("dev HTTP server", () => {
       sockets.push(p1Socket.socket, p2Socket.socket);
       const p1State = (await p1Socket.next()) as {
         snapshot?: {
+          stateSeq?: number;
           players?: Record<
             string,
             { view?: { pendingDecision?: { id?: string } } }
@@ -729,6 +774,7 @@ describe("dev HTTP server", () => {
       if (decisionId === undefined) {
         throw new Error("Missing p1 pending decision.");
       }
+      const expectedStateSeq = requireStateSeq(p1State.snapshot);
 
       p2Socket.socket.send(
         JSON.stringify({
@@ -736,8 +782,16 @@ describe("dev HTTP server", () => {
           matchId: match.matchId,
           playerId: "p2",
           clientActionId: "wrong-player-decision",
-          decisionId,
+          decisionId: decisionId as DecisionId,
+          expectedDecisionId: decisionId as DecisionId,
+          expectedStateSeq,
           response: { type: "cards", cards: [] },
+          requestHash: requestHash({
+            type: "respondToDecision",
+            playerId: "p2" as PlayerId,
+            decisionId: decisionId as DecisionId,
+            response: { type: "cards", cards: [] },
+          }),
         }),
       );
       const actionResult = (await p2Socket.next()) as { errors?: string[] };

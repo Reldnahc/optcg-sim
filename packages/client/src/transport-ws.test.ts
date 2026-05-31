@@ -1,10 +1,38 @@
 import { strict as assert } from "node:assert";
+import { createHash } from "node:crypto";
 import { describe, test } from "vitest";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import { createDevWebSocketMatchTransport } from "./transport-ws.js";
 import type { MatchStateSyncMessage } from "./transport.js";
+
+const expectedCanonicalJson = (value: unknown): string => {
+  if (value === undefined) {
+    throw new TypeError("unsupported");
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(expectedCanonicalJson).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .filter((key) => record[key] !== undefined)
+      .sort()
+      .map(
+        (key) => `${JSON.stringify(key)}:${expectedCanonicalJson(record[key])}`,
+      )
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+};
+
+const expectedRequestHash = (value: unknown): string =>
+  createHash("sha256").update(expectedCanonicalJson(value)).digest("hex");
+
+const waitForAsyncSend = async (): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+};
 
 class FakeWebSocket extends EventTarget {
   public readonly sent: string[] = [];
@@ -89,7 +117,7 @@ describe("dev WebSocket match transport", () => {
 
     assert.equal(socket.sent.length, 0);
     socket.open();
-    await Promise.resolve();
+    await waitForAsyncSend();
 
     assert.equal(socket.sent.length, 1);
     const sentPayload = socket.sent[0];
@@ -103,6 +131,12 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1",
       actionIndex: 2,
       expectedStateSeq: 7,
+      requestHash: expectedRequestHash({
+        actionIndex: 2,
+        expectedStateSeq: 7,
+        playerId: "p1",
+        type: "submitAction",
+      }),
     });
 
     socket.receive({
@@ -134,6 +168,7 @@ describe("dev WebSocket match transport", () => {
     Object.defineProperty(globalThis, "crypto", {
       configurable: true,
       value: {
+        subtle: originalCrypto.subtle,
         getRandomValues: (array: Uint8Array) => {
           array.fill(0x11);
           return array;
@@ -167,7 +202,7 @@ describe("dev WebSocket match transport", () => {
       });
 
       socket.open();
-      await Promise.resolve();
+      await waitForAsyncSend();
 
       const sentPayload = socket.sent[0];
       if (sentPayload === undefined) {
@@ -214,7 +249,7 @@ describe("dev WebSocket match transport", () => {
     });
 
     socket.open();
-    await Promise.resolve();
+    await waitForAsyncSend();
 
     const sentPayload = socket.sent[0];
     if (sentPayload === undefined) {
@@ -227,6 +262,12 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1",
       rollbackPointId: "rollback:1",
       expectedStateSeq: 7,
+      requestHash: expectedRequestHash({
+        expectedStateSeq: 7,
+        playerId: "p1",
+        rollbackPointId: "rollback:1",
+        type: "requestRollback",
+      }),
     });
 
     socket.receive({
@@ -279,7 +320,7 @@ describe("dev WebSocket match transport", () => {
     });
 
     socket.open();
-    await Promise.resolve();
+    await waitForAsyncSend();
 
     const sentPayload = socket.sent[0];
     if (sentPayload === undefined) {
@@ -291,6 +332,11 @@ describe("dev WebSocket match transport", () => {
       matchId: "match-1",
       playerId: "p1",
       expectedStateSeq: 7,
+      requestHash: expectedRequestHash({
+        expectedStateSeq: 7,
+        playerId: "p1",
+        type: "cancelRollback",
+      }),
     });
 
     socket.receive({
@@ -313,5 +359,60 @@ describe("dev WebSocket match transport", () => {
     const result = await resultPromise;
 
     assert.equal(result.snapshot.stateSeq, 8);
+  });
+
+  test("sends decision responses with expected decision and request hash", async () => {
+    const recording = createRecordingWebSocket();
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      randomUUID: () => "client-action-decision",
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    void connection.respondToDecision({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      decisionId: "decision-1" as never,
+      expectedDecisionId: "decision-1" as never,
+      expectedStateSeq: 7,
+      response: { type: "cards", cards: [] },
+    });
+
+    socket.open();
+    await waitForAsyncSend();
+
+    const sentPayload = socket.sent[0];
+    if (sentPayload === undefined) {
+      throw new Error("Expected a sent WebSocket payload.");
+    }
+    assert.deepEqual(JSON.parse(sentPayload) as unknown, {
+      type: "respondToDecision",
+      clientActionId: "client-action-decision",
+      matchId: "match-1",
+      playerId: "p1",
+      decisionId: "decision-1",
+      expectedDecisionId: "decision-1",
+      expectedStateSeq: 7,
+      response: { type: "cards", cards: [] },
+      requestHash: expectedRequestHash({
+        decisionId: "decision-1",
+        playerId: "p1",
+        response: { type: "cards", cards: [] },
+        type: "respondToDecision",
+      }),
+    });
   });
 });

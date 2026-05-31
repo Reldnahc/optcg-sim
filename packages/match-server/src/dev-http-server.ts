@@ -8,9 +8,6 @@ import type { Duplex } from "node:stream";
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
-  applyLocalDevAction,
-  applyLocalDevDecision,
-  cancelLocalDevRollback,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
@@ -18,11 +15,16 @@ import {
   getLocalDevSnapshotForPlayer,
   getLocalDevSnapshot,
   isDevMatchSetup,
-  requestLocalDevRollback,
   type CreatePremadeDevMatchSetupOptions,
   type LocalDevMatch,
 } from "./local-match.js";
 import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
+import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
+import { devSessionMetadata } from "./dev-session-metadata.js";
+import {
+  createMatchSessionRuntime,
+  type MatchSessionRuntime,
+} from "./match-session.js";
 
 interface DevResetRequest {
   setup?: unknown;
@@ -65,6 +67,7 @@ interface MatchSeat {
 
 interface LocalDevMatchSession {
   match: LocalDevMatch;
+  runtime: MatchSessionRuntime;
   seats: Record<string, MatchSeat>;
 }
 
@@ -82,6 +85,7 @@ interface LocalDevMatchRegistry {
     auth: AuthContext | undefined,
   ) => ClaimedDevSeatResponse | "matchNotFound" | "seatNotFound" | "claimed";
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
+  getRuntime: (matchId: MatchId) => MatchSessionRuntime | undefined;
   authorizeSeat: (
     auth: AuthContext | undefined,
     matchId: MatchId,
@@ -191,6 +195,20 @@ const createLocalAnonSeats = (
       },
     ]),
   );
+
+const createLocalDevMatchSession = (
+  setup: Parameters<typeof createLocalDevMatch>[0],
+): LocalDevMatchSession => {
+  const match = createLocalDevMatch(setup);
+  return {
+    match,
+    runtime: createMatchSessionRuntime({
+      local: match,
+      metadata: devSessionMetadata(setup),
+    }),
+    seats: createLocalAnonSeats(setup),
+  };
+};
 
 const createLobbySeats = (): LocalDevLobby["seats"] => ({
   p1: { playerId: p1, claimed: false },
@@ -304,10 +322,7 @@ const createLocalDevMatchRegistry = async (
   };
   const defaultSetup = await createTemplateSetup("dev-local-match" as MatchId);
   const defaultMatchId = defaultSetup.matchId;
-  sessions.set(defaultMatchId, {
-    match: createLocalDevMatch(defaultSetup),
-    seats: createLocalAnonSeats(defaultSetup),
-  });
+  sessions.set(defaultMatchId, createLocalDevMatchSession(defaultSetup));
 
   const buildCreatedResponse = (
     setup: Parameters<typeof createLocalDevMatch>[0],
@@ -326,20 +341,14 @@ const createLocalDevMatchRegistry = async (
         (await createTemplateSetup(
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
-      const session = {
-        match: createLocalDevMatch(actualSetup),
-        seats: createLocalAnonSeats(actualSetup),
-      };
+      const session = createLocalDevMatchSession(actualSetup);
       sessions.set(actualSetup.matchId, session);
       return buildCreatedResponse(actualSetup, session);
     },
     async resetMatch(matchId, setup) {
       const actualSetup = setup ?? (await createTemplateSetup(matchId));
       const normalizedSetup = { ...actualSetup, matchId };
-      const session = {
-        match: createLocalDevMatch(normalizedSetup),
-        seats: createLocalAnonSeats(normalizedSetup),
-      };
+      const session = createLocalDevMatchSession(normalizedSetup);
       sessions.set(matchId, session);
       return buildCreatedResponse(normalizedSetup, session);
     },
@@ -377,6 +386,9 @@ const createLocalDevMatchRegistry = async (
     },
     getMatch(matchId) {
       return sessions.get(matchId)?.match;
+    },
+    getRuntime(matchId) {
+      return sessions.get(matchId)?.runtime;
     },
     authorizeSeat(auth, matchId, playerId) {
       if (auth === undefined) {
@@ -769,8 +781,10 @@ const handleWebSocketUpgrade = (
   const sessionToken = url.searchParams.get("sessionToken") ?? "";
   const key = request.headers["sec-websocket-key"];
   const match = registry.getMatch(matchId);
+  const runtime = registry.getRuntime(matchId);
   if (
     match === undefined ||
+    runtime === undefined ||
     typeof key !== "string" ||
     key.length === 0 ||
     playerId.length === 0 ||
@@ -845,25 +859,38 @@ const handleWebSocketUpgrade = (
         });
         continue;
       }
-      const result =
-        payload.type === "submitAction"
-          ? applyLocalDevAction(match, payload)
-          : payload.type === "respondToDecision"
-            ? applyLocalDevDecision(match, payload)
-            : payload.type === "requestRollback"
-              ? requestLocalDevRollback(match, payload)
-              : cancelLocalDevRollback(match, payload);
-      const errors = result.errors;
+      if (
+        payload.type === "respondToDecision" &&
+        match.state.pendingDecision?.id !== payload.expectedDecisionId
+      ) {
+        sendSocketJson(connection, {
+          type: "actionResult",
+          matchId,
+          clientActionId: payload.clientActionId,
+          accepted: false,
+          stateSeq: match.state.seq,
+          actionSeq: match.state.actionSeq,
+          errors: ["Pending decision id did not match expectedDecisionId."],
+        });
+        continue;
+      }
+      const result = runtime.applyEnvelope(
+        clientActionEnvelopeFromSocketPayload(payload),
+      );
+      const errors = [...result.errors];
       sendSocketJson(connection, {
         type: "actionResult",
         matchId,
         clientActionId: payload.clientActionId,
-        accepted: errors.length === 0,
-        stateSeq: result.snapshot.stateSeq,
-        actionSeq: result.snapshot.actionSeq,
+        accepted: result.accepted,
+        stateSeq: result.stateSeq,
+        ...(result.actionSeq === undefined
+          ? {}
+          : { actionSeq: result.actionSeq }),
+        ...(result.reason === undefined ? {} : { reason: result.reason }),
         errors,
       });
-      if (errors.length === 0) {
+      if (result.accepted) {
         for (const peer of connections) {
           if (peer.matchId === matchId) {
             sendSocketJson(peer, playerStatePayload(match, peer));

@@ -117,13 +117,15 @@ export interface SubmitVisibleActionInput {
   matchId: MatchId;
   playerId: PlayerId;
   actionIndex: number;
-  expectedStateSeq?: number;
+  expectedStateSeq: number;
 }
 
 export interface RespondToDecisionInput {
   matchId: MatchId;
   playerId: PlayerId;
   decisionId: DecisionId;
+  expectedStateSeq: number;
+  expectedDecisionId: DecisionId;
   response: DecisionResponse;
 }
 
@@ -131,13 +133,13 @@ export interface RequestRollbackInput {
   matchId: MatchId;
   playerId: PlayerId;
   rollbackPointId: string;
-  expectedStateSeq?: number;
+  expectedStateSeq: number;
 }
 
 export interface CancelRollbackInput {
   matchId: MatchId;
   playerId: PlayerId;
-  expectedStateSeq?: number;
+  expectedStateSeq: number;
 }
 
 export interface MatchActionResult {
