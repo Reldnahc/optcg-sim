@@ -21,6 +21,7 @@ export interface ControlRailProps {
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
+  matchStatus?: string | undefined;
   width?: number | undefined;
   dockHeight?: number | undefined;
   dockActive?: boolean | undefined;
@@ -28,6 +29,7 @@ export interface ControlRailProps {
   activeDockTabId?: string | undefined;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
+  onRematch?: (() => Promise<void> | void) | undefined;
   onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onDockResizePointerDown?:
     | ((event: React.PointerEvent<HTMLButtonElement>) => void)
@@ -65,6 +67,7 @@ export const ControlRail = ({
   errors,
   globalActions,
   disabled,
+  matchStatus,
   width,
   dockHeight,
   dockActive = false,
@@ -72,6 +75,7 @@ export const ControlRail = ({
   activeDockTabId,
   onAction,
   onNewMatch,
+  onRematch,
   onResizePointerDown,
   onDockResizePointerDown,
   onDockTabChange,
@@ -106,6 +110,8 @@ export const ControlRail = ({
   >(undefined);
   const suppressTabClick = useRef(false);
   const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
+  const rematchDisabled =
+    disabled || (matchStatus !== "completed" && matchStatus !== "gameOver");
   const activeDockTab =
     dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
   const hasDockedWindow = activeDockTab !== undefined;
@@ -158,6 +164,23 @@ export const ControlRail = ({
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 3v18" />
               <path d="M5 4h12l-2 4 2 4H5" />
+            </svg>
+          </button>
+          <button
+            className="control-icon-button new-match-button"
+            type="button"
+            disabled={rematchDisabled}
+            aria-label="Rematch"
+            title="Rematch"
+            onClick={() => {
+              void onRematch?.();
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17 2v5h-5" />
+              <path d="M7 22v-5h5" />
+              <path d="M18.5 9A7 7 0 0 0 7.4 5.2L4 8.5" />
+              <path d="M5.5 15A7 7 0 0 0 16.6 18.8L20 15.5" />
             </svg>
           </button>
           <button

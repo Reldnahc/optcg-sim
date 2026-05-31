@@ -56,6 +56,7 @@ export const useMatchSessionActions = ({
 }: UseMatchSessionActionsInput): {
   createNewMatch: () => Promise<void>;
   chooseFirstPlayer: (choice: "goFirst" | "goSecond") => Promise<void>;
+  requestRematch: () => Promise<void>;
 } => {
   const resetLocalInteractionState = useCallback((): void => {
     setSelectedCardInstanceId(undefined);
@@ -106,5 +107,28 @@ export const useMatchSessionActions = ({
     [controller, setActionInFlight, setClientState, setErrors],
   );
 
-  return { createNewMatch, chooseFirstPlayer };
+  const requestRematch = useCallback(async (): Promise<void> => {
+    setActionInFlight(true);
+    try {
+      const result = await controller.requestRematch();
+      if (isMatchClientState(result) || isFirstPlayerSetupClientState(result)) {
+        setMatchLocation(result.matchId, result.seat.playerId);
+      }
+      resetLocalInteractionState();
+      setClientState(result);
+      setErrors([]);
+    } catch (error) {
+      setErrors([error instanceof Error ? error.message : String(error)]);
+    } finally {
+      setActionInFlight(false);
+    }
+  }, [
+    controller,
+    resetLocalInteractionState,
+    setActionInFlight,
+    setClientState,
+    setErrors,
+  ]);
+
+  return { createNewMatch, chooseFirstPlayer, requestRematch };
 };

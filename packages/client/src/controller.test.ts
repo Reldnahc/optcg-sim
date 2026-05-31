@@ -72,6 +72,19 @@ const createFakeTransport = (): MatchTransport & {
         snapshot: { stateSeq: 1, players: {} },
       });
     },
+    createRematch(input) {
+      return Promise.resolve({
+        matchId: `${String(input.matchId)}-rematch-1` as MatchId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: true },
+          p2: { playerId: "p2" as PlayerId, claimed: true },
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: input.playerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    },
     claimSeat(input) {
       claimedSeats.push(input);
       return Promise.resolve({
@@ -261,6 +274,35 @@ describe("match client controller", () => {
 
     assert.equal(match.matchId, "match-1");
     assert.equal(match.snapshot.stateSeq, 1);
+  });
+
+  test("requests rematch and reclaims the new match seat with the existing token", async () => {
+    const transport = createFakeTransport();
+    const controller = createMatchClientController({
+      transport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p1" as PlayerId);
+
+    const rematch = await controller.requestRematch();
+
+    assert.equal("firstPlayerChoice" in rematch, true);
+    if (!("firstPlayerChoice" in rematch)) {
+      throw new Error("Expected first-player setup state.");
+    }
+    assert.equal(rematch.matchId, "match-1-rematch-1");
+    assert.deepEqual(transport.claimedSeats.at(-1), {
+      matchId: "match-1-rematch-1",
+      playerId: "p1",
+      sessionToken: "token-p1",
+    });
+    assert.deepEqual(controller.currentCredential(), {
+      matchId: "match-1-rematch-1",
+      playerId: "p1",
+      sessionToken: "token-p1",
+    });
   });
 
   test("joins an existing local match by claiming only the requested seat", async () => {

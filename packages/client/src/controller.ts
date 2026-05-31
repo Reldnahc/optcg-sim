@@ -61,6 +61,7 @@ export interface MatchClientController {
   joinLocalMatch: (
     input: ClientSeatIdentity,
   ) => Promise<MatchClientSessionState>;
+  requestRematch: () => Promise<MatchClientSessionState>;
   chooseFirstPlayer: (input: {
     choice: FirstPlayerChoiceValue;
   }) => Promise<MatchClientState>;
@@ -266,6 +267,58 @@ export const createMatchClientController = ({
     },
     joinLocalMatch(input) {
       return claimAndLoad(input);
+    },
+    async requestRematch() {
+      const credential = sessionStore.loadClaimedSeat();
+      if (credential === undefined) {
+        throw new Error(
+          "Cannot request a rematch before claiming a match seat.",
+        );
+      }
+      const created = await transport.createRematch({
+        matchId: credential.matchId,
+        playerId: credential.playerId,
+        sessionToken: credential.sessionToken,
+      });
+      const seat = {
+        matchId: created.matchId,
+        playerId: credential.playerId,
+      };
+      const claimed = await transport.claimSeat({
+        ...seat,
+        sessionToken: credential.sessionToken,
+      });
+      sessionStore.setCurrentSeat(seat);
+      sessionStore.saveClaimedSeat({
+        matchId: claimed.matchId,
+        playerId: claimed.seat.playerId,
+        sessionToken: claimed.seat.sessionToken,
+      });
+      if (created.snapshot === undefined) {
+        const firstPlayerChoice =
+          created.firstPlayerChoice ?? claimed.firstPlayerChoice;
+        if (firstPlayerChoice === undefined) {
+          throw new Error("Rematch did not include snapshot or setup choice.");
+        }
+        currentFirstPlayerSetupState = {
+          matchId: created.matchId,
+          seat,
+          firstPlayerChoice,
+        };
+        currentState = undefined;
+        currentLobbyState = undefined;
+        return currentFirstPlayerSetupState;
+      }
+      const cards = await transport.loadCards(created.matchId);
+      currentState = {
+        matchId: created.matchId,
+        seat,
+        snapshot: created.snapshot,
+        cards,
+      };
+      currentFirstPlayerSetupState = undefined;
+      currentLobbyState = undefined;
+      return currentState;
     },
     async chooseFirstPlayer(input) {
       const setupState = currentFirstPlayerSetupState;

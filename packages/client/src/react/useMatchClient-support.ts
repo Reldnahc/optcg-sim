@@ -69,6 +69,7 @@ export interface MatchClientUi {
   chooseDecisionTriggerValue: (triggerId: string) => void;
   confirmDecision: () => Promise<void>;
   chooseFirstPlayer: (choice: "goFirst" | "goSecond") => Promise<void>;
+  requestRematch: () => Promise<void>;
   requestRollback: (rollbackPointId: string) => Promise<void>;
   cancelRollback: () => Promise<void>;
   createNewMatch: () => Promise<void>;

@@ -80,13 +80,10 @@ import {
 } from "./useMatchClient-support.js";
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
-  const [collectionModal, setCollectionModal] = useState<
-    CollectionModalModel | undefined
-  >(undefined);
+  const [collectionModal, setCollectionModal] =
+    useState<CollectionModalModel>();
   const [collectionMinimized, setCollectionMinimized] = useState(false);
-  const [previewCard, setPreviewCard] = useState<ClientCardModel | undefined>(
-    undefined,
-  );
+  const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMinimized, setPreviewMinimized] = useState(false);
   const [actionLogOpen, setActionLogOpen] = useState(false);
@@ -677,6 +674,7 @@ export const MatchApp = (): React.JSX.Element => {
         errors={client.state.errors}
         globalActions={visibleGlobalActions}
         disabled={client.state.actionInFlight}
+        matchStatus={matchState?.snapshot.status}
         width={controlRailWidth}
         dockHeight={controlDockHeight}
         dockActive={controlDockActive}
@@ -698,6 +696,10 @@ export const MatchApp = (): React.JSX.Element => {
         onNewMatch={() => {
           resetConcedeConfirmation();
           void client.createNewMatch();
+        }}
+        onRematch={() => {
+          resetConcedeConfirmation();
+          void client.requestRematch();
         }}
         rollbackStatus={rollbackStatus}
         onCancelRollback={() => {

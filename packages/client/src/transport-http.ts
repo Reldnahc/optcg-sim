@@ -78,6 +78,13 @@ export const createDevHttpMatchTransport = ({
     async createMatch() {
       return postJson<CreatedMatch>(`${root}/api/matches`, {});
     },
+    async createRematch(input) {
+      return postJson<CreatedMatch>(
+        matchPath(input.matchId, "/rematch"),
+        { playerId: input.playerId },
+        input.sessionToken,
+      );
+    },
     async claimSeat(input) {
       const url = matchPath(
         input.matchId,

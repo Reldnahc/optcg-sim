@@ -232,6 +232,11 @@ export interface MatchTransport {
   }) => Promise<LocalLobby>;
   loadLobby: (lobbyId: string) => Promise<LocalLobby>;
   createMatch: () => Promise<CreatedMatch>;
+  createRematch: (input: {
+    matchId: MatchId;
+    playerId: PlayerId;
+    sessionToken: string;
+  }) => Promise<CreatedMatch>;
   claimSeat: (input: {
     matchId: MatchId;
     playerId: PlayerId;

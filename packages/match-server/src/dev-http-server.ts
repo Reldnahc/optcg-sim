@@ -35,6 +35,10 @@ interface FirstPlayerChoiceRequest {
   choice?: unknown;
 }
 
+interface RematchRequest {
+  playerId?: unknown;
+}
+
 interface CreatedDevLobbyResponse {
   lobbyId: string;
   seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
@@ -343,6 +347,50 @@ const handleApiRequest = async (
         return;
       }
       sendJson(response, 200, result);
+      return;
+    }
+    if (request.method === "POST" && resource === "rematch") {
+      let body: unknown;
+      try {
+        body = await readRequestJson(request);
+      } catch {
+        sendJson(response, 400, { errors: ["Request body must be JSON."] });
+        return;
+      }
+      const rematchRequest: RematchRequest = isRecord(body) ? body : {};
+      const playerId = rematchRequest.playerId;
+      if (typeof playerId !== "string") {
+        sendJson(response, 400, {
+          errors: ["Rematch creation requires playerId."],
+        });
+        return;
+      }
+      const result = registry.createRematch(
+        matchId as MatchId,
+        playerId as PlayerId,
+        authProvider.authenticate(request),
+      );
+      if (result === "matchNotFound") {
+        matchNotFound(response, matchId);
+        return;
+      }
+      if (result === "unauthenticated") {
+        sendJson(response, 401, { errors: ["Rematch requires a session."] });
+        return;
+      }
+      if (result === "forbidden") {
+        sendJson(response, 403, {
+          errors: ["Session token is not authorized for this match seat."],
+        });
+        return;
+      }
+      if (result === "sourceNotCompleted" || result === "noPreviousLoser") {
+        sendJson(response, 409, {
+          errors: ["Rematch requires a completed source match with a loser."],
+        });
+        return;
+      }
+      sendJson(response, 201, result);
       return;
     }
     const match = registry.getMatch(matchId as MatchId);

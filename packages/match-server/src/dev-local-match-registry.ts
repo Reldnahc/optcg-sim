@@ -67,6 +67,17 @@ type LocalDevMatchSession =
 
 export interface LocalDevMatchRegistry {
   createMatch: (setup?: LocalDevMatchSetup) => Promise<CreatedDevMatchResponse>;
+  createRematch: (
+    sourceMatchId: MatchId,
+    playerId: PlayerId,
+    auth: AuthContext | undefined,
+  ) =>
+    | CreatedDevMatchResponse
+    | "matchNotFound"
+    | "unauthenticated"
+    | "forbidden"
+    | "sourceNotCompleted"
+    | "noPreviousLoser";
   resetMatch: (
     matchId: MatchId,
     setup?: LocalDevMatchSetup,
@@ -133,9 +144,12 @@ const selectedChooserForSetup = (setup: LocalDevMatchSetup): PlayerId => {
 
 const pendingFirstPlayerChoice = (
   setup: LocalDevMatchSetup,
+  firstPlayerChoice?: FirstPlayerChoiceState,
 ): FirstPlayerChoiceState => ({
-  source: "game-one-random-chooser",
-  chooserPlayerId: selectedChooserForSetup(setup),
+  ...(firstPlayerChoice ?? {
+    source: "game-one-random-chooser",
+    chooserPlayerId: selectedChooserForSetup(setup),
+  }),
 });
 
 const resolvedFirstPlayerId = (
@@ -181,11 +195,13 @@ const createActiveLocalDevMatchSession = (
 
 const createPendingLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
+  firstPlayerChoice?: FirstPlayerChoiceState,
+  seats?: Record<string, MatchSeat>,
 ): PendingFirstPlayerLocalDevMatchSession => ({
   status: "choosingFirstPlayer",
   setup,
-  seats: createLocalAnonSeats(setup),
-  firstPlayerChoice: pendingFirstPlayerChoice(setup),
+  seats: seats ?? createLocalAnonSeats(setup),
+  firstPlayerChoice: pendingFirstPlayerChoice(setup, firstPlayerChoice),
 });
 
 const createdSeatResponse = (
@@ -200,6 +216,38 @@ const createdSeatResponse = (
       },
     ]),
   );
+
+const rematchSeatsFromSource = (
+  sourceSeats: Record<string, MatchSeat>,
+  matchId: MatchId,
+): Record<string, MatchSeat> =>
+  Object.fromEntries(
+    Object.entries(sourceSeats).map(([key, seat]) => [
+      key,
+      {
+        matchId,
+        playerId: seat.playerId,
+        ...(seat.subject === undefined
+          ? {}
+          : { subject: structuredClone(seat.subject) }),
+      },
+    ]),
+  );
+
+const previousLoserId = (
+  session: ActiveLocalDevMatchSession,
+): PlayerId | undefined => {
+  const status = session.match.state.status;
+  if (status.type !== "completed" && status.type !== "gameOver") {
+    return undefined;
+  }
+  if (status.winner === "draw") {
+    return undefined;
+  }
+  return session.setup.playerOrder.find(
+    (playerId) => playerId !== status.winner,
+  );
+};
 
 export const createLocalDevMatchRegistry = async (
   createDefaultSetup: (matchId?: MatchId) => Promise<LocalDevMatchSetup>,
@@ -249,6 +297,53 @@ export const createLocalDevMatchRegistry = async (
       const session = createPendingLocalDevMatchSession(actualSetup);
       sessions.set(actualSetup.matchId, session);
       return buildCreatedResponse(actualSetup, session);
+    },
+    createRematch(sourceMatchId, playerId, auth) {
+      const sourceSession = sessions.get(sourceMatchId);
+      if (sourceSession === undefined) {
+        return "matchNotFound";
+      }
+      if (auth === undefined) {
+        return "unauthenticated";
+      }
+      const sourceSeat = sourceSession.seats[String(playerId)];
+      if (
+        sourceSeat === undefined ||
+        sourceSeat.subject === undefined ||
+        !subjectsMatch(sourceSeat.subject, auth.subject)
+      ) {
+        return "forbidden";
+      }
+      if (sourceSession.status !== "active") {
+        return "sourceNotCompleted";
+      }
+      const loserId = previousLoserId(sourceSession);
+      if (loserId === undefined) {
+        return "sourceNotCompleted";
+      }
+      const rematchId =
+        `${String(sourceMatchId)}-rematch-${String(nextMatchNumber++)}` as MatchId;
+      const rematchSetup: LocalDevMatchSetup = {
+        ...structuredClone(sourceSession.setup),
+        matchId: rematchId,
+        firstPlayerId: loserId,
+        rngSeed: `${String(sourceSession.setup.rngSeed)}:rematch:${String(
+          rematchId,
+        )}`,
+      };
+      const firstPlayerChoice: FirstPlayerChoiceState = {
+        source: "rematch-previous-loser",
+        chooserPlayerId: loserId,
+        rematchOfMatchId: sourceMatchId,
+        previousLoserId: loserId,
+      };
+      const session = createPendingLocalDevMatchSession(
+        rematchSetup,
+        firstPlayerChoice,
+        rematchSeatsFromSource(sourceSession.seats, rematchId),
+      );
+      sessions.set(rematchId, session);
+      return buildCreatedResponse(rematchSetup, session);
     },
     async resetMatch(matchId, setup) {
       const actualSetup = setup ?? (await createTemplateSetup(matchId));

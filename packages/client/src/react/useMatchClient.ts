@@ -315,20 +315,21 @@ export const useMatchClient = (): MatchClientUi => {
     setErrors,
   });
 
-  const { createNewMatch, chooseFirstPlayer } = useMatchSessionActions({
-    controller,
-    autoSubmittedPayCostDecisionId,
-    setActionInFlight,
-    setActiveAttackTargetChoice,
-    setActiveCardCostChoice,
-    setActiveCardCostSelectedInstanceIds,
-    setActiveCounterTargetChoice,
-    setClientState,
-    setDecisionDraft,
-    setErrors,
-    setSelectedCardInstanceId,
-    setSelectedDonInstanceIds,
-  });
+  const { createNewMatch, chooseFirstPlayer, requestRematch } =
+    useMatchSessionActions({
+      controller,
+      autoSubmittedPayCostDecisionId,
+      setActionInFlight,
+      setActiveAttackTargetChoice,
+      setActiveCardCostChoice,
+      setActiveCardCostSelectedInstanceIds,
+      setActiveCounterTargetChoice,
+      setClientState,
+      setDecisionDraft,
+      setErrors,
+      setSelectedCardInstanceId,
+      setSelectedDonInstanceIds,
+    });
 
   const requestRollback = useCallback(
     async (rollbackPointId: string): Promise<void> => {
@@ -984,6 +985,7 @@ export const useMatchClient = (): MatchClientUi => {
     chooseDecisionTriggerValue,
     confirmDecision,
     chooseFirstPlayer,
+    requestRematch,
     requestRollback,
     cancelRollback,
     createNewMatch,
