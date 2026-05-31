@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 import type { CardRef, DecisionId, PlayerId } from "@optcg/types";
 
@@ -15,6 +18,8 @@ const createFixtureDevHttpServer = async () =>
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
   });
+
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 interface CreatedDevMatchBody {
   matchId?: string;
@@ -1060,5 +1065,15 @@ describe("dev HTTP server", () => {
     } finally {
       await server.close();
     }
+  });
+
+  test("does not expose lobby URL-selected seat claim routes", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "dev-http-server.ts"),
+      "utf8",
+    );
+
+    assert.doesNotMatch(source, /\/api\/lobbies\/.*\/seats/u);
+    assert.doesNotMatch(source, /claimSeat\(lobbyId,\s*playerId/u);
   });
 });
