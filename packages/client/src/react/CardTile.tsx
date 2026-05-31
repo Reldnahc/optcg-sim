@@ -315,6 +315,10 @@ export const CardTile = ({
           isSelected ? "is-selected" : ""
         } ${active ? "is-active" : ""} ${
           pendingChoice ? "is-pending-choice" : ""
+        } ${
+          card.freshlyPlayedAttackRestricted === true
+            ? "is-freshly-played-attack-restricted"
+            : ""
         }`}
         type="button"
         title={card.name}

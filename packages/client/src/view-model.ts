@@ -3,6 +3,7 @@ import type {
   InstanceId,
   Keyword,
   PlayerId,
+  PlayerView,
   PublicCardView,
   PublicLegalAction,
 } from "@optcg/types";
@@ -29,6 +30,7 @@ export interface ClientCardModel {
   currentCost?: number;
   costDelta?: number;
   keywords?: Keyword[];
+  freshlyPlayedAttackRestricted?: boolean;
   state?: PublicCardView["state"];
   attachedDonCount: number;
   attachedDonCards: ClientCardModel[];
@@ -95,7 +97,10 @@ const catalogEntry = (
 const cardModel = (
   card: PublicCardView,
   catalog: MatchCardCatalog,
-  options: { includeState?: boolean } = {},
+  options: {
+    includeState?: boolean;
+    freshlyPlayedAttackRestricted?: boolean;
+  } = {},
 ): ClientCardModel => {
   const entry = catalogEntry(catalog, card.owner, card.cardId);
   const printedPower = card.printedPower ?? entry.power;
@@ -138,10 +143,28 @@ const cardModel = (
     ...(card.keywords === undefined || card.keywords.length === 0
       ? {}
       : { keywords: [...card.keywords] }),
+    ...(options.freshlyPlayedAttackRestricted === true
+      ? { freshlyPlayedAttackRestricted: true }
+      : {}),
     attachedDonCount: card.attachedDonCount,
     attachedDonCards: [],
   };
 };
+
+const hasRushKeyword = (card: PublicCardView): boolean =>
+  card.keywords?.includes("rush") === true ||
+  card.keywords?.includes("rushCharacter") === true;
+
+const freshlyPlayedAttackRestricted = (
+  card: PublicCardView,
+  turn: PlayerView["turn"],
+): boolean =>
+  card.zone.zone === "characterArea" &&
+  card.controller === turn.turnPlayerId &&
+  turn.phase === "main" &&
+  card.state === "active" &&
+  card.turnPlayed === turn.globalTurn &&
+  !hasRushKeyword(card);
 
 const attachedDonIdsFor = (card: PublicCardView): readonly InstanceId[] =>
   (card as LegacyPublicCardView).attachedDonIds ?? [];
@@ -153,8 +176,11 @@ const attachDonCards = (
   card: PublicCardView,
   catalog: MatchCardCatalog,
   costAreaById: ReadonlyMap<InstanceId, ClientCardModel>,
+  freshlyPlayedAttackRestrictedFlag = false,
 ): ClientCardModel => ({
-  ...cardModel(card, catalog),
+  ...cardModel(card, catalog, {
+    freshlyPlayedAttackRestricted: freshlyPlayedAttackRestrictedFlag,
+  }),
   attachedDonCards: attachedDonIdsFor(card).flatMap((id) => {
     const donCard = costAreaById.get(id);
     return donCard === undefined ? [] : [donCard];
@@ -207,7 +233,12 @@ const selfZones = (
     leader: attachDonCards(view.self.leader, catalog, costAreaById),
     hand: view.self.hand.map((card) => cardModel(card, catalog)),
     characters: view.self.characters.map((card) =>
-      attachDonCards(card, catalog, costAreaById),
+      attachDonCards(
+        card,
+        catalog,
+        costAreaById,
+        freshlyPlayedAttackRestricted(card, view.turn),
+      ),
     ),
     ...(view.self.stage === undefined
       ? {}
@@ -242,7 +273,12 @@ const opponentZones = (
   return {
     leader: attachDonCards(view.opponent.leader, catalog, costAreaById),
     characters: view.opponent.characters.map((card) =>
-      attachDonCards(card, catalog, costAreaById),
+      attachDonCards(
+        card,
+        catalog,
+        costAreaById,
+        freshlyPlayedAttackRestricted(card, view.turn),
+      ),
     ),
     ...(view.opponent.stage === undefined
       ? {}

@@ -520,6 +520,31 @@ describe("card action menu", () => {
     assert.equal(markup.includes("is-selected"), false);
   });
 
+  test("first-turn attack restriction uses a separate dimming card state", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(CardTile, {
+        card: {
+          ...card("fresh-character", "Fresh Character"),
+          freshlyPlayedAttackRestricted: true,
+        },
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(
+      markup,
+      /class="[^"]*card-tile[^"]*is-freshly-played-attack-restricted/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile\.is-freshly-played-attack-restricted \.card-face\s*\{[^}]*filter:\s*brightness\(0\.58\)\s+saturate\(0\.78\);/u,
+    );
+    assert.equal(markup.includes("is-active"), false);
+  });
+
   test("board layout passes active card ids to card tiles", () => {
     const layout = board();
     layout.self.characters = [card("active-character", "Resolving Character")];

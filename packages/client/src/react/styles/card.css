@@ -128,6 +128,10 @@
   transform: rotate(90deg);
 }
 
+.card-tile.is-freshly-played-attack-restricted .card-face {
+  filter: brightness(0.58) saturate(0.78);
+}
+
 .card-tile.is-selected .card-face {
   outline: 3px solid #ffdc62;
   outline-offset: 0;

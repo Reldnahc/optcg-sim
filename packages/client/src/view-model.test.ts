@@ -376,6 +376,68 @@ describe("board view model", () => {
     assert.deepEqual(model.activeCardInstanceIds, ["char-1"]);
   });
 
+  test("marks active turn-player characters played this turn as first-turn attack restricted", () => {
+    const view = minimalView();
+    view.turn.globalTurn = 4;
+    view.turn.turnPlayerId = p1;
+    view.turn.phase = "main";
+    view.self.characters = [
+      {
+        ...card("fresh-character", "OP13-089", "characterArea"),
+        state: "active",
+        turnPlayed: 4,
+      },
+      {
+        ...card("rush-character", "OP13-089", "characterArea"),
+        state: "active",
+        turnPlayed: 4,
+        keywords: ["rush"],
+      },
+      {
+        ...card("older-character", "OP13-089", "characterArea"),
+        state: "active",
+        turnPlayed: 3,
+      },
+    ];
+    view.opponent.characters = [
+      {
+        ...card("opponent-fresh-character", "OP13-089", "characterArea", p2),
+        state: "active",
+        turnPlayed: 4,
+      },
+    ];
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(model.self.characters[0]?.freshlyPlayedAttackRestricted, true);
+    assert.equal(
+      model.self.characters[1]?.freshlyPlayedAttackRestricted,
+      undefined,
+    );
+    assert.equal(
+      model.self.characters[2]?.freshlyPlayedAttackRestricted,
+      undefined,
+    );
+    assert.equal(
+      model.opponent.characters[0]?.freshlyPlayedAttackRestricted,
+      undefined,
+    );
+  });
+
   test("trash cards stay newest-first and render upright even if engine state was rested", () => {
     const view = minimalView();
     view.self.trash = [
