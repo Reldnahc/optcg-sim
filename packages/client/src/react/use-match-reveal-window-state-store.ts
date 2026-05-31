@@ -1,7 +1,5 @@
 import { useMemo } from "react";
 
-import type { MatchId } from "@optcg/types";
-
 import { createBrowserPersistentStorage } from "./browser-storage.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
@@ -11,7 +9,7 @@ export const useMatchRevealWindowStateStore = ({
   matchId,
 }: {
   enabled: boolean;
-  matchId: MatchId | undefined;
+  matchId: string | undefined;
 }): RevealWindowStateStore | undefined =>
   useMemo(
     () =>

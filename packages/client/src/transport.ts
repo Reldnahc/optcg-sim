@@ -200,7 +200,8 @@ export interface MatchSessionTransitionMessage {
   type: "sessionTransition";
   matchId: MatchId;
   serverSeq: number;
-  nextMatchId: MatchId;
+  nextMatchId?: MatchId;
+  nextLobbyId?: string;
   firstPlayerChoice?: FirstPlayerChoiceView;
 }
 
@@ -275,7 +276,7 @@ export interface MatchTransport {
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken: string;
-  }) => Promise<CreatedMatch>;
+  }) => Promise<CreatedMatch | JoinedLobby>;
   claimSeat: (input: {
     matchId: MatchId;
     playerId: PlayerId;

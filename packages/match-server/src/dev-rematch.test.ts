@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type { PlayerId } from "@optcg/types";
+import type { DeckHashDeck } from "optcg-deck-hash";
 
 import { requestHash } from "./action-envelope.js";
 import { createDevHttpServer } from "./dev-http-server.js";
@@ -13,6 +14,19 @@ const createFixtureDevHttpServer = async () =>
   createDevHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
+    deckHashCodec: {
+      decode: (hash): Promise<DeckHashDeck> =>
+        Promise.resolve({
+          leader: { card_number: "OP13-079", count: 1 },
+          main: [
+            {
+              card_number: hash === "p1-rematch-hash" ? "OP13-080" : "OP13-082",
+              count: 9,
+            },
+          ],
+          don: null,
+        }),
+    },
   });
 
 interface CreatedDevMatchBody {
@@ -50,9 +64,25 @@ interface TestSessionTransitionBody {
   type?: string;
   matchId?: string;
   nextMatchId?: string;
+  nextLobbyId?: string;
   firstPlayerChoice?: {
     chooserPlayerId?: string;
   };
+}
+
+interface CreatedDevLobbyBody {
+  lobbyId?: string;
+  matchId?: string;
+  seat?: { playerId?: string };
+  seats?: Record<
+    string,
+    {
+      playerId?: string;
+      claimed?: boolean;
+      deck: { status?: "missing" | "ready" | "invalid" };
+    }
+  >;
+  errors?: string[];
 }
 
 const requireStateSeq = (
@@ -77,6 +107,19 @@ const webSocketUrl = (
   );
   url.searchParams.set("playerId", playerId);
   url.searchParams.set("sessionToken", token);
+  return url.toString();
+};
+
+const lobbyWebSocketUrl = (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  lobbyId: string,
+  playerId: string,
+): string => {
+  const url = new URL(
+    `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
+    server.url().replace(/^http/u, "ws"),
+  );
+  url.searchParams.set("playerId", playerId);
   return url.toString();
 };
 
@@ -147,8 +190,9 @@ const chooseFirstPlayer = async (
       body: JSON.stringify({ playerId, choice }),
     },
   );
-  assert.equal(response.status, 200);
-  return (await response.json()) as CreatedDevMatchBody;
+  const body = (await response.json()) as CreatedDevMatchBody;
+  assert.equal(response.status, 200, JSON.stringify(body));
+  return body;
 };
 
 const createReadyDevMatch = async (
@@ -202,7 +246,10 @@ const createRematch = async (
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken: string,
-): Promise<{ status: number; body: CreatedDevMatchBody }> => {
+): Promise<{
+  status: number;
+  body: CreatedDevMatchBody & CreatedDevLobbyBody;
+}> => {
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/rematch`,
     {
@@ -218,6 +265,24 @@ const createRematch = async (
     status: response.status,
     body: (await response.json()) as CreatedDevMatchBody,
   };
+};
+
+const submitDevLobbyDeck = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  lobbyId: string,
+  guestToken: string,
+  deckHash: string,
+): Promise<CreatedDevLobbyBody> => {
+  const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/deck`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-optcg-session-token": guestToken,
+    },
+    body: JSON.stringify({ deckHash }),
+  });
+  assert.equal(response.status, 200);
+  return (await response.json()) as CreatedDevLobbyBody;
 };
 
 const loadDevState = async (
@@ -333,13 +398,18 @@ describe("dev rematches", () => {
     }
   });
 
-  test("creates rematches with the previous loser as first-player chooser", async () => {
+  test("creates rematch lobbies so both players can select decks again", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
       const loserToken = await claimDevSeat(server, match.matchId, "p1");
-      await concedeViaSocket(server, match.matchId, "p1", loserToken);
+      const { p2Token } = await concedeViaSocket(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
 
       const rematch = await createRematch(
         server,
@@ -349,14 +419,46 @@ describe("dev rematches", () => {
       );
 
       assert.equal(rematch.status, 201);
-      const rematchId = rematch.body.matchId;
-      const choice = rematch.body.firstPlayerChoice;
-      if (rematchId === undefined || choice === undefined) {
-        throw new Error("Rematch response did not include setup choice.");
+      const rematchLobbyId = rematch.body.lobbyId;
+      if (rematchLobbyId === undefined) {
+        throw new Error("Rematch response did not include lobby id.");
       }
-      assert.notEqual(rematchId, match.matchId);
+      const rematchSeat = rematch.body.seat;
+      const rematchSeats = rematch.body.seats;
+      if (rematchSeat === undefined || rematchSeats === undefined) {
+        throw new Error("Rematch response did not include lobby seats.");
+      }
+      const rematchP1Seat = rematchSeats["p1"];
+      const rematchP2Seat = rematchSeats["p2"];
+      if (rematchP1Seat === undefined || rematchP2Seat === undefined) {
+        throw new Error("Rematch response did not include both player seats.");
+      }
+      assert.equal(rematch.body.matchId, undefined);
       assert.equal(rematch.body.snapshot, undefined);
-      assert.equal(choice.chooserPlayerId, "p1");
+      assert.equal(rematchSeat.playerId, "p1");
+      assert.equal(rematchP1Seat.claimed, true);
+      assert.equal(rematchP2Seat.claimed, true);
+      assert.equal(rematchP1Seat.deck.status, "missing");
+      assert.equal(rematchP2Seat.deck.status, "missing");
+
+      await submitDevLobbyDeck(
+        server,
+        rematchLobbyId,
+        loserToken,
+        "p1-rematch-hash",
+      );
+      const ready = await submitDevLobbyDeck(
+        server,
+        rematchLobbyId,
+        p2Token,
+        "p2-rematch-hash",
+      );
+      const rematchId = ready.matchId;
+      if (rematchId === undefined) {
+        throw new Error(
+          "Ready rematch lobby response did not include match id.",
+        );
+      }
 
       const resolved = await chooseFirstPlayer(
         server,
@@ -397,15 +499,45 @@ describe("dev rematches", () => {
       );
 
       assert.equal(rematch.status, 201);
-      const rematchId = rematch.body.matchId;
-      if (rematchId === undefined) {
-        throw new Error("Rematch response did not include match id.");
+      const rematchLobbyId = rematch.body.lobbyId;
+      if (rematchLobbyId === undefined) {
+        throw new Error("Rematch response did not include lobby id.");
       }
       const transition = (await sourceP2.next()) as TestSessionTransitionBody;
       assert.equal(transition.type, "sessionTransition");
       assert.equal(transition.matchId, match.matchId);
-      assert.equal(transition.nextMatchId, rematchId);
-      assert.equal(transition.firstPlayerChoice?.chooserPlayerId, "p1");
+      assert.equal(transition.nextLobbyId, rematchLobbyId);
+      assert.equal(transition.nextMatchId, undefined);
+
+      const rematchLobbyP1 = await openSocket(
+        lobbyWebSocketUrl(server, rematchLobbyId, "p1"),
+      );
+      await rematchLobbyP1.next();
+      await submitDevLobbyDeck(
+        server,
+        rematchLobbyId,
+        loserToken,
+        "p1-rematch-hash",
+      );
+      await rematchLobbyP1.next();
+      const ready = await submitDevLobbyDeck(
+        server,
+        rematchLobbyId,
+        p2Token,
+        "p2-rematch-hash",
+      );
+      const rematchId = ready.matchId;
+      if (rematchId === undefined) {
+        throw new Error(
+          "Ready rematch lobby response did not include match id.",
+        );
+      }
+      const lobbyReady = (await rematchLobbyP1.next()) as {
+        type?: string;
+        lobby?: CreatedDevLobbyBody;
+      };
+      assert.equal(lobbyReady.type, "lobbySync");
+      assert.equal(lobbyReady.lobby?.matchId, rematchId);
 
       const rematchP1Token = await claimDevSeat(
         server,
@@ -438,6 +570,7 @@ describe("dev rematches", () => {
       assert.equal(p2State.type, "stateSync");
 
       sourceP2.socket.close();
+      rematchLobbyP1.socket.close();
       rematchP1.socket.close();
       rematchP2.socket.close();
     } finally {

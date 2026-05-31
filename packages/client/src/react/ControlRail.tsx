@@ -1,7 +1,9 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 
+import type { LobbyClientState } from "../controller.js";
 import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
+import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import {
@@ -60,6 +62,9 @@ export interface ControlRailProps {
   previewControl?: ReactNode | undefined;
   actionLogControl?: ReactNode | undefined;
   settingsControl?: ReactNode | undefined;
+  lobbyDeckState?: LobbyClientState | undefined;
+  deckSubmissionDisabled?: boolean | undefined;
+  onSubmitDeckHash?: ((deckHash: string) => Promise<void>) | undefined;
 }
 
 export const ControlRail = ({
@@ -90,6 +95,9 @@ export const ControlRail = ({
   previewControl,
   actionLogControl,
   settingsControl,
+  lobbyDeckState,
+  deckSubmissionDisabled = false,
+  onSubmitDeckHash,
 }: ControlRailProps): React.JSX.Element => {
   const tabDragStart = useRef<
     | {
@@ -213,6 +221,16 @@ export const ControlRail = ({
               </button>
             ) : null}
           </section>
+        )}
+        {lobbyDeckState === undefined ||
+        onSubmitDeckHash === undefined ? null : (
+          <div className="control-session-content">
+            <LobbyDeckPanel
+              disabled={deckSubmissionDisabled}
+              lobbyState={lobbyDeckState}
+              onSubmitDeckHash={onSubmitDeckHash}
+            />
+          </div>
         )}
         <ActionMenu
           title="Global actions"

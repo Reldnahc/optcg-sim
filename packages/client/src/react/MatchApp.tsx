@@ -34,7 +34,7 @@ import {
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import { MatchSessionLoading } from "./MatchSessionLoading.js";
+import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
 import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
 import {
   combineDropTargetForWindow,
@@ -108,6 +108,7 @@ export const MatchApp = (): React.JSX.Element => {
   const firstPlayerSetupState = isFirstPlayerSetupClientState(clientState)
     ? clientState
     : undefined;
+  const lobbyState = isLobbyClientState(clientState) ? clientState : undefined;
   const firstPlayerChoiceModal = useFirstPlayerChoiceModal(
     firstPlayerSetupState,
     client.chooseFirstPlayer,
@@ -122,12 +123,12 @@ export const MatchApp = (): React.JSX.Element => {
     });
   const scopedMatchState = matchState ?? firstPlayerSetupState;
   const matchScope =
-    scopedMatchState === undefined
+    scopedMatchState === undefined && lobbyState === undefined
       ? undefined
-      : String(scopedMatchState.matchId);
+      : String(scopedMatchState?.matchId ?? lobbyState?.lobbyId);
   const revealWindowStateStore = useMatchRevealWindowStateStore({
-    enabled: matchState !== undefined,
-    matchId: matchState?.matchId,
+    enabled: matchScope !== undefined,
+    matchId: matchScope,
   });
   const {
     controlRailWidth,
@@ -182,7 +183,6 @@ export const MatchApp = (): React.JSX.Element => {
     resetFloatingWindowState,
     revealWindowStateStore,
   ]);
-  const lobbyState = isLobbyClientState(clientState) ? clientState : undefined;
   const currentPlayerId = client.currentPlayerId;
   const { displayBoard, moveHandCard } = useOrderedHandBoard({
     board,
@@ -647,11 +647,7 @@ export const MatchApp = (): React.JSX.Element => {
   return (
     <main className="match-app">
       {displayBoard === undefined ? (
-        <MatchSessionLoading
-          client={client}
-          firstPlayerSetup={firstPlayerSetupState !== undefined}
-          lobbyState={lobbyState}
-        />
+        <MatchLoadingPanel clientState={clientState} />
       ) : (
         <BoardLayout
           board={displayBoard}
@@ -729,6 +725,9 @@ export const MatchApp = (): React.JSX.Element => {
         }
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
+        lobbyDeckState={lobbyState}
+        deckSubmissionDisabled={client.state.actionInFlight}
+        onSubmitDeckHash={client.submitLobbyDeckHash}
         onConcede={() => {
           if (concedeAction === undefined || !requestConcedeConfirmation()) {
             return;

@@ -29,6 +29,7 @@ export interface LobbyClientState {
   seat: {
     lobbyId: string;
     playerId: PlayerId;
+    sessionToken: string;
   };
   lobby: LocalLobby;
 }
@@ -127,6 +128,11 @@ const requireCurrentSnapshot = (
   return currentState.snapshot;
 };
 
+const isJoinedLobby = (
+  value: Awaited<ReturnType<MatchTransport["createRematch"]>>,
+): value is LocalLobby & { seat: { playerId: PlayerId } } =>
+  "lobbyId" in value && "seat" in value;
+
 export const createMatchClientController = ({
   transport,
   liveTransport,
@@ -217,35 +223,42 @@ export const createMatchClientController = ({
       currentLobbyState = lobbyState;
       return lobbyState;
     }
-    return claimAndLoad({ matchId, playerId: lobbyState.seat.playerId });
+    return claimAndLoad(
+      { matchId, playerId: lobbyState.seat.playerId },
+      lobbyState.seat.sessionToken,
+    );
   };
 
   return {
     async startNewLocalLobby() {
       const lobby = await transport.createLobby();
+      const guestToken = sessionStore.loadOrCreateGuestIdentity().guestToken;
       const joinedLobby = await transport.joinLobby({
         lobbyId: lobby.lobbyId,
-        guestToken: sessionStore.loadOrCreateGuestIdentity().guestToken,
+        guestToken,
       });
       return claimMatchIfReady({
         lobbyId: joinedLobby.lobbyId,
         seat: {
           lobbyId: joinedLobby.lobbyId,
           playerId: joinedLobby.seat.playerId,
+          sessionToken: guestToken,
         },
         lobby: joinedLobby,
       });
     },
     async joinLocalLobby(input) {
+      const guestToken = sessionStore.loadOrCreateGuestIdentity().guestToken;
       const joinedLobby = await transport.joinLobby({
         lobbyId: input.lobbyId,
-        guestToken: sessionStore.loadOrCreateGuestIdentity().guestToken,
+        guestToken,
       });
       return claimMatchIfReady({
         lobbyId: joinedLobby.lobbyId,
         seat: {
           lobbyId: joinedLobby.lobbyId,
           playerId: joinedLobby.seat.playerId,
+          sessionToken: guestToken,
         },
         lobby: joinedLobby,
       });
@@ -256,7 +269,7 @@ export const createMatchClientController = ({
       }
       const lobby = await transport.submitLobbyDeck({
         lobbyId: currentLobbyState.lobbyId,
-        guestToken: sessionStore.loadOrCreateGuestIdentity().guestToken,
+        guestToken: currentLobbyState.seat.sessionToken,
         deckHash: input.deckHash,
       });
       return claimMatchIfReady({
@@ -309,6 +322,20 @@ export const createMatchClientController = ({
         playerId: credential.playerId,
         sessionToken: credential.sessionToken,
       });
+      if (isJoinedLobby(created)) {
+        currentState = undefined;
+        currentFirstPlayerSetupState = undefined;
+        currentLobbyState = {
+          lobbyId: created.lobbyId,
+          seat: {
+            lobbyId: created.lobbyId,
+            playerId: created.seat.playerId,
+            sessionToken: credential.sessionToken,
+          },
+          lobby: created,
+        };
+        return currentLobbyState;
+      }
       const seat = {
         matchId: created.matchId,
         playerId: credential.playerId,
@@ -402,17 +429,38 @@ export const createMatchClientController = ({
           );
         },
         onSessionTransition(message) {
-          void claimAndLoad(
-            {
-              matchId: message.nextMatchId,
-              playerId: credential.playerId,
-            },
-            credential.sessionToken,
-          )
-            .then(onState)
-            .catch((error: unknown) => {
-              onError(error instanceof Error ? error.message : String(error));
-            });
+          const transition =
+            message.nextLobbyId === undefined
+              ? message.nextMatchId === undefined
+                ? Promise.reject(
+                    new Error("Session transition did not include a target."),
+                  )
+                : claimAndLoad(
+                    {
+                      matchId: message.nextMatchId,
+                      playerId: credential.playerId,
+                    },
+                    credential.sessionToken,
+                  )
+              : transport
+                  .joinLobby({
+                    lobbyId: message.nextLobbyId,
+                    guestToken: credential.sessionToken,
+                  })
+                  .then((joinedLobby) =>
+                    claimMatchIfReady({
+                      lobbyId: joinedLobby.lobbyId,
+                      seat: {
+                        lobbyId: joinedLobby.lobbyId,
+                        playerId: joinedLobby.seat.playerId,
+                        sessionToken: credential.sessionToken,
+                      },
+                      lobby: joinedLobby,
+                    }),
+                  );
+          void transition.then(onState).catch((error: unknown) => {
+            onError(error instanceof Error ? error.message : String(error));
+          });
         },
       });
     },
@@ -430,11 +478,16 @@ export const createMatchClientController = ({
       }
       const lobbyId = currentLobbyState.lobbyId;
       const playerId = currentLobbyState.seat.playerId;
+      const lobbySessionToken = currentLobbyState.seat.sessionToken;
       const toLobbyState = (
         message: LobbyStateSyncMessage,
       ): LobbyClientState => ({
         lobbyId: message.lobbyId,
-        seat: { lobbyId: message.lobbyId, playerId },
+        seat: {
+          lobbyId: message.lobbyId,
+          playerId,
+          sessionToken: lobbySessionToken,
+        },
         lobby: message.lobby,
       });
       lobbyLiveConnection = lobbyLiveTransport.connect({

@@ -329,7 +329,7 @@ const handleApiRequest = async (
         });
         return;
       }
-      const result = registry.createRematch(
+      const result = lobbyRegistry.createRematchLobby(
         matchId as MatchId,
         playerId as PlayerId,
         authProvider.authenticate(request),
@@ -355,6 +355,7 @@ const handleApiRequest = async (
         return;
       }
       broadcastSessionTransition(matchId as MatchId, result, matchConnections);
+      broadcastLobbyState(result, lobbyConnections);
       sendJson(response, 201, result);
       return;
     }
@@ -597,7 +598,8 @@ const broadcastMatchState = (
 const broadcastSessionTransition = (
   sourceMatchId: MatchId,
   created: {
-    readonly matchId: MatchId;
+    readonly matchId?: MatchId;
+    readonly lobbyId?: string;
     readonly firstPlayerChoice?: unknown;
   },
   connections: Set<DevSocketConnection>,
@@ -608,7 +610,12 @@ const broadcastSessionTransition = (
         type: "sessionTransition",
         matchId: sourceMatchId,
         serverSeq: ++connection.serverSeq,
-        nextMatchId: created.matchId,
+        ...(created.matchId === undefined
+          ? {}
+          : { nextMatchId: created.matchId }),
+        ...(created.lobbyId === undefined
+          ? {}
+          : { nextLobbyId: created.lobbyId }),
         ...(created.firstPlayerChoice === undefined
           ? {}
           : { firstPlayerChoice: created.firstPlayerChoice }),

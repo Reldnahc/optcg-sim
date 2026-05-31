@@ -83,10 +83,16 @@ const createFakeTransport = (): MatchTransport & {
     },
     joinLobby(input) {
       joinedLobbies.push(input);
+      const rematchPlayerId = input.guestToken.includes("p2")
+        ? ("p2" as PlayerId)
+        : ("p1" as PlayerId);
       return Promise.resolve({
         lobbyId: input.lobbyId,
-        seat: { playerId: "p1" as PlayerId },
-        seats: lobbySeats(),
+        seat: { playerId: rematchPlayerId },
+        seats: lobbySeats({
+          p1Ready: false,
+          p2Ready: false,
+        }),
       });
     },
     submitLobbyDeck(input) {
@@ -115,15 +121,9 @@ const createFakeTransport = (): MatchTransport & {
     },
     createRematch(input) {
       return Promise.resolve({
-        matchId: `${String(input.matchId)}-rematch-1` as MatchId,
-        seats: {
-          p1: { playerId: "p1" as PlayerId, claimed: true },
-          p2: { playerId: "p2" as PlayerId, claimed: true },
-        },
-        firstPlayerChoice: {
-          chooserPlayerId: input.playerId,
-          choices: ["goFirst", "goSecond"],
-        },
+        lobbyId: `${String(input.matchId)}-rematch-lobby-1`,
+        seat: { playerId: input.playerId },
+        seats: lobbySeats(),
       });
     },
     claimSeat(input) {
@@ -352,7 +352,7 @@ describe("match client controller", () => {
     assert.equal(match.snapshot.stateSeq, 1);
   });
 
-  test("requests rematch and reclaims the new match seat with the existing token", async () => {
+  test("requests rematch and moves to a deck-selection lobby with the existing token", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
       transport,
@@ -364,38 +364,25 @@ describe("match client controller", () => {
 
     const rematch = await controller.requestRematch();
 
-    assert.equal("firstPlayerChoice" in rematch, true);
-    if (!("firstPlayerChoice" in rematch)) {
-      throw new Error("Expected first-player setup state.");
+    assert.equal("lobbyId" in rematch, true);
+    if (!("lobbyId" in rematch)) {
+      throw new Error("Expected rematch lobby state.");
     }
-    assert.equal(rematch.matchId, "match-1-rematch-1");
-    assert.deepEqual(transport.claimedSeats.at(-1), {
-      matchId: "match-1-rematch-1",
+    assert.equal(rematch.lobbyId, "match-1-rematch-lobby-1");
+    assert.deepEqual(rematch.seat, {
+      lobbyId: "match-1-rematch-lobby-1",
       playerId: "p1",
       sessionToken: "token-p1",
     });
     assert.deepEqual(controller.currentCredential(), {
-      matchId: "match-1-rematch-1",
+      matchId: "match-1",
       playerId: "p1",
       sessionToken: "token-p1",
     });
   });
 
-  test("live rematch transitions reclaim the new pending setup match", async () => {
+  test("live rematch transitions join the rematch lobby with the existing token", async () => {
     const transport = createFakeTransport();
-    const claimSeat = transport.claimSeat;
-    transport.claimSeat = async (input) => {
-      const claimed = await claimSeat(input);
-      return String(input.matchId).includes("rematch")
-        ? {
-            ...claimed,
-            firstPlayerChoice: {
-              chooserPlayerId: "p1" as PlayerId,
-              choices: ["goFirst", "goSecond"],
-            },
-          }
-        : claimed;
-    };
     const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
       transport,
@@ -419,23 +406,18 @@ describe("match client controller", () => {
       type: "sessionTransition",
       matchId: "match-1" as MatchId,
       serverSeq: 2,
-      nextMatchId: "match-1-rematch-1" as MatchId,
-      firstPlayerChoice: {
-        chooserPlayerId: "p1" as PlayerId,
-        choices: ["goFirst", "goSecond"],
-      },
+      nextLobbyId: "match-1-rematch-lobby-1",
     });
     await flushAsyncCallbacks();
 
     const rematch = states.at(-1);
-    assert.equal(rematch !== undefined && "firstPlayerChoice" in rematch, true);
-    assert.deepEqual(transport.claimedSeats.at(-1), {
-      matchId: "match-1-rematch-1",
-      playerId: "p2",
-      sessionToken: "token-p2",
+    assert.equal(rematch !== undefined && "lobbyId" in rematch, true);
+    assert.deepEqual(transport.joinedLobbies.at(-1), {
+      lobbyId: "match-1-rematch-lobby-1",
+      guestToken: "token-p2",
     });
     assert.deepEqual(controller.currentCredential(), {
-      matchId: "match-1-rematch-1",
+      matchId: "match-1",
       playerId: "p2",
       sessionToken: "token-p2",
     });

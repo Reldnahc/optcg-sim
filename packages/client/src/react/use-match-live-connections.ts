@@ -34,6 +34,14 @@ export const useMatchLiveConnections = ({
     }
     controller.connectLive({
       onState(nextState) {
+        if (
+          isMatchClientState(nextState) ||
+          isFirstPlayerSetupClientState(nextState)
+        ) {
+          setMatchLocation(nextState.matchId, nextState.seat.playerId);
+        } else if (isLobbyClientState(nextState)) {
+          setLobbyLocation(nextState.lobbyId);
+        }
         setClientState(nextState);
         setErrors([]);
       },

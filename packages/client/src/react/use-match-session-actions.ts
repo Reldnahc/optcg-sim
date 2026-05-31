@@ -111,6 +111,8 @@ export const useMatchSessionActions = ({
       const result = await controller.requestRematch();
       if (isMatchClientState(result) || isFirstPlayerSetupClientState(result)) {
         setMatchLocation(result.matchId, result.seat.playerId);
+      } else if (isLobbyClientState(result)) {
+        setLobbyLocation(result.lobbyId);
       }
       resetLocalInteractionState();
       setClientState(result);

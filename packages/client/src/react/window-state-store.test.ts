@@ -1,8 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import type { MatchId } from "@optcg/types";
-
 import { createMemoryClientStorage } from "../session.js";
 import { createRevealWindowStateStore } from "./window-state-store.js";
 
@@ -11,11 +9,11 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
     const matchTwo = createRevealWindowStateStore({
       storage,
-      matchId: "match-2" as MatchId,
+      matchId: "match-2",
     });
 
     matchOne.saveDismissedRevealIds(new Set(["reveal-1", "reveal-2"]));
@@ -38,7 +36,7 @@ describe("reveal window state store", () => {
     );
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual([...store.loadDismissedRevealIds()], []);
@@ -48,11 +46,11 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
     const matchTwo = createRevealWindowStateStore({
       storage,
-      matchId: "match-2" as MatchId,
+      matchId: "match-2",
     });
 
     matchOne.saveWindowRects({
@@ -71,11 +69,11 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
     const matchTwo = createRevealWindowStateStore({
       storage,
-      matchId: "match-2" as MatchId,
+      matchId: "match-2",
     });
 
     matchOne.saveOpenWindowIds(
@@ -96,7 +94,7 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual(
@@ -113,7 +111,7 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     store.saveOpenWindowIds(new Set());
@@ -127,11 +125,11 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
     const matchTwo = createRevealWindowStateStore({
       storage,
-      matchId: "match-2" as MatchId,
+      matchId: "match-2",
     });
 
     matchOne.saveControlPanelLayout({
@@ -154,7 +152,7 @@ describe("reveal window state store", () => {
     );
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadControlPanelLayout(), {});
@@ -164,11 +162,11 @@ describe("reveal window state store", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
     const matchTwo = createRevealWindowStateStore({
       storage,
-      matchId: "match-2" as MatchId,
+      matchId: "match-2",
     });
 
     matchOne.saveInfoWindowConfig({
@@ -194,7 +192,7 @@ describe("reveal window state store", () => {
     );
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadInfoWindowConfig(), {
@@ -211,7 +209,7 @@ describe("reveal window state store", () => {
     );
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual([...store.loadOpenWindowIds()], []);
@@ -228,7 +226,7 @@ describe("reveal window state store", () => {
     );
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadWindowRects(), {
@@ -244,7 +242,7 @@ describe("reveal window state store", () => {
     );
     const store = createRevealWindowStateStore({
       storage,
-      matchId: "match-1" as MatchId,
+      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadInfoWindowConfig(), {

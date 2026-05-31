@@ -1,5 +1,3 @@
-import type { MatchId } from "@optcg/types";
-
 import type { ClientStorage } from "../session.js";
 import type { WindowRect } from "./FloatingWindow.js";
 
@@ -51,23 +49,23 @@ const isInfoWindowTabId = (
 ): value is (typeof allInfoWindowTabIds)[number] =>
   value === "preview" || value === "log" || value === "settings";
 
-const setKey = (matchId: MatchId, name: "dismissed" | "minimized"): string =>
-  `${keyPrefix}:${String(matchId)}:${name}`;
+const setKey = (matchId: string, name: "dismissed" | "minimized"): string =>
+  `${keyPrefix}:${matchId}:${name}`;
 
-const windowRectsKey = (matchId: MatchId): string =>
-  `${windowRectsKeyPrefix}:${String(matchId)}`;
+const windowRectsKey = (matchId: string): string =>
+  `${windowRectsKeyPrefix}:${matchId}`;
 
-const openWindowsKey = (matchId: MatchId): string =>
-  `${openWindowsKeyPrefix}:${String(matchId)}`;
+const openWindowsKey = (matchId: string): string =>
+  `${openWindowsKeyPrefix}:${matchId}`;
 
-const dockedWindowsKey = (matchId: MatchId): string =>
-  `${dockedWindowsKeyPrefix}:${String(matchId)}`;
+const dockedWindowsKey = (matchId: string): string =>
+  `${dockedWindowsKeyPrefix}:${matchId}`;
 
-const infoWindowConfigKey = (matchId: MatchId): string =>
-  `${infoWindowConfigKeyPrefix}:${String(matchId)}`;
+const infoWindowConfigKey = (matchId: string): string =>
+  `${infoWindowConfigKeyPrefix}:${matchId}`;
 
-const controlPanelLayoutKey = (matchId: MatchId): string =>
-  `${controlPanelLayoutKeyPrefix}:${String(matchId)}`;
+const controlPanelLayoutKey = (matchId: string): string =>
+  `${controlPanelLayoutKeyPrefix}:${matchId}`;
 
 const parseStringArray = (value: string | null): string[] => {
   if (value === null) {
@@ -236,7 +234,7 @@ export const createRevealWindowStateStore = ({
   matchId,
 }: {
   storage: ClientStorage;
-  matchId: MatchId;
+  matchId: string;
 }): RevealWindowStateStore => ({
   loadDismissedRevealIds() {
     return loadSet(storage, setKey(matchId, "dismissed"));

@@ -13,8 +13,12 @@ import {
 } from "./deck-submission.js";
 import type { AuthContext } from "./dev-auth.js";
 import { subjectsMatch } from "./dev-auth.js";
-import type { LocalDevMatchRegistry } from "./dev-local-match-registry.js";
+import {
+  matchSeatsWithMatchId,
+  type LocalDevMatchRegistry,
+} from "./dev-local-match-registry.js";
 import type { CreatePremadeDevMatchSetupOptions } from "./local-match.js";
+import type { FirstPlayerChoiceState } from "./session-types.js";
 
 export interface CreatedDevLobbyResponse {
   lobbyId: string;
@@ -32,13 +36,15 @@ export interface CreatedDevLobbyResponse {
 
 interface LocalDevLobbySeat {
   playerId: PlayerId;
-  subject?: AuthContext["subject"] | undefined;
+  subject?: AuthContext["subject"];
   deckSubmission?: DeckSubmission;
 }
 
 interface LocalDevLobby {
   lobbyId: string;
   seats: Record<string, LocalDevLobbySeat>;
+  firstPlayerChoice?: FirstPlayerChoiceState;
+  playerOrder?: readonly [PlayerId, PlayerId];
   matchId?: MatchId;
 }
 
@@ -62,6 +68,17 @@ export interface LocalDevLobbyRegistry {
     | "invalidDeck"
   >;
   getLobby: (lobbyId: string) => CreatedDevLobbyResponse | undefined;
+  createRematchLobby: (
+    sourceMatchId: MatchId,
+    playerId: PlayerId,
+    auth: AuthContext | undefined,
+  ) =>
+    | CreatedDevLobbyResponse
+    | "matchNotFound"
+    | "unauthenticated"
+    | "forbidden"
+    | "sourceNotCompleted"
+    | "noPreviousLoser";
 }
 
 export interface CreateLocalDevLobbyRegistryOptions extends CreatePremadeDevMatchSetupOptions {
@@ -76,6 +93,14 @@ const createLobbySeats = (): LocalDevLobby["seats"] => ({
   p1: { playerId: p1 },
   p2: { playerId: p2 },
 });
+
+const twoPlayerOrder = (
+  playerOrder: readonly PlayerId[] | undefined,
+): readonly [PlayerId, PlayerId] => {
+  const first = playerOrder?.[0] ?? p1;
+  const second = playerOrder?.[1] ?? p2;
+  return [first, second];
+};
 
 const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
   lobbyId: lobby.lobbyId,
@@ -119,11 +144,13 @@ export const createLocalDevLobbyRegistry = (
     if (first?.status !== "ready" || second?.status !== "ready") {
       return;
     }
+    const matchId = `${lobby.lobbyId}-match` as MatchId;
+    const playerOrder = twoPlayerOrder(lobby.playerOrder);
     const created = await matchRegistry.createMatch(
       await createDevMatchSetupFromDeckSubmissions({
-        matchId: `${lobby.lobbyId}-match` as MatchId,
-        firstPlayerId: p1,
-        playerOrder: [p1, p2],
+        matchId,
+        firstPlayerId: playerOrder[0],
+        playerOrder,
         createdAt: devLobbyCreatedAt,
         firstPlayer: first,
         secondPlayer: second,
@@ -135,6 +162,12 @@ export const createLocalDevLobbyRegistry = (
           ? {}
           : { redisUrl: options.redisUrl }),
       }),
+      {
+        ...(lobby.firstPlayerChoice === undefined
+          ? {}
+          : { firstPlayerChoice: lobby.firstPlayerChoice }),
+        seats: matchSeatsWithMatchId(lobby.seats, matchId),
+      },
     );
     lobby.matchId = created.matchId;
   };
@@ -234,6 +267,40 @@ export const createLocalDevLobbyRegistry = (
     getLobby(lobbyId) {
       const lobby = lobbies.get(lobbyId);
       return lobby === undefined ? undefined : lobbyResponse(lobby);
+    },
+    createRematchLobby(sourceMatchId, playerId, auth) {
+      const seed = matchRegistry.createRematchSeed(
+        sourceMatchId,
+        playerId,
+        auth,
+      );
+      if (typeof seed === "string") {
+        return seed;
+      }
+      const playerOrder = twoPlayerOrder(seed.playerOrder);
+      const lobby: LocalDevLobby = {
+        lobbyId: `${String(sourceMatchId)}-rematch-lobby-${String(
+          nextLobbyNumber++,
+        )}`,
+        seats: Object.fromEntries(
+          Object.entries(seed.seats).map(([key, seat]) => [
+            key,
+            {
+              playerId: seat.playerId,
+              ...(seat.subject === undefined
+                ? {}
+                : { subject: structuredClone(seat.subject) }),
+            },
+          ]),
+        ),
+        firstPlayerChoice: seed.firstPlayerChoice,
+        playerOrder,
+      };
+      lobbies.set(lobby.lobbyId, lobby);
+      return {
+        ...lobbyResponse(lobby),
+        seat: { playerId },
+      };
     },
   };
 };
