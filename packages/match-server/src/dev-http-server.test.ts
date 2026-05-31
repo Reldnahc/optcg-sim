@@ -20,6 +20,11 @@ interface CreatedDevMatchBody {
   matchId?: string;
   seats?: Record<string, { playerId?: string; claimed?: boolean }>;
   snapshot?: { stateSeq?: number };
+  firstPlayerChoice?: {
+    chooserPlayerId?: string;
+    choices?: string[];
+    resolvedFirstPlayerId?: string;
+  };
 }
 
 interface ClaimedDevSeatBody {
@@ -132,6 +137,24 @@ const createDevMatch = async (
   return (await response.json()) as CreatedDevMatchBody;
 };
 
+const chooseFirstPlayer = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  matchId: string,
+  playerId: "p1" | "p2",
+  choice: "goFirst" | "goSecond",
+): Promise<CreatedDevMatchBody> => {
+  const response = await fetch(
+    `${server.url()}/api/matches/${matchId}/first-player-choice`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ playerId, choice }),
+    },
+  );
+  assert.equal(response.status, 200);
+  return (await response.json()) as CreatedDevMatchBody;
+};
+
 const requireCreatedMatch = (
   body: CreatedDevMatchBody,
 ): {
@@ -153,6 +176,20 @@ const requireCreatedMatch = (
   assert.equal(p2Seat.playerId, "p2");
   assert.equal(JSON.stringify(body).includes("sessionToken"), false);
   return { matchId, stateSeq };
+};
+
+const createReadyDevMatch = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+): Promise<{ matchId: string; stateSeq: number }> => {
+  const created = await createDevMatch(server);
+  const matchId = created.matchId;
+  const chooser = created.firstPlayerChoice?.chooserPlayerId;
+  if (matchId === undefined || (chooser !== "p1" && chooser !== "p2")) {
+    throw new Error("Created dev match response was missing setup choice.");
+  }
+  return requireCreatedMatch(
+    await chooseFirstPlayer(server, matchId, chooser, "goFirst"),
+  );
 };
 
 const claimDevSeat = async (
@@ -254,7 +291,68 @@ describe("dev HTTP server", () => {
       const matchState = await fetch(
         `${server.url()}/api/matches/${matchId}/state`,
       );
-      assert.equal(matchState.status, 200);
+      assert.equal(matchState.status, 409);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("creates matches in first-player setup and resolves goFirst before engine boot", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevMatch(server);
+      const matchId = created.matchId;
+      const choice = created.firstPlayerChoice;
+      if (matchId === undefined || choice?.chooserPlayerId === undefined) {
+        throw new Error("Created match response did not include setup choice.");
+      }
+      assert.equal(created.snapshot, undefined);
+      assert.deepEqual(choice.choices, ["goFirst", "goSecond"]);
+
+      const resolved = await chooseFirstPlayer(
+        server,
+        matchId,
+        choice.chooserPlayerId as "p1" | "p2",
+        "goFirst",
+      );
+
+      assert.equal(
+        resolved.firstPlayerChoice?.resolvedFirstPlayerId,
+        choice.chooserPlayerId,
+      );
+      assert.equal(typeof resolved.snapshot?.stateSeq, "number");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("rejects first-player setup responses from the non-chooser without booting the engine", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevMatch(server);
+      const matchId = created.matchId;
+      const chooser = created.firstPlayerChoice?.chooserPlayerId;
+      if (matchId === undefined || (chooser !== "p1" && chooser !== "p2")) {
+        throw new Error("Created match response did not include setup choice.");
+      }
+      const nonChooser = chooser === "p1" ? "p2" : "p1";
+
+      const response = await fetch(
+        `${server.url()}/api/matches/${matchId}/first-player-choice`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ playerId: nonChooser, choice: "goFirst" }),
+        },
+      );
+
+      assert.equal(response.status, 403);
+      const stateResponse = await fetch(
+        `${server.url()}/api/matches/${matchId}/state`,
+      );
+      assert.equal(stateResponse.status, 409);
     } finally {
       await server.close();
     }
@@ -310,8 +408,8 @@ describe("dev HTTP server", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const first = requireCreatedMatch(await createDevMatch(server));
-      const second = requireCreatedMatch(await createDevMatch(server));
+      const first = await createReadyDevMatch(server);
+      const second = await createReadyDevMatch(server);
       assert.notEqual(first.matchId, second.matchId);
       const firstP1Token = await claimDevSeat(server, first.matchId, "p1");
       const firstP1Socket = await openSocket(
@@ -374,7 +472,7 @@ describe("dev HTTP server", () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const urls = [
         `${server.url()}/api/matches/${match.matchId}/action`,
         `${server.url()}/api/matches/${match.matchId}/decision`,
@@ -400,7 +498,7 @@ describe("dev HTTP server", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const p1Token = await claimDevSeat(server, match.matchId, "p1");
       const p2Token = await claimDevSeat(server, match.matchId, "p2");
       const p1Socket = await openSocket(
@@ -486,7 +584,7 @@ describe("dev HTTP server", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const p1Token = await claimDevSeat(server, match.matchId, "p1");
       const p1Socket = await openSocket(
         webSocketUrl(server, match.matchId, "p1", p1Token),
@@ -533,7 +631,7 @@ describe("dev HTTP server", () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       await claimDevSeat(server, match.matchId, "p1");
 
       const duplicate = await fetch(
@@ -552,7 +650,7 @@ describe("dev HTTP server", () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const token = await claimDevSeat(server, match.matchId, "p1");
 
       const duplicate = await fetch(
@@ -580,7 +678,7 @@ describe("dev HTTP server", () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const token = `dev-local:${match.matchId}:p1:existing`;
 
       const claim = await fetch(
@@ -672,7 +770,7 @@ describe("dev HTTP server", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const p1Token = await claimDevSeat(server, match.matchId, "p1");
       const p1Socket = await openSocket(
         webSocketUrl(server, match.matchId, "p1", p1Token),
@@ -749,7 +847,7 @@ describe("dev HTTP server", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const p1Token = await claimDevSeat(server, match.matchId, "p1");
       const p1Socket = await openSocket(
         webSocketUrl(server, match.matchId, "p1", p1Token),
@@ -828,7 +926,7 @@ describe("dev HTTP server", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const match = requireCreatedMatch(await createDevMatch(server));
+      const match = await createReadyDevMatch(server);
       const p1Token = await claimDevSeat(server, match.matchId, "p1");
       const p2Token = await claimDevSeat(server, match.matchId, "p2");
       const p1Socket = await openSocket(

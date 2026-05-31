@@ -85,6 +85,12 @@ export const createDevHttpMatchTransport = ({
       );
       return postJson<ClaimedSeat>(url, undefined, input.sessionToken);
     },
+    async chooseFirstPlayer(input) {
+      return postJson(matchPath(input.matchId, "/first-player-choice"), {
+        playerId: input.playerId,
+        choice: input.choice,
+      });
+    },
     async loadState(matchId) {
       const response = await fetchImpl(matchPath(matchId, "/state"));
       return readJson<MatchSnapshot>(response);

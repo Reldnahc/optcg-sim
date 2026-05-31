@@ -8,6 +8,10 @@ import {
   createMemoryClientStorage,
 } from "./session.js";
 import type {
+  MatchClientState,
+  MatchClientSessionState,
+} from "./controller.js";
+import type {
   LobbyLiveTransport,
   LobbyStateSyncMessage,
   LiveMatchConnection,
@@ -15,7 +19,6 @@ import type {
   MatchTransport,
 } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
-import type { MatchClientSessionState } from "./controller.js";
 
 const createFakeTransport = (): MatchTransport & {
   claimedSeats: Array<{
@@ -84,6 +87,18 @@ const createFakeTransport = (): MatchTransport & {
     },
     loadCards() {
       return Promise.resolve({ players: {} });
+    },
+    chooseFirstPlayer(input) {
+      return Promise.resolve({
+        matchId: input.matchId,
+        firstPlayerChoice: {
+          chooserPlayerId: input.playerId,
+          choices: ["goFirst", "goSecond"],
+          resolvedFirstPlayerId:
+            input.choice === "goFirst" ? input.playerId : ("p2" as PlayerId),
+        },
+        snapshot: { stateSeq: 1, players: {} },
+      });
     },
   };
 };
@@ -169,6 +184,15 @@ const createFakeLobbyLiveTransport = (): LobbyLiveTransport & {
   };
 };
 
+const requireMatchClientState = (
+  state: MatchClientSessionState,
+): MatchClientState => {
+  if (!("snapshot" in state)) {
+    throw new Error("Expected loaded match client state.");
+  }
+  return state;
+};
+
 describe("match client controller", () => {
   test("starts a local match by creating, claiming, and loading data", async () => {
     const transport = createFakeTransport();
@@ -179,7 +203,9 @@ describe("match client controller", () => {
       }),
     });
 
-    const state = await controller.startNewLocalMatch("p1" as PlayerId);
+    const state = requireMatchClientState(
+      await controller.startNewLocalMatch("p1" as PlayerId),
+    );
 
     assert.equal(state.matchId, "match-1");
     assert.deepEqual(state.seat, {
@@ -193,6 +219,50 @@ describe("match client controller", () => {
     });
   });
 
+  test("returns first-player setup state and resolves it before loading the match", async () => {
+    const transport = createFakeTransport();
+    transport.createMatch = () =>
+      Promise.resolve({
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: false },
+          p2: { playerId: "p2" as PlayerId, claimed: false },
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: "p1" as PlayerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    transport.claimSeat = (input) => {
+      transport.claimedSeats.push(input);
+      return Promise.resolve({
+        matchId: input.matchId,
+        seat: {
+          playerId: input.playerId,
+          sessionToken: input.sessionToken ?? `token-${String(input.playerId)}`,
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: "p1" as PlayerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    };
+    const controller = createMatchClientController({
+      transport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    const setup = await controller.startNewLocalMatch("p1" as PlayerId);
+
+    assert.equal("firstPlayerChoice" in setup, true);
+    const match = await controller.chooseFirstPlayer({ choice: "goFirst" });
+
+    assert.equal(match.matchId, "match-1");
+    assert.equal(match.snapshot.stateSeq, 1);
+  });
+
   test("joins an existing local match by claiming only the requested seat", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
@@ -202,10 +272,12 @@ describe("match client controller", () => {
       }),
     });
 
-    const state = await controller.joinLocalMatch({
-      matchId: "match-2" as MatchId,
-      playerId: "p2" as PlayerId,
-    });
+    const state = requireMatchClientState(
+      await controller.joinLocalMatch({
+        matchId: "match-2" as MatchId,
+        playerId: "p2" as PlayerId,
+      }),
+    );
 
     assert.equal(state.matchId, "match-2");
     assert.deepEqual(controller.currentCredential(), {

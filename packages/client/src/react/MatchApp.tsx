@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-
 import type { InstanceId } from "@optcg/types";
-
 import { createActionLogEntries } from "../action-log.js";
 import {
   createCollectionDecisionSurface,
@@ -14,7 +12,6 @@ import {
   defaultActionLogWindowRect,
 } from "./ActionLogWindow.js";
 import { BoardLayout } from "./BoardLayout.js";
-import { createBrowserPersistentStorage } from "./browser-storage.js";
 import {
   actionLogCardModel,
   cardDisplayFromCatalog,
@@ -25,8 +22,10 @@ import {
   CardPreviewWindow,
   defaultCardPreviewWindowRect,
 } from "./CardPreviewWindow.js";
-import type { CollectionModalModel } from "./CollectionModalHost.js";
-import { CollectionModalHost } from "./CollectionModalHost.js";
+import {
+  CollectionModalHost,
+  type CollectionModalModel,
+} from "./CollectionModalHost.js";
 import {
   collectionModalFromWindowKey,
   collectionWindowKey,
@@ -35,11 +34,14 @@ import {
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import { FirstPlayerSetupPanel } from "./FirstPlayerSetupPanel.js";
+import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
 import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
-import { combineDropTargetForWindow } from "./floating-window-grouping.js";
-import type { GroupableWindow } from "./floating-window-grouping.js";
-import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
-import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
+import {
+  combineDropTargetForWindow,
+  type GroupableWindow,
+} from "./floating-window-grouping.js";
+import { InfoTabbedWindow, type InfoWindowTabId } from "./InfoTabbedWindow.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
@@ -68,11 +70,14 @@ import { useInfoWindowDragOut } from "./use-info-window-drag-out.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
 import { useConcedeConfirmation } from "./use-concede-confirmation.js";
+import { useMatchRevealWindowStateStore } from "./use-match-reveal-window-state-store.js";
 import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
-import type { RevealWindowStateStore } from "./window-state-store.js";
-import { createRevealWindowStateStore } from "./window-state-store.js";
-
+import {
+  isFirstPlayerSetupClientState,
+  isLobbyClientState,
+  isMatchClientState,
+} from "./useMatchClient-support.js";
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
   const [collectionModal, setCollectionModal] = useState<
@@ -105,22 +110,19 @@ export const MatchApp = (): React.JSX.Element => {
     selectedCardInstanceId,
     selectedDonInstanceIds,
   } = client.state;
-  const matchState =
-    clientState !== undefined && "matchId" in clientState
-      ? clientState
-      : undefined;
+  const matchState = isMatchClientState(clientState) ? clientState : undefined;
+  const firstPlayerSetupState = isFirstPlayerSetupClientState(clientState)
+    ? clientState
+    : undefined;
+  const scopedMatchState = matchState ?? firstPlayerSetupState;
   const matchScope =
-    matchState === undefined ? undefined : String(matchState.matchId);
-  const revealWindowStateStore = useMemo<RevealWindowStateStore | undefined>(
-    () =>
-      matchState === undefined || typeof window === "undefined"
-        ? undefined
-        : createRevealWindowStateStore({
-            storage: createBrowserPersistentStorage(),
-            matchId: matchState.matchId,
-          }),
-    [matchState?.matchId],
-  );
+    scopedMatchState === undefined
+      ? undefined
+      : String(scopedMatchState.matchId);
+  const revealWindowStateStore = useMatchRevealWindowStateStore({
+    enabled: matchState !== undefined,
+    matchId: matchState?.matchId,
+  });
   const {
     controlRailWidth,
     controlDockHeight,
@@ -174,10 +176,7 @@ export const MatchApp = (): React.JSX.Element => {
     resetFloatingWindowState,
     revealWindowStateStore,
   ]);
-  const lobbyState =
-    clientState !== undefined && "lobbyId" in clientState
-      ? clientState
-      : undefined;
+  const lobbyState = isLobbyClientState(clientState) ? clientState : undefined;
   const currentPlayerId = client.currentPlayerId;
   const { displayBoard, moveHandCard } = useOrderedHandBoard({
     board,
@@ -642,11 +641,10 @@ export const MatchApp = (): React.JSX.Element => {
   return (
     <main className="match-app">
       {displayBoard === undefined ? (
-        <section className="loading-panel">
-          {lobbyState === undefined
-            ? "Loading match"
-            : `Waiting in lobby ${lobbyState.lobbyId}`}
-        </section>
+        <MatchLoadingPanel
+          firstPlayerSetup={firstPlayerSetupState !== undefined}
+          lobbyId={lobbyState?.lobbyId}
+        />
       ) : (
         <BoardLayout
           board={displayBoard}
@@ -716,6 +714,17 @@ export const MatchApp = (): React.JSX.Element => {
         }
         settingsControl={
           <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
+        }
+        setupControls={
+          firstPlayerSetupState === undefined ? undefined : (
+            <FirstPlayerSetupPanel
+              state={firstPlayerSetupState}
+              disabled={client.state.actionInFlight}
+              onChoose={(choice) => {
+                void client.chooseFirstPlayer(choice);
+              }}
+            />
+          )
         }
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}

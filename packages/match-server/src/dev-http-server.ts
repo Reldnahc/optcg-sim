@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   createServer,
   type IncomingMessage,
@@ -8,7 +8,6 @@ import type { Duplex } from "node:stream";
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
-  createLocalDevMatch,
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
   getLocalDevCardCatalog,
@@ -17,32 +16,23 @@ import {
   isDevMatchSetup,
   type CreatePremadeDevMatchSetupOptions,
   type LocalDevMatch,
+  type createLocalDevMatch,
 } from "./local-match.js";
+import type { AuthContext } from "./dev-auth.js";
 import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
-import { devSessionMetadata } from "./dev-session-metadata.js";
 import {
-  createMatchSessionService,
-  type MatchSessionService,
-} from "./session-service.js";
-import type {
-  ClientActionEnvelope,
-  SessionActionResult,
-} from "./session-types.js";
+  createLocalDevMatchRegistry,
+  type LocalDevMatchRegistry,
+} from "./dev-local-match-registry.js";
 
 interface DevResetRequest {
   setup?: unknown;
 }
 
-interface CreatedDevMatchResponse {
-  matchId: MatchId;
-  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
-  snapshot: ReturnType<typeof getLocalDevSnapshot>;
-}
-
-interface ClaimedDevSeatResponse {
-  matchId: MatchId;
-  seat: { playerId: PlayerId; sessionToken: string };
+interface FirstPlayerChoiceRequest {
+  playerId?: unknown;
+  choice?: unknown;
 }
 
 interface CreatedDevLobbyResponse {
@@ -51,52 +41,8 @@ interface CreatedDevLobbyResponse {
   matchId?: MatchId;
 }
 
-type AuthSubject =
-  | { type: "anonymousDev"; devSessionId: string }
-  | { type: "user"; userId: string; sessionId: string };
-
-interface AuthContext {
-  subject: AuthSubject;
-}
-
 interface AuthProvider {
   authenticate: (request: IncomingMessage) => AuthContext | undefined;
-}
-
-interface MatchSeat {
-  matchId: MatchId;
-  playerId: PlayerId;
-  subject?: AuthContext["subject"];
-}
-
-interface LocalDevMatchSession {
-  match: LocalDevMatch;
-  seats: Record<string, MatchSeat>;
-}
-
-interface LocalDevMatchRegistry {
-  createMatch: (
-    setup?: Parameters<typeof createLocalDevMatch>[0],
-  ) => Promise<CreatedDevMatchResponse>;
-  resetMatch: (
-    matchId: MatchId,
-    setup?: Parameters<typeof createLocalDevMatch>[0],
-  ) => Promise<CreatedDevMatchResponse>;
-  claimSeat: (
-    matchId: MatchId,
-    playerId: PlayerId,
-    auth: AuthContext | undefined,
-  ) => ClaimedDevSeatResponse | "matchNotFound" | "seatNotFound" | "claimed";
-  getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
-  applyEnvelope: (
-    envelope: ClientActionEnvelope,
-  ) => SessionActionResult | "matchNotFound";
-  authorizeSeat: (
-    auth: AuthContext | undefined,
-    matchId: MatchId,
-    playerId: PlayerId,
-  ) => "authorized" | "unauthenticated" | "forbidden";
-  defaultMatchId: MatchId;
 }
 
 interface LocalDevLobby {
@@ -188,51 +134,10 @@ const createDevAuthProvider = (): AuthProvider => ({
   },
 });
 
-const createLocalAnonSeats = (
-  setup: Parameters<typeof createLocalDevMatch>[0],
-): Record<string, MatchSeat> =>
-  Object.fromEntries(
-    setup.playerOrder.map((playerId): [string, MatchSeat] => [
-      playerId,
-      {
-        matchId: setup.matchId,
-        playerId,
-      },
-    ]),
-  );
-
-const createLocalDevMatchSession = (
-  setup: Parameters<typeof createLocalDevMatch>[0],
-  sessionService: MatchSessionService,
-): LocalDevMatchSession => {
-  const match = createLocalDevMatch(setup);
-  sessionService.registerLocalDevMatch({
-    local: match,
-    metadata: devSessionMetadata(setup),
-  });
-  return {
-    match,
-    seats: createLocalAnonSeats(setup),
-  };
-};
-
 const createLobbySeats = (): LocalDevLobby["seats"] => ({
   p1: { playerId: p1, claimed: false },
   p2: { playerId: p2, claimed: false },
 });
-
-const createdSeatResponse = (
-  seats: Record<string, MatchSeat>,
-): CreatedDevMatchResponse["seats"] =>
-  Object.fromEntries(
-    Object.entries(seats).map(([key, seat]) => [
-      key,
-      {
-        playerId: seat.playerId,
-        claimed: seat.subject !== undefined,
-      },
-    ]),
-  );
 
 const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
   lobbyId: lobby.lobbyId,
@@ -244,22 +149,6 @@ const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
   ),
   ...(lobby.matchId === undefined ? {} : { matchId: lobby.matchId }),
 });
-
-const subjectsMatch = (left: AuthSubject, right: AuthSubject): boolean => {
-  switch (left.type) {
-    case "anonymousDev":
-      return (
-        right.type === "anonymousDev" &&
-        left.devSessionId === right.devSessionId
-      );
-    case "user":
-      return (
-        right.type === "user" &&
-        left.userId === right.userId &&
-        left.sessionId === right.sessionId
-      );
-  }
-};
 
 const createLocalDevLobbyRegistry = (
   matchRegistry: LocalDevMatchRegistry,
@@ -303,122 +192,6 @@ const createLocalDevLobbyRegistry = (
     getLobby(lobbyId) {
       const lobby = lobbies.get(lobbyId);
       return lobby === undefined ? undefined : lobbyResponse(lobby);
-    },
-  };
-};
-
-const createLocalDevMatchRegistry = async (
-  createDefaultSetup: (
-    matchId?: MatchId,
-  ) => Promise<Parameters<typeof createLocalDevMatch>[0]>,
-  initialSetup?: Parameters<typeof createLocalDevMatch>[0],
-): Promise<LocalDevMatchRegistry> => {
-  let nextMatchNumber = 1;
-  const sessions = new Map<MatchId, LocalDevMatchSession>();
-  const sessionService = createMatchSessionService();
-  const createTemplateSetup = async (
-    matchId: MatchId,
-  ): Promise<Parameters<typeof createLocalDevMatch>[0]> => {
-    if (initialSetup === undefined) {
-      return createDefaultSetup(matchId);
-    }
-    return {
-      ...structuredClone(initialSetup),
-      matchId,
-    };
-  };
-  const defaultSetup = await createTemplateSetup("dev-local-match" as MatchId);
-  const defaultMatchId = defaultSetup.matchId;
-  sessions.set(
-    defaultMatchId,
-    createLocalDevMatchSession(defaultSetup, sessionService),
-  );
-
-  const buildCreatedResponse = (
-    setup: Parameters<typeof createLocalDevMatch>[0],
-    session: LocalDevMatchSession,
-  ): CreatedDevMatchResponse => ({
-    matchId: setup.matchId,
-    seats: createdSeatResponse(session.seats),
-    snapshot: getLocalDevSnapshot(session.match),
-  });
-
-  return {
-    defaultMatchId,
-    async createMatch(setup) {
-      const actualSetup =
-        setup ??
-        (await createTemplateSetup(
-          `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
-        ));
-      const session = createLocalDevMatchSession(actualSetup, sessionService);
-      sessions.set(actualSetup.matchId, session);
-      return buildCreatedResponse(actualSetup, session);
-    },
-    async resetMatch(matchId, setup) {
-      const actualSetup = setup ?? (await createTemplateSetup(matchId));
-      const normalizedSetup = { ...actualSetup, matchId };
-      const session = createLocalDevMatchSession(
-        normalizedSetup,
-        sessionService,
-      );
-      sessions.set(matchId, session);
-      return buildCreatedResponse(normalizedSetup, session);
-    },
-    claimSeat(matchId, playerId, auth) {
-      const session = sessions.get(matchId);
-      if (session === undefined) {
-        return "matchNotFound";
-      }
-      const seat = session.seats[String(playerId)];
-      if (seat === undefined) {
-        return "seatNotFound";
-      }
-      if (seat.subject !== undefined) {
-        if (
-          auth !== undefined &&
-          subjectsMatch(seat.subject, auth.subject) &&
-          seat.subject.type === "anonymousDev"
-        ) {
-          return {
-            matchId,
-            seat: {
-              playerId,
-              sessionToken: seat.subject.devSessionId,
-            },
-          };
-        }
-        return "claimed";
-      }
-      const sessionToken =
-        auth?.subject.type === "anonymousDev"
-          ? auth.subject.devSessionId
-          : `dev-local:${String(matchId)}:${String(playerId)}:${randomUUID()}`;
-      seat.subject = { type: "anonymousDev", devSessionId: sessionToken };
-      return { matchId, seat: { playerId, sessionToken } };
-    },
-    getMatch(matchId) {
-      return sessions.get(matchId)?.match;
-    },
-    applyEnvelope(envelope) {
-      if (!sessions.has(envelope.matchId)) {
-        return "matchNotFound";
-      }
-      return sessionService.applyEnvelope(envelope);
-    },
-    authorizeSeat(auth, matchId, playerId) {
-      if (auth === undefined) {
-        return "unauthenticated";
-      }
-      const seat = sessions.get(matchId)?.seats[String(playerId)];
-      if (
-        seat === undefined ||
-        seat.subject === undefined ||
-        !subjectsMatch(seat.subject, auth.subject)
-      ) {
-        return "forbidden";
-      }
-      return "authorized";
     },
   };
 };
@@ -526,8 +299,64 @@ const handleApiRequest = async (
   if (matchRoute !== null) {
     const matchId = decodeURIComponent(matchRoute.groups?.["matchId"] ?? "");
     const resource = matchRoute.groups?.["resource"];
+    if (request.method === "POST" && resource === "first-player-choice") {
+      let body: unknown;
+      try {
+        body = await readRequestJson(request);
+      } catch {
+        sendJson(response, 400, { errors: ["Request body must be JSON."] });
+        return;
+      }
+      const choiceRequest: FirstPlayerChoiceRequest = isRecord(body)
+        ? body
+        : {};
+      const playerId = choiceRequest.playerId;
+      const choice = choiceRequest.choice;
+      if (
+        typeof playerId !== "string" ||
+        (choice !== "goFirst" && choice !== "goSecond")
+      ) {
+        sendJson(response, 400, {
+          errors: ["First-player choice requires playerId and choice."],
+        });
+        return;
+      }
+      const result = registry.chooseFirstPlayer(
+        matchId as MatchId,
+        playerId as PlayerId,
+        choice,
+      );
+      if (result === "matchNotFound") {
+        matchNotFound(response, matchId);
+        return;
+      }
+      if (result === "alreadyStarted") {
+        sendJson(response, 409, {
+          errors: ["First-player choice is already resolved."],
+        });
+        return;
+      }
+      if (result === "notChooser") {
+        sendJson(response, 403, {
+          errors: ["Only the selected first-player chooser can answer."],
+        });
+        return;
+      }
+      sendJson(response, 200, result);
+      return;
+    }
     const match = registry.getMatch(matchId as MatchId);
     if (match === undefined) {
+      if (
+        resource === "state" &&
+        registry.getFirstPlayerChoice(matchId as MatchId) !== undefined
+      ) {
+        sendJson(response, 409, {
+          errors: ["First-player setup is not resolved."],
+          firstPlayerChoice: registry.getFirstPlayerChoice(matchId as MatchId),
+        });
+        return;
+      }
       matchNotFound(response, matchId);
       return;
     }

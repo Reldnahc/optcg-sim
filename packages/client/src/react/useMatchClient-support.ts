@@ -68,6 +68,7 @@ export interface MatchClientUi {
   setDecisionActionOptionValue: (actionIndex: number) => void;
   chooseDecisionTriggerValue: (triggerId: string) => void;
   confirmDecision: () => Promise<void>;
+  chooseFirstPlayer: (choice: "goFirst" | "goSecond") => Promise<void>;
   requestRollback: (rollbackPointId: string) => Promise<void>;
   cancelRollback: () => Promise<void>;
   createNewMatch: () => Promise<void>;
@@ -111,6 +112,16 @@ export const isMatchClientState = (
   state: MatchClientSessionState | undefined,
 ): state is MatchClientState =>
   state !== undefined && "matchId" in state && "snapshot" in state;
+
+export const isLobbyClientState = (
+  state: MatchClientSessionState | undefined,
+): state is Extract<MatchClientSessionState, { lobbyId: string }> =>
+  state !== undefined && "lobbyId" in state;
+
+export const isFirstPlayerSetupClientState = (
+  state: MatchClientSessionState | undefined,
+): state is Extract<MatchClientSessionState, { firstPlayerChoice: unknown }> =>
+  state !== undefined && "firstPlayerChoice" in state && !("snapshot" in state);
 
 export const visibleErrors = (errors: readonly string[]): string[] => [
   ...errors,

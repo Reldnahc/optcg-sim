@@ -58,6 +58,8 @@ import {
   cardActionsForInstance,
   decisionCandidateInstanceIds,
   decisionHasCandidate,
+  isFirstPlayerSetupClientState,
+  isLobbyClientState,
   isMatchClientState,
   isSelfAttachmentTarget,
   lobbyIdFromUrl,
@@ -72,6 +74,8 @@ import {
   zoneClickVisibleInstanceIds,
   type MatchClientUi,
 } from "./useMatchClient-support.js";
+import { useMatchLiveConnections } from "./use-match-live-connections.js";
+import { useMatchSessionActions } from "./use-match-session-actions.js";
 
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
@@ -122,7 +126,7 @@ export const useMatchClient = (): MatchClientUi => {
     ? undefined
     : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;
   const lobbyConnectionKey =
-    clientState === undefined || isMatchClientState(clientState)
+    clientState === undefined || !isLobbyClientState(clientState)
       ? undefined
       : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
   const pendingDecisionResponseActions =
@@ -275,9 +279,12 @@ export const useMatchClient = (): MatchClientUi => {
         if (cancelled) {
           return;
         }
-        if (isMatchClientState(loaded)) {
+        if (
+          isMatchClientState(loaded) ||
+          isFirstPlayerSetupClientState(loaded)
+        ) {
           setMatchLocation(loaded.matchId, loaded.seat.playerId);
-        } else {
+        } else if (isLobbyClientState(loaded)) {
           setLobbyLocation(loaded.lobbyId, loaded.seat.playerId);
         }
         setClientState(loaded);
@@ -300,70 +307,28 @@ export const useMatchClient = (): MatchClientUi => {
     setActiveCardCostSelectedInstanceIds,
   );
 
-  useEffect(() => {
-    if (
-      liveConnectionKey === undefined ||
-      controller.currentState() === undefined
-    ) {
-      controller.disconnectLive();
-      return;
-    }
-    controller.connectLive({
-      onState(nextState) {
-        setClientState(nextState);
-        setErrors([]);
-      },
-      onError(message) {
-        setErrors([message]);
-      },
-    });
-    return () => {
-      controller.disconnectLive();
-    };
-  }, [liveConnectionKey, controller]);
+  useMatchLiveConnections({
+    controller,
+    liveConnectionKey,
+    lobbyConnectionKey,
+    setClientState,
+    setErrors,
+  });
 
-  useEffect(() => {
-    if (lobbyConnectionKey === undefined) {
-      controller.disconnectLobbyLive();
-      return;
-    }
-    controller.connectLobbyLive({
-      onState(nextState) {
-        if (isMatchClientState(nextState)) {
-          setMatchLocation(nextState.matchId, nextState.seat.playerId);
-        } else {
-          setLobbyLocation(nextState.lobbyId, nextState.seat.playerId);
-        }
-        setClientState(nextState);
-        setErrors([]);
-      },
-      onError(message) {
-        setErrors([message]);
-      },
-    });
-    return () => {
-      controller.disconnectLobbyLive();
-    };
-  }, [lobbyConnectionKey, controller]);
-
-  const createNewMatch = useCallback(async (): Promise<void> => {
-    const created = await controller.startNewLocalLobby("p1" as PlayerId);
-    if (isMatchClientState(created)) {
-      setMatchLocation(created.matchId, created.seat.playerId);
-    } else {
-      setLobbyLocation(created.lobbyId, created.seat.playerId);
-    }
-    setSelectedCardInstanceId(undefined);
-    setSelectedDonInstanceIds([]);
-    setDecisionDraft(undefined);
-    setActiveCardCostChoice(undefined);
-    setActiveCardCostSelectedInstanceIds([]);
-    setActiveAttackTargetChoice(undefined);
-    setActiveCounterTargetChoice(undefined);
-    autoSubmittedPayCostDecisionId.current = undefined;
-    setClientState(created);
-    setErrors([]);
-  }, [controller]);
+  const { createNewMatch, chooseFirstPlayer } = useMatchSessionActions({
+    controller,
+    autoSubmittedPayCostDecisionId,
+    setActionInFlight,
+    setActiveAttackTargetChoice,
+    setActiveCardCostChoice,
+    setActiveCardCostSelectedInstanceIds,
+    setActiveCounterTargetChoice,
+    setClientState,
+    setDecisionDraft,
+    setErrors,
+    setSelectedCardInstanceId,
+    setSelectedDonInstanceIds,
+  });
 
   const requestRollback = useCallback(
     async (rollbackPointId: string): Promise<void> => {
@@ -1018,6 +983,7 @@ export const useMatchClient = (): MatchClientUi => {
     setDecisionActionOptionValue,
     chooseDecisionTriggerValue,
     confirmDecision,
+    chooseFirstPlayer,
     requestRollback,
     cancelRollback,
     createNewMatch,

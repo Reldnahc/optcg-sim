@@ -11,6 +11,8 @@ import type {
   ClientSessionStore,
 } from "./session.js";
 import type {
+  FirstPlayerChoiceValue,
+  FirstPlayerChoiceView,
   LiveLobbyConnection,
   LocalLobby,
   LobbyLiveTransport,
@@ -38,7 +40,16 @@ export interface MatchClientState {
   cards: MatchCardCatalog;
 }
 
-export type MatchClientSessionState = LobbyClientState | MatchClientState;
+export interface FirstPlayerSetupClientState {
+  matchId: MatchId;
+  seat: ClientSeatIdentity;
+  firstPlayerChoice: FirstPlayerChoiceView;
+}
+
+export type MatchClientSessionState =
+  | LobbyClientState
+  | FirstPlayerSetupClientState
+  | MatchClientState;
 
 export interface MatchClientController {
   startNewLocalLobby: (playerId: PlayerId) => Promise<MatchClientSessionState>;
@@ -46,8 +57,13 @@ export interface MatchClientController {
     lobbyId: string;
     playerId: PlayerId;
   }) => Promise<MatchClientSessionState>;
-  startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientState>;
-  joinLocalMatch: (input: ClientSeatIdentity) => Promise<MatchClientState>;
+  startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
+  joinLocalMatch: (
+    input: ClientSeatIdentity,
+  ) => Promise<MatchClientSessionState>;
+  chooseFirstPlayer: (input: {
+    choice: FirstPlayerChoiceValue;
+  }) => Promise<MatchClientState>;
   refresh: () => Promise<MatchClientSessionState>;
   submitVisibleAction: (input: {
     actionIndex: number;
@@ -120,6 +136,7 @@ export const createMatchClientController = ({
   sessionStore: ClientSessionStore;
 }): MatchClientController => {
   let currentState: MatchClientState | undefined;
+  let currentFirstPlayerSetupState: FirstPlayerSetupClientState | undefined;
   let currentLobbyState: LobbyClientState | undefined;
   let liveConnection: LiveMatchConnection | undefined;
   let lobbyLiveConnection: LiveLobbyConnection | undefined;
@@ -142,6 +159,7 @@ export const createMatchClientController = ({
       snapshot,
       cards,
     };
+    currentFirstPlayerSetupState = undefined;
     currentLobbyState = undefined;
     disconnectLobbyConnection();
     return currentState;
@@ -149,7 +167,7 @@ export const createMatchClientController = ({
 
   const claimAndLoad = async (
     seat: ClientSeatIdentity,
-  ): Promise<MatchClientState> => {
+  ): Promise<MatchClientSessionState> => {
     sessionStore.setCurrentSeat(seat);
     const existing = sessionStore.loadClaimedSeat();
     const claimed = await transport.claimSeat({
@@ -163,6 +181,17 @@ export const createMatchClientController = ({
       playerId: claimed.seat.playerId,
       sessionToken: claimed.seat.sessionToken,
     });
+    if (claimed.firstPlayerChoice !== undefined) {
+      currentState = undefined;
+      currentFirstPlayerSetupState = {
+        matchId: claimed.matchId,
+        seat,
+        firstPlayerChoice: claimed.firstPlayerChoice,
+      };
+      currentLobbyState = undefined;
+      disconnectLobbyConnection();
+      return currentFirstPlayerSetupState;
+    }
     return loadState(seat);
   };
 
@@ -209,17 +238,58 @@ export const createMatchClientController = ({
         sessionToken: claimed.seat.sessionToken,
       });
       const cards = await transport.loadCards(created.matchId);
+      if (created.snapshot === undefined) {
+        const firstPlayerChoice = created.firstPlayerChoice;
+        if (firstPlayerChoice === undefined) {
+          throw new Error(
+            "Created match did not include snapshot or setup choice.",
+          );
+        }
+        currentFirstPlayerSetupState = {
+          matchId: created.matchId,
+          seat,
+          firstPlayerChoice,
+        };
+        currentState = undefined;
+        currentLobbyState = undefined;
+        return currentFirstPlayerSetupState;
+      }
       currentState = {
         matchId: created.matchId,
         seat,
         snapshot: created.snapshot,
         cards,
       };
+      currentFirstPlayerSetupState = undefined;
       currentLobbyState = undefined;
       return currentState;
     },
     joinLocalMatch(input) {
       return claimAndLoad(input);
+    },
+    async chooseFirstPlayer(input) {
+      const setupState = currentFirstPlayerSetupState;
+      if (setupState === undefined) {
+        throw new Error("Cannot choose first or second before setup starts.");
+      }
+      const result = await transport.chooseFirstPlayer({
+        matchId: setupState.matchId,
+        playerId: setupState.seat.playerId,
+        choice: input.choice,
+      });
+      if (result.snapshot === undefined) {
+        throw new Error("First-player choice did not start the match.");
+      }
+      const cards = await transport.loadCards(setupState.matchId);
+      currentState = {
+        matchId: setupState.matchId,
+        seat: setupState.seat,
+        snapshot: result.snapshot,
+        cards,
+      };
+      currentFirstPlayerSetupState = undefined;
+      currentLobbyState = undefined;
+      return currentState;
     },
     connectLive({ onState, onError }) {
       const credential = sessionStore.loadClaimedSeat();
@@ -297,6 +367,9 @@ export const createMatchClientController = ({
           ...currentLobbyState,
           lobby,
         });
+      }
+      if (currentFirstPlayerSetupState !== undefined) {
+        return currentFirstPlayerSetupState;
       }
       const seat = sessionStore.loadCurrentSeat();
       if (seat === undefined) {

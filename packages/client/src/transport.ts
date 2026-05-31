@@ -96,7 +96,8 @@ export interface MatchCardCatalog {
 export interface CreatedMatch {
   matchId: MatchId;
   seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
-  snapshot: MatchSnapshot;
+  snapshot?: MatchSnapshot;
+  firstPlayerChoice?: FirstPlayerChoiceView;
 }
 
 export interface ClaimedSeat {
@@ -105,6 +106,21 @@ export interface ClaimedSeat {
     playerId: PlayerId;
     sessionToken: string;
   };
+  firstPlayerChoice?: FirstPlayerChoiceView;
+}
+
+export type FirstPlayerChoiceValue = "goFirst" | "goSecond";
+
+export interface FirstPlayerChoiceView {
+  chooserPlayerId: PlayerId;
+  choices: readonly FirstPlayerChoiceValue[];
+  resolvedFirstPlayerId?: PlayerId;
+}
+
+export interface FirstPlayerChoiceResult {
+  matchId: MatchId;
+  firstPlayerChoice: FirstPlayerChoiceView;
+  snapshot?: MatchSnapshot;
 }
 
 export interface LocalLobby {
@@ -221,6 +237,11 @@ export interface MatchTransport {
     playerId: PlayerId;
     sessionToken?: string;
   }) => Promise<ClaimedSeat>;
+  chooseFirstPlayer: (input: {
+    matchId: MatchId;
+    playerId: PlayerId;
+    choice: FirstPlayerChoiceValue;
+  }) => Promise<FirstPlayerChoiceResult>;
   loadState: (matchId: MatchId) => Promise<MatchSnapshot>;
   loadCards: (matchId: MatchId) => Promise<MatchCardCatalog>;
 }

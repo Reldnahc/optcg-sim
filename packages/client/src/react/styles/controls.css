@@ -154,6 +154,36 @@
   font-size: 13px;
 }
 
+.first-player-setup-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(47, 45, 44, 0.42);
+}
+
+.first-player-setup-panel h2,
+.first-player-setup-panel p {
+  margin: 0;
+}
+
+.first-player-setup-panel h2 {
+  color: #fff;
+  font-size: 13px;
+}
+
+.first-player-setup-panel p {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.first-player-choice-actions {
+  display: grid;
+  gap: 6px;
+}
+
 .muted {
   color: rgba(255, 255, 255, 0.62);
   font-size: 12px;
