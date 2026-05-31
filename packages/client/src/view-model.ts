@@ -91,8 +91,11 @@ const catalogEntry = (
   catalog: MatchCardCatalog,
   playerId: PlayerId,
   cardId: CardId,
+  instanceId: InstanceId,
 ): MatchCardCatalogEntry =>
-  catalog.players[playerId]?.cards[cardId] ?? unknownCard(cardId);
+  catalog.players[playerId]?.instances?.[instanceId] ??
+  catalog.players[playerId]?.cards[cardId] ??
+  unknownCard(cardId);
 
 const cardModel = (
   card: PublicCardView,
@@ -102,7 +105,7 @@ const cardModel = (
     freshlyPlayedAttackRestricted?: boolean;
   } = {},
 ): ClientCardModel => {
-  const entry = catalogEntry(catalog, card.owner, card.cardId);
+  const entry = catalogEntry(catalog, card.owner, card.cardId, card.instanceId);
   const printedPower = card.printedPower ?? entry.power;
   const printedCost = card.printedCost ?? entry.cost;
   const powerDelta =

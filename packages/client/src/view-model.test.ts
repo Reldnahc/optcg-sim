@@ -252,6 +252,50 @@ describe("board view model", () => {
     assert.deepEqual(model.self.leader.attachedDonCards, []);
   });
 
+  test("prefers per-instance catalog art for visible board cards", () => {
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view: minimalView(),
+          actions: [],
+        },
+      },
+    };
+    const catalog: MatchCardCatalog = {
+      players: {
+        [p1]: {
+          cards: {
+            ["OP13-080" as CardId]: {
+              cardId: "OP13-080" as CardId,
+              name: "Searcher",
+              category: "Character",
+              imageUrl: "https://cdn.example/default.png",
+            },
+          },
+          instances: {
+            ["hand-1" as InstanceId]: {
+              cardId: "OP13-080" as CardId,
+              name: "Searcher Variant",
+              category: "Character",
+              imageUrl: "https://cdn.example/variant.png",
+            },
+          },
+        },
+      },
+    };
+
+    const model = createBoardViewModel({ snapshot, catalog, playerId: p1 });
+    const handCard = model.self.hand[0];
+    if (handCard === undefined) {
+      throw new Error("Expected visible hand card.");
+    }
+
+    assert.equal(handCard.imageUrl, "https://cdn.example/variant.png");
+    assert.equal(handCard.name, "Searcher Variant");
+  });
+
   test("projects face-up life cards into indexed life positions", () => {
     const view = minimalView();
     view.self.life = {
