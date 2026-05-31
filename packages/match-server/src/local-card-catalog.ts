@@ -79,19 +79,18 @@ const addVisibleCatalogEntryForCard = (
   players[owner] = ownerCatalog;
 };
 
-const addVisibleCatalogEntryForCardId = (
+const addVisibleCatalogEntryForCardRef = (
   players: Record<PlayerId, DevPlayerCardCatalog>,
   manifest: MatchCardManifest,
-  owner: PlayerId,
-  cardId: CardId,
+  card: CardRef,
   variantOverrides: Record<InstanceId, VariantKey>,
 ): void => {
   addVisibleCatalogEntryForCard(
     players,
     manifest,
-    owner,
-    cardId,
-    undefined,
+    card.playerId,
+    card.cardId,
+    card.instanceId,
     variantOverrides,
   );
 };
@@ -172,11 +171,10 @@ const addVisibleCatalogEntriesForRevealEvents = (
       continue;
     }
     for (const card of revealPayloadCards(event.payload)) {
-      addVisibleCatalogEntryForCardId(
+      addVisibleCatalogEntryForCardRef(
         players,
         manifest,
-        card.playerId,
-        card.cardId,
+        card,
         variantOverrides,
       );
     }
@@ -194,13 +192,7 @@ const addVisibleCatalogEntriesForPendingDecision = (
     return;
   }
   for (const card of pending.cards) {
-    addVisibleCatalogEntryForCardId(
-      players,
-      manifest,
-      card.playerId,
-      card.cardId,
-      variantOverrides,
-    );
+    addVisibleCatalogEntryForCardRef(players, manifest, card, variantOverrides);
   }
 };
 
@@ -280,11 +272,10 @@ const addVisibleCatalogEntries = (
   );
   for (const reveal of view.revealedCards) {
     for (const card of reveal.cards) {
-      addVisibleCatalogEntryForCardId(
+      addVisibleCatalogEntryForCardRef(
         players,
         manifest,
-        card.playerId,
-        card.cardId,
+        card,
         variantOverrides,
       );
     }
