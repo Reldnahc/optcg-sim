@@ -10,6 +10,8 @@ import { idempotencyKey, requestHash } from "./action-envelope.js";
 import type {
   ActionRejectionReason,
   ClientActionEnvelope,
+  MatchPersistence,
+  MatchSessionMetadata,
   SessionActionResult,
   SessionActionRequest,
   StoredSessionRecord,
@@ -17,11 +19,15 @@ import type {
 
 export interface MatchSessionRuntime {
   applyEnvelope: (envelope: ClientActionEnvelope) => SessionActionResult;
+  flushPersistence: () => Promise<void>;
+  saveSnapshot: () => Promise<void>;
   records: () => readonly StoredSessionRecord[];
 }
 
 export interface CreateMatchSessionRuntimeOptions {
   readonly local: LocalDevMatch;
+  readonly metadata?: MatchSessionMetadata;
+  readonly persistence?: MatchPersistence;
   readonly now?: () => string;
 }
 
@@ -72,10 +78,16 @@ const applyRequest = (
 
 export const createMatchSessionRuntime = ({
   local,
+  metadata,
+  persistence,
   now = () => new Date().toISOString(),
 }: CreateMatchSessionRuntimeOptions): MatchSessionRuntime => {
   const idempotency = new Map<string, StoredSessionRecord>();
   const records: StoredSessionRecord[] = [];
+  const pendingActions: StoredSessionRecord[] = [];
+  const pendingDecisions: StoredSessionRecord[] = [];
+  const acceptedActions: StoredSessionRecord[] = [];
+  const acceptedDecisions: StoredSessionRecord[] = [];
 
   const storeRecord = (
     envelope: ClientActionEnvelope,
@@ -95,6 +107,15 @@ export const createMatchSessionRuntime = ({
       record,
     );
     records.push(record);
+    if (result.accepted) {
+      if (envelope.request.type === "respondToDecision") {
+        pendingDecisions.push(record);
+        acceptedDecisions.push(record);
+      } else {
+        pendingActions.push(record);
+        acceptedActions.push(record);
+      }
+    }
     return result;
   };
 
@@ -149,6 +170,37 @@ export const createMatchSessionRuntime = ({
         applyRequest(local, envelope.request),
       );
       return storeRecord(envelope, result);
+    },
+    async flushPersistence() {
+      if (persistence === undefined) {
+        pendingActions.length = 0;
+        pendingDecisions.length = 0;
+        return;
+      }
+      for (const record of pendingActions.splice(0)) {
+        await persistence.appendAction({
+          matchId: record.envelope.matchId,
+          record,
+        });
+      }
+      for (const record of pendingDecisions.splice(0)) {
+        await persistence.appendDecision({
+          matchId: record.envelope.matchId,
+          record,
+        });
+      }
+    },
+    async saveSnapshot() {
+      if (persistence === undefined || metadata === undefined) {
+        return;
+      }
+      await persistence.saveSnapshot({
+        metadata,
+        state: local.state,
+        manifest: local.state.cardManifest,
+        actions: acceptedActions,
+        decisions: acceptedDecisions,
+      });
     },
     records: () => records,
   };

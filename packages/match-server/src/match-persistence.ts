@@ -18,8 +18,8 @@ export interface InMemoryMatchPersistence extends MatchPersistence {
 }
 
 interface StoredSnapshot extends MatchPersistenceSnapshot {
-  actions: StoredSessionRecord[];
-  decisions: StoredSessionRecord[];
+  actions: readonly StoredSessionRecord[];
+  decisions: readonly StoredSessionRecord[];
 }
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -29,17 +29,22 @@ const lockExpired = (lock: RecoveryLock, now: string): boolean =>
 
 export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
   const snapshots = new Map<MatchId, StoredSnapshot>();
+  const actions = new Map<MatchId, StoredSessionRecord[]>();
+  const decisions = new Map<MatchId, StoredSessionRecord[]>();
   const locks = new Map<MatchId, RecoveryLock>();
   const freezes: FreezeRecord[] = [];
 
-  const snapshotForAppend = (matchId: MatchId): StoredSnapshot => {
-    const existing = snapshots.get(matchId);
+  const recordsForAppend = (
+    store: Map<MatchId, StoredSessionRecord[]>,
+    matchId: MatchId,
+  ): StoredSessionRecord[] => {
+    const existing = store.get(matchId);
     if (existing !== undefined) {
       return existing;
     }
-    throw new Error(
-      `Cannot append record for missing match ${String(matchId)}.`,
-    );
+    const created: StoredSessionRecord[] = [];
+    store.set(matchId, created);
+    return created;
   };
 
   return {
@@ -48,27 +53,42 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
         metadata: clone(input.metadata),
         state: clone(input.state),
         manifest: clone(input.manifest),
-        actions: clone([...input.actions]),
-        decisions: clone([...input.decisions]),
+        actions: [],
+        decisions: [],
       });
+      actions.set(input.metadata.matchId, clone([...input.actions]));
+      decisions.set(input.metadata.matchId, clone([...input.decisions]));
       return Promise.resolve();
     },
     appendAction({ matchId, record }) {
-      snapshotForAppend(matchId).actions.push(clone(record));
+      recordsForAppend(actions, matchId).push(clone(record));
       return Promise.resolve();
     },
     appendDecision({ matchId, record }) {
-      snapshotForAppend(matchId).decisions.push(clone(record));
+      recordsForAppend(decisions, matchId).push(clone(record));
       return Promise.resolve();
     },
     loadSnapshot(matchId) {
       const snapshot = snapshots.get(matchId);
+      if (snapshot === undefined) {
+        return Promise.resolve(undefined);
+      }
       return Promise.resolve(
-        snapshot === undefined ? undefined : clone(snapshot),
+        clone({
+          ...snapshot,
+          actions: actions.get(matchId) ?? [],
+          decisions: decisions.get(matchId) ?? [],
+        }),
       );
     },
     listActiveMatchIds() {
-      return Promise.resolve([...snapshots.keys()]);
+      return Promise.resolve([
+        ...new Set([
+          ...snapshots.keys(),
+          ...actions.keys(),
+          ...decisions.keys(),
+        ]),
+      ]);
     },
     tryAcquireRecoveryLock({ matchId, ownerInstanceId, now, ttlMs }) {
       const existing = locks.get(matchId);
