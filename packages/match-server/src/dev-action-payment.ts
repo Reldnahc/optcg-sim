@@ -9,6 +9,16 @@ import type {
 import { cardByInstanceId } from "./dev-card-utils.js";
 import type { DevVisibleAction } from "./dev-snapshot-types.js";
 
+type PayCostDecision = Extract<
+  NonNullable<GameState["pendingDecision"]>,
+  { type: "payCost" }
+>;
+
+type CardCostPaymentOption = Extract<
+  PayCostDecision["paymentOptions"][number],
+  { type: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon" }
+>;
+
 export const actionDecisionPayment = (
   state: GameState,
   action: LegalAction,
@@ -34,15 +44,12 @@ export const actionDecisionPayment = (
   const option = pending.paymentOptions.find(
     (candidate) => candidate.id === response.optionId,
   );
-  if (
-    option?.type !== "trashFromHand" &&
-    option?.type !== "trashFromField" &&
-    option?.type !== "moveCards" &&
-    option?.type !== "returnDon"
-  ) {
+  if (!isCardCostPaymentOption(option)) {
     return undefined;
   }
-  if (isDeterministicLifeToHandMoveCost(option)) {
+  if (
+    isDeterministicLifeToHandMoveCost(option, pending.paymentOptions.length)
+  ) {
     return undefined;
   }
   const selectedCardInstanceIds =
@@ -58,18 +65,18 @@ export const actionDecisionPayment = (
   return {
     kind: "cardCost",
     operation: cardCostOperation(option.type),
-    chooseLabel: chooseCardCostLabel(option.type),
+    chooseLabel: chooseCardCostLabel(option),
     selectedCardInstanceIds: [...selectedCardInstanceIds],
+    ...selectedCardDetails(state, selectedCardInstanceIds),
     ...cardCostSource(state, selectedCardInstanceIds),
   };
 };
 
 const isDeterministicLifeToHandMoveCost = (
-  option: Extract<
-    NonNullable<GameState["pendingDecision"]>,
-    { type: "payCost" }
-  >["paymentOptions"][number],
+  option: CardCostPaymentOption,
+  paymentOptionCount: number,
 ): boolean =>
+  paymentOptionCount === 1 &&
   option.type === "moveCards" &&
   option.from.zone === "life" &&
   option.from.player === "self" &&
@@ -92,19 +99,62 @@ const cardCostOperation = (
   }
 };
 
-const chooseCardCostLabel = (
-  optionType: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon",
-): string => {
-  switch (optionType) {
+const chooseCardCostLabel = (option: CardCostPaymentOption): string => {
+  switch (option.type) {
     case "trashFromField":
       return "Choose Character to trash";
     case "moveCards":
+      if (option.from.zone === "life") {
+        return "Choose Life card";
+      }
       return "Choose cards from trash";
     case "returnDon":
       return "Choose DON!! to return";
     case "trashFromHand":
       return "Choose card to trash";
   }
+};
+
+const isCardCostPaymentOption = (
+  option: PayCostDecision["paymentOptions"][number] | undefined,
+): option is CardCostPaymentOption =>
+  option?.type === "trashFromHand" ||
+  option?.type === "trashFromField" ||
+  option?.type === "moveCards" ||
+  option?.type === "returnDon";
+
+const selectedCardDetails = (
+  state: GameState,
+  instanceIds: readonly CardInstance["instanceId"][],
+):
+  | {
+      selectedCards: Array<{
+        instanceId: CardInstance["instanceId"];
+        zone: Zone;
+        playerId?: PlayerId | undefined;
+        index?: number | undefined;
+      }>;
+    }
+  | Record<string, never> => {
+  const selectedCards = instanceIds.flatMap((instanceId) => {
+    const card = cardByInstanceId(state, instanceId);
+    if (card === undefined) {
+      return [];
+    }
+    return [
+      {
+        instanceId,
+        zone: card.zone.zone,
+        ...(card.zone.playerId === undefined
+          ? {}
+          : { playerId: card.zone.playerId }),
+        ...(typeof card.zone.index === "number"
+          ? { index: card.zone.index }
+          : {}),
+      },
+    ];
+  });
+  return selectedCards.length === instanceIds.length ? { selectedCards } : {};
 };
 
 const cardCostSource = (

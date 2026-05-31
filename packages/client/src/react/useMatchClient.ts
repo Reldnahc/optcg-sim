@@ -53,6 +53,7 @@ import {
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   buildGlobalActions,
   activeCardInstanceIdsForUi,
+  applyActiveCardCostLifeChoiceCards,
   applyPendingDecisionLifeChoiceCards,
   cardActionsForInstance,
   decisionCandidateInstanceIds,
@@ -117,7 +118,6 @@ export const useMatchClient = (): MatchClientUi => {
         playerId: clientState.seat.playerId,
         activeCardInstanceIds,
       });
-  const board = applyPendingDecisionLifeChoiceCards(baseBoard, pendingDecision);
   const liveConnectionKey = !isMatchClientState(clientState)
     ? undefined
     : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;
@@ -125,13 +125,6 @@ export const useMatchClient = (): MatchClientUi => {
     clientState === undefined || isMatchClientState(clientState)
       ? undefined
       : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
-  const zoneClickVisibleIds = zoneClickVisibleInstanceIds(board);
-  const pendingDecisionInteractionMode =
-    pendingDecision === undefined
-      ? undefined
-      : getPendingDecisionInteractionMode(pendingDecision, {
-          visibleZoneClickInstanceIds: zoneClickVisibleIds,
-        });
   const pendingDecisionResponseActions =
     pendingDecision === undefined || playerSnapshot === undefined
       ? []
@@ -181,6 +174,17 @@ export const useMatchClient = (): MatchClientUi => {
   const activeCardCostGroup = explicitCardCostGroup ?? autoCardCostGroup;
   const explicitCardCostChoiceActive = explicitCardCostGroup !== undefined;
   const cardCostChoiceActive = activeCardCostGroup !== undefined;
+  const board = applyActiveCardCostLifeChoiceCards(
+    applyPendingDecisionLifeChoiceCards(baseBoard, pendingDecision),
+    activeCardCostGroup,
+  );
+  const zoneClickVisibleIds = zoneClickVisibleInstanceIds(board);
+  const pendingDecisionInteractionMode =
+    pendingDecision === undefined
+      ? undefined
+      : getPendingDecisionInteractionMode(pendingDecision, {
+          visibleZoneClickInstanceIds: zoneClickVisibleIds,
+        });
   const selectedCardCostActionIndex = optionalCardCostActionForSelection(
     activeCardCostGroup,
     activeCardCostSelectedInstanceIds,

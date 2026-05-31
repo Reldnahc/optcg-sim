@@ -14,6 +14,7 @@ import type {
 
 import {
   activeCardCostGlobalActions,
+  applyActiveCardCostLifeChoiceCards,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   applyPendingDecisionLifeChoiceCards,
@@ -54,6 +55,40 @@ const moveCardsGroup: OptionalCardCostGroup = {
   cardActions: [
     { instanceIds: ["trash-1", "trash-2"], actionIndex: 2 },
     { instanceIds: ["trash-1", "trash-3"], actionIndex: 3 },
+  ],
+};
+
+const lifeMoveCardsGroup: OptionalCardCostGroup = {
+  chooseActionIndex: -5,
+  operation: "moveCards",
+  chooseLabel: "Choose Life card",
+  requiredCount: 1,
+  source: { zone: "life" as Zone, playerId: "p1" as PlayerId },
+  cardActions: [
+    {
+      instanceIds: ["real-life-top"],
+      actionIndex: 2,
+      selectedCards: [
+        {
+          instanceId: "real-life-top" as InstanceId,
+          zone: "life",
+          playerId: "p1" as PlayerId,
+          index: 0,
+        },
+      ],
+    },
+    {
+      instanceIds: ["real-life-bottom"],
+      actionIndex: 3,
+      selectedCards: [
+        {
+          instanceId: "real-life-bottom" as InstanceId,
+          zone: "life",
+          playerId: "p1" as PlayerId,
+          index: 1,
+        },
+      ],
+    },
   ],
 };
 
@@ -391,6 +426,25 @@ describe("match client support helpers", () => {
     assert.deepEqual(zoneClickVisibleInstanceIds(updated), [
       "real-life-top",
       "hidden-life-self-1",
+      "self-leader",
+      "opponent-leader",
+    ]);
+  });
+
+  test("active life card costs render as hidden clickable zone cards", () => {
+    const updated = applyActiveCardCostLifeChoiceCards(
+      boardWithLife(),
+      lifeMoveCardsGroup,
+    );
+    assert.ok(updated);
+
+    assert.deepEqual(
+      updated.self.lifeCards.map((card) => String(card.instanceId)),
+      ["real-life-top", "real-life-bottom"],
+    );
+    assert.deepEqual(zoneClickVisibleInstanceIds(updated), [
+      "real-life-top",
+      "real-life-bottom",
       "self-leader",
       "opponent-leader",
     ]);

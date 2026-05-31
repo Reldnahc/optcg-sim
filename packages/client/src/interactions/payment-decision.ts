@@ -15,7 +15,11 @@ export interface OptionalCardCostGroup {
   chooseLabel: string;
   requiredCount: number;
   source?: CardCostPayment["source"] | undefined;
-  cardActions: Array<{ instanceIds: string[]; actionIndex: number }>;
+  cardActions: Array<{
+    instanceIds: string[];
+    actionIndex: number;
+    selectedCards?: CardCostPayment["selectedCards"] | undefined;
+  }>;
 }
 
 export interface OptionalCardCostChoice {
@@ -60,7 +64,11 @@ export const createOptionalCardCostChoice = (
       chooseLabel: string;
       requiredCount: number;
       source?: CardCostPayment["source"] | undefined;
-      cardActions: Array<{ instanceIds: string[]; actionIndex: number }>;
+      cardActions: Array<{
+        instanceIds: string[];
+        actionIndex: number;
+        selectedCards?: CardCostPayment["selectedCards"] | undefined;
+      }>;
     }
   >();
   for (const action of actions) {
@@ -92,6 +100,9 @@ export const createOptionalCardCostChoice = (
     current.cardActions.push({
       instanceIds,
       actionIndex: action.index,
+      ...(payment.selectedCards === undefined
+        ? {}
+        : { selectedCards: payment.selectedCards }),
     });
     groupedActions.set(groupKey, current);
   }

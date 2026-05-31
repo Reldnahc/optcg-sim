@@ -19,6 +19,12 @@ export interface DevVisibleAction {
         operation: "trash" | "returnToHand" | "moveCards" | "returnDon";
         chooseLabel: string;
         selectedCardInstanceIds: CardInstance["instanceId"][];
+        selectedCards?: Array<{
+          instanceId: CardInstance["instanceId"];
+          zone: Zone;
+          playerId?: PlayerId | undefined;
+          index?: number | undefined;
+        }>;
         source?: { zone: Zone; playerId?: PlayerId } | undefined;
       };
   attack?: {

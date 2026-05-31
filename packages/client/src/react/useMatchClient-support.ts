@@ -243,6 +243,50 @@ export const applyPendingDecisionLifeChoiceCards = (
   };
 };
 
+export const applyActiveCardCostLifeChoiceCards = (
+  board: BoardViewModel | undefined,
+  activeCardCostGroup: OptionalCardCostGroup | undefined,
+): BoardViewModel | undefined => {
+  if (
+    board === undefined ||
+    activeCardCostGroup === undefined ||
+    activeCardCostGroup.source?.zone !== "life"
+  ) {
+    return board;
+  }
+  const selfChoices = new Map<number, InstanceId>();
+  const opponentChoices = new Map<number, InstanceId>();
+  for (const action of activeCardCostGroup.cardActions) {
+    for (const card of action.selectedCards ?? []) {
+      if (card.zone !== "life" || card.index === undefined) {
+        continue;
+      }
+      const choices =
+        card.playerId === undefined || card.playerId === board.playerId
+          ? selfChoices
+          : opponentChoices;
+      choices.set(card.index, card.instanceId);
+    }
+  }
+  if (selfChoices.size === 0 && opponentChoices.size === 0) {
+    return board;
+  }
+  return {
+    ...board,
+    self: {
+      ...board.self,
+      lifeCards: overlayLifeChoiceCards(board.self.lifeCards, selfChoices),
+    },
+    opponent: {
+      ...board.opponent,
+      lifeCards: overlayLifeChoiceCards(
+        board.opponent.lifeCards,
+        opponentChoices,
+      ),
+    },
+  };
+};
+
 export const decisionCandidateInstanceIds = (
   decision: NonNullable<
     MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]

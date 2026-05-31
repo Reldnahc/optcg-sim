@@ -20,6 +20,12 @@ export interface ClientVisibleAction {
         operation: "trash" | "returnToHand" | "moveCards" | "returnDon";
         chooseLabel: string;
         selectedCardInstanceIds: InstanceId[];
+        selectedCards?: Array<{
+          instanceId: InstanceId;
+          zone: Zone;
+          playerId?: PlayerId | undefined;
+          index?: number | undefined;
+        }>;
         source?: { zone: Zone; playerId?: PlayerId } | undefined;
       };
   attack?: {
