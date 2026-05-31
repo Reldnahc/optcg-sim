@@ -59,7 +59,10 @@ function parseOpponentFieldRemovalReplacement(text: string):
     return undefined;
   }
 
-  const target = parseYourFieldReplacementTarget({ text: targetText });
+  const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
+  const target = parseYourFieldReplacementTarget({
+    text: normalizedTargetText,
+  });
   if (
     target === undefined ||
     target.rest.length > 0 ||
@@ -68,7 +71,9 @@ function parseOpponentFieldRemovalReplacement(text: string):
     return undefined;
   }
   const instead =
-    parseTopLifeToHandInstead(bodyText) ?? parseRestCardsInstead(bodyText);
+    parseTopLifeToHandInstead(bodyText) ??
+    parseRestSelfInstead(bodyText) ??
+    parseRestCardsInstead(bodyText);
   if (instead === undefined) {
     return undefined;
   }
@@ -89,6 +94,18 @@ function parseOpponentFieldRemovalReplacement(text: string):
       ...instead.evidence,
     ],
   };
+}
+
+function normalizeFieldRemovalTargetText(text: string): string {
+  const trimmed = text.trim();
+  const ownedSubject = /^you have an?\s+(?<predicate>.+?)\s+that$/i.exec(
+    trimmed,
+  );
+  const predicate = ownedSubject?.groups?.["predicate"];
+  if (predicate !== undefined) {
+    return `your ${predicate}`;
+  }
+  return trimmed;
 }
 
 function parseTopLifeToHandInstead(text: string):
@@ -123,6 +140,25 @@ function parseTopLifeToHandInstead(text: string):
       "destination:hand",
       "order:original",
     ],
+  };
+}
+
+function parseRestSelfInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  if (!/^you may rest this Character instead\.?$/i.test(text.trim())) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "rest",
+      target: { type: "self" },
+    },
+    evidence: ["instruction:rest", "target:thisCharacter"],
   };
 }
 

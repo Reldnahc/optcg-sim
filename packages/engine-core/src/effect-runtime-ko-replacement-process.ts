@@ -284,6 +284,9 @@ const replacementOptionLabel = (
       "cards",
     )} instead`;
   }
+  if (isSupportedRestSelfInsteadEffect(instead)) {
+    return "Rest this Character instead";
+  }
   return "Use replacement effect";
 };
 
@@ -311,6 +314,21 @@ const isSupportedRestOwnCardsInsteadEffect = (
   effect.target.request.min > 0 &&
   !effect.target.request.allowFewerIfUnavailable &&
   effect.target.request.visibility === "public";
+
+const isSupportedRestSelfInsteadEffect = (
+  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+): effect is Extract<
+  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+  { type: "rest" }
+> & {
+  target: Extract<
+    Extract<
+      SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+      { type: "rest" }
+    >["target"],
+    { type: "self" }
+  >;
+} => effect.type === "rest" && effect.target.type === "self";
 
 const replacementRestCandidateIsActive = (
   state: GameState,
@@ -930,6 +948,10 @@ const executeReplacementInsteadEffect = (
     return executeMoveCardsPrimitive(state, entry, effect, {
       incrementStateSeq: false,
     });
+  }
+  if (isSupportedRestSelfInsteadEffect(effect)) {
+    const rested = restFieldObjects(state, [entry.source]);
+    return toEngineResult(rested.state, []);
   }
   return executeNoChoiceEffectPrimitive(state, entry, effect, {
     incrementStateSeq: false,

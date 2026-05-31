@@ -359,6 +359,12 @@ const isSupportedRestOwnCardsInsteadEffect = (
   !effect.target.request.allowFewerIfUnavailable &&
   effect.target.request.visibility === "public";
 
+const isSupportedRestSelfInsteadEffect = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "rest" }> & {
+  target: Extract<Target, { type: "self" }>;
+} => effect.type === "rest" && isSelfTarget(effect.target);
+
 const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -386,12 +392,40 @@ const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
   effect.effect.when.target.player === "self" &&
   isSupportedRestOwnCardsInsteadEffect(effect.effect.instead);
 
+const isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  effect.category === "replacement" &&
+  effect.trigger.type === "replacement" &&
+  effect.trigger.replacement.type === "wouldMoveZone" &&
+  effect.trigger.replacement.from === "characterArea" &&
+  effect.trigger.replacement.sourceKind === "cardEffect" &&
+  effect.trigger.replacement.target.type === "all" &&
+  effect.trigger.replacement.target.zone === "characterArea" &&
+  effect.trigger.replacement.target.player === "self" &&
+  effect.optional === true &&
+  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.cost === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.oncePerTurn === undefined &&
+  effect.effect.type === "replacement" &&
+  effect.effect.when.type === "wouldMoveZone" &&
+  effect.effect.when.from === "characterArea" &&
+  effect.effect.when.sourceKind === "cardEffect" &&
+  effect.effect.when.target.type === "all" &&
+  effect.effect.when.target.zone === "characterArea" &&
+  effect.effect.when.target.player === "self" &&
+  isSupportedRestSelfInsteadEffect(effect.effect.instead);
+
 const isSupportedReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
   isSupportedSelfKoDrawReplacementEffect(effect) ||
   isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
-  isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect);
+  isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect) ||
+  isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect);
 
 const isReplacementTriggerEffect = (
   effect: EffectDefinition["effects"][number],
@@ -508,8 +542,20 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
         continue;
       }
       if (
-        isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) &&
-        !opponentFieldRemovalReplacementApplies(state, process, located, effect)
+        (isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
+          isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(
+            effect,
+          ) ||
+          isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(
+            effect,
+          )) &&
+        !opponentFieldRemovalReplacementApplies(
+          state,
+          process,
+          source,
+          located,
+          effect,
+        )
       ) {
         continue;
       }
@@ -537,6 +583,7 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
 const opponentFieldRemovalReplacementApplies = (
   state: GameState,
   process: ReplacementProcess,
+  source: LocatedReplacementSource,
   located: LocatedCard,
   effect: SupportedReplacementEffectBlock,
 ): boolean => {
@@ -552,7 +599,9 @@ const opponentFieldRemovalReplacementApplies = (
   if (!fieldRemovalSourceKindMatches(process, target.sourceKind)) {
     return false;
   }
-  if (!canPayOpponentFieldRemovalReplacementCost(state, located, effect)) {
+  if (
+    !canPayOpponentFieldRemovalReplacementCost(state, source, located, effect)
+  ) {
     return false;
   }
   const request = {
@@ -581,6 +630,7 @@ const opponentFieldRemovalReplacementApplies = (
 
 const canPayOpponentFieldRemovalReplacementCost = (
   state: GameState,
+  source: LocatedReplacementSource,
   located: LocatedCard,
   effect: SupportedReplacementEffectBlock,
 ): boolean => {
@@ -600,6 +650,13 @@ const canPayOpponentFieldRemovalReplacementCost = (
       candidates.candidates.filter((candidate) =>
         replacementRestCandidateIsActive(state, candidate.card),
       ).length >= instead.target.request.min
+    );
+  }
+  if (isSupportedRestSelfInsteadEffect(instead)) {
+    return (
+      source.resolved.category === "character" &&
+      source.ref.zone?.zone === "characterArea" &&
+      source.card.state !== "rested"
     );
   }
   return false;

@@ -142,4 +142,62 @@ describe("replacement effect parser", () => {
       assert.equal(result.evidence.includes(evidence), true, evidence);
     }
   });
+
+  it("parses opponent effect field-removal replacement into reusable rest-self instead primitives", () => {
+    const target = {
+      type: "all",
+      zone: "characterArea",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        colorsAny: ["green"],
+        nameNot: ["Tashigi"],
+      },
+    } as const;
+    const when = {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      target,
+    } as const;
+
+    const result = parseCardEffectLine(
+      "If you have a green Character other than [Tashigi] that would be removed from the field by your opponent's effect, you may rest this Character instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "rest",
+          target: { type: "self" },
+        },
+      },
+    });
+    for (const evidence of [
+      "entry:replacement",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "target:yourCharacters",
+      "filter:category:character",
+      "filter:color",
+      "filter:nameNot",
+      "instruction:rest",
+      "target:thisCharacter",
+      "composition:replacementInstead",
+      "composition:entryExpression",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
 });
