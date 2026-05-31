@@ -10,6 +10,7 @@ import {
   parseHandCountCondition,
   parseLeaderNameCondition,
   parseLifeCountCondition,
+  parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
@@ -68,6 +69,7 @@ import { parseDonDeckSizeRuleLine } from "./metadata-lines/index.js";
 import {
   parseEffectLine,
   parseEffectLineDetailed,
+  parseEffectLinesDetailed,
   type EffectLineParserRegistry,
 } from "./orchestrator.js";
 import {
@@ -90,7 +92,9 @@ import {
 } from "./segments/index.js";
 import type {
   ParsedEffectLine,
+  ParsedRuntimeEffectLine,
   ParseCardEffectLineResult,
+  ParseFailureDiagnostic,
   ParseInput,
 } from "./types.js";
 
@@ -150,6 +154,7 @@ const conditionParsers = [
   parseTrashCountCondition,
   parseLifeCountCondition,
   parseLeaderNameCondition,
+  parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseTurnCountCondition,
 ] as const;
@@ -184,6 +189,23 @@ export function parseCardEffectLine(
   text: string,
 ): ParsedEffectLine | undefined {
   return parseEffectLine(text, defaultRegistry);
+}
+
+export function parseCardEffectLines(text: string): ParsedRuntimeEffectLine[] {
+  const result = parseEffectLinesDetailed(text, defaultRegistry);
+  return result.ok
+    ? result.value.filter(
+        (value): value is ParsedRuntimeEffectLine => value.kind !== "metadata",
+      )
+    : [];
+}
+
+export function parseCardEffectLinesDetailed(
+  text: string,
+):
+  | { readonly ok: true; readonly value: readonly ParsedEffectLine[] }
+  | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic } {
+  return parseEffectLinesDetailed(text, defaultRegistry);
 }
 
 export function parseCardEffectLineDetailed(

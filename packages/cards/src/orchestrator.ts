@@ -39,65 +39,63 @@ export function parseEffectLine(
   return result.ok ? result.value : undefined;
 }
 
-type EffectLineParseResult =
-  | { readonly ok: true; readonly value: ParsedEffectLine }
-  | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic };
-
-export function parseEffectLineDetailed(
+export function parseEffectLinesDetailed(
   text: string,
   registry: EffectLineParserRegistry,
-): EffectLineParseResult {
+):
+  | { readonly ok: true; readonly value: readonly ParsedEffectLine[] }
+  | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic } {
   const metadataLine = firstMetadataLineParse(registry.metadataLines ?? [], {
     text,
   });
   if (metadataLine !== undefined) {
-    return { ok: true, value: metadataLine };
+    return { ok: true, value: [metadataLine] };
   }
 
   const leadingMarkerParse = parseMarkers(text, registry.markers ?? []);
-  const entryPoint = firstEntryPointParse(registry.entryPoints, {
+  const entryPoints = parseEntryPointAlternatives(registry.entryPoints, {
     text: leadingMarkerParse.rest,
   });
-  if (entryPoint === undefined) {
+  if (!entryPoints.ok) {
     return {
       ok: false,
       diagnostic: {
         stage: "entryPoint",
         reason: "no entry-point parser matched",
-        text: leadingMarkerParse.rest,
+        text: entryPoints.text,
       },
     };
   }
 
-  const markerParse = parseMarkers(entryPoint.rest, registry.markers ?? []);
-  const expression = firstExpressionParse(registry.expressions, {
-    text: markerParse.rest,
-    entryPoint: entryPoint.node,
-  });
-  if (expression === undefined || expression.rest.trim().length > 0) {
-    return {
-      ok: false,
-      diagnostic: {
-        stage: "expression",
-        reason:
-          expression === undefined
-            ? "no expression parser matched"
-            : "expression parser left unparsed residue",
-        text: expression === undefined ? markerParse.rest : expression.rest,
-      },
-    };
-  }
+  const markerParse = parseMarkers(entryPoints.rest, registry.markers ?? []);
+  const values: ParsedEffectLine[] = [];
+  for (const entryPoint of entryPoints.values) {
+    const expression = firstExpressionParse(registry.expressions, {
+      text: markerParse.rest,
+      entryPoint: entryPoint.node,
+    });
+    if (expression === undefined || expression.rest.trim().length > 0) {
+      return {
+        ok: false,
+        diagnostic: {
+          stage: "expression",
+          reason:
+            expression === undefined
+              ? "no expression parser matched"
+              : "expression parser left unparsed residue",
+          text: expression === undefined ? markerParse.rest : expression.rest,
+        },
+      };
+    }
 
-  const condition = combineConditions(
-    leadingMarkerParse.patch.condition,
-    entryPoint.node.condition,
-    markerParse.patch.condition,
-    expression.blockPatch?.condition,
-  );
+    const condition = combineConditions(
+      leadingMarkerParse.patch.condition,
+      entryPoint.node.condition,
+      markerParse.patch.condition,
+      expression.blockPatch?.condition,
+    );
 
-  return {
-    ok: true,
-    value: {
+    values.push({
       block: {
         category:
           expression.blockPatch?.category ?? entryPoint.node.category ?? "auto",
@@ -118,10 +116,67 @@ export function parseEffectLineDetailed(
         ...entryPoint.evidence,
         ...markerParse.evidence,
         ...expression.evidence,
+        ...(entryPoints.values.length > 1
+          ? (["composition:entryAlternatives"] as const)
+          : []),
         "composition:entryExpression",
       ],
-    },
-  };
+    });
+  }
+
+  return { ok: true, value: values };
+}
+
+type EffectLineParseResult =
+  | { readonly ok: true; readonly value: ParsedEffectLine }
+  | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic };
+
+export function parseEffectLineDetailed(
+  text: string,
+  registry: EffectLineParserRegistry,
+): EffectLineParseResult {
+  const result = parseEffectLinesDetailed(text, registry);
+  if (!result.ok) {
+    return result;
+  }
+  const first = result.value[0];
+  if (first === undefined) {
+    return {
+      ok: false,
+      diagnostic: {
+        stage: "entryPoint",
+        reason: "no entry-point parser matched",
+        text,
+      },
+    };
+  }
+  return { ok: true, value: first };
+}
+
+function parseEntryPointAlternatives(
+  parsers: readonly EntryPointParser[],
+  input: ParseInput,
+):
+  | {
+      readonly ok: true;
+      readonly values: readonly EntryPointParseResult[];
+      readonly rest: string;
+    }
+  | { readonly ok: false; readonly text: string } {
+  let rest = input.text;
+  const values: EntryPointParseResult[] = [];
+  for (;;) {
+    const entryPoint = firstEntryPointParse(parsers, { text: rest });
+    if (entryPoint === undefined) {
+      return { ok: false, text: rest };
+    }
+    values.push(entryPoint);
+    rest = entryPoint.rest.trimStart();
+    if (!rest.startsWith("/")) {
+      return { ok: true, values, rest };
+    }
+    rest = rest.slice(1).trimStart();
+  }
 }
 
 function firstMetadataLineParse(

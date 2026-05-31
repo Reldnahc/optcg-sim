@@ -1,10 +1,12 @@
 export {
   parseCardEffectLine,
   parseCardEffectLineDetailed,
+  parseCardEffectLines,
+  parseCardEffectLinesDetailed,
 } from "./card-effect-line-parser.js";
 export { composeWrapperAndBody } from "./composition.js";
 export { parseExpression } from "./expression-parser.js";
-export { parseEffectLine } from "./orchestrator.js";
+export { parseEffectLine, parseEffectLinesDetailed } from "./orchestrator.js";
 export { parseOncePerTurnMarker } from "./markers/index.js";
 export { evaluatePrimitiveSupport } from "./support-evaluator.js";
 export {
@@ -69,5 +71,6 @@ export type {
   PrimitiveSupportResult,
   ParsedEffectBlock,
   ParsedEffectLine,
+  ParsedRuntimeEffectLine,
   ParseInput,
 } from "./types.js";

@@ -1,7 +1,7 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type { CardId, EffectBlock } from "@optcg/types";
 
-import { parseCardEffectLineDetailed } from "./card-effect-line-parser.js";
+import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 import type { ParsedEffectLine } from "./types.js";
@@ -177,11 +177,31 @@ const createTextLineReport = (text: string): SupportProbeReport => {
     };
   }
 
-  lines.push(`Trigger: ${lineReport.value.block.trigger.type}`);
-  lines.push(`Category: ${lineReport.value.block.category}`);
-  lines.push(`Source presence: ${lineReport.value.block.sourcePresencePolicy}`);
-  if (lineReport.value.block.oncePerTurn === true) {
-    lines.push("Once per turn: true");
+  if (lineReport.values.length === 1) {
+    const value = lineReport.values[0];
+    if (value !== undefined) {
+      lines.push(`Trigger: ${value.block.trigger.type}`);
+      lines.push(`Category: ${value.block.category}`);
+      lines.push(`Source presence: ${value.block.sourcePresencePolicy}`);
+      if (value.block.oncePerTurn === true) {
+        lines.push("Once per turn: true");
+      }
+    }
+  } else {
+    lines.push(`Blocks: ${String(lineReport.values.length)}`);
+    for (const [index, value] of lineReport.values.entries()) {
+      lines.push(
+        `Block ${String(index + 1)} trigger: ${value.block.trigger.type}`,
+      );
+      lines.push(
+        `Block ${String(index + 1)} category: ${value.block.category}`,
+      );
+      lines.push(
+        `Block ${String(index + 1)} source presence: ${
+          value.block.sourcePresencePolicy
+        }`,
+      );
+    }
   }
   lines.push(
     `Engine runtime: ${lineReport.runtimeSupported ? "passed" : "failed"}`,
@@ -190,7 +210,7 @@ const createTextLineReport = (text: string): SupportProbeReport => {
     lines.push(`Engine runtime reason: ${runtimeReason(lineReport)}`);
   }
   lines.push("Evidence:");
-  for (const evidence of lineReport.value.evidence) {
+  for (const evidence of uniqueEvidence(lineReport.values)) {
     lines.push(`- ${evidence}`);
   }
 
@@ -205,7 +225,10 @@ type ParsedLineReport =
   | {
       readonly kind: "effect";
       readonly parseOk: true;
-      readonly value: Extract<ParsedEffectLine, { readonly block: unknown }>;
+      readonly values: readonly Extract<
+        ParsedEffectLine,
+        { readonly block: unknown }
+      >[];
       readonly runtimeSupported: boolean;
       readonly runtimeReason?: string;
     }
@@ -242,7 +265,7 @@ const evaluateParsedLine = (
     };
   }
 
-  const parsed = parseCardEffectLineDetailed(text);
+  const parsed = parseCardEffectLinesDetailed(text);
   if (!parsed.ok) {
     return {
       parseOk: false,
@@ -251,27 +274,43 @@ const evaluateParsedLine = (
       text: parsed.diagnostic.text,
     };
   }
-  if (parsed.value.kind === "metadata") {
+  const metadata = parsed.value.find(
+    (
+      value,
+    ): value is Extract<ParsedEffectLine, { readonly kind: "metadata" }> =>
+      value.kind === "metadata",
+  );
+  if (metadata !== undefined) {
     return {
       kind: "metadata",
       parseOk: true,
-      value: parsed.value,
+      value: metadata,
       runtimeSupported: true,
     };
   }
 
-  const runtimeSupport = evaluateEffectBlockRuntimeSupport({
-    ...parsed.value.block,
-    id: effectId as EffectBlock["id"],
-  });
+  const values = parsed.value.filter(
+    (value): value is Extract<ParsedEffectLine, { readonly block: unknown }> =>
+      value.kind !== "metadata",
+  );
+  const runtimeResults = values.map((value, index) =>
+    evaluateEffectBlockRuntimeSupport({
+      ...value.block,
+      id:
+        values.length === 1
+          ? (effectId as EffectBlock["id"])
+          : (`${effectId}:${String(index + 1)}` as EffectBlock["id"]),
+    }),
+  );
+  const firstFailure = runtimeResults.find((result) => !result.supported);
   return {
     kind: "effect",
     parseOk: true,
-    value: parsed.value,
-    runtimeSupported: runtimeSupport.supported,
-    ...(runtimeSupport.reason === undefined
+    values,
+    runtimeSupported: firstFailure === undefined,
+    ...(firstFailure?.reason === undefined
       ? {}
-      : { runtimeReason: runtimeSupport.reason }),
+      : { runtimeReason: firstFailure.reason }),
   };
 };
 
@@ -281,6 +320,18 @@ const runtimeReason = (
     { readonly parseOk: true; readonly kind: "effect" }
   >,
 ): string => lineReport.runtimeReason ?? "unsupported runtime effect shape";
+
+const uniqueEvidence = (
+  values: readonly Extract<ParsedEffectLine, { readonly block: unknown }>[],
+): readonly string[] => {
+  const evidence = new Set<string>();
+  for (const value of values) {
+    for (const entry of value.evidence) {
+      evidence.add(entry);
+    }
+  }
+  return [...evidence];
+};
 
 const fetchPoneglyphCard: PoneglyphFetch = async (url) => fetch(url);
 

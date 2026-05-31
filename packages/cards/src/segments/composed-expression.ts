@@ -1,5 +1,6 @@
 import { parseExpression } from "../expression-parser.js";
 import type {
+  ConditionParseResult,
   ConditionParser,
   ConnectorParser,
   ExpressionParseResult,
@@ -43,12 +44,11 @@ export function conditionalExpressionSegmentParser(options: {
       return undefined;
     }
 
-    for (const conditionParser of options.conditions) {
-      const condition = conditionParser({ text: conditionText });
-      if (condition === undefined || condition.rest.length > 0) {
-        continue;
-      }
-
+    const condition = parseConditionExpression(
+      conditionText,
+      options.conditions,
+    );
+    if (condition !== undefined) {
       const then = parseExpression(thenText, {
         connectors: options.connectors,
         segments: [
@@ -60,7 +60,7 @@ export function conditionalExpressionSegmentParser(options: {
         ],
       });
       if (then === undefined || then.rest.length > 0) {
-        continue;
+        return undefined;
       }
 
       return {
@@ -94,12 +94,11 @@ export function conditionalBlockExpressionParser(options: {
       return undefined;
     }
 
-    for (const conditionParser of options.conditions) {
-      const condition = conditionParser({ text: conditionText });
-      if (condition === undefined || condition.rest.length > 0) {
-        continue;
-      }
-
+    const condition = parseConditionExpression(
+      conditionText,
+      options.conditions,
+    );
+    if (condition !== undefined) {
       const then = parseExpression(thenText, {
         connectors: options.connectors,
         segments: [
@@ -111,7 +110,7 @@ export function conditionalBlockExpressionParser(options: {
         ],
       });
       if (then === undefined || then.rest.length > 0) {
-        continue;
+        return undefined;
       }
 
       return {
@@ -146,12 +145,11 @@ export function conditionalCostedBlockExpressionParser(options: {
       return undefined;
     }
 
-    for (const conditionParser of options.conditions) {
-      const condition = conditionParser({ text: conditionText });
-      if (condition === undefined || condition.rest.length > 0) {
-        continue;
-      }
-
+    const condition = parseConditionExpression(
+      conditionText,
+      options.conditions,
+    );
+    if (condition !== undefined) {
       for (const expressionParser of options.expressions) {
         const then = expressionParser({ text: thenText });
         if (then === undefined || then.rest.length > 0) {
@@ -176,4 +174,57 @@ export function conditionalCostedBlockExpressionParser(options: {
 
     return undefined;
   };
+}
+
+function parseConditionExpression(
+  text: string,
+  conditionParsers: readonly ConditionParser[],
+): ConditionParseResult | undefined {
+  const direct = parseSingleCondition(text, conditionParsers);
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const parts = text
+    .split(/\s+and\s+/iu)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (parts.length < 2) {
+    return undefined;
+  }
+
+  const parsedParts: ConditionParseResult[] = [];
+  for (const part of parts) {
+    const parsed = parseSingleCondition(part, conditionParsers);
+    if (parsed === undefined) {
+      return undefined;
+    }
+    parsedParts.push(parsed);
+  }
+
+  return {
+    condition: {
+      type: "and",
+      conditions: parsedParts.map((part) => part.condition),
+    },
+    evidence: [
+      "composition:conditionAnd",
+      ...parsedParts.flatMap((part) => part.evidence),
+    ],
+    rest: "",
+  };
+}
+
+function parseSingleCondition(
+  text: string,
+  conditionParsers: readonly ConditionParser[],
+): ConditionParseResult | undefined {
+  for (const conditionParser of conditionParsers) {
+    const condition = conditionParser({ text });
+    if (condition !== undefined && condition.rest.length === 0) {
+      return condition;
+    }
+  }
+
+  return undefined;
 }

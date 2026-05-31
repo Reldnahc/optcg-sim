@@ -16,7 +16,7 @@ import type {
   VariantKey,
 } from "@optcg/types";
 
-import { parseCardEffectLineDetailed } from "./card-effect-line-parser.js";
+import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 
@@ -433,7 +433,7 @@ const buildEffectDefinition = (
   let parsedLineCount = 0;
 
   for (const [index, line] of lines.entries()) {
-    const parsed = parseCardEffectLineDetailed(line);
+    const parsed = parseCardEffectLinesDetailed(line);
     if (!parsed.ok) {
       diagnostics.push(
         `line ${String(index + 1)} parse failed: ${parsed.diagnostic.reason}`,
@@ -441,22 +441,34 @@ const buildEffectDefinition = (
       continue;
     }
     parsedLineCount += 1;
-    if (parsed.value.kind === "metadata") {
-      continue;
+    const runtimeValues = parsed.value.filter(
+      (
+        value,
+      ): value is Extract<
+        (typeof parsed.value)[number],
+        { readonly block: unknown }
+      > => value.kind !== "metadata",
+    );
+    for (const [blockIndex, value] of runtimeValues.entries()) {
+      const block: EffectBlock = {
+        ...value.block,
+        id:
+          runtimeValues.length === 1
+            ? (`${String(cardId)}:generated:${String(index + 1)}` as EffectBlock["id"])
+            : (`${String(cardId)}:generated:${String(index + 1)}:${String(
+                blockIndex + 1,
+              )}` as EffectBlock["id"]),
+      };
+      const runtimeSupport = evaluateEffectBlockRuntimeSupport(block);
+      if (!runtimeSupport.supported) {
+        diagnostics.push(
+          `line ${String(index + 1)} runtime unsupported: ${
+            runtimeSupport.reason ?? "unknown reason"
+          }`,
+        );
+      }
+      blocks.push(block);
     }
-    const block: EffectBlock = {
-      ...parsed.value.block,
-      id: `${String(cardId)}:generated:${String(index + 1)}` as EffectBlock["id"],
-    };
-    const runtimeSupport = evaluateEffectBlockRuntimeSupport(block);
-    if (!runtimeSupport.supported) {
-      diagnostics.push(
-        `line ${String(index + 1)} runtime unsupported: ${
-          runtimeSupport.reason ?? "unknown reason"
-        }`,
-      );
-    }
-    blocks.push(block);
   }
 
   if (lines.length === 0) {

@@ -239,13 +239,22 @@ const isSupportedCharacterFieldCountFilter = (
   filter: CardFilter | undefined,
 ): filter is Required<Pick<CardFilter, "categories">> & {
   state?: "active" | "rested";
+  names?: string[];
+  typesAny?: string[];
+  excludeSelf?: boolean;
 } => {
   if (filter === undefined) {
     return false;
   }
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   for (const key of keys) {
-    if (key !== "categories" && key !== "state") {
+    if (
+      key !== "categories" &&
+      key !== "state" &&
+      key !== "names" &&
+      key !== "typesAny" &&
+      key !== "excludeSelf"
+    ) {
       return false;
     }
   }
@@ -257,10 +266,22 @@ const isSupportedCharacterFieldCountFilter = (
     return false;
   }
   const stateValue = filter.state as unknown;
+  const namesValue = filter.names as unknown;
+  const typesValue = filter.typesAny as unknown;
+  const excludeSelfValue = filter.excludeSelf as unknown;
   return (
-    stateValue === undefined ||
-    stateValue === "active" ||
-    stateValue === "rested"
+    (stateValue === undefined ||
+      stateValue === "active" ||
+      stateValue === "rested") &&
+    (namesValue === undefined ||
+      (Array.isArray(namesValue) &&
+        namesValue.length > 0 &&
+        namesValue.every((value) => typeof value === "string"))) &&
+    (typesValue === undefined ||
+      (Array.isArray(typesValue) &&
+        typesValue.length > 0 &&
+        typesValue.every((value) => typeof value === "string"))) &&
+    (excludeSelfValue === undefined || excludeSelfValue === true)
   );
 };
 
@@ -314,20 +335,36 @@ const countPublicDonOnField = (
 
 const countPublicCharactersOnField = (
   state: GameState,
+  entry: EffectQueueEntry,
   playerId: PlayerId,
-  stateFilter: CardFilter["state"] | undefined,
+  filter: CardFilter,
 ): number => {
   const player = state.players[playerId];
   if (player === undefined) {
     return 0;
   }
-  if (stateFilter === undefined) {
-    return player.characters.length;
-  }
-  if (stateFilter !== "active" && stateFilter !== "rested") {
-    return 0;
-  }
-  return player.characters.filter((card) => card.state === stateFilter).length;
+  return player.characters.filter((card) => {
+    if (
+      filter.excludeSelf === true &&
+      card.instanceId === entry.source.instanceId
+    ) {
+      return false;
+    }
+    if (
+      filter.state !== undefined &&
+      filter.state !== "active" &&
+      filter.state !== "rested"
+    ) {
+      return false;
+    }
+    if (filter.state !== undefined && card.state !== filter.state) {
+      return false;
+    }
+    if (filter.names === undefined && filter.typesAny === undefined) {
+      return true;
+    }
+    return cardMatchesFilter(state, card, filter);
+  }).length;
 };
 
 const cardMatchesFilter = (
@@ -503,8 +540,9 @@ const countSupportedFieldOperand = (
       supported: true,
       count: countPublicCharactersOnField(
         state,
+        entry,
         playerId,
-        operand.filter.state,
+        operand.filter,
       ),
     };
   }
@@ -661,7 +699,7 @@ const evaluateCondition = (
         );
       }
       if (isSupportedCharacterFieldCountFilter(condition.filter)) {
-        const stateFilter = condition.filter.state;
+        const filter = condition.filter;
         return evaluateCountCondition(
           state,
           entry,
@@ -669,7 +707,7 @@ const evaluateCondition = (
           condition.value,
           condition.op,
           (playerId) =>
-            countPublicCharactersOnField(state, playerId, stateFilter),
+            countPublicCharactersOnField(state, entry, playerId, filter),
         );
       }
       return { supported: false };

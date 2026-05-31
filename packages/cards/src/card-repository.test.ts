@@ -198,6 +198,40 @@ describe("card repository", () => {
     );
   });
 
+  test("builds multiple generated blocks from one slash-entry Poneglyph line", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-003" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-003": poneglyphCard(
+        "OP01-003",
+        "[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.",
+      ),
+    });
+    const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const manifest = await repository.buildMatchManifest({
+      cardIds: [cardId],
+      devDonCount: 1,
+    });
+
+    const definitionId = manifest.cards[cardId]?.support.effectDefinitionId;
+    assert.ok(definitionId);
+    const definition = manifest.effectDefinitions?.[definitionId];
+    assert.ok(definition);
+    assert.deepEqual(
+      definition.effects.map((effect) => effect.trigger),
+      [{ type: "onPlay" }, { type: "whenAttacking" }],
+    );
+    assert.deepEqual(
+      definition.effects.map((effect) => effect.id),
+      ["OP01-003:generated:1:1", "OP01-003:generated:1:2"],
+    );
+  });
+
   test("fails clearly when Poneglyph reports missing cards", async () => {
     const repository = createCardRepository({
       cache: new FakeCardCache(),

@@ -84,10 +84,7 @@ export function parseSupportedEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
   for (const entryPoint of supportedEntryPoints) {
-    if (
-      input.text === entryPoint.text ||
-      input.text.startsWith(`${entryPoint.text} `)
-    ) {
+    if (isEntryPointPrefix(input.text, entryPoint.text)) {
       return {
         node: {
           type: "entryPoint",
@@ -106,4 +103,12 @@ export function parseSupportedEntryPoint(
   }
 
   return undefined;
+}
+
+function isEntryPointPrefix(text: string, entryPointText: string): boolean {
+  if (text === entryPointText) {
+    return true;
+  }
+  const next = text.at(entryPointText.length);
+  return text.startsWith(entryPointText) && (next === " " || next === "/");
 }
