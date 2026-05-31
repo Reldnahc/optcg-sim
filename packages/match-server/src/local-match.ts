@@ -425,7 +425,7 @@ const responseLabel = (
   action: Extract<LegalAction, { type: "respondToDecision" }>,
 ): string => {
   if (String(action.decisionId).startsWith("decision:counterStep:pass:")) {
-    return "End counter phase";
+    return "End step";
   }
   switch (action.response.type) {
     case "payment": {

@@ -807,6 +807,7 @@ const enterCounterStepAfterDefenderTiming = (
 
   const decision = createCounterStepPassDecision(
     withAllAttackTimingCombatMetadataHidden(defenderTiming.state),
+    { requirePotentialCounterActions: false },
   );
   if (decision === null) {
     return { state: defenderTiming.state, events };

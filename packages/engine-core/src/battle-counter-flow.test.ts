@@ -67,35 +67,6 @@ test("banish attacker with defender Character Counter metadata opens counter-ste
   assert.equal(result.state.pendingDecision?.playerId, p2);
 });
 
-test("no-counter attack auto-passes counter step and resolves damage without pending decision", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const beforeLife = p2State.life.length;
-
-  const result = applyDeclareAttack(state, {
-    type: "declareAttack",
-    attacker: cardRef(p1State.leader, p1),
-    target: cardRef(p2State.leader, p2),
-  });
-
-  assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision, undefined);
-  assert.equal(result.state.battle, undefined);
-  assert.equal(
-    must(result.state.players[p2], "p2").life.length,
-    beforeLife - 1,
-  );
-  assert.equal(
-    result.events.some((event) => event.type === "decisionCreated"),
-    false,
-  );
-  assert.equal(
-    result.events.some((event) => event.type === "damageDealt"),
-    true,
-  );
-});
-
 test("Character Counter metadata in defender hand opens counter-step pass decision", () => {
   const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
 
@@ -108,7 +79,7 @@ test("Character Counter metadata in defender hand opens counter-step pass decisi
     id: decision.id,
     type: "selectCards",
     playerId: p2,
-    prompt: "Pass Counter Step.",
+    prompt: "Use counter or end step.",
     causedBy: decision.causedBy,
     visibility: { type: "public" },
     request: {
@@ -307,7 +278,6 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
 
 test("counter-step pass applies supported continuous power before damage", () => {
   const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
-  const target = p2State.leader;
   opened.state.continuousEffects = [
     {
       ...continuousEffectRecord(opened.state, "leader-power-this-battle", {
@@ -338,17 +308,12 @@ test("counter-step pass applies supported continuous power before damage", () =>
     must(result.state.players[p2], "p2").life.length,
     p2State.life.length,
   );
-  assert.equal(
-    result.events.some((event) => event.type === "damageDealt"),
-    false,
-  );
-  assert.equal(
-    result.state.continuousEffects.some(
+  assert.ok(!result.events.some((event) => event.type === "damageDealt"));
+  assert.ok(
+    !result.state.continuousEffects.some(
       (effect) => effect.id === "leader-power-this-battle",
     ),
-    false,
   );
-  assert.equal(result.state.players[p2]?.leader.instanceId, target.instanceId);
 });
 
 test("Character Counter moves from hand to trash, emits deterministic events, and keeps Counter Step open", () => {

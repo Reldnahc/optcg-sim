@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition } from "@optcg/types";
+import type { EffectDefinition, GameState, PlayerId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import {
@@ -38,6 +38,27 @@ const addTrashCards = (
       state: "active" as const,
       attachedDon: [],
     };
+  });
+};
+
+const assertCounterPassDecision = (
+  state: GameState,
+  playerId: PlayerId,
+): NonNullable<GameState["pendingDecision"]> => {
+  const decision = must(state.pendingDecision, "counter decision");
+  assert.equal(state.battle?.step, "counter");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, playerId);
+  assert.equal(decision.prompt, "Use counter or end step.");
+  return decision;
+};
+
+const passCounterStep = (state: GameState, playerId: PlayerId) => {
+  const decision = assertCounterPassDecision(state, playerId);
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
   });
 };
 
@@ -266,7 +287,11 @@ test("unsupported trigger/blocker/counter windows fail closed without mutation",
     mutate(state);
     const before = JSON.stringify(state);
     const result = resolveSupportedVanillaBattle(state);
-    assert.equal(result.errors?.[0]?.type, "illegalAction");
+    const finalResult =
+      result.state.pendingDecision === undefined
+        ? result
+        : passCounterStep(result.state, p2);
+    assert.equal(finalResult.errors?.[0]?.type, "illegalAction");
     assert.equal(JSON.stringify(state), before);
   };
   run((state) => {
@@ -364,6 +389,45 @@ test("counter-step pass remains legal even when damage continuation would fail c
   );
 });
 
+test("counter-step pass decision opens even when defender has no legal counters", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  for (const card of p2State.hand) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      power: 3000,
+    });
+  }
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  const decision = must(opened.state.pendingDecision, "counter decision");
+  assert.equal(decision.playerId, p2);
+  assert.equal(decision.prompt, "Use counter or end step.");
+  const actions = getLegalActions(opened.state, p2);
+  assert.equal(
+    actions.some((action) => action.type === "useCounter"),
+    false,
+  );
+  assert.equal(
+    actions.some(
+      (action) =>
+        action.type === "respondToDecision" &&
+        action.decisionId === decision.id &&
+        action.response.type === "cards" &&
+        action.response.cards.length === 0,
+    ),
+    true,
+  );
+});
+
 test("banish combined with doubleAttack fails closed without mutation", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -420,8 +484,10 @@ test("When Attacking target selection resumes battle after selecting no target",
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.equal(resolved.state.battle, undefined);
+  const passed = passCounterStep(resolved.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision, undefined);
+  assert.equal(passed.state.battle, undefined);
 });
 
 test("When Attacking target selection resumes battle after selecting a target", () => {
@@ -447,8 +513,10 @@ test("When Attacking target selection resumes battle after selecting a target", 
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.equal(resolved.state.battle, undefined);
+  const passed = passCounterStep(resolved.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision, undefined);
+  assert.equal(passed.state.battle, undefined);
 });
 
 test("When Attacking top-or-bottom placement resumes battle after ordering", () => {
@@ -489,8 +557,10 @@ test("When Attacking top-or-bottom placement resumes battle after ordering", () 
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.equal(resolved.state.battle, undefined);
+  const passed = passCounterStep(resolved.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision, undefined);
+  assert.equal(passed.state.battle, undefined);
 });
 
 test("When Attacking search reveal resumes battle after choosing a card", () => {
@@ -517,6 +587,8 @@ test("When Attacking search reveal resumes battle after choosing a card", () => 
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.equal(resolved.state.battle, undefined);
+  const passed = passCounterStep(resolved.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision, undefined);
+  assert.equal(passed.state.battle, undefined);
 });

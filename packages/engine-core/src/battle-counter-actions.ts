@@ -91,7 +91,7 @@ export const createCounterStepPassDecision = (
     ),
     type: "selectCards",
     playerId: target.playerId,
-    prompt: "Pass Counter Step.",
+    prompt: "Use counter or end step.",
     causedBy: {
       type: "playerAction",
       actionId: `action:${String(state.actionSeq)}`,
@@ -1407,7 +1407,9 @@ export const enterCounterStepOrAutoPass = (
   if (unsupportedCounterWindowReason !== undefined) {
     return illegalAction(state, unsupportedCounterWindowReason);
   }
-  const decision = createCounterStepPassDecision(counterState);
+  const decision = createCounterStepPassDecision(counterState, {
+    requirePotentialCounterActions: false,
+  });
   if (decision === null) {
     return null;
   }

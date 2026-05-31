@@ -612,7 +612,10 @@ test("Counter Event resolves selected power then conditional trash-to-hand seque
     false,
   );
   assert.equal(resolved.state.battle?.step, "counter");
-  assert.equal(resolved.state.pendingDecision?.prompt, "Pass Counter Step.");
+  assert.equal(
+    resolved.state.pendingDecision?.prompt,
+    "Use counter or end step.",
+  );
   assert.equal(
     getLegalActions(resolved.state, p2).some(
       (action) => action.type === "respondToDecision",

@@ -507,7 +507,7 @@ describe("local dev match", () => {
     });
   });
 
-  test("counter-step pass action is labeled as ending the counter phase", () => {
+  test("counter-step pass prompt preserves hidden info and offers end step", () => {
     const match = createTestMatch();
     let snapshot = keepBothPlayersAndAdvance(match);
     for (let step = 0; step < 2; step += 1) {
@@ -538,11 +538,13 @@ describe("local dev match", () => {
     });
 
     assert.deepEqual(opened.errors, []);
-    const counterLabels = mustPlayerSnapshot(
-      getLocalDevSnapshot(match),
-      p2,
-    ).actions.map((action) => action.label);
-    assert.ok(counterLabels.includes("End counter phase"));
+    const counterSnapshot = mustPlayerSnapshot(getLocalDevSnapshot(match), p2);
+    const counterLabels = counterSnapshot.actions.map((action) => action.label);
+    assert.equal(
+      counterSnapshot.view.pendingDecision?.prompt,
+      "Use counter or end step.",
+    );
+    assert.ok(counterLabels.includes("End step"));
     assert.equal(counterLabels.includes("Choose 0 card"), false);
   });
 
