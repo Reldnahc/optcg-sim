@@ -6,7 +6,7 @@ import { lobbyDeckStatuses } from "./useMatchClient-support.js";
 export interface LobbyDeckPanelProps {
   lobbyState: LobbyClientState;
   disabled?: boolean | undefined;
-  onSubmitDeckHash: (deckHash: string) => Promise<void>;
+  onSubmitDeckHash: (deckHash: string, donDeckCount: number) => Promise<void>;
 }
 
 export const LobbyDeckPanel = ({
@@ -15,8 +15,14 @@ export const LobbyDeckPanel = ({
   onSubmitDeckHash,
 }: LobbyDeckPanelProps): React.JSX.Element => {
   const [deckHash, setDeckHash] = useState("");
+  const [donDeckCount, setDonDeckCount] = useState(10);
   const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
-  const canSubmit = deckHash.trim().length > 0 && !disabled;
+  const canSubmit =
+    deckHash.trim().length > 0 &&
+    Number.isInteger(donDeckCount) &&
+    donDeckCount > 0 &&
+    donDeckCount <= 10 &&
+    !disabled;
 
   return (
     <section className="lobby-deck-panel">
@@ -29,7 +35,7 @@ export const LobbyDeckPanel = ({
           if (trimmed.length === 0) {
             return;
           }
-          void onSubmitDeckHash(trimmed);
+          void onSubmitDeckHash(trimmed, donDeckCount);
         }}
       >
         <label className="deck-hash-field">
@@ -41,6 +47,20 @@ export const LobbyDeckPanel = ({
             rows={4}
             onChange={(event) => {
               setDeckHash(event.target.value);
+            }}
+          />
+        </label>
+        <label className="deck-hash-field">
+          <span>DON deck size</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            step={1}
+            value={donDeckCount}
+            disabled={disabled}
+            onChange={(event) => {
+              setDonDeckCount(Number(event.target.value));
             }}
           />
         </label>

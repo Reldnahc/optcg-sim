@@ -12,6 +12,10 @@ import {
   type DeckSubmission,
   type ReadyDeckSubmission,
 } from "./deck-submission.js";
+import {
+  validateDeckLoadout,
+  type ExplicitDonDeckSubmission,
+} from "./deck-validation.js";
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
 
 interface CreateDefaultDevMatchSetupInput {
@@ -113,11 +117,12 @@ export const createDevDonDeckCardIds = (count: number): CardId[] =>
   );
 
 export const defaultDevDonCounts: DevDonCounts = {
-  firstPlayer: 6,
+  firstPlayer: 10,
   secondPlayer: 10,
 };
 
 export const defaultDevEffectDefinitionsVersion = "generated-dev-v3";
+const defaultDevDeckValidatorVersion = "dev-deck-validator-v1";
 
 const assertValidDevDonCount = (value: number, label: string): number => {
   if (!Number.isInteger(value) || value <= 0) {
@@ -170,6 +175,66 @@ export const createDevPlayerSetupFromDecklist = (
   };
 };
 
+const createExplicitDevDonDeckSubmission = (
+  count: number,
+): ExplicitDonDeckSubmission => ({
+  source: "explicit",
+  entries: createDevDonDeckCardIds(count).map((cardId) => ({
+    cardId,
+    count: 1,
+  })),
+});
+
+export const validateAndAdaptDevDecklist = async ({
+  decklist,
+  cardManifest,
+  validationCache,
+}: {
+  readonly decklist: DevDecklist;
+  readonly cardManifest: Awaited<
+    ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
+  >;
+  readonly validationCache?: Awaited<
+    ReturnType<typeof createRedisCardDataCache>
+  >;
+}): Promise<DevDecklist> => {
+  const validation = await validateDeckLoadout({
+    formatId: "sandbox-open",
+    mainDeck: {
+      source: "deckHash",
+      hash: "dev-decklist",
+      status: "ready",
+      decoded: {
+        leader: decklist.leader,
+        main: decklist.deckEntries,
+      },
+      donDeckCount: decklist.donDeckCount,
+    },
+    donDeck: createExplicitDevDonDeckSubmission(decklist.donDeckCount),
+    cards: cardManifest.cards,
+    versions: {
+      validatorVersion: defaultDevDeckValidatorVersion,
+      cardDataVersion: cardManifest.cardDataVersion,
+      effectDefinitionsVersion: cardManifest.effectDefinitionsVersion,
+      overlayVersion: "dev-overlay-v1",
+      banlistVersion: cardManifest.banlistVersion,
+      rulesVersion: "dev-rules-v1",
+    },
+    ...(validationCache === undefined ? {} : { cache: validationCache }),
+  });
+  if (!validation.valid) {
+    throw new Error(
+      `Dev decklist failed validation: ${validation.errors
+        .map((error) => error.message)
+        .join("; ")}`,
+    );
+  }
+  return {
+    ...decklist,
+    donDeckCount: validation.matchDonDeck.cards.length,
+  };
+};
+
 export const validateDevDeckSubmissionVariants = (
   decklist: DevDecklist,
   manifest: DevManifestForDeckSubmission,
@@ -206,12 +271,23 @@ export const validateReadyDevDeckSubmission = async (
     },
     decklist.donDeckCount,
   );
+  const validationCache =
+    input.fetchCard === undefined
+      ? await createRedisCardDataCache({
+          url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
+        })
+      : undefined;
   validateDevDeckSubmissionVariants(decklist, cardManifest);
-  createDevPlayerSetupFromDecklist(
-    "p1" as PlayerId,
+  const adaptedDecklist = await validateAndAdaptDevDecklist({
     decklist,
     cardManifest,
-    createDevDonDeckCardIds(decklist.donDeckCount),
+    ...(validationCache === undefined ? {} : { validationCache }),
+  });
+  createDevPlayerSetupFromDecklist(
+    "p1" as PlayerId,
+    adaptedDecklist,
+    cardManifest,
+    createDevDonDeckCardIds(adaptedDecklist.donDeckCount),
   );
 };
 
@@ -315,12 +391,28 @@ export const createDevMatchSetupFromDeckSubmissions = async (
     input,
     devDonCount,
   );
+  const validationCache =
+    input.fetchCard === undefined
+      ? await createRedisCardDataCache({
+          url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
+        })
+      : undefined;
   validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
   validateDevDeckSubmissionVariants(secondPlayerDecklist, cardManifest);
+  const adaptedFirstPlayerDecklist = await validateAndAdaptDevDecklist({
+    decklist: firstPlayerDecklist,
+    cardManifest,
+    ...(validationCache === undefined ? {} : { validationCache }),
+  });
+  const adaptedSecondPlayerDecklist = await validateAndAdaptDevDecklist({
+    decklist: secondPlayerDecklist,
+    cardManifest,
+    ...(validationCache === undefined ? {} : { validationCache }),
+  });
   return createDevMatchSetupFromDecklists({
     input,
-    firstPlayerDecklist,
-    secondPlayerDecklist,
+    firstPlayerDecklist: adaptedFirstPlayerDecklist,
+    secondPlayerDecklist: adaptedSecondPlayerDecklist,
     cardManifest,
   });
 };

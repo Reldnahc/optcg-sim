@@ -16,6 +16,7 @@ import {
   defaultDevEffectDefinitionsVersion,
   resolveDevDonCounts,
   validateDevDeckSubmissionVariants,
+  validateAndAdaptDevDecklist,
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
 
@@ -118,10 +119,95 @@ describe("default dev manifest boundary", () => {
       "dev-don-6",
     ]);
     assert.deepEqual(defaultDevDonCounts, {
-      firstPlayer: 6,
+      firstPlayer: 10,
       secondPlayer: 10,
     });
-    assert.deepEqual(resolveDevDonCounts(defaultDevDonCounts), [6, 10]);
+    assert.deepEqual(resolveDevDonCounts(defaultDevDonCounts), [10, 10]);
+  });
+
+  test("deck validation adapts submitted DON decks from leader construction rules", async () => {
+    const adapted = await validateAndAdaptDevDecklist({
+      decklist: createDevDecklistFromSubmission(
+        readySubmission("OP15-058" as CardId, [], 10),
+      ),
+      cardManifest: {
+        manifestHash: "manifest",
+        source: "poneglyph",
+        cardDataVersion: "cards",
+        effectDefinitionsVersion: "effects",
+        customHandlerVersion: "custom",
+        banlistVersion: "banlist",
+        createdAt: "2026-05-31T00:00:00.000Z",
+        cards: {
+          ["OP15-058" as CardId]: {
+            cardId: "OP15-058" as CardId,
+            language: "en",
+            name: "OP15-058",
+            category: "leader",
+            set: "TEST",
+            setName: "Test",
+            released: true,
+            colors: ["purple"],
+            life: 5,
+            attributes: [],
+            types: [],
+            effectText:
+              "Under the rules of this game, your DON!! deck consists of 6 cards.",
+            printedKeywords: [],
+            variants: [],
+            legality: {},
+            officialFaq: [],
+            errata: [],
+            sourceTextHash: "source",
+            behaviorHash: "behavior",
+            support: {
+              cardId: "OP15-058" as CardId,
+              status: "implemented-dsl",
+              tested: true,
+              rulesVersion: "rules",
+              cardDataVersion: "cards",
+              sourceTextHash: "source",
+              behaviorHash: "behavior",
+            },
+          },
+          ...Object.fromEntries(
+            createDevDonDeckCardIds(10).map((cardId) => [
+              cardId,
+              {
+                cardId,
+                language: "en",
+                name: String(cardId),
+                category: "don",
+                set: "TEST",
+                setName: "Test",
+                released: true,
+                colors: [],
+                attributes: [],
+                types: [],
+                printedKeywords: [],
+                variants: [],
+                legality: {},
+                officialFaq: [],
+                errata: [],
+                sourceTextHash: "source",
+                behaviorHash: "behavior",
+                support: {
+                  cardId,
+                  status: "vanilla-confirmed",
+                  tested: true,
+                  rulesVersion: "rules",
+                  cardDataVersion: "cards",
+                  sourceTextHash: "source",
+                  behaviorHash: "behavior",
+                },
+              },
+            ]),
+          ),
+        },
+      },
+    });
+
+    assert.equal(adapted.donDeckCount, 6);
   });
 
   test("dev generated effect definition cache version invalidates parser-output changes", () => {

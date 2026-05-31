@@ -197,14 +197,27 @@ const handleApiRequest = async (
     );
     const body = await readRequestJson(request);
     const deckHash = isRecord(body) ? body["deckHash"] : undefined;
+    const donDeckCount = isRecord(body) ? body["donDeckCount"] : undefined;
     if (typeof deckHash !== "string" || deckHash.trim().length === 0) {
       sendJson(response, 400, { errors: ["Deck hash is required."] });
+      return;
+    }
+    if (
+      typeof donDeckCount !== "number" ||
+      !Number.isInteger(donDeckCount) ||
+      donDeckCount < 1 ||
+      donDeckCount > 10
+    ) {
+      sendJson(response, 400, {
+        errors: ["DON deck count must be an integer from 1 to 10."],
+      });
       return;
     }
     const result = await lobbyRegistry.submitDeck(
       lobbyId,
       authProvider.authenticate(request),
       deckHash.trim(),
+      donDeckCount,
     );
     if (result === "lobbyNotFound") {
       sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });

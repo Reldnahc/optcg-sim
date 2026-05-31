@@ -95,6 +95,7 @@ const submitDevLobbyDeck = async (
   lobbyId: string,
   guestToken: string,
   deckHash: string,
+  donDeckCount = 10,
 ): Promise<CreatedDevLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/deck`, {
     method: "POST",
@@ -102,7 +103,7 @@ const submitDevLobbyDeck = async (
       "content-type": "application/json",
       "x-optcg-session-token": guestToken,
     },
-    body: JSON.stringify({ deckHash }),
+    body: JSON.stringify({ deckHash, donDeckCount }),
   });
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedDevLobbyBody;
@@ -331,7 +332,10 @@ describe("dev HTTP lobby deck submissions", () => {
             "content-type": "application/json",
             "x-optcg-session-token": "guest-a",
           },
-          body: JSON.stringify({ deckHash: "bad-cache-hash" }),
+          body: JSON.stringify({
+            deckHash: "bad-cache-hash",
+            donDeckCount: 10,
+          }),
         },
       );
       assert.equal(response.status, 400);

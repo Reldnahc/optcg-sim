@@ -37,6 +37,7 @@ const createFakeTransport = (): MatchTransport & {
     lobbyId: string;
     guestToken: string;
     deckHash: string;
+    donDeckCount: number;
   }>;
 } => {
   const claimedSeats: Array<{
@@ -52,6 +53,7 @@ const createFakeTransport = (): MatchTransport & {
     lobbyId: string;
     guestToken: string;
     deckHash: string;
+    donDeckCount: number;
   }> = [];
   const lobbySeats = ({
     p1Ready = false,
@@ -619,6 +621,7 @@ describe("match client controller", () => {
     await controller.joinLocalLobby({ lobbyId: "lobby-1" });
     const next = await controller.submitLobbyDeckHash({
       deckHash: "deck-hash",
+      donDeckCount: 6,
     });
 
     assert.deepEqual(transport.submittedLobbyDecks, [
@@ -626,6 +629,7 @@ describe("match client controller", () => {
         lobbyId: "lobby-1",
         guestToken: transport.joinedLobbies[0]?.guestToken,
         deckHash: "deck-hash",
+        donDeckCount: 6,
       },
     ]);
     assert.equal("lobbyId" in next, true);

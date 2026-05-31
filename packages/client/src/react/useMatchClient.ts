@@ -318,10 +318,13 @@ export const useMatchClient = (): MatchClientUi => {
     });
 
   const submitLobbyDeckHash = useCallback(
-    async (deckHash: string): Promise<void> => {
+    async (deckHash: string, donDeckCount: number): Promise<void> => {
       setActionInFlight(true);
       try {
-        const result = await controller.submitLobbyDeckHash({ deckHash });
+        const result = await controller.submitLobbyDeckHash({
+          deckHash,
+          donDeckCount,
+        });
         if (
           isMatchClientState(result) ||
           isFirstPlayerSetupClientState(result)

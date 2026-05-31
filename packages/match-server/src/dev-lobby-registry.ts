@@ -2,8 +2,6 @@ import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDevMatchSetupFromDeckSubmissions,
-  defaultDevDonCounts,
-  resolveDevDonCounts,
   validateReadyDevDeckSubmission,
 } from "./default-dev-manifest.js";
 import {
@@ -60,6 +58,7 @@ export interface LocalDevLobbyRegistry {
     lobbyId: string,
     auth: AuthContext | undefined,
     deckHash: string,
+    donDeckCount: number,
   ) => Promise<
     | CreatedDevLobbyResponse
     | "lobbyNotFound"
@@ -123,12 +122,6 @@ export const createLocalDevLobbyRegistry = (
 ): LocalDevLobbyRegistry => {
   let nextLobbyNumber = 1;
   const lobbies = new Map<string, LocalDevLobby>();
-  const [firstPlayerDonCount, secondPlayerDonCount] =
-    resolveDevDonCounts(defaultDevDonCounts);
-
-  const donDeckCountForSeat = (playerId: PlayerId): number =>
-    playerId === p1 ? firstPlayerDonCount : secondPlayerDonCount;
-
   const ensureMatchWhenReady = async (lobby: LocalDevLobby): Promise<void> => {
     if (
       lobby.matchId !== undefined ||
@@ -214,7 +207,7 @@ export const createLocalDevLobbyRegistry = (
         seat: { playerId: open.playerId },
       };
     },
-    async submitDeck(lobbyId, auth, deckHash) {
+    async submitDeck(lobbyId, auth, deckHash, donDeckCount) {
       if (auth === undefined) {
         return "unauthenticated";
       }
@@ -232,7 +225,7 @@ export const createLocalDevLobbyRegistry = (
       }
       const submission = await decodeDeckHashSubmission({
         hash: deckHash,
-        donDeckCount: donDeckCountForSeat(seat.playerId),
+        donDeckCount,
         ...(options.deckHashCodec === undefined
           ? {}
           : { codec: options.deckHashCodec }),

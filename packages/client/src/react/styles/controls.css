@@ -83,7 +83,8 @@
   font-size: 13px;
 }
 
-.deck-hash-field textarea {
+.deck-hash-field textarea,
+.deck-hash-field input {
   min-height: 78px;
   max-height: 150px;
   border: 1px solid rgba(255, 255, 255, 0.36);
@@ -93,6 +94,11 @@
   padding: 8px;
   resize: vertical;
   word-break: break-all;
+}
+
+.deck-hash-field input {
+  min-height: 34px;
+  max-height: none;
 }
 
 .deck-hash-form button {

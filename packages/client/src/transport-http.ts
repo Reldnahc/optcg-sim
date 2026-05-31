@@ -73,7 +73,7 @@ export const createDevHttpMatchTransport = ({
     async submitLobbyDeck(input) {
       return postJson<LocalLobby>(
         lobbyPath(input.lobbyId, "/deck"),
-        { deckHash: input.deckHash },
+        { deckHash: input.deckHash, donDeckCount: input.donDeckCount },
         input.guestToken,
       );
     },

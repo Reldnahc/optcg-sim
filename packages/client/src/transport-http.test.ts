@@ -114,6 +114,7 @@ describe("dev HTTP match transport", () => {
       lobbyId: "lobby-1",
       guestToken: "guest-a",
       deckHash: "hash-a",
+      donDeckCount: 6,
     });
 
     const request = recorder.requests[0];
@@ -124,7 +125,10 @@ describe("dev HTTP match transport", () => {
       throw new Error("Expected deck submission request init.");
     }
     assert.equal(request.url, "http://localhost:3000/api/lobbies/lobby-1/deck");
-    assert.equal(request.init.body, JSON.stringify({ deckHash: "hash-a" }));
+    assert.equal(
+      request.init.body,
+      JSON.stringify({ deckHash: "hash-a", donDeckCount: 6 }),
+    );
     assert.equal(
       new Headers(request.init.headers).get("x-optcg-session-token"),
       "guest-a",

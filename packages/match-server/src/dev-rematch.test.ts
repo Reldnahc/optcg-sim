@@ -272,6 +272,7 @@ const submitDevLobbyDeck = async (
   lobbyId: string,
   guestToken: string,
   deckHash: string,
+  donDeckCount = 10,
 ): Promise<CreatedDevLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/deck`, {
     method: "POST",
@@ -279,7 +280,7 @@ const submitDevLobbyDeck = async (
       "content-type": "application/json",
       "x-optcg-session-token": guestToken,
     },
-    body: JSON.stringify({ deckHash }),
+    body: JSON.stringify({ deckHash, donDeckCount }),
   });
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedDevLobbyBody;

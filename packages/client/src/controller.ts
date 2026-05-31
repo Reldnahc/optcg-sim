@@ -59,6 +59,7 @@ export interface MatchClientController {
   }) => Promise<MatchClientSessionState>;
   submitLobbyDeckHash: (input: {
     deckHash: string;
+    donDeckCount: number;
   }) => Promise<MatchClientSessionState>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
   joinLocalMatch: (
@@ -271,6 +272,7 @@ export const createMatchClientController = ({
         lobbyId: currentLobbyState.lobbyId,
         guestToken: currentLobbyState.seat.sessionToken,
         deckHash: input.deckHash,
+        donDeckCount: input.donDeckCount,
       });
       return claimMatchIfReady({
         ...currentLobbyState,

@@ -269,6 +269,7 @@ export interface MatchTransport {
     lobbyId: string;
     guestToken: string;
     deckHash: string;
+    donDeckCount: number;
   }) => Promise<LocalLobby>;
   loadLobby: (lobbyId: string) => Promise<LocalLobby>;
   createMatch: () => Promise<CreatedMatch>;

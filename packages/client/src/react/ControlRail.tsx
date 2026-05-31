@@ -64,7 +64,9 @@ export interface ControlRailProps {
   settingsControl?: ReactNode | undefined;
   lobbyDeckState?: LobbyClientState | undefined;
   deckSubmissionDisabled?: boolean | undefined;
-  onSubmitDeckHash?: ((deckHash: string) => Promise<void>) | undefined;
+  onSubmitDeckHash?:
+    | ((deckHash: string, donDeckCount: number) => Promise<void>)
+    | undefined;
 }
 
 export const ControlRail = ({

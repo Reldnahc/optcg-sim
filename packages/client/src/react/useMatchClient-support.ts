@@ -74,7 +74,10 @@ export interface MatchClientUi {
   requestRollback: (rollbackPointId: string) => Promise<void>;
   cancelRollback: () => Promise<void>;
   createNewMatch: () => Promise<void>;
-  submitLobbyDeckHash: (deckHash: string) => Promise<void>;
+  submitLobbyDeckHash: (
+    deckHash: string,
+    donDeckCount: number,
+  ) => Promise<void>;
 }
 
 export const matchIdFromUrl = (): MatchId | undefined => {
