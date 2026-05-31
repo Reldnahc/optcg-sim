@@ -90,7 +90,13 @@ export interface MatchCardCatalogEntry {
 }
 
 export interface MatchCardCatalog {
-  players: Record<PlayerId, { cards: Record<CardId, MatchCardCatalogEntry> }>;
+  players: Record<
+    PlayerId,
+    {
+      cards: Record<CardId, MatchCardCatalogEntry>;
+      instances?: Record<InstanceId, MatchCardCatalogEntry>;
+    }
+  >;
 }
 
 export interface CreatedMatch {

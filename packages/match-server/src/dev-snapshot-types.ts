@@ -2,6 +2,7 @@ import type {
   CardId,
   CardInstance,
   GameState,
+  InstanceId,
   PlayerId,
   PlayerView,
   Zone,
@@ -94,6 +95,7 @@ export interface DevCardCatalogEntry {
 
 export interface DevPlayerCardCatalog {
   cards: Record<CardId, DevCardCatalogEntry>;
+  instances?: Record<InstanceId, DevCardCatalogEntry>;
 }
 
 export interface DevVisibleCardCatalog {

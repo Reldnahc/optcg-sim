@@ -24,7 +24,9 @@ import type {
   CardInstance,
   DecisionId,
   DecisionResponse,
+  InstanceId,
   PaymentOption,
+  VariantKey,
 } from "@optcg/types";
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
@@ -34,6 +36,7 @@ import {
   buildLocalDevCardCatalog,
   buildLocalDevCardCatalogForPlayer,
 } from "./local-card-catalog.js";
+import { cardVariantOverridesForSetup } from "./local-card-variants.js";
 import type {
   DevMatchSnapshot,
   DevPlayerSnapshot,
@@ -82,6 +85,7 @@ export interface DevMatchSetup {
 export interface LocalDevMatch {
   state: GameState;
   rollback: LocalRollbackState;
+  cardVariantOverrides: Record<InstanceId, VariantKey>;
 }
 
 export interface CreatePremadeDevMatchSetupOptions {
@@ -387,12 +391,13 @@ export const createLocalDevMatch = (setup: DevMatchSetup): LocalDevMatch => {
     shuffleDecks: setup.shuffleDecks ?? false,
   });
   const rollback = createLocalRollbackState(setup.rollback);
+  const cardVariantOverrides = cardVariantOverridesForSetup(setup);
   if (setupState.pendingDecision !== undefined) {
-    return { state: setupState, rollback };
+    return { state: setupState, rollback, cardVariantOverrides };
   }
   const started = startMulliganFlow(setupState);
   assertEngineResult(started, "Local dev match boot");
-  return { state: started.state, rollback };
+  return { state: started.state, rollback, cardVariantOverrides };
 };
 
 const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
@@ -1007,7 +1012,11 @@ export const cancelLocalDevRollback = (
 export const getLocalDevCardCatalog = (
   match: LocalDevMatch,
 ): DevVisibleCardCatalog =>
-  buildLocalDevCardCatalog(match.state, getLocalDevSnapshot(match));
+  buildLocalDevCardCatalog(
+    match.state,
+    getLocalDevSnapshot(match),
+    match.cardVariantOverrides,
+  );
 
 export const getLocalDevCardCatalogForPlayer = (
   match: LocalDevMatch,
@@ -1017,4 +1026,5 @@ export const getLocalDevCardCatalogForPlayer = (
     match.state,
     getLocalDevSnapshotForPlayer(match, playerId),
     playerId,
+    match.cardVariantOverrides,
   );

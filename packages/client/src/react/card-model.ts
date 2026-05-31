@@ -7,7 +7,13 @@ import type { ClientCardModel } from "../view-model.js";
 const catalogEntryForCard = (
   catalog: MatchCardCatalog | undefined,
   card: CardRef,
-) => catalog?.players[card.playerId]?.cards[card.cardId];
+) => {
+  const playerCatalog = catalog?.players[card.playerId];
+  return (
+    playerCatalog?.instances?.[card.instanceId] ??
+    playerCatalog?.cards[card.cardId]
+  );
+};
 
 export const cardDisplayFromCatalog = (
   catalog: MatchCardCatalog | undefined,
