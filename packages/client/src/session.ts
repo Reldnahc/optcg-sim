@@ -9,6 +9,10 @@ export interface ClientSeatCredential extends ClientSeatIdentity {
   sessionToken: string;
 }
 
+export interface ClientGuestIdentity {
+  guestToken: string;
+}
+
 export interface ClientStorage {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
@@ -20,11 +24,16 @@ export interface ClientSessionStore {
   loadCurrentSeat: () => ClientSeatIdentity | undefined;
   saveClaimedSeat: (credential: ClientSeatCredential) => void;
   loadClaimedSeat: () => ClientSeatCredential | undefined;
+  loadGuestIdentity: () => ClientGuestIdentity | undefined;
+  loadOrCreateGuestIdentity: () => ClientGuestIdentity;
   clear: () => void;
 }
 
 const currentSeatKey = "optcg:client:current-seat";
 const credentialKey = "optcg:client:seat-credential";
+const guestIdentityKey = "optcg:client:guest-identity";
+
+const createGuestToken = (): string => `guest:${crypto.randomUUID()}`;
 
 const isStringRecord = (value: unknown): value is Record<string, string> =>
   typeof value === "object" &&
@@ -78,6 +87,14 @@ const loadCredential = (
   };
 };
 
+const loadGuestIdentity = (
+  storage: ClientStorage,
+): ClientGuestIdentity | undefined => {
+  const parsed = parseJsonRecord(storage.getItem(guestIdentityKey));
+  const guestToken = parsed?.["guestToken"];
+  return guestToken === undefined ? undefined : { guestToken };
+};
+
 export const createClientSessionStore = ({
   storage,
 }: {
@@ -119,9 +136,22 @@ export const createClientSessionStore = ({
     }
     return credential;
   },
+  loadGuestIdentity() {
+    return loadGuestIdentity(storage);
+  },
+  loadOrCreateGuestIdentity() {
+    const existing = loadGuestIdentity(storage);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const guest = { guestToken: createGuestToken() };
+    storage.setItem(guestIdentityKey, JSON.stringify(guest));
+    return guest;
+  },
   clear() {
     storage.removeItem(currentSeatKey);
     storage.removeItem(credentialKey);
+    storage.removeItem(guestIdentityKey);
   },
 });
 
