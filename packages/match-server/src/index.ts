@@ -32,3 +32,41 @@ export type {
   CreateDevHttpServerOptions,
   DevHttpServer,
 } from "./dev-http-server.js";
+export { canonicalJson } from "./canonical-json.js";
+export { idempotencyKey, requestHash } from "./action-envelope.js";
+export type {
+  ActionRejectionReason,
+  ClientActionEnvelope,
+  DisconnectPolicyMode,
+  FirstPlayerChoiceSource,
+  FirstPlayerChoiceState,
+  FirstPlayerChoiceValue,
+  GameType,
+  MatchCreationSource,
+  MatchSessionMetadata,
+  MatchPersistence,
+  MatchPersistenceSnapshot,
+  RecoveryLock,
+  RollbackPolicyMode,
+  SessionActionRequest,
+  SessionActionResult,
+  SpectatorPolicyMode,
+  StoredSessionRecord,
+} from "./session-types.js";
+export { createMatchSessionRuntime } from "./match-session.js";
+export type {
+  CreateMatchSessionRuntimeOptions,
+  MatchSessionRuntime,
+} from "./match-session.js";
+export { createInMemoryMatchSessionStore } from "./match-session-store.js";
+export type { MatchSessionStore } from "./match-session-store.js";
+export { createInMemoryMatchPersistence } from "./match-persistence.js";
+export type {
+  FreezeRecord,
+  InMemoryMatchPersistence,
+} from "./match-persistence.js";
+export { recoverActiveMatches } from "./match-recovery.js";
+export type {
+  RecoveredMatchSummary,
+  RecoverActiveMatchesInput,
+} from "./match-recovery.js";
