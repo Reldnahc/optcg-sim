@@ -49,10 +49,11 @@ function parseOpponentFieldRemovalReplacement(text: string):
     }
   | undefined {
   const match =
-    /^If (?<target>.+?) would be removed from the field by your opponent,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would be removed from the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
       text.trim(),
     );
   const targetText = match?.groups?.["target"];
+  const effectOnlyText = match?.groups?.["effectOnly"];
   const bodyText = match?.groups?.["body"];
   if (targetText === undefined || bodyText === undefined) {
     return undefined;
@@ -66,7 +67,8 @@ function parseOpponentFieldRemovalReplacement(text: string):
   ) {
     return undefined;
   }
-  const instead = parseTopLifeToHandInstead(bodyText);
+  const instead =
+    parseTopLifeToHandInstead(bodyText) ?? parseRestCardsInstead(bodyText);
   if (instead === undefined) {
     return undefined;
   }
@@ -75,10 +77,17 @@ function parseOpponentFieldRemovalReplacement(text: string):
     when: {
       type: "wouldMoveZone",
       from: target.target.zone,
+      ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
       target: target.target,
     },
     instead: instead.effect,
-    evidence: [...target.evidence, ...instead.evidence],
+    evidence: [
+      ...(effectOnlyText === undefined
+        ? []
+        : ["replacementSource:cardEffect" as const]),
+      ...target.evidence,
+      ...instead.evidence,
+    ],
   };
 }
 
@@ -113,6 +122,52 @@ function parseTopLifeToHandInstead(text: string):
       "position:top",
       "destination:hand",
       "order:original",
+    ],
+  };
+}
+
+function parseRestCardsInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  const match =
+    /^you may rest (?<count>[1-9]\d*) of your cards instead\.?$/i.exec(
+      text.trim(),
+    );
+  const countText = match?.groups?.["count"];
+  if (countText === undefined) {
+    return undefined;
+  }
+  const count = Number.parseInt(countText, 10);
+
+  return {
+    effect: {
+      type: "rest",
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+          min: count,
+          max: count,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    evidence: [
+      "instruction:rest",
+      "target:yourCards",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "zone:stageArea",
+      "zone:costArea",
+      "cardinality:exact",
+      "count:positiveInteger",
     ],
   };
 }

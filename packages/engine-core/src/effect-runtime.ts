@@ -28,7 +28,12 @@ import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-que
 import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
 
 export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
-export { executeAcceptedSelectedTargetKoReplacementProcess } from "./effect-runtime-ko-replacement-process.js";
+export {
+  applyReplacementRestTargetDecisionResponse,
+  executeAcceptedSelectedTargetKoReplacementProcess,
+  getReplacementRestTargetLegalActions,
+  isReplacementRestTargetsDecision,
+} from "./effect-runtime-ko-replacement-process.js";
 export type {
   BattleKOTriggerCandidate,
   DetectBattleKOTriggerCandidatesResult,

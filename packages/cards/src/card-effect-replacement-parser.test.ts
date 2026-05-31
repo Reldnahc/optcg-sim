@@ -66,4 +66,80 @@ describe("replacement effect parser", () => {
       assert.equal(result.evidence.includes(evidence), true, evidence);
     }
   });
+
+  it("parses opponent effect field-removal replacement into reusable rest-card instead primitives", () => {
+    const target = {
+      type: "all",
+      zone: "characterArea",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        power: { max: 7000 },
+      },
+    } as const;
+    const when = {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      target,
+    } as const;
+
+    const result = parseCardEffectLine(
+      "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may rest 2 of your cards instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+              min: 2,
+              max: 2,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+      },
+    });
+    for (const evidence of [
+      "entry:replacement",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "sourcePresence:resolveFromLastKnownInformation",
+      "target:yourCharacters",
+      "filter:category:character",
+      "filter:power",
+      "condition:comparator:lte",
+      "instruction:rest",
+      "target:yourCards",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "zone:stageArea",
+      "zone:costArea",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "composition:replacementInstead",
+      "composition:entryExpression",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
 });

@@ -4,7 +4,7 @@ export function parseReplacementEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
   const match =
-    /^If .+? would be removed from the field by your opponent,\s*you may\b/i.exec(
+    /^If .+? would be removed from the field by your opponent(?:'s effects?)?,\s*you may\b/i.exec(
       input.text.trimStart(),
     );
   if (match === null) {

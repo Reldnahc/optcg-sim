@@ -364,7 +364,13 @@ export type ReplacementTrigger =
   | { type: "wouldTakeDamage"; target: Target }
   | { type: "wouldBeTrashed"; target: Target }
   | { type: "wouldDraw"; player: PlayerRef }
-  | { type: "wouldMoveZone"; from?: Zone; to?: Zone; target: Target }
+  | {
+      type: "wouldMoveZone";
+      from?: Zone;
+      to?: Zone;
+      sourceKind?: "battle" | "cardEffect";
+      target: Target;
+    }
   | { type: "custom"; event: string };
 
 export interface EffectOption {

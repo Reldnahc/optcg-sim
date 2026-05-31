@@ -1,19 +1,25 @@
 import type {
+  Action,
   CardInstance,
   CardRef,
   CardSnapshot,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
+  EngineResult,
   GameState,
+  LegalAction,
   PlayerId,
   ReplacementProcess,
+  SelectTargetsDecision,
+  TargetCandidate,
   TimingWindowId,
 } from "@optcg/types";
 
 import {
   appendEvent,
   rebaseEvents,
+  toEngineResult,
   toDecisionId,
   toStateSeq,
 } from "./action-results.js";
@@ -27,6 +33,8 @@ import {
   detectSupportedSelectedTargetKoReplacementCandidate,
   type SelectedTargetKoReplacementCandidate,
 } from "./effect-runtime-replacement-primitives.js";
+import { restFieldObjects } from "./effect-runtime-sequence-saved-field-object.js";
+import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 export type {
   DetectSelectedTargetKoReplacementCandidateResult,
@@ -66,6 +74,15 @@ type EngineInternalReplacementAppliedEventPayload = {
   previousPayloadHash: string;
   transformedPayloadHash: string;
 };
+
+interface PendingReplacementRestInsteadPayload {
+  decisionId: string;
+  effectBlockId: EffectQueueEntry["effectBlockId"];
+  replacementId: string;
+  source: CardRef;
+  target?: CardRef;
+  controllerId: PlayerId;
+}
 
 export const buildKoReplacementProcess = (params: {
   battleContinuation?: SelectedTargetKoReplacementPayload["battleContinuation"];
@@ -260,7 +277,87 @@ const replacementOptionLabel = (
       "cards",
     )} from Life to hand instead`;
   }
+  if (isSupportedRestOwnCardsInsteadEffect(instead)) {
+    return `Rest ${String(instead.target.request.min)} ${plural(
+      instead.target.request.min,
+      "card",
+      "cards",
+    )} instead`;
+  }
   return "Use replacement effect";
+};
+
+const isSupportedRestOwnCardsInsteadEffect = (
+  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+): effect is Extract<
+  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+  { type: "rest" }
+> & {
+  target: Extract<
+    Extract<
+      SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+      { type: "rest" }
+    >["target"],
+    { type: "chooseFromZones" }
+  >;
+} =>
+  effect.type === "rest" &&
+  effect.target.type === "chooseFromZones" &&
+  effect.target.request.timing === "onResolution" &&
+  effect.target.request.chooser === "self" &&
+  effect.target.request.player === "self" &&
+  effect.target.request.filter === undefined &&
+  effect.target.request.min === effect.target.request.max &&
+  effect.target.request.min > 0 &&
+  !effect.target.request.allowFewerIfUnavailable &&
+  effect.target.request.visibility === "public";
+
+const replacementRestCandidateIsActive = (
+  state: GameState,
+  target: CardRef,
+): boolean => {
+  const located = findKoTargetByInstanceId(state, target.instanceId);
+  if (located !== null) {
+    return located.card.state !== "rested";
+  }
+  const player = state.players[target.playerId];
+  if (player === undefined) {
+    return false;
+  }
+  if (
+    target.zone?.zone === "leaderArea" &&
+    player.leader.instanceId === target.instanceId
+  ) {
+    return player.leader.state !== "rested";
+  }
+  if (target.zone?.zone === "costArea") {
+    return player.costArea.some(
+      (card) =>
+        card.instanceId === target.instanceId && card.state !== "rested",
+    );
+  }
+  return false;
+};
+
+const replacementRestCandidates = (
+  state: GameState,
+  candidate: SelectedTargetKoReplacementCandidate,
+): TargetCandidate[] => {
+  const instead = candidate.replacementEffect.instead;
+  if (!isSupportedRestOwnCardsInsteadEffect(instead)) {
+    return [];
+  }
+  const resolved = resolvePublicTargetCandidatesForRequest(
+    state,
+    instead.target.request,
+    { sourceControllerId: candidate.controllerId },
+  );
+  if (!resolved.ok) {
+    return [];
+  }
+  return resolved.candidates.filter((target) =>
+    replacementRestCandidateIsActive(state, target.card),
+  );
 };
 
 const acceptedReplacementError = (
@@ -362,6 +459,63 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     ...process,
     usedReplacementIds: [...process.usedReplacementIds, candidate.id],
   };
+  const restDecision = createReplacementRestTargetDecision(
+    state,
+    process,
+    candidate,
+  );
+  if (restDecision !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: restDecision.id,
+        decisionType: restDecision.type,
+        playerId: restDecision.playerId,
+      },
+      restDecision.visibility,
+    );
+    const created = events[events.length - 1];
+    if (created !== undefined) {
+      created.causedBy = restDecision.causedBy;
+    }
+    return {
+      state: {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        pendingDecision: restDecision,
+        replacementState: [
+          ...state.replacementState.filter(
+            (candidateState) => candidateState.processId !== process.id,
+          ),
+          {
+            processId: process.id,
+            type: process.type,
+            usedReplacementIds: usedProcess.usedReplacementIds,
+            payload: {
+              ...(typeof process.payload === "object" &&
+              process.payload !== null
+                ? process.payload
+                : {}),
+              pendingReplacementRestInstead: {
+                decisionId: restDecision.id,
+                effectBlockId: candidate.effectBlockId,
+                replacementId: candidate.id,
+                source: candidate.source,
+                ...(process.target === undefined
+                  ? {}
+                  : { target: process.target }),
+                controllerId: candidate.controllerId,
+              } satisfies PendingReplacementRestInsteadPayload,
+            },
+          },
+        ],
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      process: usedProcess,
+    };
+  }
   const transformedPayload = replacementInsteadTransformedPayload(candidate);
   appendEvent(
     state,
@@ -428,6 +582,344 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     process: usedProcess,
   };
 };
+
+const createReplacementRestTargetDecision = (
+  state: GameState,
+  process: ReplacementProcess,
+  candidate: SelectedTargetKoReplacementCandidate,
+): SelectTargetsDecision | undefined => {
+  const instead = candidate.replacementEffect.instead;
+  if (!isSupportedRestOwnCardsInsteadEffect(instead)) {
+    return undefined;
+  }
+  const candidates = replacementRestCandidates(state, candidate);
+  if (candidates.length < instead.target.request.min) {
+    return undefined;
+  }
+  if (state.players[candidate.controllerId] === undefined) {
+    return undefined;
+  }
+  return {
+    id: toDecisionId(
+      `decision:replacementRestTargets:${process.id}:${candidate.id}`,
+    ),
+    type: "selectTargets",
+    playerId: candidate.controllerId,
+    prompt: `Rest ${String(instead.target.request.min)} ${plural(
+      instead.target.request.min,
+      "card",
+      "cards",
+    )} instead.`,
+    causedBy: { type: "replacement", replacementId: candidate.id },
+    visibility: { type: "public" },
+    request: instead.target.request,
+    candidates,
+  };
+};
+
+const pendingReplacementRestPayload = (
+  state: GameState,
+  decision: NonNullable<GameState["pendingDecision"]> | undefined,
+): {
+  processId: string;
+  payload: PendingReplacementRestInsteadPayload;
+} | null => {
+  if (decision?.type !== "selectTargets") {
+    return null;
+  }
+  const processState = state.replacementState.find((candidate) => {
+    const payload = candidate.payload;
+    return (
+      typeof payload === "object" &&
+      payload !== null &&
+      "pendingReplacementRestInstead" in payload &&
+      pendingReplacementRestInsteadFromPayload(payload)?.decisionId ===
+        decision.id
+    );
+  });
+  const payload =
+    processState === undefined
+      ? undefined
+      : pendingReplacementRestInsteadFromPayload(processState.payload);
+  return processState === undefined || payload === undefined
+    ? null
+    : { processId: processState.processId, payload };
+};
+
+const pendingReplacementRestInsteadFromPayload = (
+  payload: unknown,
+):
+  | (PendingReplacementRestInsteadPayload & { decisionId: string })
+  | undefined => {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("pendingReplacementRestInstead" in payload)
+  ) {
+    return undefined;
+  }
+  const pending = payload.pendingReplacementRestInstead;
+  if (typeof pending !== "object" || pending === null) {
+    return undefined;
+  }
+  const candidate = pending as Record<string, unknown>;
+  if (
+    typeof candidate["decisionId"] !== "string" ||
+    typeof candidate["replacementId"] !== "string" ||
+    typeof candidate["effectBlockId"] !== "string" ||
+    typeof candidate["controllerId"] !== "string" ||
+    !isCardRef(candidate["source"])
+  ) {
+    return undefined;
+  }
+  const target = candidate["target"];
+  if (target !== undefined && !isCardRef(target)) {
+    return undefined;
+  }
+  return {
+    decisionId: candidate["decisionId"],
+    replacementId: candidate["replacementId"],
+    effectBlockId: candidate[
+      "effectBlockId"
+    ] as EffectQueueEntry["effectBlockId"],
+    controllerId: candidate["controllerId"] as PlayerId,
+    source: candidate["source"],
+    ...(target === undefined ? {} : { target }),
+  };
+};
+
+const isCardRef = (value: unknown): value is CardRef => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  const zone = candidate["zone"];
+  return (
+    typeof candidate["instanceId"] === "string" &&
+    typeof candidate["cardId"] === "string" &&
+    typeof candidate["playerId"] === "string" &&
+    (zone === undefined || (typeof zone === "object" && zone !== null))
+  );
+};
+
+const cardRefsEqual = (left: CardRef, right: CardRef): boolean =>
+  left.instanceId === right.instanceId &&
+  left.cardId === right.cardId &&
+  left.playerId === right.playerId &&
+  left.zone?.zone === right.zone?.zone &&
+  left.zone?.playerId === right.zone?.playerId &&
+  left.zone?.slot === right.zone?.slot &&
+  left.zone?.index === right.zone?.index;
+
+export const isReplacementRestTargetsDecision = (
+  state: GameState,
+  decision: NonNullable<GameState["pendingDecision"]> | undefined,
+): boolean => pendingReplacementRestPayload(state, decision) !== null;
+
+export const getReplacementRestTargetLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  const pending = pendingReplacementRestPayload(state, decision);
+  if (
+    decision?.type !== "selectTargets" ||
+    pending === null ||
+    decision.playerId !== playerId
+  ) {
+    return [];
+  }
+  const currentCandidates = replacementRestDecisionCandidates(state, decision);
+  if (currentCandidates.length < decision.request.min) {
+    return [];
+  }
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "targets",
+        targets: currentCandidates
+          .slice(0, decision.request.min)
+          .map((candidate) => candidate.card),
+      },
+    },
+  ];
+};
+
+export type ReplacementRestTargetDecisionResult = {
+  completedPayload: unknown;
+  result: EngineResult;
+};
+
+export const applyReplacementRestTargetDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): ReplacementRestTargetDecisionResult | null => {
+  const decision = state.pendingDecision;
+  const pending = pendingReplacementRestPayload(state, decision);
+  if (decision?.type !== "selectTargets" || pending === null) {
+    return null;
+  }
+  if (action.response.type !== "targets") {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(
+        state,
+        [],
+        [
+          {
+            type: "invalidDecisionResponse",
+            reason: "Response type must be targets for selectTargets.",
+          },
+        ],
+      ),
+    };
+  }
+  const targets = (action.response as { targets?: unknown }).targets;
+  if (!Array.isArray(targets) || !targets.every(isCardRef)) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(
+        state,
+        [],
+        [
+          {
+            type: "invalidDecisionResponse",
+            reason: "Response targets must be CardRef values.",
+          },
+        ],
+      ),
+    };
+  }
+  const currentCandidates = replacementRestDecisionCandidates(state, decision);
+  const targetRefs = targets;
+  if (
+    targetRefs.length !== decision.request.min ||
+    hasDuplicateTargets(targetRefs) ||
+    !targetRefs.every((target) =>
+      currentCandidates.some((candidate) =>
+        cardRefsEqual(candidate.card, target),
+      ),
+    )
+  ) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(
+        state,
+        [],
+        [
+          {
+            type: "invalidDecisionResponse",
+            reason:
+              "Selected targets must be current legal replacement targets.",
+          },
+        ],
+      ),
+    };
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: action.response.type,
+    },
+    { type: "public" },
+  );
+  const resolved = events[0];
+  if (resolved !== undefined) {
+    resolved.causedBy = { type: "decision", decisionId: decision.id };
+  }
+  const rested = restFieldObjects(state, targetRefs);
+  const transformedPayload = {
+    replacementId: pending.payload.replacementId,
+    restedTargets: targetRefs,
+  };
+  appendEvent(
+    rested.state,
+    events,
+    "replacementApplied",
+    {
+      processId: pending.processId,
+      replacementId: pending.payload.replacementId,
+      previousPayloadHash: hashCanonicalStateValue(
+        replacementPayloadWithoutPending(state, pending.processId),
+      ),
+      transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
+    } satisfies EngineInternalReplacementAppliedEventPayload,
+    { type: "public" },
+  );
+  const applied = events[events.length - 1];
+  if (applied !== undefined) {
+    applied.causedBy = {
+      type: "replacement",
+      replacementId: pending.payload.replacementId,
+    };
+  }
+  const completedPayload = replacementPayloadWithoutPending(
+    state,
+    pending.processId,
+  );
+  const nextState: GameState = {
+    ...rested.state,
+    seq: toStateSeq(rested.state.seq + 1),
+    replacementState: rested.state.replacementState.filter(
+      (candidate) => candidate.processId !== pending.processId,
+    ),
+    eventJournal: [...rested.state.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+  return {
+    completedPayload,
+    result: toEngineResult(nextState, events),
+  };
+};
+
+const replacementPayloadWithoutPending = (
+  state: GameState,
+  processId: string,
+): unknown => {
+  const stored = state.replacementState.find(
+    (candidate) => candidate.processId === processId,
+  );
+  const payload = stored?.payload;
+  if (typeof payload !== "object" || payload === null) {
+    return payload;
+  }
+  const rest = { ...(payload as Record<string, unknown>) };
+  delete rest["pendingReplacementRestInstead"];
+  return rest;
+};
+
+const replacementRestDecisionCandidates = (
+  state: GameState,
+  decision: SelectTargetsDecision,
+): TargetCandidate[] => {
+  const resolved = resolvePublicTargetCandidatesForRequest(
+    state,
+    decision.request,
+    { sourceControllerId: decision.playerId },
+  );
+  if (!resolved.ok) {
+    return [];
+  }
+  return resolved.candidates.filter((candidate) =>
+    replacementRestCandidateIsActive(state, candidate.card),
+  );
+};
+
+const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
+  targets.some((target, index) =>
+    targets
+      .slice(index + 1)
+      .some((candidate) => cardRefsEqual(target, candidate)),
+  );
 
 const executeReplacementInsteadEffect = (
   state: GameState,

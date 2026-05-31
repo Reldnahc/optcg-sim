@@ -44,8 +44,11 @@ import {
   detectPendingRuntimeWork,
   executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,
+  getReplacementRestTargetLegalActions,
+  isReplacementRestTargetsDecision,
   resumePlaySourceOverflowDecision,
 } from "./effect-runtime.js";
+import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement-rest-target-actions.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
   resumeSequenceFrameAfterPlaySelectedOverflow,
@@ -567,6 +570,12 @@ const applyChooseReplacementDecisionResponse = (
       ...applied.state,
       actionSeq: state.actionSeq + 1,
     };
+    if (
+      nextState.pendingDecision !== undefined &&
+      isReplacementRestTargetsDecision(nextState, nextState.pendingDecision)
+    ) {
+      return toEngineResult(nextState, events);
+    }
     if (shouldFinalizeBattle) {
       return finalizeBattleAfterReplacementResolution(state, nextState, events);
     }
@@ -645,6 +654,7 @@ export const getLegalActions = (
       });
     }
     actions.push(...getLifeTriggerLegalActions(state, playerId));
+    actions.push(...getReplacementRestTargetLegalActions(state, playerId));
     actions.push(...getSelectTargetsLegalActions(state, playerId));
     actions.push(...getOptionalActivationLegalActions(state, playerId));
     actions.push(...getPlayCardLegalActions(state, playerId));
@@ -841,6 +851,11 @@ const applyRespondToDecision = (
   );
   if (triggerOrderResult !== null) {
     return continueAfterEffectDecision(state, decision, triggerOrderResult);
+  }
+  const replacementRestTargetResult =
+    applyReplacementRestTargetDecisionWithContinuation(state, action);
+  if (replacementRestTargetResult !== null) {
+    return replacementRestTargetResult;
   }
   const targetSelectionResult = applySelectTargetsDecisionResponse(
     state,

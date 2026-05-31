@@ -78,6 +78,53 @@ const restFieldObject = (
       },
     };
   }
+  if (
+    target.zone?.zone === "stageArea" &&
+    player.stage !== undefined &&
+    refsEqual(target, {
+      instanceId: player.stage.instanceId,
+      cardId: player.stage.cardId,
+      playerId: target.playerId,
+      zone: player.stage.zone,
+    })
+  ) {
+    return {
+      changed: player.stage.state !== "rested",
+      state: {
+        ...state,
+        players: {
+          ...state.players,
+          [target.playerId]: {
+            ...player,
+            stage: { ...player.stage, state: "rested" },
+          },
+        },
+      },
+    };
+  }
+  if (target.zone?.zone === "costArea") {
+    let changed = false;
+    const costArea = player.costArea.map((card) => {
+      if (
+        card.instanceId !== target.instanceId ||
+        card.cardId !== target.cardId
+      ) {
+        return card;
+      }
+      changed = card.state !== "rested";
+      return { ...card, state: "rested" as const };
+    });
+    return {
+      changed,
+      state: {
+        ...state,
+        players: {
+          ...state.players,
+          [target.playerId]: { ...player, costArea },
+        },
+      },
+    };
+  }
   return { changed: false, state };
 };
 
