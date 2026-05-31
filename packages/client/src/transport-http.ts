@@ -3,6 +3,7 @@ import type { MatchId } from "@optcg/types";
 import type {
   ClaimedSeat,
   CreatedMatch,
+  JoinedLobby,
   LocalLobby,
   MatchCardCatalog,
   MatchSnapshot,
@@ -62,13 +63,11 @@ export const createDevHttpMatchTransport = ({
     async createLobby() {
       return postJson<LocalLobby>(`${root}/api/lobbies`, {});
     },
-    async claimLobbySeat(input) {
-      return postJson<LocalLobby>(
-        lobbyPath(
-          input.lobbyId,
-          `/seats/${encodeURIComponent(String(input.playerId))}/claim`,
-        ),
+    async joinLobby(input) {
+      return postJson<JoinedLobby>(
+        lobbyPath(input.lobbyId, "/join"),
         {},
+        input.guestToken,
       );
     },
     async loadLobby(lobbyId) {

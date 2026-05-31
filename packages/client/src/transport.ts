@@ -129,6 +129,10 @@ export interface LocalLobby {
   matchId?: MatchId;
 }
 
+export interface JoinedLobby extends LocalLobby {
+  seat: { playerId: PlayerId };
+}
+
 export interface SubmitVisibleActionInput {
   matchId: MatchId;
   playerId: PlayerId;
@@ -243,10 +247,10 @@ export interface LobbyLiveTransport {
 
 export interface MatchTransport {
   createLobby: () => Promise<LocalLobby>;
-  claimLobbySeat: (input: {
+  joinLobby: (input: {
     lobbyId: string;
-    playerId: PlayerId;
-  }) => Promise<LocalLobby>;
+    guestToken: string;
+  }) => Promise<JoinedLobby>;
   loadLobby: (lobbyId: string) => Promise<LocalLobby>;
   createMatch: () => Promise<CreatedMatch>;
   createRematch: (input: {

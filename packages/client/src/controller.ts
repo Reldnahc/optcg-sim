@@ -52,10 +52,9 @@ export type MatchClientSessionState =
   | MatchClientState;
 
 export interface MatchClientController {
-  startNewLocalLobby: (playerId: PlayerId) => Promise<MatchClientSessionState>;
+  startNewLocalLobby: () => Promise<MatchClientSessionState>;
   joinLocalLobby: (input: {
     lobbyId: string;
-    playerId: PlayerId;
   }) => Promise<MatchClientSessionState>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
   joinLocalMatch: (
@@ -186,7 +185,9 @@ export const createMatchClientController = ({
     sessionToken?: string,
   ): Promise<MatchClientSessionState> => {
     const existingSessionToken =
-      sessionToken ?? sessionStore.loadClaimedSeat()?.sessionToken;
+      sessionToken ??
+      sessionStore.loadClaimedSeat()?.sessionToken ??
+      sessionStore.loadGuestIdentity()?.guestToken;
     sessionStore.setCurrentSeat(seat);
     const claimed = await transport.claimSeat({
       ...seat,
@@ -217,24 +218,33 @@ export const createMatchClientController = ({
   };
 
   return {
-    async startNewLocalLobby(playerId) {
+    async startNewLocalLobby() {
       const lobby = await transport.createLobby();
-      const claimedLobby = await transport.claimLobbySeat({
+      const joinedLobby = await transport.joinLobby({
         lobbyId: lobby.lobbyId,
-        playerId,
+        guestToken: sessionStore.loadOrCreateGuestIdentity().guestToken,
       });
       return claimMatchIfReady({
-        lobbyId: claimedLobby.lobbyId,
-        seat: { lobbyId: claimedLobby.lobbyId, playerId },
-        lobby: claimedLobby,
+        lobbyId: joinedLobby.lobbyId,
+        seat: {
+          lobbyId: joinedLobby.lobbyId,
+          playerId: joinedLobby.seat.playerId,
+        },
+        lobby: joinedLobby,
       });
     },
     async joinLocalLobby(input) {
-      const claimedLobby = await transport.claimLobbySeat(input);
+      const joinedLobby = await transport.joinLobby({
+        lobbyId: input.lobbyId,
+        guestToken: sessionStore.loadOrCreateGuestIdentity().guestToken,
+      });
       return claimMatchIfReady({
-        lobbyId: claimedLobby.lobbyId,
-        seat: { lobbyId: claimedLobby.lobbyId, playerId: input.playerId },
-        lobby: claimedLobby,
+        lobbyId: joinedLobby.lobbyId,
+        seat: {
+          lobbyId: joinedLobby.lobbyId,
+          playerId: joinedLobby.seat.playerId,
+        },
+        lobby: joinedLobby,
       });
     },
     async startNewLocalMatch(playerId) {

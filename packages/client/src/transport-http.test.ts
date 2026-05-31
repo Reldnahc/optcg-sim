@@ -37,15 +37,16 @@ const createRecordingFetch = (
 };
 
 describe("dev HTTP match transport", () => {
-  test("creates and claims primitive lobbies", async () => {
+  test("creates and joins primitive lobbies without caller-selected seats", async () => {
     const recorder = createRecordingFetch((request) =>
       responseJson({
         lobbyId: "lobby-1",
+        seat: { playerId: "p1" },
         seats: {
           p1: { playerId: "p1", claimed: true },
           p2: { playerId: "p2", claimed: false },
         },
-        ...(request.url.endsWith("/claim") ? { matchId: "match-1" } : {}),
+        ...(request.url.endsWith("/join") ? { matchId: "match-1" } : {}),
       }),
     );
     const transport = createDevHttpMatchTransport({
@@ -54,20 +55,27 @@ describe("dev HTTP match transport", () => {
     });
 
     await transport.createLobby();
-    const claimed = await transport.claimLobbySeat({
+    const joined = await transport.joinLobby({
       lobbyId: "lobby-1",
-      playerId: "p1" as PlayerId,
+      guestToken: "guest-a",
     });
     await transport.loadLobby("lobby-1");
 
-    assert.equal(claimed.matchId, "match-1");
+    assert.equal(joined.matchId, "match-1");
+    assert.deepEqual(joined.seat, { playerId: "p1" });
     assert.deepEqual(
       recorder.requests.map((request) => request.url),
       [
         "http://localhost:3000/api/lobbies",
-        "http://localhost:3000/api/lobbies/lobby-1/seats/p1/claim",
+        "http://localhost:3000/api/lobbies/lobby-1/join",
         "http://localhost:3000/api/lobbies/lobby-1",
       ],
+    );
+    assert.equal(
+      new Headers(recorder.requests[1]?.init?.headers).get(
+        "x-optcg-session-token",
+      ),
+      "guest-a",
     );
   });
 

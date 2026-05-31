@@ -29,14 +29,23 @@ const createFakeTransport = (): MatchTransport & {
     playerId: PlayerId;
     sessionToken?: string;
   }>;
+  joinedLobbies: Array<{
+    lobbyId: string;
+    guestToken: string;
+  }>;
 } => {
   const claimedSeats: Array<{
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken?: string;
   }> = [];
+  const joinedLobbies: Array<{
+    lobbyId: string;
+    guestToken: string;
+  }> = [];
   return {
     claimedSeats,
+    joinedLobbies,
     createLobby() {
       return Promise.resolve({
         lobbyId: "lobby-1",
@@ -46,9 +55,11 @@ const createFakeTransport = (): MatchTransport & {
         },
       });
     },
-    claimLobbySeat(input) {
+    joinLobby(input) {
+      joinedLobbies.push(input);
       return Promise.resolve({
         lobbyId: input.lobbyId,
+        seat: { playerId: "p1" as PlayerId },
         seats: {
           p1: { playerId: "p1" as PlayerId, claimed: true },
           p2: { playerId: "p2" as PlayerId, claimed: false },
@@ -498,7 +509,7 @@ describe("match client controller", () => {
       }),
     });
 
-    const initial = await controller.startNewLocalLobby("p1" as PlayerId);
+    const initial = await controller.startNewLocalLobby();
     assert.equal("lobbyId" in initial, true);
 
     const readyStatePromise = new Promise<MatchClientSessionState>(
@@ -527,13 +538,56 @@ describe("match client controller", () => {
 
     assert.equal("matchId" in readyState, true);
     assert.deepEqual(transport.claimedSeats, [
-      { matchId: "match-1", playerId: "p1" },
+      {
+        matchId: "match-1",
+        playerId: "p1",
+        sessionToken: transport.joinedLobbies[0]?.guestToken,
+      },
     ]);
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-1",
       playerId: "p1",
-      sessionToken: "token-p1",
+      sessionToken: transport.joinedLobbies[0]?.guestToken,
     });
+  });
+
+  test("starts a local lobby by joining with guest identity and assigned seat", async () => {
+    const transport = createFakeTransport();
+    const sessionStore = createClientSessionStore({
+      storage: createMemoryClientStorage(),
+    });
+    const controller = createMatchClientController({
+      transport,
+      sessionStore,
+    });
+
+    const state = await controller.startNewLocalLobby();
+
+    assert.equal("lobbyId" in state, true);
+    const joinedLobby = transport.joinedLobbies[0];
+    if (joinedLobby === undefined) {
+      throw new Error("Expected lobby join request.");
+    }
+    assert.equal(joinedLobby.lobbyId, "lobby-1");
+    assert.match(joinedLobby.guestToken, /^guest:/u);
+  });
+
+  test("joins a local lobby without caller-selected player id", async () => {
+    const transport = createFakeTransport();
+    const sessionStore = createClientSessionStore({
+      storage: createMemoryClientStorage(),
+    });
+    const controller = createMatchClientController({
+      transport,
+      sessionStore,
+    });
+
+    await controller.joinLocalLobby({ lobbyId: "lobby-1" });
+
+    assert.deepEqual(Object.keys(transport.joinedLobbies[0] ?? {}), [
+      "lobbyId",
+      "guestToken",
+    ]);
   });
 
   test("refuses to submit actions before a seat is claimed", async () => {
