@@ -185,4 +185,58 @@ describe("warlords parser primitives", () => {
     expect(result?.evidence).toContain("player:any");
     expect(result?.evidence).toContain("destination:ownerHand");
   });
+
+  it("parses adjacent circled DON and rest-self costs before a search body", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] ➀ (You may rest the specified number of DON!! cards in your cost area.) You may rest this Character: Look at 5 cards from the top of your deck; reveal up to 1 {Supernovas} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "activateMain" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "sequence",
+                  optional: true,
+                  costs: [
+                    { type: "restDon", count: 1, chooser: "self" },
+                    { type: "restSelf" },
+                  ],
+                },
+              },
+            },
+            {
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  lookCount: 5,
+                  filter: { typesAny: ["Supernovas"] },
+                  min: 0,
+                  max: 1,
+                  destination: "hand",
+                  revealTo: "bothPlayers",
+                  remainingCards: {
+                    destination: "deck",
+                    position: "bottom",
+                    order: "ownerChoice",
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("composition:costSequence");
+    expect(result?.evidence).toContain("cost:restDon");
+    expect(result?.evidence).toContain("cost:restSelf");
+    expect(result?.evidence).toContain("instruction:search");
+  });
 });

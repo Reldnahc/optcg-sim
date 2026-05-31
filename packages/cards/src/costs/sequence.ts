@@ -30,7 +30,7 @@ export interface OptionalCostSequenceParseResult {
 export function parseOptionalCostSequence(
   input: ParseInput,
 ): OptionalCostSequenceParseResult | undefined {
-  const parts = input.text
+  const parts = normalizeAdjacentOptionalCostBoundaries(input.text)
     .split(/\s*(?:,|\band\b)\s*/i)
     .map(stripOptionalCostPrefix)
     .map((part) => part.trim())
@@ -179,4 +179,8 @@ function parseCostPart(text: string): CostParseResult | undefined {
   }
 
   return undefined;
+}
+
+function normalizeAdjacentOptionalCostBoundaries(text: string): string {
+  return text.replace(/\)\s+(?=You may\b)/giu, ") and ");
 }

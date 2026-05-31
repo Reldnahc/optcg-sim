@@ -673,3 +673,22 @@ test("cards parser emits any-player owner-hand return targets accepted by engine
     supported: true,
   });
 });
+
+test("cards parser emits adjacent circled DON and rest-self costs accepted before search bodies", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[Activate: Main] ➀ (You may rest the specified number of DON!! cards in your cost area.) You may rest this Character: Look at 5 cards from the top of your deck; reveal up to 1 {Supernovas} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    [
+      "entry:activateMain",
+      "composition:costSequence",
+      "cost:restDon",
+      "cost:restSelf",
+      "instruction:search",
+      "filter:type",
+      "remaining:bottomDeck",
+    ],
+  );
+
+  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
+    supported: true,
+  });
+});
