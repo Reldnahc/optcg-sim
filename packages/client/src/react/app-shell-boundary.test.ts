@@ -1,9 +1,10 @@
 import { strict as assert } from "node:assert";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 
-const sourceDirectory = join(process.cwd(), "src/react");
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 const shellFiles = [
   "AppRoot.tsx",

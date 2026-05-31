@@ -14,11 +14,10 @@ import { ProfilePage } from "./ProfilePage.js";
 describe("client app shell pages", () => {
   test("dashboard exposes the primary navigation entries", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        { activeRouteId: "dashboard" },
-        createElement(DashboardPage),
-      ),
+      createElement(AppShell, {
+        activeRouteId: "dashboard",
+        children: createElement(DashboardPage),
+      }),
     );
 
     assert.match(html, /Play/u);
@@ -29,11 +28,10 @@ describe("client app shell pages", () => {
 
   test("play page keeps future-service queue states separate from dev play", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        { activeRouteId: "play" },
-        createElement(PlayPage),
-      ),
+      createElement(AppShell, {
+        activeRouteId: "play",
+        children: createElement(PlayPage),
+      }),
     );
 
     assert.match(html, /Ranked Queue/u);
@@ -43,11 +41,10 @@ describe("client app shell pages", () => {
 
   test("lobbies page exposes current custom lobby entry", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        { activeRouteId: "lobbies" },
-        createElement(LobbiesPage),
-      ),
+      createElement(AppShell, {
+        activeRouteId: "lobbies",
+        children: createElement(LobbiesPage),
+      }),
     );
 
     assert.match(html, /Create Custom Lobby/u);
@@ -56,18 +53,16 @@ describe("client app shell pages", () => {
 
   test("deck and profile pages describe future integrations honestly", () => {
     const deckHtml = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        { activeRouteId: "decks" },
-        createElement(DecksPage),
-      ),
+      createElement(AppShell, {
+        activeRouteId: "decks",
+        children: createElement(DecksPage),
+      }),
     );
     const profileHtml = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        { activeRouteId: "profile" },
-        createElement(ProfilePage),
-      ),
+      createElement(AppShell, {
+        activeRouteId: "profile",
+        children: createElement(ProfilePage),
+      }),
     );
 
     assert.match(deckHtml, /Poneglyph deck builder/u);
@@ -76,11 +71,10 @@ describe("client app shell pages", () => {
 
   test("not-found page links back to the dashboard", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        { activeRouteId: "notFound" },
-        createElement(NotFoundPage, { path: "/missing" }),
-      ),
+      createElement(AppShell, {
+        activeRouteId: "notFound",
+        children: createElement(NotFoundPage, { path: "/missing" }),
+      }),
     );
 
     assert.match(html, /Page not found/u);
