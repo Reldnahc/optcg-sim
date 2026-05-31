@@ -18,6 +18,7 @@
   "dependencies": {
     "@optcg/cards": "workspace:*",
     "@optcg/engine-core": "workspace:*",
-    "@optcg/types": "workspace:*"
+    "@optcg/types": "workspace:*",
+    "optcg-deck-hash": "^0.1.1"
   }
 }

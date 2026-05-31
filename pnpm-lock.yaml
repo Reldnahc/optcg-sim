@@ -114,6 +114,9 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
+      optcg-deck-hash:
+        specifier: ^0.1.1
+        version: 0.1.1
 
   packages/types: {}
 
@@ -1706,6 +1709,12 @@ packages:
       }
     engines: { node: ">=18" }
 
+  optcg-deck-hash@0.1.1:
+    resolution:
+      {
+        integrity: sha512-IbkUHMdeEKq9CB9vE0osu8z4BrlgksYjKG5Pq54/Ge0NkAGu/fpK16yQsilC6CA4Nfw5nUKl9fO4DjhegGK+ZQ==,
+      }
+
   optionator@0.9.4:
     resolution:
       {
@@ -3164,6 +3173,8 @@ snapshots:
   onetime@7.0.0:
     dependencies:
       mimic-function: 5.0.1
+
+  optcg-deck-hash@0.1.1: {}
 
   optionator@0.9.4:
     dependencies:
