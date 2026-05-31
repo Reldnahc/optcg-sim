@@ -14,7 +14,10 @@ import type {
 } from "@optcg/types";
 
 import { computeView } from "./compute-view.js";
-import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
+import {
+  deriveImplementedDslPermanentContinuousEffects,
+  isSupportedContinuousQueueEffect,
+} from "./effect-runtime-continuous.js";
 import { createInitialState } from "./initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;
@@ -284,6 +287,26 @@ test("cannotBlock all-opponent-character restriction disables blocker", () => {
   const blocker = must(p2State.characters[0], "blocker");
   const view = computeView(state);
   assert.equal(view.cards[blocker.instanceId]?.canBlock, false);
+});
+
+test("continuous support accepts all rested character filters for refresh restrictions", () => {
+  assert.equal(
+    isSupportedContinuousQueueEffect({
+      type: "cannotBecomeActive",
+      target: {
+        type: "all",
+        player: "opponent",
+        zone: "characterArea",
+        filter: {
+          categories: ["character"],
+          state: "rested",
+          cost: { max: 7 },
+        },
+      },
+      duration: { type: "untilStartOfNextTurn", player: "opponent" },
+    }),
+    true,
+  );
 });
 
 test("modifyPower exactCard uses effect value without mutating canonical power", () => {

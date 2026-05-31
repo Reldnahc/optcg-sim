@@ -161,6 +161,27 @@ test("cards parser emits conditional power reduction primitives accepted by engi
   assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
 });
 
+test("cards parser emits all-target rested refresh locks accepted by engine continuous gates", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[Main] All of your opponent's rested Characters with a cost of 7 or less will not become active in your opponent's next Refresh Phase.",
+    [
+      "entry:eventMain",
+      "instruction:preventActivation",
+      "cardinality:all",
+      "target:opponentCharacters",
+      "filter:state:rested",
+      "filter:cost",
+      "duration:opponentNextRefreshPhase",
+    ],
+  );
+
+  assert.equal(effectBlock.effect.type, "cannotBecomeActive");
+  assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
+  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
+    supported: true,
+  });
+});
+
 test("cards parser emits conditional power reduction accepted by engine attack queueing", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters −1000 power during this turn.",

@@ -27,6 +27,7 @@ describe("planned field-effect instruction parsers", () => {
     expect(preventOpponentCharactersRefreshPrimitive).toEqual({
       primitiveId: "instruction:preventActivation",
       childPrimitiveIds: [
+        "cardinality:all",
         "cardinality:upTo",
         "target:opponentCharacters",
         "duration:opponentNextRefreshPhase",
@@ -234,6 +235,66 @@ describe("planned field-effect instruction parsers", () => {
       ],
       rest: "",
     });
+  });
+
+  it("parses all opponent Character refresh locks through the same prevent-activation primitive", () => {
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "All of your opponent's rested Characters with a cost of 7 or less will not become active in your opponent's next Refresh Phase.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "all",
+          player: "opponent",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            state: "rested",
+            cost: { max: 7 },
+          },
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:all",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:state:rested",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
+  it("keeps all and up-to target selectors separate from the refresh-lock body primitive", () => {
+    const choose = parsePreventOpponentCharactersRefreshInstruction({
+      text: "up to 1 of your opponent's rested Characters will not become active in your opponent's next Refresh Phase.",
+    });
+    const all = parsePreventOpponentCharactersRefreshInstruction({
+      text: "All of your opponent's rested Characters will not become active in your opponent's next Refresh Phase.",
+    });
+
+    expect(choose?.effect.type).toBe("cannotBecomeActive");
+    expect(all?.effect.type).toBe("cannotBecomeActive");
+    expect(choose?.evidence).toEqual(
+      expect.arrayContaining([
+        "cardinality:upTo",
+        "instruction:preventActivation",
+      ]),
+    );
+    expect(all?.evidence).toEqual(
+      expect.arrayContaining([
+        "cardinality:all",
+        "instruction:preventActivation",
+      ]),
+    );
   });
 
   it("parses your Leader power through opponent next End Phase as a modifier", () => {

@@ -35,6 +35,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "cost",
   "names",
   "power",
+  "state",
 ]);
 const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
   "categories",

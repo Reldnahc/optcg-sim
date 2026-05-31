@@ -1,3 +1,5 @@
+import type { CardFilter, Target } from "@optcg/types";
+
 import { parseUpToCardinality } from "../cardinality/index.js";
 import {
   parseOpponentNextEndPhaseDuration,
@@ -6,11 +8,12 @@ import {
 import { parsePositivePowerModifier } from "../modifiers/index.js";
 import { parseThatCharacterReference } from "../references/index.js";
 import {
+  parseAllFieldTarget,
   parseOpponentCharactersTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
 } from "../targets/index.js";
-import type { InstructionParser } from "../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const thatCharacterSelectionId = "selected:thatCharacter";
 
@@ -47,6 +50,7 @@ export const preventThatCharacterRefreshPrimitive = {
 export const preventOpponentCharactersRefreshPrimitive = {
   primitiveId: "instruction:preventActivation",
   childPrimitiveIds: [
+    "cardinality:all",
     "cardinality:upTo",
     "target:opponentCharacters",
     "duration:opponentNextRefreshPhase",
@@ -214,18 +218,13 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
 
 export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser =
   (input) => {
-    const cardinality = parseUpToCardinality(input);
-    if (cardinality === undefined) {
-      return undefined;
-    }
-
-    const target = parseOpponentCharactersTarget({ text: cardinality.rest });
-    if (target === undefined) {
+    const parsedTarget = parseOpponentRefreshLockTarget(input.text);
+    if (parsedTarget === undefined) {
       return undefined;
     }
 
     const actionMatch = /^will not become active\s+(?<rest>.*)$/i.exec(
-      target.rest,
+      parsedTarget.rest,
     );
     const durationText = actionMatch?.groups?.["rest"];
     if (durationText === undefined) {
@@ -246,32 +245,89 @@ export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser
     return {
       effect: {
         type: "cannotBecomeActive",
-        target: {
-          type: "choose",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "opponent",
-            zone: "characterArea",
-            filter: target.filter ?? { categories: ["character"] },
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
-            allowFewerIfUnavailable: true,
-            visibility: "public",
-          },
-        },
+        target: parsedTarget.target,
         duration: duration.duration,
       },
       evidence: [
         "instruction:preventActivation",
-        ...cardinality.evidence,
-        "chooser:self:upTo",
-        ...target.evidence,
+        ...parsedTarget.evidence,
         ...duration.evidence,
       ],
       rest: "",
     };
   };
+
+const parseOpponentRefreshLockTarget = (
+  text: string,
+):
+  | {
+      readonly target: Target;
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+    }
+  | undefined => {
+  const cardinality = parseUpToCardinality({ text });
+  if (cardinality !== undefined) {
+    const target = parseOpponentCharactersTarget({ text: cardinality.rest });
+    if (target === undefined) {
+      return undefined;
+    }
+    const filter: CardFilter = target.filter ?? { categories: ["character"] };
+    return {
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zone: "characterArea",
+          filter,
+          min: cardinality.cardinality.min,
+          max: cardinality.cardinality.max,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+        },
+      },
+      evidence: [
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...target.evidence,
+      ],
+      rest: target.rest,
+    };
+  }
+
+  const allTarget = parseAllFieldTarget({ text });
+  if (
+    allTarget === undefined ||
+    allTarget.target.type !== "all" ||
+    allTarget.target.player !== "opponent" ||
+    allTarget.target.zone !== "characterArea" ||
+    allTarget.target.filter?.categories?.[0] !== "character"
+  ) {
+    return undefined;
+  }
+  return {
+    target: {
+      type: "all",
+      player: "opponent",
+      zone: "characterArea",
+      filter: allTarget.target.filter ?? { categories: ["character"] },
+    },
+    evidence: [
+      "cardinality:all",
+      "player:opponent",
+      "target:opponentCharacters",
+      ...allTarget.evidence.filter(
+        (evidence) =>
+          evidence !== "cardinality:all" &&
+          evidence !== "player:opponent" &&
+          evidence !== "zone:characterArea",
+      ),
+    ],
+    rest: allTarget.rest.trim(),
+  };
+};
 
 export const parseYourLeaderPowerOpponentNextEndInstruction: InstructionParser =
   (input) => {
