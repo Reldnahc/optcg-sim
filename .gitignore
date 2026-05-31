@@ -7,3 +7,5 @@ coverage/
 Thumbs.db
 packages/match-server/dev-decks/deck1.txt
 packages/match-server/dev-decks/deck2.txt
+packages/match-server/dev-decks/deck1.hash
+packages/match-server/dev-decks/deck2.hash

@@ -62,7 +62,9 @@ export interface DevMatchPlayerSetup {
   playerId: PlayerId;
   leaderCardId: CardId;
   leaderLifeCount: number;
+  leaderVariantIndex?: number;
   deckCardIds: CardId[];
+  deckVariantIndexes?: Array<number | undefined>;
   donDeckCardIds: CardId[];
 }
 
@@ -313,8 +315,16 @@ const isDevMatchPlayerSetup = (
     typeof candidate["playerId"] === "string" &&
     typeof candidate["leaderCardId"] === "string" &&
     Number.isInteger(candidate["leaderLifeCount"]) &&
+    (candidate["leaderVariantIndex"] === undefined ||
+      Number.isInteger(candidate["leaderVariantIndex"])) &&
     Array.isArray(candidate["deckCardIds"]) &&
     candidate["deckCardIds"].every((cardId) => typeof cardId === "string") &&
+    (candidate["deckVariantIndexes"] === undefined ||
+      (Array.isArray(candidate["deckVariantIndexes"]) &&
+        candidate["deckVariantIndexes"].every(
+          (variantIndex) =>
+            variantIndex === undefined || Number.isInteger(variantIndex),
+        ))) &&
     Array.isArray(candidate["donDeckCardIds"]) &&
     candidate["donDeckCardIds"].every((cardId) => typeof cardId === "string")
   );

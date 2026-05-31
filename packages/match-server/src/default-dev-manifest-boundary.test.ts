@@ -1,20 +1,42 @@
 import { readFile } from "node:fs/promises";
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { CardId, PlayerId } from "@optcg/types";
+import type { CardId, PlayerId, VariantKey } from "@optcg/types";
+import type { ReadyDeckSubmission } from "./deck-submission.js";
 
 import {
+  createDevDecklistFromSubmission,
   createDevDeckCardIds,
+  createDevDeckVariantIndexes,
   createDevDonDeckCardIds,
   createDevRngSeed,
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
   defaultDevDonCounts,
   defaultDevEffectDefinitionsVersion,
-  parseDevDecklistText,
   resolveDevDonCounts,
+  validateDevDeckSubmissionVariants,
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
+
+const readySubmission = (
+  leaderCardId: CardId,
+  main: ReadonlyArray<{
+    cardId: CardId;
+    count: number;
+    variantIndex?: number;
+  }>,
+  donDeckCount = 10,
+): ReadyDeckSubmission => ({
+  source: "deckHash",
+  hash: "hash-value",
+  status: "ready",
+  decoded: {
+    leader: { cardId: leaderCardId, count: 1 },
+    main,
+  },
+  donDeckCount,
+});
 
 describe("default dev manifest boundary", () => {
   test("does not compile card text or read card fixtures in match-server", async () => {
@@ -27,6 +49,9 @@ describe("default dev manifest boundary", () => {
     assert.equal(source.includes("evaluateEffectBlockRuntimeSupport"), false);
     assert.equal(source.includes("readFileSync"), false);
     assert.equal(source.includes("fixtures/poneglyph/cards"), false);
+    assert.equal(source.includes("deck1.txt"), false);
+    assert.equal(source.includes("deck2.txt"), false);
+    assert.equal(source.includes("parseDevDecklistText"), false);
   });
 
   test("dev deck entries support custom quantities and derive manifest ids", () => {
@@ -59,14 +84,24 @@ describe("default dev manifest boundary", () => {
       "OP13-091",
     ]);
     assert.deepEqual(
+      createDevDeckVariantIndexes([
+        { cardId: "OP13-080" as CardId, count: 2, variantIndex: 0 },
+        { cardId: "OP13-080" as CardId, count: 1, variantIndex: 2 },
+        { cardId: "OP13-091" as CardId, count: 1 },
+      ]),
+      [0, 0, 2, undefined],
+    );
+    assert.deepEqual(
       createDevManifestCardIds(
         {
-          leaderCardId: "OP13-079" as CardId,
+          leader: { cardId: "OP13-079" as CardId, count: 1 },
           deckEntries: firstPlayerEntries,
+          donDeckCount: 10,
         },
         {
-          leaderCardId: "OP13-079" as CardId,
+          leader: { cardId: "OP13-079" as CardId, count: 1 },
           deckEntries: secondPlayerEntries,
+          donDeckCount: 10,
         },
       ),
       ["OP13-079", "OP13-080", "OP13-082", "OP13-091", "OP13-084"],
@@ -116,16 +151,19 @@ describe("default dev manifest boundary", () => {
     );
   });
 
-  test("parses dev decklists with a required first-line one-copy leader", () => {
-    const decklist = parseDevDecklistText(
-      ["1xOP13-079", "4xOP13-080", "2xOP13-082", "1xOP13-099"].join("\n"),
+  test("creates dev decklists from ready deck hash submissions", () => {
+    const decklist = createDevDecklistFromSubmission(
+      readySubmission("OP13-079" as CardId, [
+        { cardId: "OP13-080" as CardId, count: 4 },
+        { cardId: "OP13-082" as CardId, count: 2, variantIndex: 1 },
+      ]),
     );
 
-    assert.equal(decklist.leaderCardId, "OP13-079");
+    assert.equal(decklist.leader.cardId, "OP13-079");
+    assert.equal(decklist.donDeckCount, 10);
     assert.deepEqual(decklist.deckEntries, [
       { cardId: "OP13-080", count: 4 },
-      { cardId: "OP13-082", count: 2 },
-      { cardId: "OP13-099", count: 1 },
+      { cardId: "OP13-082", count: 2, variantIndex: 1 },
     ]);
     assert.deepEqual(createDevDeckCardIds(decklist.deckEntries), [
       "OP13-080",
@@ -134,30 +172,97 @@ describe("default dev manifest boundary", () => {
       "OP13-080",
       "OP13-082",
       "OP13-082",
-      "OP13-099",
     ]);
   });
 
-  test("rejects decklists whose first entry is not exactly one leader copy", () => {
+  test("rejects non-ready deck submissions before setup creation", () => {
     assert.throws(
-      () => parseDevDecklistText("4xOP13-079\n4xOP13-080"),
-      /first line must be the leader as 1xCARDID/u,
+      () =>
+        createDevDecklistFromSubmission({
+          source: "deckHash",
+          hash: "bad",
+          status: "invalid",
+          error: "bad hash",
+          donDeckCount: 10,
+        }),
+      /ready deck submission/u,
     );
   });
 
-  test("rejects malformed dev decklist lines", () => {
-    assert.throws(
-      () => parseDevDecklistText("1xOP13-079\n4 x OP13-080"),
-      /invalid dev decklist line 2/u,
+  test("validates requested variant indexes against resolved card details", () => {
+    validateDevDeckSubmissionVariants(
+      createDevDecklistFromSubmission(
+        readySubmission("OP13-079" as CardId, [
+          { cardId: "OP13-080" as CardId, count: 1, variantIndex: 2 },
+        ]),
+      ),
+      {
+        cards: {
+          ["OP13-079" as CardId]: {
+            category: "leader",
+            life: 5,
+            variants: [
+              { variantIndex: 0, variantKey: "OP13-079:v0" as VariantKey },
+            ],
+          },
+          ["OP13-080" as CardId]: {
+            category: "character",
+            variants: [
+              { variantIndex: 2, variantKey: "OP13-080:v2" as VariantKey },
+            ],
+          },
+        },
+      },
     );
+
+    assert.throws(() => {
+      validateDevDeckSubmissionVariants(
+        createDevDecklistFromSubmission(
+          readySubmission("OP13-079" as CardId, [
+            { cardId: "OP13-080" as CardId, count: 1, variantIndex: 9 },
+          ]),
+        ),
+        {
+          cards: {
+            ["OP13-079" as CardId]: {
+              category: "leader",
+              life: 5,
+              variants: [
+                {
+                  variantIndex: 0,
+                  variantKey: "OP13-079:v0" as VariantKey,
+                },
+              ],
+            },
+            ["OP13-080" as CardId]: {
+              category: "character",
+              variants: [
+                {
+                  variantIndex: 2,
+                  variantKey: "OP13-080:v2" as VariantKey,
+                },
+              ],
+            },
+          },
+        },
+      );
+    }, /variant 9 is not available for OP13-080/u);
   });
 
   test("derives player leader life count from the resolved leader metadata", () => {
     const setup = createDevPlayerSetupFromDecklist(
       "p1" as PlayerId,
       {
-        leaderCardId: "OP13-079" as CardId,
-        deckEntries: [{ cardId: "OP13-080" as CardId, count: 2 }],
+        leader: {
+          cardId: "OP13-079" as CardId,
+          count: 1,
+          variantIndex: 1,
+        },
+        deckEntries: [
+          { cardId: "OP13-080" as CardId, count: 1, variantIndex: 0 },
+          { cardId: "OP13-080" as CardId, count: 1, variantIndex: 2 },
+        ],
+        donDeckCount: 10,
       },
       {
         cards: {
@@ -173,6 +278,8 @@ describe("default dev manifest boundary", () => {
     assert.equal(setup.leaderCardId, "OP13-079");
     assert.equal(setup.leaderLifeCount, 4);
     assert.deepEqual(setup.deckCardIds, ["OP13-080", "OP13-080"]);
+    assert.equal(setup.leaderVariantIndex, 1);
+    assert.deepEqual(setup.deckVariantIndexes, [0, 2]);
   });
 
   test("rejects dev decklists whose leader metadata is missing life", () => {
@@ -180,7 +287,11 @@ describe("default dev manifest boundary", () => {
       () =>
         createDevPlayerSetupFromDecklist(
           "p1" as PlayerId,
-          { leaderCardId: "OP13-079" as CardId, deckEntries: [] },
+          {
+            leader: { cardId: "OP13-079" as CardId, count: 1 },
+            deckEntries: [],
+            donDeckCount: 10,
+          },
           {
             cards: {
               ["OP13-079" as CardId]: {

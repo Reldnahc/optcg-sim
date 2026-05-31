@@ -5,8 +5,13 @@ import {
   createRedisCardDataCache,
   type DevPoneglyphFetch,
 } from "@optcg/cards";
-import type { CardId, PlayerId } from "@optcg/types";
+import type { CardId, PlayerId, VariantKey } from "@optcg/types";
 
+import {
+  decodeDeckHashSubmission,
+  type DeckSubmission,
+  type ReadyDeckSubmission,
+} from "./deck-submission.js";
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
 
 interface CreateDefaultDevMatchSetupInput {
@@ -27,20 +32,26 @@ export interface DevDonCounts {
 export interface DevDeckCardEntry {
   readonly cardId: CardId;
   readonly count: number;
+  readonly variantIndex?: number;
 }
 
 export interface DevDecklist {
-  readonly leaderCardId: CardId;
+  readonly leader: DevDeckCardEntry;
   readonly deckEntries: readonly DevDeckCardEntry[];
+  readonly donDeckCount: number;
 }
 
-interface DevLeaderManifest {
+interface DevManifestForDeckSubmission {
   readonly cards: Partial<
     Record<
       CardId,
       {
         readonly category?: string;
         readonly life?: number;
+        readonly variants?: readonly {
+          readonly variantIndex: number;
+          readonly variantKey?: VariantKey;
+        }[];
       }
     >
   >;
@@ -53,50 +64,33 @@ export const createDevDeckCardIds = (
     Array.from({ length: entry.count }, () => entry.cardId),
   );
 
+export const createDevDeckVariantIndexes = (
+  entries: readonly DevDeckCardEntry[],
+): Array<number | undefined> =>
+  entries.flatMap((entry) =>
+    Array.from({ length: entry.count }, () => entry.variantIndex),
+  );
+
 export const createDevManifestCardIds = (
   ...decklists: readonly DevDecklist[]
 ): CardId[] => {
   const cardIds = decklists.flatMap((decklist) => [
-    decklist.leaderCardId,
+    decklist.leader.cardId,
     ...decklist.deckEntries.map((entry) => entry.cardId),
   ]);
   return [...new Set(cardIds)];
 };
 
-const decklistLinePattern = /^(?<count>[1-9]\d*)x(?<cardId>[A-Z0-9-]+)$/u;
-
-export const parseDevDecklistText = (text: string): DevDecklist => {
-  const lines = text
-    .split(/\r?\n/u)
-    .map((line, index) => ({ line: line.trim(), lineNumber: index + 1 }))
-    .filter((entry) => entry.line.length > 0);
-  const first = lines[0];
-  if (first === undefined) {
-    throw new Error("Dev decklist must include a leader line.");
-  }
-  const entries = lines.map(({ line, lineNumber }) => {
-    const match = decklistLinePattern.exec(line);
-    if (match?.groups === undefined) {
-      throw new Error(
-        `invalid dev decklist line ${String(lineNumber)}: ${line}`,
-      );
-    }
-    return {
-      cardId: match.groups["cardId"] as CardId,
-      count: Number.parseInt(match.groups["count"] ?? "", 10),
-      lineNumber,
-    };
-  });
-  const leader = entries[0];
-  if (leader === undefined || leader.count !== 1) {
-    throw new Error("Dev decklist first line must be the leader as 1xCARDID.");
+export const createDevDecklistFromSubmission = (
+  submission: DeckSubmission,
+): DevDecklist => {
+  if (submission.status !== "ready") {
+    throw new TypeError("Dev match setup requires a ready deck submission.");
   }
   return {
-    leaderCardId: leader.cardId,
-    deckEntries: entries.slice(1).map((entry) => ({
-      cardId: entry.cardId,
-      count: entry.count,
-    })),
+    leader: submission.decoded.leader,
+    deckEntries: submission.decoded.main,
+    donDeckCount: submission.donDeckCount,
   };
 };
 
@@ -132,13 +126,13 @@ export const createDevRngSeed = (): string => `dev-local-${randomUUID()}`;
 export const createDevPlayerSetupFromDecklist = (
   playerId: PlayerId,
   decklist: DevDecklist,
-  manifest: DevLeaderManifest,
+  manifest: DevManifestForDeckSubmission,
   donDeckCardIds: CardId[],
 ): DevMatchPlayerSetup => {
-  const leader = manifest.cards[decklist.leaderCardId];
+  const leader = manifest.cards[decklist.leader.cardId];
   if (leader?.category !== "leader") {
     throw new Error(
-      `Dev decklist leader ${String(decklist.leaderCardId)} must resolve to a Leader card.`,
+      `Dev decklist leader ${String(decklist.leader.cardId)} must resolve to a Leader card.`,
     );
   }
   const leaderLife = leader.life;
@@ -148,33 +142,66 @@ export const createDevPlayerSetupFromDecklist = (
     leaderLife < 0
   ) {
     throw new Error(
-      `Dev decklist leader ${String(decklist.leaderCardId)} must have a life count.`,
+      `Dev decklist leader ${String(decklist.leader.cardId)} must have a life count.`,
     );
   }
   return {
     playerId,
-    leaderCardId: decklist.leaderCardId,
+    leaderCardId: decklist.leader.cardId,
     leaderLifeCount: leaderLife,
+    ...(decklist.leader.variantIndex === undefined
+      ? {}
+      : { leaderVariantIndex: decklist.leader.variantIndex }),
     deckCardIds: createDevDeckCardIds(decklist.deckEntries),
+    deckVariantIndexes: createDevDeckVariantIndexes(decklist.deckEntries),
     donDeckCardIds,
   };
 };
 
-const readDefaultDevDecklist = async (fileName: "deck1.txt" | "deck2.txt") =>
-  parseDevDecklistText(
-    await readFile(
-      new URL(`../dev-decks/${fileName}`, import.meta.url),
-      "utf8",
-    ),
-  );
+export const validateDevDeckSubmissionVariants = (
+  decklist: DevDecklist,
+  manifest: DevManifestForDeckSubmission,
+): void => {
+  for (const entry of [decklist.leader, ...decklist.deckEntries]) {
+    if (entry.variantIndex === undefined) {
+      continue;
+    }
+    const variants = manifest.cards[entry.cardId]?.variants ?? [];
+    if (
+      !variants.some((variant) => variant.variantIndex === entry.variantIndex)
+    ) {
+      throw new TypeError(
+        `Deck hash requested variant ${String(entry.variantIndex)} is not available for ${String(entry.cardId)}.`,
+      );
+    }
+  }
+};
+
+const readDefaultDevDeckSubmission = async (
+  fileName: "deck1.hash" | "deck2.hash",
+  donDeckCount: number,
+): Promise<ReadyDeckSubmission> => {
+  const hash = (
+    await readFile(new URL(`../dev-decks/${fileName}`, import.meta.url), "utf8")
+  ).trim();
+  const submission = await decodeDeckHashSubmission({ hash, donDeckCount });
+  if (submission.status !== "ready") {
+    throw new Error(`Invalid ${fileName}: ${submission.error}`);
+  }
+  return submission;
+};
 
 export const createDefaultDevMatchSetup = async (
   input: CreateDefaultDevMatchSetupInput,
 ): Promise<DevMatchSetup> => {
-  const firstPlayerDecklist = await readDefaultDevDecklist("deck1.txt");
-  const secondPlayerDecklist = await readDefaultDevDecklist("deck2.txt");
   const [firstPlayerDonCount, secondPlayerDonCount] =
     resolveDevDonCounts(defaultDevDonCounts);
+  const firstPlayerDecklist = createDevDecklistFromSubmission(
+    await readDefaultDevDeckSubmission("deck1.hash", firstPlayerDonCount),
+  );
+  const secondPlayerDecklist = createDevDecklistFromSubmission(
+    await readDefaultDevDeckSubmission("deck2.hash", secondPlayerDonCount),
+  );
   const firstPlayerDonDeck = createDevDonDeckCardIds(firstPlayerDonCount);
   const secondPlayerDonDeck = createDevDonDeckCardIds(secondPlayerDonCount);
   const devDonCount = Math.max(firstPlayerDonCount, secondPlayerDonCount);
@@ -199,6 +226,8 @@ export const createDefaultDevMatchSetup = async (
     ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
     ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
   });
+  validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
+  validateDevDeckSubmissionVariants(secondPlayerDecklist, cardManifest);
   return {
     matchId: input.matchId,
     firstPlayerId: input.firstPlayerId,
