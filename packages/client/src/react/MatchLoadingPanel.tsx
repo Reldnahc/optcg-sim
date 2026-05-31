@@ -6,7 +6,7 @@ export interface MatchLoadingPanelProps {
   selfDeckStatus?: "missing" | "ready" | "invalid" | undefined;
   opponentDeckStatus?: "missing" | "ready" | "invalid" | undefined;
   disabled?: boolean | undefined;
-  onSubmitDeckHash?: ((deckHash: string) => void) | undefined;
+  onSubmitDeckHash?: ((deckHash: string) => Promise<void>) | undefined;
 }
 
 export const MatchLoadingPanel = ({
@@ -43,7 +43,7 @@ export const MatchLoadingPanel = ({
             if (trimmed.length === 0 || onSubmitDeckHash === undefined) {
               return;
             }
-            onSubmitDeckHash(trimmed);
+            void onSubmitDeckHash(trimmed);
           }}
         >
           <label className="deck-hash-field">

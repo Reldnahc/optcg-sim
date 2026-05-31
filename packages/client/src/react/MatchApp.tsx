@@ -34,7 +34,7 @@ import {
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
+import { MatchSessionLoading } from "./MatchSessionLoading.js";
 import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
 import {
   combineDropTargetForWindow,
@@ -77,11 +77,11 @@ import {
   isFirstPlayerSetupClientState,
   isLobbyClientState,
   isMatchClientState,
-  lobbyDeckStatuses,
 } from "./useMatchClient-support.js";
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
-  const [collectionModal, setCollectionModal] = useState<CollectionModalModel>();
+  const [collectionModal, setCollectionModal] =
+    useState<CollectionModalModel>();
   const [collectionMinimized, setCollectionMinimized] = useState(false);
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -647,12 +647,10 @@ export const MatchApp = (): React.JSX.Element => {
   return (
     <main className="match-app">
       {displayBoard === undefined ? (
-        <MatchLoadingPanel
-          disabled={client.state.actionInFlight}
+        <MatchSessionLoading
+          client={client}
           firstPlayerSetup={firstPlayerSetupState !== undefined}
-          lobbyId={lobbyState?.lobbyId}
-          {...lobbyDeckStatuses(lobbyState)}
-          onSubmitDeckHash={(deckHash) => void client.submitLobbyDeckHash(deckHash)}
+          lobbyState={lobbyState}
         />
       ) : (
         <BoardLayout
