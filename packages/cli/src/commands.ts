@@ -468,6 +468,10 @@ const dispatchRespond = (
     return dispatchCardsResponse(state, choice);
   }
 
+  if (choice === "none") {
+    return dispatchNoCardsResponse(state, choice);
+  }
+
   if (choice !== "keep" && choice !== "mulligan") {
     return resultFromState(state, [`Unsupported respond choice: ${choice}.`]);
   }
@@ -611,6 +615,30 @@ const dispatchCardsResponse = (
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "cards", cards },
+    }),
+  );
+};
+
+const dispatchNoCardsResponse = (
+  state: GameState,
+  choice: string,
+): DispatchCliCommandResult => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.request.min !== 0
+  ) {
+    return resultFromState(state, [
+      `No supported pending decision for respond ${choice}.`,
+    ]);
+  }
+
+  return resultFromEngine(
+    applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
     }),
   );
 };

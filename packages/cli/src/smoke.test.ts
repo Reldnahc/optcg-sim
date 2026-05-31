@@ -282,6 +282,10 @@ describe("CLI-002A full vanilla terminal match smoke", () => {
       true,
     );
     assert.equal(
+      commands.some((command) => command === "respond none"),
+      true,
+    );
+    assert.equal(
       commands.some((command) => command === "pass"),
       true,
     );

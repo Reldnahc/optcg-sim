@@ -33,14 +33,15 @@
         },
         { "type": "set-leader-life-count", "playerId": "p2", "lifeCount": 0 }
       ],
-      "actionCommands": ["attack leader opponent-leader"],
+      "actionCommands": ["attack leader opponent-leader", "respond none"],
       "expected": {
         "checkpointHashes": [
           "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
-          "7f12fbe51125d8935ac0a7146eab4020b702a666c6158c1004d2e77cbfc11be2"
+          "2a87211a734b3c1cd6857547fa8722ddce6531af2ee8ddff2573c30c4fcc1130",
+          "71b179b414c93e471bc5e1acb05b94c066e03f0674496eb61c289f9b527755bd"
         ],
-        "finalHash": "7f12fbe51125d8935ac0a7146eab4020b702a666c6158c1004d2e77cbfc11be2",
+        "finalHash": "71b179b414c93e471bc5e1acb05b94c066e03f0674496eb61c289f9b527755bd",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     },
@@ -171,7 +172,9 @@
         "attach-don 0 character:0",
         "attach-don 1 character:0",
         "attack character:0 opponent-leader",
+        "respond none",
         "attack leader opponent-leader",
+        "respond none",
         "play 0",
         "respond pay:2",
         "pass",
@@ -181,11 +184,15 @@
         "attach-don 2 character:1",
         "attach-don 3 character:1",
         "attack character:0 opponent-leader",
+        "respond none",
         "attack character:1 opponent-leader",
+        "respond none",
         "attack leader opponent-leader",
+        "respond none",
         "pass",
         "pass",
-        "attack leader opponent-leader"
+        "attack leader opponent-leader",
+        "respond none"
       ],
       "expected": {
         "checkpointHashes": [
@@ -197,24 +204,30 @@
           "1d543e96c756a80016dc692b69022c5445d6dc6f8cfead64cd7389cb854d655a",
           "a54f809fa65378823f96d8c5dd5b15f0523f0439f223f33fd7e5000eee6dad3f",
           "1658a19f54489bbe3e8341a2ef61dfe3f390200c98068883aa33ee3e87577df5",
-          "2e646566e7a5cf8b8116d66c4dc012ac6b3071c3ead5d68f39633a4308ead58a",
-          "7b2cbec70ed7d8e07a9a5407168a257ef89e79ba6a9e8eebbfa12b84ffec22ec",
-          "bde9b190cf9e41289e352b1c353f59f57778bb4f05d27743c2a8be7ee5a4322c",
-          "d03f9216cda2099ac716c9e45b712e51acea03a78c5749e9b07d58e8969472b5",
-          "390f6585282d1a93f13c8d8affb568cc48e8a2adcc1e8840c83858157e00a731",
-          "444c67416a68115353908b109c0bb0efb372fb9b17a43926efd567c49da7a2d3",
-          "a8c0e991c90904bd84d199e91c33e7931068a5dc4dd36fe22cdbf5dac2097ae8",
-          "ac09805a8b7a943fdbd0102406351c63bcdf32a437a6dfe4b0e36affc0ccd47c",
-          "0565a9d7e0d4fd37a04e177da6a51e1b16ac9cfd397dc1ba9a9fce402aee2cbc",
-          "6f2f0bf20aeefb6c0b5c67e9683facd89c2401227444896cec2f50b27d8f8ae7",
-          "8b5f86c5595fb1b0ce0158414f3299599a9e093044ea76576fbaa082a20836d7",
-          "de79877d9df5bc9fad3f312eb0db6f086ee620ab9232017c4a89a39e3170cd8e",
-          "28f7b55e895e99921bb1f24048593b3f56f98101a2e1e38b6b6d6b13fde3f57c",
-          "501cc896a4d40fd7ebd093e4cec55f2c1ea814e8192a92be2040d021efa659c3",
-          "ff79b9f85ea494286590e1f0744e50239cb4e50c6573a0c9367eb24a2efca10b",
-          "3d0adb0b212bc845bd299afddc8e0c273cb7451a815416ae485822654f5b60d2"
+          "78d45f5d44b36cca5630c9d9de5b8bbab7d13ec2854a422c69ee7361022ebe12",
+          "c5108ad5b45315926a3cf49232201e0a57b9e3d2a94dafe8a4319c274a6b2893",
+          "e0bbe41cbdde0ce5e847c371328c161f03fc785ba6bda3dbecc7e5706450cf7b",
+          "6ad5b94613539295fb5cdd89404635fce1e1a9c0e5128788fb02967f00439e43",
+          "e09291ff714959b2ce92be48daaf0b10229fee8e324a379c30f1ea9f97202206",
+          "9a128b6f1713f421c93fd1fdba3fc8febbf1df92c05ef80a8d891c6abc78b539",
+          "ec133922679c663e50cd7906c6535689f73a6f6b7e9a2da1e5182232e424fb2f",
+          "58e251f6ad6250b9e34410e60b9755feda3cd36f72efae6305b858a217709a9d",
+          "c319bcaa48b3cd24fcaf9cbd26dfb370b7a500a5c58cd07dae15763958ffb816",
+          "46a0b1dc4ac5fe27f6c4a290aed9868f93ece7700570082722a647c83230d4d7",
+          "cb4c63f9fdcc181550509c85fcfe0002f24911adbdc764f6d1d24c9c6a22ba73",
+          "e74ee9c110cfa4efcf5dc6e3d53fe0fb9e29e74e1234ac5be9e3d90ad101c62a",
+          "b079406eb254d299af400009a2ec9211c1a5949469add5a3966ee269a6879a39",
+          "67b7defed28b3e7cf8a5ee6a052f0c2c3e99fbfc2d384dc1ac1c7f6e0810cf5b",
+          "165031e61460c33f9d10a485c67d8c8d1ddb3ea4829d41e1ec2369219735a05f",
+          "56bf014b25cd3641621c2f1e4c73917586e7ede0d4cc1795928eabadea2d91fc",
+          "7c7808ecaa8bc43af420e0a1891695fda9a567cba9d299ba361a661e60a02189",
+          "439a7d4f28ec513143efe2302a45ff9edf3e6ed72288a64be1a31b5e24848791",
+          "da703c11a090f558e8f8fb33c516e606bc672d6f66982e8d6c1fe9a0c32812b0",
+          "2f402adf486b55b86879c2ca7c39ba35b2e8731080c41c2da4fa597556c53b1c",
+          "5a9df4d9ea34635c512854dbf53c4eadfcd8daf20ac49f0525224392ab4b9ddc",
+          "2cc4bb44f19b87a592711ab9971d8697e845e0c4442f350d750ba0bad7bc0d2e"
         ],
-        "finalHash": "3d0adb0b212bc845bd299afddc8e0c273cb7451a815416ae485822654f5b60d2",
+        "finalHash": "2cc4bb44f19b87a592711ab9971d8697e845e0c4442f350d750ba0bad7bc0d2e",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     }

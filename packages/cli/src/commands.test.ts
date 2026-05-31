@@ -256,6 +256,13 @@ describe("dispatchCliCommand", () => {
       "No supported pending decision for respond keep.",
     ]);
     assert.equal(stateSnapshot(active), activeBefore);
+
+    const noCardDecision = dispatchCliCommand(active, "respond none");
+    assert.equal(noCardDecision.state, active);
+    assert.deepEqual(noCardDecision.errors, [
+      "No supported pending decision for respond none.",
+    ]);
+    assert.equal(stateSnapshot(active), activeBefore);
   });
 
   test("dispatches pass through the end-main-phase action path", () => {
@@ -291,10 +298,18 @@ describe("dispatchCliCommand", () => {
     const state = bootAttackFixtureMatch();
     const beforeLife = must(state.players[p2], "p2").life.length;
 
-    const result = dispatchCliCommand(state, "attack leader opponent-leader");
+    const opened = dispatchCliCommand(state, "attack leader opponent-leader");
+
+    assert.equal(opened.errors.length, 0);
+    assert.equal(must(opened.state.players[p1], "p1").leader.state, "rested");
+    assert.equal(opened.state.pendingDecision?.type, "selectCards");
+    assert.equal(opened.state.pendingDecision.request.min, 0);
+    assert.equal(opened.state.pendingDecision.request.max, 0);
+
+    const result = dispatchCliCommand(opened.state, "respond none");
 
     assert.equal(result.errors.length, 0);
-    assert.equal(must(result.state.players[p1], "p1").leader.state, "rested");
+    assert.equal(result.state.pendingDecision, undefined);
     assert.equal(
       must(result.state.players[p2], "p2").life.length,
       beforeLife - 1,
@@ -442,6 +457,21 @@ describe("dispatchCliCommand", () => {
       must(resolvedP1.trash[0], "trashed character").instanceId,
       selected.instanceId,
     );
+    assertSummaryOutput(result.output);
+  });
+
+  test("dispatches respond none for zero-card select decisions", () => {
+    const state = bootAttackFixtureMatch();
+    const opened = dispatchCliCommand(state, "attack leader opponent-leader");
+    assert.equal(opened.errors.length, 0);
+    assert.equal(opened.state.pendingDecision?.type, "selectCards");
+    assert.equal(opened.state.pendingDecision.request.min, 0);
+    assert.equal(opened.state.pendingDecision.request.max, 0);
+
+    const result = dispatchCliCommand(opened.state, "respond none");
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.state.pendingDecision, undefined);
     assertSummaryOutput(result.output);
   });
 
