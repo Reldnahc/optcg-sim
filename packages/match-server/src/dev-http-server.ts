@@ -22,9 +22,13 @@ import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
 import { devSessionMetadata } from "./dev-session-metadata.js";
 import {
-  createMatchSessionRuntime,
-  type MatchSessionRuntime,
-} from "./match-session.js";
+  createMatchSessionService,
+  type MatchSessionService,
+} from "./session-service.js";
+import type {
+  ClientActionEnvelope,
+  SessionActionResult,
+} from "./session-types.js";
 
 interface DevResetRequest {
   setup?: unknown;
@@ -67,7 +71,6 @@ interface MatchSeat {
 
 interface LocalDevMatchSession {
   match: LocalDevMatch;
-  runtime: MatchSessionRuntime;
   seats: Record<string, MatchSeat>;
 }
 
@@ -85,7 +88,9 @@ interface LocalDevMatchRegistry {
     auth: AuthContext | undefined,
   ) => ClaimedDevSeatResponse | "matchNotFound" | "seatNotFound" | "claimed";
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
-  getRuntime: (matchId: MatchId) => MatchSessionRuntime | undefined;
+  applyEnvelope: (
+    envelope: ClientActionEnvelope,
+  ) => SessionActionResult | "matchNotFound";
   authorizeSeat: (
     auth: AuthContext | undefined,
     matchId: MatchId,
@@ -198,14 +203,15 @@ const createLocalAnonSeats = (
 
 const createLocalDevMatchSession = (
   setup: Parameters<typeof createLocalDevMatch>[0],
+  sessionService: MatchSessionService,
 ): LocalDevMatchSession => {
   const match = createLocalDevMatch(setup);
+  sessionService.registerLocalDevMatch({
+    local: match,
+    metadata: devSessionMetadata(setup),
+  });
   return {
     match,
-    runtime: createMatchSessionRuntime({
-      local: match,
-      metadata: devSessionMetadata(setup),
-    }),
     seats: createLocalAnonSeats(setup),
   };
 };
@@ -309,6 +315,7 @@ const createLocalDevMatchRegistry = async (
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
+  const sessionService = createMatchSessionService();
   const createTemplateSetup = async (
     matchId: MatchId,
   ): Promise<Parameters<typeof createLocalDevMatch>[0]> => {
@@ -322,7 +329,10 @@ const createLocalDevMatchRegistry = async (
   };
   const defaultSetup = await createTemplateSetup("dev-local-match" as MatchId);
   const defaultMatchId = defaultSetup.matchId;
-  sessions.set(defaultMatchId, createLocalDevMatchSession(defaultSetup));
+  sessions.set(
+    defaultMatchId,
+    createLocalDevMatchSession(defaultSetup, sessionService),
+  );
 
   const buildCreatedResponse = (
     setup: Parameters<typeof createLocalDevMatch>[0],
@@ -341,14 +351,17 @@ const createLocalDevMatchRegistry = async (
         (await createTemplateSetup(
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
-      const session = createLocalDevMatchSession(actualSetup);
+      const session = createLocalDevMatchSession(actualSetup, sessionService);
       sessions.set(actualSetup.matchId, session);
       return buildCreatedResponse(actualSetup, session);
     },
     async resetMatch(matchId, setup) {
       const actualSetup = setup ?? (await createTemplateSetup(matchId));
       const normalizedSetup = { ...actualSetup, matchId };
-      const session = createLocalDevMatchSession(normalizedSetup);
+      const session = createLocalDevMatchSession(
+        normalizedSetup,
+        sessionService,
+      );
       sessions.set(matchId, session);
       return buildCreatedResponse(normalizedSetup, session);
     },
@@ -387,8 +400,11 @@ const createLocalDevMatchRegistry = async (
     getMatch(matchId) {
       return sessions.get(matchId)?.match;
     },
-    getRuntime(matchId) {
-      return sessions.get(matchId)?.runtime;
+    applyEnvelope(envelope) {
+      if (!sessions.has(envelope.matchId)) {
+        return "matchNotFound";
+      }
+      return sessionService.applyEnvelope(envelope);
     },
     authorizeSeat(auth, matchId, playerId) {
       if (auth === undefined) {
@@ -781,10 +797,8 @@ const handleWebSocketUpgrade = (
   const sessionToken = url.searchParams.get("sessionToken") ?? "";
   const key = request.headers["sec-websocket-key"];
   const match = registry.getMatch(matchId);
-  const runtime = registry.getRuntime(matchId);
   if (
     match === undefined ||
-    runtime === undefined ||
     typeof key !== "string" ||
     key.length === 0 ||
     playerId.length === 0 ||
@@ -859,9 +873,17 @@ const handleWebSocketUpgrade = (
         });
         continue;
       }
-      const result = runtime.applyEnvelope(
-        clientActionEnvelopeFromSocketPayload(payload),
-      );
+      const envelope = clientActionEnvelopeFromSocketPayload(payload);
+      const result = registry.applyEnvelope(envelope);
+      if (result === "matchNotFound") {
+        sendSocketJson(connection, {
+          type: "matchError",
+          matchId,
+          serverSeq: ++connection.serverSeq,
+          message: "Match session is not active on this server.",
+        });
+        continue;
+      }
       const errors = [...result.errors];
       sendSocketJson(connection, {
         type: "actionResult",

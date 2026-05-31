@@ -130,6 +130,17 @@ export interface StoredSessionRecord {
   readonly recordedAt: string;
 }
 
+export interface SessionObservation {
+  readonly matchId: MatchId;
+  readonly clientActionId: string;
+  readonly requestType: SessionActionRequest["type"];
+  readonly accepted: boolean;
+  readonly reason?: ActionRejectionReason;
+  readonly stateSeq: number;
+  readonly actionSeq?: number;
+  readonly durationMs: number;
+}
+
 export interface MatchPersistenceSnapshot {
   readonly metadata: MatchSessionMetadata;
   readonly state: GameState;
