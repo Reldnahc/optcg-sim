@@ -81,6 +81,20 @@ const restFieldObject = (
   return { changed: false, state };
 };
 
+export const restFieldObjects = (
+  state: GameState,
+  targets: readonly CardRef[],
+): { changed: boolean; state: GameState } => {
+  let nextState = state;
+  let changed = false;
+  for (const target of targets) {
+    const rested = restFieldObject(nextState, target);
+    nextState = rested.state;
+    changed ||= rested.changed;
+  }
+  return { changed, state: nextState };
+};
+
 const activateFieldObject = (
   state: GameState,
   target: CardRef,
@@ -321,7 +335,10 @@ export const applySavedFieldObjectRestSequenceSegment = (params: {
   ledgers: SegmentLedgers;
   state: GameState;
 } => {
-  if (params.segment.effect.type !== "rest") {
+  if (
+    params.segment.effect.type !== "rest" ||
+    params.segment.effect.target.type !== "savedFieldObject"
+  ) {
     return { ledgers: params.ledgers, state: params.state };
   }
   const resolvedSavedTarget = resolveSavedFieldObjectKoSelection({
@@ -346,13 +363,12 @@ export const applySavedFieldObjectRestSequenceSegment = (params: {
     };
   }
 
-  let nextState = params.state;
-  let changedState = false;
-  for (const target of resolvedSavedTarget.selectedTargets) {
-    const rested = restFieldObject(nextState, target);
-    nextState = rested.state;
-    changedState ||= rested.changed;
-  }
+  const rested = restFieldObjects(
+    params.state,
+    resolvedSavedTarget.selectedTargets,
+  );
+  const nextState = rested.state;
+  const changedState = rested.changed;
 
   return {
     ledgers: {

@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   CardId,
   CardInstance,
+  Effect,
   EffectDefinition,
   PlayerId,
 } from "@optcg/types";
@@ -278,6 +279,63 @@ test("queues every supported same-entrypoint On Your Opponent's Attack effect bl
         (event) => (event.payload as { effectBlockId?: unknown }).effectBlockId,
       ),
     [onOpponentAttackEffect.id, secondOnOpponentAttackEffect.id],
+  );
+});
+
+test("queues On Your Opponent's Attack optional rest-DON target-rest sequence through generic auto support", () => {
+  const { state, definition } = opponentAttackQueueingState();
+  const onOpponentAttackEffect = must(
+    definition.effects[0],
+    "onOpponentAttack effect",
+  );
+  const restSequence: Extract<Effect, { type: "sequence" }> = {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-rest-don",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: { type: "restDon", count: 1, chooser: "self", optional: true },
+        },
+      },
+      {
+        id: "rest-opponent-leader-or-character",
+        connector: "ifYouDo",
+        effect: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zones: ["leaderArea", "characterArea"],
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { categories: ["leader", "character"] },
+            },
+          },
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitions = {
+    "def-on-opponent-attack": {
+      ...definition,
+      effects: [{ ...onOpponentAttackEffect, effect: restSequence }],
+    },
+  };
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    true,
   );
 });
 

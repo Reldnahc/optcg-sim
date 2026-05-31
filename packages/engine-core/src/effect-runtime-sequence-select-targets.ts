@@ -15,6 +15,7 @@ import type {
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
 import { createContinuousRecordsForResolvedEffect } from "./effect-runtime-continuous.js";
+import { restFieldObjects } from "./effect-runtime-sequence-saved-field-object.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 import {
   frameForPausedSequenceDecision,
@@ -179,6 +180,28 @@ const isConditionalContinuousChooseTargetEffect = (
   return (
     candidate.type === "conditional" &&
     isContinuousEffectWithChooseTarget(candidate.then)
+  );
+};
+
+const isRestEffectWithChooseTarget = (
+  effect: unknown,
+): effect is Extract<Effect, { type: "rest" }> & {
+  readonly target: Extract<Target, { type: "choose" | "chooseFromZones" }>;
+} => {
+  if (typeof effect !== "object" || effect === null) {
+    return false;
+  }
+  const candidate = effect as {
+    readonly target?: unknown;
+    readonly type?: unknown;
+  };
+  const target = candidate.target;
+  return (
+    candidate.type === "rest" &&
+    typeof target === "object" &&
+    target !== null &&
+    ((target as { readonly type?: unknown }).type === "choose" ||
+      (target as { readonly type?: unknown }).type === "chooseFromZones")
   );
 };
 
@@ -522,6 +545,40 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
                 ...records,
               ],
             },
+    });
+  }
+
+  if (isRestEffectWithChooseTarget(pausedSegment.effect)) {
+    const rested = restFieldObjects(params.state, params.selectedTargets);
+    const scopedSegmentKey = segmentKeyForPath(
+      frame.effectPath,
+      params.segmentKey,
+    );
+    return params.resumeSequenceFrameFromLedgers({
+      createTrashDecision: params.createUnsupportedTrashDecision,
+      effectBlock,
+      entry,
+      finalizeCompleted: true,
+      frame,
+      ledgers: {
+        savedReferences: frame.savedReferences,
+        segmentResults: {
+          ...frame.segmentResults,
+          [scopedSegmentKey(
+            pausedSegment,
+            frame.pendingDecision.resumeAtSegmentIndex,
+          )]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: rested.changed,
+            selectedTargets: [...params.selectedTargets],
+          },
+        },
+      },
+      state: rested.changed
+        ? { ...rested.state, seq: toStateSeq(rested.state.seq + 1) }
+        : rested.state,
     });
   }
 

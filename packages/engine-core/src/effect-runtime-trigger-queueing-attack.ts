@@ -1,7 +1,5 @@
 import type {
   CardInstance,
-  Effect,
-  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -13,10 +11,6 @@ import type {
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
-import {
-  isSupportedNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect,
-} from "./effect-runtime-primitives.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnOpponentAttackTriggerQueueingFailureReason,
@@ -40,13 +34,15 @@ export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   });
 
 export const isSupportedOnOpponentAttackCompatibleQueuedEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
+  effect: Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0],
+): effect is Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Effect;
 } =>
-  isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
-  isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect);
+  isSupportedAutoRuntimeEffectBlock(effect, {
+    category: "auto",
+    sourcePresencePolicies: ["mustRemainInSameZone"],
+    triggerType: "onOpponentAttack",
+  });
 
 export const createAttackTriggerQueueing = (
   dependencies: Pick<

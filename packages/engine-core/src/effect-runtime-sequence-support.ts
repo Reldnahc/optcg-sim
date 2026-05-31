@@ -7,9 +7,11 @@ import type {
   PlaySelectedEffect,
   SelectTargetsEffect,
   SelectCardsEffect,
+  MultiZoneTargetRequest,
   Target,
   CardFilter,
   Duration,
+  TargetRequest,
 } from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "./action-state.js";
@@ -53,7 +55,10 @@ type DirectContinuousEffect = Extract<
 >;
 type TrashEffect = Extract<Effect, { type: "trash" }>;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
-  target: Extract<Target, { type: "savedFieldObject" }>;
+  target: Extract<
+    Target,
+    { type: "choose" | "chooseFromZones" | "savedFieldObject" }
+  >;
 };
 type ActivateEffect = Extract<Effect, { type: "activate" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
@@ -560,7 +565,10 @@ const isSupportedPublicFieldTargetFilter = (
   );
 
 const isSupportedSequenceTargetRequest = (
-  request: SelectTargetsEffect["request"],
+  request:
+    | SelectTargetsEffect["request"]
+    | TargetRequest
+    | MultiZoneTargetRequest,
 ): boolean => {
   const zones: readonly string[] =
     "zones" in request ? request.zones : [request.zone];
@@ -598,7 +606,11 @@ const isSupportedAllFieldTrashSegment = (
 const isSupportedRestSegment = (
   effect: SequenceSegmentEffect,
 ): effect is RestEffect =>
-  effect.type === "rest" && isSupportedSavedFieldObjectKoTarget(effect.target);
+  effect.type === "rest" &&
+  (isSupportedSavedFieldObjectKoTarget(effect.target) ||
+    ((effect.target.type === "choose" ||
+      effect.target.type === "chooseFromZones") &&
+      isSupportedSequenceTargetRequest(effect.target.request)));
 
 const isSupportedActivateSegment = (
   effect: SequenceSegmentEffect,
@@ -838,6 +850,12 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedRestSegment(segment.effect)) {
+        if (
+          segment.effect.target.type === "choose" ||
+          segment.effect.target.type === "chooseFromZones"
+        ) {
+          supportState.hasPendingDecisionSegment = true;
+        }
         return true;
       }
       if (isSupportedActivateSegment(segment.effect)) {
@@ -893,6 +911,7 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
     | "onPlay"
     | "whenAttacking"
     | "onKO"
+    | "onOpponentAttack"
     | "main"
     | "trigger"
     | "counter"

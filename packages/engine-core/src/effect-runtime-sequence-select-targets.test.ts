@@ -249,6 +249,36 @@ const directPowerReductionTargetSequence = (): Extract<
   ],
 });
 
+const directRestLeaderOrCharacterTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "rest-leader-or-character",
+      connector: "always",
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["leader", "character"] },
+          },
+        },
+      },
+    },
+  ],
+});
+
 test("sequence selectTargets fail-closes when no legal candidates satisfy min without leaving a pending decision", () => {
   const { state } = sequenceQueueState(
     selectTargetsThenKoSavedSelectedTargetSequence(),
@@ -320,6 +350,44 @@ test("sequence direct continuous choose segment creates target decision and exac
     type: "addPower",
     value: -1000,
   });
+});
+
+test("sequence direct rest chooseFromZones segment creates target decision and rests selected leader", () => {
+  const { state } = sequenceQueueState(
+    directRestLeaderOrCharacterTargetSequence(),
+  );
+  const p2State = must(state.players[p2], "p2");
+  p2State.leader.state = "active";
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+  const leaderCandidate = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.zone?.zone === "leaderArea",
+    ),
+    "leader candidate",
+  );
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [leaderCandidate.card],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    must(result.state.players[p2], "resolved p2").leader.state,
+    "rested",
+  );
 });
 
 test("multiple sequence selectTargets segments use distinct decision ids", () => {

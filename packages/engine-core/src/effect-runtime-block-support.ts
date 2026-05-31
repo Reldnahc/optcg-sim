@@ -85,6 +85,7 @@ const isQueuedAutoSequenceTriggerType = (
   | "onPlay"
   | "whenAttacking"
   | "onKO"
+  | "onOpponentAttack"
   | "main"
   | "trigger"
   | "counter"
@@ -93,6 +94,7 @@ const isQueuedAutoSequenceTriggerType = (
   triggerType === "onPlay" ||
   triggerType === "whenAttacking" ||
   triggerType === "onKO" ||
+  triggerType === "onOpponentAttack" ||
   triggerType === "main" ||
   triggerType === "trigger" ||
   triggerType === "counter" ||
