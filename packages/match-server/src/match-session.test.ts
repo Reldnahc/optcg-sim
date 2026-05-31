@@ -114,6 +114,36 @@ describe("match session runtime", () => {
     expect(local.state.seq).toBe(stale.expectedStateSeq + 1);
   });
 
+  test("rejects envelopes whose match id or player id do not match the request context", async () => {
+    const { local, runtime } = await createRuntime();
+    const startingSeq = local.state.seq;
+    const wrongPlayerRequest: SessionActionRequest = {
+      type: "submitAction",
+      playerId: "p2" as PlayerId,
+      actionIndex: 0,
+      expectedStateSeq: local.state.seq,
+    };
+
+    const wrongPlayer = runtime.applyEnvelope({
+      ...envelope(wrongPlayerRequest, local.state.seq, "wrong-player"),
+      playerId: p1,
+    });
+    const wrongMatch = runtime.applyEnvelope({
+      ...envelope(
+        submitRequest(local.state.seq),
+        local.state.seq,
+        "wrong-match",
+      ),
+      matchId: "other-match" as MatchId,
+    });
+
+    expect(wrongPlayer.accepted).toBe(false);
+    expect(wrongPlayer.reason).toBe("illegalAction");
+    expect(wrongMatch.accepted).toBe(false);
+    expect(wrongMatch.reason).toBe("illegalAction");
+    expect(local.state.seq).toBe(startingSeq);
+  });
+
   test("persists accepted records and server-only snapshots", async () => {
     const setup = await createFixtureDevMatchSetup(matchId);
     const local = createLocalDevMatch(setup);
@@ -144,5 +174,36 @@ describe("match session runtime", () => {
     expect(loaded?.manifest.manifestHash).toBe(
       local.state.cardManifest.manifestHash,
     );
+  });
+
+  test("keeps accepted records pending when persistence append fails", async () => {
+    const setup = await createFixtureDevMatchSetup(matchId);
+    const local = createLocalDevMatch(setup);
+    const persistence = createInMemoryMatchPersistence();
+    let failNextAppend = true;
+    const runtime = createMatchSessionRuntime({
+      local,
+      metadata: metadata(),
+      persistence: {
+        ...persistence,
+        appendAction: (input) => {
+          if (failNextAppend) {
+            failNextAppend = false;
+            return Promise.reject(new Error("write failed"));
+          }
+          return persistence.appendAction(input);
+        },
+      },
+    });
+    runtime.applyEnvelope(
+      envelope(submitRequest(local.state.seq), local.state.seq),
+    );
+
+    await expect(runtime.flushPersistence()).rejects.toThrow("write failed");
+    await runtime.flushPersistence();
+    await runtime.saveSnapshot();
+
+    const loaded = await persistence.loadSnapshot(matchId);
+    expect(loaded?.actions).toHaveLength(1);
   });
 });

@@ -744,6 +744,85 @@ describe("dev HTTP server", () => {
     }
   });
 
+  test("returns the stored decision result when a decision response is retried after resolution", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      sockets.push(p1Socket.socket);
+      const stateBody = (await p1Socket.next()) as {
+        snapshot?: {
+          stateSeq?: number;
+          players?: Record<
+            string,
+            {
+              view?: {
+                pendingDecision?: {
+                  id?: string;
+                  candidates?: Array<{ card?: CardRef }>;
+                };
+              };
+            }
+          >;
+        };
+      };
+      const decision =
+        stateBody.snapshot?.players?.["p1"]?.view?.pendingDecision;
+      const candidate = decision?.candidates?.[0]?.card;
+      if (decision?.id === undefined || candidate === undefined) {
+        throw new Error("Missing filtered setup decision candidate.");
+      }
+      const decisionId = decision.id as DecisionId;
+      const expectedStateSeq = requireStateSeq(stateBody.snapshot);
+      const payload = {
+        type: "respondToDecision",
+        matchId: match.matchId,
+        playerId: "p1",
+        clientActionId: "decision-retry-action",
+        decisionId,
+        expectedDecisionId: decisionId,
+        expectedStateSeq,
+        response: { type: "cards", cards: [candidate] },
+        requestHash: requestHash({
+          type: "respondToDecision",
+          playerId: "p1" as PlayerId,
+          decisionId,
+          response: { type: "cards", cards: [candidate] },
+        }),
+      };
+
+      p1Socket.socket.send(JSON.stringify(payload));
+      const firstResult = (await p1Socket.next()) as {
+        type?: string;
+        accepted?: boolean;
+        errors?: string[];
+      };
+      await p1Socket.next();
+      p1Socket.socket.send(JSON.stringify(payload));
+      const retryResult = (await p1Socket.next()) as {
+        type?: string;
+        accepted?: boolean;
+        errors?: string[];
+      };
+
+      assert.equal(firstResult.type, "actionResult");
+      assert.equal(firstResult.accepted, true);
+      assert.equal(retryResult.type, "actionResult");
+      assert.equal(retryResult.accepted, true);
+      assert.deepEqual(retryResult.errors, []);
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
+      await server.close();
+    }
+  });
+
   test("rejects websocket decision responses from the wrong player", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");

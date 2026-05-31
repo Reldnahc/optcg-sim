@@ -859,21 +859,6 @@ const handleWebSocketUpgrade = (
         });
         continue;
       }
-      if (
-        payload.type === "respondToDecision" &&
-        match.state.pendingDecision?.id !== payload.expectedDecisionId
-      ) {
-        sendSocketJson(connection, {
-          type: "actionResult",
-          matchId,
-          clientActionId: payload.clientActionId,
-          accepted: false,
-          stateSeq: match.state.seq,
-          actionSeq: match.state.actionSeq,
-          errors: ["Pending decision id did not match expectedDecisionId."],
-        });
-        continue;
-      }
       const result = runtime.applyEnvelope(
         clientActionEnvelopeFromSocketPayload(payload),
       );

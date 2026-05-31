@@ -76,6 +76,11 @@ const applyRequest = (
   }
 };
 
+const requestExpectedStateSeq = (
+  request: SessionActionRequest,
+): number | undefined =>
+  request.type === "respondToDecision" ? undefined : request.expectedStateSeq;
+
 export const createMatchSessionRuntime = ({
   local,
   metadata,
@@ -139,6 +144,21 @@ export const createMatchSessionRuntime = ({
         );
       }
 
+      if (
+        envelope.matchId !== local.state.matchId ||
+        envelope.playerId !== envelope.request.playerId ||
+        (requestExpectedStateSeq(envelope.request) !== undefined &&
+          requestExpectedStateSeq(envelope.request) !==
+            envelope.expectedStateSeq)
+      ) {
+        return rejectedResult(
+          envelope,
+          local.state.seq,
+          "illegalAction",
+          "Action envelope does not match its request context.",
+        );
+      }
+
       const actualHash = requestHash(envelope.request);
       if (actualHash !== envelope.requestHash) {
         return rejectedResult(
@@ -164,6 +184,17 @@ export const createMatchSessionRuntime = ({
           "Action request expected a future state sequence.",
         );
       }
+      if (
+        envelope.request.type === "respondToDecision" &&
+        local.state.pendingDecision?.id !== envelope.expectedDecisionId
+      ) {
+        return rejectedResult(
+          envelope,
+          local.state.seq,
+          "pendingDecisionMismatch",
+          "Pending decision id did not match expectedDecisionId.",
+        );
+      }
 
       const result = resultFromLocal(
         envelope,
@@ -177,17 +208,27 @@ export const createMatchSessionRuntime = ({
         pendingDecisions.length = 0;
         return;
       }
-      for (const record of pendingActions.splice(0)) {
+      while (pendingActions.length > 0) {
+        const record = pendingActions[0];
+        if (record === undefined) {
+          break;
+        }
         await persistence.appendAction({
           matchId: record.envelope.matchId,
           record,
         });
+        pendingActions.shift();
       }
-      for (const record of pendingDecisions.splice(0)) {
+      while (pendingDecisions.length > 0) {
+        const record = pendingDecisions[0];
+        if (record === undefined) {
+          break;
+        }
         await persistence.appendDecision({
           matchId: record.envelope.matchId,
           record,
         });
+        pendingDecisions.shift();
       }
     },
     async saveSnapshot() {
