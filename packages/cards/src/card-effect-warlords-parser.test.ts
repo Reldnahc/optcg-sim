@@ -105,7 +105,7 @@ describe("warlords parser primitives", () => {
                       effect: {
                         type: "selectTargets",
                         request: {
-                          player: "opponent",
+                          player: "anyPlayer",
                           zone: "characterArea",
                           filter: {
                             categories: ["character"],
@@ -128,6 +128,61 @@ describe("warlords parser primitives", () => {
     expect(result?.evidence).toContain("cost:returnToOwnerHand");
     expect(result?.evidence).toContain("condition:leaderIdentity");
     expect(result?.evidence).toContain("instruction:returnToOwnerHand");
+    expect(result?.evidence).toContain("destination:ownerHand");
+  });
+
+  it("parses unqualified return-to-owner-hand targets as either player's Characters", () => {
+    const result = parseCardEffectLine(
+      "[On Play] ① (You may rest the specified number of DON!! cards in your cost area.): Return up to 1 Character with a cost of 2 or less to the owner's hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "restDon", count: 1, chooser: "self" },
+              },
+            },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "anyPlayer",
+                        zone: "characterArea",
+                        filter: {
+                          categories: ["character"],
+                          cost: { max: 2 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "bounce",
+                      destination: "hand",
+                      target: {
+                        type: "savedFieldObject",
+                        player: "anyPlayer",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("player:any");
     expect(result?.evidence).toContain("destination:ownerHand");
   });
 });

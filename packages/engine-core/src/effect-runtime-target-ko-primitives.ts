@@ -207,11 +207,16 @@ export const resolveSavedFieldObjectKoSelection = (params: {
     return { ok: false, reason: "illegal-object" };
   }
   const targetPlayerId =
-    params.target.player === "self"
-      ? params.controllerId
-      : params.target.player === "opponent"
-        ? getOpponentId(params.state, params.controllerId)
-        : params.target.player;
+    params.target.player === "anyPlayer"
+      ? object.object.playerId
+      : params.target.player === "self"
+        ? params.controllerId
+        : params.target.player === "opponent"
+          ? getOpponentId(params.state, params.controllerId)
+          : params.target.player;
+  if (targetPlayerId === null) {
+    return { ok: false, reason: "illegal-object" };
+  }
   if (
     object.object.zone.zone !== params.target.zone ||
     object.object.playerId !== targetPlayerId

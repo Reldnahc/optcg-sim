@@ -241,13 +241,15 @@ export interface TargetRequest {
   timing: "onActivation" | "onResolution";
   chooser: PlayerRef;
   zone: Zone;
-  player: PlayerRef;
+  player: TargetPlayerRef;
   filter?: CardFilter;
   min: number;
   max: number;
   allowFewerIfUnavailable: boolean;
   visibility?: "public" | "privateToChooser";
 }
+
+export type TargetPlayerRef = PlayerRef | "anyPlayer";
 
 export interface MultiZoneTargetRequest extends Omit<TargetRequest, "zone"> {
   zones: Zone[];
@@ -457,7 +459,7 @@ export interface SavedFieldObjectTarget {
   type: "savedFieldObject";
   binding: SavedFieldObjectTargetBinding;
   zone: SavedFieldObjectZone;
-  player: PlayerRef;
+  player: TargetPlayerRef;
   controller?: PlayerRef;
   filter?: CardFilter;
   visibility: "publicOnly";

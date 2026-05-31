@@ -416,4 +416,33 @@ describe("resolvePublicTargetCandidates", () => {
     expect(result).toEqual({ ok: false, reason: "missingCardMetadata" });
     expect(hashCanonicalStateValue(state)).toBe(before);
   });
+
+  test("any-player character requests include both players' public character candidates", () => {
+    const state = createActiveState();
+    const selfCharacter = toCardId("self-character");
+    const opponentCharacter = toCardId("opponent-character");
+    addManifestCard(state, {
+      cardId: selfCharacter,
+      category: "character",
+      cost: 2,
+    });
+    addManifestCard(state, {
+      cardId: opponentCharacter,
+      category: "character",
+      cost: 2,
+    });
+    const selfRefs = placeCharacters(state, p1, [selfCharacter]);
+    const opponentRefs = placeCharacters(state, p2, [opponentCharacter]);
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        player: "anyPlayer" as TargetRequest["player"],
+        filter: { categories: ["character"], cost: { max: 2 } },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([selfRefs[0], opponentRefs[0]]);
+  });
 });

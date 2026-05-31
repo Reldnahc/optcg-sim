@@ -94,6 +94,23 @@ const resolvePlayerRef = (
   return null;
 };
 
+const resolveTargetPlayerIds = (
+  state: GameState,
+  ref: TargetRequest["player"],
+  context: ResolvePublicTargetCandidatesContext,
+): PlayerId[] | null => {
+  if (ref !== "anyPlayer") {
+    const playerId = resolvePlayerRef(state, ref, context);
+    return playerId === null ? null : [playerId];
+  }
+
+  if (!Object.hasOwn(state.players, context.sourceControllerId)) {
+    return null;
+  }
+  const opponentId = getOpponentId(state, context.sourceControllerId);
+  return opponentId === null ? null : [context.sourceControllerId, opponentId];
+};
+
 const hasOnlySupportedFilterKeys = (filter: CardFilter): boolean =>
   Object.keys(filter).every((key) =>
     supportedFilterKeys.has(key as keyof CardFilter),
@@ -269,31 +286,37 @@ export const resolvePublicTargetCandidates = (
   }
 
   const chooserId = resolvePlayerRef(state, request.chooser, context);
-  const targetPlayerId = resolvePlayerRef(state, request.player, context);
-  if (chooserId === null || targetPlayerId === null) {
-    return { ok: false, reason: "unresolvedPlayerRef" };
-  }
-
-  const cards = candidateCardsForZone(state, targetPlayerId, request.zone);
-  if (cards === null) {
+  const targetPlayerIds = resolveTargetPlayerIds(
+    state,
+    request.player,
+    context,
+  );
+  if (chooserId === null || targetPlayerIds === null) {
     return { ok: false, reason: "unresolvedPlayerRef" };
   }
 
   const candidates: TargetCandidate[] = [];
-  for (const card of cards) {
-    const metadata = state.cardManifest.cards[card.cardId];
-    if (request.filter !== undefined && metadata === undefined) {
-      return { ok: false, reason: "missingCardMetadata" };
+  for (const targetPlayerId of targetPlayerIds) {
+    const cards = candidateCardsForZone(state, targetPlayerId, request.zone);
+    if (cards === null) {
+      return { ok: false, reason: "unresolvedPlayerRef" };
     }
 
-    if (
-      metadata === undefined ||
-      cardMatchesFilter(state, card, metadata, request.filter)
-    ) {
-      candidates.push({
-        card: toCardRef(card, targetPlayerId),
-        visibility: publicCandidateVisibility,
-      });
+    for (const card of cards) {
+      const metadata = state.cardManifest.cards[card.cardId];
+      if (request.filter !== undefined && metadata === undefined) {
+        return { ok: false, reason: "missingCardMetadata" };
+      }
+
+      if (
+        metadata === undefined ||
+        cardMatchesFilter(state, card, metadata, request.filter)
+      ) {
+        candidates.push({
+          card: toCardRef(card, targetPlayerId),
+          visibility: publicCandidateVisibility,
+        });
+      }
     }
   }
 

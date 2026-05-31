@@ -649,3 +649,27 @@ test("cards parser emits broad field-removal protection primitives accepted by e
     true,
   );
 });
+
+test("cards parser emits any-player owner-hand return targets accepted by engine sequence gates", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[On Play] ① (You may rest the specified number of DON!! cards in your cost area.): Return up to 1 Character with a cost of 2 or less to the owner's hand.",
+    [
+      "entry:onPlay",
+      "cost:restDon",
+      "instruction:returnToOwnerHand",
+      "player:any",
+      "filter:category:character",
+      "filter:cost",
+      "destination:ownerHand",
+      "composition:selectThenApply",
+    ],
+  );
+
+  const body = effectBlock.effect.effects[1]?.effect;
+  assert.equal(body?.type, "sequence");
+  assert.equal(body.effects[0]?.effect.request.player, "anyPlayer");
+  assert.equal(body.effects[1]?.effect.target.player, "anyPlayer");
+  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
+    supported: true,
+  });
+});

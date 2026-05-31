@@ -524,7 +524,9 @@ const isSupportedSavedFieldObjectKoTarget = (
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
   target.type === "savedFieldObject" &&
   (target.zone === "characterArea" || target.zone === "stageArea") &&
-  (target.player === "self" || target.player === "opponent") &&
+  (target.player === "self" ||
+    target.player === "opponent" ||
+    target.player === "anyPlayer") &&
   target.controller === undefined &&
   target.filter === undefined;
 
@@ -583,7 +585,9 @@ const isSupportedSequenceTargetRequest = (
         zone === "stageArea" ||
         zone === "costArea",
     ) &&
-    (request.player === "self" || request.player === "opponent") &&
+    (request.player === "self" ||
+      request.player === "opponent" ||
+      request.player === "anyPlayer") &&
     Number.isInteger(request.min) &&
     Number.isInteger(request.max) &&
     request.min >= 0 &&

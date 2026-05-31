@@ -160,6 +160,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   TargetRequest: "TYP-001D",
   MultiZoneTargetRequest: "TYP-001D",
   SelectedTargetsRequest: "TYP-010",
+  TargetPlayerRef: "TYP-001D",
   ExactCardinality: "TYP-007A",
   UpToCardinality: "TYP-007A",
   Cardinality: "TYP-007A",

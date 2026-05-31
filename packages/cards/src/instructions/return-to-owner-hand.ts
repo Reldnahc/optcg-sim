@@ -30,7 +30,7 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
 
   return {
     effect: selectThenReturnToOwnerHand(
-      "opponent",
+      "anyPlayer",
       cardinality.cardinality.min,
       cardinality.cardinality.max,
       predicates.filter,
@@ -38,7 +38,7 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     evidence: [
       "instruction:returnToOwnerHand",
       ...cardinality.evidence,
-      "player:opponent",
+      "player:any",
       ...predicates.evidence,
       "destination:ownerHand",
       "composition:selectThenApply",
@@ -48,7 +48,7 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
 };
 
 export function selectThenReturnToOwnerHand(
-  player: "self" | "opponent",
+  player: "self" | "opponent" | "anyPlayer",
   min: number,
   max: number,
   filter: NonNullable<Extract<Target, { type: "choose" }>["request"]["filter"]>,

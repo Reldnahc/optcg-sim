@@ -163,6 +163,7 @@ export type PrimitiveEvidence =
   | "keyword:anySupported"
   | "player:self"
   | "player:opponent"
+  | "player:any"
   | "chooser:self"
   | "chooser:self:upTo"
   | "chooser:opponent"
