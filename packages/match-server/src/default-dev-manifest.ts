@@ -29,6 +29,13 @@ export interface CreateDevMatchSetupFromDeckSubmissionsInput extends CreateDefau
   readonly secondPlayer: ReadyDeckSubmission;
 }
 
+export interface ValidateReadyDevDeckSubmissionInput extends Omit<
+  CreateDefaultDevMatchSetupInput,
+  "matchId" | "firstPlayerId" | "playerOrder"
+> {
+  readonly submission: ReadyDeckSubmission;
+}
+
 export interface DevDonCounts {
   readonly firstPlayer: number;
   readonly secondPlayer: number;
@@ -180,6 +187,32 @@ export const validateDevDeckSubmissionVariants = (
       );
     }
   }
+};
+
+export const validateReadyDevDeckSubmission = async (
+  input: ValidateReadyDevDeckSubmissionInput,
+): Promise<void> => {
+  const decklist = createDevDecklistFromSubmission(input.submission);
+  const cardManifest = await buildDevManifestFromCardIds(
+    createDevManifestCardIds(decklist),
+    {
+      matchId: "validation-only" as DevMatchSetup["matchId"],
+      firstPlayerId: "p1" as PlayerId,
+      playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+      createdAt: input.createdAt,
+      ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
+      ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+      ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
+    },
+    decklist.donDeckCount,
+  );
+  validateDevDeckSubmissionVariants(decklist, cardManifest);
+  createDevPlayerSetupFromDecklist(
+    "p1" as PlayerId,
+    decklist,
+    cardManifest,
+    createDevDonDeckCardIds(decklist.donDeckCount),
+  );
 };
 
 const readDefaultDevDeckSubmission = async (

@@ -52,11 +52,17 @@ const createDeckHashDevHttpServer = async () =>
                 main: [{ card_number: "OP13-080", count: 8 }],
                 don: null,
               }
-            : {
-                leader: { card_number: "OP13-079", count: 1 },
-                main: [{ card_number: "OP13-082", count: 8 }],
-                don: null,
-              },
+            : hash === "bad-cache-hash"
+              ? {
+                  leader: { card_number: "OP13-079", count: 1 },
+                  main: [{ card_number: "BAD-001", count: 8 }],
+                  don: null,
+                }
+              : {
+                  leader: { card_number: "OP13-079", count: 1 },
+                  main: [{ card_number: "OP13-082", count: 8 }],
+                  don: null,
+                },
         ),
     },
   });
@@ -301,6 +307,42 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(JSON.stringify(lobby).includes("p1-hash"), false);
       assert.equal(requireLobbySeat(lobby, "p1").deck.status, "ready");
       assert.equal(requireLobbySeat(lobby, "p2").deck.status, "missing");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("declines decoded deck hashes that do not resolve through the card cache", async () => {
+    const server = await createDeckHashDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      await joinDevLobby(server, lobbyId, "guest-a");
+      const response = await fetch(
+        `${server.url()}/api/lobbies/${lobbyId}/deck`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-optcg-session-token": "guest-a",
+          },
+          body: JSON.stringify({ deckHash: "bad-cache-hash" }),
+        },
+      );
+      assert.equal(response.status, 400);
+
+      const lobbyResponse = await fetch(
+        `${server.url()}/api/lobbies/${lobbyId}`,
+      );
+      assert.equal(lobbyResponse.status, 200);
+      const lobby = (await lobbyResponse.json()) as CreatedDevLobbyBody;
+      assert.equal(requireLobbySeat(lobby, "p1").deck.status, "missing");
+      assert.equal(lobby.matchId, undefined);
     } finally {
       await server.close();
     }

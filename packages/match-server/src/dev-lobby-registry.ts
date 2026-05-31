@@ -4,6 +4,7 @@ import {
   createDevMatchSetupFromDeckSubmissions,
   defaultDevDonCounts,
   resolveDevDonCounts,
+  validateReadyDevDeckSubmission,
 } from "./default-dev-manifest.js";
 import {
   decodeDeckHashSubmission,
@@ -69,6 +70,7 @@ export interface CreateLocalDevLobbyRegistryOptions extends CreatePremadeDevMatc
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
+const devLobbyCreatedAt = "2026-05-04T00:00:00.000Z";
 
 const createLobbySeats = (): LocalDevLobby["seats"] => ({
   p1: { playerId: p1 },
@@ -122,7 +124,7 @@ export const createLocalDevLobbyRegistry = (
         matchId: `${lobby.lobbyId}-match` as MatchId,
         firstPlayerId: p1,
         playerOrder: [p1, p2],
-        createdAt: "2026-05-04T00:00:00.000Z",
+        createdAt: devLobbyCreatedAt,
         firstPlayer: first,
         secondPlayer: second,
         ...(options.fetchCard === undefined
@@ -202,10 +204,27 @@ export const createLocalDevLobbyRegistry = (
           ? {}
           : { codec: options.deckHashCodec }),
       });
-      seat.deckSubmission = submission;
       if (submission.status !== "ready") {
         return "invalidDeck";
       }
+      try {
+        await validateReadyDevDeckSubmission({
+          submission,
+          createdAt: devLobbyCreatedAt,
+          ...(options.fetchCard === undefined
+            ? {}
+            : { fetchCard: options.fetchCard }),
+          ...(options.baseUrl === undefined
+            ? {}
+            : { baseUrl: options.baseUrl }),
+          ...(options.redisUrl === undefined
+            ? {}
+            : { redisUrl: options.redisUrl }),
+        });
+      } catch {
+        return "invalidDeck";
+      }
+      seat.deckSubmission = submission;
       await ensureMatchWhenReady(lobby);
       return {
         ...lobbyResponse(lobby),
