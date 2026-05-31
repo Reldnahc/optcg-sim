@@ -11,6 +11,7 @@ import {
 import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
 import {
   effectDefinition,
+  passCounterStep,
   setupAttackState,
   withOnKODrawEffect,
 } from "./battle-actions-test-fixtures.js";
@@ -170,9 +171,11 @@ const createLifeTriggerDecisionState = () => {
     },
   });
   assert.equal(opened.errors, undefined);
-  assert.equal(opened.state.pendingDecision?.type, "confirmLifeTrigger");
+  const passed = passCounterStep(opened.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision?.type, "confirmLifeTrigger");
   return {
-    opened,
+    opened: passed,
     lifeCardId,
     adjacentLifeId,
     hiddenHandId,

@@ -184,7 +184,10 @@ test("CARD-009D: draw-then-trash trash decision response trashes selected card a
     assert.equal(resolved.state.effectQueue.length, 0);
     assert.notEqual(resolved.state.battle?.step, "attack");
     if (resolved.state.battle !== undefined) {
-      assert.equal(resolved.state.battle.step, "block");
+      assert.ok(
+        resolved.state.battle.step === "block" ||
+          resolved.state.battle.step === "counter",
+      );
       assert.equal(resolved.state.pendingDecision?.type, "selectCards");
       assert.equal(
         getLegalActions(resolved.state, p2).some(

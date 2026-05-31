@@ -9,6 +9,7 @@ import { must, p1, p2 } from "./action-test-fixtures.js";
 import {
   cardRef,
   continuousEffectRecord,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 type EngineInternalBattleState = NonNullable<
@@ -59,19 +60,20 @@ test("leader damage at zero life still routes through end-of-battle cleanup orde
   });
 
   assert.equal(result.errors, undefined);
-  assert.equal(result.state.battle, undefined);
+  const passed = passCounterStep(result.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.battle, undefined);
   assert.deepEqual(
-    result.events.map((event) => event.type),
+    passed.events.map((event) => event.type),
     [
-      "attackDeclared",
-      "ruleProcessingChecked",
+      "decisionResolved",
       "damageDealt",
       "ruleProcessingChecked",
       "gameEnded",
       "effectResolved",
     ],
   );
-  assert.deepEqual(result.events[5]?.payload, {
+  assert.deepEqual(passed.events[4]?.payload, {
     systemStep: "endBattle",
     battleCleared: true,
   });

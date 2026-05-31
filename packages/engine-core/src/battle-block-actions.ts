@@ -311,9 +311,13 @@ export const applyBlockStepDecisionResponse = (
     );
   }
 
+  const eventState: GameState = {
+    ...state,
+    actionSeq: state.actionSeq + 1,
+  };
   const events: EngineEvent[] = [];
   appendEvent(
-    state,
+    eventState,
     events,
     "decisionResolved",
     { decisionId: decision.id, playerId: decision.playerId },
@@ -331,7 +335,7 @@ export const applyBlockStepDecisionResponse = (
     const blockerRef = toCardRef(selected.card, selected.playerId);
     const previousTarget = battle.currentTarget;
     appendEvent(
-      state,
+      eventState,
       events,
       "blockerActivated",
       {
@@ -343,7 +347,7 @@ export const applyBlockStepDecisionResponse = (
     );
     const activatedState: GameState = {
       ...state,
-      actionSeq: state.actionSeq + 1,
+      actionSeq: eventState.actionSeq,
       players: restBlocker(state, decision.playerId, blockerRef),
       battle: {
         ...battle,
@@ -365,7 +369,7 @@ export const applyBlockStepDecisionResponse = (
 
   const resumedState: GameState = {
     ...state,
-    actionSeq: state.actionSeq + 1,
+    actionSeq: eventState.actionSeq,
     battle: { ...battle, step: "attack" },
     eventJournal: [...state.eventJournal, ...events],
   };

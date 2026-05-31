@@ -9,6 +9,7 @@ import { must, p1, p2 } from "./action-test-fixtures.js";
 import {
   cardRef,
   continuousEffectRecord,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
@@ -27,7 +28,7 @@ test("supported declareAttack resolves vanilla battle internally without continu
   const seqBefore = state.seq;
   const actionSeqBefore = state.actionSeq;
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -41,14 +42,21 @@ test("supported declareAttack resolves vanilla battle internally without continu
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.stateHash, hashCanonicalStateValue(opened.state));
+  assert.equal(must(opened.state.players[p1], "p1").leader.state, "rested");
+  assert.equal(opened.state.battle?.step, "counter");
+  assert.equal(
+    opened.state.pendingDecision?.prompt,
+    "Use counter or end step.",
+  );
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
-  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
-  assert.equal(must(result.state.players[p1], "p1").leader.state, "rested");
   assert.equal(result.state.battle, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.decisions, undefined);
   assert.equal(
-    result.events.some((event) => event.type === "attackDeclared"),
+    opened.events.some((event) => event.type === "attackDeclared"),
     true,
   );
   assert.equal(
@@ -77,10 +85,10 @@ test("supported declareAttack resolves vanilla battle internally without continu
     [...new Set(result.events.map((event) => event.seq))],
   );
   assert.equal(
-    result.state.seq,
+    opened.state.seq,
     ((seqBefore as number) + 1) as typeof state.seq,
   );
-  assert.equal(result.state.actionSeq, actionSeqBefore + 1);
+  assert.equal(result.state.actionSeq, actionSeqBefore + 2);
   assert.equal(
     result.events.every(
       (event) => event.createdAtStateSeq === result.state.seq,
@@ -113,7 +121,9 @@ test("leader damage at 0 life completes the match for the attacker", () => {
     step: "attack",
     damageCount: 1,
   };
-  const result = resolveSupportedVanillaBattle(state);
+  const opened = resolveSupportedVanillaBattle(state);
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.deepEqual(result.state.status, { type: "completed", winner: p1 });
   assert.equal(
@@ -151,7 +161,7 @@ test("life orientation uses player.life[0] as next damage card", () => {
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const expectedLifeCard = must(p2State.life[0], "top life").card.instanceId;
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -164,6 +174,8 @@ test("life orientation uses player.life[0] as next damage card", () => {
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2").hand.some(
@@ -177,7 +189,7 @@ test("public life movement events do not expose life card ids, while private eve
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -190,6 +202,9 @@ test("public life movement events do not expose life card ids, while private eve
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
+  assert.equal(result.errors, undefined);
   const publicCardMoved = result.events.find(
     (event) => event.type === "cardMoved" && event.visibility.type === "public",
   );

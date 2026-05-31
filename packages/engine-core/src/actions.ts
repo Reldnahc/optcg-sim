@@ -794,7 +794,11 @@ const applyRespondToDecision = (
   }
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
-    return continueRuntimeAndAttackTimingAfterDecision(state, battleResult);
+    return battleResult.errors === undefined &&
+      battleResult.state.battle?.step === "counter" &&
+      battleResult.state.pendingDecision === undefined
+      ? continueRuntimeAndAttackTimingAfterDecision(state, battleResult)
+      : battleResult;
   }
   const lifeTriggerResult = applyLifeTriggerDecisionResponse(state, action);
   if (lifeTriggerResult !== null) {

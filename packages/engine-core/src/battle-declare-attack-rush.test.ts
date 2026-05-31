@@ -9,6 +9,7 @@ import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
 import {
   addTrashMarker,
   continuousKeywordEffectRecord,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 
@@ -109,7 +110,7 @@ test("played-this-turn rush character attacks leader through battle action surfa
   });
   const beforeLife = p2State.life.length;
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -123,6 +124,8 @@ test("played-this-turn rush character attacks leader through battle action surfa
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p1], "p1 result").characters.find(
@@ -136,7 +139,7 @@ test("played-this-turn rush character attacks leader through battle action surfa
   );
   assert.equal(result.state.battle, undefined);
   assert.equal(
-    result.events.some((event) => event.type === "attackDeclared"),
+    opened.events.some((event) => event.type === "attackDeclared"),
     true,
   );
   assert.equal(
@@ -164,7 +167,7 @@ test("played-this-turn rush character attacks rested character through battle ac
     power: 3000,
   });
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -178,6 +181,8 @@ test("played-this-turn rush character attacks rested character through battle ac
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2 result").characters.length,
@@ -236,7 +241,7 @@ test("played-this-turn rushCharacter character can attack rested characters but 
     true,
   );
 
-  const accepted = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -249,6 +254,8 @@ test("played-this-turn rushCharacter character can attack rested characters but 
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const accepted = passCounterStep(opened.state, p2);
   assert.equal(accepted.errors, undefined);
   assert.equal(
     must(accepted.state.players[p2], "p2 result").trash.some(

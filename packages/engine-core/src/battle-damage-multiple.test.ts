@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -21,6 +22,7 @@ import {
   addTrashMarker,
   continuousKeywordEffectRecord,
   effectDefinition,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
@@ -219,6 +221,14 @@ const assertRejectedHash = (
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 };
 
+const resolveBattleAfterCounterPass = (
+  state: ReturnType<typeof setupAttackState>,
+): EngineResult => {
+  const opened = resolveSupportedVanillaBattle(state);
+  assertAcceptedHash(opened);
+  return passCounterStep(opened.state, p2);
+};
+
 test("double attack leader damage processes two life cards sequentially", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const p2State = must(state.players[p2], "p2");
@@ -227,7 +237,7 @@ test("double attack leader damage processes two life cards sequentially", () => 
   const beforeLife = p2State.life.length;
   const beforeHand = p2State.hand.length;
 
-  const result = resolveSupportedVanillaBattle(state);
+  const result = resolveBattleAfterCounterPass(state);
 
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
@@ -263,6 +273,7 @@ test("double attack leader damage processes two life cards sequentially", () => 
     "lifeTaken",
   ]);
   assert.deepEqual(eventTypeVisibilitySequence(result), [
+    { type: "decisionResolved", visibility: "public" },
     { type: "damageDealt", visibility: "public" },
     { type: "lifeTaken", visibility: "public" },
     { type: "cardMoved", visibility: "public" },
@@ -300,10 +311,11 @@ test("damageCount values other than one or two fail closed without mutation", ()
 
 test("two damage without Double Attack source fails closed without mutation", () => {
   const state = setupLeaderBattleWithDamageCount(2);
-  const before = JSON.stringify(state);
-  const beforeHash = hashCanonicalStateValue(state);
+  const opened = resolveSupportedVanillaBattle(state);
+  assertAcceptedHash(opened);
+  const before = JSON.stringify(opened.state);
 
-  const result = resolveSupportedVanillaBattle(state);
+  const result = passCounterStep(opened.state, p2);
 
   assert.deepEqual(result.errors, [
     {
@@ -312,29 +324,30 @@ test("two damage without Double Attack source fails closed without mutation", ()
     },
   ]);
   assert.deepEqual(result.events, []);
-  assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  assert.equal(JSON.stringify(opened.state), before);
 });
 
 test("unsupported Double Attack metadata cannot bypass source gate through direct resolution", () => {
   const state = setupLeaderBattleWithDamageCount(2, {
     unsupportedDoubleAttack: true,
   });
-  const before = JSON.stringify(state);
-  const beforeHash = hashCanonicalStateValue(state);
+  const opened = resolveSupportedVanillaBattle(state);
+  assertAcceptedHash(opened);
+  const before = JSON.stringify(opened.state);
+  const beforeHash = hashCanonicalStateValue(opened.state);
 
-  const result = resolveSupportedVanillaBattle(state);
+  const result = passCounterStep(opened.state, p2);
 
   assert.deepEqual(result.errors, [
     {
       type: "illegalAction",
-      reason: "Battle requires unsupported keyword or protection handling.",
+      reason: "Battle requires unsupported combat metadata.",
     },
   ]);
   assert.deepEqual(result.events, []);
   assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(opened.state), before);
   assert.equal(JSON.stringify(result.state), before);
 });
 
@@ -389,7 +402,7 @@ test("first Double Attack damage point with supported Life Trigger pauses before
     .card.instanceId;
   const beforeP2 = must(state.players[p2], "p2 before");
 
-  const result = resolveSupportedVanillaBattle(state);
+  const result = resolveBattleAfterCounterPass(state);
 
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
@@ -446,7 +459,7 @@ test("accepting first Double Attack Life Trigger resumes and can create second t
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
   const secondLife = installSupportedLifeTriggerOnLife(state, 1, "second");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   const firstDecision = must(
     opened.state.pendingDecision,
     "first life trigger decision",
@@ -519,7 +532,7 @@ test("accepted Double Attack Life Trigger continuation keeps event order and sta
     const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
     installSupportedLifeTriggerOnLife(state, 0, "first");
     installSupportedLifeTriggerOnLife(state, 1, "second");
-    const opened = resolveSupportedVanillaBattle(state);
+    const opened = resolveBattleAfterCounterPass(state);
     const firstDecision = must(
       opened.state.pendingDecision,
       "first life trigger decision",
@@ -570,7 +583,7 @@ test("Double Attack defers Life Trigger effectResolved follow-up until all damag
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
   const firstLifeEffectId = must(firstLife.effectId, "first life effect id");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   assert.equal(opened.errors, undefined);
   const followUp = installEffectResolvedDrawFollowUp(
     opened.state,
@@ -648,7 +661,7 @@ test("Double Attack defers Life Trigger effectResolved follow-up until all damag
 test("Double Attack rejects structurally deferred non-Life Trigger follow-up without mutation", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   installSupportedLifeTriggerOnLife(state, 0, "first");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   assert.equal(opened.errors, undefined);
   const followUp = installEffectResolvedDrawFollowUp(
     opened.state,
@@ -723,7 +736,7 @@ test("declining first Double Attack Life Trigger moves it to hand then resumes t
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
   const secondLife = installSupportedLifeTriggerOnLife(state, 1, "second");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   const firstDecision = must(
     opened.state.pendingDecision,
     "first life trigger decision",
@@ -775,7 +788,7 @@ test("declining first Double Attack Life Trigger moves it to hand then resumes t
 test("malformed Double Attack Life Trigger continuation fails closed without mutation", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   installSupportedLifeTriggerOnLife(state, 0, "first");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   const decision = must(opened.state.pendingDecision, "life trigger decision");
   const malformed = structuredClone(opened.state);
   malformed.battle = {
@@ -805,7 +818,7 @@ test("malformed Double Attack Life Trigger continuation fails closed without mut
 test("missing Double Attack Life Trigger continuation marker fails closed without mutation", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   installSupportedLifeTriggerOnLife(state, 0, "first");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   const decision = must(opened.state.pendingDecision, "life trigger decision");
   const malformed = structuredClone(opened.state);
   const battle = must(malformed.battle, "continuation battle");
@@ -840,7 +853,7 @@ test("missing Double Attack Life Trigger continuation marker fails closed withou
 test("stale Double Attack Life Trigger continuation response fails closed without mutation", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
-  const opened = resolveSupportedVanillaBattle(state);
+  const opened = resolveBattleAfterCounterPass(state);
   const decision = must(opened.state.pendingDecision, "life trigger decision");
   const stale = structuredClone(opened.state);
   const player = must(stale.players[p2], "stale p2");
@@ -895,7 +908,7 @@ test("supported doubleAttack declareAttack against leader applies two damage poi
   installSupportedDoubleAttackLeader(state);
   const beforeLife = p2State.life.length;
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -909,7 +922,8 @@ test("supported doubleAttack declareAttack against leader applies two damage poi
     },
   });
 
-  assert.equal(result.errors, undefined);
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assertAcceptedHash(result);
   const nextP2 = must(result.state.players[p2], "p2");
   assert.equal(nextP2.life.length, beforeLife - 2);
@@ -938,7 +952,7 @@ test("conditional continuous doubleAttack grant applies two leader damage points
   ];
   const beforeLife = p2State.life.length;
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -952,6 +966,8 @@ test("conditional continuous doubleAttack grant applies two leader damage points
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
   assert.equal(

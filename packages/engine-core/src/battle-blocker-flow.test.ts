@@ -16,6 +16,7 @@ import {
   addTrashMarker,
   cardRef,
   continuousKeywordEffectRecord,
+  passCounterStep,
   setupAttackState,
   setupOpenedBlockStepDecision,
   setupOpenedCharacterTargetBlockStepDecision,
@@ -152,17 +153,19 @@ test("conditional continuous blocker grant opens Block Step decision and can be 
     },
   ]);
 
-  const result = applyAction(opened.state, {
+  const blocked = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: pending.id,
     response: { type: "cards", cards: [cardRef(defenderBlocker, p2)] },
   });
 
-  assert.equal(result.errors, undefined);
+  assert.equal(blocked.errors, undefined);
   assert.equal(
-    result.events.some((event) => event.type === "blockerActivated"),
+    blocked.events.some((event) => event.type === "blockerActivated"),
     true,
   );
+  const result = passCounterStep(blocked.state, p2);
+  assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2 result").trash.some(
       (card) => card.instanceId === defenderBlocker.instanceId,
@@ -274,10 +277,12 @@ test("blocker activation queues opponent activation reactions before battle reso
   });
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.equal(resolved.state.battle, undefined);
+  const passed = passCounterStep(resolved.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision, undefined);
+  assert.equal(passed.state.battle, undefined);
   assert.equal(
-    resolved.state.continuousEffects.some(
+    passed.state.continuousEffects.some(
       (effect) =>
         effect.modifier.layer === "powerAdd" &&
         effect.modifier.operation.type === "addPower" &&
@@ -291,16 +296,18 @@ test("blocker activation queues opponent activation reactions before battle reso
 test("empty block-step respondToDecision declines and resumes existing no-block battle resolution path", () => {
   const { opened, decision: pending } = setupOpenedBlockStepDecision();
 
-  const result = applyAction(opened.state, {
+  const declined = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: pending.id,
     response: { type: "cards", cards: [] },
   });
 
+  assert.equal(declined.errors, undefined);
+  const result = passCounterStep(declined.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.battle, undefined);
-  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 2);
   assert.equal(
     result.events.some((event) => event.type === "decisionResolved"),
     true,
@@ -309,7 +316,8 @@ test("empty block-step respondToDecision declines and resumes existing no-block 
     result.events.some((event) => event.type === "damageDealt"),
     true,
   );
-  const decisionResolved = result.events.find(
+  const events = [...declined.events, ...result.events];
+  const decisionResolved = events.find(
     (event) => event.type === "decisionResolved",
   );
   const resolvedEvent = must(decisionResolved, "decisionResolved event");
@@ -319,11 +327,12 @@ test("empty block-step respondToDecision declines and resumes existing no-block 
     playerId: p2,
   });
   assert.equal(result.events[0]?.type, "decisionResolved");
-  const replay = applyAction(structuredClone(opened.state), {
+  const replayDeclined = applyAction(structuredClone(opened.state), {
     type: "respondToDecision",
     decisionId: pending.id,
     response: { type: "cards", cards: [] },
   });
+  const replay = passCounterStep(replayDeclined.state, p2);
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(result.events, replay.events);
 });
@@ -335,15 +344,17 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
   const blocker = cardRef(defenderBlocker, p2);
   const beforeLife = p2State.life.length;
 
-  const result = applyAction(opened.state, {
+  const blocked = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: decision.id,
     response: { type: "cards", cards: [blocker] },
   });
 
+  assert.equal(blocked.errors, undefined);
+  const result = passCounterStep(blocked.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
-  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 2);
   assert.equal(result.state.battle, undefined);
   assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);
   assert.equal(
@@ -358,8 +369,9 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
     ),
     true,
   );
+  const events = [...blocked.events, ...result.events];
   assert.deepEqual(
-    result.events.map((event) => ({
+    events.map((event) => ({
       type: event.type,
       payload: event.payload,
       visibility: event.visibility,
@@ -376,6 +388,25 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
           blocker,
           previousTarget: originalTarget,
           currentTarget: blocker,
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "decisionCreated",
+        payload: {
+          decisionId: must(blocked.state.pendingDecision, "counter decision")
+            .id,
+          decisionType: "selectCards",
+          playerId: p2,
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "decisionResolved",
+        payload: {
+          decisionId: must(blocked.state.pendingDecision, "counter decision")
+            .id,
+          playerId: p2,
         },
         visibility: { type: "public" },
       },
@@ -443,12 +474,14 @@ test("attached DON!! returns rested when a blocker is K.O.'d", () => {
   };
   const blocker = cardRef(defenderBlocker, p2);
 
-  const result = applyAction(opened.state, {
+  const blocked = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: decision.id,
     response: { type: "cards", cards: [blocker] },
   });
 
+  assert.equal(blocked.errors, undefined);
+  const result = passCounterStep(blocked.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2").costArea.find(
@@ -522,12 +555,14 @@ test("lower-power attack into blocker clears battle without K.O. or Life movemen
   const blocker = cardRef(context.defenderBlocker, p2);
   const beforeLife = must(context.opened.state.players[p2], "p2").life.length;
 
-  const result = applyAction(context.opened.state, {
+  const blocked = applyAction(context.opened.state, {
     type: "respondToDecision",
     decisionId: context.decision.id,
     response: { type: "cards", cards: [blocker] },
   });
 
+  assert.equal(blocked.errors, undefined);
+  const result = passCounterStep(blocked.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(result.state.battle, undefined);
   assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);
@@ -559,14 +594,16 @@ test("Banish attacker blocked by Character causes no Life movement or Life trash
   };
   const blocker = cardRef(defenderBlocker, p2);
 
-  const result = applyAction(opened.state, {
+  const blocked = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: decision.id,
     response: { type: "cards", cards: [blocker] },
   });
 
-  const nextP2 = must(result.state.players[p2], "p2");
+  assert.equal(blocked.errors, undefined);
+  const result = passCounterStep(blocked.state, p2);
   assert.equal(result.errors, undefined);
+  const nextP2 = must(result.state.players[p2], "p2");
   assert.equal(nextP2.life.length, expectedLifeCards.length);
   assert.deepEqual(
     nextP2.life.map((lifeCard) => lifeCard.card.instanceId),
@@ -592,23 +629,31 @@ test("supported blocked-battle resolution is deterministic", () => {
   const { opened, defenderBlocker, decision } = setupOpenedBlockStepDecision();
   const blocker = cardRef(defenderBlocker, p2);
 
-  const result = applyAction(opened.state, {
+  const blocked = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: decision.id,
     response: { type: "cards", cards: [blocker] },
   });
-  const replay = applyAction(structuredClone(opened.state), {
+  const replayBlocked = applyAction(structuredClone(opened.state), {
     type: "respondToDecision",
     decisionId: decision.id,
     response: { type: "cards", cards: [blocker] },
   });
 
+  assert.equal(blocked.errors, undefined);
+  const result = passCounterStep(blocked.state, p2);
   assert.equal(result.errors, undefined);
+  assert.equal(replayBlocked.errors, undefined);
+  const replay = passCounterStep(replayBlocked.state, p2);
+  const events = [...blocked.events, ...result.events];
+  const replayEvents = [...replayBlocked.events, ...replay.events];
   assert.deepEqual(
-    result.events.map((event) => event.type),
+    events.map((event) => event.type),
     [
       "decisionResolved",
       "blockerActivated",
+      "decisionCreated",
+      "decisionResolved",
       "damageDealt",
       "cardKOd",
       "cardMoved",
@@ -617,8 +662,10 @@ test("supported blocked-battle resolution is deterministic", () => {
     ],
   );
   assert.deepEqual(
-    result.events.map((event) => event.visibility),
+    events.map((event) => event.visibility),
     [
+      { type: "public" },
+      { type: "public" },
       { type: "public" },
       { type: "public" },
       { type: "public" },
@@ -629,19 +676,14 @@ test("supported blocked-battle resolution is deterministic", () => {
     ],
   );
   assert.deepEqual(
-    result.events.map((event) => event.seq),
-    result.events.map(
-      (_, index) => opened.state.eventJournal.length + index + 1,
-    ),
+    events.map((event) => event.seq),
+    events.map((_, index) => opened.state.eventJournal.length + index + 1),
   );
-  assert.deepEqual(
-    result.state.eventJournal.slice(-result.events.length),
-    result.events,
-  );
+  assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "5a0f0632199e50fced2a19aaef865390ca6108f712b2dba1683ed1c90e694784",
+    "5c5b7ae2f7e480ed62491f84a83aa36722c9079c8432638cec275bfc9cd27815",
   );
   assert.equal(result.stateHash, replay.stateHash);
-  assert.deepEqual(result.events, replay.events);
+  assert.deepEqual(events, replayEvents);
 });

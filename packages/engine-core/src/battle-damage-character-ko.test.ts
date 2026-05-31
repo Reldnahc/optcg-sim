@@ -19,6 +19,7 @@ import {
 import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
 import {
   effectDefinition,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 
@@ -188,7 +189,7 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
     category: "character",
     power: 3000,
   });
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -201,6 +202,8 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(must(result.state.players[p2], "p2").characters.length, 0);
   assert.equal(must(result.state.players[p2], "p2").trash.length >= 1, true);
@@ -230,7 +233,7 @@ test("battle K.O. still removes a Character protected from opponent effect remov
     power: 3000,
   });
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -244,6 +247,8 @@ test("battle K.O. still removes a Character protected from opponent effect remov
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2").characters.some(
@@ -281,7 +286,7 @@ test("battle K.O. pauses for opponent field-removal life replacement", () => {
     power: 7000,
   });
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -295,6 +300,8 @@ test("battle K.O. pauses for opponent field-removal life replacement", () => {
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   const decision = must(result.state.pendingDecision, "replacement decision");
   assert.equal(decision.type, "chooseReplacement");
@@ -386,7 +393,7 @@ test("banish attacker against rested character still K.O.s normally and returns 
     power: 3000,
   });
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -400,6 +407,8 @@ test("banish attacker against rested character still K.O.s normally and returns 
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(must(result.state.players[p2], "p2").characters.length, 0);
   assert.equal(
@@ -451,7 +460,7 @@ test("character K.O. reindexes surviving defender characters", () => {
     power: 3000,
   });
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -465,8 +474,10 @@ test("character K.O. reindexes surviving defender characters", () => {
     },
   });
 
-  const defender = must(result.state.players[p2], "p2");
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
+  const defender = must(result.state.players[p2], "p2");
   assert.equal(defender.characters.length, 1);
   const remainingCharacter = must(defender.characters[0], "remaining defender");
   assert.equal(remainingCharacter.instanceId, survivor.instanceId);
@@ -495,7 +506,7 @@ test("lower-power attack causes no K.O. and no life movement", () => {
     power: 7000,
   });
   const beforeLife = p2State.life.length;
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -508,6 +519,8 @@ test("lower-power attack causes no K.O. and no life movement", () => {
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(must(result.state.players[p2], "p2").characters.length, 1);
   assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);

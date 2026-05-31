@@ -1259,9 +1259,13 @@ export const applyCounterStepDecisionResponse = (
     return illegalAction(state, unsupportedContinuationReason);
   }
 
+  const eventState: GameState = {
+    ...state,
+    actionSeq: state.actionSeq + 1,
+  };
   const events: EngineEvent[] = [];
   appendEvent(
-    state,
+    eventState,
     events,
     "decisionResolved",
     { decisionId: decision.id, playerId: decision.playerId },
@@ -1269,7 +1273,7 @@ export const applyCounterStepDecisionResponse = (
   );
   const resumedState: GameState = {
     ...state,
-    actionSeq: state.actionSeq + 1,
+    actionSeq: eventState.actionSeq,
     eventJournal: [...state.eventJournal, ...events],
   };
   delete resumedState.pendingDecision;

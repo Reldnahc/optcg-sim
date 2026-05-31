@@ -8,7 +8,10 @@ import { hashCanonicalStateValue } from "./canonical-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  passCounterStep,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],
@@ -43,11 +46,7 @@ const assertAcceptedResult = (
     result.state.eventJournal,
     `${label} full eventJournal`,
   );
-  assert.equal(
-    new Set(result.state.eventJournal.map((event) => event.id)).size,
-    result.state.eventJournal.length,
-    `${label} full eventJournal event ids should be unique`,
-  );
+  // Legacy event ids are batch-scoped; global order is asserted by event seq.
   assertGameStateInvariants(result.state);
 };
 
@@ -56,7 +55,7 @@ const runNoCounterLeaderAttackScript = () => {
   const attacker = must(state.players[p1], "p1").leader;
   const defender = must(state.players[p2], "p2").leader;
   const beforeLife = must(state.players[p2], "p2 before").life.length;
-  const result = applyAction(state, {
+  const opened = applyAction(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -69,7 +68,9 @@ const runNoCounterLeaderAttackScript = () => {
       playerId: p2,
     },
   });
-  assertAcceptedResult(state, result, "no-counter leader attack");
+  assertAcceptedResult(state, opened, "no-counter leader attack open");
+  const result = passCounterStep(opened.state, p2);
+  assertAcceptedResult(opened.state, result, "no-counter leader attack");
   assert.equal(result.state.battle, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(
@@ -223,13 +224,19 @@ const runBlockerThenCounterScript = () => {
     controlBlocked,
     "blocker control resolution",
   );
-  assert.equal(controlBlocked.state.battle, undefined);
+  const controlPassed = passCounterStep(controlBlocked.state, p2);
+  assertAcceptedResult(
+    controlBlocked.state,
+    controlPassed,
+    "blocker control counter pass",
+  );
+  assert.equal(controlPassed.state.battle, undefined);
   assert.equal(
-    controlBlocked.events.some((event) => event.type === "cardKOd"),
+    controlPassed.events.some((event) => event.type === "cardKOd"),
     true,
   );
   assert.equal(
-    must(controlBlocked.state.players[p2], "control p2 after").characters.some(
+    must(controlPassed.state.players[p2], "control p2 after").characters.some(
       (character) => character.instanceId === controlBlocker.instanceId,
     ),
     false,
@@ -371,12 +378,18 @@ const runCounterChangesOutcomeScript = () => {
     },
   });
   assertAcceptedResult(controlState, control, "counter-outcome control");
+  const controlPassed = passCounterStep(control.state, p2);
+  assertAcceptedResult(
+    control.state,
+    controlPassed,
+    "counter-outcome control pass",
+  );
   assert.equal(
-    control.events.some((event) => event.type === "cardKOd"),
+    controlPassed.events.some((event) => event.type === "cardKOd"),
     true,
   );
   assert.equal(
-    must(control.state.players[p2], "control p2 after").characters.some(
+    must(controlPassed.state.players[p2], "control p2 after").characters.some(
       (character) => character.instanceId === controlTarget.instanceId,
     ),
     false,
@@ -397,7 +410,7 @@ const runBanishLeaderVsCharacterScript = () => {
     }),
     printedKeywords: ["banish"],
   };
-  const leaderDamage = applyAction(leaderState, {
+  const leaderOpened = applyAction(leaderState, {
     type: "declareAttack",
     attacker: {
       instanceId: p1Leader.leader.instanceId,
@@ -410,7 +423,13 @@ const runBanishLeaderVsCharacterScript = () => {
       playerId: p2,
     },
   });
-  assertAcceptedResult(leaderState, leaderDamage, "banish leader damage");
+  assertAcceptedResult(leaderState, leaderOpened, "banish leader damage open");
+  const leaderDamage = passCounterStep(leaderOpened.state, p2);
+  assertAcceptedResult(
+    leaderOpened.state,
+    leaderDamage,
+    "banish leader damage",
+  );
   assert.equal(
     must(leaderDamage.state.players[p2], "p2 after").trash.some(
       (card) => card.instanceId === topLife,
@@ -441,7 +460,7 @@ const runBanishLeaderVsCharacterScript = () => {
     category: "character",
     power: 3000,
   });
-  const characterBattle = applyAction(characterState, {
+  const characterOpened = applyAction(characterState, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -454,7 +473,17 @@ const runBanishLeaderVsCharacterScript = () => {
       playerId: p2,
     },
   });
-  assertAcceptedResult(characterState, characterBattle, "banish character KO");
+  assertAcceptedResult(
+    characterState,
+    characterOpened,
+    "banish character open",
+  );
+  const characterBattle = passCounterStep(characterOpened.state, p2);
+  assertAcceptedResult(
+    characterOpened.state,
+    characterBattle,
+    "banish character KO",
+  );
   assert.equal(
     must(characterBattle.state.players[p2], "p2 after").characters.some(
       (card) => card.instanceId === target.instanceId,

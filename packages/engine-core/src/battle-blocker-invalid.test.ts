@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type { CardRef, DecisionId } from "@optcg/types";
 
+import { applyAction } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 import {
   must,
@@ -15,6 +16,7 @@ import {
   assertRejectsWithoutMutation,
   cardRef,
   effectDefinition,
+  passCounterStep,
   setupAttackState,
   setupOpenedBlockStepDecision,
 } from "./battle-actions-test-fixtures.js";
@@ -41,11 +43,22 @@ test("rested, stale, non-blocker, and attacker-controlled cards do not open bloc
       },
     });
     assert.equal(result.errors, undefined);
-    assert.equal(result.state.pendingDecision, undefined);
-    assert.equal(result.state.battle, undefined);
     assert.equal(
-      result.events.some((event) => event.type === "decisionCreated"),
-      false,
+      result.state.pendingDecision?.prompt,
+      "Use counter or end step.",
+    );
+    const passed = passCounterStep(result.state, p2);
+    assert.equal(passed.errors, undefined);
+    assert.equal(passed.state.pendingDecision, undefined);
+    assert.equal(passed.state.battle, undefined);
+    assert.equal(
+      result.events.some(
+        (event) =>
+          event.type === "decisionCreated" &&
+          (event.payload as { decisionType?: string }).decisionType ===
+            "selectCards",
+      ),
+      true,
     );
   };
 
@@ -138,10 +151,16 @@ test("ineligible printed blocker does not open block-step decision", () => {
   });
 
   assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision, undefined);
-  assert.equal(result.state.battle, undefined);
   assert.equal(
-    result.events.some((event) => event.type === "damageDealt"),
+    result.state.pendingDecision?.prompt,
+    "Use counter or end step.",
+  );
+  const passed = passCounterStep(result.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision, undefined);
+  assert.equal(passed.state.battle, undefined);
+  assert.equal(
+    passed.events.some((event) => event.type === "damageDealt"),
     true,
   );
 });
@@ -503,10 +522,23 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
         playerId: p2,
       },
     });
-    assert.equal(result.errors?.[0]?.type, "illegalAction");
+    if (result.errors !== undefined) {
+      assert.equal(result.errors[0]?.type, "illegalAction");
+      assert.equal(JSON.stringify(state), before);
+      assert.equal(JSON.stringify(result.state), before);
+      assert.deepEqual(result.events, []);
+      return;
+    }
+    const decision = must(result.state.pendingDecision, "block decision");
+    const declined = applyAction(result.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    });
+    assert.equal(declined.errors?.[0]?.type, "illegalAction");
     assert.equal(JSON.stringify(state), before);
-    assert.equal(JSON.stringify(result.state), before);
-    assert.deepEqual(result.events, []);
+    assert.equal(JSON.stringify(declined.state), JSON.stringify(result.state));
+    assert.deepEqual(declined.events, []);
   };
 
   run((state) => {

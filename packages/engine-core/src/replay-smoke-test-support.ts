@@ -59,6 +59,7 @@ export type SetupStep =
 export type ActionStep =
   | { type: "concede"; playerId: string }
   | { type: "endMainPhase" }
+  | { type: "respondToCounterPass" }
   | { type: "playCardFromHand"; playerId: string; handIndex: number }
   | {
       type: "respondToPayment";
@@ -515,13 +516,15 @@ export const replayScenario = (
         ? { type: "concede" as const, playerId: toPlayerId(action.playerId) }
         : action.type === "endMainPhase"
           ? { type: "endMainPhase" as const }
-          : action.type === "declareAttack"
-            ? {
-                type: "declareAttack" as const,
-                attacker: getCombatRef(current, action.attacker),
-                target: getCombatRef(current, action.target),
-              }
-            : null;
+          : action.type === "respondToCounterPass"
+            ? toCounterPassAction(current)
+            : action.type === "declareAttack"
+              ? {
+                  type: "declareAttack" as const,
+                  attacker: getCombatRef(current, action.attacker),
+                  target: getCombatRef(current, action.target),
+                }
+              : null;
     assert.ok(
       parsedAction !== null,
       `unsupported combat replay action ${action.type}`,
@@ -594,6 +597,19 @@ const toOverflowAction = (
   };
 };
 
+const toCounterPassAction = (
+  state: GameState,
+): Extract<Action, { type: "respondToDecision" }> => {
+  const decision = must(state.pendingDecision, "counter pass decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.prompt, "Use counter or end step.");
+  return {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  };
+};
+
 const toPlayCardAction = (
   state: GameState,
   step: Extract<ActionStep, { type: "playCardFromHand" }>,
@@ -637,11 +653,13 @@ export const replayPlayCardScenario = (
                 }
               : action.type === "endMainPhase"
                 ? { type: "endMainPhase" as const }
-                : {
-                    type: "declareAttack" as const,
-                    attacker: getCombatRef(current, action.attacker),
-                    target: getCombatRef(current, action.target),
-                  };
+                : action.type === "respondToCounterPass"
+                  ? toCounterPassAction(current)
+                  : {
+                      type: "declareAttack" as const,
+                      attacker: getCombatRef(current, action.attacker),
+                      target: getCombatRef(current, action.target),
+                    };
     const result = applyAction(current, parsedAction);
     assert.equal(result.errors, undefined);
     current = result.state;

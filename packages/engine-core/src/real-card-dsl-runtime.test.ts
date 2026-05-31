@@ -11,6 +11,7 @@ import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 import {
   effectDefinition,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
@@ -331,7 +332,7 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
   };
   const before = JSON.stringify(state);
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -344,6 +345,8 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   const nextP2 = must(result.state.players[p2], "p2 after damage");
 
   assert.equal(opCard.support.status, "vanilla-confirmed");

@@ -16,6 +16,7 @@ import {
   toCardId,
 } from "./action-test-fixtures.js";
 import {
+  passCounterStep,
   setupAttackState,
   withMultipleWhenAttackingDrawEffects,
   withOnKODrawEffect,
@@ -131,7 +132,7 @@ test("ENG-023A: non-attacking combat card When Attacking metadata does not make 
     true,
   );
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -145,6 +146,8 @@ test("ENG-023A: non-attacking combat card When Attacking metadata does not make 
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     result.events.some((event) => event.type === "effectQueued"),
@@ -169,7 +172,7 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
   const beforeP1Hand = p1State.hand.length;
   const beforeP2Life = p2State.life.length;
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -183,14 +186,16 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(result.state.effectQueue.length, 0);
   assert.equal(
-    must(result.state.players[p1], "result p1").deck.length,
+    must(opened.state.players[p1], "result p1").deck.length,
     beforeP1Deck - 1,
   );
   assert.equal(
-    must(result.state.players[p1], "result p1").hand.length,
+    must(opened.state.players[p1], "result p1").hand.length,
     beforeP1Hand + 1,
   );
   assert.equal(
@@ -198,21 +203,20 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
     beforeP2Life - 1,
   );
 
-  const attackDeclaredIndex = result.events.findIndex(
+  const events = [...opened.events, ...result.events];
+  const attackDeclaredIndex = events.findIndex(
     (event) => event.type === "attackDeclared",
   );
-  const effectQueuedIndex = result.events.findIndex(
+  const effectQueuedIndex = events.findIndex(
     (event) => event.type === "effectQueued",
   );
-  const effectResolvedIndex = result.events.findIndex((event) => {
+  const effectResolvedIndex = events.findIndex((event) => {
     const payload = event.payload as Partial<{ effectBlockId: string }>;
     return (
       event.type === "effectResolved" && payload.effectBlockId === effect.id
     );
   });
-  const damageIndex = result.events.findIndex(
-    (event) => event.type === "damageDealt",
-  );
+  const damageIndex = events.findIndex((event) => event.type === "damageDealt");
 
   assert.notEqual(attackDeclaredIndex, -1);
   assert.notEqual(effectQueuedIndex, -1);
@@ -223,10 +227,10 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
   assert.ok(effectResolvedIndex < damageIndex);
 
   const attackDeclared = must(
-    result.events[attackDeclaredIndex],
+    events[attackDeclaredIndex],
     "attackDeclared event",
   );
-  const effectQueued = must(result.events[effectQueuedIndex], "effectQueued");
+  const effectQueued = must(events[effectQueuedIndex], "effectQueued");
   assert.deepEqual(effectQueued.payload, {
     queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(effect.id)}`,
     timingWindowId: `timing-window:${String(attackDeclared.id)}`,
@@ -236,8 +240,8 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
     sourcePresencePolicy: "mustRemainInSameZone",
     orderingGroup: "turnPlayer",
   });
-  for (const event of result.events) {
-    assert.equal(event.createdAtStateSeq, result.state.seq);
+  for (const event of opened.events) {
+    assert.equal(event.createdAtStateSeq, opened.state.seq);
   }
 });
 
@@ -259,7 +263,7 @@ test("ENG-060A: attacker When Attacking metadata remains usable with an unrelate
   ];
   ensureDeckHasAtLeast(state, p1, 2);
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -273,6 +277,8 @@ test("ENG-060A: attacker When Attacking metadata remains usable with an unrelate
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     result.events.some((event) => event.type === "effectQueued"),
@@ -396,7 +402,7 @@ test("ENG-060A: On K.O. battle metadata remains usable with an unrelated On Play
   ];
   ensureDeckHasAtLeast(state, p2, 2);
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -410,6 +416,8 @@ test("ENG-060A: On K.O. battle metadata remains usable with an unrelated On Play
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     result.events.some((event) => event.type === "effectQueued"),
@@ -905,29 +913,30 @@ test("ENG-023B: defender timing waits until Block Step response completes", () =
   });
 
   assert.equal(declined.errors, undefined);
+  const passed = passCounterStep(declined.state, p2);
+  assert.equal(passed.errors, undefined);
   assert.equal(
-    must(declined.state.players[p2], "declined p2").hand.length,
+    must(passed.state.players[p2], "declined p2").hand.length,
     beforeP2Hand + 2,
   );
   assert.equal(
-    must(declined.state.players[p2], "declined p2").deck.length,
+    must(passed.state.players[p2], "declined p2").deck.length,
     beforeP2Deck - 1,
   );
-  const decisionResolvedIndex = declined.events.findIndex(
+  const events = [...declined.events, ...passed.events];
+  const decisionResolvedIndex = events.findIndex(
     (event) => event.type === "decisionResolved",
   );
-  const effectQueuedIndex = declined.events.findIndex(
+  const effectQueuedIndex = events.findIndex(
     (event) => event.type === "effectQueued",
   );
-  const effectResolvedIndex = declined.events.findIndex((event) => {
+  const effectResolvedIndex = events.findIndex((event) => {
     const payload = event.payload as Partial<{ effectBlockId: string }>;
     return (
       event.type === "effectResolved" && payload.effectBlockId === effect.id
     );
   });
-  const damageIndex = declined.events.findIndex(
-    (event) => event.type === "damageDealt",
-  );
+  const damageIndex = events.findIndex((event) => event.type === "damageDealt");
 
   assert.notEqual(decisionResolvedIndex, -1);
   assert.notEqual(effectQueuedIndex, -1);

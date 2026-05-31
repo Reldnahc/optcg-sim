@@ -1,4 +1,4 @@
-import type { GameState } from "@optcg/types";
+import type { GameState, ResolvedCard } from "@optcg/types";
 
 import { reifyCardRef } from "./action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
@@ -14,6 +14,20 @@ import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
 } from "./life-trigger-actions.js";
+
+const isSupportedDoubleAttackDamageSource = (
+  card: ResolvedCard | undefined,
+): card is ResolvedCard => {
+  const printedKeywords = card?.printedKeywords ?? [];
+  return (
+    card?.support.status === "implemented-dsl" &&
+    card.support.effectDefinitionId === undefined &&
+    (card.effectText ?? "").trim().length === 0 &&
+    (card.triggerText ?? "").trim().length === 0 &&
+    printedKeywords.includes("doubleAttack") &&
+    !printedKeywords.includes("banish")
+  );
+};
 
 export const getUnsupportedDamageStepContinuationReason = (
   state: GameState,
@@ -32,7 +46,28 @@ export const getUnsupportedDamageStepContinuationReason = (
   ) {
     return "Battle requires unsupported trigger or replacement processing.";
   }
-  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
+  const baseCombatMetadataState =
+    withAllAttackTimingCombatMetadataHidden(state);
+  const attackerMetadata = state.cardManifest.cards[battle.attacker.cardId];
+  const combatMetadataState =
+    battle.damageCount === 2 &&
+    isSupportedDoubleAttackDamageSource(attackerMetadata)
+      ? {
+          ...baseCombatMetadataState,
+          cardManifest: {
+            ...baseCombatMetadataState.cardManifest,
+            cards: {
+              ...baseCombatMetadataState.cardManifest.cards,
+              [battle.attacker.cardId]: {
+                ...attackerMetadata,
+                printedKeywords: attackerMetadata.printedKeywords.filter(
+                  (keyword) => keyword !== "doubleAttack",
+                ),
+              },
+            },
+          },
+        }
+      : baseCombatMetadataState;
   const unsupportedEffectMetadataReason =
     getUnsupportedBattleEffectMetadataReason(combatMetadataState);
   if (unsupportedEffectMetadataReason !== undefined) {

@@ -6,6 +6,8 @@ import type {
   ContinuousEffectRecord,
   EffectDefinition,
   EffectId,
+  EngineResult,
+  GameState,
   Keyword,
   PlayerId,
 } from "@optcg/types";
@@ -484,6 +486,34 @@ export const setupOpenedCounterStepPassDecision = () => {
     counterCard,
     decision: must(opened.state.pendingDecision, "pending decision"),
   };
+};
+
+export const assertCounterStepPassDecision = (
+  state: GameState,
+  playerId: PlayerId = p2,
+): NonNullable<GameState["pendingDecision"]> => {
+  const decision = must(state.pendingDecision, "counter pass decision");
+  assert.equal(state.battle?.step, "counter");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, playerId);
+  assert.equal(decision.prompt, "Use counter or end step.");
+  assert.equal(decision.request.min, 0);
+  assert.equal(decision.request.max, 0);
+  assert.deepEqual(decision.candidates, []);
+  assert.deepEqual(decision.defaultResponse, { type: "cards", cards: [] });
+  return decision;
+};
+
+export const passCounterStep = (
+  state: GameState,
+  playerId: PlayerId = p2,
+): EngineResult => {
+  const decision = assertCounterStepPassDecision(state, playerId);
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  });
 };
 
 export const installSupportedCounterEvent = (

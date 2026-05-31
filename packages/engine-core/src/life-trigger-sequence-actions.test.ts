@@ -18,6 +18,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   effectDefinition,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 
@@ -90,8 +91,10 @@ const openLifeTriggerDecision = (
   });
 
   assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
-  return { state: result.state, lifeInstanceId: topLife.card.instanceId };
+  const passed = passCounterStep(result.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision?.type, "confirmLifeTrigger");
+  return { state: passed.state, lifeInstanceId: topLife.card.instanceId };
 };
 
 test("noSourceRequired life trigger sequence support is routed through shared queued sequence gating", () => {

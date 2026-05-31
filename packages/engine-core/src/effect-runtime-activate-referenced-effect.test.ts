@@ -18,6 +18,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   effectDefinition,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 
@@ -92,9 +93,11 @@ const openLifeTriggerDecision = (options: {
   });
 
   assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+  const passed = passCounterStep(result.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision?.type, "confirmLifeTrigger");
   return {
-    state: result.state,
+    state: passed.state,
     lifeInstanceId: topLife.card.instanceId,
   };
 };

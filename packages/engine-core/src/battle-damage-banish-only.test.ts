@@ -12,7 +12,10 @@ import {
   resolvedCard,
   toCardId,
 } from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  passCounterStep,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 import {
   addTrashMarker,
   continuousKeywordEffectRecord,
@@ -32,7 +35,7 @@ test("banish attacker dealing leader damage moves top life to trash instead of h
     printedKeywords: ["banish"],
   };
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -46,6 +49,8 @@ test("banish attacker dealing leader damage moves top life to trash instead of h
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2").trash.some(
@@ -80,7 +85,7 @@ test("conditional continuous banish grant moves leader damage life to trash", ()
     ),
   ];
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: attacker.instanceId,
@@ -94,6 +99,8 @@ test("conditional continuous banish grant moves leader damage life to trash", ()
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
     must(result.state.players[p2], "p2").trash.some(
@@ -122,7 +129,7 @@ test("banish leader damage reindexes life and trash zones deterministically", ()
     printedKeywords: ["banish"],
   };
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -136,8 +143,10 @@ test("banish leader damage reindexes life and trash zones deterministically", ()
     },
   });
 
-  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
+  const nextP2 = must(result.state.players[p2], "next p2");
   assert.deepEqual(
     nextP2.life.map((lifeCard) => lifeCard.card.zone),
     nextP2.life.map((_, index) => ({
@@ -171,7 +180,7 @@ test("banish public cardMoved event does not expose life card identity and priva
     printedKeywords: ["banish"],
   };
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -185,6 +194,9 @@ test("banish public cardMoved event does not expose life card identity and priva
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
+  assert.equal(result.errors, undefined);
   const publicCardMoved = result.events.find(
     (event) => event.type === "cardMoved" && event.visibility.type === "public",
   );
@@ -237,7 +249,7 @@ test("banish damage on trigger life card does not create life trigger decision",
     printedKeywords: ["banish"],
   };
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -251,6 +263,8 @@ test("banish damage on trigger life card does not create life trigger decision",
     },
   });
 
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(result.decisions, undefined);
   assert.equal(result.state.pendingDecision, undefined);

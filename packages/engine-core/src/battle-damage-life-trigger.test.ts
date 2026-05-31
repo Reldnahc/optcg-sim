@@ -12,6 +12,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   effectDefinition,
+  passCounterStep,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
@@ -77,7 +78,8 @@ const applySupportedLifeTriggerAttack = () => {
       playerId: p2,
     },
   });
-  return { result, lifeCardId };
+  assert.equal(result.errors, undefined);
+  return { result: passCounterStep(result.state, p2), lifeCardId };
 };
 test("applyAction declareAttack creates life trigger decision for supported trigger life damage", () => {
   const state = setupAttackState();
@@ -143,14 +145,16 @@ test("applyAction declareAttack creates life trigger decision for supported trig
   });
 
   assert.equal(result.errors, undefined);
+  const passed = passCounterStep(result.state, p2);
+  assert.equal(passed.errors, undefined);
   const pendingDecision = must(
-    result.state.pendingDecision,
+    passed.state.pendingDecision,
     "pending decision",
   );
   assert.equal(pendingDecision.type, "confirmLifeTrigger");
   assert.deepEqual(pendingDecision.options, ["activateTrigger", "addToHand"]);
   assert.equal(pendingDecision.playerId, p2);
-  const nextP2 = must(result.state.players[p2], "next p2");
+  const nextP2 = must(passed.state.players[p2], "next p2");
   assert.equal(
     nextP2.hand.some((card) => card.cardId === lifeCardId),
     false,
@@ -167,14 +171,14 @@ test("applyAction declareAttack creates life trigger decision for supported trig
   assert.equal(pendingDecision.card.zone, undefined);
   assert.equal(nextP2.life.length, beforeLifeCount - 1);
   assert.equal(
-    filterStateForPlayer(result.state, p1).opponent.life.count,
+    filterStateForPlayer(passed.state, p1).opponent.life.count,
     beforeLifeCount - 1,
   );
   assert.equal(
-    filterStateForPlayer(result.state, p2).self.life.count,
+    filterStateForPlayer(passed.state, p2).self.life.count,
     beforeLifeCount - 1,
   );
-  const opponentView = filterStateForPlayer(result.state, p1);
+  const opponentView = filterStateForPlayer(passed.state, p1);
   assert.equal(
     JSON.stringify(opponentView.events).includes("confirmLifeTrigger"),
     false,
@@ -188,11 +192,11 @@ test("applyAction declareAttack creates life trigger decision for supported trig
     false,
   );
   assert.equal(
-    result.events.some((event) => event.type === "lifeTaken"),
+    passed.events.some((event) => event.type === "lifeTaken"),
     true,
   );
   assert.equal(
-    result.events.some(
+    passed.events.some(
       (event) =>
         event.type === "cardMoved" &&
         event.visibility.type === "private" &&
@@ -201,7 +205,7 @@ test("applyAction declareAttack creates life trigger decision for supported trig
     false,
   );
   assert.equal(
-    result.events.some((event) => event.type === "decisionCreated"),
+    passed.events.some((event) => event.type === "decisionCreated"),
     true,
   );
 });
@@ -395,7 +399,9 @@ test("applyAction declareAttack keeps conditioned life trigger activation reacha
   });
 
   assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+  const passed = passCounterStep(result.state, p2);
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.pendingDecision?.type, "confirmLifeTrigger");
 });
 
 test("applyAction declareAttack fail-closes unsupported conditioned life trigger before decision without identity leak", () => {
@@ -453,7 +459,7 @@ test("applyAction declareAttack fail-closes unsupported conditioned life trigger
     "def-life-trigger-unsupported-conditioned": unsupportedConditioned,
   };
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
       instanceId: p1State.leader.instanceId,
@@ -466,6 +472,8 @@ test("applyAction declareAttack fail-closes unsupported conditioned life trigger
       playerId: p2,
     },
   });
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
   const nextP2 = must(result.state.players[p2], "next p2");
   const publicEvents = result.events.filter(
     (event) => event.visibility.type === "public",
@@ -479,7 +487,10 @@ test("applyAction declareAttack fail-closes unsupported conditioned life trigger
         "Life trigger reveal decisions are unsupported in this battle path.",
     },
   ]);
-  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    result.state.pendingDecision?.prompt,
+    "Use counter or end step.",
+  );
   assert.equal(nextP2.life.length, beforeLifeCount);
   assert.equal(
     nextP2.hand.some((card) => card.cardId === lifeCardId),
@@ -588,8 +599,11 @@ test("activated life trigger with false condition skips body and still trashes t
       playerId: p2,
     },
   });
-  const decision = must(opened.state.pendingDecision, "life trigger decision");
-  const result = applyAction(opened.state, {
+  assert.equal(opened.errors, undefined);
+  const passed = passCounterStep(opened.state, p2);
+  assert.equal(passed.errors, undefined);
+  const decision = must(passed.state.pendingDecision, "life trigger decision");
+  const result = applyAction(passed.state, {
     type: "respondToDecision",
     decisionId: decision.id,
     response: { type: "lifeTrigger", choice: "activateTrigger" },

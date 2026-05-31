@@ -33,6 +33,7 @@ import { setupMainPlayState } from "./play-card-test-fixtures.js";
 import {
   setupAttackState,
   effectDefinition,
+  passCounterStep,
   withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
@@ -438,25 +439,29 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
         playerId: p2,
       },
     });
-    assertAcceptedSequencing(state, opened, "ENG-028 life trigger decision");
-    return opened;
+    assertAcceptedSequencing(state, opened, "ENG-028 counter decision");
+    const passed = passCounterStep(opened.state, p2);
+    assertAcceptedSequencing(
+      opened.state,
+      passed,
+      "ENG-028 life trigger decision",
+    );
+    return passed;
   };
 
   const openedForDecline = openLifeTrigger();
   const expectedOpenedSignature = {
-    eventSeq: [5, 6, 7, 8, 9, 10, 11],
+    eventSeq: [8, 9, 10, 11, 12, 13],
     eventIds: [
-      "event:3:1:attackDeclared",
-      "event:3:2:ruleProcessingChecked",
-      "event:3:3:damageDealt",
-      "event:3:4:lifeTaken",
-      "event:3:5:decisionCreated",
-      "event:3:6:effectResolved",
-      "event:3:7:ruleProcessingChecked",
+      "event:4:1:decisionResolved",
+      "event:4:1:damageDealt",
+      "event:4:2:lifeTaken",
+      "event:4:3:decisionCreated",
+      "event:4:4:effectResolved",
+      "event:4:5:ruleProcessingChecked",
     ],
     eventTypes: [
-      "attackDeclared",
-      "ruleProcessingChecked",
+      "decisionResolved",
       "damageDealt",
       "lifeTaken",
       "decisionCreated",
@@ -464,7 +469,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "ruleProcessingChecked",
     ],
     stateHash:
-      "3d55cb9f48f99a785e4641b5cd20bacb637ddac04f8a8b19b7dc5914a2b82038",
+      "71a5b62209bd79e889f16d875e24eb2c6c31a3ee7d325da0a8ea1ee9be121785",
   };
   assert.deepEqual(signature(openedForDecline), expectedOpenedSignature);
   const declineDecision = must(
@@ -483,15 +488,15 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   );
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
   assert.deepEqual(signature(declined), {
-    eventSeq: [12, 13, 14],
+    eventSeq: [14, 15, 16],
     eventIds: [
-      "event:4:1:decisionResolved",
-      "event:4:2:cardMoved",
-      "event:4:3:cardMoved",
+      "event:5:1:decisionResolved",
+      "event:5:2:cardMoved",
+      "event:5:3:cardMoved",
     ],
     eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
     stateHash:
-      "fadc01490a3918c48773d11bdeff7f7156a6a9e640c115e97f5c20a6205c0127",
+      "c061e1acd5081b4e23616ca497b0141582bf5e0e5c0e7ced68e71da677057cf1",
   });
 
   const openedForActivation = openLifeTrigger();
@@ -514,20 +519,20 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   assert.equal(activated.state.effectQueue.length, 0);
   assert.equal(activated.state.revealedCards.length, 0);
   assert.deepEqual(signature(activated), {
-    eventSeq: [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+    eventSeq: [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
     eventIds: [
-      "event:4:1:decisionResolved",
-      "event:4:2:cardRevealed",
-      "event:4:3:triggerActivated",
-      "event:4:4:effectQueued",
-      "event:5:1:cardDrawn",
-      "event:5:2:cardMoved",
-      "event:5:3:cardMoved",
-      "event:5:1:effectResolved",
-      "event:5:1:ruleProcessingChecked",
-      "event:5:2:gameEnded",
-      "event:5:1:cardMoved",
-      "event:5:2:cardTrashed",
+      "event:5:1:decisionResolved",
+      "event:5:2:cardRevealed",
+      "event:5:3:triggerActivated",
+      "event:5:4:effectQueued",
+      "event:6:1:cardDrawn",
+      "event:6:2:cardMoved",
+      "event:6:3:cardMoved",
+      "event:6:1:effectResolved",
+      "event:6:1:ruleProcessingChecked",
+      "event:6:2:gameEnded",
+      "event:6:1:cardMoved",
+      "event:6:2:cardTrashed",
     ],
     eventTypes: [
       "decisionResolved",
@@ -544,7 +549,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "cardTrashed",
     ],
     stateHash:
-      "2207b0fef4e335a13bfb3b046b048fc5a74a22560ad6f55d096e2139700f42ed",
+      "46c0aad2e95725d0569a5223f9117bc15790a394589d1532bcd76eaa47a69800",
   });
 
   return {
