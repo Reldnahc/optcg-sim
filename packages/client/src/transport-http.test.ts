@@ -43,8 +43,16 @@ describe("dev HTTP match transport", () => {
         lobbyId: "lobby-1",
         seat: { playerId: "p1" },
         seats: {
-          p1: { playerId: "p1", claimed: true },
-          p2: { playerId: "p2", claimed: false },
+          p1: {
+            playerId: "p1",
+            claimed: true,
+            deck: { status: "missing" },
+          },
+          p2: {
+            playerId: "p2",
+            claimed: false,
+            deck: { status: "missing" },
+          },
         },
         ...(request.url.endsWith("/join") ? { matchId: "match-1" } : {}),
       }),
@@ -75,6 +83,50 @@ describe("dev HTTP match transport", () => {
       new Headers(recorder.requests[1]?.init?.headers).get(
         "x-optcg-session-token",
       ),
+      "guest-a",
+    );
+  });
+
+  test("submits lobby deck hashes with the guest token", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        lobbyId: "lobby-1",
+        seats: {
+          p1: {
+            playerId: "p1",
+            claimed: true,
+            deck: { status: "ready" },
+          },
+          p2: {
+            playerId: "p2",
+            claimed: false,
+            deck: { status: "missing" },
+          },
+        },
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    await transport.submitLobbyDeck({
+      lobbyId: "lobby-1",
+      guestToken: "guest-a",
+      deckHash: "hash-a",
+    });
+
+    const request = recorder.requests[0];
+    if (request === undefined) {
+      throw new Error("Expected a deck submission request.");
+    }
+    if (request.init === undefined) {
+      throw new Error("Expected deck submission request init.");
+    }
+    assert.equal(request.url, "http://localhost:3000/api/lobbies/lobby-1/deck");
+    assert.equal(request.init.body, JSON.stringify({ deckHash: "hash-a" }));
+    assert.equal(
+      new Headers(request.init.headers).get("x-optcg-session-token"),
       "guest-a",
     );
   });

@@ -17,6 +17,7 @@ import {
 import type {
   BoardViewModel,
   ClientActionModel,
+  LobbyClientState,
   DecisionDraft,
   DecisionModalModel,
   MatchClientState,
@@ -73,6 +74,7 @@ export interface MatchClientUi {
   requestRollback: (rollbackPointId: string) => Promise<void>;
   cancelRollback: () => Promise<void>;
   createNewMatch: () => Promise<void>;
+  submitLobbyDeckHash: (deckHash: string) => Promise<void>;
 }
 
 export const seatIdFromUrl = (): PlayerId => {
@@ -126,6 +128,28 @@ export const isFirstPlayerSetupClientState = (
   state: MatchClientSessionState | undefined,
 ): state is Extract<MatchClientSessionState, { firstPlayerChoice: unknown }> =>
   state !== undefined && "firstPlayerChoice" in state && !("snapshot" in state);
+
+export const lobbyDeckStatuses = (
+  lobbyState: LobbyClientState | undefined,
+): {
+  selfDeckStatus?: "missing" | "ready" | "invalid" | undefined;
+  opponentDeckStatus?: "missing" | "ready" | "invalid" | undefined;
+} => {
+  const ownSeat =
+    lobbyState === undefined
+      ? undefined
+      : lobbyState.lobby.seats[String(lobbyState.seat.playerId)];
+  const opponentSeat =
+    lobbyState === undefined
+      ? undefined
+      : Object.values(lobbyState.lobby.seats).find(
+          (seat) => seat.playerId !== lobbyState.seat.playerId,
+        );
+  return {
+    selfDeckStatus: ownSeat?.deck.status,
+    opponentDeckStatus: opponentSeat?.deck.status,
+  };
+};
 
 export const visibleErrors = (errors: readonly string[]): string[] => [
   ...errors,

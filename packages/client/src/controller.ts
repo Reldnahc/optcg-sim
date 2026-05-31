@@ -56,6 +56,9 @@ export interface MatchClientController {
   joinLocalLobby: (input: {
     lobbyId: string;
   }) => Promise<MatchClientSessionState>;
+  submitLobbyDeckHash: (input: {
+    deckHash: string;
+  }) => Promise<MatchClientSessionState>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
   joinLocalMatch: (
     input: ClientSeatIdentity,
@@ -245,6 +248,20 @@ export const createMatchClientController = ({
           playerId: joinedLobby.seat.playerId,
         },
         lobby: joinedLobby,
+      });
+    },
+    async submitLobbyDeckHash(input) {
+      if (currentLobbyState === undefined) {
+        throw new Error("Cannot submit a deck before joining a lobby.");
+      }
+      const lobby = await transport.submitLobbyDeck({
+        lobbyId: currentLobbyState.lobbyId,
+        guestToken: sessionStore.loadOrCreateGuestIdentity().guestToken,
+        deckHash: input.deckHash,
+      });
+      return claimMatchIfReady({
+        ...currentLobbyState,
+        lobby,
       });
     },
     async startNewLocalMatch(playerId) {

@@ -131,8 +131,15 @@ export interface FirstPlayerChoiceResult {
 
 export interface LocalLobby {
   lobbyId: string;
-  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  seats: Record<
+    string,
+    { playerId: PlayerId; claimed: boolean; deck: LobbyDeckStatus }
+  >;
   matchId?: MatchId;
+}
+
+export interface LobbyDeckStatus {
+  status: "missing" | "ready" | "invalid";
 }
 
 export interface JoinedLobby extends LocalLobby {
@@ -257,6 +264,11 @@ export interface MatchTransport {
     lobbyId: string;
     guestToken: string;
   }) => Promise<JoinedLobby>;
+  submitLobbyDeck: (input: {
+    lobbyId: string;
+    guestToken: string;
+    deckHash: string;
+  }) => Promise<LocalLobby>;
   loadLobby: (lobbyId: string) => Promise<LocalLobby>;
   createMatch: () => Promise<CreatedMatch>;
   createRematch: (input: {

@@ -77,11 +77,11 @@ import {
   isFirstPlayerSetupClientState,
   isLobbyClientState,
   isMatchClientState,
+  lobbyDeckStatuses,
 } from "./useMatchClient-support.js";
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
-  const [collectionModal, setCollectionModal] =
-    useState<CollectionModalModel>();
+  const [collectionModal, setCollectionModal] = useState<CollectionModalModel>();
   const [collectionMinimized, setCollectionMinimized] = useState(false);
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -89,13 +89,10 @@ export const MatchApp = (): React.JSX.Element => {
   const [actionLogOpen, setActionLogOpen] = useState(false);
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
-  const [combineDropTarget, setCombineDropTarget] = useState<
-    InfoWindowTabId | undefined
-  >(undefined);
+  const [combineDropTarget, setCombineDropTarget] = useState<InfoWindowTabId>();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [controlDockActiveTabId, setControlDockActiveTabId] = useState<
-    string | undefined
-  >(undefined);
+  const [controlDockActiveTabId, setControlDockActiveTabId] =
+    useState<string>();
   const {
     board,
     cardCostSelection,
@@ -651,8 +648,11 @@ export const MatchApp = (): React.JSX.Element => {
     <main className="match-app">
       {displayBoard === undefined ? (
         <MatchLoadingPanel
+          disabled={client.state.actionInFlight}
           firstPlayerSetup={firstPlayerSetupState !== undefined}
           lobbyId={lobbyState?.lobbyId}
+          {...lobbyDeckStatuses(lobbyState)}
+          onSubmitDeckHash={(deckHash) => void client.submitLobbyDeckHash(deckHash)}
         />
       ) : (
         <BoardLayout

@@ -332,6 +332,30 @@ export const useMatchClient = (): MatchClientUi => {
       setSelectedDonInstanceIds,
     });
 
+  const submitLobbyDeckHash = useCallback(
+    async (deckHash: string): Promise<void> => {
+      setActionInFlight(true);
+      try {
+        const result = await controller.submitLobbyDeckHash({ deckHash });
+        if (
+          isMatchClientState(result) ||
+          isFirstPlayerSetupClientState(result)
+        ) {
+          setMatchLocation(result.matchId, result.seat.playerId);
+        } else if (isLobbyClientState(result)) {
+          setLobbyLocation(result.lobbyId);
+        }
+        setClientState(result);
+        setErrors([]);
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : String(error)]);
+      } finally {
+        setActionInFlight(false);
+      }
+    },
+    [controller],
+  );
+
   const requestRollback = useCallback(
     async (rollbackPointId: string): Promise<void> => {
       setActionInFlight(true);
@@ -990,5 +1014,6 @@ export const useMatchClient = (): MatchClientUi => {
     requestRollback,
     cancelRollback,
     createNewMatch,
+    submitLobbyDeckHash,
   };
 };

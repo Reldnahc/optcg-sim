@@ -70,6 +70,13 @@ export const createDevHttpMatchTransport = ({
         input.guestToken,
       );
     },
+    async submitLobbyDeck(input) {
+      return postJson<LocalLobby>(
+        lobbyPath(input.lobbyId, "/deck"),
+        { deckHash: input.deckHash },
+        input.guestToken,
+      );
+    },
     async loadLobby(lobbyId) {
       const response = await fetchImpl(lobbyPath(lobbyId));
       return readJson<LocalLobby>(response);

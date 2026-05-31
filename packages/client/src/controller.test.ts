@@ -33,6 +33,11 @@ const createFakeTransport = (): MatchTransport & {
     lobbyId: string;
     guestToken: string;
   }>;
+  submittedLobbyDecks: Array<{
+    lobbyId: string;
+    guestToken: string;
+    deckHash: string;
+  }>;
 } => {
   const claimedSeats: Array<{
     matchId: MatchId;
@@ -43,16 +48,37 @@ const createFakeTransport = (): MatchTransport & {
     lobbyId: string;
     guestToken: string;
   }> = [];
+  const submittedLobbyDecks: Array<{
+    lobbyId: string;
+    guestToken: string;
+    deckHash: string;
+  }> = [];
+  const lobbySeats = ({
+    p1Ready = false,
+    p2Ready = false,
+  }: {
+    p1Ready?: boolean;
+    p2Ready?: boolean;
+  } = {}) => ({
+    p1: {
+      playerId: "p1" as PlayerId,
+      claimed: true,
+      deck: { status: p1Ready ? "ready" : "missing" } as const,
+    },
+    p2: {
+      playerId: "p2" as PlayerId,
+      claimed: false,
+      deck: { status: p2Ready ? "ready" : "missing" } as const,
+    },
+  });
   return {
     claimedSeats,
     joinedLobbies,
+    submittedLobbyDecks,
     createLobby() {
       return Promise.resolve({
         lobbyId: "lobby-1",
-        seats: {
-          p1: { playerId: "p1" as PlayerId, claimed: false },
-          p2: { playerId: "p2" as PlayerId, claimed: false },
-        },
+        seats: lobbySeats(),
       });
     },
     joinLobby(input) {
@@ -60,20 +86,21 @@ const createFakeTransport = (): MatchTransport & {
       return Promise.resolve({
         lobbyId: input.lobbyId,
         seat: { playerId: "p1" as PlayerId },
-        seats: {
-          p1: { playerId: "p1" as PlayerId, claimed: true },
-          p2: { playerId: "p2" as PlayerId, claimed: false },
-        },
+        seats: lobbySeats(),
+      });
+    },
+    submitLobbyDeck(input) {
+      submittedLobbyDecks.push(input);
+      return Promise.resolve({
+        lobbyId: input.lobbyId,
+        seats: lobbySeats({ p1Ready: true }),
       });
     },
     loadLobby(lobbyId) {
       return Promise.resolve({
         lobbyId,
         matchId: "match-1" as MatchId,
-        seats: {
-          p1: { playerId: "p1" as PlayerId, claimed: true },
-          p2: { playerId: "p2" as PlayerId, claimed: true },
-        },
+        seats: lobbySeats({ p1Ready: true, p2Ready: true }),
       });
     },
     createMatch() {
@@ -528,8 +555,16 @@ describe("match client controller", () => {
         lobbyId: "lobby-1",
         matchId: "match-1" as MatchId,
         seats: {
-          p1: { playerId: "p1" as PlayerId, claimed: true },
-          p2: { playerId: "p2" as PlayerId, claimed: true },
+          p1: {
+            playerId: "p1" as PlayerId,
+            claimed: true,
+            deck: { status: "ready" },
+          },
+          p2: {
+            playerId: "p2" as PlayerId,
+            claimed: true,
+            deck: { status: "ready" },
+          },
         },
       },
     });
@@ -588,6 +623,30 @@ describe("match client controller", () => {
       "lobbyId",
       "guestToken",
     ]);
+  });
+
+  test("submits a lobby deck hash using the local guest identity", async () => {
+    const transport = createFakeTransport();
+    const controller = createMatchClientController({
+      transport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    await controller.joinLocalLobby({ lobbyId: "lobby-1" });
+    const next = await controller.submitLobbyDeckHash({
+      deckHash: "deck-hash",
+    });
+
+    assert.deepEqual(transport.submittedLobbyDecks, [
+      {
+        lobbyId: "lobby-1",
+        guestToken: transport.joinedLobbies[0]?.guestToken,
+        deckHash: "deck-hash",
+      },
+    ]);
+    assert.equal("lobbyId" in next, true);
   });
 
   test("refuses to submit actions before a seat is claimed", async () => {

@@ -46,6 +46,81 @@
   font-weight: 400;
 }
 
+.loading-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  max-width: 480px;
+  margin: 40px auto;
+  color: #fff;
+}
+
+.loading-panel h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.deck-hash-form {
+  display: grid;
+  gap: 8px;
+}
+
+.deck-hash-field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.deck-hash-field input {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.26);
+  padding: 0 8px;
+}
+
+.deck-hash-form button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 5px;
+  color: #fff;
+  background: #275f3e;
+  cursor: pointer;
+}
+
+.deck-hash-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.deck-status-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.deck-status-list div {
+  display: grid;
+  gap: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.deck-status-list dt {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.deck-status-list dd {
+  margin: 0;
+  font-size: 15px;
+}
+
 .controls-panel {
   --control-window-dock-height: 320px;
 
