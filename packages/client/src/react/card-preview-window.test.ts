@@ -115,19 +115,27 @@ describe("card preview window", () => {
   });
 
   test("board and modal surfaces pass hover preview callbacks through shared card tiles", async () => {
-    const [boardLayout, zone, handRow, collectionModal, matchApp] =
-      await Promise.all([
-        readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
-        readFile(join(sourceDirectory, "Zone.tsx"), "utf8"),
-        readFile(join(sourceDirectory, "HandRow.tsx"), "utf8"),
-        readFile(join(sourceDirectory, "CollectionModalHost.tsx"), "utf8"),
-        readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
-      ]);
+    const [
+      boardLayout,
+      zone,
+      handRow,
+      collectionModal,
+      decisionModal,
+      matchApp,
+    ] = await Promise.all([
+      readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "Zone.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "HandRow.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "CollectionModalHost.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "DecisionModalHost.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+    ]);
 
     assert.match(boardLayout, /onPreviewCard/u);
     assert.match(zone, /onCardPreview/u);
     assert.match(handRow, /onCardPreview/u);
     assert.match(collectionModal, /onPreviewCard/u);
+    assert.match(decisionModal, /onPreviewCard/u);
     assert.match(matchApp, /onMoveOrderedCard=\{client\.moveDecisionCard\}/u);
     assert.match(matchApp, /previewHoveredCard/u);
     assert.match(matchApp, /previewControl=/u);

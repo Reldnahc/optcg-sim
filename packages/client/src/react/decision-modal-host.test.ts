@@ -269,6 +269,21 @@ test("return-to-deck order modal shares CardTile reorder instead of custom drag"
   assert.doesNotMatch(source, /draggable=/u);
 });
 
+test("decision modal card surfaces pass hover callbacks to card preview", async () => {
+  const source = await readFile(
+    join(sourceDirectory, "DecisionModalHost.tsx"),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /onPreviewCard\?: \(\(card: ClientCardModel\) => void\)/u,
+  );
+  assert.match(source, /onHover=\{onPreviewCard\}/u);
+  assert.match(source, /onPreviewCard\?\.\(\s*toDecisionOrderClientCard/u);
+  assert.doesNotMatch(source, /onHover=\{\(\) => undefined\}/u);
+});
+
 test("trigger order modal presents source cards like a single-card selection", () => {
   const model: DecisionModalModel = {
     kind: "orderTriggers",

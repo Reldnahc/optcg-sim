@@ -20,6 +20,7 @@ export interface DecisionModalHostProps {
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
   onActionOption: (actionIndex: number) => void;
+  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
   onMoveOrderedCard: (
     draggedId: InstanceId,
     targetId: InstanceId,
@@ -51,6 +52,7 @@ export const DecisionModalHost = ({
   onQuantity,
   onOption,
   onActionOption,
+  onPreviewCard,
   onMoveOrderedCard,
   onPlacementDestination,
   onConfirm,
@@ -104,6 +106,11 @@ export const DecisionModalHost = ({
                 } ${choice.selectable ? "" : "is-disabled"}`}
                 type="button"
                 disabled={disabled || !choice.selectable}
+                onPointerEnter={() => {
+                  onPreviewCard?.(
+                    toDecisionOrderClientCard(choice.card, display),
+                  );
+                }}
                 onClick={() => {
                   onToggleCard(instanceId);
                 }}
@@ -175,7 +182,7 @@ export const DecisionModalHost = ({
                     onPreviewMoveNear={orderReorder.onPreviewMoveNear}
                     onMoveNear={orderReorder.onMoveNear}
                     onReorderCancel={orderReorder.onReorderCancel}
-                    onHover={() => undefined}
+                    onHover={onPreviewCard}
                   />
                   {orderReorder.placeholderAfter(instanceId) ? (
                     <div className="hand-drag-placeholder" aria-hidden="true" />
@@ -203,6 +210,14 @@ export const DecisionModalHost = ({
                 }`}
                 type="button"
                 disabled={disabled}
+                onPointerEnter={() => {
+                  if (choice.source === undefined) {
+                    return;
+                  }
+                  onPreviewCard?.(
+                    toDecisionOrderClientCard(choice.source, display),
+                  );
+                }}
                 onClick={() => {
                   onChooseTrigger(choice.triggerId);
                 }}
