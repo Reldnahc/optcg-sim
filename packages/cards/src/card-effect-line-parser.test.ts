@@ -903,10 +903,11 @@ describe("card effect line parser", () => {
           duration: {
             type: "whileConditionTrue",
             condition: {
-              type: "trashCount",
-              player: "self",
-              op: "gte",
-              value: 10,
+              type: "and",
+              conditions: [
+                { type: "yourTurn" },
+                { type: "trashCount", player: "self", op: "gte", value: 10 },
+              ],
             },
           },
         },
@@ -915,6 +916,8 @@ describe("card effect line parser", () => {
     expect(result?.evidence).toEqual(
       expect.arrayContaining([
         "entry:yourTurn",
+        "condition:yourTurn",
+        "composition:conditionAnd",
         "expression:conditionalContinuous",
         "condition:trashCount",
         "condition:comparator:gte",

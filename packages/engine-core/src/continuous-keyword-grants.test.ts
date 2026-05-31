@@ -343,6 +343,37 @@ test("inactive whileSourceOnField keyword grant with source-dependent condition 
   );
 });
 
+test("attached DON count condition controls reusable keyword grants", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  p1State.characters = [withCharacter(p1, 0)];
+  const source = must(p1State.characters[0], "source");
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(state, "rush", {
+      source,
+      condition: {
+        type: "attachedDonCount",
+        target: { type: "self" },
+        op: "gte",
+        value: 1,
+      },
+    }),
+  ];
+
+  const withoutDonView = computeView(state);
+  source.attachedDon = [must(p1State.donDeck[0], "attached DON").instanceId];
+  const withDonView = computeView(state);
+
+  assert.equal(
+    withoutDonView.cards[source.instanceId]?.keywords.includes("rush"),
+    false,
+  );
+  assert.equal(
+    withDonView.cards[source.instanceId]?.keywords.includes("rush"),
+    true,
+  );
+});
+
 test("conditional blocker grant contributes to computed canBlock without printed keyword mutation", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");

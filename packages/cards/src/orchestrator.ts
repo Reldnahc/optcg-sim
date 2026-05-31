@@ -70,9 +70,19 @@ export function parseEffectLinesDetailed(
   const markerParse = parseMarkers(entryPoints.rest, registry.markers ?? []);
   const values: ParsedEffectLine[] = [];
   for (const entryPoint of entryPoints.values) {
+    const entryExpressionCondition = combineConditions(
+      leadingMarkerParse.patch.condition,
+      entryPoint.node.condition,
+      markerParse.patch.condition,
+    );
     const expression = firstExpressionParse(registry.expressions, {
       text: markerParse.rest,
-      entryPoint: entryPoint.node,
+      entryPoint: {
+        ...entryPoint.node,
+        ...(entryExpressionCondition === undefined
+          ? {}
+          : { condition: entryExpressionCondition }),
+      },
     });
     if (expression === undefined || expression.rest.trim().length > 0) {
       return {

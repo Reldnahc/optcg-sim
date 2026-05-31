@@ -28,11 +28,15 @@ export function conditionalContinuousExpressionParser(options: {
         continue;
       }
 
+      const continuousCondition = combineConditions(
+        input.entryPoint?.condition,
+        condition.condition,
+      );
       const body = parseExpression(bodyText, {
         connectors: options.connectors,
         segments: [
           continuousInstructionSegmentParser({
-            condition: condition.condition,
+            condition: continuousCondition,
             instructions: options.instructions,
           }),
         ],
@@ -46,6 +50,9 @@ export function conditionalContinuousExpressionParser(options: {
         evidence: [
           "expression:conditionalContinuous",
           ...condition.evidence,
+          ...(input.entryPoint?.condition === undefined
+            ? []
+            : (["composition:conditionAnd"] as const)),
           ...body.evidence,
         ],
         rest: "",
@@ -106,6 +113,21 @@ export function entryConditionContinuousExpressionParser(options: {
       },
     };
   };
+}
+
+function combineConditions(
+  ...conditions: readonly (Condition | undefined)[]
+): Condition | undefined {
+  const present = conditions.filter(
+    (condition): condition is Condition => condition !== undefined,
+  );
+  if (present.length === 0) {
+    return undefined;
+  }
+  if (present.length === 1) {
+    return present[0];
+  }
+  return { type: "and", conditions: present };
 }
 
 function normalizeContinuousEffect(

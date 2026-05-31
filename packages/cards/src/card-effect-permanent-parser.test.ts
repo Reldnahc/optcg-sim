@@ -175,6 +175,81 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it("parses attached DON keyword grants as marker conditions plus reusable keyword primitives", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] This Character gains [Blocker].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 1,
+        },
+        effect: {
+          type: "giveKeyword",
+          target: { type: "self" },
+          keyword: "blocker",
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "attachedDonCount",
+              target: { type: "self" },
+              op: "gte",
+              value: 1,
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "marker:attachedDon",
+        "condition:attachedDonCount",
+        "entry:implicitPermanent",
+        "instruction:giveKeyword",
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
+  it("parses attached DON keyword grants without coupling to Blocker", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x2] This Character gains [Rush].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 2,
+        },
+        effect: {
+          type: "giveKeyword",
+          keyword: "rush",
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "attachedDonCount",
+              target: { type: "self" },
+              op: "gte",
+              value: 2,
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("parses relative DON-count self hand cost reduction as reusable primitives", () => {
     const result = parseCardEffectLine(
       "If the number of DON!! cards on your field is at least 2 less than the number on your opponent's field, give this card in your hand −3 cost.",
