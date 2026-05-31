@@ -1,7 +1,8 @@
 import { createRoot } from "react-dom/client";
-import { MatchApp } from "./MatchApp.js";
+import { AppRoot } from "./AppRoot.js";
 import "./styles.css";
 import "./styles/app-shell.css";
+import "./styles/app-shell-pages.css";
 import "./styles/count-badge.css";
 import "./styles/playmat.css";
 import "./styles/zone.css";
@@ -21,4 +22,4 @@ if (root === null) {
   throw new Error("Missing root element.");
 }
 
-createRoot(root).render(<MatchApp />);
+createRoot(root).render(<AppRoot />);
