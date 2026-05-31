@@ -8,6 +8,7 @@ const forbiddenProductionImports = [
   "@optcg/engine-core",
   "@optcg/match-server",
   "@optcg/cards",
+  "optcg-deck-hash",
   "redis",
   "pg",
 ] as const;

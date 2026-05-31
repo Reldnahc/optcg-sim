@@ -110,6 +110,12 @@ const repoRoot = path.resolve(
   "../../..",
 );
 
+const forbiddenEngineProductionImports = [
+  "@optcg/cards",
+  "optcg-deck-hash",
+  "redis",
+] as const;
+
 function isPlainManifestFixture(value: unknown): value is MatchCardManifest {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -147,22 +153,39 @@ test("package boundary allows plain real-card DSL manifest fixture data", async 
   );
 });
 
-test("production engine-core source files do not import @optcg/cards", async () => {
+const importPatternForPackage = (packageName: string): RegExp => {
+  const escapedPackageName = packageName.replace(
+    /[.*+?^${}()|[\]\\]/gu,
+    "\\$&",
+  );
+  return new RegExp(
+    `(?:\\bimport(?:\\s+type)?\\b[\\s\\S]*?\\bfrom\\s*["']${escapedPackageName}(?:/[^"']*)?["']|\\bimport\\s*["']${escapedPackageName}(?:/[^"']*)?["']|\\bexport(?:\\s+type)?\\b[\\s\\S]*?\\bfrom\\s*["']${escapedPackageName}(?:/[^"']*)?["']|\\bimport\\s*\\(\\s*["']${escapedPackageName}(?:/[^"']*)?["']\\s*\\))`,
+    "u",
+  );
+};
+
+test("production engine-core source files do not import card, deck hash, or cache packages", async () => {
   const srcDirectoryPath = path.join(repoRoot, "packages/engine-core/src");
   const productionSourcePaths =
     await listProductionSourcePaths(srcDirectoryPath);
-  const cardsImportPattern =
-    /(?:\bimport(?:\s+type)?\b[\s\S]*?\bfrom\s*["']@optcg\/cards(?:\/[^"']*)?["']|\bimport\s*["']@optcg\/cards(?:\/[^"']*)?["']|\bexport(?:\s+type)?\b[\s\S]*?\bfrom\s*["']@optcg\/cards(?:\/[^"']*)?["']|\bimport\s*\(\s*["']@optcg\/cards(?:\/[^"']*)?["']\s*\))/u;
+  const forbiddenImportPatterns = forbiddenEngineProductionImports.map(
+    (packageName) => ({
+      packageName,
+      pattern: importPatternForPackage(packageName),
+    }),
+  );
 
   assert.ok(productionSourcePaths.length > 0);
   for (const sourcePath of productionSourcePaths) {
     const source = await readFile(sourcePath, "utf8");
 
-    assert.equal(
-      cardsImportPattern.test(source),
-      false,
-      `engine-core production source must not import @optcg/cards: ${sourcePath}`,
-    );
+    for (const { packageName, pattern } of forbiddenImportPatterns) {
+      assert.equal(
+        pattern.test(source),
+        false,
+        `engine-core production source must not import ${packageName}: ${sourcePath}`,
+      );
+    }
   }
 });
 
