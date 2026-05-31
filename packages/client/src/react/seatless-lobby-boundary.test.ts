@@ -23,6 +23,9 @@ describe("seatless custom lobby boundaries", () => {
       assert.doesNotMatch(source, /joinLocalLobby\(\{[^}]*playerId/u, file);
       assert.doesNotMatch(source, /lobbyIdFromUrl/u, file);
       assert.doesNotMatch(source, /searchParams\.get\("lobbyId"\)/u, file);
+      assert.doesNotMatch(source, /seatIdFromUrl/u, file);
+      assert.doesNotMatch(source, /searchParams\.get\("seat"\)/u, file);
+      assert.doesNotMatch(source, /searchParams\.set\("seat"/u, file);
     }
   });
 

@@ -77,11 +77,6 @@ export interface MatchClientUi {
   submitLobbyDeckHash: (deckHash: string) => Promise<void>;
 }
 
-export const seatIdFromUrl = (): PlayerId => {
-  const value = new URL(window.location.href).searchParams.get("seat");
-  return (value ?? "p1") as PlayerId;
-};
-
 export const matchIdFromUrl = (): MatchId | undefined => {
   const value = new URL(window.location.href).searchParams.get("matchId");
   return value === null ? undefined : (value as MatchId);
@@ -96,14 +91,11 @@ export const lobbyIdFromPath = (): string | undefined => {
   return undefined;
 };
 
-export const setMatchLocation = (
-  matchId: MatchId,
-  playerId: PlayerId,
-): void => {
+export const setMatchLocation = (matchId: MatchId): void => {
   const url = new URL(window.location.href);
   url.searchParams.delete("lobbyId");
   url.searchParams.set("matchId", String(matchId));
-  url.searchParams.set("seat", String(playerId));
+  url.searchParams.delete("seat");
   window.history.replaceState({}, "", url);
 };
 

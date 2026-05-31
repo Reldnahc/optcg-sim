@@ -79,7 +79,7 @@ export const useMatchSessionActions = ({
   const createNewMatch = useCallback(async (): Promise<void> => {
     const created = await controller.startNewLocalLobby();
     if (isMatchClientState(created) || isFirstPlayerSetupClientState(created)) {
-      setMatchLocation(created.matchId, created.seat.playerId);
+      setMatchLocation(created.matchId);
     } else if (isLobbyClientState(created)) {
       setLobbyLocation(created.lobbyId);
     }
@@ -93,7 +93,7 @@ export const useMatchSessionActions = ({
       setActionInFlight(true);
       try {
         const result = await controller.chooseFirstPlayer({ choice });
-        setMatchLocation(result.matchId, result.seat.playerId);
+        setMatchLocation(result.matchId);
         setClientState(result);
         setErrors([]);
       } catch (error) {
@@ -110,7 +110,7 @@ export const useMatchSessionActions = ({
     try {
       const result = await controller.requestRematch();
       if (isMatchClientState(result) || isFirstPlayerSetupClientState(result)) {
-        setMatchLocation(result.matchId, result.seat.playerId);
+        setMatchLocation(result.matchId);
       } else if (isLobbyClientState(result)) {
         setLobbyLocation(result.lobbyId);
       }

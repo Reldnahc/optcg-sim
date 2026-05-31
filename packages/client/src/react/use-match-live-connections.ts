@@ -38,7 +38,7 @@ export const useMatchLiveConnections = ({
           isMatchClientState(nextState) ||
           isFirstPlayerSetupClientState(nextState)
         ) {
-          setMatchLocation(nextState.matchId, nextState.seat.playerId);
+          setMatchLocation(nextState.matchId);
         } else if (isLobbyClientState(nextState)) {
           setLobbyLocation(nextState.lobbyId);
         }
@@ -65,7 +65,7 @@ export const useMatchLiveConnections = ({
           isMatchClientState(nextState) ||
           isFirstPlayerSetupClientState(nextState)
         ) {
-          setMatchLocation(nextState.matchId, nextState.seat.playerId);
+          setMatchLocation(nextState.matchId);
         } else if (isLobbyClientState(nextState)) {
           setLobbyLocation(nextState.lobbyId);
         }

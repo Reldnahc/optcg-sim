@@ -62,10 +62,7 @@ import {
   isLobbyClientState,
   isMatchClientState,
   isSelfAttachmentTarget,
-  lobbyIdFromPath,
-  matchIdFromUrl,
   prominentDecisionPrompt,
-  seatIdFromUrl,
   setLobbyLocation,
   setMatchLocation,
   toggleCardCostSelectedInstanceId,
@@ -74,6 +71,7 @@ import {
   zoneClickVisibleInstanceIds,
   type MatchClientUi,
 } from "./useMatchClient-support.js";
+import { loadInitialMatchClientState } from "./initial-match-client-state.js";
 import { useMatchLiveConnections } from "./use-match-live-connections.js";
 import { useMatchSessionActions } from "./use-match-session-actions.js";
 
@@ -263,20 +261,7 @@ export const useMatchClient = (): MatchClientUi => {
     let cancelled = false;
     const load = async (): Promise<void> => {
       try {
-        const urlMatchId = matchIdFromUrl();
-        const urlLobbyId = lobbyIdFromPath();
-        const seatId = seatIdFromUrl();
-        const loaded =
-          urlMatchId !== undefined
-            ? await controller.joinLocalMatch({
-                matchId: urlMatchId,
-                playerId: seatId,
-              })
-            : urlLobbyId !== undefined
-              ? await controller.joinLocalLobby({
-                  lobbyId: urlLobbyId,
-                })
-              : await controller.startNewLocalLobby();
+        const loaded = await loadInitialMatchClientState(controller);
         if (cancelled) {
           return;
         }
@@ -284,7 +269,7 @@ export const useMatchClient = (): MatchClientUi => {
           isMatchClientState(loaded) ||
           isFirstPlayerSetupClientState(loaded)
         ) {
-          setMatchLocation(loaded.matchId, loaded.seat.playerId);
+          setMatchLocation(loaded.matchId);
         } else if (isLobbyClientState(loaded)) {
           setLobbyLocation(loaded.lobbyId);
         }
@@ -341,7 +326,7 @@ export const useMatchClient = (): MatchClientUi => {
           isMatchClientState(result) ||
           isFirstPlayerSetupClientState(result)
         ) {
-          setMatchLocation(result.matchId, result.seat.playerId);
+          setMatchLocation(result.matchId);
         } else if (isLobbyClientState(result)) {
           setLobbyLocation(result.lobbyId);
         }
