@@ -25,6 +25,7 @@ import {
   createLocalDevMatchRegistry,
   type LocalDevMatchRegistry,
 } from "./dev-local-match-registry.js";
+import { subjectsMatch } from "./dev-auth.js";
 
 interface DevResetRequest {
   setup?: unknown;
@@ -43,24 +44,32 @@ interface CreatedDevLobbyResponse {
   lobbyId: string;
   seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
   matchId?: MatchId;
+  seat?: { playerId: PlayerId };
 }
 
 interface AuthProvider {
   authenticate: (request: IncomingMessage) => AuthContext | undefined;
 }
 
+interface LocalDevLobbySeat {
+  playerId: PlayerId;
+  subject?: AuthContext["subject"] | undefined;
+}
+
 interface LocalDevLobby {
   lobbyId: string;
-  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  seats: Record<string, LocalDevLobbySeat>;
   matchId?: MatchId;
 }
 
 interface LocalDevLobbyRegistry {
   createLobby: () => CreatedDevLobbyResponse;
-  claimSeat: (
+  joinLobby: (
     lobbyId: string,
-    playerId: PlayerId,
-  ) => Promise<CreatedDevLobbyResponse | "lobbyNotFound" | "seatNotFound">;
+    auth: AuthContext | undefined,
+  ) => Promise<
+    CreatedDevLobbyResponse | "lobbyNotFound" | "unauthenticated" | "full"
+  >;
   getLobby: (lobbyId: string) => CreatedDevLobbyResponse | undefined;
 }
 
@@ -139,8 +148,8 @@ const createDevAuthProvider = (): AuthProvider => ({
 });
 
 const createLobbySeats = (): LocalDevLobby["seats"] => ({
-  p1: { playerId: p1, claimed: false },
-  p2: { playerId: p2, claimed: false },
+  p1: { playerId: p1 },
+  p2: { playerId: p2 },
 });
 
 const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
@@ -148,7 +157,7 @@ const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
   seats: Object.fromEntries(
     Object.entries(lobby.seats).map(([key, seat]) => [
       key,
-      { playerId: seat.playerId, claimed: seat.claimed },
+      { playerId: seat.playerId, claimed: seat.subject !== undefined },
     ]),
   ),
   ...(lobby.matchId === undefined ? {} : { matchId: lobby.matchId }),
@@ -163,7 +172,7 @@ const createLocalDevLobbyRegistry = (
   const ensureMatchWhenReady = async (lobby: LocalDevLobby): Promise<void> => {
     if (
       lobby.matchId !== undefined ||
-      !Object.values(lobby.seats).every((seat) => seat.claimed)
+      !Object.values(lobby.seats).every((seat) => seat.subject !== undefined)
     ) {
       return;
     }
@@ -180,18 +189,38 @@ const createLocalDevLobbyRegistry = (
       lobbies.set(lobby.lobbyId, lobby);
       return lobbyResponse(lobby);
     },
-    async claimSeat(lobbyId, playerId) {
+    async joinLobby(lobbyId, auth) {
+      if (auth === undefined) {
+        return "unauthenticated";
+      }
       const lobby = lobbies.get(lobbyId);
       if (lobby === undefined) {
         return "lobbyNotFound";
       }
-      const seat = lobby.seats[String(playerId)];
-      if (seat === undefined) {
-        return "seatNotFound";
+      const existing = Object.values(lobby.seats).find(
+        (seat) =>
+          seat.subject !== undefined &&
+          subjectsMatch(seat.subject, auth.subject),
+      );
+      if (existing !== undefined) {
+        await ensureMatchWhenReady(lobby);
+        return {
+          ...lobbyResponse(lobby),
+          seat: { playerId: existing.playerId },
+        };
       }
-      seat.claimed = true;
+      const open = Object.values(lobby.seats).find(
+        (seat) => seat.subject === undefined,
+      );
+      if (open === undefined) {
+        return "full";
+      }
+      open.subject = auth.subject;
       await ensureMatchWhenReady(lobby);
-      return lobbyResponse(lobby);
+      return {
+        ...lobbyResponse(lobby),
+        seat: { playerId: open.playerId },
+      };
     },
     getLobby(lobbyId) {
       const lobby = lobbies.get(lobbyId);
@@ -240,26 +269,27 @@ const handleApiRequest = async (
     sendJson(response, 404, { errors: ["API route not found."] });
     return;
   }
-  const lobbySeatClaimRoute =
-    /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/seats\/(?<playerId>[^/]+)\/claim$/u.exec(
-      pathname,
-    );
-  if (request.method === "POST" && lobbySeatClaimRoute !== null) {
+  const lobbyJoinRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/join$/u.exec(
+    pathname,
+  );
+  if (request.method === "POST" && lobbyJoinRoute !== null) {
     const lobbyId = decodeURIComponent(
-      lobbySeatClaimRoute.groups?.["lobbyId"] ?? "",
+      lobbyJoinRoute.groups?.["lobbyId"] ?? "",
     );
-    const playerId = decodeURIComponent(
-      lobbySeatClaimRoute.groups?.["playerId"] ?? "",
-    ) as PlayerId;
-    const result = await lobbyRegistry.claimSeat(lobbyId, playerId);
+    const result = await lobbyRegistry.joinLobby(
+      lobbyId,
+      authProvider.authenticate(request),
+    );
     if (result === "lobbyNotFound") {
       sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
       return;
     }
-    if (result === "seatNotFound") {
-      sendJson(response, 404, {
-        errors: [`Seat ${String(playerId)} not found.`],
-      });
+    if (result === "unauthenticated") {
+      sendJson(response, 401, { errors: ["Guest identity is required."] });
+      return;
+    }
+    if (result === "full") {
+      sendJson(response, 409, { errors: ["Lobby is full."] });
       return;
     }
     broadcastLobbyState(result, lobbyConnections);

@@ -38,7 +38,9 @@ interface ClaimedDevSeatBody {
 interface CreatedDevLobbyBody {
   lobbyId?: string;
   matchId?: string;
+  seat?: { playerId?: string };
   seats: Record<string, { playerId?: string; claimed?: boolean }>;
+  errors?: string[];
 }
 
 const requireStateSeq = (
@@ -228,10 +230,25 @@ const claimDevLobbySeat = async (
   lobbyId: string,
   playerId: "p1" | "p2",
 ): Promise<CreatedDevLobbyBody> => {
-  const response = await fetch(
-    `${server.url()}/api/lobbies/${lobbyId}/seats/${playerId}/claim`,
-    { method: "POST" },
-  );
+  const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
+    method: "POST",
+    headers: { "x-optcg-session-token": `guest-${playerId}` },
+  });
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as CreatedDevLobbyBody;
+  assert.equal(body.seat?.playerId, playerId);
+  return body;
+};
+
+const joinDevLobby = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  lobbyId: string,
+  guestToken: string,
+): Promise<CreatedDevLobbyBody> => {
+  const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
+    method: "POST",
+    headers: { "x-optcg-session-token": guestToken },
+  });
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedDevLobbyBody;
 };
@@ -338,6 +355,96 @@ describe("dev HTTP server", () => {
       for (const socket of sockets) {
         socket.close();
       }
+      await server.close();
+    }
+  });
+
+  test("seatless lobby join assigns first open seat by guest identity", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      const first = await joinDevLobby(server, lobbyId, "guest-a");
+      const second = await joinDevLobby(server, lobbyId, "guest-b");
+
+      assert.equal(first.seat?.playerId, "p1");
+      assert.equal(second.seat?.playerId, "p2");
+      assert.equal(typeof second.matchId, "string");
+      assert.equal(first.seats["p1"]?.claimed, true);
+      assert.equal(second.seats["p2"]?.claimed, true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("seatless lobby join is idempotent for the same guest identity", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      const first = await joinDevLobby(server, lobbyId, "guest-a");
+      const second = await joinDevLobby(server, lobbyId, "guest-a");
+
+      assert.equal(first.seat?.playerId, "p1");
+      assert.equal(second.seat?.playerId, "p1");
+      assert.equal(second.matchId, undefined);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("seatless lobby join fails closed when the lobby is full", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      await joinDevLobby(server, lobbyId, "guest-a");
+      await joinDevLobby(server, lobbyId, "guest-b");
+      const response = await fetch(
+        `${server.url()}/api/lobbies/${lobbyId}/join`,
+        {
+          method: "POST",
+          headers: { "x-optcg-session-token": "guest-c" },
+        },
+      );
+      const body = (await response.json()) as CreatedDevLobbyBody;
+
+      assert.equal(response.status, 409);
+      assert.deepEqual(body.errors, ["Lobby is full."]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("lobby join responses do not expose guest tokens", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      const joined = await joinDevLobby(server, lobbyId, "guest-a");
+
+      assert.equal(JSON.stringify(joined).includes("guest-a"), false);
+    } finally {
       await server.close();
     }
   });
