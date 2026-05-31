@@ -32,6 +32,19 @@ describe("and connector parser", () => {
     });
   });
 
+  it("keeps Leader and Character effect source wording inside the same segment", () => {
+    expect(
+      parseAndConnector({
+        text: "This Character cannot be rested by your opponent's Leader and Character effects and gains [Blocker].",
+      }),
+    ).toMatchObject({
+      segments: [
+        "This Character cannot be rested by your opponent's Leader and Character effects",
+        "gains [Blocker].",
+      ],
+    });
+  });
+
   it("does not authorize support unless split segments parse independently", () => {
     expect(
       parseExpression("A and UNKNOWN.", {

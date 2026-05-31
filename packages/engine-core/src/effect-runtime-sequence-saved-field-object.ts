@@ -1,4 +1,5 @@
 import type {
+  CardInstance,
   CardRef,
   ContinuousEffectRecord,
   EffectExecutionFrame,
@@ -13,6 +14,10 @@ import {
   resolveSavedFieldObjectKoSelection,
 } from "./effect-runtime-primitives.js";
 import type { SupportedSequenceSegment } from "./effect-runtime-sequence-support.js";
+import {
+  applyRestProtection,
+  type RestProtectionAttempt,
+} from "./field-removal-protection.js";
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -131,16 +136,79 @@ const restFieldObject = (
 export const restFieldObjects = (
   state: GameState,
   targets: readonly CardRef[],
+  attempt?: RestProtectionAttempt,
 ): { changed: boolean; state: GameState } => {
   let nextState = state;
   let changed = false;
   for (const target of targets) {
+    if (attempt !== undefined) {
+      const located = findFieldObjectByRef(nextState, target);
+      if (located !== null) {
+        const protection = applyRestProtection(
+          nextState,
+          located.card,
+          attempt,
+        );
+        if (!protection.ok || protection.prevented) {
+          continue;
+        }
+      }
+    }
     const rested = restFieldObject(nextState, target);
     nextState = rested.state;
     changed ||= rested.changed;
   }
   return { changed, state: nextState };
 };
+
+const findFieldObjectByRef = (
+  state: GameState,
+  target: CardRef,
+): { card: CardInstance } | null => {
+  const player = state.players[target.playerId];
+  if (player === undefined) {
+    return null;
+  }
+  if (
+    target.zone?.zone === "leaderArea" &&
+    player.leader.instanceId === target.instanceId &&
+    player.leader.cardId === target.cardId
+  ) {
+    return { card: player.leader };
+  }
+  if (target.zone?.zone === "characterArea") {
+    const card = player.characters.find(
+      (candidate) =>
+        candidate.instanceId === target.instanceId &&
+        candidate.cardId === target.cardId,
+    );
+    return card === undefined ? null : { card };
+  }
+  if (
+    target.zone?.zone === "stageArea" &&
+    player.stage?.instanceId === target.instanceId &&
+    player.stage.cardId === target.cardId
+  ) {
+    return { card: player.stage };
+  }
+  if (target.zone?.zone === "costArea") {
+    const card = player.costArea.find(
+      (candidate) =>
+        candidate.instanceId === target.instanceId &&
+        candidate.cardId === target.cardId,
+    );
+    return card === undefined ? null : { card };
+  }
+  return null;
+};
+
+const restProtectionAttemptFromEntry = (
+  entry: EffectQueueEntry,
+): RestProtectionAttempt => ({
+  sourceKind: "cardEffect",
+  sourceControllerId: entry.controllerId,
+  sourceCardCategory: entry.sourceSnapshot.category,
+});
 
 const activateFieldObject = (
   state: GameState,
@@ -413,6 +481,7 @@ export const applySavedFieldObjectRestSequenceSegment = (params: {
   const rested = restFieldObjects(
     params.state,
     resolvedSavedTarget.selectedTargets,
+    restProtectionAttemptFromEntry(params.entry),
   );
   const nextState = rested.state;
   const changedState = rested.changed;

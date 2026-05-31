@@ -549,7 +549,11 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
   }
 
   if (isRestEffectWithChooseTarget(pausedSegment.effect)) {
-    const rested = restFieldObjects(params.state, params.selectedTargets);
+    const rested = restFieldObjects(params.state, params.selectedTargets, {
+      sourceKind: "cardEffect",
+      sourceControllerId: entry.controllerId,
+      sourceCardCategory: entry.sourceSnapshot.category,
+    });
     const scopedSegmentKey = segmentKeyForPath(
       frame.effectPath,
       params.segmentKey,

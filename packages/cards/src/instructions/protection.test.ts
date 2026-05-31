@@ -23,6 +23,8 @@ describe("continuous protection instruction parser", () => {
         "target:thisCharacter",
         "protectionProcess:fieldRemoval",
         "protectionProcess:ko",
+        "protectionProcess:rest",
+        "protectionSource:opponentCardCategoryEffects",
         "protectionSource:opponentEffects",
         "protectionSource:effects",
         "protectionSource:battle",

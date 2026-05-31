@@ -866,7 +866,10 @@ test("fails closed for malformed protection metadata", () => {
   const seq = definition.effects[0]?.effect;
   if (seq?.type === "sequence") {
     const second = seq.effects[1];
-    if (second?.effect.type === "giveProtection") {
+    if (
+      second?.effect.type === "giveProtection" &&
+      second.effect.protection.process === "fieldRemoval"
+    ) {
       second.effect.protection.fieldRemoval.sourceControllerRelation =
         "unknownController";
     }

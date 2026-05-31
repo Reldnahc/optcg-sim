@@ -113,6 +113,68 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it("parses Opponent's Turn rest protection and keyword grant as reusable continuous primitives", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] This Character cannot be rested by your opponent's Leader and Character effects and gains [Blocker].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: { type: "opponentTurn" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "giveProtection",
+                target: { type: "self" },
+                protection: {
+                  process: "rest",
+                  sourceKind: "cardEffect",
+                  sourceControllerRelation: "opponentControlled",
+                  sourceCardCategories: ["leader", "character"],
+                },
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: { type: "opponentTurn" },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "giveKeyword",
+                target: { type: "self" },
+                keyword: "blocker",
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: { type: "opponentTurn" },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:opponentTurn",
+        "condition:opponentTurn",
+        "instruction:giveProtection",
+        "protectionProcess:rest",
+        "protectionSource:opponentCardCategoryEffects",
+        "sourceCategory:leader",
+        "sourceCategory:character",
+        "instruction:giveKeyword",
+        "keyword:anySupported",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses relative DON-count self hand cost reduction as reusable primitives", () => {
     const result = parseCardEffectLine(
       "If the number of DON!! cards on your field is at least 2 less than the number on your opponent's field, give this card in your hand −3 cost.",

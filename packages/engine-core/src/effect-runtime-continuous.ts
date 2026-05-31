@@ -22,6 +22,7 @@ import {
 import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import {
   isSupportedFieldRemovalProtection,
+  isSupportedRestProtection,
   malformedFieldRemovalProtectionMessage,
 } from "./field-removal-protection-shape.js";
 
@@ -753,11 +754,23 @@ const effectToDerivedModifier = (
       unsupportedDerivedMessage("unsupported protection shape"),
     );
   }
-  if (!isSupportedFieldRemovalProtection(effect.protection)) {
+  if (effect.protection.process === "fieldRemoval") {
+    if (!isSupportedFieldRemovalProtection(effect.protection)) {
+      throw new TypeError(
+        malformedFieldRemovalProtectionMessage({
+          id: "implemented-dsl:malformed-protection",
+        } as ContinuousEffectRecord),
+      );
+    }
+    return {
+      layer: "protection",
+      target: { type: "self" },
+      operation: { type: "protection", protection: effect.protection },
+    };
+  }
+  if (!isSupportedRestProtection(effect.protection)) {
     throw new TypeError(
-      malformedFieldRemovalProtectionMessage({
-        id: "implemented-dsl:malformed-protection",
-      } as ContinuousEffectRecord),
+      unsupportedDerivedMessage("unsupported protection shape"),
     );
   }
   return {

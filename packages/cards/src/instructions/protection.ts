@@ -1,4 +1,9 @@
-import type { Effect, EffectDslFieldRemovalProtection } from "@optcg/types";
+import type {
+  CardCategory,
+  Effect,
+  EffectDslFieldRemovalProtection,
+  EffectDslRestProtection,
+} from "@optcg/types";
 
 import { parseProtectionProcess } from "../protection/process.js";
 import { parseProtectionSource } from "../protection/source.js";
@@ -14,6 +19,8 @@ export const protectionInstructionPrimitive = {
     "target:thisCharacter",
     "protectionProcess:fieldRemoval",
     "protectionProcess:ko",
+    "protectionProcess:rest",
+    "protectionSource:opponentCardCategoryEffects",
     "protectionSource:opponentEffects",
     "protectionSource:effects",
     "protectionSource:battle",
@@ -45,6 +52,7 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
   const effect = buildProtectionEffect({
     context,
     process: process.process.type,
+    sourceCardCategories: source.source.cardCategories,
     sourceKind: source.source.kind,
     sourceControllerRelation: source.source.controllerRelation,
   });
@@ -67,7 +75,8 @@ export const parseOpponentEffectFieldRemovalProtectionInstruction =
 
 function buildProtectionEffect(options: {
   readonly context: ContinuousInstructionContext;
-  readonly process: "fieldRemoval" | "ko";
+  readonly process: "fieldRemoval" | "ko" | "rest";
+  readonly sourceCardCategories: readonly CardCategory[] | undefined;
   readonly sourceKind: "battle" | "cardEffect";
   readonly sourceControllerRelation: "eitherController" | "opponentControlled";
 }): Effect {
@@ -89,6 +98,19 @@ function buildProtectionEffect(options: {
     };
   }
 
+  if (options.process === "rest") {
+    return {
+      type: "giveProtection",
+      target: { type: "self" },
+      protection: restProtection({
+        sourceCardCategories: options.sourceCardCategories,
+        sourceKind: options.sourceKind,
+        sourceControllerRelation: options.sourceControllerRelation,
+      }),
+      duration,
+    };
+  }
+
   return {
     type: "giveProtection",
     target: { type: "self" },
@@ -97,6 +119,21 @@ function buildProtectionEffect(options: {
       sourceControllerRelation: options.sourceControllerRelation,
     }),
     duration,
+  };
+}
+
+function restProtection(options: {
+  readonly sourceCardCategories: readonly CardCategory[] | undefined;
+  readonly sourceKind: "battle" | "cardEffect";
+  readonly sourceControllerRelation: "eitherController" | "opponentControlled";
+}): EffectDslRestProtection {
+  return {
+    process: "rest",
+    sourceKind: options.sourceKind,
+    sourceControllerRelation: options.sourceControllerRelation,
+    ...(options.sourceCardCategories === undefined
+      ? {}
+      : { sourceCardCategories: [...options.sourceCardCategories] }),
   };
 }
 

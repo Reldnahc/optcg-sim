@@ -2,7 +2,8 @@ import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 export type ProtectionProcess =
   | { readonly type: "fieldRemoval" }
-  | { readonly type: "ko" };
+  | { readonly type: "ko" }
+  | { readonly type: "rest" };
 
 export interface ProtectionProcessParseResult {
   readonly process: ProtectionProcess;
@@ -28,6 +29,15 @@ export const koProtectionProcessPrimitive = {
   ],
 } as const;
 
+export const restProtectionProcessPrimitive = {
+  primitiveId: "protectionProcess:rest",
+  matches: [
+    {
+      id: "cannot-be-rested",
+    },
+  ],
+} as const;
+
 export function parseProtectionProcess(
   input: ParseInput,
 ): ProtectionProcessParseResult | undefined {
@@ -47,6 +57,15 @@ export function parseProtectionProcess(
       process: { type: "ko" },
       evidence: ["protectionProcess:ko"],
       rest: koMatch.groups?.["rest"]?.trim() ?? "",
+    };
+  }
+
+  const restMatch = /^cannot be rested\b\s*(?<rest>.*)$/i.exec(input.text);
+  if (restMatch !== null) {
+    return {
+      process: { type: "rest" },
+      evidence: ["protectionProcess:rest"],
+      rest: restMatch.groups?.["rest"]?.trim() ?? "",
     };
   }
 

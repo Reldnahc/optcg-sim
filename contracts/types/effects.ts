@@ -585,6 +585,21 @@ export interface EffectDslFieldRemovalProtection {
   };
 }
 
+export interface EffectDslRestProtection {
+  process: "rest";
+  sourceKind: "cardEffect" | "ruleProcess" | "battle" | "cost" | "custom";
+  sourceControllerRelation:
+    | "opponentControlled"
+    | "selfControlled"
+    | "eitherController"
+    | "unknownController";
+  sourceCardCategories?: CardCategory[];
+}
+
+export type EffectDslProtection =
+  | EffectDslFieldRemovalProtection
+  | EffectDslRestProtection;
+
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
@@ -720,7 +735,7 @@ export type Effect =
   | {
       type: "giveProtection";
       target: Target;
-      protection: EffectDslFieldRemovalProtection;
+      protection: EffectDslProtection;
       duration: Duration;
     }
   | { type: "addDon"; count: number; player: PlayerRef }

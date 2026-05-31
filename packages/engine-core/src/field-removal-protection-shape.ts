@@ -11,6 +11,13 @@ const supportedFieldRemovalClassifications = new Set([
   "moveFromFieldToOtherZone",
 ]);
 
+const supportedRestSourceCategories = new Set([
+  "leader",
+  "character",
+  "event",
+  "stage",
+]);
+
 export const isSupportedFieldRemovalProtection = (
   protection: Protection,
 ): protection is Extract<Protection, { process: "fieldRemoval" }> => {
@@ -34,10 +41,32 @@ export const isSupportedFieldRemovalProtection = (
   );
 };
 
+export const isSupportedRestProtection = (
+  protection: Protection,
+): protection is Extract<Protection, { process: "rest" }> => {
+  if (protection.process !== "rest") return false;
+  const categories = protection.sourceCardCategories;
+  return (
+    protection.sourceKind === "cardEffect" &&
+    (protection.sourceControllerRelation === "opponentControlled" ||
+      protection.sourceControllerRelation === "selfControlled" ||
+      protection.sourceControllerRelation === "eitherController") &&
+    (categories === undefined ||
+      (Array.isArray(categories) &&
+        categories.length > 0 &&
+        categories.every((category) =>
+          supportedRestSourceCategories.has(category),
+        )))
+  );
+};
+
 export const hasOnlyFieldRemovalProtections = (
   protections: readonly Protection[],
 ): boolean =>
-  protections.every((protection) => protection.process === "fieldRemoval");
+  protections.every(
+    (protection) =>
+      protection.process === "fieldRemoval" || protection.process === "rest",
+  );
 
 export const malformedFieldRemovalProtectionMessage = (
   effect: ContinuousEffectRecord,

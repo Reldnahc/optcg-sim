@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardCategory,
   ContinuousEffectRecord,
   EffectQueueEntry,
   GameState,
@@ -14,7 +15,10 @@ import {
   isSupportedQueuedEffectConditionShape,
 } from "./effect-runtime-conditions.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
-import { isSupportedFieldRemovalProtection } from "./field-removal-protection-shape.js";
+import {
+  isSupportedFieldRemovalProtection,
+  isSupportedRestProtection,
+} from "./field-removal-protection-shape.js";
 export {
   hasOnlyFieldRemovalProtections,
   isSupportedFieldRemovalProtection,
@@ -36,6 +40,12 @@ type FieldRemovalAttempt = {
   classification: ProtectionFieldRemovalClassification;
   sourceKind: "cardEffect" | "cost";
   sourceControllerId: PlayerId;
+};
+
+export type RestProtectionAttempt = {
+  sourceKind: "cardEffect" | "ruleProcess" | "battle" | "cost" | "custom";
+  sourceControllerId: PlayerId;
+  sourceCardCategory?: CardCategory;
 };
 
 type ProtectionOperation = Extract<
@@ -155,7 +165,8 @@ export const isSupportedProtectionModifier = (
   isSupportedDuration(effect.duration) &&
   effect.modifier.target.type === "self" &&
   (isSupportedFieldRemovalProtection(effect.modifier.operation.protection) ||
-    isSupportedKoProtection(effect.modifier.operation.protection));
+    isSupportedKoProtection(effect.modifier.operation.protection) ||
+    isSupportedRestProtection(effect.modifier.operation.protection));
 
 const toConditionQueueEntry = (
   effect: ContinuousEffectRecord,
@@ -319,6 +330,82 @@ const protectionRequiresOpponentController = (
     );
   }
   return protection.sourceControllerRelation === "opponentControlled";
+};
+
+const sourceControllerMatchesProtection = (
+  protection: Protection,
+  sourceControllerId: PlayerId,
+  targetControllerId: PlayerId,
+): boolean => {
+  if (protection.process === "fieldRemoval") {
+    const relation = protection.fieldRemoval.sourceControllerRelation;
+    if (relation === "opponentControlled") {
+      return sourceControllerId !== targetControllerId;
+    }
+    if (relation === "selfControlled") {
+      return sourceControllerId === targetControllerId;
+    }
+    return relation === "eitherController";
+  }
+  if (protection.sourceControllerRelation === "opponentControlled") {
+    return sourceControllerId !== targetControllerId;
+  }
+  if (protection.sourceControllerRelation === "selfControlled") {
+    return sourceControllerId === targetControllerId;
+  }
+  return (
+    protection.sourceControllerRelation === undefined ||
+    protection.sourceControllerRelation === "eitherController"
+  );
+};
+
+const restProtectionCoversAttempt = (
+  protection: Protection,
+  attempt: RestProtectionAttempt,
+  target: CardInstance,
+): boolean => {
+  if (protection.process !== "rest") {
+    return false;
+  }
+  if (protection.sourceKind !== attempt.sourceKind) {
+    return false;
+  }
+  if (
+    !sourceControllerMatchesProtection(
+      protection,
+      attempt.sourceControllerId,
+      target.controller,
+    )
+  ) {
+    return false;
+  }
+  if (protection.sourceCardCategories === undefined) {
+    return true;
+  }
+  return (
+    attempt.sourceCardCategory !== undefined &&
+    protection.sourceCardCategories.includes(attempt.sourceCardCategory)
+  );
+};
+
+export const applyRestProtection = (
+  state: GameState,
+  target: CardInstance,
+  attempt: RestProtectionAttempt,
+):
+  | { ok: true; prevented: boolean }
+  | { ok: false; reason: FieldRemovalProtectionFailureReason } => {
+  const protections = fieldRemovalProtectionsForCard(state, target);
+  if (!protections.ok) return protections;
+  if (protections.protections.length === 0) {
+    return { ok: true, prevented: false };
+  }
+  return {
+    ok: true,
+    prevented: protections.protections.some((protection) =>
+      restProtectionCoversAttempt(protection, attempt, target),
+    ),
+  };
 };
 
 export const applyFieldRemovalProtection = (

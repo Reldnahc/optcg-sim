@@ -771,7 +771,7 @@
           "properties": {
             "type": { "const": "giveProtection" },
             "target": { "$ref": "#/$defs/target" },
-            "protection": { "$ref": "#/$defs/effectDslFieldRemovalProtection" },
+            "protection": { "$ref": "#/$defs/effectDslProtection" },
             "duration": { "$ref": "#/$defs/duration" }
           }
         },
@@ -1554,6 +1554,37 @@
           "$ref": "#/$defs/protectionFieldRemovalMetadata"
         }
       }
+    },
+    "effectDslRestProtection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["process", "sourceKind", "sourceControllerRelation"],
+      "properties": {
+        "process": { "const": "rest" },
+        "sourceKind": {
+          "enum": ["cardEffect", "ruleProcess", "battle", "cost", "custom"]
+        },
+        "sourceControllerRelation": {
+          "enum": [
+            "opponentControlled",
+            "selfControlled",
+            "eitherController",
+            "unknownController"
+          ]
+        },
+        "sourceCardCategories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cardCategory" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "effectDslProtection": {
+      "oneOf": [
+        { "$ref": "#/$defs/effectDslFieldRemovalProtection" },
+        { "$ref": "#/$defs/effectDslRestProtection" }
+      ]
     },
     "playerRef": {
       "type": "string",

@@ -1,8 +1,11 @@
+import type { CardCategory } from "@optcg/types";
+
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 export interface ProtectionSource {
   readonly kind: "battle" | "cardEffect";
   readonly controllerRelation: "eitherController" | "opponentControlled";
+  readonly cardCategories?: readonly CardCategory[];
 }
 
 export interface ProtectionSourceParseResult {
@@ -16,6 +19,15 @@ export const opponentEffectsProtectionSourcePrimitive = {
   matches: [
     {
       id: "by-your-opponents-effects",
+    },
+  ],
+} as const;
+
+export const opponentCardCategoryEffectsProtectionSourcePrimitive = {
+  primitiveId: "protectionSource:opponentCardCategoryEffects",
+  matches: [
+    {
+      id: "by-your-opponents-card-category-effects",
     },
   ],
 } as const;
@@ -41,6 +53,11 @@ export const battleProtectionSourcePrimitive = {
 export function parseProtectionSource(
   input: ParseInput,
 ): ProtectionSourceParseResult | undefined {
+  const categorySource = parseOpponentCardCategoryEffectsSource(input.text);
+  if (categorySource !== undefined) {
+    return categorySource;
+  }
+
   if (/^by your opponent's effects\.?$/i.test(input.text)) {
     return {
       source: {
@@ -76,6 +93,66 @@ export function parseProtectionSource(
   }
 
   return undefined;
+}
+
+const categoryByText = new Map<string, CardCategory>([
+  ["leader", "leader"],
+  ["leaders", "leader"],
+  ["character", "character"],
+  ["characters", "character"],
+  ["event", "event"],
+  ["events", "event"],
+  ["stage", "stage"],
+  ["stages", "stage"],
+]);
+
+type ProtectionSourceCardCategory = Exclude<CardCategory, "don">;
+
+const categoryEvidenceByCategory: Record<
+  ProtectionSourceCardCategory,
+  PrimitiveEvidence
+> = {
+  character: "sourceCategory:character",
+  event: "sourceCategory:event",
+  leader: "sourceCategory:leader",
+  stage: "sourceCategory:stage",
+};
+
+function parseOpponentCardCategoryEffectsSource(
+  text: string,
+): ProtectionSourceParseResult | undefined {
+  const match = /^by your opponent's (?<categories>.+?) effects\.?$/i.exec(
+    text,
+  );
+  const categoriesText = match?.groups?.["categories"];
+  if (categoriesText === undefined) {
+    return undefined;
+  }
+  const categories = categoriesText
+    .split(/\s*(?:,|and)\s*/iu)
+    .map((category) => categoryByText.get(category.trim().toLowerCase()))
+    .filter(
+      (category): category is ProtectionSourceCardCategory =>
+        category !== undefined && category !== "don",
+    );
+  if (
+    categories.length === 0 ||
+    new Set(categories).size !== categories.length
+  ) {
+    return undefined;
+  }
+  return {
+    source: {
+      kind: "cardEffect",
+      controllerRelation: "opponentControlled",
+      cardCategories: categories,
+    },
+    evidence: [
+      "protectionSource:opponentCardCategoryEffects",
+      ...categories.map((category) => categoryEvidenceByCategory[category]),
+    ],
+    rest: "",
+  };
 }
 
 function trimTrailingPeriod(value: string): string {

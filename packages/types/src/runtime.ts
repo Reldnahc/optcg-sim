@@ -11,7 +11,12 @@ import type {
   StateSeq,
   TimingWindowId,
 } from "./primitives.js";
-import type { CardRef, Keyword, ZoneRef } from "./card-metadata.js";
+import type {
+  CardCategory,
+  CardRef,
+  Keyword,
+  ZoneRef,
+} from "./card-metadata.js";
 import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent, EventVisibility } from "./events.js";
 import type {
@@ -240,10 +245,11 @@ export interface ProtectionFieldRemovalMetadata {
 }
 
 export interface SimpleProtection {
-  process: "ko" | "damage" | "trash" | "effect";
+  process: "ko" | "damage" | "trash" | "effect" | "rest";
   fieldRemoval?: never;
   sourceKind?: ProtectionFieldRemovalSourceKind;
   sourceControllerRelation?: ProtectionFieldRemovalSourceControllerRelation;
+  sourceCardCategories?: CardCategory[];
   source?: CardRef;
   duration?: Duration;
 }

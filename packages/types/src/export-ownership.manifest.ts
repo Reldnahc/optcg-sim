@@ -194,6 +194,8 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PlaySourceEffect: "TYP-007D",
   PayCostEffect: "TYP-009A",
   EffectDslFieldRemovalProtection: "TYP-012B",
+  EffectDslRestProtection: "TYP-012B",
+  EffectDslProtection: "TYP-012B",
   ReplacementTrigger: "TYP-001D",
   EffectOption: "TYP-001D",
   SequencedEffect: "TYP-001D",

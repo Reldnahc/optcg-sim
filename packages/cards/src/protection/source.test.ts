@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   battleProtectionSourcePrimitive,
   effectsProtectionSourcePrimitive,
+  opponentCardCategoryEffectsProtectionSourcePrimitive,
   opponentEffectsProtectionSourcePrimitive,
   parseProtectionSource,
 } from "./source.js";
@@ -20,6 +21,14 @@ describe("protection source parser", () => {
     expect(effectsProtectionSourcePrimitive).toMatchObject({
       primitiveId: "protectionSource:effects",
     });
+    expect(opponentCardCategoryEffectsProtectionSourcePrimitive).toMatchObject({
+      primitiveId: "protectionSource:opponentCardCategoryEffects",
+      matches: [
+        {
+          id: "by-your-opponents-card-category-effects",
+        },
+      ],
+    });
     expect(battleProtectionSourcePrimitive).toMatchObject({
       primitiveId: "protectionSource:battle",
     });
@@ -34,6 +43,46 @@ describe("protection source parser", () => {
         controllerRelation: "opponentControlled",
       },
       evidence: ["protectionSource:opponentEffects"],
+      rest: "",
+    });
+  });
+
+  it("parses opponent Leader and Character effect source categories", () => {
+    expect(
+      parseProtectionSource({
+        text: "by your opponent's Leader and Character effects.",
+      }),
+    ).toEqual({
+      source: {
+        kind: "cardEffect",
+        controllerRelation: "opponentControlled",
+        cardCategories: ["leader", "character"],
+      },
+      evidence: [
+        "protectionSource:opponentCardCategoryEffects",
+        "sourceCategory:leader",
+        "sourceCategory:character",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses opponent card effect source categories without binding to one pair", () => {
+    expect(
+      parseProtectionSource({
+        text: "by your opponent's Stage and Event effects.",
+      }),
+    ).toEqual({
+      source: {
+        kind: "cardEffect",
+        controllerRelation: "opponentControlled",
+        cardCategories: ["stage", "event"],
+      },
+      evidence: [
+        "protectionSource:opponentCardCategoryEffects",
+        "sourceCategory:stage",
+        "sourceCategory:event",
+      ],
       rest: "",
     });
   });

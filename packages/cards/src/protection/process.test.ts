@@ -4,6 +4,7 @@ import {
   fieldRemovalProtectionProcessPrimitive,
   koProtectionProcessPrimitive,
   parseProtectionProcess,
+  restProtectionProcessPrimitive,
 } from "./process.js";
 
 describe("protection process parser", () => {
@@ -21,6 +22,14 @@ describe("protection process parser", () => {
       matches: [
         {
           id: "cannot-be-ko",
+        },
+      ],
+    });
+    expect(restProtectionProcessPrimitive).toMatchObject({
+      primitiveId: "protectionProcess:rest",
+      matches: [
+        {
+          id: "cannot-be-rested",
         },
       ],
     });
@@ -47,6 +56,18 @@ describe("protection process parser", () => {
       process: { type: "ko" },
       evidence: ["protectionProcess:ko"],
       rest: "in battle by <Slash> attribute cards",
+    });
+  });
+
+  it("parses rest as a protection process independently from source/cause", () => {
+    expect(
+      parseProtectionProcess({
+        text: "cannot be rested by your opponent's Leader and Character effects",
+      }),
+    ).toEqual({
+      process: { type: "rest" },
+      evidence: ["protectionProcess:rest"],
+      rest: "by your opponent's Leader and Character effects",
     });
   });
 });
