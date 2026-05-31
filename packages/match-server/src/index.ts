@@ -50,6 +50,7 @@ export type {
   RollbackPolicyMode,
   SessionActionRequest,
   SessionActionResult,
+  SessionObservation,
   SpectatorPolicyMode,
   StoredSessionRecord,
 } from "./session-types.js";
@@ -60,11 +61,19 @@ export type {
 } from "./match-session.js";
 export { createInMemoryMatchSessionStore } from "./match-session-store.js";
 export type { MatchSessionStore } from "./match-session-store.js";
+export { createMatchSessionService } from "./session-service.js";
+export type {
+  CreateMatchSessionServiceOptions,
+  MatchSessionService,
+  RegisterLocalDevMatchInput,
+} from "./session-service.js";
 export { createInMemoryMatchPersistence } from "./match-persistence.js";
 export type {
   FreezeRecord,
   InMemoryMatchPersistence,
 } from "./match-persistence.js";
+export { createRedisMatchPersistence } from "./redis-match-persistence.js";
+export type { RedisLike, RedisSetOptions } from "./redis-match-persistence.js";
 export { recoverActiveMatches } from "./match-recovery.js";
 export type {
   RecoveredMatchSummary,
