@@ -50,6 +50,7 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
             type: "playSelected",
             selection: handPlaySelection,
             ignoreCost: true,
+            ...(source.enterRested ? { enterRested: true } : {}),
           },
         },
       ],
@@ -61,6 +62,7 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
       "player:self",
       "chooser:self:upTo",
       ...source.evidence,
+      ...(source.enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",
     ],
     rest: "",
@@ -75,10 +77,15 @@ function parsePlayFromHandSource(text: string):
       readonly evidence: NonNullable<
         ReturnType<typeof parseCardFilterPredicates>
       >["evidence"];
+      readonly enterRested: boolean;
     }
   | undefined {
-  const sourceMatch = /^(?<predicates>.+) from your hand\.?$/i.exec(text);
-  const predicateText = sourceMatch?.groups?.["predicates"];
+  const sourceMatch =
+    /^(?<predicates>.+) from your hand(?<rested>\s+rested)?\.?$/i.exec(text);
+  if (sourceMatch === null) {
+    return undefined;
+  }
+  const predicateText = sourceMatch.groups?.["predicates"];
   if (predicateText === undefined) {
     return undefined;
   }
@@ -86,5 +93,9 @@ function parsePlayFromHandSource(text: string):
   const predicates = parseCardFilterPredicates({ text: predicateText });
   return predicates === undefined || predicates.rest.length > 0
     ? undefined
-    : { filter: predicates.filter, evidence: predicates.evidence };
+    : {
+        filter: predicates.filter,
+        evidence: predicates.evidence,
+        enterRested: sourceMatch.groups?.["rested"] !== undefined,
+      };
 }

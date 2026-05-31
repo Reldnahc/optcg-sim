@@ -692,3 +692,22 @@ test("cards parser emits adjacent circled DON and rest-self costs accepted befor
     supported: true,
   });
 });
+
+test("cards parser emits return-cost into rested hand-play bodies accepted by engine", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[On Play] You may return 1 of your Characters to the owner's hand: Play up to 1 Character card with a cost of 5 or less from your hand rested.",
+    [
+      "entry:onPlay",
+      "cost:returnToOwnerHand",
+      "instruction:playSelected",
+      "filter:category:character",
+      "filter:cost",
+      "state:rested",
+      "composition:selectThenPlay",
+    ],
+  );
+
+  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
+    supported: true,
+  });
+});

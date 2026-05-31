@@ -239,4 +239,59 @@ describe("warlords parser primitives", () => {
     expect(result?.evidence).toContain("cost:restSelf");
     expect(result?.evidence).toContain("instruction:search");
   });
+
+  it("parses return-to-owner-hand cost into play-from-hand rested body", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may return 1 of your Characters to the owner's hand: Play up to 1 Character card with a cost of 5 or less from your hand rested.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectTargets",
+                request: {
+                  player: "self",
+                  zone: "characterArea",
+                  filter: { categories: ["character"] },
+                },
+              },
+            },
+            { effect: { type: "bounce", destination: "hand" } },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      filter: {
+                        categories: ["character"],
+                        cost: { max: 5 },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "playSelected",
+                      ignoreCost: true,
+                      enterRested: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("cost:returnToOwnerHand");
+    expect(result?.evidence).toContain("instruction:playSelected");
+    expect(result?.evidence).toContain("state:rested");
+  });
 });
