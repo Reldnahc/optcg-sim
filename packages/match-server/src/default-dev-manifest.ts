@@ -24,6 +24,11 @@ interface CreateDefaultDevMatchSetupInput {
   readonly redisUrl?: string;
 }
 
+export interface CreateDevMatchSetupFromDeckSubmissionsInput extends CreateDefaultDevMatchSetupInput {
+  readonly firstPlayer: ReadyDeckSubmission;
+  readonly secondPlayer: ReadyDeckSubmission;
+}
+
 export interface DevDonCounts {
   readonly firstPlayer: number;
   readonly secondPlayer: number;
@@ -191,31 +196,19 @@ const readDefaultDevDeckSubmission = async (
   return submission;
 };
 
-export const createDefaultDevMatchSetup = async (
+const buildDevManifestFromCardIds = async (
+  cardIds: readonly CardId[],
   input: CreateDefaultDevMatchSetupInput,
-): Promise<DevMatchSetup> => {
-  const [firstPlayerDonCount, secondPlayerDonCount] =
-    resolveDevDonCounts(defaultDevDonCounts);
-  const firstPlayerDecklist = createDevDecklistFromSubmission(
-    await readDefaultDevDeckSubmission("deck1.hash", firstPlayerDonCount),
-  );
-  const secondPlayerDecklist = createDevDecklistFromSubmission(
-    await readDefaultDevDeckSubmission("deck2.hash", secondPlayerDonCount),
-  );
-  const firstPlayerDonDeck = createDevDonDeckCardIds(firstPlayerDonCount);
-  const secondPlayerDonDeck = createDevDonDeckCardIds(secondPlayerDonCount);
-  const devDonCount = Math.max(firstPlayerDonCount, secondPlayerDonCount);
+  devDonCount: number,
+) => {
   const cache =
     input.fetchCard === undefined
       ? await createRedisCardDataCache({
           url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
         })
       : undefined;
-  const cardManifest = await buildDevMatchCardManifestFromPoneglyphIds({
-    cardIds: createDevManifestCardIds(
-      firstPlayerDecklist,
-      secondPlayerDecklist,
-    ),
+  return await buildDevMatchCardManifestFromPoneglyphIds({
+    cardIds,
     createdAt: input.createdAt,
     devDonCount,
     versions: {
@@ -226,8 +219,27 @@ export const createDefaultDevMatchSetup = async (
     ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
     ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
   });
-  validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
-  validateDevDeckSubmissionVariants(secondPlayerDecklist, cardManifest);
+};
+
+const createDevMatchSetupFromDecklists = ({
+  input,
+  firstPlayerDecklist,
+  secondPlayerDecklist,
+  cardManifest,
+}: {
+  readonly input: CreateDefaultDevMatchSetupInput;
+  readonly firstPlayerDecklist: DevDecklist;
+  readonly secondPlayerDecklist: DevDecklist;
+  readonly cardManifest: Awaited<
+    ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
+  >;
+}): DevMatchSetup => {
+  const firstPlayerDonDeck = createDevDonDeckCardIds(
+    firstPlayerDecklist.donDeckCount,
+  );
+  const secondPlayerDonDeck = createDevDonDeckCardIds(
+    secondPlayerDecklist.donDeckCount,
+  );
   return {
     matchId: input.matchId,
     firstPlayerId: input.firstPlayerId,
@@ -250,6 +262,52 @@ export const createDefaultDevMatchSetup = async (
     cardManifest,
     shuffleDecks: true,
   };
+};
+
+export const createDevMatchSetupFromDeckSubmissions = async (
+  input: CreateDevMatchSetupFromDeckSubmissionsInput,
+): Promise<DevMatchSetup> => {
+  const firstPlayerDecklist = createDevDecklistFromSubmission(
+    input.firstPlayer,
+  );
+  const secondPlayerDecklist = createDevDecklistFromSubmission(
+    input.secondPlayer,
+  );
+  const devDonCount = Math.max(
+    firstPlayerDecklist.donDeckCount,
+    secondPlayerDecklist.donDeckCount,
+  );
+  const cardManifest = await buildDevManifestFromCardIds(
+    createDevManifestCardIds(firstPlayerDecklist, secondPlayerDecklist),
+    input,
+    devDonCount,
+  );
+  validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
+  validateDevDeckSubmissionVariants(secondPlayerDecklist, cardManifest);
+  return createDevMatchSetupFromDecklists({
+    input,
+    firstPlayerDecklist,
+    secondPlayerDecklist,
+    cardManifest,
+  });
+};
+
+export const createDefaultDevMatchSetup = async (
+  input: CreateDefaultDevMatchSetupInput,
+): Promise<DevMatchSetup> => {
+  const [firstPlayerDonCount, secondPlayerDonCount] =
+    resolveDevDonCounts(defaultDevDonCounts);
+  return await createDevMatchSetupFromDeckSubmissions({
+    ...input,
+    firstPlayer: await readDefaultDevDeckSubmission(
+      "deck1.hash",
+      firstPlayerDonCount,
+    ),
+    secondPlayer: await readDefaultDevDeckSubmission(
+      "deck2.hash",
+      secondPlayerDonCount,
+    ),
+  });
 };
 
 const defaultRedisUrl = "redis://localhost:6379";

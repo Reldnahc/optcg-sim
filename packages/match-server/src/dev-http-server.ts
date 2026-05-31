@@ -7,6 +7,12 @@ import {
 import type { Duplex } from "node:stream";
 import type { MatchId, PlayerId } from "@optcg/types";
 
+import { type DeckHashCodecPort } from "./deck-submission.js";
+import {
+  createLocalDevLobbyRegistry,
+  type CreatedDevLobbyResponse,
+  type LocalDevLobbyRegistry,
+} from "./dev-lobby-registry.js";
 import {
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
@@ -25,7 +31,6 @@ import {
   createLocalDevMatchRegistry,
   type LocalDevMatchRegistry,
 } from "./dev-local-match-registry.js";
-import { subjectsMatch } from "./dev-auth.js";
 
 interface DevResetRequest {
   setup?: unknown;
@@ -40,37 +45,8 @@ interface RematchRequest {
   playerId?: unknown;
 }
 
-interface CreatedDevLobbyResponse {
-  lobbyId: string;
-  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
-  matchId?: MatchId;
-  seat?: { playerId: PlayerId };
-}
-
 interface AuthProvider {
   authenticate: (request: IncomingMessage) => AuthContext | undefined;
-}
-
-interface LocalDevLobbySeat {
-  playerId: PlayerId;
-  subject?: AuthContext["subject"] | undefined;
-}
-
-interface LocalDevLobby {
-  lobbyId: string;
-  seats: Record<string, LocalDevLobbySeat>;
-  matchId?: MatchId;
-}
-
-interface LocalDevLobbyRegistry {
-  createLobby: () => CreatedDevLobbyResponse;
-  joinLobby: (
-    lobbyId: string,
-    auth: AuthContext | undefined,
-  ) => Promise<
-    CreatedDevLobbyResponse | "lobbyNotFound" | "unauthenticated" | "full"
-  >;
-  getLobby: (lobbyId: string) => CreatedDevLobbyResponse | undefined;
 }
 
 export interface DevHttpServer {
@@ -81,10 +57,8 @@ export interface DevHttpServer {
 
 export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
+  readonly deckHashCodec?: DeckHashCodecPort;
 }
-
-const p1 = "p1" as PlayerId;
-const p2 = "p2" as PlayerId;
 
 const sendJson = (
   response: ServerResponse,
@@ -147,88 +121,6 @@ const createDevAuthProvider = (): AuthProvider => ({
   },
 });
 
-const createLobbySeats = (): LocalDevLobby["seats"] => ({
-  p1: { playerId: p1 },
-  p2: { playerId: p2 },
-});
-
-const lobbyResponse = (lobby: LocalDevLobby): CreatedDevLobbyResponse => ({
-  lobbyId: lobby.lobbyId,
-  seats: Object.fromEntries(
-    Object.entries(lobby.seats).map(([key, seat]) => [
-      key,
-      { playerId: seat.playerId, claimed: seat.subject !== undefined },
-    ]),
-  ),
-  ...(lobby.matchId === undefined ? {} : { matchId: lobby.matchId }),
-});
-
-const createLocalDevLobbyRegistry = (
-  matchRegistry: LocalDevMatchRegistry,
-): LocalDevLobbyRegistry => {
-  let nextLobbyNumber = 1;
-  const lobbies = new Map<string, LocalDevLobby>();
-
-  const ensureMatchWhenReady = async (lobby: LocalDevLobby): Promise<void> => {
-    if (
-      lobby.matchId !== undefined ||
-      !Object.values(lobby.seats).every((seat) => seat.subject !== undefined)
-    ) {
-      return;
-    }
-    const created = await matchRegistry.createMatch();
-    lobby.matchId = created.matchId;
-  };
-
-  return {
-    createLobby() {
-      const lobby: LocalDevLobby = {
-        lobbyId: `dev-local-lobby-${String(nextLobbyNumber++)}`,
-        seats: createLobbySeats(),
-      };
-      lobbies.set(lobby.lobbyId, lobby);
-      return lobbyResponse(lobby);
-    },
-    async joinLobby(lobbyId, auth) {
-      if (auth === undefined) {
-        return "unauthenticated";
-      }
-      const lobby = lobbies.get(lobbyId);
-      if (lobby === undefined) {
-        return "lobbyNotFound";
-      }
-      const existing = Object.values(lobby.seats).find(
-        (seat) =>
-          seat.subject !== undefined &&
-          subjectsMatch(seat.subject, auth.subject),
-      );
-      if (existing !== undefined) {
-        await ensureMatchWhenReady(lobby);
-        return {
-          ...lobbyResponse(lobby),
-          seat: { playerId: existing.playerId },
-        };
-      }
-      const open = Object.values(lobby.seats).find(
-        (seat) => seat.subject === undefined,
-      );
-      if (open === undefined) {
-        return "full";
-      }
-      open.subject = auth.subject;
-      await ensureMatchWhenReady(lobby);
-      return {
-        ...lobbyResponse(lobby),
-        seat: { playerId: open.playerId },
-      };
-    },
-    getLobby(lobbyId) {
-      const lobby = lobbies.get(lobbyId);
-      return lobby === undefined ? undefined : lobbyResponse(lobby);
-    },
-  };
-};
-
 const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
@@ -290,6 +182,46 @@ const handleApiRequest = async (
     }
     if (result === "full") {
       sendJson(response, 409, { errors: ["Lobby is full."] });
+      return;
+    }
+    broadcastLobbyState(result, lobbyConnections);
+    sendJson(response, 200, result);
+    return;
+  }
+  const lobbyDeckRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/deck$/u.exec(
+    pathname,
+  );
+  if (request.method === "POST" && lobbyDeckRoute !== null) {
+    const lobbyId = decodeURIComponent(
+      lobbyDeckRoute.groups?.["lobbyId"] ?? "",
+    );
+    const body = await readRequestJson(request);
+    const deckHash = isRecord(body) ? body["deckHash"] : undefined;
+    if (typeof deckHash !== "string" || deckHash.trim().length === 0) {
+      sendJson(response, 400, { errors: ["Deck hash is required."] });
+      return;
+    }
+    const result = await lobbyRegistry.submitDeck(
+      lobbyId,
+      authProvider.authenticate(request),
+      deckHash.trim(),
+    );
+    if (result === "lobbyNotFound") {
+      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
+      return;
+    }
+    if (result === "unauthenticated") {
+      sendJson(response, 401, { errors: ["Guest identity is required."] });
+      return;
+    }
+    if (result === "seatNotFound") {
+      sendJson(response, 403, {
+        errors: ["Session token is not authorized for this lobby."],
+      });
+      return;
+    }
+    if (result === "invalidDeck") {
+      sendJson(response, 400, { errors: ["Deck hash is invalid."] });
       return;
     }
     broadcastLobbyState(result, lobbyConnections);
@@ -891,7 +823,7 @@ export const createDevHttpServer = async (
     createDefaultSetup,
     options.setup,
   );
-  const lobbyRegistry = createLocalDevLobbyRegistry(registry);
+  const lobbyRegistry = createLocalDevLobbyRegistry(registry, options);
   const authProvider = createDevAuthProvider();
   const socketConnections = new Set<DevSocketConnection>();
   const lobbySocketConnections = new Set<DevLobbySocketConnection>();

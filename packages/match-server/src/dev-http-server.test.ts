@@ -44,9 +44,27 @@ interface CreatedDevLobbyBody {
   lobbyId?: string;
   matchId?: string;
   seat?: { playerId?: string };
-  seats: Record<string, { playerId?: string; claimed?: boolean }>;
+  seats: Record<
+    string,
+    {
+      playerId?: string;
+      claimed?: boolean;
+      deck: { status: "missing" | "ready" | "invalid" };
+    }
+  >;
   errors?: string[];
 }
+
+const requireLobbySeat = (
+  lobby: CreatedDevLobbyBody,
+  seatId: string,
+): CreatedDevLobbyBody["seats"][string] => {
+  const seat = lobby.seats[seatId];
+  if (seat === undefined) {
+    throw new Error(`Lobby response was missing ${seatId}.`);
+  }
+  return seat;
+};
 
 const requireStateSeq = (
   snapshot: { stateSeq?: number } | undefined,
@@ -70,19 +88,6 @@ const webSocketUrl = (
   );
   url.searchParams.set("playerId", playerId);
   url.searchParams.set("sessionToken", token);
-  return url.toString();
-};
-
-const lobbyWebSocketUrl = (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
-  lobbyId: string,
-  playerId: string,
-): string => {
-  const url = new URL(
-    `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
-    server.url().replace(/^http/u, "ws"),
-  );
-  url.searchParams.set("playerId", playerId);
   return url.toString();
 };
 
@@ -230,21 +235,6 @@ const createDevLobby = async (
   return (await response.json()) as CreatedDevLobbyBody;
 };
 
-const claimDevLobbySeat = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
-  lobbyId: string,
-  playerId: "p1" | "p2",
-): Promise<CreatedDevLobbyBody> => {
-  const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
-    method: "POST",
-    headers: { "x-optcg-session-token": `guest-${playerId}` },
-  });
-  assert.equal(response.status, 200);
-  const body = (await response.json()) as CreatedDevLobbyBody;
-  assert.equal(body.seat?.playerId, playerId);
-  return body;
-};
-
 const joinDevLobby = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
   lobbyId: string,
@@ -284,86 +274,6 @@ describe("dev HTTP server", () => {
     assert.equal(frame.subarray(10).toString("utf8"), payload);
   });
 
-  test("keeps primitive lobbies separate from match creation until both seats are claimed", async () => {
-    const server = await createFixtureDevHttpServer();
-    await server.listen(0, "127.0.0.1");
-    try {
-      const created = await createDevLobby(server);
-      const lobbyId = created.lobbyId;
-      if (lobbyId === undefined) {
-        throw new Error("Created lobby response did not include a lobby id.");
-      }
-      assert.equal(created.matchId, undefined);
-      assert.equal(created.seats["p1"]?.claimed, false);
-      assert.equal(created.seats["p2"]?.claimed, false);
-
-      const oneSeat = await claimDevLobbySeat(server, lobbyId, "p1");
-      assert.equal(oneSeat.matchId, undefined);
-      assert.equal(oneSeat.seats["p1"]?.claimed, true);
-      assert.equal(oneSeat.seats["p2"]?.claimed, false);
-
-      const ready = await claimDevLobbySeat(server, lobbyId, "p2");
-      const matchId = ready.matchId;
-      if (matchId === undefined) {
-        throw new Error("Ready lobby response did not include a match id.");
-      }
-      assert.equal(ready.seats["p1"]?.claimed, true);
-      assert.equal(ready.seats["p2"]?.claimed, true);
-
-      const matchState = await fetch(
-        `${server.url()}/api/matches/${matchId}/state`,
-      );
-      assert.equal(matchState.status, 409);
-    } finally {
-      await server.close();
-    }
-  });
-
-  test("pushes lobby readiness to an already-waiting seat when the second seat joins", async () => {
-    const server = await createFixtureDevHttpServer();
-    await server.listen(0, "127.0.0.1");
-    const sockets: WebSocket[] = [];
-    try {
-      const created = await createDevLobby(server);
-      const lobbyId = created.lobbyId;
-      if (lobbyId === undefined) {
-        throw new Error("Created lobby response did not include a lobby id.");
-      }
-      await claimDevLobbySeat(server, lobbyId, "p1");
-      const p1LobbySocket = await openSocket(
-        lobbyWebSocketUrl(server, lobbyId, "p1"),
-      );
-      sockets.push(p1LobbySocket.socket);
-
-      const initial = (await p1LobbySocket.next()) as {
-        type?: string;
-        lobby?: CreatedDevLobbyBody;
-      };
-      assert.equal(initial.type, "lobbySync");
-      assert.equal(initial.lobby?.matchId, undefined);
-
-      await claimDevLobbySeat(server, lobbyId, "p2");
-
-      const ready = (await p1LobbySocket.next()) as {
-        type?: string;
-        lobby?: CreatedDevLobbyBody;
-      };
-      assert.equal(ready.type, "lobbySync");
-      const readyLobby = ready.lobby;
-      if (readyLobby === undefined) {
-        throw new Error("Lobby sync did not include lobby state.");
-      }
-      assert.equal(readyLobby.seats["p1"]?.claimed, true);
-      assert.equal(readyLobby.seats["p2"]?.claimed, true);
-      assert.equal(typeof readyLobby.matchId, "string");
-    } finally {
-      for (const socket of sockets) {
-        socket.close();
-      }
-      await server.close();
-    }
-  });
-
   test("seatless lobby join assigns first open seat by guest identity", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
@@ -379,9 +289,11 @@ describe("dev HTTP server", () => {
 
       assert.equal(first.seat?.playerId, "p1");
       assert.equal(second.seat?.playerId, "p2");
-      assert.equal(typeof second.matchId, "string");
+      assert.equal(second.matchId, undefined);
       assert.equal(first.seats["p1"]?.claimed, true);
       assert.equal(second.seats["p2"]?.claimed, true);
+      assert.equal(requireLobbySeat(second, "p1").deck.status, "missing");
+      assert.equal(requireLobbySeat(second, "p2").deck.status, "missing");
     } finally {
       await server.close();
     }
