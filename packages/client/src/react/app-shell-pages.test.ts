@@ -49,6 +49,8 @@ describe("client app shell pages", () => {
 
     assert.match(html, /Create Custom Lobby/u);
     assert.match(html, /Join Custom Lobby/u);
+    assert.match(html, /server assigns seats/u);
+    assert.doesNotMatch(html, /seat query/u);
   });
 
   test("deck and profile pages describe future integrations honestly", () => {

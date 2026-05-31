@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { DecisionResponse, InstanceId, PlayerId } from "@optcg/types";
+import type { DecisionResponse, InstanceId } from "@optcg/types";
 
 import {
   attackTargetActionForInstance,
@@ -62,7 +62,7 @@ import {
   isLobbyClientState,
   isMatchClientState,
   isSelfAttachmentTarget,
-  lobbyIdFromUrl,
+  lobbyIdFromPath,
   matchIdFromUrl,
   prominentDecisionPrompt,
   seatIdFromUrl,
@@ -264,7 +264,7 @@ export const useMatchClient = (): MatchClientUi => {
     const load = async (): Promise<void> => {
       try {
         const urlMatchId = matchIdFromUrl();
-        const urlLobbyId = lobbyIdFromUrl();
+        const urlLobbyId = lobbyIdFromPath();
         const seatId = seatIdFromUrl();
         const loaded =
           urlMatchId !== undefined
@@ -275,9 +275,8 @@ export const useMatchClient = (): MatchClientUi => {
             : urlLobbyId !== undefined
               ? await controller.joinLocalLobby({
                   lobbyId: urlLobbyId,
-                  playerId: seatId,
                 })
-              : await controller.startNewLocalLobby("p1" as PlayerId);
+              : await controller.startNewLocalLobby();
         if (cancelled) {
           return;
         }
@@ -287,7 +286,7 @@ export const useMatchClient = (): MatchClientUi => {
         ) {
           setMatchLocation(loaded.matchId, loaded.seat.playerId);
         } else if (isLobbyClientState(loaded)) {
-          setLobbyLocation(loaded.lobbyId, loaded.seat.playerId);
+          setLobbyLocation(loaded.lobbyId);
         }
         setClientState(loaded);
         setErrors([]);

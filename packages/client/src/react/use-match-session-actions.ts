@@ -1,7 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 
-import type { PlayerId } from "@optcg/types";
-
 import type {
   AttackTargetChoice,
   CounterTargetChoice,
@@ -79,11 +77,11 @@ export const useMatchSessionActions = ({
   ]);
 
   const createNewMatch = useCallback(async (): Promise<void> => {
-    const created = await controller.startNewLocalLobby("p1" as PlayerId);
+    const created = await controller.startNewLocalLobby();
     if (isMatchClientState(created) || isFirstPlayerSetupClientState(created)) {
       setMatchLocation(created.matchId, created.seat.playerId);
     } else if (isLobbyClientState(created)) {
-      setLobbyLocation(created.lobbyId, created.seat.playerId);
+      setLobbyLocation(created.lobbyId);
     }
     resetLocalInteractionState();
     setClientState(created);

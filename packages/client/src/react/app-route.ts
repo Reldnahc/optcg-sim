@@ -34,10 +34,7 @@ const routeByPath = new Map<string, AppRouteDefinition>(
 
 export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
   const parsed = new URL(pathWithSearch, "http://localhost");
-  if (
-    parsed.pathname === "/" &&
-    (parsed.searchParams.has("matchId") || parsed.searchParams.has("lobbyId"))
-  ) {
+  if (parsed.pathname === "/" && parsed.searchParams.has("matchId")) {
     return {
       id: "match",
       path: parsed.pathname,
@@ -46,6 +43,13 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
   }
 
   const route = routeByPath.get(parsed.pathname);
+  if (parsed.pathname.startsWith("/lobbies/")) {
+    return {
+      id: "lobbies",
+      path: parsed.pathname,
+      search: parsed.search,
+    };
+  }
   return {
     id: route?.id ?? "notFound",
     path: parsed.pathname,

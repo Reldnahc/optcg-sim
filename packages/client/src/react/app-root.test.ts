@@ -53,4 +53,17 @@ describe("client app root", () => {
     assert.match(html, /data-testid="match-surface"/u);
     assert.doesNotMatch(html, /Dashboard/u);
   });
+
+  test("delegates concrete lobby routes to the match surface", () => {
+    const html = renderToStaticMarkup(
+      createElement(AppRoot, {
+        matchSurface: createElement("div", { "data-testid": "lobby-surface" }),
+        path: "/lobbies/dev-local-lobby-1",
+      }),
+    );
+
+    assert.match(html, /data-app-route="match"/u);
+    assert.match(html, /data-testid="lobby-surface"/u);
+    assert.doesNotMatch(html, /Create Custom Lobby/u);
+  });
 });

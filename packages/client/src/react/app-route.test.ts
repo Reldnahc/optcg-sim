@@ -18,6 +18,13 @@ describe("client app routes", () => {
     assert.equal(appRouteFromPath("/match").id, "match");
   });
 
+  test("maps concrete lobby URLs to the lobbies route", () => {
+    const route = appRouteFromPath("/lobbies/dev-local-lobby-1");
+
+    assert.equal(route.id, "lobbies");
+    assert.equal(route.path, "/lobbies/dev-local-lobby-1");
+  });
+
   test("preserves query strings for the match route", () => {
     const route = appRouteFromPath("/match?matchId=abc&seat=p2");
 
@@ -25,9 +32,9 @@ describe("client app routes", () => {
     assert.equal(route.search, "?matchId=abc&seat=p2");
   });
 
-  test("preserves existing root match links with match or lobby query params", () => {
+  test("preserves existing root match links with match query params only", () => {
     assert.equal(appRouteFromPath("/?matchId=abc&seat=p1").id, "match");
-    assert.equal(appRouteFromPath("/?lobbyId=abc&seat=p2").id, "match");
+    assert.equal(appRouteFromPath("/?lobbyId=abc&seat=p2").id, "dashboard");
   });
 
   test("returns notFound for unknown paths", () => {

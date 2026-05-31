@@ -59,7 +59,7 @@ export const useMatchLiveConnections = ({
         ) {
           setMatchLocation(nextState.matchId, nextState.seat.playerId);
         } else if (isLobbyClientState(nextState)) {
-          setLobbyLocation(nextState.lobbyId, nextState.seat.playerId);
+          setLobbyLocation(nextState.lobbyId);
         }
         setClientState(nextState);
         setErrors([]);

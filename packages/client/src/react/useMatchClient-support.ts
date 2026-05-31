@@ -85,9 +85,13 @@ export const matchIdFromUrl = (): MatchId | undefined => {
   return value === null ? undefined : (value as MatchId);
 };
 
-export const lobbyIdFromUrl = (): string | undefined => {
-  const value = new URL(window.location.href).searchParams.get("lobbyId");
-  return value === null ? undefined : value;
+export const lobbyIdFromPath = (): string | undefined => {
+  const url = new URL(window.location.href);
+  const pathMatch = /^\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(url.pathname);
+  if (pathMatch !== null) {
+    return decodeURIComponent(pathMatch.groups?.["lobbyId"] ?? "");
+  }
+  return undefined;
 };
 
 export const setMatchLocation = (
@@ -101,11 +105,10 @@ export const setMatchLocation = (
   window.history.replaceState({}, "", url);
 };
 
-export const setLobbyLocation = (lobbyId: string, playerId: PlayerId): void => {
+export const setLobbyLocation = (lobbyId: string): void => {
   const url = new URL(window.location.href);
-  url.searchParams.delete("matchId");
-  url.searchParams.set("lobbyId", lobbyId);
-  url.searchParams.set("seat", String(playerId));
+  url.pathname = `/lobbies/${encodeURIComponent(lobbyId)}`;
+  url.search = "";
   window.history.replaceState({}, "", url);
 };
 

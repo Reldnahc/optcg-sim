@@ -12,15 +12,15 @@ export const LobbiesPage = (): React.JSX.Element => (
     <div className="shell-card-grid">
       <ShellPageCard
         title="Create Custom Lobby"
-        description="Start the current dev lobby flow from the match board."
+        description="Create a shareable lobby link. The server assigns seats when guests join."
         href={appRoutePath("match")}
         label="Create"
       />
       <ShellPageCard
         title="Join Custom Lobby"
-        description="Open an existing lobby link with lobbyId and seat query parameters."
-        href={appRoutePath("match")}
-        label="Join"
+        description="Open a shared /lobbies link. Your browser identity claims or resumes your seat."
+        href={appRoutePath("lobbies")}
+        label="View Lobbies"
       />
     </div>
   </section>
