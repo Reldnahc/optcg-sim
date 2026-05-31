@@ -84,6 +84,7 @@ import {
   applyEndMainPhase,
   getTurnLegalActions,
 } from "./turn-actions.js";
+import { advanceEndPhase } from "./phases.js";
 import {
   applyActivateMainAction,
   getActivateMainLegalActions,
@@ -668,10 +669,28 @@ export const getLegalActions = (
 const continueRuntimeAndAttackTimingAfterDecision = (
   originalState: GameState,
   result: EngineResult,
-): EngineResult =>
-  continueAttackTimingDecisionResultIfReady(
+): EngineResult => {
+  const continued = continueAttackTimingDecisionResultIfReady(
     continueRuntimeAfterDecisionResult(originalState, result),
   );
+  return continueEndPhaseIfReady(continued);
+};
+
+const continueEndPhaseIfReady = (result: EngineResult): EngineResult => {
+  if (
+    result.errors !== undefined ||
+    result.state.pendingDecision !== undefined ||
+    result.state.turn.phase !== "end" ||
+    detectPendingRuntimeWork(result.state) !== undefined
+  ) {
+    return result;
+  }
+  const ended = advanceEndPhase(result.state);
+  if (ended.errors !== undefined) {
+    return ended;
+  }
+  return toEngineResult(ended.state, [...result.events, ...ended.events]);
+};
 
 const shouldContinueRuntimeAfterEffectDecision = (
   state: GameState,
@@ -688,7 +707,8 @@ const shouldContinueRuntimeAfterEffectDecision = (
     queueEntry?.causedBy.type === "ruleProcess" &&
     (queueEntry.causedBy.name === "effectRuntime:mainEventTriggerQueueing" ||
       queueEntry.causedBy.name ===
-        "effectRuntime:opponentActivationTriggerQueueing")
+        "effectRuntime:opponentActivationTriggerQueueing" ||
+      queueEntry.causedBy.name === "effectRuntime:endOfYourTurnTriggerQueueing")
   );
 };
 

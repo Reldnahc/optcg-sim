@@ -83,6 +83,9 @@ const autoAdapterFor = (
       "resolveFromLastKnownInformation",
     ]);
   }
+  if (block.trigger.type === "endOfYourTurn") {
+    return autoAdapter("endOfYourTurn", ["mustRemainInSameZone"]);
+  }
   if (block.trigger.type === "main") {
     return autoAdapter("main", [
       "noSourceRequired",

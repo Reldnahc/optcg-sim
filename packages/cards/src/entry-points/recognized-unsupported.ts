@@ -19,11 +19,6 @@ const recognizedUnsupportedEntryPoints: readonly RecognizedUnsupportedEntryPoint
       trigger: { type: "onBlock" },
       evidence: ["entry:onBlock", "entrySupport:unsupported"],
     },
-    {
-      text: "[End of Your Turn]",
-      trigger: { type: "endOfYourTurn" },
-      evidence: ["entry:endOfYourTurn", "entrySupport:unsupported"],
-    },
   ];
 
 export function parseRecognizedUnsupportedEntryPoint(

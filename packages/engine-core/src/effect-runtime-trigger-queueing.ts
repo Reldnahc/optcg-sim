@@ -15,6 +15,7 @@ import { createLifeRemovedTriggerQueueing } from "./effect-runtime-trigger-queue
 import { createMainEventTriggerQueueing } from "./effect-runtime-trigger-queueing-main-event.js";
 import { createOnPlayTriggerQueueing } from "./effect-runtime-trigger-queueing-on-play.js";
 import { createOpponentActivationTriggerQueueing } from "./effect-runtime-trigger-queueing-opponent-activation.js";
+import { createEndOfTurnTriggerQueueing } from "./effect-runtime-trigger-queueing-end-turn.js";
 
 export type OnPlayTriggerQueueingFailureReason =
   | "invalid-card-played-event"
@@ -60,6 +61,11 @@ export type OpponentActivationTriggerQueueingFailureReason =
   | "invalid-opponent-activation-event"
   | "unsupported-opponent-activation-definition";
 
+export type EndOfYourTurnTriggerQueueingFailureReason =
+  | "invalid-end-phase-event"
+  | "missing-card-definition"
+  | "unsupported-end-of-your-turn-definition";
+
 interface OnPlayTriggerQueueingErrorDetails {
   reason: OnPlayTriggerQueueingFailureReason;
 }
@@ -86,6 +92,10 @@ interface LifeRemovedTriggerQueueingErrorDetails {
 
 interface OpponentActivationTriggerQueueingErrorDetails {
   reason: OpponentActivationTriggerQueueingFailureReason;
+}
+
+interface EndOfYourTurnTriggerQueueingErrorDetails {
+  reason: EndOfYourTurnTriggerQueueingFailureReason;
 }
 
 export interface BattleKOTriggerCandidate {
@@ -139,6 +149,7 @@ export interface EffectRuntimeTriggerQueueingHelpers {
   queueOpponentActivationTriggers: (
     state: GameState,
   ) => EngineResult | undefined;
+  queueEndOfYourTurnTriggers: (state: GameState) => EngineResult | undefined;
   queueEffectResolvedCustomTriggers: (
     state: GameState,
     resolvedEntry: EffectQueueEntry,
@@ -204,6 +215,14 @@ const opponentActivationTriggerQueueingError = (
   } satisfies OpponentActivationTriggerQueueingErrorDetails,
 });
 
+const endOfYourTurnTriggerQueueingError = (
+  reason: EndOfYourTurnTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "end-of-your-turn-trigger-queueing",
+  details: { reason } satisfies EndOfYourTurnTriggerQueueingErrorDetails,
+});
+
 export const createEffectRuntimeTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,
 ): EffectRuntimeTriggerQueueingHelpers => {
@@ -214,6 +233,10 @@ export const createEffectRuntimeTriggerQueueing = (
   const { queueMainEventTriggers } = createMainEventTriggerQueueing(
     dependencies,
     mainEventTriggerQueueingError,
+  );
+  const { queueEndOfYourTurnTriggers } = createEndOfTurnTriggerQueueing(
+    dependencies,
+    endOfYourTurnTriggerQueueingError,
   );
   const { queueLifeRemovedTriggers } = createLifeRemovedTriggerQueueing(
     dependencies,
@@ -241,6 +264,7 @@ export const createEffectRuntimeTriggerQueueing = (
     queueBattleKOTriggers,
     queueOnPlayTriggers,
     queueMainEventTriggers,
+    queueEndOfYourTurnTriggers,
     queueLifeRemovedTriggers,
     queueOpponentActivationTriggers,
     queueWhenAttackingTriggers,

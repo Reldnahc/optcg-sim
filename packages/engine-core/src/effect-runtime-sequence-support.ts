@@ -912,6 +912,7 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
     | "whenAttacking"
     | "onKO"
     | "onOpponentAttack"
+    | "endOfYourTurn"
     | "main"
     | "trigger"
     | "counter"

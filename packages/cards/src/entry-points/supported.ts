@@ -36,6 +36,11 @@ const supportedEntryPoints: readonly SupportedEntryPoint[] = [
     evidence: ["entry:onKO", "sourcePresence:resolveFromDestination"],
   },
   {
+    text: "[End of Your Turn]",
+    trigger: { type: "endOfYourTurn" },
+    evidence: ["entry:endOfYourTurn", "sourcePresence:mustRemain"],
+  },
+  {
     text: "[Trigger]",
     trigger: { type: "trigger" },
     evidence: ["entry:lifeTrigger", "sourcePresence:noSourceRequired"],

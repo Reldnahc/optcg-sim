@@ -247,10 +247,7 @@ test("cards parser emits On K.O. trash-from-hand accepted by engine On K.O. supp
 });
 
 test("cards parser keeps recognized unsupported entry points out of engine support", () => {
-  const cases = [
-    ["[On Block] Draw 1 card.", "entry:onBlock"],
-    ["[End of Your Turn] Draw 1 card.", "entry:endOfYourTurn"],
-  ];
+  const cases = [["[On Block] Draw 1 card.", "entry:onBlock"]];
 
   for (const [text, entryEvidence] of cases) {
     const effectBlock = parseSupportedEffectBlock(text, [
@@ -269,6 +266,17 @@ test("cards parser keeps recognized unsupported entry points out of engine suppo
       false,
     );
   }
+});
+
+test("cards parser emits end-of-your-turn draw accepted by generic auto support", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[End of Your Turn] Draw 1 card.",
+    ["entry:endOfYourTurn", "sourcePresence:mustRemain", "instruction:draw"],
+  );
+
+  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
+    supported: true,
+  });
 });
 
 test("cards parser emits event entry primitives without making them On Play effects", () => {

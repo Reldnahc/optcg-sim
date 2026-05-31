@@ -14,11 +14,6 @@ const recognizedUnsupportedEntryPointCases = [
     trigger: { type: "onBlock" },
     evidence: ["entry:onBlock", "entrySupport:unsupported"],
   },
-  {
-    text: "[End of Your Turn]",
-    trigger: { type: "endOfYourTurn" },
-    evidence: ["entry:endOfYourTurn", "entrySupport:unsupported"],
-  },
 ] as const;
 
 describe("recognized unsupported entry-point parser", () => {

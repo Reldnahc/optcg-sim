@@ -1,5 +1,6 @@
 import type {
   Action,
+  EngineError,
   EngineEvent,
   EngineResult,
   GameState,
@@ -15,6 +16,8 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { canConcede, getOpponentId, isMatchActive } from "./action-state.js";
+import { processEffectRuntime } from "./effect-runtime.js";
+import { continueRuntimeUntilIdle } from "./effect-runtime-decision-continuation.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { advanceEndPhase } from "./phases.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
@@ -118,6 +121,50 @@ export const applyEndMainPhase = (state: GameState): EngineResult => {
     return toEngineResult(terminalState, transitionEvents);
   }
   assertGameStateInvariants(preEndState);
+
+  const endPhaseState: GameState = {
+    ...postRuleState,
+    seq: toStateSeq(state.seq + 1),
+    eventJournal: [...state.eventJournal, ...transitionEvents],
+  };
+  const firstRuntimeResult = processEffectRuntime(endPhaseState);
+  const runtimeResult = continueRuntimeUntilIdle(
+    endPhaseState,
+    firstRuntimeResult,
+  );
+  if (
+    runtimeResult.errors !== undefined ||
+    runtimeResult.state.pendingDecision !== undefined
+  ) {
+    const events = [...transitionEvents, ...runtimeResult.events];
+    const nextState = runtimeResult.state;
+    assertGameStateInvariants(nextState);
+    const errors = runtimeResult.errors;
+    if (errors !== undefined) {
+      const firstError: EngineError = errors[0] ?? {
+        type: "illegalAction",
+        reason: "Runtime failed without error.",
+      };
+      return toEngineResult(nextState, events, [
+        firstError,
+        ...errors.slice(1),
+      ]);
+    }
+    return toEngineResult(nextState, events);
+  }
+  if (runtimeResult.events.length > 0) {
+    const endResult = advanceEndPhase(runtimeResult.state);
+    if (endResult.errors !== undefined) {
+      return endResult;
+    }
+    const events = [
+      ...transitionEvents,
+      ...runtimeResult.events,
+      ...endResult.events,
+    ];
+    assertGameStateInvariants(endResult.state);
+    return toEngineResult(endResult.state, events);
+  }
 
   const endResult = advanceEndPhase(postRuleState);
   if (endResult.errors !== undefined) {
