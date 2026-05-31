@@ -13,6 +13,7 @@ import {
   parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseOpponentRestedCharactersCondition,
+  parseRestedCardCountCondition,
   parseTrashCountCondition,
   parseTurnCountCondition,
 } from "./conditions/index.js";
@@ -151,6 +152,7 @@ const conditionParsers = [
   parseDonFieldCountCondition,
   parseHandCountCondition,
   parseOpponentRestedCharactersCondition,
+  parseRestedCardCountCondition,
   parseTrashCountCondition,
   parseLifeCountCondition,
   parseLeaderNameCondition,

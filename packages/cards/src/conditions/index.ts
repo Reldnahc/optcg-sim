@@ -5,6 +5,7 @@ export { parseLifeCountCondition } from "./life-count.js";
 export { parseNoOtherNamedCharactersCondition } from "./no-other-named-characters.js";
 export { parseOnlyMatchingFieldCardsCondition } from "./only-matching-field-cards.js";
 export { parseOpponentRestedCharactersCondition } from "./opponent-rested-characters.js";
+export { parseRestedCardCountCondition } from "./rested-card-count.js";
 export { syntheticConditionParser } from "./synthetic.js";
 export { parseTrashCountCondition } from "./trash-count.js";
 export { parseTurnCountCondition } from "./turn-count.js";

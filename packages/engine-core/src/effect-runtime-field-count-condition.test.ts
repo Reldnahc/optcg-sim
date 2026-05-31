@@ -379,6 +379,74 @@ test("fieldCount honors DON filter state for active, rested, and attached", () =
   );
 });
 
+test("fieldCount state-only filter counts rested public field cards across zones", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  player.costArea = [];
+  player.characters = [];
+  player.leader = { ...player.leader, state: "rested", attachedDon: [] };
+  const restedCharacter = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "rested character"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const activeCharacter = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[1], "active character"),
+    zone: "characterArea",
+    index: 1,
+  });
+  const stage = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[2], "stage"),
+    zone: "stageArea",
+  });
+  player.characters = [
+    { ...restedCharacter, state: "rested" },
+    { ...activeCharacter, state: "active" },
+  ];
+  player.stage = { ...stage, state: "rested" };
+  const restedDon = removeFirstDonFromDeck(state, p1);
+  const activeDon = removeFirstDonFromDeck(state, p1);
+  const attachedDon = removeFirstDonFromDeck(state, p1);
+  player.costArea = [
+    {
+      ...restedDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "rested",
+    },
+    {
+      ...activeDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 1 },
+      state: "active",
+    },
+    {
+      ...attachedDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 2 },
+      state: "rested",
+    },
+  ];
+  player.characters[1] = {
+    ...must(player.characters[1], "attached host"),
+    attachedDon: [attachedDon.instanceId],
+  };
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "fieldCount",
+      player: "self",
+      filter: { state: "rested" },
+      op: "eq",
+      value: 4,
+    }),
+    { supported: true, passed: true },
+  );
+});
+
 test("fieldCount fails closed for unsupported DON filter shapes", () => {
   const state = createActiveState();
   setDonFieldState(state, p1, { costArea: 2, attached: 1 });

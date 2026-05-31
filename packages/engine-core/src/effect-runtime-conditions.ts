@@ -285,6 +285,20 @@ const isSupportedCharacterFieldCountFilter = (
   );
 };
 
+const isSupportedPublicFieldStateCountFilter = (
+  filter: CardFilter | undefined,
+): filter is { state: "active" | "rested" } => {
+  if (filter === undefined) {
+    return false;
+  }
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return (
+    keys.length === 1 &&
+    keys[0] === "state" &&
+    (filter.state === "active" || filter.state === "rested")
+  );
+};
+
 const countPublicDonOnField = (
   state: GameState,
   playerId: PlayerId,
@@ -365,6 +379,28 @@ const countPublicCharactersOnField = (
     }
     return cardMatchesFilter(state, card, filter);
   }).length;
+};
+
+const countPublicCardsOnFieldByState = (
+  state: GameState,
+  playerId: PlayerId,
+  stateFilter: "active" | "rested",
+): number => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return 0;
+  }
+  const attachedIds = new Set([
+    ...player.leader.attachedDon,
+    ...player.characters.flatMap((card) => card.attachedDon),
+  ]);
+  const fieldCards: CardInstance[] = [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+    ...player.costArea.filter((card) => !attachedIds.has(card.instanceId)),
+  ];
+  return fieldCards.filter((card) => card.state === stateFilter).length;
 };
 
 const cardMatchesFilter = (
@@ -546,6 +582,16 @@ const countSupportedFieldOperand = (
       ),
     };
   }
+  if (isSupportedPublicFieldStateCountFilter(operand.filter)) {
+    return {
+      supported: true,
+      count: countPublicCardsOnFieldByState(
+        state,
+        playerId,
+        operand.filter.state,
+      ),
+    };
+  }
   return { supported: false };
 };
 
@@ -710,6 +756,18 @@ const evaluateCondition = (
             countPublicCharactersOnField(state, entry, playerId, filter),
         );
       }
+      if (isSupportedPublicFieldStateCountFilter(condition.filter)) {
+        const stateFilter = condition.filter.state;
+        return evaluateCountCondition(
+          state,
+          entry,
+          condition.player,
+          condition.value,
+          condition.op,
+          (playerId) =>
+            countPublicCardsOnFieldByState(state, playerId, stateFilter),
+        );
+      }
       return { supported: false };
     }
     case "fieldCountDifference":
@@ -803,9 +861,13 @@ export const isSupportedQueuedEffectConditionShape = (
     case "fieldCountDifference":
       return (
         (isSupportedDonFieldCountFilter(condition.minuend.filter) ||
-          isSupportedCharacterFieldCountFilter(condition.minuend.filter)) &&
+          isSupportedCharacterFieldCountFilter(condition.minuend.filter) ||
+          isSupportedPublicFieldStateCountFilter(condition.minuend.filter)) &&
         (isSupportedDonFieldCountFilter(condition.subtrahend.filter) ||
-          isSupportedCharacterFieldCountFilter(condition.subtrahend.filter)) &&
+          isSupportedCharacterFieldCountFilter(condition.subtrahend.filter) ||
+          isSupportedPublicFieldStateCountFilter(
+            condition.subtrahend.filter,
+          )) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.minuend.player === "self" ||
