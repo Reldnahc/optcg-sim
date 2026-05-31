@@ -30,8 +30,15 @@ const expectedCanonicalJson = (value: unknown): string => {
 const expectedRequestHash = (value: unknown): string =>
   createHash("sha256").update(expectedCanonicalJson(value)).digest("hex");
 
-const waitForAsyncSend = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
+const waitForSentPayload = async (socket: FakeWebSocket): Promise<string> => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const payload = socket.sent[0];
+    if (payload !== undefined) {
+      return payload;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error("Expected a sent WebSocket payload.");
 };
 
 class FakeWebSocket extends EventTarget {
@@ -117,13 +124,8 @@ describe("dev WebSocket match transport", () => {
 
     assert.equal(socket.sent.length, 0);
     socket.open();
-    await waitForAsyncSend();
-
+    const sentPayload = await waitForSentPayload(socket);
     assert.equal(socket.sent.length, 1);
-    const sentPayload = socket.sent[0];
-    if (sentPayload === undefined) {
-      throw new Error("Expected a sent WebSocket payload.");
-    }
     assert.deepEqual(JSON.parse(sentPayload) as unknown, {
       type: "submitAction",
       clientActionId: "client-action-1",
@@ -202,12 +204,7 @@ describe("dev WebSocket match transport", () => {
       });
 
       socket.open();
-      await waitForAsyncSend();
-
-      const sentPayload = socket.sent[0];
-      if (sentPayload === undefined) {
-        throw new Error("Expected a sent WebSocket payload.");
-      }
+      const sentPayload = await waitForSentPayload(socket);
       assert.equal(
         (JSON.parse(sentPayload) as { clientActionId: string }).clientActionId,
         "11111111-1111-4111-9111-111111111111",
@@ -249,12 +246,7 @@ describe("dev WebSocket match transport", () => {
     });
 
     socket.open();
-    await waitForAsyncSend();
-
-    const sentPayload = socket.sent[0];
-    if (sentPayload === undefined) {
-      throw new Error("Expected a sent WebSocket payload.");
-    }
+    const sentPayload = await waitForSentPayload(socket);
     assert.deepEqual(JSON.parse(sentPayload) as unknown, {
       type: "requestRollback",
       clientActionId: "client-action-rollback",
@@ -320,12 +312,7 @@ describe("dev WebSocket match transport", () => {
     });
 
     socket.open();
-    await waitForAsyncSend();
-
-    const sentPayload = socket.sent[0];
-    if (sentPayload === undefined) {
-      throw new Error("Expected a sent WebSocket payload.");
-    }
+    const sentPayload = await waitForSentPayload(socket);
     assert.deepEqual(JSON.parse(sentPayload) as unknown, {
       type: "cancelRollback",
       clientActionId: "client-action-cancel-rollback",
@@ -392,12 +379,7 @@ describe("dev WebSocket match transport", () => {
     });
 
     socket.open();
-    await waitForAsyncSend();
-
-    const sentPayload = socket.sent[0];
-    if (sentPayload === undefined) {
-      throw new Error("Expected a sent WebSocket payload.");
-    }
+    const sentPayload = await waitForSentPayload(socket);
     assert.deepEqual(JSON.parse(sentPayload) as unknown, {
       type: "respondToDecision",
       clientActionId: "client-action-decision",
