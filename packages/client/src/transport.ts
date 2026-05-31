@@ -172,6 +172,21 @@ export interface MatchStateSyncMessage {
   cards: MatchCardCatalog;
 }
 
+export interface MatchSetupSyncMessage {
+  type: "setupSync";
+  matchId: MatchId;
+  serverSeq: number;
+  firstPlayerChoice: FirstPlayerChoiceView;
+}
+
+export interface MatchSessionTransitionMessage {
+  type: "sessionTransition";
+  matchId: MatchId;
+  serverSeq: number;
+  nextMatchId: MatchId;
+  firstPlayerChoice?: FirstPlayerChoiceView;
+}
+
 export interface LobbyStateSyncMessage {
   type: "lobbySync";
   lobbyId: string;
@@ -211,6 +226,8 @@ export interface MatchLiveTransport {
     playerId: PlayerId;
     sessionToken: string;
     onStateSync: (message: MatchStateSyncMessage) => void;
+    onSetupSync: (message: MatchSetupSyncMessage) => void;
+    onSessionTransition: (message: MatchSessionTransitionMessage) => void;
     onError: (message: string) => void;
   }) => LiveMatchConnection;
 }

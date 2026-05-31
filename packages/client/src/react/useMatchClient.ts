@@ -122,9 +122,11 @@ export const useMatchClient = (): MatchClientUi => {
         playerId: clientState.seat.playerId,
         activeCardInstanceIds,
       });
-  const liveConnectionKey = !isMatchClientState(clientState)
-    ? undefined
-    : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;
+  const liveConnectionKey =
+    isMatchClientState(clientState) ||
+    isFirstPlayerSetupClientState(clientState)
+      ? `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`
+      : undefined;
   const lobbyConnectionKey =
     clientState === undefined || !isLobbyClientState(clientState)
       ? undefined

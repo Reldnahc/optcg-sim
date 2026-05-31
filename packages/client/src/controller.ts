@@ -78,7 +78,7 @@ export interface MatchClientController {
   }) => Promise<MatchClientState>;
   cancelRollback: () => Promise<MatchClientState>;
   connectLive: (input: {
-    onState: (state: MatchClientState) => void;
+    onState: (state: MatchClientSessionState) => void;
     onError: (message: string) => void;
   }) => void;
   disconnectLive: () => void;
@@ -166,16 +166,33 @@ export const createMatchClientController = ({
     return currentState;
   };
 
+  const loadSetupState = (
+    seat: ClientSeatIdentity,
+    firstPlayerChoice: FirstPlayerChoiceView,
+  ): FirstPlayerSetupClientState => {
+    currentState = undefined;
+    currentFirstPlayerSetupState = {
+      matchId: seat.matchId,
+      seat,
+      firstPlayerChoice,
+    };
+    currentLobbyState = undefined;
+    disconnectLobbyConnection();
+    return currentFirstPlayerSetupState;
+  };
+
   const claimAndLoad = async (
     seat: ClientSeatIdentity,
+    sessionToken?: string,
   ): Promise<MatchClientSessionState> => {
+    const existingSessionToken =
+      sessionToken ?? sessionStore.loadClaimedSeat()?.sessionToken;
     sessionStore.setCurrentSeat(seat);
-    const existing = sessionStore.loadClaimedSeat();
     const claimed = await transport.claimSeat({
       ...seat,
-      ...(existing === undefined
+      ...(existingSessionToken === undefined
         ? {}
-        : { sessionToken: existing.sessionToken }),
+        : { sessionToken: existingSessionToken }),
     });
     sessionStore.saveClaimedSeat({
       matchId: claimed.matchId,
@@ -183,15 +200,7 @@ export const createMatchClientController = ({
       sessionToken: claimed.seat.sessionToken,
     });
     if (claimed.firstPlayerChoice !== undefined) {
-      currentState = undefined;
-      currentFirstPlayerSetupState = {
-        matchId: claimed.matchId,
-        seat,
-        firstPlayerChoice: claimed.firstPlayerChoice,
-      };
-      currentLobbyState = undefined;
-      disconnectLobbyConnection();
-      return currentFirstPlayerSetupState;
+      return loadSetupState(seat, claimed.firstPlayerChoice);
     }
     return loadState(seat);
   };
@@ -246,14 +255,7 @@ export const createMatchClientController = ({
             "Created match did not include snapshot or setup choice.",
           );
         }
-        currentFirstPlayerSetupState = {
-          matchId: created.matchId,
-          seat,
-          firstPlayerChoice,
-        };
-        currentState = undefined;
-        currentLobbyState = undefined;
-        return currentFirstPlayerSetupState;
+        return loadSetupState(seat, firstPlayerChoice);
       }
       currentState = {
         matchId: created.matchId,
@@ -300,14 +302,7 @@ export const createMatchClientController = ({
         if (firstPlayerChoice === undefined) {
           throw new Error("Rematch did not include snapshot or setup choice.");
         }
-        currentFirstPlayerSetupState = {
-          matchId: created.matchId,
-          seat,
-          firstPlayerChoice,
-        };
-        currentState = undefined;
-        currentLobbyState = undefined;
-        return currentFirstPlayerSetupState;
+        return loadSetupState(seat, firstPlayerChoice);
       }
       const cards = await transport.loadCards(created.matchId);
       currentState = {
@@ -370,6 +365,27 @@ export const createMatchClientController = ({
           };
           currentLobbyState = undefined;
           onState(currentState);
+        },
+        onSetupSync(message) {
+          onState(
+            loadSetupState(
+              { matchId: message.matchId, playerId: credential.playerId },
+              message.firstPlayerChoice,
+            ),
+          );
+        },
+        onSessionTransition(message) {
+          void claimAndLoad(
+            {
+              matchId: message.nextMatchId,
+              playerId: credential.playerId,
+            },
+            credential.sessionToken,
+          )
+            .then(onState)
+            .catch((error: unknown) => {
+              onError(error instanceof Error ? error.message : String(error));
+            });
         },
       });
     },

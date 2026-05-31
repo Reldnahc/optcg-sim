@@ -60,7 +60,6 @@ export interface ControlRailProps {
   previewControl?: ReactNode | undefined;
   actionLogControl?: ReactNode | undefined;
   settingsControl?: ReactNode | undefined;
-  setupControls?: ReactNode | undefined;
 }
 
 export const ControlRail = ({
@@ -91,7 +90,6 @@ export const ControlRail = ({
   previewControl,
   actionLogControl,
   settingsControl,
-  setupControls,
 }: ControlRailProps): React.JSX.Element => {
   const tabDragStart = useRef<
     | {
@@ -216,7 +214,6 @@ export const ControlRail = ({
             ) : null}
           </section>
         )}
-        {setupControls}
         <ActionMenu
           title="Global actions"
           actions={globalActions}

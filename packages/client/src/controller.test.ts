@@ -16,6 +16,9 @@ import type {
   LobbyStateSyncMessage,
   LiveMatchConnection,
   MatchLiveTransport,
+  MatchSessionTransitionMessage,
+  MatchSetupSyncMessage,
+  MatchStateSyncMessage,
   MatchTransport,
 } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
@@ -127,10 +130,18 @@ const createFakeLiveTransport = (options?: {
   requestedRollbacks: string[];
   cancelledRollbacks: number;
   connection: LiveMatchConnection;
+  emitSetup: (message: MatchSetupSyncMessage) => void;
+  emitState: (message: MatchStateSyncMessage) => void;
+  emitTransition: (message: MatchSessionTransitionMessage) => void;
 } => {
   const submittedActions: number[] = [];
   const submittedDecisions: DecisionId[] = [];
   const requestedRollbacks: string[] = [];
+  let onSetupSync: ((message: MatchSetupSyncMessage) => void) | undefined;
+  let onStateSync: ((message: MatchStateSyncMessage) => void) | undefined;
+  let onSessionTransition:
+    | ((message: MatchSessionTransitionMessage) => void)
+    | undefined;
   let cancelledRollbacks = 0;
   const connection: LiveMatchConnection = {
     close() {},
@@ -171,8 +182,29 @@ const createFakeLiveTransport = (options?: {
       return cancelledRollbacks;
     },
     connection,
-    connect() {
+    connect(input) {
+      onSetupSync = input.onSetupSync;
+      onStateSync = input.onStateSync;
+      onSessionTransition = input.onSessionTransition;
       return connection;
+    },
+    emitSetup(message) {
+      if (onSetupSync === undefined) {
+        throw new Error("Match live transport was not connected.");
+      }
+      onSetupSync(message);
+    },
+    emitState(message) {
+      if (onStateSync === undefined) {
+        throw new Error("Match live transport was not connected.");
+      }
+      onStateSync(message);
+    },
+    emitTransition(message) {
+      if (onSessionTransition === undefined) {
+        throw new Error("Match live transport was not connected.");
+      }
+      onSessionTransition(message);
     },
   };
 };
@@ -204,6 +236,12 @@ const requireMatchClientState = (
     throw new Error("Expected loaded match client state.");
   }
   return state;
+};
+
+const flushAsyncCallbacks = async (): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 };
 
 describe("match client controller", () => {
@@ -303,6 +341,126 @@ describe("match client controller", () => {
       playerId: "p1",
       sessionToken: "token-p1",
     });
+  });
+
+  test("live rematch transitions reclaim the new pending setup match", async () => {
+    const transport = createFakeTransport();
+    const claimSeat = transport.claimSeat;
+    transport.claimSeat = async (input) => {
+      const claimed = await claimSeat(input);
+      return String(input.matchId).includes("rematch")
+        ? {
+            ...claimed,
+            firstPlayerChoice: {
+              chooserPlayerId: "p1" as PlayerId,
+              choices: ["goFirst", "goSecond"],
+            },
+          }
+        : claimed;
+    };
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p2" as PlayerId);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+
+    liveTransport.emitTransition({
+      type: "sessionTransition",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      nextMatchId: "match-1-rematch-1" as MatchId,
+      firstPlayerChoice: {
+        chooserPlayerId: "p1" as PlayerId,
+        choices: ["goFirst", "goSecond"],
+      },
+    });
+    await flushAsyncCallbacks();
+
+    const rematch = states.at(-1);
+    assert.equal(rematch !== undefined && "firstPlayerChoice" in rematch, true);
+    assert.deepEqual(transport.claimedSeats.at(-1), {
+      matchId: "match-1-rematch-1",
+      playerId: "p2",
+      sessionToken: "token-p2",
+    });
+    assert.deepEqual(controller.currentCredential(), {
+      matchId: "match-1-rematch-1",
+      playerId: "p2",
+      sessionToken: "token-p2",
+    });
+  });
+
+  test("live setup connections accept the resolved match state", async () => {
+    const transport = createFakeTransport();
+    transport.createMatch = () =>
+      Promise.resolve({
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: false },
+          p2: { playerId: "p2" as PlayerId, claimed: false },
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: "p1" as PlayerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    transport.claimSeat = (input) => {
+      transport.claimedSeats.push(input);
+      return Promise.resolve({
+        matchId: input.matchId,
+        seat: {
+          playerId: input.playerId,
+          sessionToken: input.sessionToken ?? `token-${String(input.playerId)}`,
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: "p1" as PlayerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    };
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p2" as PlayerId);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      stateSeq: 1,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 1, players: {} },
+      cards: { players: {} },
+    });
+
+    const match = states.at(-1);
+    assert.equal(match !== undefined && "snapshot" in match, true);
   });
 
   test("joins an existing local match by claiming only the requested seat", async () => {

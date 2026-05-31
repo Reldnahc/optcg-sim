@@ -4,6 +4,8 @@ import type {
   MatchActionResult,
   MatchActionResultMessage,
   MatchLiveTransport,
+  MatchSessionTransitionMessage,
+  MatchSetupSyncMessage,
   MatchStateSyncMessage,
   CancelRollbackInput,
   RequestRollbackInput,
@@ -57,6 +59,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isStateSync = (value: unknown): value is MatchStateSyncMessage =>
   isRecord(value) && value["type"] === "stateSync";
 
+const isSetupSync = (value: unknown): value is MatchSetupSyncMessage =>
+  isRecord(value) && value["type"] === "setupSync";
+
+const isSessionTransition = (
+  value: unknown,
+): value is MatchSessionTransitionMessage =>
+  isRecord(value) && value["type"] === "sessionTransition";
+
 const isLobbySync = (value: unknown): value is LobbyStateSyncMessage =>
   isRecord(value) && value["type"] === "lobbySync";
 
@@ -73,7 +83,15 @@ export const createDevWebSocketMatchTransport = ({
   WebSocket: WebSocketImpl = WebSocket,
   randomUUID = createClientActionId,
 }: DevWebSocketMatchTransportOptions): MatchLiveTransport => ({
-  connect({ matchId, playerId, sessionToken, onStateSync, onError }) {
+  connect({
+    matchId,
+    playerId,
+    sessionToken,
+    onStateSync,
+    onSetupSync,
+    onSessionTransition,
+    onError,
+  }) {
     const url = new URL(
       `/api/matches/${encodeURIComponent(String(matchId))}/ws`,
       socketRoot(baseUrl),
@@ -134,6 +152,16 @@ export const createDevWebSocketMatchTransport = ({
             errors: [],
           });
         }
+        return;
+      }
+
+      if (isSetupSync(parsed)) {
+        onSetupSync(parsed);
+        return;
+      }
+
+      if (isSessionTransition(parsed)) {
+        onSessionTransition(parsed);
         return;
       }
 

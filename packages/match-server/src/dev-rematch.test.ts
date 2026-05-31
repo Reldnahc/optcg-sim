@@ -46,6 +46,15 @@ interface TestSocket {
   next: () => Promise<unknown>;
 }
 
+interface TestSessionTransitionBody {
+  type?: string;
+  matchId?: string;
+  nextMatchId?: string;
+  firstPlayerChoice?: {
+    chooserPlayerId?: string;
+  };
+}
+
 const requireStateSeq = (
   snapshot: { stateSeq?: number } | undefined,
 ): number => {
@@ -162,12 +171,18 @@ const claimDevSeat = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
+  sessionToken?: string,
 ): Promise<string> => {
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/seats/${playerId}/claim`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(sessionToken === undefined
+          ? {}
+          : { "x-optcg-session-token": sessionToken }),
+      },
       body: JSON.stringify({}),
     },
   );
@@ -219,7 +234,7 @@ const concedeViaSocket = async (
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken: string,
-): Promise<void> => {
+): Promise<{ p1Token: string; p2Token: string }> => {
   const p1Token =
     playerId === "p1"
       ? sessionToken
@@ -280,7 +295,7 @@ const concedeViaSocket = async (
       );
       if (concedeAction?.index !== undefined) {
         await submitAction(playerId, concedeAction.index, expectedStateSeq);
-        return;
+        return { p1Token, p2Token };
       }
       const pendingPlayerId =
         state.players?.["p1"]?.view?.pendingDecision?.playerId ??
@@ -352,6 +367,79 @@ describe("dev rematches", () => {
 
       assert.equal(resolved.firstPlayerChoice?.resolvedFirstPlayerId, "p2");
       assert.equal(typeof resolved.snapshot?.stateSeq, "number");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("announces rematches on source sockets and resolves pending setup sockets", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = await createReadyDevMatch(server);
+      const loserToken = await claimDevSeat(server, match.matchId, "p1");
+      const { p2Token } = await concedeViaSocket(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
+      const sourceP2 = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      await sourceP2.next();
+
+      const rematch = await createRematch(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
+
+      assert.equal(rematch.status, 201);
+      const rematchId = rematch.body.matchId;
+      if (rematchId === undefined) {
+        throw new Error("Rematch response did not include match id.");
+      }
+      const transition = (await sourceP2.next()) as TestSessionTransitionBody;
+      assert.equal(transition.type, "sessionTransition");
+      assert.equal(transition.matchId, match.matchId);
+      assert.equal(transition.nextMatchId, rematchId);
+      assert.equal(transition.firstPlayerChoice?.chooserPlayerId, "p1");
+
+      const rematchP1Token = await claimDevSeat(
+        server,
+        rematchId,
+        "p1",
+        loserToken,
+      );
+      const rematchP2Token = await claimDevSeat(
+        server,
+        rematchId,
+        "p2",
+        p2Token,
+      );
+      const rematchP1 = await openSocket(
+        webSocketUrl(server, rematchId, "p1", rematchP1Token),
+      );
+      const rematchP2 = await openSocket(
+        webSocketUrl(server, rematchId, "p2", rematchP2Token),
+      );
+      const setupP1 = (await rematchP1.next()) as { type?: string };
+      const setupP2 = (await rematchP2.next()) as { type?: string };
+      assert.equal(setupP1.type, "setupSync");
+      assert.equal(setupP2.type, "setupSync");
+
+      await chooseFirstPlayer(server, rematchId, "p1", "goSecond");
+
+      const p1State = (await rematchP1.next()) as { type?: string };
+      const p2State = (await rematchP2.next()) as { type?: string };
+      assert.equal(p1State.type, "stateSync");
+      assert.equal(p2State.type, "stateSync");
+
+      sourceP2.socket.close();
+      rematchP1.socket.close();
+      rematchP2.socket.close();
     } finally {
       await server.close();
     }

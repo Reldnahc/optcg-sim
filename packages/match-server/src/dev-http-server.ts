@@ -205,6 +205,7 @@ const handleApiRequest = async (
   response: ServerResponse,
   registry: LocalDevMatchRegistry,
   lobbyRegistry: LocalDevLobbyRegistry,
+  matchConnections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
 ): Promise<void> => {
@@ -346,6 +347,7 @@ const handleApiRequest = async (
         });
         return;
       }
+      broadcastMatchState(matchId as MatchId, registry, matchConnections);
       sendJson(response, 200, result);
       return;
     }
@@ -390,6 +392,7 @@ const handleApiRequest = async (
         });
         return;
       }
+      broadcastSessionTransition(matchId as MatchId, result, matchConnections);
       sendJson(response, 201, result);
       return;
     }
@@ -560,6 +563,9 @@ const sendSocketJson = (
   connection: DevSocketBaseConnection,
   payload: Record<string, unknown>,
 ): void => {
+  if (connection.socket.destroyed || connection.socket.writableEnded) {
+    return;
+  }
   connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
 };
 
@@ -578,6 +584,17 @@ const playerStatePayload = (
   };
 };
 
+const playerSetupPayload = (
+  matchId: MatchId,
+  firstPlayerChoice: unknown,
+  connection: DevSocketConnection,
+): Record<string, unknown> => ({
+  type: "setupSync",
+  matchId,
+  serverSeq: ++connection.serverSeq,
+  firstPlayerChoice,
+});
+
 const lobbyStatePayload = (
   lobby: CreatedDevLobbyResponse,
   connection: DevLobbySocketConnection,
@@ -595,6 +612,45 @@ const broadcastLobbyState = (
   for (const connection of connections) {
     if (connection.lobbyId === lobby.lobbyId) {
       sendSocketJson(connection, lobbyStatePayload(lobby, connection));
+    }
+  }
+};
+
+const broadcastMatchState = (
+  matchId: MatchId,
+  registry: LocalDevMatchRegistry,
+  connections: Set<DevSocketConnection>,
+): void => {
+  const match = registry.getMatch(matchId);
+  if (match === undefined) {
+    return;
+  }
+  for (const connection of connections) {
+    if (connection.matchId === matchId) {
+      sendSocketJson(connection, playerStatePayload(match, connection));
+    }
+  }
+};
+
+const broadcastSessionTransition = (
+  sourceMatchId: MatchId,
+  created: {
+    readonly matchId: MatchId;
+    readonly firstPlayerChoice?: unknown;
+  },
+  connections: Set<DevSocketConnection>,
+): void => {
+  for (const connection of connections) {
+    if (connection.matchId === sourceMatchId) {
+      sendSocketJson(connection, {
+        type: "sessionTransition",
+        matchId: sourceMatchId,
+        serverSeq: ++connection.serverSeq,
+        nextMatchId: created.matchId,
+        ...(created.firstPlayerChoice === undefined
+          ? {}
+          : { firstPlayerChoice: created.firstPlayerChoice }),
+      });
     }
   }
 };
@@ -674,8 +730,9 @@ const handleWebSocketUpgrade = (
   const sessionToken = url.searchParams.get("sessionToken") ?? "";
   const key = request.headers["sec-websocket-key"];
   const match = registry.getMatch(matchId);
+  const firstPlayerChoice = registry.getFirstPlayerChoice(matchId);
   if (
-    match === undefined ||
+    (match === undefined && firstPlayerChoice === undefined) ||
     typeof key !== "string" ||
     key.length === 0 ||
     playerId.length === 0 ||
@@ -713,7 +770,14 @@ const handleWebSocketUpgrade = (
   socket.on("close", () => {
     connections.delete(connection);
   });
-  sendSocketJson(connection, playerStatePayload(match, connection));
+  if (match === undefined) {
+    sendSocketJson(
+      connection,
+      playerSetupPayload(matchId, firstPlayerChoice, connection),
+    );
+  } else {
+    sendSocketJson(connection, playerStatePayload(match, connection));
+  }
 
   let buffered: Buffer = Buffer.alloc(0);
   socket.on("data", (chunk: Buffer) => {
@@ -775,11 +839,7 @@ const handleWebSocketUpgrade = (
         errors,
       });
       if (result.accepted) {
-        for (const peer of connections) {
-          if (peer.matchId === matchId) {
-            sendSocketJson(peer, playerStatePayload(match, peer));
-          }
-        }
+        broadcastMatchState(matchId, registry, connections);
       }
     }
   });
@@ -813,6 +873,7 @@ export const createDevHttpServer = async (
           response,
           registry,
           lobbyRegistry,
+          socketConnections,
           lobbySocketConnections,
           authProvider,
         )

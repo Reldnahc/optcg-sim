@@ -28,10 +28,7 @@ export const useMatchLiveConnections = ({
   setErrors,
 }: UseMatchLiveConnectionsInput): void => {
   useEffect(() => {
-    if (
-      liveConnectionKey === undefined ||
-      controller.currentState() === undefined
-    ) {
+    if (liveConnectionKey === undefined) {
       controller.disconnectLive();
       return;
     }

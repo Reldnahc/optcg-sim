@@ -34,7 +34,6 @@ import {
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import { FirstPlayerSetupPanel } from "./FirstPlayerSetupPanel.js";
 import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
 import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
 import {
@@ -70,6 +69,7 @@ import { useInfoWindowDragOut } from "./use-info-window-drag-out.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useMatchClient } from "./useMatchClient.js";
 import { useConcedeConfirmation } from "./use-concede-confirmation.js";
+import { useFirstPlayerChoiceModal } from "./use-first-player-choice-modal.js";
 import { useMatchRevealWindowStateStore } from "./use-match-reveal-window-state-store.js";
 import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
@@ -111,6 +111,18 @@ export const MatchApp = (): React.JSX.Element => {
   const firstPlayerSetupState = isFirstPlayerSetupClientState(clientState)
     ? clientState
     : undefined;
+  const firstPlayerChoiceModal = useFirstPlayerChoiceModal(
+    firstPlayerSetupState,
+    client.chooseFirstPlayer,
+  );
+  const visibleDecisionModal = firstPlayerChoiceModal.model ?? decisionModal;
+  const setVisibleDecisionOption =
+    firstPlayerChoiceModal.onOption ?? client.setDecisionOptionValue;
+  const confirmVisibleDecision =
+    firstPlayerChoiceModal.onConfirm ??
+    (() => {
+      void client.confirmDecision();
+    });
   const scopedMatchState = matchState ?? firstPlayerSetupState;
   const matchScope =
     scopedMatchState === undefined
@@ -717,17 +729,6 @@ export const MatchApp = (): React.JSX.Element => {
         settingsControl={
           <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
         }
-        setupControls={
-          firstPlayerSetupState === undefined ? undefined : (
-            <FirstPlayerSetupPanel
-              state={firstPlayerSetupState}
-              disabled={client.state.actionInFlight}
-              onChoose={(choice) => {
-                void client.chooseFirstPlayer(choice);
-              }}
-            />
-          )
-        }
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
         onConcede={() => {
@@ -739,21 +740,21 @@ export const MatchApp = (): React.JSX.Element => {
       />
       <DecisionModalHost
         model={
-          collectionDecisionSurface === undefined ? decisionModal : undefined
+          collectionDecisionSurface === undefined
+            ? visibleDecisionModal
+            : undefined
         }
         disabled={client.state.actionInFlight}
         cardDisplay={cardDisplay}
         onToggleCard={client.toggleDecisionCard}
         onChooseTrigger={client.chooseDecisionTriggerValue}
         onQuantity={client.setDecisionQuantityValue}
-        onOption={client.setDecisionOptionValue}
+        onOption={setVisibleDecisionOption}
         onActionOption={client.setDecisionActionOptionValue}
         onPreviewCard={previewHoveredCard}
         onMoveOrderedCard={client.moveDecisionCard}
         onPlacementDestination={client.setDecisionPlacementDestination}
-        onConfirm={() => {
-          void client.confirmDecision();
-        }}
+        onConfirm={confirmVisibleDecision}
       />
       {collectionViewerDocked && collectionPresentation === "window" ? null : (
         <CollectionModalHost

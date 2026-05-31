@@ -106,6 +106,8 @@ describe("dev WebSocket match transport", () => {
       onStateSync(message) {
         receivedStates.push(message);
       },
+      onSetupSync() {},
+      onSessionTransition() {},
       onError(message) {
         throw new Error(message);
       },
@@ -164,6 +166,58 @@ describe("dev WebSocket match transport", () => {
     assert.equal(receivedStates.length, 1);
   });
 
+  test("routes setup and session transition sync messages", () => {
+    const recording = createRecordingWebSocket();
+    const setupMessages: unknown[] = [];
+    const transitionMessages: unknown[] = [];
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+    });
+    transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onSetupSync(message) {
+        setupMessages.push(message);
+      },
+      onSessionTransition(message) {
+        transitionMessages.push(message);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    socket.receive({
+      type: "setupSync",
+      matchId: "match-1",
+      serverSeq: 1,
+      firstPlayerChoice: {
+        chooserPlayerId: "p1",
+        choices: ["goFirst", "goSecond"],
+      },
+    });
+    socket.receive({
+      type: "sessionTransition",
+      matchId: "match-1",
+      serverSeq: 2,
+      nextMatchId: "match-2",
+      firstPlayerChoice: {
+        chooserPlayerId: "p2",
+        choices: ["goFirst", "goSecond"],
+      },
+    });
+
+    assert.equal(setupMessages.length, 1);
+    assert.equal(transitionMessages.length, 1);
+  });
+
   test("falls back to getRandomValues for client action ids when randomUUID is unavailable", async () => {
     const recording = createRecordingWebSocket();
     const originalCrypto = globalThis.crypto;
@@ -187,6 +241,8 @@ describe("dev WebSocket match transport", () => {
         playerId: "p1" as PlayerId,
         sessionToken: "token-p1",
         onStateSync() {},
+        onSetupSync() {},
+        onSessionTransition() {},
         onError(message) {
           throw new Error(message);
         },
@@ -229,6 +285,8 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
       onError(message) {
         throw new Error(message);
       },
@@ -296,6 +354,8 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
       onError(message) {
         throw new Error(message);
       },
@@ -360,6 +420,8 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
       onError(message) {
         throw new Error(message);
       },
