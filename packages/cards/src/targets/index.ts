@@ -1,6 +1,7 @@
 export { parseAllFieldTarget } from "./all-field-targets.js";
 export { parseYourDonCardsCostTarget } from "./cost-targets.js";
 export {
+  parseOpponentLeaderOrCharacterCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,
   parseYourCharactersTarget,

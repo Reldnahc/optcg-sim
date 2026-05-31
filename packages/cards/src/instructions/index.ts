@@ -30,6 +30,7 @@ export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parseRestOpponentLeaderOrCharactersInstruction,
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
 } from "./planned-field-effects.js";

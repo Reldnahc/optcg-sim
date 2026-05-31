@@ -20,6 +20,11 @@ export const opponentStagesTargetPrimitive = {
   matches: [{ id: "of-your-opponents-stages" }],
 } as const;
 
+export const opponentLeaderOrCharactersTargetPrimitive = {
+  primitiveId: "target:opponentLeaderOrCharacters",
+  matches: [{ id: "of-your-opponents-leader-or-character-cards" }],
+} as const;
+
 export const yourLeaderTargetPrimitive = {
   primitiveId: "target:yourLeader",
   matches: [{ id: "your-leader" }],
@@ -81,6 +86,42 @@ export function parseOpponentFieldTarget(
     filter: predicates.filter,
     evidence: ["player:opponent", targetEvidence, ...predicates.evidence],
     rest: predicates.rest.trim(),
+  };
+}
+
+export function parseOpponentLeaderOrCharacterCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match =
+    /^of your opponent's Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["leaderArea", "characterArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: { categories: ["leader", "character"] },
+      },
+    },
+    evidence: [
+      "target:opponentLeaderOrCharacters",
+      "player:opponent",
+      "filter:category:leader",
+      "filter:category:character",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
   };
 }
 

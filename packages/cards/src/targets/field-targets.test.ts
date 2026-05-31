@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   opponentCharactersTargetPrimitive,
+  opponentLeaderOrCharactersTargetPrimitive,
   parseOpponentCharactersTarget,
+  parseOpponentLeaderOrCharacterCardsTarget,
   parseYourCharactersTarget,
   parseYourNamedCardsTarget,
   parseYourLeaderTarget,
@@ -16,6 +18,10 @@ describe("field target parsers", () => {
     expect(opponentCharactersTargetPrimitive).toEqual({
       primitiveId: "target:opponentCharacters",
       matches: [{ id: "of-your-opponents-characters" }],
+    });
+    expect(opponentLeaderOrCharactersTargetPrimitive).toEqual({
+      primitiveId: "target:opponentLeaderOrCharacters",
+      matches: [{ id: "of-your-opponents-leader-or-character-cards" }],
     });
     expect(yourLeaderTargetPrimitive).toEqual({
       primitiveId: "target:yourLeader",
@@ -44,6 +50,36 @@ describe("field target parsers", () => {
         "filter:category:character",
       ],
       rest: "−1000 power during this turn.",
+    });
+  });
+
+  it("parses opponent Leader or Character cards target", () => {
+    expect(
+      parseOpponentLeaderOrCharacterCardsTarget({
+        text: "of your opponent's Leader or Character cards.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zones: ["leaderArea", "characterArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["leader", "character"] },
+        },
+      },
+      evidence: [
+        "target:opponentLeaderOrCharacters",
+        "player:opponent",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      rest: ".",
     });
   });
 

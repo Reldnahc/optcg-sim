@@ -26,6 +26,11 @@ const supportedEntryPoints: readonly SupportedEntryPoint[] = [
     evidence: ["entry:whenAttacking", "sourcePresence:mustRemain"],
   },
   {
+    text: "[On Your Opponent's Attack]",
+    trigger: { type: "onOpponentAttack" },
+    evidence: ["entry:onOpponentAttack", "sourcePresence:mustRemain"],
+  },
+  {
     text: "[On K.O.]",
     trigger: { type: "onKO" },
     evidence: ["entry:onKO", "sourcePresence:resolveFromDestination"],
