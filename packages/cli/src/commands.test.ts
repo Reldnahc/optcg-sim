@@ -309,12 +309,17 @@ describe("dispatchCliCommand", () => {
     const result = dispatchCliCommand(opened.state, "respond none");
 
     assert.equal(result.errors.length, 0);
-    assert.equal(result.state.pendingDecision, undefined);
+    assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+
+    const confirmed = dispatchCliCommand(result.state, "respond add-to-hand");
+
+    assert.equal(confirmed.errors.length, 0);
+    assert.equal(confirmed.state.pendingDecision, undefined);
     assert.equal(
-      must(result.state.players[p2], "p2").life.length,
+      must(confirmed.state.players[p2], "p2").life.length,
       beforeLife - 1,
     );
-    assertSummaryOutput(result.output);
+    assertSummaryOutput(confirmed.output);
   });
 
   test("dispatches play using the selected hand card instance id", () => {
@@ -471,8 +476,13 @@ describe("dispatchCliCommand", () => {
     const result = dispatchCliCommand(opened.state, "respond none");
 
     assert.equal(result.errors.length, 0);
-    assert.equal(result.state.pendingDecision, undefined);
-    assertSummaryOutput(result.output);
+    assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+
+    const confirmed = dispatchCliCommand(result.state, "respond add-to-hand");
+
+    assert.equal(confirmed.errors.length, 0);
+    assert.equal(confirmed.state.pendingDecision, undefined);
+    assertSummaryOutput(confirmed.output);
   });
 
   test("fails closed for malformed, stale, duplicate, or mismatched respond pay choices", () => {

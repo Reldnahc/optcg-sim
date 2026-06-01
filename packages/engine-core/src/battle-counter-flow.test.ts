@@ -24,6 +24,7 @@ import {
   continuousEffectRecord,
   ensureActiveDonInCostArea,
   installSupportedCounterEvent,
+  resolveNoTriggerLifeDamageDecisionsForTests,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
 } from "./battle-actions-test-fixtures.js";
@@ -237,16 +238,18 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
   const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
   const beforeLife = p2State.life.length;
 
-  const result = applyAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "cards", cards: [] },
-  });
+  const result = resolveNoTriggerLifeDamageDecisionsForTests(
+    applyAction(opened.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    }),
+  );
 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.battle, undefined);
-  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 2);
   assert.equal(
     must(result.state.players[p2], "p2").life.length,
     beforeLife - 1,
@@ -257,21 +260,25 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
       "decisionResolved",
       "damageDealt",
       "lifeTaken",
-      "cardMoved",
-      "cardMoved",
+      "decisionCreated",
       "effectResolved",
       "ruleProcessingChecked",
+      "decisionResolved",
+      "cardMoved",
+      "cardMoved",
     ],
   );
   assert.deepEqual(result.events[0]?.payload, {
     decisionId: decision.id,
     playerId: p2,
   });
-  const replay = applyAction(structuredClone(opened.state), {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "cards", cards: [] },
-  });
+  const replay = resolveNoTriggerLifeDamageDecisionsForTests(
+    applyAction(structuredClone(opened.state), {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    }),
+  );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(result.events, replay.events);
 });

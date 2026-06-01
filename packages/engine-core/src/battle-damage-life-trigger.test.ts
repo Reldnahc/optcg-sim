@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 import {
   must,
@@ -145,7 +145,15 @@ test("applyAction declareAttack creates life trigger decision for supported trig
   });
 
   assert.equal(result.errors, undefined);
-  const passed = passCounterStep(result.state, p2);
+  const counterDecision = must(
+    result.state.pendingDecision,
+    "counter decision",
+  );
+  const passed = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: counterDecision.id,
+    response: { type: "cards", cards: [] },
+  });
   assert.equal(passed.errors, undefined);
   const pendingDecision = must(
     passed.state.pendingDecision,
@@ -207,6 +215,80 @@ test("applyAction declareAttack creates life trigger decision for supported trig
   assert.equal(
     passed.events.some((event) => event.type === "decisionCreated"),
     true,
+  );
+});
+
+test("life damage creates the same trigger decision pause when taken card has no trigger text", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = topLife.card.cardId;
+  const beforeLifeCount = p2State.life.length;
+  const beforeHandCount = p2State.hand.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  const counterDecision = must(
+    result.state.pendingDecision,
+    "counter decision",
+  );
+  const passed = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: counterDecision.id,
+    response: { type: "cards", cards: [] },
+  });
+  assert.equal(passed.errors, undefined);
+  const pendingDecision = must(
+    passed.state.pendingDecision,
+    "pending decision",
+  );
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.equal(pendingDecision.playerId, p2);
+  assert.equal(pendingDecision.card.cardId, lifeCardId);
+  const nextP2 = must(passed.state.players[p2], "next p2");
+  assert.equal(nextP2.life.length, beforeLifeCount - 1);
+  assert.equal(nextP2.hand.length, beforeHandCount);
+  assert.equal(
+    nextP2.life.some(
+      (lifeCard) => lifeCard.card.instanceId === topLife.card.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    filterStateForPlayer(passed.state, p1).opponent.life.count,
+    beforeLifeCount - 1,
+  );
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(passed.state, p1)).includes(
+      String(lifeCardId),
+    ),
+    false,
+  );
+  assert.deepEqual(
+    getLegalActions(passed.state, p2)
+      .filter((action) => action.type === "respondToDecision")
+      .map((action) => action.response),
+    [{ type: "lifeTrigger", choice: "addToHand" }],
+  );
+  assert.equal(
+    filterStateForPlayer(passed.state, p2).legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ).length,
+    1,
   );
 });
 

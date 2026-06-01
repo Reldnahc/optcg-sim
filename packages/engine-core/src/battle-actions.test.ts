@@ -15,7 +15,11 @@ import {
   resolvedCard,
   toCardId,
 } from "./action-test-fixtures.js";
-import { cardRef, setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  cardRef,
+  resolveNoTriggerLifeDamageDecisionsForTests,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 
 const addTrashCards = (
   state: ReturnType<typeof setupAttackState>,
@@ -55,11 +59,13 @@ const assertCounterPassDecision = (
 
 const passCounterStep = (state: GameState, playerId: PlayerId) => {
   const decision = assertCounterPassDecision(state, playerId);
-  return applyAction(state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "cards", cards: [] },
-  });
+  return resolveNoTriggerLifeDamageDecisionsForTests(
+    applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    }),
+  );
 };
 
 const installWhenAttackingConditionalPowerReduction = (

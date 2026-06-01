@@ -88,10 +88,10 @@ test("supported declareAttack resolves vanilla battle internally without continu
     opened.state.seq,
     ((seqBefore as number) + 1) as typeof state.seq,
   );
-  assert.equal(result.state.actionSeq, actionSeqBefore + 2);
+  assert.equal(result.state.actionSeq, actionSeqBefore + 3);
   assert.equal(
     result.events.every(
-      (event) => event.createdAtStateSeq === result.state.seq,
+      (event) => Number(event.createdAtStateSeq) <= Number(result.state.seq),
     ),
     true,
   );

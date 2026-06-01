@@ -509,11 +509,42 @@ export const passCounterStep = (
   playerId: PlayerId = p2,
 ): EngineResult => {
   const decision = assertCounterStepPassDecision(state, playerId);
-  return applyAction(state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "cards", cards: [] },
-  });
+  return resolveNoTriggerLifeDamageDecisionsForTests(
+    applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    }),
+  );
+};
+
+export const resolveNoTriggerLifeDamageDecisionsForTests = (
+  result: EngineResult,
+): EngineResult => {
+  let current = result;
+  let events = [...result.events];
+  for (let guard = 0; guard < 5; guard += 1) {
+    const decision = current.state.pendingDecision;
+    if (decision?.type !== "confirmLifeTrigger") {
+      return { ...current, events };
+    }
+    const triggerText =
+      current.state.cardManifest.cards[decision.card.cardId]?.triggerText;
+    if (triggerText !== undefined && triggerText.trim().length > 0) {
+      return { ...current, events };
+    }
+    const next = applyAction(current.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "lifeTrigger", choice: "addToHand" },
+    });
+    if (next.errors !== undefined) {
+      return { ...next, events: [...events, ...next.events] };
+    }
+    events = [...events, ...next.events];
+    current = next;
+  }
+  assert.fail("too many no-trigger life damage decisions");
 };
 
 export const installSupportedCounterEvent = (

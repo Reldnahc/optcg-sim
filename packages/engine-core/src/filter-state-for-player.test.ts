@@ -227,6 +227,11 @@ test("confirmLifeTrigger projection is private to decision player and does not l
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2 state");
   const lifeCard = must(p2State.life[0], "top life").card;
+  const hiddenLifeCardId = toCardId("hidden-life-trigger-card");
+  state.cardManifest.cards[hiddenLifeCardId] = resolvedCard({
+    cardId: hiddenLifeCardId,
+    category: "character",
+  });
   state.pendingDecision = {
     id: toDecisionId("decision:life-trigger"),
     type: "confirmLifeTrigger",
@@ -236,7 +241,7 @@ test("confirmLifeTrigger projection is private to decision player and does not l
     visibility: { type: "public" },
     card: {
       instanceId: lifeCard.instanceId,
-      cardId: toCardId("hidden-life-trigger-card"),
+      cardId: hiddenLifeCardId,
       playerId: p2,
       zone: lifeCard.zone,
     },

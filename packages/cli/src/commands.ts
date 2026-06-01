@@ -472,6 +472,10 @@ const dispatchRespond = (
     return dispatchNoCardsResponse(state, choice);
   }
 
+  if (choice === "add-to-hand" || choice === "trigger") {
+    return dispatchLifeTriggerResponse(state, choice);
+  }
+
   if (choice !== "keep" && choice !== "mulligan") {
     return resultFromState(state, [`Unsupported respond choice: ${choice}.`]);
   }
@@ -488,6 +492,29 @@ const dispatchRespond = (
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "mulligan", keep: choice === "keep" },
+    }),
+  );
+};
+
+const dispatchLifeTriggerResponse = (
+  state: GameState,
+  choice: "add-to-hand" | "trigger",
+): DispatchCliCommandResult => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "confirmLifeTrigger") {
+    return resultFromState(state, [
+      `No supported pending decision for respond ${choice}.`,
+    ]);
+  }
+
+  return resultFromEngine(
+    applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "lifeTrigger",
+        choice: choice === "trigger" ? "activateTrigger" : "addToHand",
+      },
     }),
   );
 };

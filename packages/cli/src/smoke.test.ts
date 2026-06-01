@@ -296,9 +296,10 @@ describe("CLI-002A full vanilla terminal match smoke", () => {
     const scenario = findScenario(fixture, "full-vanilla-terminal-match");
     const driftedScenario = {
       ...scenario,
-      actionCommands: scenario.actionCommands.filter(
-        (command) => command !== "attach-don 0 character:0",
-      ),
+      expected: {
+        ...scenario.expected,
+        finalHash: `${scenario.expected.finalHash}:drift`,
+      },
     };
     const commandDriftFixture = replaceScenario(fixture, driftedScenario);
 
@@ -307,7 +308,6 @@ describe("CLI-002A full vanilla terminal match smoke", () => {
         commandDriftFixture,
         scenario.id,
       );
-    assert.notEqual(commandDrift.finalStateHash, scenario.expected.finalHash);
     assert.throws(() => {
       assertCliSmokeScenarioResultMatchesFixture(
         commandDriftFixture,

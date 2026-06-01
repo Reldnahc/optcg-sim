@@ -25,6 +25,7 @@ import {
   setupFullCharacterPlayState,
   setupMainPlayState,
 } from "./play-card-test-fixtures.js";
+import { effectDefinition } from "./battle-actions-test-fixtures.js";
 import {
   toDecisionId,
   toEffectId,
@@ -344,6 +345,40 @@ test("getLegalActions exposes confirmLifeTrigger respondToDecision only to decis
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2");
   const lifeCard = must(p2State.life[0], "top life").card;
+  const definition = effectDefinition(lifeCard.cardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "trigger effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
+  const supportedDefinition = {
+    ...definition,
+    effects: [
+      {
+        ...effectWithoutFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+      },
+    ],
+  };
+  state.cardManifest.cards[lifeCard.cardId] = resolvedCard({
+    cardId: lifeCard.cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 1 card",
+    support: {
+      cardId: lifeCard.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-life-trigger",
+      tested: true,
+      cardDataVersion: state.cardManifest.cardDataVersion,
+      rulesVersion: supportedDefinition.metadata.rulesVersion,
+      sourceTextHash: supportedDefinition.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    supportedDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-life-trigger": supportedDefinition,
+  };
   state.pendingDecision = {
     id: toDecisionId("decision:life-trigger"),
     type: "confirmLifeTrigger",

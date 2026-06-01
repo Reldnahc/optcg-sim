@@ -30,6 +30,7 @@ import { addCardsToHand, reifyCardRef } from "./action-state.js";
 import { isSupportedBattleResolutionEnvelope } from "./battle-support.js";
 import {
   processEffectRuntime,
+  releaseDamageDeferredEffectQueue,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
@@ -255,6 +256,36 @@ export const getSupportedLifeTriggerDecision = (
   };
 };
 
+export const getLifeDamageDecision = (
+  state: GameState,
+  damagedPlayerId: PlayerId,
+  card: CardInstance,
+): ConfirmLifeTriggerDecision | undefined => {
+  const resolved = state.cardManifest.cards[card.cardId];
+  if (resolved === undefined) {
+    return undefined;
+  }
+  if (hasLifeTriggerText(resolved.triggerText)) {
+    return getSupportedLifeTriggerDecision(state, damagedPlayerId, card);
+  }
+  return {
+    id: toDecisionId(
+      `decision:life-trigger:${String(card.instanceId)}:${String(state.seq + 1)}`,
+    ),
+    type: "confirmLifeTrigger",
+    playerId: damagedPlayerId,
+    prompt: "Activate life trigger?",
+    causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+    visibility: { type: "public" },
+    card: {
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      playerId: damagedPlayerId,
+    },
+    options: ["activateTrigger", "addToHand"],
+  };
+};
+
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
@@ -356,22 +387,36 @@ export const getLifeTriggerLegalActions = (
     decision === undefined ||
     decision.type !== "confirmLifeTrigger" ||
     decision.playerId !== playerId ||
-    resolved?.support.status === "unsupported" ||
-    (resolved?.support.status === "implemented-dsl" &&
-      resolveSupportedLifeTriggerEffect(state, {
+    resolved === undefined
+  ) {
+    return [];
+  }
+  const supportedTrigger = hasLifeTriggerText(resolved.triggerText)
+    ? resolveSupportedLifeTriggerEffect(state, {
         cardId: decision.card.cardId,
         instanceId: decision.card.instanceId,
         playerId: decision.card.playerId,
-      }) === undefined)
+      })
+    : undefined;
+  if (
+    hasLifeTriggerText(resolved.triggerText) &&
+    supportedTrigger === undefined
   ) {
     return [];
   }
   return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "lifeTrigger", choice: "activateTrigger" },
-    },
+    ...(supportedTrigger === undefined
+      ? []
+      : [
+          {
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: {
+              type: "lifeTrigger" as const,
+              choice: "activateTrigger" as const,
+            },
+          },
+        ]),
     {
       type: "respondToDecision",
       decisionId: decision.id,
@@ -403,7 +448,6 @@ const validateDamageContinuation = (
     state.effectQueue.length > 0 ||
     state.deferredTriggers.length > 0 ||
     state.replacementState.length > 0 ||
-    state.continuousEffects.length > 0 ||
     reifyCardRef(state, battle.attacker) === null ||
     reifyCardRef(state, battle.currentTarget) === null
   ) {
@@ -416,7 +460,26 @@ const continueDamageAfterLifeTriggerResponse = (
   state: GameState,
   responseResult: EngineResult,
 ): EngineResult => {
-  if (state.battle === undefined || responseResult.errors !== undefined) {
+  if (responseResult.errors !== undefined) {
+    return responseResult;
+  }
+  if (state.battle === undefined) {
+    const releasedState = releaseDamageDeferredEffectQueue(
+      responseResult.state,
+    );
+    if (releasedState === null) {
+      return malformedContinuation(state);
+    }
+    if (releasedState.effectQueue.length > 0) {
+      const resolved = processEffectRuntime(releasedState);
+      if (resolved.errors !== undefined) {
+        return toEngineResult(state, [], toErrorTuple(resolved.errors));
+      }
+      return toEngineResult(resolved.state, [
+        ...responseResult.events,
+        ...resolved.events,
+      ]);
+    }
     return responseResult;
   }
   if (damageContinuationResolver === undefined) {

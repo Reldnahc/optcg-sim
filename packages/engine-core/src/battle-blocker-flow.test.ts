@@ -307,7 +307,7 @@ test("empty block-step respondToDecision declines and resumes existing no-block 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.battle, undefined);
-  assert.equal(result.state.actionSeq, opened.state.actionSeq + 2);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 3);
   assert.equal(
     result.events.some((event) => event.type === "decisionResolved"),
     true,

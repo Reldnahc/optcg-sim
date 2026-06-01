@@ -382,7 +382,7 @@ const runEng021cLeaderDamageCleanupScript = () => {
     opened.state,
     damaged,
     "ENG-021C leader damage cleanup",
-    ["damageDealt", "lifeTaken", "cardMoved"],
+    ["damageDealt", "lifeTaken"],
   );
   assert.equal(
     must(damaged.state.players[p2], "ENG-021C damaged p2").life.length,
@@ -432,7 +432,7 @@ const runEng021dVanillaLeaderDamageCleanupScript = () => {
     opened.state,
     damaged,
     "ENG-021D vanilla Leader damage cleanup",
-    ["damageDealt", "lifeTaken", "cardMoved"],
+    ["damageDealt", "lifeTaken"],
   );
   assert.equal(
     must(damaged.state.players[p2], "ENG-021D damaged p2").life.length,

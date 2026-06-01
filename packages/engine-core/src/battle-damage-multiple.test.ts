@@ -229,6 +229,33 @@ const resolveBattleAfterCounterPass = (
   return passCounterStep(opened.state, p2);
 };
 
+const resolveNoTriggerLifeDamageDecisions = (
+  result: EngineResult,
+): EngineResult => {
+  let current = result;
+  let events = [...result.events];
+  for (let guard = 0; guard < 5; guard += 1) {
+    const decision = current.state.pendingDecision;
+    if (decision?.type !== "confirmLifeTrigger") {
+      return { ...current, events };
+    }
+    const triggerText =
+      current.state.cardManifest.cards[decision.card.cardId]?.triggerText;
+    if (triggerText !== undefined && triggerText.trim().length > 0) {
+      return { ...current, events };
+    }
+    const next = applyAction(current.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "lifeTrigger", choice: "addToHand" },
+    });
+    assertAcceptedHash(next);
+    events = [...events, ...next.events];
+    current = next;
+  }
+  assert.fail("too many no-trigger life damage decisions");
+};
+
 test("double attack leader damage processes two life cards sequentially", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const p2State = must(state.players[p2], "p2");
@@ -237,7 +264,9 @@ test("double attack leader damage processes two life cards sequentially", () => 
   const beforeLife = p2State.life.length;
   const beforeHand = p2State.hand.length;
 
-  const result = resolveBattleAfterCounterPass(state);
+  const result = resolveNoTriggerLifeDamageDecisions(
+    resolveBattleAfterCounterPass(state),
+  );
 
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
@@ -276,14 +305,18 @@ test("double attack leader damage processes two life cards sequentially", () => 
     { type: "decisionResolved", visibility: "public" },
     { type: "damageDealt", visibility: "public" },
     { type: "lifeTaken", visibility: "public" },
+    { type: "decisionCreated", visibility: "private" },
+    { type: "decisionResolved", visibility: "private" },
     { type: "cardMoved", visibility: "public" },
     { type: "cardMoved", visibility: "private" },
     { type: "damageDealt", visibility: "public" },
     { type: "lifeTaken", visibility: "public" },
-    { type: "cardMoved", visibility: "public" },
-    { type: "cardMoved", visibility: "private" },
+    { type: "decisionCreated", visibility: "private" },
     { type: "effectResolved", visibility: "replayOnly" },
     { type: "ruleProcessingChecked", visibility: "replayOnly" },
+    { type: "decisionResolved", visibility: "private" },
+    { type: "cardMoved", visibility: "public" },
+    { type: "cardMoved", visibility: "private" },
   ]);
 });
 
@@ -465,11 +498,13 @@ test("accepting first Double Attack Life Trigger resumes and can create second t
     "first life trigger decision",
   );
 
-  const result = applyAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: firstDecision.id,
-    response: { type: "lifeTrigger", choice: "activateTrigger" },
-  });
+  const result = resolveNoTriggerLifeDamageDecisions(
+    applyAction(opened.state, {
+      type: "respondToDecision",
+      decisionId: firstDecision.id,
+      response: { type: "lifeTrigger", choice: "activateTrigger" },
+    }),
+  );
 
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
@@ -614,11 +649,13 @@ test("Double Attack defers Life Trigger effectResolved follow-up until all damag
     "first life trigger decision",
   );
 
-  const result = applyAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: firstDecision.id,
-    response: { type: "lifeTrigger", choice: "activateTrigger" },
-  });
+  const result = resolveNoTriggerLifeDamageDecisions(
+    applyAction(opened.state, {
+      type: "respondToDecision",
+      decisionId: firstDecision.id,
+      response: { type: "lifeTrigger", choice: "activateTrigger" },
+    }),
+  );
 
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
@@ -923,7 +960,9 @@ test("supported doubleAttack declareAttack against leader applies two damage poi
   });
 
   assert.equal(opened.errors, undefined);
-  const result = passCounterStep(opened.state, p2);
+  const result = resolveNoTriggerLifeDamageDecisions(
+    passCounterStep(opened.state, p2),
+  );
   assertAcceptedHash(result);
   const nextP2 = must(result.state.players[p2], "p2");
   assert.equal(nextP2.life.length, beforeLife - 2);
@@ -967,7 +1006,9 @@ test("conditional continuous doubleAttack grant applies two leader damage points
   });
 
   assert.equal(opened.errors, undefined);
-  const result = passCounterStep(opened.state, p2);
+  const result = resolveNoTriggerLifeDamageDecisions(
+    passCounterStep(opened.state, p2),
+  );
   assert.equal(result.errors, undefined);
   assertAcceptedHash(result);
   assert.equal(

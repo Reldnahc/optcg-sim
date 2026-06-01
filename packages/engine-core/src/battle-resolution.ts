@@ -65,6 +65,7 @@ import {
 import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import {
+  getLifeDamageDecision,
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
   registerLifeTriggerDamageContinuationResolver,
@@ -581,13 +582,14 @@ const processLeaderDamagePoint = ({
     };
   }
   const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
-  const supportedLifeTriggerDecision = attackerHasBanish
+  const lifeDamageDecision = attackerHasBanish
     ? undefined
-    : getSupportedLifeTriggerDecision(nextState, targetPlayerId, topLife.card);
+    : getLifeDamageDecision(nextState, targetPlayerId, topLife.card);
   if (
     !attackerHasBanish &&
     hasLifeTriggerText(lifeMeta?.triggerText) &&
-    supportedLifeTriggerDecision === undefined
+    getSupportedLifeTriggerDecision(nextState, targetPlayerId, topLife.card) ===
+      undefined
   ) {
     return {
       result: unsupportedBattleResolution(
@@ -601,7 +603,7 @@ const processLeaderDamagePoint = ({
     target: targetInstanceId,
     amount: 1,
   });
-  if (supportedLifeTriggerDecision === undefined) {
+  if (lifeDamageDecision === undefined) {
     const movedLifeCard: CardInstance = {
       ...topLife.card,
       zone: {
@@ -715,9 +717,9 @@ const processLeaderDamagePoint = ({
     events,
     "decisionCreated",
     {
-      decisionId: supportedLifeTriggerDecision.id,
-      decisionType: supportedLifeTriggerDecision.type,
-      playerId: supportedLifeTriggerDecision.playerId,
+      decisionId: lifeDamageDecision.id,
+      decisionType: lifeDamageDecision.type,
+      playerId: lifeDamageDecision.playerId,
     },
     { type: "private", playerId: targetPlayerId },
   );
@@ -745,7 +747,7 @@ const processLeaderDamagePoint = ({
         life: nextLife,
       },
     },
-    pendingDecision: supportedLifeTriggerDecision,
+    pendingDecision: lifeDamageDecision,
   };
   return {
     state: stateWithDecision,
