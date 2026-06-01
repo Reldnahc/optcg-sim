@@ -295,6 +295,10 @@ describe("hand layout", () => {
       /\.hand-cards\s+\.card-tile-shell\s*\{[^}]*transition:\s*margin-left 80ms ease,\s*transform 80ms ease;/u,
     );
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*height:\s*100%;/u);
+    assert.match(
+      styles,
+      /\.hand-drag-placeholder\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*10;/u,
+    );
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*transition:/u);
     assert.match(
       styles,
