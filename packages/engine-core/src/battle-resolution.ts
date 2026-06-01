@@ -795,6 +795,9 @@ const enterCounterStepAfterDefenderTiming = (
   if (defenderTiming.state.status.type !== "active") {
     return { result: defenderTiming };
   }
+  if (defenderTiming.state.pendingDecision !== undefined) {
+    return { result: defenderTiming };
+  }
   if (!battleParticipantsRemainLegal(defenderTiming.state)) {
     return {
       result: finalizeSupportedEndOfBattleCleanup({

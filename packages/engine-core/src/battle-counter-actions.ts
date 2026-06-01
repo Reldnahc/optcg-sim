@@ -1044,7 +1044,7 @@ export const applyCounterStepDecisionResponse = (
     }
     const context = parseCounterPayCostDecisionId(String(decision.id));
     if (context === null) {
-      return illegalAction(state, "Unsupported payCost decision context.");
+      return null;
     }
     const defender = state.players[decision.playerId];
     if (defender === undefined) {
