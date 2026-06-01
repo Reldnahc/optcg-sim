@@ -616,6 +616,12 @@ export type Effect =
       sourceCategories: CardCategory[];
       duration: Duration;
     }
+  | {
+      type: "preventPlay";
+      player: PlayerRef;
+      filter: CardFilter;
+      duration: Duration;
+    }
   | { type: "search"; request: SearchRequest }
   | {
       type: "placeTopDeckCards";

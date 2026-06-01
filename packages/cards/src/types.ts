@@ -71,6 +71,7 @@ export type PrimitiveEvidence =
   | "instruction:draw"
   | "instruction:preventDraw"
   | "instruction:preventDonActivation"
+  | "instruction:preventPlay"
   | "instruction:trashFromHand"
   | "instruction:moveCards"
   | "instruction:activate"

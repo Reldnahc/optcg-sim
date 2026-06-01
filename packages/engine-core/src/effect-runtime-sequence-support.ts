@@ -48,6 +48,7 @@ type DirectContinuousEffect = Extract<
       | "modifyCost"
       | "preventDraw"
       | "preventDonActivation"
+      | "preventPlay"
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
@@ -68,6 +69,7 @@ type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
   then:
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "preventDonActivation" }>
+    | Extract<Effect, { type: "preventPlay" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>

@@ -284,6 +284,35 @@ test("DON activation restriction materializes as source-category-scoped continuo
   assert.deepEqual(restriction.duration, { type: "thisTurn" });
 });
 
+test("play restriction materializes as filtered hand continuous restriction", () => {
+  const { state } = sequenceQueueState({
+    type: "preventPlay",
+    player: "self",
+    filter: { categories: ["character"], cost: { min: 7 } },
+    duration: { type: "thisTurn" },
+  });
+
+  const resolved = processEffectRuntime(state);
+  const restriction = must(
+    resolved.state.continuousEffects.find(
+      (effect) =>
+        effect.modifier.layer === "restriction" &&
+        effect.modifier.operation.type === "restriction" &&
+        effect.modifier.operation.restriction === "cannotPlay",
+    ),
+    "play restriction",
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(restriction.modifier.target, {
+    type: "allMatching",
+    zone: "hand",
+    player: "self",
+    filter: { categories: ["character"], cost: { min: 7 } },
+  });
+  assert.deepEqual(restriction.duration, { type: "thisTurn" });
+});
+
 test("DON activation restriction remains safe for player snapshots", () => {
   const { state } = sequenceQueueState({
     type: "preventDonActivation",

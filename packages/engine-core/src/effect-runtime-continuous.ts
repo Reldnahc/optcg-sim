@@ -19,13 +19,13 @@ import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "./effect-runtime-conditions.js";
+import type { ContinuousQueueEffect } from "./effect-runtime-continuous-types.js";
 import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import {
   isSupportedFieldRemovalProtection,
   isSupportedRestProtection,
   malformedFieldRemovalProtectionMessage,
 } from "./field-removal-protection-shape.js";
-
 const supportedRestriction = new Set([
   "cannotAttack",
   "cannotBlock",
@@ -49,7 +49,12 @@ const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
   "cost",
   "typesAny",
 ]);
-
+const supportedPlayRestrictionFilterKeys = new Set<keyof CardFilter>([
+  "categories",
+  "cost",
+  "names",
+  "typesAny",
+]);
 const isSupportedDuration = (duration: Duration): boolean => {
   if (
     duration.type === "thisBattle" ||
@@ -90,7 +95,6 @@ const isSupportedBasePowerDuration = (duration: Duration): boolean =>
   duration.type === "whileSourceOnField" ||
   (duration.type === "whileConditionTrue" &&
     isSupportedQueuedEffectConditionShape(duration.condition));
-
 const hasSupportedNumericFilter = (
   filter: CardFilter["cost"] | CardFilter["power"],
 ): boolean => {
@@ -114,7 +118,6 @@ const isSupportedAllFilter = (filter: CardFilter | undefined): boolean =>
   ) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power));
-
 const isNonEmptyStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) &&
   value.length > 0 &&
@@ -173,7 +176,17 @@ const isSupportedCostModifierEffect = (
       effect.target !== undefined &&
       effect.filter === undefined &&
       isSupportedTarget(effect.target)));
-
+const isSupportedPlayRestrictionFilter = (
+  filter: CardFilter | undefined,
+): boolean =>
+  filter !== undefined &&
+  Object.keys(filter).every((key) =>
+    supportedPlayRestrictionFilterKeys.has(key as keyof CardFilter),
+  ) &&
+  (filter.categories === undefined || filter.categories.length > 0) &&
+  (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
+  (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
+  hasSupportedNumericFilter(filter.cost);
 const isSupportedPowerValue = (
   value: Extract<Effect, { type: "modifyPower" }>["value"],
 ): boolean =>
@@ -185,7 +198,6 @@ const isSupportedPowerValue = (
 type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];
 };
-
 const resolvePowerValue = (
   state: GameState,
   value: Extract<Effect, { type: "modifyPower" }>["value"],
@@ -208,7 +220,6 @@ const resolvePowerValue = (
   }
   return totalCost * value.multiplier;
 };
-
 const isSupportedChooseFromZonesTarget = (
   target: Extract<Target, { type: "chooseFromZones" }>,
 ): boolean =>
@@ -240,22 +251,14 @@ const isSupportedTarget = (target: Target): boolean => {
 
 export const isSupportedContinuousQueueEffect = (
   effect: Effect,
-): effect is
-  | Extract<Effect, { type: "modifyPower" }>
-  | Extract<Effect, { type: "giveKeyword" }>
-  | Extract<Effect, { type: "modifyCost" }>
-  | Extract<Effect, { type: "preventDraw" }>
-  | Extract<Effect, { type: "preventDonActivation" }>
-  | Extract<Effect, { type: "invalidateEffects" }>
-  | Extract<Effect, { type: "cannotBecomeActive" }>
-  | Extract<Effect, { type: "cannotAttack" }>
-  | Extract<Effect, { type: "cannotBlock" }> => {
+): effect is ContinuousQueueEffect => {
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "modifyCost" &&
     effect.type !== "preventDraw" &&
     effect.type !== "preventDonActivation" &&
+    effect.type !== "preventPlay" &&
     effect.type !== "invalidateEffects" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
@@ -279,6 +282,12 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (effect.type === "preventDonActivation") {
     return effect.player === "self" && effect.sourceCategories.length > 0;
+  }
+  if (effect.type === "preventPlay") {
+    return (
+      effect.player === "self" &&
+      isSupportedPlayRestrictionFilter(effect.filter)
+    );
   }
   if (
     effect.type === "invalidateEffects" &&
@@ -328,16 +337,7 @@ const toExactCardTarget = (
 
 const mapEffectToModifier = (
   state: GameState,
-  effect:
-    | Extract<Effect, { type: "modifyPower" }>
-    | Extract<Effect, { type: "giveKeyword" }>
-    | Extract<Effect, { type: "modifyCost" }>
-    | Extract<Effect, { type: "preventDraw" }>
-    | Extract<Effect, { type: "preventDonActivation" }>
-    | Extract<Effect, { type: "invalidateEffects" }>
-    | Extract<Effect, { type: "cannotBecomeActive" }>
-    | Extract<Effect, { type: "cannotAttack" }>
-    | Extract<Effect, { type: "cannotBlock" }>,
+  effect: ContinuousQueueEffect,
   target: TargetSpec,
   context?: ContinuousResolutionContext,
 ): ContinuousEffectRecord["modifier"] | null => {
@@ -384,6 +384,13 @@ const mapEffectToModifier = (
       },
     };
   }
+  if (effect.type === "preventPlay") {
+    return {
+      layer: "restriction",
+      target,
+      operation: { type: "restriction", restriction: "cannotPlay" },
+    };
+  }
   if (effect.type === "invalidateEffects") {
     return {
       layer: "effectInvalidation",
@@ -415,16 +422,7 @@ const costModifierTargetForEffect = (
 const createRecord = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect:
-    | Extract<Effect, { type: "modifyPower" }>
-    | Extract<Effect, { type: "giveKeyword" }>
-    | Extract<Effect, { type: "modifyCost" }>
-    | Extract<Effect, { type: "preventDraw" }>
-    | Extract<Effect, { type: "preventDonActivation" }>
-    | Extract<Effect, { type: "invalidateEffects" }>
-    | Extract<Effect, { type: "cannotBecomeActive" }>
-    | Extract<Effect, { type: "cannotAttack" }>
-    | Extract<Effect, { type: "cannotBlock" }>,
+  effect: ContinuousQueueEffect,
   target: TargetSpec,
   index: number,
   context?: ContinuousResolutionContext,
@@ -462,16 +460,7 @@ const isPublicResolvableFieldObject = (
 export const createContinuousRecordsForResolvedEffect = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect:
-    | Extract<Effect, { type: "modifyPower" }>
-    | Extract<Effect, { type: "giveKeyword" }>
-    | Extract<Effect, { type: "modifyCost" }>
-    | Extract<Effect, { type: "preventDraw" }>
-    | Extract<Effect, { type: "preventDonActivation" }>
-    | Extract<Effect, { type: "invalidateEffects" }>
-    | Extract<Effect, { type: "cannotBecomeActive" }>
-    | Extract<Effect, { type: "cannotAttack" }>
-    | Extract<Effect, { type: "cannotBlock" }>,
+  effect: ContinuousQueueEffect,
   chosenTargets?: readonly CardRef[],
   context?: ContinuousResolutionContext,
 ): ContinuousEffectRecord[] | null => {
@@ -492,6 +481,22 @@ export const createContinuousRecordsForResolvedEffect = (
       entry,
       effect,
       { type: "player", player: effect.player },
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
+  if (effect.type === "preventPlay") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      {
+        type: "allMatching",
+        zone: "hand",
+        player: effect.player,
+        filter: effect.filter,
+      },
       0,
       context,
     );

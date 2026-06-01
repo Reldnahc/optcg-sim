@@ -79,6 +79,56 @@ const addCelestialDragonsHandCostReduction = (
   } satisfies ContinuousEffectRecord);
 };
 
+const addHighCostCharacterPlayRestriction = (state: GameState): void => {
+  const source = must(state.players[p1], "p1").leader;
+  state.continuousEffects.push({
+    id: "test:play-restriction",
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "leader",
+      colors: [],
+      keywords: [],
+    },
+    controller: p1,
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test" },
+    createdAtStateSeq: state.seq,
+    modifier: {
+      layer: "restriction",
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: "self",
+        filter: { categories: ["character"], cost: { min: 7 } },
+      },
+      operation: { type: "restriction", restriction: "cannotPlay" },
+    },
+  } satisfies ContinuousEffectRecord);
+};
+
+const setActiveDonCount = (state: GameState, count: number): void => {
+  const player = must(state.players[p1], "p1");
+  const source = must([...player.costArea, ...player.donDeck][0], "DON source");
+  player.costArea = Array.from({ length: count }, (_, index) => ({
+    ...source,
+    instanceId:
+      `${String(source.instanceId)}:active:${String(index)}` as CardInstance["instanceId"],
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+    state: "active",
+  }));
+  player.donDeck = [];
+};
+
 const addStageDerivedCelestialDragonsHandCostReduction = (
   state: GameState,
 ): void => {
@@ -375,6 +425,45 @@ test("playCard uses continuous cost reductions when checking and paying play cos
     ).length,
     3,
   );
+});
+
+test("playCard omits and rejects cards blocked by filtered play restrictions", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const blocked = must(p1State.hand[0], "blocked character");
+  const allowedLowerCost = must(p1State.hand[1], "allowed lower-cost");
+  const allowedStage = must(p1State.hand[2], "allowed stage");
+  setActiveDonCount(state, 10);
+  state.cardManifest.cards[blocked.cardId] = resolvedCard({
+    cardId: blocked.cardId,
+    category: "character",
+    cost: 7,
+    power: 7000,
+  });
+  state.cardManifest.cards[allowedLowerCost.cardId] = resolvedCard({
+    cardId: allowedLowerCost.cardId,
+    category: "character",
+    cost: 6,
+    power: 6000,
+  });
+  state.cardManifest.cards[allowedStage.cardId] = resolvedCard({
+    cardId: allowedStage.cardId,
+    category: "stage",
+    cost: 7,
+  });
+  addHighCostCharacterPlayRestriction(state);
+
+  const legal = getPlayCardLegalActions(state, p1);
+  assert.equal(hasPlayCardAction(legal, blocked), false);
+  assert.equal(hasPlayCardAction(legal, allowedLowerCost), true);
+  assert.equal(hasPlayCardAction(legal, allowedStage), true);
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: blocked.instanceId,
+  });
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(result.state.pendingDecision, undefined);
 });
 
 test("playCard uses derived stage cost reductions for cards in hand", () => {

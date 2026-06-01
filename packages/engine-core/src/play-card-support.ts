@@ -34,12 +34,26 @@ const numericFilterMatches = (
   return true;
 };
 
-const cardMatchesCostModifierFilter = (
+const supportedHandCardFilterKeys = new Set<keyof CardFilter>([
+  "categories",
+  "cost",
+  "names",
+  "typesAny",
+]);
+
+const cardMatchesHandFilter = (
   state: GameState,
   card: CardInstance,
   filter: CardFilter | undefined,
 ): boolean => {
   if (filter === undefined) return true;
+  if (
+    !Object.keys(filter).every((key) =>
+      supportedHandCardFilterKeys.has(key as keyof CardFilter),
+    )
+  ) {
+    return false;
+  }
   const metadata = state.cardManifest.cards[card.cardId];
   if (metadata === undefined) return false;
   if (
@@ -51,6 +65,12 @@ const cardMatchesCostModifierFilter = (
   if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => metadata.types.includes(type))
+  ) {
+    return false;
+  }
+  if (
+    filter.names !== undefined &&
+    !filter.names.some((name) => metadata.name === name)
   ) {
     return false;
   }
@@ -163,7 +183,32 @@ const costModifierAppliesToCard = (
     return false;
   }
   if (card.controller !== playerId) return false;
-  return cardMatchesCostModifierFilter(state, card, target.filter);
+  return cardMatchesHandFilter(state, card, target.filter);
+};
+
+const playRestrictionAppliesToCard = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  if (effect.modifier.layer !== "restriction") return false;
+  if (effect.modifier.operation.type !== "restriction") return false;
+  if (effect.modifier.operation.restriction !== "cannotPlay") return false;
+  if (!costModifierDurationIsActive(state, effect)) return false;
+  if (!costModifierConditionPasses(state, effect)) return false;
+  const target = effect.modifier.target;
+  if (target.type !== "allMatching") return false;
+  if (target.zone !== "hand") return false;
+  if (card.zone.zone !== "hand") return false;
+  if (target.player === "self" && card.controller !== effect.controller) {
+    return false;
+  }
+  if (target.player === "opponent" && card.controller === effect.controller) {
+    return false;
+  }
+  if (card.controller !== playerId) return false;
+  return cardMatchesHandFilter(state, card, target.filter);
 };
 
 const hasOnlySupportedRelevantEffects = (
@@ -312,6 +357,19 @@ export const getEffectivePlayCost = (
   return Math.max(0, supported.printedCost + costDelta);
 };
 
+export const isPlayBlockedByRestriction = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+): boolean =>
+  [
+    ...state.continuousEffects,
+    ...deriveImplementedDslPermanentContinuousEffects(state),
+    ...deriveImplementedDslPlayCostContinuousEffects(state),
+  ].some((effect) =>
+    playRestrictionAppliesToCard(state, playerId, card, effect),
+  );
+
 export const getPlayableHandCards = (
   state: GameState,
   playerId: PlayerId,
@@ -329,6 +387,9 @@ export const getPlayableHandCards = (
     if (
       activeDonCount < getEffectivePlayCost(state, playerId, card, supported)
     ) {
+      return false;
+    }
+    if (isPlayBlockedByRestriction(state, playerId, card)) {
       return false;
     }
     return canResolveDestinationConflict(player, supported.category);

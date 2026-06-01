@@ -27,6 +27,7 @@ export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
 export { parsePlaySourceInstruction } from "./play-source.js";
 export { parsePreventDonActivationInstruction } from "./prevent-don-activation.js";
 export { parsePreventDrawInstruction } from "./prevent-draw.js";
+export { parsePreventPlayInstruction } from "./prevent-play.js";
 export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export {
   parsePreventOpponentCharactersRefreshInstruction,

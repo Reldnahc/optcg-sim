@@ -179,6 +179,16 @@ const isSupportedPlayerDonActivationRestriction = (
   (effect.modifier.operation.sourceCategories === undefined ||
     effect.modifier.operation.sourceCategories.length > 0);
 
+const isSupportedPlayRestriction = (effect: ContinuousEffectRecord): boolean =>
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.layer === "restriction" &&
+  effect.modifier.target.type === "allMatching" &&
+  effect.modifier.target.zone === "hand" &&
+  (effect.modifier.target.player === "self" ||
+    effect.modifier.target.player === "opponent") &&
+  effect.modifier.operation.type === "restriction" &&
+  effect.modifier.operation.restriction === "cannotPlay";
+
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
 ): boolean =>
@@ -266,6 +276,11 @@ const assertSupportedContinuousEffects = (state: GameState): void => {
       continue;
     }
     if (isSupportedPlayerDonActivationRestriction(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
+    }
+    if (isSupportedPlayRestriction(effect)) {
       if (!durationIsActive(state, effect)) continue;
       recordConditionPasses(state, effect);
       continue;

@@ -63,6 +63,7 @@ import {
   parseYourLeaderPowerOpponentNextEndInstruction,
   parsePlayFromHandInstruction,
   parsePreventDonActivationInstruction,
+  parsePreventPlayInstruction,
 } from "./instructions/index.js";
 import {
   parseAttachedDonMarker,
@@ -137,6 +138,7 @@ const instructionParsers = [
   parsePlaySourceInstruction,
   parsePreventDrawInstruction,
   parsePreventDonActivationInstruction,
+  parsePreventPlayInstruction,
   parseRevealTopInstruction,
   parseModifyPowerInstruction,
   parseTargetedModifyCostInstruction,

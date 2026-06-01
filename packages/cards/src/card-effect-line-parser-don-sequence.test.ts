@@ -248,6 +248,79 @@ it("parses activate-main DON activation followed by character-effect DON activat
   );
 });
 
+it("parses on-play DON activation followed by filtered play restriction", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Set up to 4 of your DON!! cards as active. Then, you cannot play Character cards with a base cost of 7 or more during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      zone: "costArea",
+                      player: "self",
+                      min: 0,
+                      max: 4,
+                      filter: { categories: ["don"], state: "rested" },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "activate",
+                    target: { type: "savedFieldObject" },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "preventPlay",
+              player: "self",
+              filter: { categories: ["character"], cost: { min: 7 } },
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:activate",
+      "instruction:preventPlay",
+      "target:yourDonCards",
+      "filter:category:don",
+      "filter:category:character",
+      "filter:cost",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "duration:thisTurn",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses main rest-DON cost with attached-DON condition and power reduction body", () => {
   const result = parseCardEffectLine(
     "[Main] You may rest 5 of your DON!! cards: If you have any DON!! cards given, give up to 1 of your opponent's Characters −8000 power during this turn.",

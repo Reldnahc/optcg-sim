@@ -51,6 +51,7 @@ import {
   getEffectivePlayCost,
   getPlayableHandCards,
   getSupportedPlayMetadata,
+  isPlayBlockedByRestriction,
   type SupportedPlayMetadata,
 } from "./play-card-support.js";
 import { continueRuntimeUntilIdle } from "./effect-runtime-decision-continuation.js";
@@ -156,6 +157,9 @@ export const applyPlayCard = (
   const supported = getSupportedPlayMetadata(state, handCard);
   if (supported === null) {
     return illegalAction(state, "playCard card is unsupported.");
+  }
+  if (isPlayBlockedByRestriction(state, playerId, handCard)) {
+    return illegalAction(state, "playCard is blocked by a play restriction.");
   }
   const playCost = getEffectivePlayCost(state, playerId, handCard, supported);
   if (getActiveDonCount(player.costArea) < playCost) {
