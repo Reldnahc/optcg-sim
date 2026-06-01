@@ -184,69 +184,84 @@ export const resolveSavedFieldObjectKoSelection = (params: {
   if (!refs.ok) {
     return refs;
   }
-  const objectIndex = params.target.binding.objectIndex ?? 0;
-  if (!Number.isInteger(objectIndex) || objectIndex < 0) {
+  const requestedObjectIndex = params.target.binding.objectIndex;
+  if (
+    requestedObjectIndex !== undefined &&
+    (!Number.isInteger(requestedObjectIndex) || requestedObjectIndex < 0)
+  ) {
     return { ok: false, reason: "invalid-object-index" };
   }
-  const object = refs.objects[objectIndex];
-  if (object === undefined) {
+  const objects =
+    requestedObjectIndex === undefined
+      ? refs.objects
+      : refs.objects[requestedObjectIndex] === undefined
+        ? []
+        : [refs.objects[requestedObjectIndex]];
+  if (objects.length === 0) {
     return { ok: false, reason: "missing-object" };
-  }
-  if (
-    object.binding.saveResultAs !== params.target.binding.saveResultAs ||
-    object.binding.family !== params.target.binding.family ||
-    (params.target.binding.sourceSegmentId !== undefined &&
-      object.binding.sourceSegmentId !== params.target.binding.sourceSegmentId)
-  ) {
-    return { ok: false, reason: "illegal-object" };
-  }
-  if (!isPublicFieldZone(object.object.zone)) {
-    return { ok: false, reason: "hidden-object" };
   }
   if (!Object.hasOwn(params.state.players, params.controllerId)) {
     return { ok: false, reason: "illegal-object" };
   }
-  const targetPlayerId =
-    params.target.player === "anyPlayer"
-      ? object.object.playerId
-      : params.target.player === "self"
-        ? params.controllerId
-        : params.target.player === "opponent"
-          ? getOpponentId(params.state, params.controllerId)
-          : params.target.player;
-  if (targetPlayerId === null) {
-    return { ok: false, reason: "illegal-object" };
-  }
-  if (
-    object.object.zone.zone !== params.target.zone ||
-    object.object.playerId !== targetPlayerId
-  ) {
-    return { ok: false, reason: "illegal-object" };
-  }
-  const located = findCardByInstanceId(params.state, object.object.instanceId);
-  if (located === null) {
-    return { ok: false, reason: "missing-object" };
-  }
-  if (!isPublicFieldZone(located.card.zone)) {
-    return { ok: false, reason: "hidden-object" };
-  }
-  if (
-    located.playerId !== object.object.playerId ||
-    located.card.cardId !== object.object.cardId ||
-    located.card.zone.zone !== object.object.zone.zone
-  ) {
-    return { ok: false, reason: "illegal-object" };
+
+  const selectedTargets: CardRef[] = [];
+  for (const object of objects) {
+    if (
+      object.binding.saveResultAs !== params.target.binding.saveResultAs ||
+      object.binding.family !== params.target.binding.family ||
+      (params.target.binding.sourceSegmentId !== undefined &&
+        object.binding.sourceSegmentId !==
+          params.target.binding.sourceSegmentId)
+    ) {
+      return { ok: false, reason: "illegal-object" };
+    }
+    if (!isPublicFieldZone(object.object.zone)) {
+      return { ok: false, reason: "hidden-object" };
+    }
+    const targetPlayerId =
+      params.target.player === "anyPlayer"
+        ? object.object.playerId
+        : params.target.player === "self"
+          ? params.controllerId
+          : params.target.player === "opponent"
+            ? getOpponentId(params.state, params.controllerId)
+            : params.target.player;
+    if (targetPlayerId === null) {
+      return { ok: false, reason: "illegal-object" };
+    }
+    if (
+      object.object.zone.zone !== params.target.zone ||
+      object.object.playerId !== targetPlayerId
+    ) {
+      return { ok: false, reason: "illegal-object" };
+    }
+    const located = findCardByInstanceId(
+      params.state,
+      object.object.instanceId,
+    );
+    if (located === null) {
+      return { ok: false, reason: "missing-object" };
+    }
+    if (!isPublicFieldZone(located.card.zone)) {
+      return { ok: false, reason: "hidden-object" };
+    }
+    if (
+      located.playerId !== object.object.playerId ||
+      located.card.cardId !== object.object.cardId ||
+      located.card.zone.zone !== object.object.zone.zone
+    ) {
+      return { ok: false, reason: "illegal-object" };
+    }
+    selectedTargets.push({
+      instanceId: located.card.instanceId,
+      cardId: located.card.cardId,
+      playerId: located.playerId,
+      zone: located.card.zone,
+    });
   }
   return {
     ok: true,
-    selectedTargets: [
-      {
-        instanceId: located.card.instanceId,
-        cardId: located.card.cardId,
-        playerId: located.playerId,
-        zone: located.card.zone,
-      },
-    ],
+    selectedTargets,
   };
 };
 

@@ -449,3 +449,59 @@ test("sequence support admits selecting up to 10 DON in cost area", () => {
   assert.equal(decision.candidates.length, 10);
   assert.equal(decision.request.max, 10);
 });
+
+test("saved target DON activation applies to every selected DON", () => {
+  const { state } = sequenceQueueState(
+    selectRestedDonThenActivateSavedTargetSequence(2),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const donTemplate = must(p1State.donDeck[0], "don template");
+  const restedDon = Array.from({ length: 2 }, (_, index) => ({
+    ...donTemplate,
+    instanceId: toInstanceId(`multi-don-activation:${String(index)}`),
+  }));
+  p1State.donDeck = p1State.donDeck.slice(2).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = restedDon.map((card, index) => {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "don",
+    });
+    return {
+      ...card,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+      state: "rested" as const,
+    };
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+  assert.equal(decision.candidates.length, 2);
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: decision.candidates.map((candidate) => candidate.card),
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const activeSelectedDon = must(
+    resolved.state.players[p1],
+    "after p1",
+  ).costArea.filter((card) =>
+    restedDon.some((selected) => selected.instanceId === card.instanceId),
+  );
+  assert.equal(activeSelectedDon.length, 2);
+  assert.deepEqual(
+    activeSelectedDon.map((card) => card.state),
+    ["active", "active"],
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
