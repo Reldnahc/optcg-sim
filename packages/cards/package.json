@@ -20,6 +20,7 @@
   "dependencies": {
     "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*",
+    "optcg-deck-hash": "^0.1.1",
     "redis": "^5.12.1"
   }
 }

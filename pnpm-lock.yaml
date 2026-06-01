@@ -62,6 +62,9 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
+      optcg-deck-hash:
+        specifier: ^0.1.1
+        version: 0.1.1
       redis:
         specifier: ^5.12.1
         version: 5.12.1

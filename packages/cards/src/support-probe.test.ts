@@ -227,4 +227,50 @@ describe("text-only support probe parser backend", () => {
       errors: ["Poneglyph card fetch failed for OP10-999: HTTP 404"],
     });
   });
+
+  it("probes decoded deck-hash card lists without requiring a leader", async () => {
+    const requestedUrls: string[] = [];
+    const report = await createSupportProbeReport({
+      deckHash: "hash-with-card-list",
+      deckHashCodec: {
+        decode: () =>
+          Promise.resolve({
+            leader: null,
+            main: [
+              { card_number: "OP01-001", count: 4, variant_index: 2 },
+              { card_number: "OP01-002", count: 1 },
+              { card_number: "OP01-001", count: 1, variant_index: 3 },
+            ],
+            don: null,
+          }),
+      },
+      fetchCard: (url) => {
+        requestedUrls.push(url);
+        const cardId = url.endsWith("OP01-001") ? "OP01-001" : "OP01-002";
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: cardId,
+                effect: "[On Play] Draw 1 card.",
+              },
+            }),
+        });
+      },
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(requestedUrls).toEqual([
+      "https://api.poneglyph.one/v1/cards/OP01-001",
+      "https://api.poneglyph.one/v1/cards/OP01-002",
+    ]);
+    expect(report.lines).toContain("Deck hash: hash-with-card-list");
+    expect(report.lines).toContain("Cards: 2 unique / 6 total");
+    expect(report.lines).toContain("Card ID: OP01-001 x5 variants: 2, 3");
+    expect(report.lines).toContain("Card ID: OP01-002 x1");
+    expect(report.lines).toContain("OP01-001 line 1 parse: passed");
+    expect(report.lines).toContain("OP01-002 line 1 engine runtime: passed");
+  });
 });

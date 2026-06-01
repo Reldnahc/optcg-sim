@@ -1,5 +1,10 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type { CardId, EffectBlock } from "@optcg/types";
+import {
+  createApiDeckHashDictionarySource,
+  createDeckHashCodec,
+  type DeckHashDeck,
+} from "optcg-deck-hash";
 
 import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
@@ -9,6 +14,8 @@ import type { ParsedEffectLine } from "./types.js";
 export interface SupportProbeRequest {
   readonly text?: string;
   readonly cardId?: string;
+  readonly deckHash?: string;
+  readonly deckHashCodec?: DeckHashCodecPort;
   readonly fetchCard?: PoneglyphFetch;
   readonly baseUrl?: string;
 }
@@ -34,9 +41,32 @@ type PoneglyphFetch = (url: string) => Promise<PoneglyphFetchResponse>;
 
 const defaultPoneglyphBaseUrl = "https://api.poneglyph.one";
 
+export interface DeckHashCodecPort {
+  readonly decode: (hash: string) => Promise<DeckHashDeck>;
+}
+
+const createPoneglyphDeckHashCodec = (): DeckHashCodecPort => {
+  const codec = createDeckHashCodec({
+    dictionarySource: createApiDeckHashDictionarySource({
+      baseUrl: "https://poneglyph.one",
+    }),
+  });
+  return {
+    decode: (hash) => codec.decode(hash),
+  };
+};
+
 export const createSupportProbeReport = async (
   request: SupportProbeRequest,
 ): Promise<SupportProbeReport> => {
+  if (request.deckHash !== undefined && request.deckHash.length > 0) {
+    return createDeckHashSupportProbeReport(request.deckHash, {
+      baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
+      deckHashCodec: request.deckHashCodec ?? createPoneglyphDeckHashCodec(),
+      fetchCard: request.fetchCard ?? fetchPoneglyphCard,
+    });
+  }
+
   if (request.cardId !== undefined && request.cardId.length > 0) {
     return createCardSupportProbeReport(request.cardId, {
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
@@ -48,11 +78,178 @@ export const createSupportProbeReport = async (
     return {
       exitCode: 1,
       lines: [],
-      errors: ["Usage: support:probe -- --text <effect line>"],
+      errors: [
+        "Usage: support:probe -- --text <effect line> | --card <card id> | --deck-hash <hash>",
+      ],
     };
   }
 
   return createTextLineReport(request.text);
+};
+
+interface DeckHashProbeEntry {
+  readonly cardId: string;
+  readonly count: number;
+  readonly variantIndex?: number;
+}
+
+interface AggregatedDeckHashProbeEntry {
+  readonly cardId: string;
+  readonly count: number;
+  readonly variantIndexes: readonly number[];
+}
+
+const createDeckHashSupportProbeReport = async (
+  deckHash: string,
+  options: {
+    readonly baseUrl: string;
+    readonly deckHashCodec: DeckHashCodecPort;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<SupportProbeReport> => {
+  const decoded = await decodeProbeDeckHash(deckHash, options.deckHashCodec);
+  if (!decoded.ok) {
+    return {
+      exitCode: 1,
+      lines: [],
+      errors: [`Deck hash decode failed: ${decoded.error}`],
+    };
+  }
+
+  const cards = aggregateDeckHashEntries(decoded.entries);
+  const totalCount = cards.reduce((sum, entry) => sum + entry.count, 0);
+  const lines = [
+    `Deck hash: ${deckHash}`,
+    `Cards: ${String(cards.length)} unique / ${String(totalCount)} total`,
+  ];
+  let exitCode = 0;
+
+  for (const card of cards) {
+    lines.push(deckHashEntryLine(card));
+    const fetched = await fetchPoneglyphCardPayload(card.cardId, options);
+    if (!fetched.ok) {
+      exitCode = 1;
+      lines.push(`${card.cardId} fetch: failed`);
+      lines.push(`${card.cardId} fetch reason: ${fetched.error}`);
+      continue;
+    }
+
+    const effectLines = gameplayLinesFromTextParts([fetched.card.effect]);
+    for (const [index, text] of effectLines.entries()) {
+      const lineNumber = index + 1;
+      const lineReport = evaluateParsedLine(
+        text,
+        `${card.cardId}:line:${String(lineNumber)}`,
+      );
+      lines.push(`${card.cardId} line ${String(lineNumber)} text: ${text}`);
+      if (!lineReport.parseOk) {
+        exitCode = 1;
+        lines.push(`${card.cardId} line ${String(lineNumber)} parse: failed`);
+        lines.push(
+          `${card.cardId} line ${String(lineNumber)} stage: ${lineReport.stage}`,
+        );
+        lines.push(
+          `${card.cardId} line ${String(lineNumber)} reason: ${lineReport.reason}`,
+        );
+        continue;
+      }
+
+      lines.push(`${card.cardId} line ${String(lineNumber)} parse: passed`);
+      lines.push(
+        `${card.cardId} line ${String(lineNumber)} engine runtime: ${
+          lineReport.runtimeSupported ? "passed" : "failed"
+        }`,
+      );
+      if (!lineReport.runtimeSupported) {
+        exitCode = 1;
+        lines.push(
+          `${card.cardId} line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
+        );
+      }
+    }
+  }
+
+  return { exitCode, lines, errors: [] };
+};
+
+const decodeProbeDeckHash = async (
+  deckHash: string,
+  codec: DeckHashCodecPort,
+): Promise<
+  | { readonly ok: true; readonly entries: readonly DeckHashProbeEntry[] }
+  | { readonly ok: false; readonly error: string }
+> => {
+  try {
+    const decoded = await codec.decode(deckHash);
+    return {
+      ok: true,
+      entries: [
+        ...(decoded.leader === null
+          ? []
+          : [
+              {
+                cardId: decoded.leader.card_number,
+                count: decoded.leader.count,
+                ...(decoded.leader.variant_index === undefined
+                  ? {}
+                  : { variantIndex: decoded.leader.variant_index }),
+              },
+            ]),
+        ...decoded.main.map((entry) => ({
+          cardId: entry.card_number,
+          count: entry.count,
+          ...(entry.variant_index === undefined
+            ? {}
+            : { variantIndex: entry.variant_index }),
+        })),
+      ],
+    };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+const aggregateDeckHashEntries = (
+  entries: readonly DeckHashProbeEntry[],
+): readonly AggregatedDeckHashProbeEntry[] => {
+  const byCardId = new Map<string, AggregatedDeckHashProbeEntry>();
+  for (const entry of entries) {
+    const existing = byCardId.get(entry.cardId);
+    const variantIndexes =
+      entry.variantIndex === undefined ? [] : [entry.variantIndex];
+    if (existing === undefined) {
+      byCardId.set(entry.cardId, {
+        cardId: entry.cardId,
+        count: entry.count,
+        variantIndexes,
+      });
+      continue;
+    }
+    byCardId.set(entry.cardId, {
+      cardId: existing.cardId,
+      count: existing.count + entry.count,
+      variantIndexes: uniqueNumbers([
+        ...existing.variantIndexes,
+        ...variantIndexes,
+      ]),
+    });
+  }
+  return [...byCardId.values()];
+};
+
+const uniqueNumbers = (values: readonly number[]): readonly number[] => [
+  ...new Set(values),
+];
+
+const deckHashEntryLine = (entry: AggregatedDeckHashProbeEntry): string => {
+  const variants =
+    entry.variantIndexes.length === 0
+      ? ""
+      : ` variants: ${entry.variantIndexes.join(", ")}`;
+  return `Card ID: ${entry.cardId} x${String(entry.count)}${variants}`;
 };
 
 const createCardSupportProbeReport = async (
