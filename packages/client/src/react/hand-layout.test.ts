@@ -284,7 +284,11 @@ describe("hand layout", () => {
     );
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*height:\s*100%;/u);
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*transition:/u);
-    assert.doesNotMatch(styles, /hand-drag-placeholder-enter/u);
+    assert.match(
+      styles,
+      /\.hand-drag-placeholder\s*\{[^}]*animation:\s*hand-drag-placeholder-enter 80ms ease-out;/u,
+    );
+    assert.match(styles, /@keyframes hand-drag-placeholder-enter/u);
     assert.match(
       styles,
       /\.card-tile-shell\.is-pointer-reorder-dragging\s*\{[^}]*transition:\s*none;/u,
