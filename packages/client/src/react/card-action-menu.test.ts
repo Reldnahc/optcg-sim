@@ -626,6 +626,27 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*is-selected/u);
   });
 
+  test("pending zone-click decision candidates render on opponent DON", () => {
+    const layout = board();
+    layout.opponent.costArea = [card("opponent-don-1", "DON!!")];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        pendingChoiceInstanceIds: ["opponent-don-1"],
+        decisionSelectedInstanceIds: ["opponent-don-1"],
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*is-pending-choice/u);
+    assert.match(markup, /class="[^"]*is-selected/u);
+  });
+
   test("battle arrow renders from public battle state", () => {
     const layout = board();
     layout.battleArrow = {

@@ -120,8 +120,12 @@ export const BoardLayout = ({
             cards={board.opponent.costArea}
             size="mini"
             displayMode="overlap"
+            pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+            decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+            selectedDonInstanceIds={selectedDonInstanceIds}
             activeCardInstanceIds={activeCardInstanceIds}
             onCardPreview={onPreviewCard}
+            onCardClick={onCardClick}
           />
         </div>
         <div className="playmat-zone opponent-life">
