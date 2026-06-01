@@ -1,4 +1,10 @@
-import type { CardColor, CardFilter, Comparator } from "@optcg/types";
+import type {
+  Attribute,
+  CardCategory,
+  CardColor,
+  CardFilter,
+  Comparator,
+} from "@optcg/types";
 
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
@@ -26,10 +32,12 @@ export interface CardFilterPredicateParseOptions {
 
 const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
+  parseTypeOrAttributeCategoryPredicate,
   parseTypeLeaderOrCharacterPredicate,
   parseTypeCharacterPredicate,
   parseGenericTypeCardPredicate,
   parseTypeOnlyPredicate,
+  parseAttributeCategoryPredicate,
   parseRestedCharacterPredicate,
   parseEventCategoryPredicate,
   parseStageCategoryPredicate,
@@ -139,6 +147,29 @@ function stripLeadingConnector(text: string): string {
   return text.replace(/^(?:with|and)\s+/i, "").trim();
 }
 
+function parseBraceName(text: string): string | undefined {
+  const name = /^\{(?<name>[^}]+)\}$/.exec(text)?.groups?.["name"]?.trim();
+  return name === undefined || name.length === 0 ? undefined : name;
+}
+
+function parseAngleAttribute(text: string): Attribute | undefined {
+  const name = /^<(?<name>[^>]+)>$/.exec(text)?.groups?.["name"]?.trim();
+  return name === undefined || name.length === 0
+    ? undefined
+    : (name.toLowerCase() as Attribute);
+}
+
+function categoryEvidence(category: string): PrimitiveEvidence {
+  const normalized = category.toLowerCase();
+  if (normalized === "character") {
+    return "filter:category:character";
+  }
+  if (normalized === "stage") {
+    return "filter:category:stage";
+  }
+  return "filter:category:event";
+}
+
 function parseTypeLeaderOrCharacterPredicate(
   text: string,
   current: CardFilter,
@@ -173,6 +204,48 @@ function parseTypeLeaderOrCharacterPredicate(
   };
 }
 
+function parseTypeOrAttributeCategoryPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<type>\{[^}]+\}) type or (?<attribute><[^>]+>) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeText = match?.groups?.["type"];
+  const attributeText = match?.groups?.["attribute"];
+  const categoryText = match?.groups?.["category"];
+  const restText = match?.groups?.["rest"];
+  if (
+    typeText === undefined ||
+    attributeText === undefined ||
+    categoryText === undefined
+  ) {
+    return undefined;
+  }
+
+  const typeName = parseBraceName(typeText);
+  const attribute = parseAngleAttribute(attributeText);
+  if (typeName === undefined || attribute === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      anyOf: [{ typesAny: [typeName] }, { attributesAny: [attribute] }],
+      categories: [categoryText.toLowerCase() as CardCategory],
+    },
+    evidence: [
+      "filter:anyOf",
+      "filter:type",
+      "filter:attribute",
+      categoryEvidence(categoryText),
+    ],
+    rest: restText ?? "",
+  };
+}
+
 function parseTypeCharacterPredicate(
   text: string,
   current: CardFilter,
@@ -188,7 +261,7 @@ function parseTypeCharacterPredicate(
     return undefined;
   }
 
-  const typeName = /^\{(?<name>[^}]+)\}$/.exec(typeText)?.groups?.["name"];
+  const typeName = parseBraceName(typeText);
   if (typeName === undefined || typeName.trim().length === 0) {
     return undefined;
   }
@@ -220,7 +293,7 @@ function parseGenericTypeCardPredicate(
     return undefined;
   }
 
-  const typeName = /^\{(?<name>[^}]+)\}$/.exec(typeText)?.groups?.["name"];
+  const typeName = parseBraceName(typeText);
   if (typeName === undefined || typeName.trim().length === 0) {
     return undefined;
   }
@@ -243,7 +316,7 @@ function parseTypeOnlyPredicate(
     return undefined;
   }
 
-  const typeName = /^\{(?<name>[^}]+)\}$/.exec(typeText)?.groups?.["name"];
+  const typeName = parseBraceName(typeText);
   if (typeName === undefined || typeName.trim().length === 0) {
     return undefined;
   }
@@ -251,6 +324,37 @@ function parseTypeOnlyPredicate(
   return {
     filter: { ...current, typesAny: [typeName.trim()] },
     evidence: ["filter:type"],
+    rest: restText ?? "",
+  };
+}
+
+function parseAttributeCategoryPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<attribute><[^>]+>) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const attributeText = match?.groups?.["attribute"];
+  const categoryText = match?.groups?.["category"];
+  const restText = match?.groups?.["rest"];
+  if (attributeText === undefined || categoryText === undefined) {
+    return undefined;
+  }
+
+  const attribute = parseAngleAttribute(attributeText);
+  if (attribute === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      attributesAny: [attribute],
+      categories: [categoryText.toLowerCase() as CardCategory],
+    },
+    evidence: ["filter:attribute", categoryEvidence(categoryText)],
     rest: restText ?? "",
   };
 }

@@ -129,6 +129,7 @@ export type PrimitiveEvidence =
   | "filter:nameNot"
   | "filter:color"
   | "filter:type"
+  | "filter:attribute"
   | "filter:cost"
   | "filter:power"
   | "filter:currentPower"

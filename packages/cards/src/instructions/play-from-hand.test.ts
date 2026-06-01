@@ -111,4 +111,46 @@ describe("play from hand instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses play from hand with separated type-or-attribute alternatives and shared suffix filters", () => {
+    expect(
+      parsePlayFromHandInstruction({
+        text: "play up to 1 {Muggy Kingdom} type or <Slash> attribute Character card with a cost of 4 or less other than [Dracule Mihawk] from your hand rested.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                anyOf: [
+                  { typesAny: ["Muggy Kingdom"] },
+                  { attributesAny: ["slash"] },
+                ],
+                categories: ["character"],
+                cost: { max: 4 },
+                nameNot: ["Dracule Mihawk"],
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+              enterRested: true,
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+  });
 });

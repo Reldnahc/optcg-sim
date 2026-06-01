@@ -34,6 +34,8 @@ export interface ResolvePublicTargetCandidatesContext {
 const publicCandidateVisibility = { type: "public" } as const;
 
 const supportedFilterKeys = new Set<keyof CardFilter>([
+  "anyOf",
+  "attributesAny",
   "categories",
   "colorsAny",
   "cost",
@@ -143,6 +145,10 @@ const isStringArray = (value: unknown): value is string[] =>
 const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
   filter === undefined ||
   (hasOnlySupportedFilterKeys(filter) &&
+    (filter.anyOf === undefined ||
+      (filter.anyOf.length > 0 && filter.anyOf.every(isSupportedFilter))) &&
+    (filter.attributesAny === undefined ||
+      isStringArray(filter.attributesAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
@@ -193,6 +199,14 @@ const cardMatchesFilter = (
   }
 
   if (
+    filter.anyOf !== undefined &&
+    !filter.anyOf.some((candidate) =>
+      cardMatchesFilter(state, instance, card, candidate),
+    )
+  ) {
+    return false;
+  }
+  if (
     filter.categories !== undefined &&
     !filter.categories.includes(card.category)
   ) {
@@ -207,6 +221,14 @@ const cardMatchesFilter = (
   if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => card.types.includes(type))
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesAny !== undefined &&
+    !filter.attributesAny.some((attribute) =>
+      card.attributes.includes(attribute),
+    )
   ) {
     return false;
   }

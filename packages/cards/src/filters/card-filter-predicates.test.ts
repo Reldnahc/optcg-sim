@@ -171,4 +171,30 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses type-or-attribute alternatives separately from shared character predicates", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{Muggy Kingdom} type or <Slash> attribute Character card with a cost of 4 or less other than [Dracule Mihawk]",
+      }),
+    ).toEqual({
+      filter: {
+        anyOf: [{ typesAny: ["Muggy Kingdom"] }, { attributesAny: ["slash"] }],
+        categories: ["character"],
+        cost: { max: 4 },
+        nameNot: ["Dracule Mihawk"],
+      },
+      evidence: [
+        "filter:anyOf",
+        "filter:type",
+        "filter:attribute",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "filter:nameNot",
+      ],
+      rest: "",
+    });
+  });
 });
