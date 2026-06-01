@@ -18,6 +18,7 @@ import {
   p2,
   processEffectRuntime,
   resolvedCard,
+  toCardId,
   toInstanceId,
   reviewedOnPlayDrawDefinition,
   toEffectId,
@@ -168,6 +169,7 @@ test("selectTargets saved reference can feed activate for rested DON in cost are
   });
 
   const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
   const decision = must(paused.state.pendingDecision, "target selection");
   assert.equal(decision.type, "selectTargets");
   assert.equal(decision.candidates.length, 1);
@@ -187,6 +189,121 @@ test("selectTargets saved reference can feed activate for rested DON in cost are
     (card) => card.instanceId === restedDon.instanceId,
   );
   assert.equal(afterDon?.state, "active");
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+const selectRestedCharacterThenActivateSavedTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select-character",
+      connector: "always",
+      saveResultAs: "savedCharacter",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "self",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"], currentPower: { max: 7000 } },
+        },
+      },
+    },
+    {
+      id: "activate-character",
+      connector: "then",
+      effect: {
+        type: "activate",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "savedCharacter",
+          },
+          zone: "characterArea",
+          player: "self",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+  ],
+});
+
+test("selectTargets saved reference can feed activate for rested Character in character area", () => {
+  const { state } = sequenceQueueState(
+    selectRestedCharacterThenActivateSavedTargetSequence(),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const target = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(p1State.hand[0], "target"),
+      cardId: toCardId("activatable-character"),
+    },
+    zone: "characterArea",
+  });
+  target.state = "rested";
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 5000,
+  });
+  for (const player of Object.values(state.players)) {
+    state.cardManifest.cards[player.leader.cardId] = resolvedCard({
+      cardId: player.leader.cardId,
+      category: "leader",
+      power: 5000,
+    });
+    for (const character of player.characters) {
+      const existing = state.cardManifest.cards[character.cardId];
+      state.cardManifest.cards[character.cardId] = resolvedCard({
+        cardId: character.cardId,
+        category: "character",
+        power: 5000,
+        ...(existing?.support === undefined
+          ? {}
+          : { support: existing.support }),
+      });
+    }
+  }
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+  const targetCandidate = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.instanceId === target.instanceId,
+    ),
+    "target candidate",
+  );
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [targetCandidate.card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const afterCharacter = must(
+    resolved.state.players[p1],
+    "after p1",
+  ).characters.find((card) => card.instanceId === target.instanceId);
+  assert.equal(afterCharacter?.state, "active");
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 

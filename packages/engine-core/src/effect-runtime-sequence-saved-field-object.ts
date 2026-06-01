@@ -247,6 +247,29 @@ const activateFieldObject = (
       },
     };
   }
+  if (target.zone?.zone === "characterArea") {
+    let changed = false;
+    const characters = player.characters.map((card) => {
+      if (
+        card.instanceId !== target.instanceId ||
+        card.cardId !== target.cardId
+      ) {
+        return card;
+      }
+      changed = card.state !== "active";
+      return { ...card, state: "active" as const };
+    });
+    return {
+      changed,
+      state: {
+        ...state,
+        players: {
+          ...state.players,
+          [target.playerId]: { ...player, characters },
+        },
+      },
+    };
+  }
   return { changed: false, state };
 };
 

@@ -294,4 +294,82 @@ describe("warlords parser primitives", () => {
     expect(result?.evidence).toContain("instruction:playSelected");
     expect(result?.evidence).toContain("state:rested");
   });
+
+  it("parses filtered return-to-owner-hand cost into reusable character activation body", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] [When Attacking] [Once Per Turn] You may return 1 of your Characters with a cost of 2 or more to the owner's hand: Set up to 1 of your Characters with 7000 power or less as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "whenAttacking" },
+        oncePerTurn: true,
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 1,
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectTargets",
+                request: {
+                  player: "self",
+                  zone: "characterArea",
+                  filter: {
+                    categories: ["character"],
+                    cost: { min: 2 },
+                  },
+                },
+              },
+            },
+            {
+              effect: { type: "bounce", destination: "hand" },
+            },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "self",
+                        zone: "characterArea",
+                        filter: {
+                          categories: ["character"],
+                          currentPower: { max: 7000 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "activate",
+                      target: {
+                        type: "savedFieldObject",
+                        zone: "characterArea",
+                        player: "self",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("marker:attachedDon");
+    expect(result?.evidence).toContain("marker:oncePerTurn");
+    expect(result?.evidence).toContain("cost:returnToOwnerHand");
+    expect(result?.evidence).toContain("filter:cost");
+    expect(result?.evidence).toContain("condition:comparator:gte");
+    expect(result?.evidence).toContain("instruction:activate");
+    expect(result?.evidence).toContain("filter:currentPower");
+    expect(result?.evidence).toContain("condition:comparator:lte");
+  });
 });

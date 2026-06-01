@@ -629,7 +629,8 @@ const isSupportedActivateSegment = (
 ): effect is Extract<SequenceSegmentEffect, { type: "activate" }> =>
   effect.type === "activate" &&
   effect.target.type === "savedFieldObject" &&
-  effect.target.zone === "costArea" &&
+  (effect.target.zone === "costArea" ||
+    effect.target.zone === "characterArea") &&
   (effect.target.player === "self" || effect.target.player === "opponent") &&
   effect.target.controller === undefined &&
   effect.target.filter === undefined &&
