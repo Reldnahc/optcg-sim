@@ -21,4 +21,16 @@ describe("up to cardinality parser", () => {
       rest: "of your opponent's Characters",
     });
   });
+
+  it("parses shared-total wording without changing cardinality semantics", () => {
+    expect(
+      parseUpToCardinality({
+        text: "up to a total of 2 of your opponent's Characters or DON!! cards",
+      }),
+    ).toEqual({
+      cardinality: { mode: "upTo", min: 0, max: 2 },
+      evidence: ["cardinality:upTo", "count:positiveInteger"],
+      rest: "of your opponent's Characters or DON!! cards",
+    });
+  });
 });

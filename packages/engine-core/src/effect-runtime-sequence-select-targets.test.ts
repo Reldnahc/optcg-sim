@@ -279,6 +279,36 @@ const directRestLeaderOrCharacterTargetSequence = (): Extract<
   ],
 });
 
+const directRestOpponentCharacterOrDonTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "rest-character-or-don",
+      connector: "always",
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["characterArea", "costArea"],
+            min: 0,
+            max: 2,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character", "don"] },
+          },
+        },
+      },
+    },
+  ],
+});
+
 test("sequence selectTargets fail-closes when no legal candidates satisfy min without leaving a pending decision", () => {
   const { state } = sequenceQueueState(
     selectTargetsThenKoSavedSelectedTargetSequence(),
@@ -388,6 +418,76 @@ test("sequence direct rest chooseFromZones segment creates target decision and r
     must(result.state.players[p2], "resolved p2").leader.state,
     "rested",
   );
+});
+
+test("sequence direct rest chooseFromZones segment shares max across opponent Characters and DON", () => {
+  const { state } = sequenceQueueState(
+    directRestOpponentCharacterOrDonTargetSequence(),
+  );
+  const p2State = must(state.players[p2], "p2");
+  const character = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "character target"),
+    zone: "characterArea",
+  });
+  const don = must(p2State.donDeck[0], "don target");
+  p2State.donDeck = p2State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p2, slot: "donDeck", index },
+  }));
+  p2State.costArea = [
+    {
+      ...don,
+      zone: { zone: "costArea", playerId: p2, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  state.cardManifest.cards[character.cardId] = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+  });
+  state.cardManifest.cards[don.cardId] = resolvedCard({
+    cardId: don.cardId,
+    category: "don",
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+  assert.equal(decision.request.max, 2);
+  assert.ok("zones" in decision.request);
+  assert.deepEqual(decision.request.zones, ["characterArea", "costArea"]);
+  const characterCandidate = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.zone?.zone === "characterArea",
+    ),
+    "character candidate",
+  );
+  const donCandidate = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.zone?.zone === "costArea",
+    ),
+    "DON candidate",
+  );
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [characterCandidate.card, donCandidate.card],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  const resolvedP2 = must(result.state.players[p2], "resolved p2");
+  assert.equal(
+    must(resolvedP2.characters[0], "rested character").state,
+    "rested",
+  );
+  assert.equal(must(resolvedP2.costArea[0], "rested DON").state, "rested");
 });
 
 test("multiple sequence selectTargets segments use distinct decision ids", () => {

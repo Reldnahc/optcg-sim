@@ -25,6 +25,11 @@ export const opponentLeaderOrCharactersTargetPrimitive = {
   matches: [{ id: "of-your-opponents-leader-or-character-cards" }],
 } as const;
 
+export const opponentCharactersOrDonCardsTargetPrimitive = {
+  primitiveId: "target:opponentCharactersOrDonCards",
+  matches: [{ id: "of-your-opponents-characters-or-don-cards" }],
+} as const;
+
 export const yourLeaderTargetPrimitive = {
   primitiveId: "target:yourLeader",
   matches: [{ id: "your-leader" }],
@@ -120,6 +125,44 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
       "player:opponent",
       "filter:category:leader",
       "filter:category:character",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
+
+export function parseOpponentCharactersOrDonCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match =
+    /^of your opponent's Characters? or DON!! cards?\b\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["characterArea", "costArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: { categories: ["character", "don"] },
+      },
+    },
+    evidence: [
+      "target:opponentCharactersOrDonCards",
+      "player:opponent",
+      "zone:characterArea",
+      "zone:costArea",
+      "filter:category:character",
+      "filter:category:don",
     ],
     rest: match.groups?.["rest"]?.trim() ?? "",
   };

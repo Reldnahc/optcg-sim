@@ -179,6 +179,7 @@ export type PrimitiveEvidence =
   | "position:top"
   | "target:thisCard"
   | "target:opponentCharacters"
+  | "target:opponentCharactersOrDonCards"
   | "target:opponentLeaderOrCharacters"
   | "target:thatCharacter"
   | "target:triggerCard"

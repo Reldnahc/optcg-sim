@@ -30,6 +30,7 @@ export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
