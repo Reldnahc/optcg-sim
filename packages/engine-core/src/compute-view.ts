@@ -168,6 +168,17 @@ const isSupportedPlayerDrawRestriction = (
   effect.modifier.operation.type === "restriction" &&
   effect.modifier.operation.restriction === "cannotDrawByOwnEffects";
 
+const isSupportedPlayerDonActivationRestriction = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.layer === "restriction" &&
+  effect.modifier.target.type === "player" &&
+  effect.modifier.operation.type === "restriction" &&
+  effect.modifier.operation.restriction === "cannotActivateDon" &&
+  (effect.modifier.operation.sourceCategories === undefined ||
+    effect.modifier.operation.sourceCategories.length > 0);
+
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
 ): boolean =>
@@ -250,6 +261,11 @@ const assertSupportedContinuousEffects = (state: GameState): void => {
       continue;
     }
     if (isSupportedPlayerDrawRestriction(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
+    }
+    if (isSupportedPlayerDonActivationRestriction(effect)) {
       if (!durationIsActive(state, effect)) continue;
       recordConditionPasses(state, effect);
       continue;

@@ -15,6 +15,7 @@ import {
   hashCanonicalStateValue,
   must,
   p1,
+  p2,
   processEffectRuntime,
   resolvedCard,
   toInstanceId,
@@ -25,6 +26,7 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const setupSequenceDefinition = (
   state: GameState,
@@ -280,6 +282,44 @@ test("DON activation restriction materializes as source-category-scoped continuo
   assert.equal(operation.type, "restriction");
   assert.deepEqual(operation.sourceCategories, ["character"]);
   assert.deepEqual(restriction.duration, { type: "thisTurn" });
+});
+
+test("DON activation restriction remains safe for player snapshots", () => {
+  const { state } = sequenceQueueState({
+    type: "preventDonActivation",
+    player: "self",
+    sourceCategories: ["character"],
+    duration: { type: "thisTurn" },
+  });
+  for (const player of Object.values(state.players)) {
+    state.cardManifest.cards[player.leader.cardId] = resolvedCard({
+      cardId: player.leader.cardId,
+      category: "leader",
+      power: 5000,
+    });
+    for (const character of player.characters) {
+      const existing = state.cardManifest.cards[character.cardId];
+      state.cardManifest.cards[character.cardId] = resolvedCard({
+        cardId: character.cardId,
+        category: "character",
+        power: 5000,
+        ...(existing === undefined ? {} : { support: existing.support }),
+      });
+    }
+  }
+
+  const resolved = processEffectRuntime(state);
+  const restriction = resolved.state.continuousEffects.find(
+    (effect) =>
+      effect.modifier.layer === "restriction" &&
+      effect.modifier.operation.type === "restriction" &&
+      effect.modifier.operation.restriction === "cannotActivateDon",
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.notEqual(restriction, undefined);
+  assert.doesNotThrow(() => filterStateForPlayer(resolved.state, p1));
+  assert.doesNotThrow(() => filterStateForPlayer(resolved.state, p2));
 });
 
 test("DON activation restriction materialization keeps source category as data", () => {
