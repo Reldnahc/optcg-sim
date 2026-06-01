@@ -288,7 +288,7 @@ test("canonical optional cost contracts stay distinct from optional activation",
   );
   assert.match(
     canonicalTypes,
-    /export type ScopedOptionalFieldTrashCost\s*=\s*{[\s\S]*type:\s*"trashFromField";[\s\S]*count:\s*number;[\s\S]*filter:\s*ScopedOptionalFieldTrashCostFilter;[\s\S]*chooser:\s*"self";[\s\S]*optional:\s*true;[\s\S]*};/m,
+    /export type ScopedOptionalFieldTrashCost\s*=\s*{[\s\S]*type:\s*"trashFromField";[\s\S]*count:\s*number;[\s\S]*filter\?:\s*CardFilter;[\s\S]*chooser:\s*"self";[\s\S]*optional:\s*true;[\s\S]*};/m,
   );
   assert.match(
     canonicalTypes,

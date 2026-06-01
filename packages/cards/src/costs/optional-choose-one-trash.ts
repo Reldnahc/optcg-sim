@@ -32,7 +32,7 @@ export function parseOptionalChooseOneTrashCost(
     return undefined;
   }
 
-  const options = split.costText.split(/\s+or\s+/i);
+  const options = splitTrashCostOptions(split.costText);
   if (options.length < 2) {
     return undefined;
   }
@@ -64,6 +64,23 @@ export function parseOptionalChooseOneTrashCost(
   };
 }
 
+function splitTrashCostOptions(costText: string): readonly string[] {
+  const split = costText.split(/\s+or\s+/i);
+  const options: string[] = [];
+  for (const part of split) {
+    const trimmed = part.trim();
+    if (/^field$/i.test(trimmed) && options.length > 0) {
+      const previous = options.at(-1);
+      if (previous !== undefined && /\bfrom your hand$/i.test(previous)) {
+        options.push(previous.replace(/\bfrom your hand$/i, "from your field"));
+        continue;
+      }
+    }
+    options.push(trimmed);
+  }
+  return options;
+}
+
 function splitCostAndBody(
   text: string,
 ): { readonly costText: string; readonly bodyText: string } | undefined {
@@ -84,33 +101,6 @@ function splitCostAndBody(
 function parseTrashCostOption(
   text: string,
 ): TrashCostOptionParseResult | undefined {
-  const fieldOption = parseFieldTrashCostOption(text);
-  if (fieldOption !== undefined) {
-    return fieldOption;
-  }
-
-  const handMatch = /^trash (?<count>[1-9]\d*) cards? from your hand$/i.exec(
-    text,
-  );
-  const handCountText = handMatch?.groups?.["count"];
-  if (handCountText === undefined) {
-    return undefined;
-  }
-
-  return {
-    cost: {
-      type: "trashFromHand",
-      count: Number.parseInt(handCountText, 10),
-      chooser: self,
-      optional: true,
-    },
-    evidence: ["cost:trashFromHand", "count:positiveInteger", "chooser:self"],
-  };
-}
-
-function parseFieldTrashCostOption(
-  text: string,
-): TrashCostOptionParseResult | undefined {
   const actionMatch = /^trash\s+(?<rest>.+)$/i.exec(text);
   const afterAction = actionMatch?.groups?.["rest"];
   if (afterAction === undefined) {
@@ -122,28 +112,35 @@ function parseFieldTrashCostOption(
     return undefined;
   }
 
-  const ownershipMatch = /^of your\s+(?<predicates>.+)$/i.exec(
-    cardinality.rest,
-  );
-  const predicateText = ownershipMatch?.groups?.["predicates"];
-  if (predicateText === undefined) {
+  const source = parseTrashCostSource(cardinality.rest);
+  if (source === undefined) {
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates(
-    { text: predicateText },
-    { powerSemantics: "current" },
-  );
-  if (
-    predicates === undefined ||
-    predicates.rest.length > 0 ||
-    predicates.filter.categories?.[0] !== "character" ||
-    predicates.filter.typesAny?.[0] === undefined ||
-    Object.keys(predicates.filter).some(
-      (key) => key !== "categories" && key !== "typesAny",
-    )
-  ) {
+  const parsedFilter = parseTrashCostFilter(source.predicateText);
+  if (parsedFilter === undefined) {
     return undefined;
+  }
+
+  if (source.zone === "hand") {
+    return {
+      cost: {
+        type: "trashFromHand",
+        count: cardinality.count,
+        chooser: self,
+        optional: true,
+        ...(parsedFilter.filter === undefined
+          ? {}
+          : { filter: parsedFilter.filter }),
+      },
+      evidence: [
+        "cost:trashFromHand",
+        ...cardinality.evidence,
+        ...parsedFilter.evidence,
+        "zone:hand",
+        "chooser:self",
+      ],
+    };
   }
 
   return {
@@ -152,16 +149,71 @@ function parseFieldTrashCostOption(
       count: cardinality.count,
       chooser: self,
       optional: true,
-      filter: {
-        categories: ["character"],
-        typesAny: [predicates.filter.typesAny[0]],
-      },
+      filter: parsedFilter.filter ?? {},
     },
     evidence: [
       "cost:trashFromField",
       ...cardinality.evidence,
+      ...parsedFilter.evidence,
+      "zone:characterArea",
+      "zone:stageArea",
       "chooser:self",
-      ...predicates.evidence,
     ],
+  };
+}
+
+function parseTrashCostSource(text: string):
+  | {
+      readonly predicateText: string;
+      readonly zone: "field" | "hand";
+    }
+  | undefined {
+  const explicitZoneMatch =
+    /^(?<predicates>.+?)\s+from your\s+(?<zone>hand|field)$/i.exec(text);
+  const explicitPredicateText = explicitZoneMatch?.groups?.["predicates"];
+  const explicitZone = explicitZoneMatch?.groups?.["zone"]?.toLowerCase();
+  if (
+    explicitPredicateText !== undefined &&
+    (explicitZone === "hand" || explicitZone === "field")
+  ) {
+    return {
+      predicateText: explicitPredicateText,
+      zone: explicitZone,
+    };
+  }
+
+  const impliedFieldMatch = /^of your\s+(?<predicates>.+)$/i.exec(text);
+  const impliedFieldPredicateText = impliedFieldMatch?.groups?.["predicates"];
+  if (impliedFieldPredicateText !== undefined) {
+    return {
+      predicateText: impliedFieldPredicateText,
+      zone: "field",
+    };
+  }
+
+  return undefined;
+}
+
+function parseTrashCostFilter(text: string):
+  | {
+      readonly filter: ChooseOneTrashCost["options"][number]["filter"];
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  if (/^cards?$/i.test(text.trim())) {
+    return { filter: undefined, evidence: [] };
+  }
+
+  const predicates = parseCardFilterPredicates(
+    { text },
+    { powerSemantics: "current" },
+  );
+  if (predicates === undefined || predicates.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    filter: predicates.filter,
+    evidence: predicates.evidence,
   };
 }

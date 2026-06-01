@@ -179,15 +179,10 @@ export type OptionalMoveCardsCost = {
   optional: true;
 };
 
-export type ScopedOptionalFieldTrashCostFilter = {
-  categories: ["character"];
-  typesAny: [string, ...string[]];
-};
-
 export type ScopedOptionalFieldTrashCost = {
   type: "trashFromField";
   count: number;
-  filter: ScopedOptionalFieldTrashCostFilter;
+  filter?: CardFilter;
   chooser: "self";
   optional: true;
 };

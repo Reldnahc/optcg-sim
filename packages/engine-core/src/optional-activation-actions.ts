@@ -17,6 +17,8 @@ import type {
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import {
   addCardsToHand,
+  cardMatchesHandSelectionFilter,
+  isSupportedHandSelectionCardFilter,
   reindexZoneCards,
   zonesEqual,
 } from "./action-state.js";
@@ -259,27 +261,41 @@ const orderedCurrentChoiceGroupIds = (
   return groupIds.length > 1 ? groupIds : undefined;
 };
 
-const supportsScopedFieldTrashFilter = (
+const supportsChooseOneTrashFilter = (
   filter: CardFilter | undefined,
-): filter is { categories: ["character"]; typesAny: [string, ...string[]] } =>
-  filter !== undefined &&
-  Array.isArray(filter.categories) &&
-  filter.categories.length === 1 &&
-  filter.categories[0] === "character" &&
-  Array.isArray(filter.typesAny) &&
-  filter.typesAny.length > 0 &&
-  filter.typesAny.every((value) => typeof value === "string");
+): boolean => isSupportedHandSelectionCardFilter(filter);
 
 const fieldCardMatchesFilter = (
   state: GameState,
-  cardId: CardInstance["cardId"],
-  filter: { categories: ["character"]; typesAny: [string, ...string[]] },
+  playerId: PlayerId,
+  card: CardInstance,
+  filter: CardFilter | undefined,
 ): boolean => {
-  const metadata = state.cardManifest.cards[cardId];
-  if (metadata === undefined || metadata.category !== "character") {
-    return false;
+  return cardMatchesHandSelectionFilter(state, playerId, card, filter);
+};
+
+const fieldTrashCandidates = (player: PlayerState): readonly CardInstance[] => [
+  ...player.characters,
+  ...(player.stage === undefined ? [] : [player.stage]),
+];
+
+const selectedFieldTrashSourceZone = (
+  selectedCards: readonly CardInstance[],
+): "characterArea" | "stageArea" | null => {
+  const sourceZones = new Set(
+    selectedCards.map((card) =>
+      card.zone.zone === "characterArea" || card.zone.zone === "stageArea"
+        ? card.zone.zone
+        : null,
+    ),
+  );
+  if (sourceZones.size !== 1) {
+    return null;
   }
-  return filter.typesAny.some((cardType) => metadata.types.includes(cardType));
+  const sourceZone = [...sourceZones][0];
+  return sourceZone === "characterArea" || sourceZone === "stageArea"
+    ? sourceZone
+    : null;
 };
 
 export const applyOptionalActivationDecisionResponse = (
@@ -502,7 +518,7 @@ export const applyOptionalActivationDecisionResponse = (
               ? player.hand.find(
                   (candidate) => candidate.instanceId === selectedId,
                 )
-              : player.characters.find(
+              : fieldTrashCandidates(player).find(
                   (candidate) => candidate.instanceId === selectedId,
                 );
           if (card === undefined) {
@@ -513,13 +529,13 @@ export const applyOptionalActivationDecisionResponse = (
             );
           }
           if (
-            selectedOption.type === "trashFromField" &&
-            (!supportsScopedFieldTrashFilter(selectedOption.filter) ||
-              !fieldCardMatchesFilter(
-                state,
-                card.cardId,
-                selectedOption.filter,
-              ))
+            !supportsChooseOneTrashFilter(selectedOption.filter) ||
+            !fieldCardMatchesFilter(
+              state,
+              decision.playerId,
+              card,
+              selectedOption.filter,
+            )
           ) {
             return toEngineResult(
               state,
@@ -538,6 +554,17 @@ export const applyOptionalActivationDecisionResponse = (
           selectedOption.type === "trashFromHand"
             ? "trashFromHand"
             : "trashFromField";
+        const sourceZone =
+          selectedOption.type === "trashFromHand"
+            ? "hand"
+            : selectedFieldTrashSourceZone(selectedCards);
+        if (sourceZone === null) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection is invalid."),
+          );
+        }
         const movement = moveConcreteCardsToTrash(
           state,
           events,
@@ -551,10 +578,7 @@ export const applyOptionalActivationDecisionResponse = (
             emitCardTrashed: true,
             playerId: decision.playerId,
             reason,
-            sourceZone:
-              selectedOption.type === "trashFromHand"
-                ? "hand"
-                : "characterArea",
+            sourceZone,
           },
         );
         const movedPlayer = movement.state.players[decision.playerId];

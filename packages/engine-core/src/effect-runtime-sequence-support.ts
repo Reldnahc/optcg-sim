@@ -344,39 +344,25 @@ const isSupportedPayCostSegment = (
       (option as Record<string, unknown>)["optional"] === true &&
       Number.isInteger((option as Record<string, unknown>)["count"]) &&
       ((option as Record<string, unknown>)["count"] as number) > 0;
-    const hasSupportedSelfOptionalUnfilteredHand = (
-      option: unknown,
-    ): boolean => {
+    const hasSupportedSelfOptionalHand = (option: unknown): boolean => {
       if (!hasSupportedSelfOptionalPositiveCount(option)) {
         return false;
       }
       return (
-        typeof option === "object" && option !== null && !("filter" in option)
+        typeof option === "object" &&
+        option !== null &&
+        isSupportedHandSelectionCardFilter(
+          (option as { filter?: CardFilter }).filter,
+        )
       );
     };
-    const hasSupportedFieldFilter = (
-      filter: unknown,
-    ): filter is {
-      categories: ["character"];
-      typesAny: [string, ...string[]];
-    } =>
-      typeof filter === "object" &&
-      filter !== null &&
-      Array.isArray((filter as { categories?: unknown }).categories) &&
-      (filter as { categories: unknown[] }).categories.length === 1 &&
-      (filter as { categories: unknown[] }).categories[0] === "character" &&
-      Array.isArray((filter as { typesAny?: unknown }).typesAny) &&
-      (filter as { typesAny: unknown[] }).typesAny.length > 0 &&
-      (filter as { typesAny: unknown[] }).typesAny.every(
-        (typeName) => typeof typeName === "string",
-      );
     return cost.options.every((option) => {
       if (option.type === "trashFromHand") {
-        return hasSupportedSelfOptionalUnfilteredHand(option);
+        return hasSupportedSelfOptionalHand(option);
       }
       return (
         hasSupportedSelfOptionalPositiveCount(option) &&
-        hasSupportedFieldFilter(option.filter)
+        isSupportedHandSelectionCardFilter(option.filter)
       );
     });
   }

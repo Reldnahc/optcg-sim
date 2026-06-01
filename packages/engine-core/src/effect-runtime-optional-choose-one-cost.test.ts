@@ -245,6 +245,152 @@ test("optional choose-one cost supports field payment and dependent draw", () =>
   ]);
 });
 
+test("optional choose-one cost supports filtered hand and named stage field alternatives", () => {
+  const stateSetup = setupState("Navy");
+  const { state } = stateSetup;
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source");
+  const handFish = must(p1State.hand[2], "fish hand cost");
+  const fieldArkSource = must(p1State.hand[3], "field ark cost");
+  const handArk = must(p1State.hand[4], "hand ark cost");
+  const fieldArk = withCardInZone({
+    state,
+    playerId: p1,
+    card: fieldArkSource,
+    zone: "stageArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== fieldArk.instanceId,
+  );
+  state.cardManifest.cards[handFish.cardId] = {
+    ...resolvedCard({
+      cardId: handFish.cardId,
+      category: "character",
+      power: 1000,
+    }),
+    types: ["Fish-Man"],
+  };
+  state.cardManifest.cards[handArk.cardId] = {
+    ...resolvedCard({ cardId: handArk.cardId, category: "stage", cost: 1 }),
+    name: "The Ark Noah",
+  };
+  state.cardManifest.cards[fieldArk.cardId] = {
+    ...resolvedCard({ cardId: fieldArk.cardId, category: "stage", cost: 1 }),
+    name: "The Ark Noah",
+  };
+  setupDefinition(state, source, {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-choose-one-cost",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "chooseOne",
+            optional: true,
+            options: [
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { typesAny: ["Fish-Man"] },
+              },
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { names: ["The Ark Noah"] },
+              },
+              {
+                type: "trashFromField",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { names: ["The Ark Noah"] },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "if-you-do-draw",
+        connector: "ifYouDo",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = asPayCostDecision(
+    must(paused.state.pendingDecision, "decision"),
+  );
+  assert.deepEqual(
+    decision.paymentOptions.map((option) => option.type),
+    ["trashFromHand", "trashFromHand", "trashFromField"],
+  );
+  const fieldOption = must(
+    decision.paymentOptions.find(
+      (option) =>
+        option.type === "trashFromField" &&
+        option.filter?.names?.includes("The Ark Noah") === true,
+    ),
+    "named field option",
+  );
+  const legal = getLegalActions(paused.state, p1).filter(
+    (
+      action,
+    ): action is Extract<Action, { type: "respondToDecision" }> & {
+      response: Extract<
+        Extract<Action, { type: "respondToDecision" }>["response"],
+        { type: "payment" }
+      >;
+    } =>
+      action.type === "respondToDecision" && action.response.type === "payment",
+  );
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.response.optionId === fieldOption.id &&
+        action.response.selectedCardInstanceIds?.[0] === fieldArk.instanceId,
+    ),
+    true,
+  );
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: fieldOption.id,
+      selectedCardInstanceIds: [fieldArk.instanceId],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  const after = must(result.state.players[p1], "after p1");
+  assert.equal(after.stage, undefined);
+  assert.equal(
+    after.trash.some((card) => card.instanceId === fieldArk.instanceId),
+    true,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "cardMoved" &&
+        (event.payload as { from?: string }).from === "stageArea",
+    ),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "cardDrawn"),
+    true,
+  );
+});
+
 test("optional choose-one cost supports hand payment and decline; neither-payable skips decision", () => {
   const base = setupState("Navy");
   const paused = processEffectRuntime(base.state);
@@ -487,8 +633,7 @@ test("unsupported choose-one field-trash alternative fails closed without degrad
                 optional: true,
                 count: 1,
                 filter: {
-                  categories: ["character"],
-                  typesAny: [] as unknown as [string, ...string[]],
+                  custom: "unsupported-cost-filter",
                 },
               },
               {
@@ -550,10 +695,7 @@ test("unsupported choose-one hand-trash alternative fails closed without degradi
                 chooser: "self",
                 optional: true,
                 count: 1,
-                filter: { categories: ["character"] } as unknown as {
-                  categories: ["character"];
-                  typesAny: [string, ...string[]];
-                },
+                filter: { custom: "unsupported-cost-filter" },
               },
               {
                 type: "trashFromField",

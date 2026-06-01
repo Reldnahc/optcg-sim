@@ -142,6 +142,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "colorsAny",
   "custom",
   "cost",
+  "names",
   "nameNot",
   "power",
   "state",
@@ -211,6 +212,7 @@ export const isSupportedHandSelectionCardFilter = (
       isStringArray(filter.attributesAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
     (filter.state === undefined ||

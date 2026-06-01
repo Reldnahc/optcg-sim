@@ -15,6 +15,10 @@ import type {
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
 import {
+  cardMatchesHandSelectionFilter,
+  isSupportedHandSelectionCardFilter,
+} from "./action-state.js";
+import {
   getReturnDonEligibleCount,
   getReturnDonEligibleInstanceIds,
 } from "./effect-runtime-return-don.js";
@@ -379,28 +383,25 @@ const chooseCombos = <T>(values: readonly T[], count: number): T[][] => {
   return results;
 };
 
-const supportsScopedFieldTrashFilter = (
+const supportsChooseOneTrashFilter = (
   filter: CardFilter | undefined,
-): filter is { categories: ["character"]; typesAny: [string, ...string[]] } =>
-  filter !== undefined &&
-  Array.isArray(filter.categories) &&
-  filter.categories.length === 1 &&
-  filter.categories[0] === "character" &&
-  Array.isArray(filter.typesAny) &&
-  filter.typesAny.length > 0 &&
-  filter.typesAny.every((value) => typeof value === "string");
+): boolean => isSupportedHandSelectionCardFilter(filter);
 
 const fieldCardMatchesFilter = (
   state: GameState,
-  cardId: CardInstance["cardId"],
-  filter: { categories: ["character"]; typesAny: [string, ...string[]] },
+  playerId: EffectQueueEntry["controllerId"],
+  card: CardInstance,
+  filter: CardFilter | undefined,
 ): boolean => {
-  const metadata = state.cardManifest.cards[cardId];
-  if (metadata === undefined || metadata.category !== "character") {
-    return false;
-  }
-  return filter.typesAny.some((cardType) => metadata.types.includes(cardType));
+  return cardMatchesHandSelectionFilter(state, playerId, card, filter);
 };
+
+const fieldTrashCandidates = (
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+): readonly CardInstance[] => [
+  ...player.characters,
+  ...(player.stage === undefined ? [] : [player.stage]),
+];
 
 const chooseOneOptionId = (
   option: { type: "trashFromHand" | "trashFromField" },
@@ -420,9 +421,9 @@ const isSupportedChooseOneOption = (
     return false;
   }
   if (option.type === "trashFromHand") {
-    return !("filter" in option);
+    return supportsChooseOneTrashFilter(option.filter);
   }
-  return supportsScopedFieldTrashFilter(option.filter);
+  return supportsChooseOneTrashFilter(option.filter);
 };
 
 const findRestableSource = (
@@ -516,7 +517,14 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "trashFromHand") {
-      const selectableCardIds = player.hand.map((card) => card.instanceId);
+      if (!supportsChooseOneTrashFilter(option.filter)) {
+        continue;
+      }
+      const selectableCardIds = player.hand
+        .filter((card) =>
+          cardMatchesHandSelectionFilter(state, playerId, card, option.filter),
+        )
+        .map((card) => card.instanceId);
       legalPayments.push(
         ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
           type: "respondToDecision" as const,
@@ -531,13 +539,13 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "trashFromField") {
-      if (!supportsScopedFieldTrashFilter(option.filter)) {
+      if (!supportsChooseOneTrashFilter(option.filter)) {
         continue;
       }
       const fieldFilter = option.filter;
-      const selectableCardIds = player.characters
+      const selectableCardIds = fieldTrashCandidates(player)
         .filter((card) =>
-          fieldCardMatchesFilter(state, card.cardId, fieldFilter),
+          fieldCardMatchesFilter(state, playerId, card, fieldFilter),
         )
         .map((card) => card.instanceId);
       legalPayments.push(
@@ -755,24 +763,44 @@ export const getSequenceOptionalPayCostOptions = (
       return [];
     }
     if (option.type === "trashFromHand") {
-      if (handEligibleCount < option.count) {
+      if (!supportsChooseOneTrashFilter(option.filter)) {
+        return [];
+      }
+      const matchingHandCount =
+        currentPlayer?.hand.filter((card) =>
+          cardMatchesHandSelectionFilter(
+            state,
+            entry.controllerId,
+            card,
+            option.filter,
+          ),
+        ).length ?? 0;
+      if (matchingHandCount < option.count) {
         continue;
       }
       paymentOptions.push({
         id: chooseOneOptionId(option, index),
         type: "trashFromHand",
         count: option.count,
+        ...(option.filter === undefined ? {} : { filter: option.filter }),
       });
       continue;
     }
-    if (!supportsScopedFieldTrashFilter(option.filter)) {
+    if (!supportsChooseOneTrashFilter(option.filter)) {
       return [];
     }
     const fieldFilter = option.filter;
     const fieldMatchCount =
-      currentPlayer?.characters.filter((card) =>
-        fieldCardMatchesFilter(state, card.cardId, fieldFilter),
-      ).length ?? 0;
+      currentPlayer === undefined
+        ? 0
+        : fieldTrashCandidates(currentPlayer).filter((card) =>
+            fieldCardMatchesFilter(
+              state,
+              entry.controllerId,
+              card,
+              fieldFilter,
+            ),
+          ).length;
     if (fieldMatchCount < option.count) {
       continue;
     }
@@ -780,7 +808,7 @@ export const getSequenceOptionalPayCostOptions = (
       id: chooseOneOptionId(option, index),
       type: "trashFromField",
       count: option.count,
-      filter: fieldFilter,
+      ...(fieldFilter === undefined ? {} : { filter: fieldFilter }),
     });
   }
   return paymentOptions;

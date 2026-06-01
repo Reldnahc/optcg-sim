@@ -697,7 +697,7 @@ test("unsupported hand-selection shapes fail closed for zone/chooser-visibility/
       chooser: "self",
       min: 1,
       max: 1,
-      filter: { names: ["not-category-filter"] },
+      filter: { custom: "unsupported-filter" },
       saveAs: "handSelection:unsupported-filter" as HandSelectionId,
       visibility: "chooserOnly",
     },

@@ -207,7 +207,7 @@ test("SUP-003A optional choose-one trash costs reject malformed alternatives", (
   void emptyAlternatives;
 });
 
-test("SUP-003A optional choose-one field-trash alternatives stay scoped", () => {
+test("SUP-003A optional choose-one field-trash alternatives stay self scoped and filterable", () => {
   const opponentFieldTrash: OptionalCost = {
     type: "chooseOne",
     optional: true,
@@ -222,38 +222,27 @@ test("SUP-003A optional choose-one field-trash alternatives stay scoped", () => 
       },
     ],
   };
-  const nonCharacterCategory: OptionalCost = {
+  const namedStageFieldTrash: OptionalCost = {
     type: "chooseOne",
     optional: true,
     options: [
-      // @ts-expect-error field-trash alternatives are limited to Characters.
       {
         type: "trashFromField",
         count: 1,
         chooser: "self",
-        filter: {
-          categories: ["stage"],
-          typesAny: ["Straw Hat Crew"],
-        },
+        filter: { categories: ["stage"], names: ["The Ark Noah"] },
         optional: true,
       },
-    ],
-  };
-  const missingTypesAny: OptionalCost = {
-    type: "chooseOne",
-    optional: true,
-    options: [
-      // @ts-expect-error field-trash alternatives require a typed Character filter.
       {
-        type: "trashFromField",
+        type: "trashFromHand",
         count: 1,
         chooser: "self",
-        filter: { categories: ["character"] },
+        filter: { typesAny: ["Fish-Man"] },
         optional: true,
       },
     ],
   };
-  const arbitraryFilter: OptionalCost = {
+  const arbitraryCardFilter: OptionalCost = {
     type: "chooseOne",
     optional: true,
     options: [
@@ -264,7 +253,6 @@ test("SUP-003A optional choose-one field-trash alternatives stay scoped", () => 
         filter: {
           categories: ["character"],
           typesAny: ["Straw Hat Crew"],
-          // @ts-expect-error field-trash alternatives do not allow arbitrary filters.
           colorsAny: ["red"],
         },
         optional: true,
@@ -287,10 +275,9 @@ test("SUP-003A optional choose-one field-trash alternatives stay scoped", () => 
     ],
   };
 
+  expect(namedStageFieldTrash.options).toHaveLength(2);
   void opponentFieldTrash;
-  void nonCharacterCategory;
-  void missingTypesAny;
-  void arbitraryFilter;
+  void arbitraryCardFilter;
   void unsupportedFieldZone;
 });
 

@@ -152,7 +152,6 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   Cost: "TYP-001D",
   OptionalTrashFromHandCost: "SUP-003A",
   OptionalMoveCardsCost: "TYP-001D",
-  ScopedOptionalFieldTrashCostFilter: "SUP-003A",
   ScopedOptionalFieldTrashCost: "SUP-003A",
   OptionalChooseOneTrashCostAlternative: "SUP-003A",
   OptionalChooseOneTrashCost: "SUP-003A",
