@@ -13,7 +13,7 @@ describe("card row layout", () => {
         cardCount: 5,
       }),
       {
-        overlap: 10,
+        overlap: 5,
         laneExtension: 80,
         edgePacked: true,
       },
@@ -30,7 +30,7 @@ describe("card row layout", () => {
       }),
       {
         overlap: 0,
-        laneExtension: 120,
+        laneExtension: 100,
         edgePacked: true,
       },
     );

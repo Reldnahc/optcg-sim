@@ -126,6 +126,10 @@
   justify-content: flex-start;
 }
 
+.hand-cards.is-overlapping {
+  gap: 0;
+}
+
 .hand-cards.is-overlapping .card-tile-shell + .card-tile-shell {
   margin-left: calc(-1 * var(--hand-overlap));
 }

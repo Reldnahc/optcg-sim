@@ -48,6 +48,13 @@ interface PointerReorderTarget {
   placement: ReorderPlacement;
 }
 
+interface PointerReorderFinishEvent {
+  pointerId: number;
+  type: "pointerup" | "pointercancel";
+  preventDefault: () => void;
+  stopPropagation: () => void;
+}
+
 export interface CardTileProps {
   card: ClientCardModel;
   label?: string | undefined;
@@ -105,6 +112,7 @@ export const CardTile = ({
     PointerReorderDrag | undefined
   >(undefined);
   const suppressClickRef = useRef(false);
+  const completedPointerIdRef = useRef<number | undefined>(undefined);
   const lastPointerMoveRef = useRef<PointerReorderTarget | undefined>(
     undefined,
   );
@@ -142,6 +150,33 @@ export const CardTile = ({
           pointerEvents: "none",
         } satisfies CSSProperties)
       : undefined;
+  const finishPointerReorder = (event: PointerReorderFinishEvent): boolean => {
+    if (
+      pointerDrag === undefined ||
+      pointerDrag.pointerId !== event.pointerId
+    ) {
+      return false;
+    }
+    const commitTarget = lastPointerMoveRef.current;
+    setPointerDrag(undefined);
+    lastPointerMoveRef.current = undefined;
+    suppressClickRef.current = pointerDrag.moved;
+    if (!pointerDrag.moved || !pointerReorderEnabled) {
+      return true;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.type === "pointerup" && commitTarget !== undefined) {
+      onMoveNear(
+        String(card.instanceId),
+        commitTarget.targetInstanceId,
+        commitTarget.placement,
+      );
+    } else {
+      onReorderCancel?.();
+    }
+    return true;
+  };
   const moveCardNearPointer = (clientX: number): void => {
     if (!pointerReorderEnabled) {
       return;
@@ -183,6 +218,36 @@ export const CardTile = ({
     };
   }, [pointerReorderDragging]);
 
+  useEffect(() => {
+    if (pointerDrag === undefined) {
+      return;
+    }
+
+    const finishFromDocument = (event: PointerEvent): void => {
+      if (
+        finishPointerReorder({
+          pointerId: event.pointerId,
+          type: event.type === "pointercancel" ? "pointercancel" : "pointerup",
+          preventDefault: () => {
+            event.preventDefault();
+          },
+          stopPropagation: () => {
+            event.stopPropagation();
+          },
+        })
+      ) {
+        completedPointerIdRef.current = event.pointerId;
+      }
+    };
+
+    document.addEventListener("pointerup", finishFromDocument, true);
+    document.addEventListener("pointercancel", finishFromDocument, true);
+    return () => {
+      document.removeEventListener("pointerup", finishFromDocument, true);
+      document.removeEventListener("pointercancel", finishFromDocument, true);
+    };
+  }, [finishPointerReorder, pointerDrag]);
+
   return (
     <div
       className={`card-tile-shell ${
@@ -210,6 +275,10 @@ export const CardTile = ({
           return;
         }
         const rect = event.currentTarget.getBoundingClientRect();
+        completedPointerIdRef.current = undefined;
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }
         const reorderRoot =
           event.currentTarget.closest<HTMLElement>(".hand-cards");
         const reorderEntries =
@@ -274,40 +343,39 @@ export const CardTile = ({
         });
       }}
       onPointerUp={(event) => {
-        if (
-          pointerDrag === undefined ||
-          pointerDrag.pointerId !== event.pointerId
-        ) {
+        if (completedPointerIdRef.current === event.pointerId) {
+          completedPointerIdRef.current = undefined;
           return;
         }
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
-        const commitTarget = lastPointerMoveRef.current;
-        setPointerDrag(undefined);
-        lastPointerMoveRef.current = undefined;
-        suppressClickRef.current = pointerDrag.moved;
-        if (!pointerDrag.moved || !pointerReorderEnabled) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        if (commitTarget !== undefined) {
-          onMoveNear(
-            String(card.instanceId),
-            commitTarget.targetInstanceId,
-            commitTarget.placement,
-          );
-        } else {
-          onReorderCancel?.();
-        }
+        finishPointerReorder({
+          pointerId: event.pointerId,
+          type: "pointerup",
+          preventDefault: () => {
+            event.preventDefault();
+          },
+          stopPropagation: () => {
+            event.stopPropagation();
+          },
+        });
       }}
       onPointerCancel={(event) => {
-        if (pointerDrag?.pointerId === event.pointerId) {
-          setPointerDrag(undefined);
-          lastPointerMoveRef.current = undefined;
-          onReorderCancel?.();
+        if (completedPointerIdRef.current === event.pointerId) {
+          completedPointerIdRef.current = undefined;
+          return;
         }
+        finishPointerReorder({
+          pointerId: event.pointerId,
+          type: "pointercancel",
+          preventDefault: () => {
+            event.preventDefault();
+          },
+          stopPropagation: () => {
+            event.stopPropagation();
+          },
+        });
       }}
     >
       <button

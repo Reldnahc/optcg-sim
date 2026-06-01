@@ -24,23 +24,6 @@
   transition:
     margin-left 80ms ease,
     transform 80ms ease;
-  animation: hand-drag-placeholder-enter 90ms ease-out;
-}
-
-@keyframes hand-drag-placeholder-enter {
-  from {
-    width: 0;
-    flex-basis: 0;
-    opacity: 0;
-    transform: scaleX(0.65);
-  }
-
-  to {
-    width: var(--card-width);
-    flex-basis: var(--card-width);
-    opacity: 1;
-    transform: scaleX(1);
-  }
 }
 
 .card-tile-shell.is-pointer-reorderable {

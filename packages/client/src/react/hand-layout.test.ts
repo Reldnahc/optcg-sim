@@ -84,7 +84,7 @@ describe("hand layout", () => {
         cardWidth: 60,
         cardCount: 4,
       }),
-      55 / 3,
+      40 / 3,
     );
   });
 
@@ -97,7 +97,7 @@ describe("hand layout", () => {
         cardCount: 5,
       }),
       {
-        overlap: 10,
+        overlap: 5,
         laneExtension: 80,
         edgePacked: true,
       },
@@ -111,7 +111,7 @@ describe("hand layout", () => {
       }),
       {
         overlap: 0,
-        laneExtension: 120,
+        laneExtension: 100,
         edgePacked: true,
       },
     );
@@ -224,7 +224,7 @@ describe("hand layout", () => {
 
     assert.doesNotMatch(pointerDownSource, /stopPropagation\(\)/u);
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
-    assert.doesNotMatch(pointerDownSource, /setPointerCapture/u);
+    assert.match(pointerDownSource, /setPointerCapture/u);
   });
 
   test("card pointer reorder previews during drag and commits once on release", async () => {
@@ -264,8 +264,7 @@ describe("hand layout", () => {
     );
     assert.match(pointerMoveSource, /moveCardNearPointer/u);
     assert.doesNotMatch(pointerMoveSource, /onMoveNear\(/u);
-    assert.match(pointerUpSource, /onMoveNear\(/u);
-    assert.match(pointerUpSource, /lastPointerMoveRef\.current/u);
+    assert.match(pointerUpSource, /finishPointerReorder/u);
   });
 
   test("card images do not start native browser image dragging", async () => {
@@ -285,19 +284,23 @@ describe("hand layout", () => {
     );
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*height:\s*100%;/u);
     assert.match(styles, /\.hand-drag-placeholder\s*\{[^}]*transition:/u);
-    assert.match(
-      styles,
-      /\.hand-drag-placeholder\s*\{[^}]*animation:\s*hand-drag-placeholder-enter 90ms ease-out;/u,
-    );
-    assert.match(styles, /@keyframes hand-drag-placeholder-enter/u);
-    assert.match(
-      styles,
-      /from\s*\{[^}]*width:\s*0;[^}]*flex-basis:\s*0;[^}]*opacity:\s*0;/u,
-    );
+    assert.doesNotMatch(styles, /hand-drag-placeholder-enter/u);
     assert.match(
       styles,
       /\.card-tile-shell\.is-pointer-reorder-dragging\s*\{[^}]*transition:\s*none;/u,
     );
+  });
+
+  test("hand drag owns and cleans up pointer state even when release is noisy", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardTile.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /setPointerCapture\(event\.pointerId\)/u);
+    assert.match(source, /document\.addEventListener\("pointerup"/u);
+    assert.match(source, /document\.addEventListener\("pointercancel"/u);
+    assert.match(source, /finishPointerReorder/u);
   });
 
   test("board layout wires hand rearranging only to the player hand", async () => {
@@ -329,10 +332,7 @@ describe("hand layout", () => {
       styles,
       /\.hand-cards\.is-using-outside-lane\.hand-cards-overlap-left\s*\{[^}]*width:\s*calc\(100%\s*\+\s*var\(--hand-lane-extension\)\);[^}]*margin-left:\s*calc\(-1\s*\*\s*var\(--hand-lane-extension\)\);/u,
     );
-    assert.equal(
-      /\.hand-cards\.is-overlapping\s*\{[^}]*gap:\s*0;/u.test(styles),
-      false,
-    );
+    assert.match(styles, /\.hand-cards\.is-overlapping\s*\{[^}]*gap:\s*0;/u);
     assert.match(
       styles,
       /\.hand-cards\.is-edge-packed\.hand-cards-overlap-left\s*\{[^}]*justify-content:\s*flex-end;/u,

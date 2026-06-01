@@ -30,12 +30,13 @@ export const calculateCardRowLayout = ({
     return { overlap: 0, laneExtension: 0, edgePacked: false };
   }
 
+  const overlapNaturalWidth = cardCount * cardWidth;
   const laneExtension = Math.min(
     Math.max(0, laneExtensionWidth),
-    naturalWidth - availableWidth,
+    overlapNaturalWidth - availableWidth,
   );
   const usableWidth = availableWidth + laneExtension;
-  const requiredOverlap = (naturalWidth - usableWidth) / (cardCount - 1);
+  const requiredOverlap = (overlapNaturalWidth - usableWidth) / (cardCount - 1);
   const maximumOverlap = Math.max(0, cardWidth - MIN_VISIBLE_CARD_WIDTH_PX);
   const overlap = Math.min(Math.max(0, requiredOverlap), maximumOverlap);
   return { overlap, laneExtension, edgePacked: true };

@@ -72,4 +72,22 @@ describe("drag reorder", () => {
       { targetId: "four", placement: "after" },
     );
   });
+
+  test("horizontal reorder keeps a placeholder in the dragged card slot", () => {
+    const entries = [
+      { id: "one", centerX: 80 },
+      { id: "two", centerX: 100 },
+      { id: "three", centerX: 120 },
+      { id: "four", centerX: 140 },
+    ];
+
+    assert.deepEqual(
+      horizontalReorderTargetFromPointer({
+        entries,
+        draggedId: "three",
+        clientX: 120,
+      }),
+      { targetId: "three", placement: "before" },
+    );
+  });
 });
