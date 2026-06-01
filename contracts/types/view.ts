@@ -144,17 +144,24 @@ export interface PublicChooseTriggerOrderDecision extends PublicDecision<"choose
   }>;
 }
 
+export interface PublicConfirmLifeTriggerDecision extends PublicDecision<"confirmLifeTrigger"> {
+  type: "confirmLifeTrigger";
+  card: CardRef;
+}
+
 export type PublicPendingDecision =
   | PublicDecision<
       Exclude<
         PendingDecision["type"],
         | "chooseQuantity"
         | "chooseTriggerOrder"
+        | "confirmLifeTrigger"
         | "selectCards"
         | "selectTargets"
         | "orderCards"
       >
     >
+  | PublicConfirmLifeTriggerDecision
   | PublicChooseQuantityDecision
   | PublicChooseTriggerOrderDecision
   | PublicSelectCardsDecision

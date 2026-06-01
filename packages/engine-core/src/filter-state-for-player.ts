@@ -605,6 +605,13 @@ const toPublicDecision = (
         : { placement: pending.placement }),
     };
   }
+  if (pending.type === "confirmLifeTrigger") {
+    return {
+      ...base,
+      type: "confirmLifeTrigger",
+      card: pending.card,
+    };
+  }
   if (pending.type === "chooseTriggerOrder") {
     const visibleByInstanceId = new Map(
       visibleCardsForPlayer(state, playerId).map((visible) => [

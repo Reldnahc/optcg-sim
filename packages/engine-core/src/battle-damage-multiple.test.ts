@@ -539,7 +539,7 @@ test("accepting first Double Attack Life Trigger resumes and can create second t
   );
   assert.equal(
     JSON.stringify(defenderView).includes(String(secondLife.cardId)),
-    false,
+    true,
   );
   assert.deepEqual(
     result.events

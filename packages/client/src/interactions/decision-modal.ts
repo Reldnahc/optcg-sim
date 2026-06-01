@@ -116,6 +116,7 @@ export type DecisionModalModel =
       kind: "actionOptions";
       decisionId: DecisionId;
       prompt: string;
+      card?: CardRef;
       options: Array<{ actionIndex: number; label: string }>;
       selectedActionIndex: number;
       canConfirm: true;
@@ -661,6 +662,9 @@ export const createDecisionModalModel = (
       kind: "actionOptions",
       decisionId: decision.id,
       prompt: decision.prompt,
+      ...(decision.type === "confirmLifeTrigger"
+        ? { card: decision.card }
+        : {}),
       options: actionOptions,
       selectedActionIndex: draft.actionIndex,
       canConfirm: true,

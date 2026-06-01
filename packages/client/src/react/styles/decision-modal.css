@@ -4,6 +4,10 @@
   gap: 8px;
 }
 
+.decision-card-preview-grid {
+  justify-content: center;
+}
+
 .decision-option-list {
   display: flex;
   gap: 8px;

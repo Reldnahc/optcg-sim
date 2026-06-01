@@ -450,6 +450,38 @@ describe("headless decision modal models", () => {
     });
   });
 
+  test("life trigger decision modal includes the damaged card with response options", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "confirmLifeTrigger",
+      prompt: "Activate life trigger?",
+      card: cardRef("life-trigger"),
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      { index: 1, type: "respondToDecision", label: "Activate trigger" },
+      { index: 2, type: "respondToDecision", label: "Add to hand" },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.deepEqual(model, {
+      kind: "actionOptions",
+      decisionId: decision.id,
+      prompt: "Activate life trigger?",
+      card: cardRef("life-trigger"),
+      options: [
+        { actionIndex: 1, label: "Activate trigger" },
+        { actionIndex: 2, label: "Add to hand" },
+      ],
+      selectedActionIndex: 1,
+      canConfirm: true,
+    });
+  });
+
   test("counter-step pass decisions are suppressed from modal rendering", () => {
     const counterPass: PublicSelectCardsDecision = {
       ...selectDecision(),

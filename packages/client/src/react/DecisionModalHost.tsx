@@ -294,24 +294,61 @@ export const DecisionModalHost = ({
         </div>
       ) : null}
       {model.kind === "actionOptions" ? (
-        <div className="decision-option-list">
-          {model.options.map((option) => (
-            <button
-              key={option.actionIndex}
-              className={`decision-choice ${
-                option.actionIndex === model.selectedActionIndex
-                  ? "is-selected"
-                  : ""
-              }`}
-              type="button"
-              onClick={() => {
-                onActionOption(option.actionIndex);
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <>
+          {(() => {
+            const previewCard = model.card;
+            if (previewCard === undefined) {
+              return null;
+            }
+            const display = cardDisplay?.(previewCard) ?? {
+              name: String(previewCard.cardId),
+            };
+            return (
+              <div className="decision-card-grid decision-card-preview-grid">
+                <button
+                  className="decision-choice decision-card-choice"
+                  type="button"
+                  disabled={disabled}
+                  onPointerEnter={() => {
+                    onPreviewCard?.(
+                      toDecisionOrderClientCard(previewCard, display),
+                    );
+                  }}
+                >
+                  {display.imageUrl === undefined ? (
+                    <span className="decision-card-placeholder">
+                      {display.name}
+                    </span>
+                  ) : (
+                    <img
+                      className="decision-card-face"
+                      src={display.imageUrl}
+                      alt={display.name}
+                    />
+                  )}
+                </button>
+              </div>
+            );
+          })()}
+          <div className="decision-option-list">
+            {model.options.map((option) => (
+              <button
+                key={option.actionIndex}
+                className={`decision-choice ${
+                  option.actionIndex === model.selectedActionIndex
+                    ? "is-selected"
+                    : ""
+                }`}
+                type="button"
+                onClick={() => {
+                  onActionOption(option.actionIndex);
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </>
       ) : null}
       {model.kind === "generic" ? (
         <p className="muted">This decision needs a dedicated control.</p>

@@ -191,15 +191,21 @@ const assertPublicDecisionShape = (
   assert.ok(pending, `${label}: pending decision must exist`);
   const keys = Object.keys(pending).sort();
   const required = ["causedBy", "id", "playerId", "prompt", "type"].sort();
+  const publicDecisionSpecificKeys =
+    pending.type === "confirmLifeTrigger" ? ["card"] : [];
   if ("timeoutMs" in pending) {
     assert.deepEqual(
       keys,
-      [...required, "timeoutMs"].sort(),
+      [...required, "timeoutMs", ...publicDecisionSpecificKeys].sort(),
       `${label}: pending decision must be public`,
     );
     return;
   }
-  assert.deepEqual(keys, required, `${label}: pending decision must be public`);
+  assert.deepEqual(
+    keys,
+    [...required, ...publicDecisionSpecificKeys].sort(),
+    `${label}: pending decision must be public`,
+  );
 };
 
 const assertNoHiddenLeak = (
@@ -230,6 +236,9 @@ const assertNoHiddenLeak = (
     ...view.revealedCards.flatMap((record) =>
       record.cards.map((card) => String(card.cardId)),
     ),
+    ...(view.pendingDecision?.type === "confirmLifeTrigger"
+      ? [String(view.pendingDecision.card.cardId)]
+      : []),
   ]);
 
   assert.equal(view.self.hand.length, recipientState.hand.length, label);
