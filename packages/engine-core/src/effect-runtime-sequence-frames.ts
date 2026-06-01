@@ -1541,6 +1541,7 @@ const continueNoDecisionSegments = (
           nextState,
           entry,
           index,
+          segment.effect,
           segment.effect.count,
         );
         const decision = quantityDecision.state.pendingDecision;
@@ -1589,6 +1590,7 @@ const continueNoDecisionSegments = (
         nextState,
         entry,
         index,
+        segment.effect,
         segment.effect.count,
       );
       const decision = quantityDecision.state.pendingDecision;
@@ -1647,6 +1649,7 @@ const continueNoDecisionSegments = (
           nextState,
           entry,
           index,
+          segment.effect,
           segment.effect.count,
         );
         const decision = quantityDecision.state.pendingDecision;

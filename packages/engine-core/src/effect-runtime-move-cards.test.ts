@@ -630,6 +630,10 @@ test("conditional queued up-to deck top to life top asks quantity and can choose
 
   assert.equal(quantityPrompt.errors, undefined);
   assert.equal(decision.type, "chooseQuantity");
+  assert.equal(
+    decision.prompt,
+    "Choose how many cards to move from deck to Life.",
+  );
   assert.equal(decision.min, 0);
   assert.equal(decision.max, 1);
 

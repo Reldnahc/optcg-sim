@@ -3,6 +3,7 @@ import type {
   CardInstance,
   ChooseQuantityDecision,
   ChooseOptionalActivationDecision,
+  Effect,
   EffectExecutionFrame,
   EffectQueueEntry,
   EngineEvent,
@@ -17,6 +18,7 @@ import {
   getReturnDonEligibleCount,
   getReturnDonEligibleInstanceIds,
 } from "./effect-runtime-return-don.js";
+import { chooseQuantityPromptForEffect } from "./effect-runtime-quantity-prompts.js";
 import { activeDonCount } from "./effect-runtime-sequence-segments.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
@@ -300,6 +302,7 @@ export const createChooseQuantityDecisionForSequenceSegment = (
   state: GameState,
   entry: EffectQueueEntry,
   index: number,
+  effect: Effect,
   max: number,
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = {
@@ -314,7 +317,7 @@ export const createChooseQuantityDecisionForSequenceSegment = (
     ),
     type: "chooseQuantity",
     playerId: entry.controllerId,
-    prompt: "Choose quantity.",
+    prompt: chooseQuantityPromptForEffect(effect),
     causedBy,
     visibility,
     mode: "upTo",

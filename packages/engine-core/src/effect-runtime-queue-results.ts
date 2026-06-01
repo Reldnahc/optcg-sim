@@ -58,6 +58,7 @@ import {
   executeMoveCardsPrimitive,
   resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
 } from "./effect-runtime-move-cards.js";
+import { chooseQuantityPromptForEffect } from "./effect-runtime-quantity-prompts.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "./effect-runtime-top-deck-placement.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
@@ -415,6 +416,7 @@ export const createEffectRuntimeQueueResults = (
   const createChooseQuantityDecision = (
     state: GameState,
     entry: EffectQueueEntry,
+    effect: Effect,
     bounds: { min: number; max: number },
   ): EngineResult => {
     const decisionId =
@@ -428,7 +430,7 @@ export const createEffectRuntimeQueueResults = (
       id: decisionId,
       type: "chooseQuantity",
       playerId: entry.controllerId,
-      prompt: "Choose quantity.",
+      prompt: chooseQuantityPromptForEffect(effect),
       causedBy,
       visibility: { type: "private", playerId: entry.controllerId },
       mode: "upTo",
@@ -715,6 +717,7 @@ export const createEffectRuntimeQueueResults = (
           const quantityDecision = createChooseQuantityDecision(
             nextState,
             selected,
+            moveCardsEffect,
             { min, max },
           );
           return {
@@ -767,6 +770,7 @@ export const createEffectRuntimeQueueResults = (
           const quantityDecision = createChooseQuantityDecision(
             nextState,
             selected,
+            drawUpToEffect,
             { min: 0, max: drawUpToEffect.count },
           );
           return {

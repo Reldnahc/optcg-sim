@@ -464,6 +464,7 @@ test("drawUpTo chooseQuantity keeps authored max, draws short deck do-as-much-as
   const paused = processEffectRuntime(state);
   const pausedDecision = must(paused.state.pendingDecision, "pending decision");
   assert.equal(pausedDecision.type, "chooseQuantity");
+  assert.equal(pausedDecision.prompt, "Choose how many cards to draw.");
   assert.equal(pausedDecision.max, 3);
 
   const ownerView = filterStateForPlayer(paused.state, p1);
