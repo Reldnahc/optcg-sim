@@ -22,6 +22,18 @@ const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
 const cardStylesPath = join(sourceDirectory, "styles", "card.css");
 const countBadgeStylesPath = join(sourceDirectory, "styles", "count-badge.css");
 
+const cssSectionBetween = (
+  source: string,
+  startMarker: string,
+  endMarker: string,
+): string => {
+  const startIndex = source.indexOf(startMarker);
+  assert.notEqual(startIndex, -1);
+  const endIndex = source.indexOf(endMarker, startIndex + startMarker.length);
+  assert.notEqual(endIndex, -1);
+  return source.slice(startIndex, endIndex);
+};
+
 const card = (index: number): ClientCardModel => ({
   instanceId: `hand-${String(index)}` as InstanceId,
   cardId: `card-${String(index)}` as CardId,
@@ -289,6 +301,17 @@ describe("hand layout", () => {
       /\.hand-drag-placeholder\s*\{[^}]*animation:\s*hand-drag-placeholder-enter 80ms ease-out;/u,
     );
     assert.match(styles, /@keyframes hand-drag-placeholder-enter/u);
+    assert.match(
+      styles,
+      /\.hand-cards\.is-overlapping\s+\.hand-drag-placeholder\s*\{[^}]*animation:\s*hand-drag-placeholder-overlap-enter 80ms ease-out;/u,
+    );
+    const overlapAnimation = cssSectionBetween(
+      styles,
+      "@keyframes hand-drag-placeholder-overlap-enter",
+      ".card-tile-shell.is-pointer-reorderable",
+    );
+    assert.doesNotMatch(overlapAnimation, /flex-basis/u);
+    assert.doesNotMatch(overlapAnimation, /width:/u);
     assert.match(
       styles,
       /\.card-tile-shell\.is-pointer-reorder-dragging\s*\{[^}]*transition:\s*none;/u,

@@ -43,6 +43,22 @@
   }
 }
 
+.hand-cards.is-overlapping .hand-drag-placeholder {
+  animation: hand-drag-placeholder-overlap-enter 80ms ease-out;
+}
+
+@keyframes hand-drag-placeholder-overlap-enter {
+  from {
+    opacity: 0;
+    transform: scaleX(0.65);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
 .card-tile-shell.is-pointer-reorderable {
   touch-action: none;
 }
