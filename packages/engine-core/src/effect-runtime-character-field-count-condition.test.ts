@@ -4,6 +4,10 @@ import { test } from "vitest";
 import type { Condition } from "@optcg/types";
 
 import {
+  evaluateQueuedEffectCondition,
+  isSupportedQueuedEffectConditionShape,
+} from "./effect-runtime-conditions.js";
+import {
   createActiveState,
   must,
   p1,
@@ -13,7 +17,6 @@ import {
   toCardId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 
 const opponentRestedCharacterCount = (
   value: number,
@@ -58,6 +61,64 @@ test("fieldCount condition supports opponent rested character thresholds", () =>
       state,
       { ...queueDrawForP1(), controllerId: p1 },
       opponentRestedCharacterCount(2),
+    ),
+    { supported: true, passed: false },
+  );
+});
+
+test("fieldCount condition supports generic rested public card thresholds", () => {
+  const condition: Extract<Condition, { type: "fieldCount" }> = {
+    type: "fieldCount",
+    player: "self",
+    filter: { state: "rested" },
+    op: "gte",
+    value: 4,
+  };
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  self.leader.state = "rested";
+  const character = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(self.hand[0], "character"),
+    zone: "characterArea",
+  });
+  character.state = "rested";
+  const stage = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(self.hand[1], "stage"),
+    zone: "stageArea",
+  });
+  stage.state = "rested";
+  const restedDon = must(self.donDeck[0], "rested DON");
+  self.donDeck = self.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  self.costArea = [
+    {
+      ...restedDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "rested",
+    },
+  ];
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+  self.leader.state = "active";
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
     ),
     { supported: true, passed: false },
   );

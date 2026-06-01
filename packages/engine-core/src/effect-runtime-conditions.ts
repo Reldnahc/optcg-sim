@@ -853,7 +853,8 @@ export const isSupportedQueuedEffectConditionShape = (
     case "fieldCount":
       return (
         (isSupportedDonFieldCountFilter(condition.filter) ||
-          isSupportedCharacterFieldCountFilter(condition.filter)) &&
+          isSupportedCharacterFieldCountFilter(condition.filter) ||
+          isSupportedPublicFieldStateCountFilter(condition.filter)) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
