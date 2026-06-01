@@ -217,6 +217,58 @@ test("runtime admission accepts costed main sequences with conditional draw and 
   );
 });
 
+test("runtime admission accepts opponent-attack optional rest-DON target-rest sequence", () => {
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        trigger: { type: "onOpponentAttack" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "restDon",
+                  count: 1,
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "rest",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "opponent",
+                    zones: ["leaderArea", "characterArea"],
+                    min: 0,
+                    max: 1,
+                    allowFewerIfUnavailable: true,
+                    visibility: "public",
+                    filter: { categories: ["leader", "character"] },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
 test("runtime admission rejects parsed unsupported entry adapters", () => {
   assert.deepEqual(
     evaluateEffectBlockRuntimeSupport(

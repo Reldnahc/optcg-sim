@@ -113,6 +113,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for opponent-attack optional rest-DON target-rest effects", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Your Opponent's Attack] [Once Per Turn] You may rest 1 of your DON!! cards: Rest up to 1 of your opponent's Leader or Character cards.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports raw keyword reminder lines as metadata-supported", async () => {
     const report = await createSupportProbeReport({
       text: "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",

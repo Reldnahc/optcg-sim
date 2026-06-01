@@ -77,6 +77,9 @@ const autoAdapterFor = (
   if (block.trigger.type === "whenAttacking") {
     return autoAdapter("whenAttacking", ["mustRemainInSameZone"]);
   }
+  if (block.trigger.type === "onOpponentAttack") {
+    return autoAdapter("onOpponentAttack", ["mustRemainInSameZone"]);
+  }
   if (block.trigger.type === "onKO") {
     return autoAdapter("onKO", [
       "resolveFromDestinationZone",
