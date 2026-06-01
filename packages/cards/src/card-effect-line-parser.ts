@@ -8,6 +8,7 @@ import {
 import {
   parseDonFieldCountCondition,
   parseHandCountCondition,
+  parseLeaderColorCountCondition,
   parseLeaderNameCondition,
   parseLifeCountCondition,
   parseNoOtherNamedCharactersCondition,
@@ -165,6 +166,7 @@ const conditionParsers = [
   parseSelfFieldCountCondition,
   parseTrashCountCondition,
   parseLifeCountCondition,
+  parseLeaderColorCountCondition,
   parseLeaderNameCondition,
   parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,

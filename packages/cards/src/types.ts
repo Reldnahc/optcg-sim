@@ -56,6 +56,7 @@ export type PrimitiveEvidence =
   | "condition:synthetic:C"
   | "condition:fieldCount"
   | "condition:leaderIdentity"
+  | "condition:leaderColorCount"
   | "condition:opponentFieldCount"
   | "condition:handCount"
   | "condition:trashCount"

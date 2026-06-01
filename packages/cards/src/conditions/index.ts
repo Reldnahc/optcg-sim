@@ -1,5 +1,6 @@
 export { parseDonFieldCountCondition } from "./don-field-count.js";
 export { parseHandCountCondition } from "./hand-count.js";
+export { parseLeaderColorCountCondition } from "./leader-color-count.js";
 export { parseLeaderNameCondition } from "./leader-name.js";
 export { parseLifeCountCondition } from "./life-count.js";
 export { parseNoOtherNamedCharactersCondition } from "./no-other-named-characters.js";
