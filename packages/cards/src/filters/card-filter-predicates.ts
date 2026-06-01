@@ -45,6 +45,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parsePowerPredicate,
   parseDynamicDonFieldCostPredicate,
   parseCostPredicate,
+  parseSelfExclusionPredicate,
   parseNameExclusionPredicate,
   parseNamePredicate,
   parseDifferentNamesPredicate,
@@ -620,6 +621,22 @@ function parseDifferentNamesPredicate(
     filter: { ...current, custom: "differentNames" },
     evidence: ["filter:differentNames"],
     rest: restText ?? "",
+  };
+}
+
+function parseSelfExclusionPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^other than this Character\b\s*(?<rest>.*)$/i.exec(text);
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, excludeSelf: true },
+    evidence: ["filter:excludeSelf"],
+    rest: match.groups?.["rest"] ?? "",
   };
 }
 

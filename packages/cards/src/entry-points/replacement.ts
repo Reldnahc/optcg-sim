@@ -3,11 +3,15 @@ import type { EntryPointParseResult, ParseInput } from "../types.js";
 export function parseReplacementEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
-  const match =
-    /^If .+? would be removed from the field by your opponent(?:'s effects?)?,\s*you may\b/i.exec(
-      input.text.trimStart(),
-    );
-  if (match === null) {
+  const text = input.text.trimStart();
+  if (
+    !/^If .+? would be removed from the field by your opponent(?:'s effects?)?,\s*you may\b/i.test(
+      text,
+    ) &&
+    !/^If .+? would be K\.O\.'d by your opponent(?:'s effects?)?,\s*you may\b/i.test(
+      text,
+    )
+  ) {
     return undefined;
   }
 
@@ -24,6 +28,6 @@ export function parseReplacementEntryPoint(
       "entry:replacement",
       "sourcePresence:resolveFromLastKnownInformation",
     ],
-    rest: input.text.trimStart(),
+    rest: text,
   };
 }

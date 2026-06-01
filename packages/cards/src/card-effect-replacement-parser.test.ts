@@ -200,4 +200,65 @@ describe("replacement effect parser", () => {
       assert.equal(result.evidence.includes(evidence), true, evidence);
     }
   });
+
+  it("parses opponent effect K.O.-only replacement separately from broad field removal", () => {
+    const target = {
+      type: "all",
+      zone: "characterArea",
+      player: "self",
+      filter: {
+        attributesAny: ["slash"],
+        categories: ["character"],
+        cost: { max: 5 },
+        excludeSelf: true,
+      },
+    } as const;
+    const when = {
+      type: "wouldBeKOd",
+      sourceKind: "cardEffect",
+      target,
+    } as const;
+
+    const result = parseCardEffectLine(
+      "If your <Slash> attribute Character with a cost of 5 or less other than this Character would be K.O.'d by your opponent's effect, you may rest this Character instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "rest",
+          target: { type: "self" },
+        },
+      },
+    });
+    for (const evidence of [
+      "entry:replacement",
+      "replacement:wouldBeKOd",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "target:yourCharacters",
+      "filter:attribute",
+      "filter:category:character",
+      "filter:cost",
+      "condition:comparator:lte",
+      "filter:excludeSelf",
+      "instruction:rest",
+      "target:thisCharacter",
+      "composition:replacementInstead",
+      "composition:entryExpression",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+    assert.equal(result.evidence.includes("replacement:wouldMoveZone"), false);
+    assert.equal(result.evidence.includes("replacement:fieldRemoval"), false);
+  });
 });

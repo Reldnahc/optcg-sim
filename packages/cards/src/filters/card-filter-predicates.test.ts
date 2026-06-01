@@ -197,4 +197,28 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses self exclusion separately from attribute, category, and cost predicates", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "<Slash> attribute Character with a cost of 5 or less other than this Character",
+      }),
+    ).toEqual({
+      filter: {
+        attributesAny: ["slash"],
+        categories: ["character"],
+        cost: { max: 5 },
+        excludeSelf: true,
+      },
+      evidence: [
+        "filter:attribute",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "filter:excludeSelf",
+      ],
+      rest: "",
+    });
+  });
 });

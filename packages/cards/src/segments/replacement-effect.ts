@@ -13,7 +13,9 @@ export function replacementInsteadExpressionParser(
     return undefined;
   }
 
-  const parsed = parseOpponentFieldRemovalReplacement(input.text);
+  const parsed =
+    parseOpponentKoReplacement(input.text) ??
+    parseOpponentFieldRemovalReplacement(input.text);
   if (parsed === undefined) {
     return undefined;
   }
@@ -27,9 +29,6 @@ export function replacementInsteadExpressionParser(
     evidence: [
       "expression:replacement",
       "composition:replacementInstead",
-      "replacement:wouldMoveZone",
-      "replacement:fieldRemoval",
-      "replacementSource:opponent",
       ...parsed.evidence,
     ],
     rest: "",
@@ -38,6 +37,62 @@ export function replacementInsteadExpressionParser(
       optional: true,
       trigger: { type: "replacement", replacement: parsed.when },
     },
+  };
+}
+
+function parseOpponentKoReplacement(text: string):
+  | {
+      readonly when: Extract<Effect, { type: "replacement" }>["when"];
+      readonly instead: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  const match =
+    /^If (?<target>.+?) would be K\.O\.'d by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
+      text.trim(),
+    );
+  const targetText = match?.groups?.["target"];
+  const effectOnlyText = match?.groups?.["effectOnly"];
+  const bodyText = match?.groups?.["body"];
+  if (targetText === undefined || bodyText === undefined) {
+    return undefined;
+  }
+
+  const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
+  const target = parseYourFieldReplacementTarget({
+    text: normalizedTargetText,
+  });
+  if (
+    target === undefined ||
+    target.rest.length > 0 ||
+    target.target.type !== "all"
+  ) {
+    return undefined;
+  }
+  const instead =
+    parseTopLifeToHandInstead(bodyText) ??
+    parseRestSelfInstead(bodyText) ??
+    parseRestCardsInstead(bodyText);
+  if (instead === undefined) {
+    return undefined;
+  }
+
+  return {
+    when: {
+      type: "wouldBeKOd",
+      ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
+      target: target.target,
+    },
+    instead: instead.effect,
+    evidence: [
+      "replacement:wouldBeKOd",
+      "replacementSource:opponent",
+      ...(effectOnlyText === undefined
+        ? []
+        : ["replacementSource:cardEffect" as const]),
+      ...target.evidence,
+      ...instead.evidence,
+    ],
   };
 }
 
@@ -87,6 +142,9 @@ function parseOpponentFieldRemovalReplacement(text: string):
     },
     instead: instead.effect,
     evidence: [
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
       ...(effectOnlyText === undefined
         ? []
         : ["replacementSource:cardEffect" as const]),

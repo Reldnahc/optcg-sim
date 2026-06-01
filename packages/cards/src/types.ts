@@ -217,6 +217,7 @@ export type PrimitiveEvidence =
   | "sourceCategory:character"
   | "sourceCategory:event"
   | "sourceCategory:stage"
+  | "replacement:wouldBeKOd"
   | "replacement:wouldMoveZone"
   | "replacement:fieldRemoval"
   | "replacementSource:opponent"

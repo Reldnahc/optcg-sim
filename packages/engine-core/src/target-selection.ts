@@ -6,6 +6,7 @@ import type {
   PlayerId,
   PlayerRef,
   ResolvedCard,
+  CardRef,
   TargetCandidate,
   TargetRequest,
   Zone,
@@ -29,6 +30,7 @@ export type TargetCandidateResolutionResult =
 
 export interface ResolvePublicTargetCandidatesContext {
   sourceControllerId: PlayerId;
+  source?: CardRef;
 }
 
 const publicCandidateVisibility = { type: "public" } as const;
@@ -40,6 +42,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "colorsAny",
   "cost",
   "currentPower",
+  "excludeSelf",
   "names",
   "nameNot",
   "power",
@@ -154,6 +157,7 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    (filter.excludeSelf === undefined || filter.excludeSelf) &&
     (filter.state === undefined ||
       filter.state === "active" ||
       filter.state === "rested") &&
@@ -193,15 +197,24 @@ const cardMatchesFilter = (
   instance: CardInstance,
   card: ResolvedCard,
   filter: CardFilter | undefined,
+  context: ResolvePublicTargetCandidatesContext,
 ): boolean => {
   if (filter === undefined) {
     return true;
   }
 
   if (
+    filter.excludeSelf === true &&
+    (context.source === undefined ||
+      context.source.instanceId === instance.instanceId)
+  ) {
+    return false;
+  }
+
+  if (
     filter.anyOf !== undefined &&
     !filter.anyOf.some((candidate) =>
-      cardMatchesFilter(state, instance, card, candidate),
+      cardMatchesFilter(state, instance, card, candidate, context),
     )
   ) {
     return false;
@@ -337,7 +350,7 @@ export const resolvePublicTargetCandidates = (
 
       if (
         metadata === undefined ||
-        cardMatchesFilter(state, card, metadata, request.filter)
+        cardMatchesFilter(state, card, metadata, request.filter, context)
       ) {
         candidates.push({
           card: toCardRef(card, targetPlayerId),

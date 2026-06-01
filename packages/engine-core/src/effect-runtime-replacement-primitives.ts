@@ -419,13 +419,39 @@ const isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect = (
   effect.effect.when.target.player === "self" &&
   isSupportedRestSelfInsteadEffect(effect.effect.instead);
 
+const isSupportedOpponentEffectKoRestSelfReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  effect.category === "replacement" &&
+  effect.trigger.type === "replacement" &&
+  effect.trigger.replacement.type === "wouldBeKOd" &&
+  effect.trigger.replacement.sourceKind === "cardEffect" &&
+  effect.trigger.replacement.target.type === "all" &&
+  effect.trigger.replacement.target.zone === "characterArea" &&
+  effect.trigger.replacement.target.player === "self" &&
+  effect.optional === true &&
+  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.cost === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.oncePerTurn === undefined &&
+  effect.effect.type === "replacement" &&
+  effect.effect.when.type === "wouldBeKOd" &&
+  effect.effect.when.sourceKind === "cardEffect" &&
+  effect.effect.when.target.type === "all" &&
+  effect.effect.when.target.zone === "characterArea" &&
+  effect.effect.when.target.player === "self" &&
+  isSupportedRestSelfInsteadEffect(effect.effect.instead);
+
 const isSupportedReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
   isSupportedSelfKoDrawReplacementEffect(effect) ||
   isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect) ||
-  isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect);
+  isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||
+  isSupportedOpponentEffectKoRestSelfReplacementEffect(effect);
 
 const isReplacementTriggerEffect = (
   effect: EffectDefinition["effects"][number],
@@ -548,7 +574,8 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
           ) ||
           isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(
             effect,
-          )) &&
+          ) ||
+          isSupportedOpponentEffectKoRestSelfReplacementEffect(effect)) &&
         !opponentFieldRemovalReplacementApplies(
           state,
           process,
@@ -593,7 +620,10 @@ const opponentFieldRemovalReplacementApplies = (
     return false;
   }
   const target = effect.trigger.replacement;
-  if (target.type !== "wouldMoveZone" || target.target.type !== "all") {
+  if (
+    (target.type !== "wouldMoveZone" && target.type !== "wouldBeKOd") ||
+    target.target.type !== "all"
+  ) {
     return false;
   }
   if (!fieldRemovalSourceKindMatches(process, target.sourceKind)) {
@@ -619,6 +649,7 @@ const opponentFieldRemovalReplacementApplies = (
   } as const;
   const candidates = resolvePublicTargetCandidates(state, request, {
     sourceControllerId: located.card.controller,
+    source: source.ref,
   });
   if (!candidates.ok) {
     return false;
@@ -672,14 +703,7 @@ const replacementRestCandidateIsActive = (
 
 const fieldRemovalSourceKindMatches = (
   process: ReplacementProcess,
-  sourceKind: Extract<
-    Effect,
-    { type: "replacement" }
-  >["when"] extends infer Trigger
-    ? Trigger extends { type: "wouldMoveZone"; sourceKind?: infer Kind }
-      ? Kind | undefined
-      : never
-    : never,
+  sourceKind: "battle" | "cardEffect" | undefined,
 ): boolean => {
   if (sourceKind === undefined) {
     return true;
