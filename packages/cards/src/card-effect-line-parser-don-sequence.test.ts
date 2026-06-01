@@ -178,6 +178,76 @@ it("parses activate-main turn-count DON ramp and rested-DON attach compositional
   );
 });
 
+it("parses activate-main DON activation followed by character-effect DON activation restriction", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] Set up to 1 of your DON!! cards as active. Then, you cannot set DON!! cards as active using Character effects during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      zone: "costArea",
+                      player: "self",
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["don"], state: "rested" },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "activate",
+                    target: { type: "savedFieldObject" },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "preventDonActivation",
+              player: "self",
+              sourceCategories: ["character"],
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "instruction:activate",
+      "instruction:preventDonActivation",
+      "target:yourDonCards",
+      "filter:category:don",
+      "sourceCategory:character",
+      "duration:thisTurn",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses main rest-DON cost with attached-DON condition and power reduction body", () => {
   const result = parseCardEffectLine(
     "[Main] You may rest 5 of your DON!! cards: If you have any DON!! cards given, give up to 1 of your opponent's Characters −8000 power during this turn.",

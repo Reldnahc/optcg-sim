@@ -5,10 +5,12 @@ import type {
   EffectExecutionFrame,
   EffectQueueEntry,
   GameState,
+  PlayerId,
   SequenceSegmentResult,
 } from "@optcg/types";
 
 import { toStateSeq } from "./action-results.js";
+import { getOpponentId } from "./action-state.js";
 import {
   executeSelectedTargetEffectPrimitive,
   resolveSavedFieldObjectKoSelection,
@@ -212,10 +214,14 @@ const restProtectionAttemptFromEntry = (
 
 const activateFieldObject = (
   state: GameState,
+  entry: EffectQueueEntry,
   target: CardRef,
 ): { changed: boolean; state: GameState } => {
   const player = state.players[target.playerId];
   if (player === undefined) {
+    return { changed: false, state };
+  }
+  if (isDonActivationPrevented(state, entry, target)) {
     return { changed: false, state };
   }
   if (target.zone?.zone === "costArea") {
@@ -242,6 +248,60 @@ const activateFieldObject = (
     };
   }
   return { changed: false, state };
+};
+
+const targetPlayerForDonActivationRestriction = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): PlayerId | undefined => {
+  const target = effect.modifier.target;
+  if (target.type !== "player") {
+    return undefined;
+  }
+  switch (target.player) {
+    case "self":
+    case "controller":
+      return effect.controller;
+    case "owner":
+      return effect.source.playerId;
+    case "opponent":
+      return getOpponentId(state, effect.controller) ?? undefined;
+    case "turnPlayer":
+      return state.turn.turnPlayerId;
+    case "nonTurnPlayer":
+      return getOpponentId(state, state.turn.turnPlayerId) ?? undefined;
+    default:
+      return undefined;
+  }
+};
+
+const isDonActivationPrevented = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  target: CardRef,
+): boolean => {
+  if (target.zone?.zone !== "costArea") {
+    return false;
+  }
+  return state.continuousEffects.some((effect) => {
+    if (
+      effect.modifier.layer !== "restriction" ||
+      effect.modifier.operation.type !== "restriction" ||
+      effect.modifier.operation.restriction !== "cannotActivateDon"
+    ) {
+      return false;
+    }
+    const sourceCategories = effect.modifier.operation.sourceCategories;
+    if (
+      sourceCategories !== undefined &&
+      !sourceCategories.includes(entry.sourceSnapshot.category)
+    ) {
+      return false;
+    }
+    return (
+      targetPlayerForDonActivationRestriction(state, effect) === target.playerId
+    );
+  });
 };
 
 const exactTargetForSavedObject = (
@@ -546,7 +606,7 @@ export const applySavedFieldObjectActivateSequenceSegment = (params: {
   let nextState = params.state;
   let changedState = false;
   for (const target of resolvedSavedTarget.selectedTargets) {
-    const activated = activateFieldObject(nextState, target);
+    const activated = activateFieldObject(nextState, params.entry, target);
     nextState = activated.state;
     changedState ||= activated.changed;
   }

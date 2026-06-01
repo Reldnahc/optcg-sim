@@ -70,6 +70,7 @@ export type PrimitiveEvidence =
   | "condition:threshold:nonNegativeInteger"
   | "instruction:draw"
   | "instruction:preventDraw"
+  | "instruction:preventDonActivation"
   | "instruction:trashFromHand"
   | "instruction:moveCards"
   | "instruction:activate"

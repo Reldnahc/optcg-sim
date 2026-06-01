@@ -30,6 +30,7 @@ const supportedRestriction = new Set([
   "cannotAttack",
   "cannotBlock",
   "cannotBecomeActive",
+  "cannotActivateDon",
 ]);
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
@@ -244,6 +245,7 @@ export const isSupportedContinuousQueueEffect = (
   | Extract<Effect, { type: "giveKeyword" }>
   | Extract<Effect, { type: "modifyCost" }>
   | Extract<Effect, { type: "preventDraw" }>
+  | Extract<Effect, { type: "preventDonActivation" }>
   | Extract<Effect, { type: "invalidateEffects" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
@@ -253,6 +255,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "giveKeyword" &&
     effect.type !== "modifyCost" &&
     effect.type !== "preventDraw" &&
+    effect.type !== "preventDonActivation" &&
     effect.type !== "invalidateEffects" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
@@ -273,6 +276,9 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (effect.type === "preventDraw") {
     return effect.player === "self";
+  }
+  if (effect.type === "preventDonActivation") {
+    return effect.player === "self" && effect.sourceCategories.length > 0;
   }
   if (
     effect.type === "invalidateEffects" &&
@@ -327,6 +333,7 @@ const mapEffectToModifier = (
     | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "preventDraw" }>
+    | Extract<Effect, { type: "preventDonActivation" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
@@ -366,6 +373,17 @@ const mapEffectToModifier = (
       operation: { type: "restriction", restriction: "cannotDrawByOwnEffects" },
     };
   }
+  if (effect.type === "preventDonActivation") {
+    return {
+      layer: "restriction",
+      target,
+      operation: {
+        type: "restriction",
+        restriction: "cannotActivateDon",
+        sourceCategories: effect.sourceCategories,
+      },
+    };
+  }
   if (effect.type === "invalidateEffects") {
     return {
       layer: "effectInvalidation",
@@ -402,6 +420,7 @@ const createRecord = (
     | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "preventDraw" }>
+    | Extract<Effect, { type: "preventDonActivation" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
@@ -448,6 +467,7 @@ export const createContinuousRecordsForResolvedEffect = (
     | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "preventDraw" }>
+    | Extract<Effect, { type: "preventDonActivation" }>
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
@@ -456,6 +476,17 @@ export const createContinuousRecordsForResolvedEffect = (
   context?: ContinuousResolutionContext,
 ): ContinuousEffectRecord[] | null => {
   if (effect.type === "preventDraw") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      { type: "player", player: effect.player },
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
+  if (effect.type === "preventDonActivation") {
     const record = createRecord(
       state,
       entry,

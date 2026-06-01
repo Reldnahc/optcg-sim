@@ -121,6 +121,7 @@ type ContinuousResolvedEffect = Extract<
       | "giveKeyword"
       | "modifyCost"
       | "preventDraw"
+      | "preventDonActivation"
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
@@ -179,6 +180,7 @@ const isContinuousResolvedEffect = (
   effect.type === "giveKeyword" ||
   effect.type === "modifyCost" ||
   effect.type === "preventDraw" ||
+  effect.type === "preventDonActivation" ||
   effect.type === "invalidateEffects" ||
   effect.type === "cannotBecomeActive" ||
   effect.type === "cannotAttack" ||

@@ -610,6 +610,12 @@ export type Effect =
       source: "ownEffects";
       duration: Duration;
     }
+  | {
+      type: "preventDonActivation";
+      player: PlayerRef;
+      sourceCategories: CardCategory[];
+      duration: Duration;
+    }
   | { type: "search"; request: SearchRequest }
   | {
       type: "placeTopDeckCards";

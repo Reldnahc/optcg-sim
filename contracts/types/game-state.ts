@@ -15,6 +15,7 @@ import type {
 } from "./primitives.js";
 import type {
   CardRef,
+  CardCategory,
   CardSnapshot,
   CardSupportStatus,
   Keyword,
@@ -166,7 +167,11 @@ export type ModifierOperation =
   | { type: "invalidateEffects" }
   | { type: "addKeyword"; keyword: Keyword }
   | { type: "removeKeyword"; keyword: Keyword }
-  | { type: "restriction"; restriction: string }
+  | {
+      type: "restriction";
+      restriction: string;
+      sourceCategories?: CardCategory[];
+    }
   | { type: "protection"; protection: Protection };
 
 export interface Modifier {
