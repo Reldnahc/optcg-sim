@@ -8,4 +8,5 @@ export {
 } from "./sequence.js";
 export { parseRestSelfCost } from "./rest-self.js";
 export { parseTrashFromHandCost } from "./trash-from-hand.js";
+export { parseTrashSelfCost } from "./trash-self.js";
 export { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";

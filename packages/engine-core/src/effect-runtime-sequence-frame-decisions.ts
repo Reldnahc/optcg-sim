@@ -444,6 +444,34 @@ const findRestableSource = (
   );
 };
 
+const findTrashableSource = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): CardInstance | undefined => {
+  const player = state.players[entry.controllerId];
+  if (player === undefined) {
+    return undefined;
+  }
+  if (entry.source.zone?.zone === "characterArea") {
+    return player.characters.find(
+      (card) =>
+        card.instanceId === entry.source.instanceId &&
+        card.cardId === entry.source.cardId &&
+        card.controller === entry.controllerId,
+    );
+  }
+  if (entry.source.zone?.zone === "stageArea") {
+    const stage = player.stage;
+    return stage !== undefined &&
+      stage.instanceId === entry.source.instanceId &&
+      stage.cardId === entry.source.cardId &&
+      stage.controller === entry.controllerId
+      ? stage
+      : undefined;
+  }
+  return undefined;
+};
+
 export const getSequencePayCostLegalActions = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -463,6 +491,17 @@ export const getSequencePayCostLegalActions = (
   const legalPayments: LegalAction[] = [];
   for (const option of decision.paymentOptions) {
     if (option.type === "restSelf") {
+      legalPayments.push({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: {
+          type: "payment" as const,
+          optionId: option.id,
+        },
+      });
+      continue;
+    }
+    if (option.type === "trashSelf") {
       legalPayments.push({
         type: "respondToDecision",
         decisionId: decision.id,
@@ -583,6 +622,7 @@ export const getSequenceOptionalPayCostOptions = (
     {
       type:
         | "restSelf"
+        | "trashSelf"
         | "restDon"
         | "returnDon"
         | "trashFromHand"
@@ -598,6 +638,7 @@ export const getSequenceOptionalPayCostOptions = (
       {
         type:
           | "restSelf"
+          | "trashSelf"
           | "restDon"
           | "returnDon"
           | "trashFromHand"
@@ -617,6 +658,15 @@ export const getSequenceOptionalPayCostOptions = (
       paymentOptions.push({
         id: "restSelf",
         type: "restSelf",
+      });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "trashSelf") {
+    if (findTrashableSource(state, entry) !== undefined) {
+      paymentOptions.push({
+        id: "trashSelf",
+        type: "trashSelf",
       });
     }
     return paymentOptions;

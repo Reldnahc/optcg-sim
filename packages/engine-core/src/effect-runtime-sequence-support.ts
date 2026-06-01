@@ -155,6 +155,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
   switch (cost.type) {
     case "restSelf":
       return { type: "restSelf", optional: true };
+    case "trashSelf":
+      return { type: "trashSelf", optional: true };
     case "restDon":
       return { ...cost, optional: true };
     case "returnDon":
@@ -166,7 +168,6 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
     case "sequence":
-    case "trashSelf":
     case "discard":
     case "custom":
       return undefined;
@@ -376,6 +377,9 @@ const isSupportedPayCostSegment = (
     });
   }
   if (cost.type === "restSelf") {
+    return true;
+  }
+  if (cost.type === "trashSelf") {
     return true;
   }
   if (cost.type === "turnLifeFaceUp") {

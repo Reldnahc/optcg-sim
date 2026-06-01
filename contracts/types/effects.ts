@@ -209,6 +209,7 @@ export type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
+  | { type: "trashSelf"; optional: true }
   | {
       type: "turnLifeFaceUp";
       count: number;

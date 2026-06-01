@@ -67,4 +67,82 @@ describe("opponent attack effect line parser", () => {
       ]),
     );
   });
+
+  it("parses opponent-attack trash-this-character cost into reusable DON activation primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Your Opponent's Attack] You may trash this Character: Set up to 1 of your DON!! cards as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onOpponentAttack" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashSelf",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "targetSelection:set-don-active",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        chooser: "self",
+                        player: "self",
+                        zone: "costArea",
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          categories: ["don"],
+                          state: "rested",
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "activate",
+                      target: {
+                        type: "savedFieldObject",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onOpponentAttack",
+        "composition:optionalCostedEffect",
+        "cost:trashSelf",
+        "target:thisCharacter",
+        "instruction:activate",
+        "target:yourDonCards",
+        "filter:category:don",
+        "filter:state:rested",
+        "state:active",
+      ]),
+    );
+  });
 });

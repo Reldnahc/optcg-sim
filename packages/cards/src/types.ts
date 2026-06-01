@@ -101,6 +101,7 @@ export type PrimitiveEvidence =
   | "cost:returnDon"
   | "cost:turnLifeFaceUp"
   | "cost:chooseOne"
+  | "cost:trashSelf"
   | "cost:trashFromField"
   | "cost:trashFromHand"
   | "cost:moveCards"
