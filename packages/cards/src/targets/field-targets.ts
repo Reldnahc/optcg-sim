@@ -104,6 +104,14 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
   if (match === null) {
     return undefined;
   }
+  const predicateText = match.groups?.["rest"]?.trim() ?? "";
+  const predicates =
+    predicateText.length > 0
+      ? parseCardFilterPredicates(
+          { text: predicateText },
+          { powerSemantics: "current" },
+        )
+      : undefined;
 
   return {
     target: {
@@ -117,7 +125,10 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: { categories: ["leader", "character"] },
+        filter: {
+          ...(predicates?.filter ?? {}),
+          categories: ["leader", "character"],
+        },
       },
     },
     evidence: [
@@ -125,8 +136,9 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
       "player:opponent",
       "filter:category:leader",
       "filter:category:character",
+      ...(predicates?.evidence ?? []),
     ],
-    rest: match.groups?.["rest"]?.trim() ?? "",
+    rest: predicates?.rest.trim() ?? predicateText,
   };
 }
 
@@ -209,6 +221,14 @@ export function parseYourLeaderOrCharacterCardsTarget(
   if (match === null) {
     return undefined;
   }
+  const predicateText = match.groups?.["rest"]?.trim() ?? "";
+  const predicates =
+    predicateText.length > 0
+      ? parseCardFilterPredicates(
+          { text: predicateText },
+          { powerSemantics: "current" },
+        )
+      : undefined;
 
   return {
     target: {
@@ -222,7 +242,10 @@ export function parseYourLeaderOrCharacterCardsTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: { categories: ["leader", "character"] },
+        filter: {
+          ...(predicates?.filter ?? {}),
+          categories: ["leader", "character"],
+        },
       },
     },
     evidence: [
@@ -230,8 +253,9 @@ export function parseYourLeaderOrCharacterCardsTarget(
       "player:self",
       "filter:category:leader",
       "filter:category:character",
+      ...(predicates?.evidence ?? []),
     ],
-    rest: match.groups?.["rest"]?.trim() ?? "",
+    rest: predicates?.rest.trim() ?? predicateText,
   };
 }
 

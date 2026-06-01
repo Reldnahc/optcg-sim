@@ -199,6 +199,50 @@ test("selectTargets response resumes queued KO target effect in stable event ord
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
+test("selectTargets response resolves direct queued rest target effect", () => {
+  const { state, entry } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "rest",
+    target: {
+      type: "choose",
+      request: publicCharacterTargetRequest({ min: 0, max: 1 }),
+    },
+  });
+  removeFieldCardsFromHands(state);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectTargets");
+  const selected = must(decision.candidates[0], "selected").card;
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  const target = must(result.state.players[p2], "p2").characters.find(
+    (card) => card.instanceId === selected.instanceId,
+  );
+  assert.equal(target?.state, "rested");
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["decisionResolved", "effectResolved", "ruleProcessingChecked"],
+  );
+  assert.deepEqual(result.events[1]?.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+});
+
 test("selectTargets response continuation is deterministic for identical queued target input", () => {
   const run = () => {
     const { state } = targetSelectionQueueState();

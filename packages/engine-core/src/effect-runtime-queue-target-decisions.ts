@@ -33,13 +33,14 @@ import {
   isSupportedMainEventTargetKoEffect,
   resolvePlayerId,
 } from "./effect-runtime-primitives.js";
+import { restFieldObjects } from "./effect-runtime-sequence-saved-field-object.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "./once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
-import { resolvePublicTargetCandidates } from "./target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 export type EffectQueuePendingRuntimeWork = {
   kind: "effectQueue";
@@ -95,17 +96,20 @@ export interface EffectRuntimeQueueTargetDecisions {
   resolveQueuedTargetRequest: (
     state: GameState,
     entry: EffectQueueEntry,
-  ) => TargetRequest | undefined;
+  ) => TargetRequest | MultiZoneTargetRequest | undefined;
   createSelectTargetsDecisionForQueuedEffect: (
     state: GameState,
     entry: EffectQueueEntry,
-    request: TargetRequest,
+    request: TargetRequest | MultiZoneTargetRequest,
     options: SelectTargetsDecisionOptions,
   ) => EngineResult;
 }
 
 type SupportedSelectedTargetKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "choose" }>;
+};
+type SupportedSelectedTargetRestEffect = Extract<Effect, { type: "rest" }> & {
+  target: Extract<Target, { type: "choose" | "chooseFromZones" }>;
 };
 type SupportedSelectedTargetContinuousEffect =
   | (Extract<Effect, { type: "modifyPower" }> & {
@@ -153,8 +157,9 @@ export const isSupportedTargetChoiceEffectShape = (
     effect.cost === undefined &&
     effect.conditionTiming === undefined &&
     effect.failurePolicy === undefined &&
-    effect.effect.type === "ko" &&
-    isChooseTarget(effect.effect.target)
+    ((effect.effect.type === "ko" && isChooseTarget(effect.effect.target)) ||
+      (effect.effect.type === "rest" &&
+        isSelectableTarget(effect.effect.target)))
   );
 };
 const isSupportedTargetChoiceContinuousShape = (
@@ -196,11 +201,20 @@ const isChooseTarget = (
 ): target is Extract<Target, { type: "choose" }> =>
   typeof target === "object" && "type" in target && target.type === "choose";
 
-const targetRequestForEffect = (effect: Effect): TargetRequest | undefined => {
+const isSelectableTarget = (
+  target: EffectWithTarget["target"],
+): target is Extract<Target, { type: "choose" | "chooseFromZones" }> =>
+  typeof target === "object" &&
+  "type" in target &&
+  (target.type === "choose" || target.type === "chooseFromZones");
+
+const targetRequestForEffect = (
+  effect: Effect,
+): TargetRequest | MultiZoneTargetRequest | undefined => {
   if (!("target" in effect)) {
     return undefined;
   }
-  return isChooseTarget(effect.target) ? effect.target.request : undefined;
+  return isSelectableTarget(effect.target) ? effect.target.request : undefined;
 };
 
 const targetRequestsEqual = (
@@ -266,7 +280,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
   const resolveQueuedTargetRequest = (
     state: GameState,
     entry: EffectQueueEntry,
-  ): TargetRequest | undefined => {
+  ): TargetRequest | MultiZoneTargetRequest | undefined => {
     const resolved = state.cardManifest.cards[entry.source.cardId];
     if (resolved === undefined) {
       return undefined;
@@ -301,6 +315,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         entry: EffectQueueEntry;
         effect:
           | SupportedSelectedTargetKoEffect
+          | SupportedSelectedTargetRestEffect
           | SupportedSelectedTargetContinuousEffect;
         oncePerTurn: boolean;
       }
@@ -502,6 +517,25 @@ export const createEffectRuntimeQueueTargetDecisions = (
           (entry) => entry.id !== resolved.entry.id,
         ),
       };
+      if (resolved.effect.type === "rest") {
+        const rested = restFieldObjects(queueRemovedState, selectedTargets, {
+          sourceKind: "cardEffect",
+          sourceControllerId: resolved.entry.controllerId,
+          sourceCardCategory: resolved.entry.sourceSnapshot.category,
+        });
+        nextState = rested.changed
+          ? { ...rested.state, seq: toStateSeq(rested.state.seq + 1) }
+          : rested.state;
+        const allEvents: EngineEvent[] = [];
+        return finalizeSelectedTargetEffectResolution(
+          nextState,
+          state,
+          resolved.entry,
+          allEvents,
+          [],
+        );
+      }
+
       if (resolved.effect.type !== "ko") {
         const records = createContinuousRecordsForResolvedEffect(
           queueRemovedState,
@@ -577,10 +611,10 @@ export const createEffectRuntimeQueueTargetDecisions = (
   const createSelectTargetsDecisionForQueuedEffect = (
     state: GameState,
     entry: EffectQueueEntry,
-    request: TargetRequest,
+    request: TargetRequest | MultiZoneTargetRequest,
     options: SelectTargetsDecisionOptions,
   ): EngineResult => {
-    const resolved = resolvePublicTargetCandidates(state, request, {
+    const resolved = resolvePublicTargetCandidatesForRequest(state, request, {
       sourceControllerId: entry.controllerId,
     });
     const chooserId = resolvePlayerId(state, entry, request.chooser);

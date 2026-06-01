@@ -83,6 +83,42 @@ describe("field target parsers", () => {
     });
   });
 
+  it("parses opponent Leader or Character cards target with reusable cost predicates", () => {
+    expect(
+      parseOpponentLeaderOrCharacterCardsTarget({
+        text: "of your opponent's Leader or Character cards with a cost of 7 or less.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zones: ["leaderArea", "characterArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            categories: ["leader", "character"],
+            cost: { max: 7 },
+          },
+        },
+      },
+      evidence: [
+        "target:opponentLeaderOrCharacters",
+        "player:opponent",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: ".",
+    });
+  });
+
   it("parses opponent field target power predicates as current power unless base is explicit", () => {
     const currentPower = parseOpponentCharactersTarget({
       text: "of your opponent's Characters with 3000 power or less",
