@@ -2,7 +2,8 @@ import type { Action, EngineResult, GameState } from "@optcg/types";
 
 import { finalizeBattleAfterReplacementResolution } from "./battle-actions.js";
 import { finalizeSelectedTargetEffectResolution } from "./effect-runtime.js";
-import { applyReplacementRestTargetDecisionResponse } from "./effect-runtime-ko-replacement-process.js";
+import { applyReplacementRestTargetDecisionResponse } from "./replacement-rest-target-decision.js";
+import { applyReplacementTrashFromHandDecisionResponse } from "./replacement-trash-from-hand-actions.js";
 import { toEngineResult } from "./action-results.js";
 
 const queueEntryIdFromReplacementPayload = (
@@ -41,7 +42,8 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
   action: Extract<Action, { type: "respondToDecision" }>,
 ): EngineResult | null => {
   const replacementRestTargetResult =
-    applyReplacementRestTargetDecisionResponse(state, action);
+    applyReplacementRestTargetDecisionResponse(state, action) ??
+    applyReplacementTrashFromHandDecisionResponse(state, action);
   if (replacementRestTargetResult === null) {
     return null;
   }

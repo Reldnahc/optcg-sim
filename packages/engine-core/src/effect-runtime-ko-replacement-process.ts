@@ -1,16 +1,14 @@
 import type {
-  Action,
   CardInstance,
   CardRef,
   CardSnapshot,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
-  EngineResult,
   GameState,
-  LegalAction,
   PlayerId,
   ReplacementProcess,
+  SelectCardsDecision,
   SelectTargetsDecision,
   TargetCandidate,
   TimingWindowId,
@@ -23,6 +21,7 @@ import {
   toDecisionId,
   toStateSeq,
 } from "./action-results.js";
+import { toCardRef } from "./action-state.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { executeNoChoiceEffectPrimitive } from "./effect-runtime-draw-primitives.js";
 import {
@@ -34,6 +33,7 @@ import {
   type SelectedTargetKoReplacementCandidate,
 } from "./effect-runtime-replacement-primitives.js";
 import { restFieldObjects } from "./effect-runtime-sequence-saved-field-object.js";
+import { consumeOncePerTurn, toOncePerTurnKey } from "./once-per-turn.js";
 import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
 
 export type {
@@ -82,6 +82,21 @@ interface PendingReplacementRestInsteadPayload {
   source: CardRef;
   target?: CardRef;
   controllerId: PlayerId;
+}
+
+interface PendingReplacementTrashFromHandInsteadPayload {
+  decisionId: string;
+  effectBlockId: EffectQueueEntry["effectBlockId"];
+  replacementId: string;
+  source: CardRef;
+  target?: CardRef;
+  controllerId: PlayerId;
+  count: number;
+  oncePerTurn?: {
+    cardInstanceId: CardInstance["instanceId"];
+    effectId: EffectQueueEntry["effectBlockId"];
+    turnNumber: GameState["turn"]["globalTurn"];
+  };
 }
 
 export const buildKoReplacementProcess = (params: {
@@ -287,6 +302,13 @@ const replacementOptionLabel = (
   if (isSupportedRestSelfInsteadEffect(instead)) {
     return "Rest this Character instead";
   }
+  if (isSupportedTrashFromHandInsteadEffect(instead)) {
+    return `Trash ${String(instead.count)} ${plural(
+      instead.count,
+      "card",
+      "cards",
+    )} from hand instead`;
+  }
   return "Use replacement effect";
 };
 
@@ -329,6 +351,19 @@ const isSupportedRestSelfInsteadEffect = (
     { type: "self" }
   >;
 } => effect.type === "rest" && effect.target.type === "self";
+
+const isSupportedTrashFromHandInsteadEffect = (
+  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+): effect is Extract<
+  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
+  { type: "trashFromHand" }
+> =>
+  effect.type === "trashFromHand" &&
+  effect.player === "self" &&
+  effect.chooser === "self" &&
+  effect.filter === undefined &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
 
 const replacementRestCandidateIsActive = (
   state: GameState,
@@ -534,6 +569,73 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
       process: usedProcess,
     };
   }
+  const trashFromHandDecision = createReplacementTrashFromHandDecision(
+    state,
+    process,
+    candidate,
+  );
+  if (trashFromHandDecision !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: trashFromHandDecision.id,
+        decisionType: trashFromHandDecision.type,
+        playerId: trashFromHandDecision.playerId,
+      },
+      trashFromHandDecision.visibility,
+    );
+    const created = events[events.length - 1];
+    if (created !== undefined) {
+      created.causedBy = trashFromHandDecision.causedBy;
+    }
+    const oncePerTurn =
+      candidate.oncePerTurn === true
+        ? {
+            cardInstanceId: candidate.source.instanceId,
+            effectId: candidate.effectBlockId,
+            turnNumber: state.turn.globalTurn,
+          }
+        : undefined;
+    return {
+      state: {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        pendingDecision: trashFromHandDecision,
+        replacementState: [
+          ...state.replacementState.filter(
+            (candidateState) => candidateState.processId !== process.id,
+          ),
+          {
+            processId: process.id,
+            type: process.type,
+            usedReplacementIds: usedProcess.usedReplacementIds,
+            payload: {
+              ...(typeof process.payload === "object" &&
+              process.payload !== null
+                ? process.payload
+                : {}),
+              pendingReplacementTrashFromHandInstead: {
+                decisionId: trashFromHandDecision.id,
+                effectBlockId: candidate.effectBlockId,
+                replacementId: candidate.id,
+                source: candidate.source,
+                ...(process.target === undefined
+                  ? {}
+                  : { target: process.target }),
+                controllerId: candidate.controllerId,
+                count: trashFromHandDecision.request.min,
+                ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
+              } satisfies PendingReplacementTrashFromHandInsteadPayload,
+            },
+          },
+        ],
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      process: usedProcess,
+    };
+  }
   const transformedPayload = replacementInsteadTransformedPayload(candidate);
   appendEvent(
     state,
@@ -591,10 +693,21 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     };
   }
 
+  const afterReplacement =
+    candidate.oncePerTurn === true
+      ? consumeOncePerTurn(
+          replaced.state,
+          toOncePerTurnKey({
+            cardInstanceId: candidate.source.instanceId,
+            effectId: candidate.effectBlockId,
+            turnNumber: state.turn.globalTurn,
+          }),
+        )
+      : replaced.state;
   events.push(...rebaseEvents(state, replaced.events, events.length + 1));
   return {
     state: {
-      ...replaced.state,
+      ...afterReplacement,
       eventJournal: [...state.eventJournal, ...events],
     },
     process: usedProcess,
@@ -635,309 +748,52 @@ const createReplacementRestTargetDecision = (
   };
 };
 
-const pendingReplacementRestPayload = (
+const createReplacementTrashFromHandDecision = (
   state: GameState,
-  decision: NonNullable<GameState["pendingDecision"]> | undefined,
-): {
-  processId: string;
-  payload: PendingReplacementRestInsteadPayload;
-} | null => {
-  if (decision?.type !== "selectTargets") {
-    return null;
-  }
-  const processState = state.replacementState.find((candidate) => {
-    const payload = candidate.payload;
-    return (
-      typeof payload === "object" &&
-      payload !== null &&
-      "pendingReplacementRestInstead" in payload &&
-      pendingReplacementRestInsteadFromPayload(payload)?.decisionId ===
-        decision.id
-    );
-  });
-  const payload =
-    processState === undefined
-      ? undefined
-      : pendingReplacementRestInsteadFromPayload(processState.payload);
-  return processState === undefined || payload === undefined
-    ? null
-    : { processId: processState.processId, payload };
-};
-
-const pendingReplacementRestInsteadFromPayload = (
-  payload: unknown,
-):
-  | (PendingReplacementRestInsteadPayload & { decisionId: string })
-  | undefined => {
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("pendingReplacementRestInstead" in payload)
-  ) {
+  process: ReplacementProcess,
+  candidate: SelectedTargetKoReplacementCandidate,
+): SelectCardsDecision | undefined => {
+  const instead = candidate.replacementEffect.instead;
+  if (!isSupportedTrashFromHandInsteadEffect(instead)) {
     return undefined;
   }
-  const pending = payload.pendingReplacementRestInstead;
-  if (typeof pending !== "object" || pending === null) {
+  const player = state.players[candidate.controllerId];
+  if (player === undefined || player.hand.length < instead.count) {
     return undefined;
   }
-  const candidate = pending as Record<string, unknown>;
-  if (
-    typeof candidate["decisionId"] !== "string" ||
-    typeof candidate["replacementId"] !== "string" ||
-    typeof candidate["effectBlockId"] !== "string" ||
-    typeof candidate["controllerId"] !== "string" ||
-    !isCardRef(candidate["source"])
-  ) {
-    return undefined;
-  }
-  const target = candidate["target"];
-  if (target !== undefined && !isCardRef(target)) {
-    return undefined;
-  }
+  const visibility = {
+    type: "private",
+    playerId: candidate.controllerId,
+  } as const;
   return {
-    decisionId: candidate["decisionId"],
-    replacementId: candidate["replacementId"],
-    effectBlockId: candidate[
-      "effectBlockId"
-    ] as EffectQueueEntry["effectBlockId"],
-    controllerId: candidate["controllerId"] as PlayerId,
-    source: candidate["source"],
-    ...(target === undefined ? {} : { target }),
-  };
-};
-
-const isCardRef = (value: unknown): value is CardRef => {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  const zone = candidate["zone"];
-  return (
-    typeof candidate["instanceId"] === "string" &&
-    typeof candidate["cardId"] === "string" &&
-    typeof candidate["playerId"] === "string" &&
-    (zone === undefined || (typeof zone === "object" && zone !== null))
-  );
-};
-
-const cardRefsEqual = (left: CardRef, right: CardRef): boolean =>
-  left.instanceId === right.instanceId &&
-  left.cardId === right.cardId &&
-  left.playerId === right.playerId &&
-  left.zone?.zone === right.zone?.zone &&
-  left.zone?.playerId === right.zone?.playerId &&
-  left.zone?.slot === right.zone?.slot &&
-  left.zone?.index === right.zone?.index;
-
-export const isReplacementRestTargetsDecision = (
-  state: GameState,
-  decision: NonNullable<GameState["pendingDecision"]> | undefined,
-): boolean => pendingReplacementRestPayload(state, decision) !== null;
-
-export const getReplacementRestTargetLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): LegalAction[] => {
-  const decision = state.pendingDecision;
-  const pending = pendingReplacementRestPayload(state, decision);
-  if (
-    decision?.type !== "selectTargets" ||
-    pending === null ||
-    decision.playerId !== playerId
-  ) {
-    return [];
-  }
-  const currentCandidates = replacementRestDecisionCandidates(state, decision);
-  if (currentCandidates.length < decision.request.min) {
-    return [];
-  }
-  return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: {
-        type: "targets",
-        targets: currentCandidates
-          .slice(0, decision.request.min)
-          .map((candidate) => candidate.card),
-      },
-    },
-  ];
-};
-
-export type ReplacementRestTargetDecisionResult = {
-  completedPayload: unknown;
-  result: EngineResult;
-};
-
-export const applyReplacementRestTargetDecisionResponse = (
-  state: GameState,
-  action: Extract<Action, { type: "respondToDecision" }>,
-): ReplacementRestTargetDecisionResult | null => {
-  const decision = state.pendingDecision;
-  const pending = pendingReplacementRestPayload(state, decision);
-  if (decision?.type !== "selectTargets" || pending === null) {
-    return null;
-  }
-  if (action.response.type !== "targets") {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        [
-          {
-            type: "invalidDecisionResponse",
-            reason: "Response type must be targets for selectTargets.",
-          },
-        ],
-      ),
-    };
-  }
-  const targets = (action.response as { targets?: unknown }).targets;
-  if (!Array.isArray(targets) || !targets.every(isCardRef)) {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        [
-          {
-            type: "invalidDecisionResponse",
-            reason: "Response targets must be CardRef values.",
-          },
-        ],
-      ),
-    };
-  }
-  const currentCandidates = replacementRestDecisionCandidates(state, decision);
-  const targetRefs = targets;
-  if (
-    targetRefs.length !== decision.request.min ||
-    hasDuplicateTargets(targetRefs) ||
-    !targetRefs.every((target) =>
-      currentCandidates.some((candidate) =>
-        cardRefsEqual(candidate.card, target),
-      ),
-    )
-  ) {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        [
-          {
-            type: "invalidDecisionResponse",
-            reason:
-              "Selected targets must be current legal replacement targets.",
-          },
-        ],
-      ),
-    };
-  }
-
-  const events: EngineEvent[] = [];
-  appendEvent(
-    state,
-    events,
-    "decisionResolved",
-    {
-      decisionId: decision.id,
-      decisionType: decision.type,
-      playerId: decision.playerId,
-      responseType: action.response.type,
-    },
-    { type: "public" },
-  );
-  const resolved = events[0];
-  if (resolved !== undefined) {
-    resolved.causedBy = { type: "decision", decisionId: decision.id };
-  }
-  const rested = restFieldObjects(state, targetRefs);
-  const transformedPayload = {
-    replacementId: pending.payload.replacementId,
-    restedTargets: targetRefs,
-  };
-  appendEvent(
-    rested.state,
-    events,
-    "replacementApplied",
-    {
-      processId: pending.processId,
-      replacementId: pending.payload.replacementId,
-      previousPayloadHash: hashCanonicalStateValue(
-        replacementPayloadWithoutPending(state, pending.processId),
-      ),
-      transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
-    } satisfies EngineInternalReplacementAppliedEventPayload,
-    { type: "public" },
-  );
-  const applied = events[events.length - 1];
-  if (applied !== undefined) {
-    applied.causedBy = {
-      type: "replacement",
-      replacementId: pending.payload.replacementId,
-    };
-  }
-  const completedPayload = replacementPayloadWithoutPending(
-    state,
-    pending.processId,
-  );
-  const nextState: GameState = {
-    ...rested.state,
-    seq: toStateSeq(rested.state.seq + 1),
-    replacementState: rested.state.replacementState.filter(
-      (candidate) => candidate.processId !== pending.processId,
+    id: toDecisionId(
+      `decision:replacementTrashFromHand:${process.id}:${candidate.id}`,
     ),
-    eventJournal: [...rested.state.eventJournal, ...events],
+    type: "selectCards",
+    playerId: candidate.controllerId,
+    prompt: `Trash ${String(instead.count)} ${plural(
+      instead.count,
+      "card",
+      "cards",
+    )} from hand instead.`,
+    causedBy: { type: "replacement", replacementId: candidate.id },
+    visibility,
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "self",
+      zone: "hand",
+      min: instead.count,
+      max: instead.count,
+      allowFewerIfUnavailable: false,
+      visibility: "privateToChooser",
+    },
+    candidates: player.hand.map((card) => ({
+      card: toCardRef(card, candidate.controllerId),
+      visibility,
+    })),
   };
-  delete nextState.pendingDecision;
-  return {
-    completedPayload,
-    result: toEngineResult(nextState, events),
-  };
 };
-
-const replacementPayloadWithoutPending = (
-  state: GameState,
-  processId: string,
-): unknown => {
-  const stored = state.replacementState.find(
-    (candidate) => candidate.processId === processId,
-  );
-  const payload = stored?.payload;
-  if (typeof payload !== "object" || payload === null) {
-    return payload;
-  }
-  const rest = { ...(payload as Record<string, unknown>) };
-  delete rest["pendingReplacementRestInstead"];
-  return rest;
-};
-
-const replacementRestDecisionCandidates = (
-  state: GameState,
-  decision: SelectTargetsDecision,
-): TargetCandidate[] => {
-  const resolved = resolvePublicTargetCandidatesForRequest(
-    state,
-    decision.request,
-    { sourceControllerId: decision.playerId },
-  );
-  if (!resolved.ok) {
-    return [];
-  }
-  return resolved.candidates.filter((candidate) =>
-    replacementRestCandidateIsActive(state, candidate.card),
-  );
-};
-
-const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
-  targets.some((target, index) =>
-    targets
-      .slice(index + 1)
-      .some((candidate) => cardRefsEqual(target, candidate)),
-  );
 
 const executeReplacementInsteadEffect = (
   state: GameState,

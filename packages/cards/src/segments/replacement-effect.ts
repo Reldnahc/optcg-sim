@@ -48,7 +48,7 @@ function parseOpponentKoReplacement(text: string):
     }
   | undefined {
   const match =
-    /^If (?<target>.+?) would be K\.O\.'d by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would be K\.O\.'d(?: by your opponent(?<effectOnly>'s effects?))?,\s*(?<body>.+)$/i.exec(
       text.trim(),
     );
   const targetText = match?.groups?.["target"];
@@ -71,6 +71,7 @@ function parseOpponentKoReplacement(text: string):
   }
   const instead =
     parseTopLifeToHandInstead(bodyText) ??
+    parseTrashFromHandInstead(bodyText) ??
     parseRestSelfInstead(bodyText) ??
     parseRestCardsInstead(bodyText);
   if (instead === undefined) {
@@ -80,13 +81,18 @@ function parseOpponentKoReplacement(text: string):
   return {
     when: {
       type: "wouldBeKOd",
+      ...(effectOnlyText === undefined && !/by your opponent/i.test(text)
+        ? { sourceControllerRelation: "any" as const }
+        : {}),
       ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
       target: target.target,
     },
     instead: instead.effect,
     evidence: [
       "replacement:wouldBeKOd",
-      "replacementSource:opponent",
+      ...(/by your opponent/i.test(text)
+        ? (["replacementSource:opponent"] as const)
+        : []),
       ...(effectOnlyText === undefined
         ? []
         : ["replacementSource:cardEffect" as const]),
@@ -127,6 +133,7 @@ function parseOpponentFieldRemovalReplacement(text: string):
   }
   const instead =
     parseTopLifeToHandInstead(bodyText) ??
+    parseTrashFromHandInstead(bodyText) ??
     parseRestSelfInstead(bodyText) ??
     parseRestCardsInstead(bodyText);
   if (instead === undefined) {
@@ -197,6 +204,37 @@ function parseTopLifeToHandInstead(text: string):
       "position:top",
       "destination:hand",
       "order:original",
+    ],
+  };
+}
+
+function parseTrashFromHandInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  const match =
+    /^you may trash (?<count>[1-9]\d*) cards? from your hand instead\.?$/i.exec(
+      text.trim(),
+    );
+  const countText = match?.groups?.["count"];
+  if (countText === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "trashFromHand",
+      player: "self",
+      chooser: "self",
+      count: Number.parseInt(countText, 10),
+    },
+    evidence: [
+      "instruction:trashFromHand",
+      "count:positiveInteger",
+      "player:self",
+      "chooser:self",
     ],
   };
 }

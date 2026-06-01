@@ -8,7 +8,7 @@ export function parseReplacementEntryPoint(
     !/^If .+? would be removed from the field by your opponent(?:'s effects?)?,\s*you may\b/i.test(
       text,
     ) &&
-    !/^If .+? would be K\.O\.'d by your opponent(?:'s effects?)?,\s*you may\b/i.test(
+    !/^If .+? would be K\.O\.'d(?: by your opponent(?:'s effects?))?,\s*you may\b/i.test(
       text,
     )
   ) {

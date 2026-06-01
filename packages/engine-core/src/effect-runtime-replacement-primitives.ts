@@ -18,6 +18,7 @@ import {
   resolvePublicTargetCandidates,
   resolvePublicTargetCandidatesForRequest,
 } from "./target-selection.js";
+import { isOncePerTurnUsed, toOncePerTurnKey } from "./once-per-turn.js";
 
 export type SelectedTargetKoReplacementDetectionFailureReason =
   | "unsupported-replacement-process"
@@ -50,6 +51,7 @@ export interface SelectedTargetKoReplacementCandidate {
   id: string;
   effectBlockId: EffectQueueEntry["effectBlockId"];
   controllerId: PlayerId;
+  oncePerTurn?: true;
   source: CardRef;
   replacementEffect: Extract<Effect, { type: "replacement" }>;
 }
@@ -365,6 +367,16 @@ const isSupportedRestSelfInsteadEffect = (
   target: Extract<Target, { type: "self" }>;
 } => effect.type === "rest" && isSelfTarget(effect.target);
 
+const isSupportedTrashFromHandInsteadEffect = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "trashFromHand" }> =>
+  effect.type === "trashFromHand" &&
+  effect.player === "self" &&
+  effect.chooser === "self" &&
+  effect.filter === undefined &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
+
 const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -444,6 +456,32 @@ const isSupportedOpponentEffectKoRestSelfReplacementEffect = (
   effect.effect.when.target.player === "self" &&
   isSupportedRestSelfInsteadEffect(effect.effect.instead);
 
+const isSupportedOpponentKoTrashFromHandReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  effect.category === "replacement" &&
+  effect.trigger.type === "replacement" &&
+  effect.trigger.replacement.type === "wouldBeKOd" &&
+  effect.trigger.replacement.target.type === "all" &&
+  effect.trigger.replacement.target.zone === "characterArea" &&
+  effect.trigger.replacement.target.player === "self" &&
+  effect.optional === true &&
+  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.cost === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.oncePerTurn !== false &&
+  effect.effect.type === "replacement" &&
+  effect.effect.when.type === "wouldBeKOd" &&
+  effect.effect.when.target.type === "all" &&
+  effect.effect.when.target.zone === "characterArea" &&
+  effect.effect.when.target.player === "self" &&
+  effect.effect.when.sourceKind === effect.trigger.replacement.sourceKind &&
+  effect.effect.when.sourceControllerRelation ===
+    effect.trigger.replacement.sourceControllerRelation &&
+  isSupportedTrashFromHandInsteadEffect(effect.effect.instead);
+
 const isSupportedReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -451,7 +489,8 @@ const isSupportedReplacementEffect = (
   isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||
-  isSupportedOpponentEffectKoRestSelfReplacementEffect(effect);
+  isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
+  isSupportedOpponentKoTrashFromHandReplacementEffect(effect);
 
 const isReplacementTriggerEffect = (
   effect: EffectDefinition["effects"][number],
@@ -590,6 +629,7 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
         id: String(effect.id),
         effectBlockId: effect.id,
         controllerId: source.card.controller,
+        ...(effect.oncePerTurn === true ? { oncePerTurn: true } : {}),
         source: source.ref,
         replacementEffect: effect.effect,
       });
@@ -614,12 +654,15 @@ const opponentFieldRemovalReplacementApplies = (
   located: LocatedCard,
   effect: SupportedReplacementEffectBlock,
 ): boolean => {
+  const target = effect.trigger.replacement;
+  const sourceControllerRelation =
+    target.type === "wouldBeKOd" ? target.sourceControllerRelation : undefined;
   if (
+    sourceControllerRelation !== "any" &&
     !isOpponentControlledFieldRemovalProcess(process, located.card.controller)
   ) {
     return false;
   }
-  const target = effect.trigger.replacement;
   if (
     (target.type !== "wouldMoveZone" && target.type !== "wouldBeKOd") ||
     target.target.type !== "all"
@@ -631,6 +674,19 @@ const opponentFieldRemovalReplacementApplies = (
   }
   if (
     !canPayOpponentFieldRemovalReplacementCost(state, source, located, effect)
+  ) {
+    return false;
+  }
+  if (
+    effect.oncePerTurn === true &&
+    isOncePerTurnUsed(
+      state,
+      toOncePerTurnKey({
+        cardInstanceId: source.card.instanceId,
+        effectId: effect.id,
+        turnNumber: state.turn.globalTurn,
+      }),
+    )
   ) {
     return false;
   }
@@ -689,6 +745,10 @@ const canPayOpponentFieldRemovalReplacementCost = (
       source.ref.zone?.zone === "characterArea" &&
       source.card.state !== "rested"
     );
+  }
+  if (isSupportedTrashFromHandInsteadEffect(instead)) {
+    const player = state.players[source.card.controller];
+    return player !== undefined && player.hand.length >= instead.count;
   }
   return false;
 };

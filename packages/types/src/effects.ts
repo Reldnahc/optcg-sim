@@ -356,7 +356,12 @@ export interface SearchRequest {
 }
 
 export type ReplacementTrigger =
-  | { type: "wouldBeKOd"; sourceKind?: "battle" | "cardEffect"; target: Target }
+  | {
+      type: "wouldBeKOd";
+      sourceKind?: "battle" | "cardEffect";
+      sourceControllerRelation?: "any";
+      target: Target;
+    }
   | { type: "wouldTakeDamage"; target: Target }
   | { type: "wouldBeTrashed"; target: Target }
   | { type: "wouldDraw"; player: PlayerRef }

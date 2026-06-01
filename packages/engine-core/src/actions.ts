@@ -44,10 +44,12 @@ import {
   detectPendingRuntimeWork,
   executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,
-  getReplacementRestTargetLegalActions,
-  isReplacementRestTargetsDecision,
   resumePlaySourceOverflowDecision,
 } from "./effect-runtime.js";
+import {
+  getReplacementDecisionLegalActions,
+  isReplacementContinuationDecision,
+} from "./replacement-decision-actions.js";
 import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement-rest-target-actions.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
@@ -572,7 +574,7 @@ const applyChooseReplacementDecisionResponse = (
     };
     if (
       nextState.pendingDecision !== undefined &&
-      isReplacementRestTargetsDecision(nextState, nextState.pendingDecision)
+      isReplacementContinuationDecision(nextState, nextState.pendingDecision)
     ) {
       return toEngineResult(nextState, events);
     }
@@ -654,7 +656,7 @@ export const getLegalActions = (
       });
     }
     actions.push(...getLifeTriggerLegalActions(state, playerId));
-    actions.push(...getReplacementRestTargetLegalActions(state, playerId));
+    actions.push(...getReplacementDecisionLegalActions(state, playerId));
     actions.push(...getSelectTargetsLegalActions(state, playerId));
     actions.push(...getOptionalActivationLegalActions(state, playerId));
     actions.push(...getPlayCardLegalActions(state, playerId));
@@ -1016,20 +1018,11 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
       "Phase actions are illegal while effect runtime work is pending.",
     );
   }
-  if (action.type === "playCard") {
-    return applyPlayCard(state, action);
-  }
-  if (action.type === "endMainPhase") {
-    return applyEndMainPhase(state);
-  }
-  if (action.type === "attachDon") {
-    return applyAttachDon(state, action);
-  }
-  if (action.type === "declareAttack") {
-    return applyDeclareAttack(state, action);
-  }
-  if (action.type === "activateEffect") {
+  if (action.type === "playCard") return applyPlayCard(state, action);
+  if (action.type === "endMainPhase") return applyEndMainPhase(state);
+  if (action.type === "attachDon") return applyAttachDon(state, action);
+  if (action.type === "declareAttack") return applyDeclareAttack(state, action);
+  if (action.type === "activateEffect")
     return applyActivateMainAction(state, action);
-  }
   return illegalAction(state, `Unsupported action type: ${action.type}`);
 };

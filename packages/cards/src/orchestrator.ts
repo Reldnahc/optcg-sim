@@ -118,6 +118,9 @@ export function parseEffectLinesDetailed(
           ? {}
           : { optional: expression.blockPatch.optional }),
         sourcePresencePolicy: sourcePresencePolicy(entryPoint.evidence),
+        ...(leadingMarkerParse.patch.oncePerTurn === true
+          ? { oncePerTurn: true as const }
+          : {}),
         ...markerParse.patch,
         effect: expression.effect,
       },

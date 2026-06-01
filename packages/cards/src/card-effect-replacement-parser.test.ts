@@ -261,4 +261,63 @@ describe("replacement effect parser", () => {
     assert.equal(result.evidence.includes("replacement:wouldMoveZone"), false);
     assert.equal(result.evidence.includes("replacement:fieldRemoval"), false);
   });
+
+  it("parses once-per-turn K.O. replacement into reusable cost filter and hand-trash instead primitives", () => {
+    const target = {
+      type: "all",
+      zone: "characterArea",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        cost: { min: 4 },
+      },
+    } as const;
+    const when = {
+      type: "wouldBeKOd",
+      sourceControllerRelation: "any",
+      target,
+    } as const;
+
+    const result = parseCardEffectLine(
+      "[Once Per Turn] If your Character with a base cost of 4 or more would be K.O.'d, you may trash 1 card from your hand instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      oncePerTurn: true,
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "trashFromHand",
+          player: "self",
+          chooser: "self",
+          count: 1,
+        },
+      },
+    });
+    for (const evidence of [
+      "marker:oncePerTurn",
+      "entry:replacement",
+      "replacement:wouldBeKOd",
+      "target:yourCharacters",
+      "filter:category:character",
+      "filter:cost",
+      "condition:comparator:gte",
+      "instruction:trashFromHand",
+      "player:self",
+      "chooser:self",
+      "count:positiveInteger",
+      "composition:replacementInstead",
+      "composition:entryExpression",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
 });
