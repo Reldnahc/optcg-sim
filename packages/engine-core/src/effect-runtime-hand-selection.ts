@@ -19,6 +19,7 @@ import {
 } from "./action-results.js";
 import {
   cardMatchesHandSelectionFilter,
+  getOpponentId,
   isSupportedHandSelectionCardFilter,
   toCardRef,
   zonesEqual,
@@ -40,8 +41,8 @@ export const isSupportedSequenceHandSelectCardsEffect = (
 ): effect is SequenceSelectCardsEffect =>
   effect.type === "selectCards" &&
   effect.zone === "hand" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
+  effect.player === effect.chooser &&
+  (effect.player === "self" || effect.player === "opponent") &&
   effect.visibility === "chooserOnly" &&
   String(effect.saveAs).startsWith("handSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
@@ -155,6 +156,20 @@ const getRespondingPlayerId = (
     return (action as { playerId: SelectCardsDecision["playerId"] }).playerId;
   }
   return decisionPlayerId;
+};
+
+const resolveEffectPlayerId = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  player: SequenceSelectCardsEffect["player"],
+): SelectCardsDecision["playerId"] | undefined => {
+  if (player === "self") {
+    return entry.controllerId;
+  }
+  if (player === "opponent") {
+    return getOpponentId(state, entry.controllerId) ?? undefined;
+  }
+  return undefined;
 };
 
 export const isHandSelectionSelectCardsDecision = (
@@ -310,8 +325,9 @@ export const createSupportedHandSelectionChoiceDecision = (
       state,
     };
   }
-  const player = state.players[entry.controllerId];
-  if (player === undefined) {
+  const playerId = resolveEffectPlayerId(state, entry, effect.player);
+  const player = playerId === undefined ? undefined : state.players[playerId];
+  if (playerId === undefined || player === undefined) {
     return {
       error: {
         type: "effectRuntimeError",
@@ -333,19 +349,14 @@ export const createSupportedHandSelectionChoiceDecision = (
   const candidateVisibility =
     effect.zone === "trash" || effect.zone === "costArea"
       ? { type: "public" as const }
-      : ({ type: "private" as const, playerId: entry.controllerId } as const);
+      : ({ type: "private" as const, playerId } as const);
 
   const candidates = cards
     .filter((card) =>
-      cardMatchesHandSelectionFilter(
-        state,
-        entry.controllerId,
-        card,
-        resolvedFilter,
-      ),
+      cardMatchesHandSelectionFilter(state, playerId, card, resolvedFilter),
     )
     .map((card) => ({
-      card: toCardRef(card, entry.controllerId),
+      card: toCardRef(card, playerId),
       visibility: candidateVisibility,
     }));
 
@@ -370,7 +381,7 @@ export const createSupportedHandSelectionChoiceDecision = (
   const visibility =
     effect.zone === "trash" || effect.zone === "costArea"
       ? ({ type: "public" } as const)
-      : ({ type: "private", playerId: entry.controllerId } as const);
+      : ({ type: "private", playerId } as const);
   const idPrefix =
     effect.zone === "trash"
       ? trashDecisionIdPrefix
@@ -380,7 +391,7 @@ export const createSupportedHandSelectionChoiceDecision = (
   const pendingDecision: SelectCardsDecision = {
     id: toDecisionId(`${idPrefix}${String(entry.id)}:${String(segmentIndex)}`),
     type: "selectCards",
-    playerId: entry.controllerId,
+    playerId,
     prompt:
       effect.zone === "trash"
         ? "Choose cards from trash."

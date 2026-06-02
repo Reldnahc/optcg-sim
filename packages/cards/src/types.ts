@@ -115,6 +115,7 @@ export type PrimitiveEvidence =
   | "composition:optionalCostedEffect"
   | "composition:selectThenPlay"
   | "composition:selectThenApply"
+  | "composition:selectThenMove"
   | "look:topDeck"
   | "zone:deck"
   | "zone:hand"

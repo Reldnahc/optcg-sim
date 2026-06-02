@@ -8,6 +8,7 @@ export {
   parseYourLeaderConditionalPowerInstruction,
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
+export { parseHandToDeckBottomInstruction } from "./hand-to-deck-bottom.js";
 export { parseSetFieldActiveInstruction } from "./field-activation.js";
 export {
   parseAddActiveDonFromDonDeckInstruction,

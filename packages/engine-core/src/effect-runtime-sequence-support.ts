@@ -424,20 +424,24 @@ const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SelectCardsEffect =>
   effect.type === "selectCards" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
   Number.isInteger(effect.min) &&
   Number.isInteger(effect.max) &&
   effect.min >= 0 &&
   effect.max >= effect.min &&
   ((effect.zone === "hand" &&
+    effect.player === effect.chooser &&
+    (effect.player === "self" || effect.player === "opponent") &&
     effect.visibility === "chooserOnly" &&
     String(effect.saveAs).startsWith("handSelection:")) ||
     (effect.zone === "trash" &&
+      effect.player === "self" &&
+      effect.chooser === "self" &&
       effect.visibility === "bothPlayers" &&
       String(effect.saveAs).startsWith("trashSelection:")) ||
     (effect.zone === "costArea" &&
+      effect.player === "self" &&
+      effect.chooser === "self" &&
       effect.visibility === "bothPlayers" &&
       String(effect.saveAs).startsWith("donSelection:")));
 
@@ -445,10 +449,14 @@ const isSupportedTrashToHandMoveSelectedSegment = (
   effect: SequenceSegmentEffect,
 ): effect is MoveSelectedEffect =>
   effect.type === "moveSelected" &&
-  effect.from === "trash" &&
-  effect.to === "hand" &&
-  effect.position === undefined &&
-  String(effect.selection).startsWith("trashSelection:");
+  ((effect.from === "trash" &&
+    effect.to === "hand" &&
+    effect.position === undefined &&
+    String(effect.selection).startsWith("trashSelection:")) ||
+    (effect.from === "hand" &&
+      effect.to === "deck" &&
+      effect.position === "bottom" &&
+      String(effect.selection).startsWith("handSelection:")));
 
 const isSupportedAttachSelectedDonSegment = (
   effect: SequenceSegmentEffect,

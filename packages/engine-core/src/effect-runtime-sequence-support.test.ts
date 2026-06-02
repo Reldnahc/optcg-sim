@@ -5,6 +5,7 @@ import type {
   EffectDefinition,
   EffectQueueEntry,
   HandSelectionId,
+  SelectionId,
 } from "@optcg/types";
 
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
@@ -208,6 +209,49 @@ test("sequence support accepts hand play followed by reusable play restriction",
             player: "self",
             filter: { categories: ["character"] },
             duration: { type: "thisTurn" },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts opponent hand selection moved to deck bottom", () => {
+  const selection = "handSelection:opponent-hand-to-deck-bottom" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: selection,
+          effect: {
+            type: "selectCards",
+            zone: "hand",
+            player: "opponent",
+            chooser: "opponent",
+            min: 1,
+            max: 1,
+            saveAs: selection,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: "hand",
+            to: "deck",
+            position: "bottom",
           },
         },
       ],
