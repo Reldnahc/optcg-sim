@@ -16,8 +16,8 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./state/canonical-state.js";
-import { createActiveState, must, p1, p2 } from "./action-test-fixtures.js";
+import { createActiveState, must, p1, p2 } from "../action-test-fixtures.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 
 const toCardId = (value: string): CardId => value as CardId;
