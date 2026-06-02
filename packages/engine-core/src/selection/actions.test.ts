@@ -22,7 +22,7 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 import {
   createActiveState,
   must,
@@ -32,11 +32,11 @@ import {
   reviewedMainEventDrawDefinition,
   reviewedOnPlayDrawDefinition,
   toCardId,
-} from "./action-test-fixtures.js";
-import { applyAction, getLegalActions } from "./actions.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { applyPlayCard, applyPlayCardDecisionResponse } from "../play-card.js";
+import { setupMainPlayState } from "../play-card-test-fixtures.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;

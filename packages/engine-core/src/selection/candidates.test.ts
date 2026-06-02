@@ -9,7 +9,7 @@ import type {
   TargetRequest,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 import {
   createActiveState,
   must,
@@ -17,9 +17,9 @@ import {
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
-import { cardRef } from "./battle-actions-test-fixtures.js";
-import { resolvePublicTargetCandidates } from "./target-selection.js";
+} from "../action-test-fixtures.js";
+import { cardRef } from "../battle-actions-test-fixtures.js";
+import { resolvePublicTargetCandidates } from "./candidates.js";
 
 const publicCharacterRequest = (
   overrides: Partial<TargetRequest> = {},
