@@ -44,7 +44,7 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "../../effect-runtime-queue/test-support.js";
-import { setupMainPlayState } from "../../play-card-test-fixtures.js";
+import { setupMainPlayState } from "../../play-card/test-fixtures.js";
 
 const installDefinition = (
   state: ReturnType<typeof createActiveState>,

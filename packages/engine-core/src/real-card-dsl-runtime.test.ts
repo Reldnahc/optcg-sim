@@ -21,8 +21,11 @@ import {
 } from "./effect-runtime.js";
 import { targetSelectionQueueState } from "./effect-runtime-queue/test-support.js";
 import { enterMainPhase } from "./phases.js";
-import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+import {
+  applyPlayCard,
+  applyPlayCardDecisionResponse,
+} from "./play-card/core.js";
+import { setupMainPlayState } from "./play-card/test-fixtures.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

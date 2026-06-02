@@ -10,10 +10,7 @@ import {
   resolvedCard,
   reviewedMainEventDrawDefinition,
 } from "../action-test-fixtures.js";
-import {
-  hasPlayCardAction,
-  setupMainPlayState,
-} from "../play-card-test-fixtures.js";
+import { hasPlayCardAction, setupMainPlayState } from "./test-fixtures.js";
 
 const reviewedMainEventSearchDefinition = (
   cardId: CardInstance["cardId"],

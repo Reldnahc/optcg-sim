@@ -24,7 +24,7 @@ import {
   getPlayableHandCards,
   getSupportedPlayMetadata,
 } from "./support.js";
-import { setupMainPlayState } from "../play-card-test-fixtures.js";
+import { setupMainPlayState } from "./test-fixtures.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

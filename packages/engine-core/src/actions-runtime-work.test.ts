@@ -11,7 +11,7 @@ import {
   p2,
   resolvedCard,
 } from "./action-test-fixtures.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+import { setupMainPlayState } from "./play-card/test-fixtures.js";
 import {
   makeMainPhaseLegalActionState,
   queuedEffect,

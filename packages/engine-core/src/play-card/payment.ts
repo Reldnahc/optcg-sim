@@ -18,7 +18,7 @@ import {
   getPlayCardDecisionId,
   getPlayCardDecisionPrompt,
   parsePlayCardDecisionInstanceId,
-} from "../play-card-legal-actions.js";
+} from "./legal-actions.js";
 import {
   canResolveDestinationConflict,
   getSupportedPlayMetadata,

@@ -37,7 +37,7 @@ import {
   shouldAttemptSegment,
 } from "./segments.js";
 import { type SupportedSequenceSegment } from "./support.js";
-import { applyRuntimePlaySource } from "../play-card.js";
+import { applyRuntimePlaySource } from "../play-card/core.js";
 import { createSelectFromSetDecision } from "./selected-segments.js";
 import {
   conditionalThenSequencePath,

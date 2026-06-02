@@ -7,7 +7,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { toDecisionId } from "./action-results.js";
+import { toDecisionId } from "../action-results.js";
 
 const playCardDecisionPrefix = "decision:playCard:cost:";
 const characterOverflowDecisionPrefix = "decision:playCard:overflow:";

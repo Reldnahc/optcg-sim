@@ -5,7 +5,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { chooseDonCombos } from "./play-card-legal-actions.js";
+import { chooseDonCombos } from "./play-card/legal-actions.js";
 import { parseCounterPayCostDecisionId } from "./battle-counter-event-payment-context.js";
 import {
   getSupportedCounterEventPower,

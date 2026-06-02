@@ -30,8 +30,8 @@ import {
   getRuntimePlaySourceOverflowDecisionId,
   parseRuntimePlaySelectedOverflowDecisionInstanceId,
   parseRuntimePlaySourceOverflowDecisionInstanceId,
-} from "../play-card-legal-actions.js";
-import { findPlayCardOverflowSource } from "../play-card-overflow-source.js";
+} from "./legal-actions.js";
+import { findPlayCardOverflowSource } from "./overflow-source.js";
 import {
   createPlayCardPaymentDecisionResult,
   getPlayCardPaymentContext,

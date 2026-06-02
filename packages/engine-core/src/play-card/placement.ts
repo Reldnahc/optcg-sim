@@ -19,7 +19,7 @@ import {
 import { reindexZoneCards, toCardRef } from "../action-state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { assertGameStateInvariants } from "../invariants.js";
-import { getCharacterOverflowDecisionId } from "../play-card-legal-actions.js";
+import { getCharacterOverflowDecisionId } from "./legal-actions.js";
 import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
 import type { SupportedPlayMetadata } from "./support.js";
 

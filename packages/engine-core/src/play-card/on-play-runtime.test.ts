@@ -27,7 +27,7 @@ import {
   hasPlayCardAction,
   setupMainPlayState,
   toTestCardRef,
-} from "../play-card-test-fixtures.js";
+} from "./test-fixtures.js";
 
 const applyPlayCardTestAction = (
   state: GameState,

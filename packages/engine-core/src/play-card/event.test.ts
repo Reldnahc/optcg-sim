@@ -31,7 +31,7 @@ import {
   respondToDecisionActions,
   setupFullCharacterPlayState,
   setupMainPlayState,
-} from "../play-card-test-fixtures.js";
+} from "./test-fixtures.js";
 
 const applyPlayCardTestAction = (
   state: GameState,

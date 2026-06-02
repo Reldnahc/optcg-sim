@@ -42,7 +42,7 @@ import {
   withCardInZone,
 } from "./effect-runtime-queue/test-support.js";
 import { resolveSupportedVanillaBattle } from "./index.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+import { setupMainPlayState } from "./play-card/test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   seqValues: readonly number[],

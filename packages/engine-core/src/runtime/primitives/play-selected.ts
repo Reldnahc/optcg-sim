@@ -24,8 +24,8 @@ import type { SupportedSequenceBlock } from "../../effect-runtime-sequence/suppo
 import {
   parseCharacterOverflowDecisionInstanceId,
   parseRuntimePlaySelectedOverflowDecisionInstanceId,
-} from "../../play-card-legal-actions.js";
-import { applyRuntimePlaySelected } from "../../play-card.js";
+} from "../../play-card/legal-actions.js";
+import { applyRuntimePlaySelected } from "../../play-card/core.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegment = SequenceEffect["effects"][number];

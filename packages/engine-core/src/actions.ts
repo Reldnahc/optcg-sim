@@ -22,7 +22,7 @@ import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
-} from "./play-card.js";
+} from "./play-card/core.js";
 import {
   applySelectTargetsDecisionResponse,
   getSelectTargetsLegalActions,

@@ -24,7 +24,7 @@ import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-sear
 import {
   setupFullCharacterPlayState,
   setupMainPlayState,
-} from "./play-card-test-fixtures.js";
+} from "./play-card/test-fixtures.js";
 import { effectDefinition } from "./battle-actions-test-fixtures.js";
 import {
   toDecisionId,

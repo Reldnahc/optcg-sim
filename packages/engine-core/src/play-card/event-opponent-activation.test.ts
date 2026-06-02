@@ -9,7 +9,7 @@ import type {
 
 import { applyPlayCard } from "./core.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
-import { setupMainPlayState } from "../play-card-test-fixtures.js";
+import { setupMainPlayState } from "./test-fixtures.js";
 
 test("Event activation with no own implemented body still queues opponent activation reactions immediately", () => {
   const state = setupMainPlayState();

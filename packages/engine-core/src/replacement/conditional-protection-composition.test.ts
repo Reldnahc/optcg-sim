@@ -41,8 +41,11 @@ import { hashCanonicalStateValue } from "../canonical-state.js";
 import { computeView } from "../compute-view.js";
 import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
-import { applyPlayCard, applyPlayCardDecisionResponse } from "../play-card.js";
-import { setupFullCharacterPlayState } from "../play-card-test-fixtures.js";
+import {
+  applyPlayCard,
+  applyPlayCardDecisionResponse,
+} from "../play-card/core.js";
+import { setupFullCharacterPlayState } from "../play-card/test-fixtures.js";
 
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;

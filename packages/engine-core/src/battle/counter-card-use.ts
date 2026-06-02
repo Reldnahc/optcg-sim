@@ -51,7 +51,7 @@ import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../invariants.js";
-import { getActiveDonCount } from "../play-card-support.js";
+import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "../battle-counter-window-support.js";
 
 type CreateCounterStepPassDecision = (

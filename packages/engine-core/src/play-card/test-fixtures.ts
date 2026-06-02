@@ -6,7 +6,7 @@ import {
   p1,
   p2,
   resolvedCard,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 
 export const hasPlayCardAction = (
   legal: readonly LegalAction[],
