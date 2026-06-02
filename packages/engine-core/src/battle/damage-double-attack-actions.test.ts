@@ -12,7 +12,7 @@ import {
   passCounterStep,
   setupAttackState,
 } from "./test-fixtures.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 
 const installSupportedDoubleAttackLeader = (
   state: ReturnType<typeof setupAttackState>,

@@ -3,9 +3,9 @@ import { test } from "vitest";
 
 import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { createInitialState } from "./initial-state.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;

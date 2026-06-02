@@ -1,4 +1,8 @@
-export { advanceRngFloat01, advanceRngUint32, initializeRng } from "./rng.js";
+export {
+  advanceRngFloat01,
+  advanceRngUint32,
+  initializeRng,
+} from "./state/rng.js";
 export { createInitialState } from "./initial-state.js";
 export type {
   CreateInitialStateInput,
@@ -7,12 +11,12 @@ export type {
 export {
   canonicalSerializeStateValue,
   hashCanonicalStateValue,
-} from "./canonical-state.js";
+} from "./state/canonical-state.js";
 export {
   assertGameStateInvariants,
   collectGameStateInvariantViolations,
   GameStateInvariantError,
-} from "./invariants.js";
+} from "./state/invariants.js";
 export { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
 export {
   advanceDonPhase,

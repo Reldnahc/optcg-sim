@@ -12,7 +12,7 @@ import {
   passCounterStep,
   setupAttackState,
 } from "./test-fixtures.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {
   const state = setupAttackState();

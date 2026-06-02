@@ -36,7 +36,7 @@ import {
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "../effect-runtime-sequence/support.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
   triggerText !== undefined && triggerText.trim().length > 0;

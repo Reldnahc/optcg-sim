@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "./state/canonical-state.js";
 import { createActiveState } from "./action-test-fixtures.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 

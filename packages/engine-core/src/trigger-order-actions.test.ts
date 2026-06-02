@@ -15,7 +15,7 @@ import type {
 
 import { applyAction } from "./actions.js";
 import { createActiveState, p1, p2 } from "./action-test-fixtures.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "./state/canonical-state.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;

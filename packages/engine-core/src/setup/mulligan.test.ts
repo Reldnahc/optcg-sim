@@ -3,10 +3,10 @@ import { test } from "vitest";
 
 import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { applyAction } from "../actions.js";
 import { createInitialState } from "./initial-state.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;

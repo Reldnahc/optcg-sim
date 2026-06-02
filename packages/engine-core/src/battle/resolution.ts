@@ -63,7 +63,7 @@ import {
   pauseSelectedTargetKoReplacementProcess,
 } from "../runtime/primitives/execute.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getLifeDamageDecision,
   getSupportedLifeTriggerDecision,

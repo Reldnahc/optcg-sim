@@ -13,7 +13,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 

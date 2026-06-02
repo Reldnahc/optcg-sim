@@ -9,7 +9,7 @@ import {
   setupAttackState,
   withWhenAttackingDrawEffect,
 } from "./test-fixtures.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { must, p1, p2 } from "../action-test-fixtures.js";
 

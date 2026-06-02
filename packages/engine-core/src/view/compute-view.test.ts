@@ -11,7 +11,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { computeView } from "./compute-view.js";
 import { createInitialState } from "../initial-state.js";
 

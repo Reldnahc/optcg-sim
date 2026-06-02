@@ -19,7 +19,7 @@ import {
 import { isUnsupportedSelectTargetsDecision } from "../effect-runtime-queue/target-decisions.js";
 import { resumeSequenceFrameAfterSelectTargets } from "../effect-runtime-sequence/frames.js";
 import { isSequenceFrameSelectTargetsDecision } from "../effect-runtime-sequence/select-targets.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { resolvePublicTargetCandidatesForRequest } from "./candidates.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [

@@ -24,7 +24,7 @@ import {
   passCounterStep,
   setupAttackState,
 } from "../battle/test-fixtures.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 
 const supportedLifeTriggerDefinition = (

@@ -22,7 +22,7 @@ import {
   queueDrawForP1,
   toEffectId,
 } from "../effect-runtime-queue/test-support.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 
 const supportedSearch = (
   overrides: Partial<Extract<Effect, { type: "search" }>["request"]> = {},

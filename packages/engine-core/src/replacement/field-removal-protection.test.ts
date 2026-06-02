@@ -7,7 +7,7 @@ import type {
   ReplacementProcess,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { computeView } from "../compute-view.js";
 import { setupFullCharacterPlayState } from "../play-card/test-fixtures.js";
 import {

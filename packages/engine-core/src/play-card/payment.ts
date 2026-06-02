@@ -13,7 +13,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getPlayCardDecisionId,
   getPlayCardDecisionPrompt,

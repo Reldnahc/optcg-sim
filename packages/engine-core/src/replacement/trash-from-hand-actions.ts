@@ -13,7 +13,7 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import { toCardRef, zonesEqual } from "../action-state.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { consumeOncePerTurn, toOncePerTurnKey } from "../once-per-turn.js";
 

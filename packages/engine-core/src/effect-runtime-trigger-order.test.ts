@@ -14,7 +14,7 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "./state/canonical-state.js";
 import { applyAction } from "./index.js";
 import {
   createActiveState,

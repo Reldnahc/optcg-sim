@@ -9,7 +9,7 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "./state/canonical-state.js";
 
 export const toStateSeq = (value: number): StateSeq => value as StateSeq;
 

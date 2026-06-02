@@ -16,7 +16,7 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "./state/canonical-state.js";
 import { createActiveState, must, p1, p2 } from "./action-test-fixtures.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 

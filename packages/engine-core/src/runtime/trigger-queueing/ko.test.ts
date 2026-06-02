@@ -24,7 +24,7 @@ import {
   queueBattleKOTriggers,
 } from "../../effect-runtime.js";
 import { applyAction } from "../../index.js";
-import { hashCanonicalStateValue } from "../../canonical-state.js";
+import { hashCanonicalStateValue } from "../../state/canonical-state.js";
 
 const withCardInZone = (params: {
   state: ReturnType<typeof createActiveState>;

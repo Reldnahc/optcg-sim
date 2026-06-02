@@ -7,7 +7,7 @@ import type {
 
 import { appendEvent, toStateSeq } from "../action-results.js";
 import { cardMatchesSearchFilter } from "../action-state.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   createSearchRevealOrderCardsDecision,
   hasSupportedTrashRemainingCardsPolicy,

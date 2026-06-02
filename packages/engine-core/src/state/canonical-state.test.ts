@@ -7,12 +7,12 @@ import type {
   SelectionSetId,
 } from "@optcg/types";
 
-import { createInput, must, p1, toStateSeq } from "./action-test-fixtures.js";
+import { createInput, must, p1, toStateSeq } from "../action-test-fixtures.js";
 import {
   canonicalSerializeStateValue,
   hashCanonicalStateValue,
 } from "./canonical-state.js";
-import { createInitialState } from "./initial-state.js";
+import { createInitialState } from "../setup/initial-state.js";
 
 const representativeEffectExecutionFrame = (
   state: GameState,

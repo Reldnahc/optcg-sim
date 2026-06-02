@@ -11,8 +11,8 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
-import { assertGameStateInvariants } from "../invariants.js";
-import { advanceRngUint32, initializeRng } from "../rng.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
+import { advanceRngUint32, initializeRng } from "../state/rng.js";
 import {
   collectStartOfGamePlans,
   createStartOfGameSetupDecision,

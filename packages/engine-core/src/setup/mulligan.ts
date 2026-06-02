@@ -14,10 +14,10 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
-import { assertGameStateInvariants } from "../invariants.js";
-import { advanceRngUint32 } from "../rng.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
+import { advanceRngUint32 } from "../state/rng.js";
 
 const OPENING_HAND_SIZE = 5;
 

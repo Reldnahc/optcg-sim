@@ -17,7 +17,7 @@ import {
   p2,
   resolvedCard,
 } from "../action-test-fixtures.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { createSupportedSearchRevealChoiceDecision } from "../effect-runtime-search-reveal.js";
 import { toCardRefForPlayer } from "./remainder.js";

@@ -22,7 +22,7 @@ import {
   targetMatchesCard,
   zonesEqual,
 } from "../action-state.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getPlayCardPendingDecisionLegalActions,
   parseCharacterOverflowDecisionInstanceId,

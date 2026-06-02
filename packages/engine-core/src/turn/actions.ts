@@ -18,7 +18,7 @@ import {
 import { canConcede, getOpponentId, isMatchActive } from "../action-state.js";
 import { processEffectRuntime } from "../effect-runtime.js";
 import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { advanceEndPhase } from "./phases.js";
 import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
 

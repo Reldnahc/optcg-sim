@@ -31,7 +31,7 @@ import {
   toEffectId,
   toQueueEntryId,
 } from "./action-dispatcher-test-support.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "./state/canonical-state.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 

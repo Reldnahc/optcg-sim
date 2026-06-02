@@ -17,7 +17,7 @@ import type {
 } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../../actions.js";
-import { hashCanonicalStateValue } from "../../canonical-state.js";
+import { hashCanonicalStateValue } from "../../state/canonical-state.js";
 import {
   createActiveState,
   must,

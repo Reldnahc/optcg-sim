@@ -26,7 +26,7 @@ import {
   setupOnKODefinition,
   queueingState,
 } from "./test-support.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 
 test("resolves one queued supported On Play draw entry and removes it from effectQueue", () => {
   const { state, played } = queueingState();

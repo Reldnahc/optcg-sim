@@ -22,7 +22,7 @@ import {
   toStateSeq,
 } from "../action-results.js";
 import { toCardRef } from "../action-state.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { executeNoChoiceEffectPrimitive } from "../runtime/primitives/execute.js";
 import {
   executeMoveCardsPrimitive,

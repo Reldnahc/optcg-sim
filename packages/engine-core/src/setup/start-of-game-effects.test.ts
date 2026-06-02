@@ -11,7 +11,7 @@ import type {
 } from "@optcg/types";
 
 import { applyAction } from "../actions.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";

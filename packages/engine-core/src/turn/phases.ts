@@ -13,14 +13,14 @@ import type {
 } from "@optcg/types";
 
 import { isMatchActive } from "../action-state.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   detectPendingRuntimeWork,
   processEffectRuntime,
 } from "../effect-runtime.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
 import { hasUnsupportedSupportGateText } from "../battle/support.js";
 

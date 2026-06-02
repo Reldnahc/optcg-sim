@@ -14,7 +14,7 @@ import type {
 import { createActiveState, must, p1 } from "../../action-test-fixtures.js";
 import { applyAction } from "../../actions.js";
 import { filterStateForPlayer } from "../../filter-state-for-player.js";
-import { hashCanonicalStateValue } from "../../canonical-state.js";
+import { hashCanonicalStateValue } from "../../state/canonical-state.js";
 import { executeNoChoiceEffectPrimitive } from "../../effect-runtime.js";
 import {
   processEffectRuntime,

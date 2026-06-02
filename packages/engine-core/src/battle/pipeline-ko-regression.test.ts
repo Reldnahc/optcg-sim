@@ -10,8 +10,8 @@ import type {
 } from "@optcg/types";
 
 import { resolveSupportedVanillaBattle } from "./actions.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import { setupAttackState, withOnKODrawEffect } from "./test-fixtures.js";
 

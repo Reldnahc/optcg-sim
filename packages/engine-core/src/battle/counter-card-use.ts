@@ -50,7 +50,7 @@ import { computeView } from "../compute-view.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
 

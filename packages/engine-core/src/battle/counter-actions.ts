@@ -26,7 +26,7 @@ import {
   getSupportedCounterEventPowerTargets,
 } from "./counter-event-support.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { assertGameStateInvariants } from "../invariants.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getUnsupportedCounterWindowReason,
   hasPotentialCharacterCounterActions,

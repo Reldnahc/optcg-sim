@@ -23,7 +23,7 @@ import {
   toEffectId,
   toQueueEntryId,
 } from "../action-dispatcher-test-support.js";
-import { hashCanonicalStateValue } from "../canonical-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { processEffectRuntime } from "../effect-runtime.js";
 import {
   queueDrawForP1,
