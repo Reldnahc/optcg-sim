@@ -18,8 +18,8 @@ import {
   isSupportedSequenceBlock,
 } from "../../packages/engine-core/src/effect-runtime-sequence-support.ts";
 import { createSupportedSearchRevealTransientSet } from "../../packages/engine-core/src/effect-runtime-search-reveal.ts";
-import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts";
-import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts";
+import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/runtime/trigger-queueing/attack.ts";
+import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/runtime/trigger-queueing/ko.ts";
 import {
   createActiveState,
   queueDrawForP1,

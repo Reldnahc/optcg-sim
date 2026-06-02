@@ -17,14 +17,14 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
-} from "./action-test-fixtures.js";
+} from "../../action-test-fixtures.js";
 import {
   detectBattleKOTriggerCandidates,
   processEffectRuntime,
   queueBattleKOTriggers,
-} from "./effect-runtime.js";
-import { applyAction } from "./index.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+} from "../../effect-runtime.js";
+import { applyAction } from "../../index.js";
+import { hashCanonicalStateValue } from "../../canonical-state.js";
 
 const withCardInZone = (params: {
   state: ReturnType<typeof createActiveState>;

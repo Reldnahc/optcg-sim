@@ -29,7 +29,7 @@ import {
   opponentAttackQueueingState,
   queueingState,
   setupOnPlayDefinition,
-} from "./effect-runtime-trigger-queueing-test-support.js";
+} from "./runtime/trigger-queueing/test-support.js";
 import { getSupportedLifeTriggerDecision } from "./life-trigger-actions.js";
 import { reviewedOnPlayDrawDefinition } from "./action-test-fixtures.js";
 

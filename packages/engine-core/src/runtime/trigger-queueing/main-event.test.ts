@@ -14,8 +14,8 @@ import {
   resolvedCard,
   reviewedMainEventDrawDefinition,
   toEngineEventId,
-} from "./action-test-fixtures.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+} from "../../action-test-fixtures.js";
+import { processEffectRuntime } from "../../effect-runtime.js";
 
 const reviewedMainEventTargetKoRequest = (
   overrides: Partial<TargetRequest> = {},

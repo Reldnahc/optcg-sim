@@ -16,9 +16,9 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
-} from "./action-test-fixtures.js";
-import type { OnPlayTriggerQueueingFailureReason } from "./effect-runtime.js";
-import type { processEffectRuntime } from "./effect-runtime.js";
+} from "../../action-test-fixtures.js";
+import type { OnPlayTriggerQueueingFailureReason } from "../../effect-runtime.js";
+import type { processEffectRuntime } from "../../effect-runtime.js";
 
 export const toStateSeq = (value: number): StateSeq => value as StateSeq;
 

@@ -24,7 +24,7 @@ import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-processing.js";
 import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence-frames.js";
-import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-queueing.js";
+import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
 
 export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
@@ -47,7 +47,7 @@ export type {
   OnPlayTriggerQueueingFailureReason,
   QueueBattleKOTriggersResult,
   WhenAttackingTriggerQueueingFailureReason,
-} from "./effect-runtime-trigger-queueing.js";
+} from "./runtime/trigger-queueing/core.js";
 export {
   executeNoChoiceEffectPrimitive,
   isSupportedMainEventTargetKoEffect,

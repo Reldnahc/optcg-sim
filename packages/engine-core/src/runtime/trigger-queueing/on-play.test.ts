@@ -6,16 +6,16 @@ import {
   p1,
   resolvedCard,
   toEngineEventId,
-} from "./action-test-fixtures.js";
-import { createActiveState } from "./action-test-fixtures.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+} from "../../action-test-fixtures.js";
+import { createActiveState } from "../../action-test-fixtures.js";
+import { processEffectRuntime } from "../../effect-runtime.js";
 import {
   queueingState,
   setupOnPlayDefinition,
   toSourceSnapshot,
   toStateSeq,
-} from "./effect-runtime-trigger-queueing-test-support.js";
-import { reviewedOnPlayDrawDefinition } from "./action-test-fixtures.js";
+} from "./test-support.js";
+import { reviewedOnPlayDrawDefinition } from "../../action-test-fixtures.js";
 
 test("queues one supported no-choice On Play draw effect from an accepted cardPlayed event", () => {
   const { state, played } = queueingState();

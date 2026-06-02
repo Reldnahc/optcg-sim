@@ -16,8 +16,8 @@ import { isSupportedPermanentContinuousEffectBlock } from "../effect-runtime-con
 import {
   isSupportedOnOpponentAttackCompatibleQueuedEffect,
   isSupportedWhenAttackingCompatibleQueuedEffect,
-} from "../effect-runtime-trigger-queueing-attack.js";
-import { isSupportedOnKOCompatibleQueuedEffect } from "../effect-runtime-trigger-queueing-ko.js";
+} from "../runtime/trigger-queueing/attack.js";
+import { isSupportedOnKOCompatibleQueuedEffect } from "../runtime/trigger-queueing/ko.js";
 import { isSupportedReplacementEffectBlock } from "../effect-runtime-replacement-primitives.js";
 
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>

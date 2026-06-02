@@ -15,18 +15,18 @@ import {
   p2,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
+} from "../../action-test-fixtures.js";
 import {
   isSupportedNoChoiceOnPlayDrawEffect,
   processEffectRuntime,
-} from "./effect-runtime.js";
+} from "../../effect-runtime.js";
 import {
   appendCardPlayedEvent,
   expectOnPlayQueueingFailure,
   queueingState,
   setupOnPlayDefinition,
   withCardInZone,
-} from "./effect-runtime-trigger-queueing-test-support.js";
+} from "./test-support.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 

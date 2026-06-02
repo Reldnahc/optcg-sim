@@ -30,7 +30,7 @@ import {
 import {
   attackQueueingState,
   opponentAttackQueueingState,
-} from "../../effect-runtime-trigger-queueing-test-support.js";
+} from "../trigger-queueing/test-support.js";
 import {
   applyAction,
   queueDrawForP1,

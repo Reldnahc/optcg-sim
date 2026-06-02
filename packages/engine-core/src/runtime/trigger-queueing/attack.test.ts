@@ -9,15 +9,15 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { must, p1 } from "./action-test-fixtures.js";
+import { must, p1 } from "../../action-test-fixtures.js";
 import {
   processDefenderOpponentAttackTiming,
   processEffectRuntime,
-} from "./effect-runtime.js";
+} from "../../effect-runtime.js";
 import {
   attackQueueingState,
   opponentAttackQueueingState,
-} from "./effect-runtime-trigger-queueing-test-support.js";
+} from "./test-support.js";
 
 test("attackDeclared source presence failure rejects When Attacking queueing without mutation or events", () => {
   const { state, attacker } = attackQueueingState();

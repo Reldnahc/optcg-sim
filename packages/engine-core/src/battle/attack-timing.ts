@@ -10,7 +10,7 @@ import type {
 import {
   isSupportedOnOpponentAttackCompatibleQueuedEffect,
   isSupportedWhenAttackingCompatibleQueuedEffect,
-} from "../effect-runtime-trigger-queueing-attack.js";
+} from "../runtime/trigger-queueing/attack.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 
 const isAttackTimingTrigger = (
