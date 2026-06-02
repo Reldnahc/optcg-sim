@@ -15,7 +15,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { findFirstNoChoiceEffectQueueEntryBeforeChoiceGroup } from "../effect-queue-ordering.js";
+import { findFirstNoChoiceEffectQueueEntryBeforeChoiceGroup } from "./group-ordering.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { cleanupResolvedLifeTrigger } from "../effect-runtime-life-trigger-cleanup.js";
 import {

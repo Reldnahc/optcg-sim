@@ -19,7 +19,7 @@ import {
   groupValidatedEffectQueueEntries,
   orderNoChoiceEffectQueueGroups,
   validateEffectQueueOrderingInput,
-} from "../effect-queue-ordering.js";
+} from "./group-ordering.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

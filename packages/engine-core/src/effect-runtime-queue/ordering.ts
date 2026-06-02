@@ -1,12 +1,12 @@
 import type { EffectQueueEntry } from "@optcg/types";
 
-import type { EffectQueueGroup } from "../effect-queue-ordering.js";
+import type { EffectQueueGroup } from "./group-ordering.js";
 import {
   findEarliestChoiceRequiredEffectQueueGroup,
   groupValidatedEffectQueueEntries,
   orderNoChoiceEffectQueueGroups,
   validateEffectQueueOrderingInput,
-} from "../effect-queue-ordering.js";
+} from "./group-ordering.js";
 
 export interface QueueOrderingEvaluation {
   ok: true;

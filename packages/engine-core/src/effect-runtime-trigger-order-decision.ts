@@ -6,7 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import type { EffectQueueGroup } from "./effect-queue-ordering.js";
+import type { EffectQueueGroup } from "./effect-runtime-queue/group-ordering.js";
 
 export const createChooseTriggerOrderDecision = (
   state: GameState,
