@@ -15,7 +15,11 @@ import type {
 
 import { appendEvent, illegalAction, toStateSeq } from "./action-results.js";
 import { isMatchActive, zonesEqual } from "./action-state.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import {
+  evaluateQueuedEffectCondition,
+  isSupportedQueuedEffectConditionShape,
+} from "./effect-runtime-conditions.js";
+import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import { isCardEffectInvalidated } from "./effect-invalidation.js";
 import {
   processEffectRuntime,
@@ -77,6 +81,21 @@ export const isSupportedOptionalActivateMainNoChoiceDrawEffect = (
   effect: Extract<Effect, { type: "draw" }>;
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
 } => effect.optional === true && isSupportedActivateMainDrawEffectShape(effect);
+
+export const isSupportedActivateMainContinuousEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+} =>
+  effect.category === "activate" &&
+  effect.trigger.type === "activateMain" &&
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  effect.optional !== true &&
+  effect.cost === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined &&
+  isSupportedQueuedEffectConditionShape(effect.condition) &&
+  isSupportedContinuousQueueEffect(effect.effect);
 
 const findLiveCardBySource = (
   state: GameState,
@@ -184,6 +203,7 @@ const findSupportedActivateMainEffects = (
     return (
       isSupportedActivateMainNoChoiceDrawEffect(effect) ||
       isSupportedOptionalActivateMainNoChoiceDrawEffect(effect) ||
+      isSupportedActivateMainContinuousEffect(effect) ||
       (effect.trigger.type === "activateMain" &&
         isSupportedSequenceBlock(sequenceSupportEntry, effect))
     );

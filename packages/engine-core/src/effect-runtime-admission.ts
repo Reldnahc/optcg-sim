@@ -1,6 +1,7 @@
 import type { EffectBlock, EffectQueueEntry } from "@optcg/types";
 
 import {
+  isSupportedActivateMainContinuousEffect,
   isSupportedActivateMainNoChoiceDrawEffect,
   isSupportedOptionalActivateMainNoChoiceDrawEffect,
 } from "./effect-runtime-activation-main.js";
@@ -43,6 +44,7 @@ export const evaluateEffectBlockRuntimeSupport = (
 
   if (block.category === "activate" && block.trigger.type === "activateMain") {
     return isSupportedActivateMainNoChoiceDrawEffect(block) ||
+      isSupportedActivateMainContinuousEffect(block) ||
       isSupportedOptionalActivateMainNoChoiceDrawEffect(block) ||
       isSupportedSequenceBlock(activateMainProbeQueueEntry, block)
       ? { supported: true }

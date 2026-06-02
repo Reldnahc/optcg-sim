@@ -28,6 +28,7 @@ import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
 } from "./effect-runtime-continuous.js";
+import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import {
   executeSelectedTargetEffectPrimitive,
   isSupportedMainEventTargetKoEffect,
@@ -127,6 +128,26 @@ const isEffectQueueCausality = (
 ): causedBy is Extract<CausalityRef, { type: "effect" }> =>
   causedBy.type === "effect";
 
+const isFieldZoneForActivateMain = (
+  zone: CardRef["zone"],
+): zone is NonNullable<CardRef["zone"]> =>
+  zone?.zone === "leaderArea" ||
+  zone?.zone === "characterArea" ||
+  zone?.zone === "stageArea";
+
+const isScopedActivateMainTargetQueueEntry = (
+  entry: EffectQueueEntry,
+): boolean =>
+  entry.causedBy.type === "ruleProcess" &&
+  entry.causedBy.name === "effectRuntime:activateMain" &&
+  String(entry.id).startsWith("queue-entry:activate-main:") &&
+  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
+  entry.generation === 0 &&
+  entry.triggerEventId === undefined &&
+  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
+  isFieldZoneForActivateMain(entry.source.zone) &&
+  isFieldZoneForActivateMain(entry.sourceSnapshot.zone);
+
 export const isSupportedTargetChoiceEffectShape = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -178,6 +199,21 @@ const isSupportedTargetChoiceContinuousShape = (
       effect.cost === undefined &&
       effect.conditionTiming === undefined &&
       effect.failurePolicy === undefined
+    );
+  }
+  if (effect.trigger.type === "activateMain") {
+    if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
+    if (!("target" in effect.effect) || !isChooseTarget(effect.effect.target)) {
+      return false;
+    }
+    return (
+      effect.category === "activate" &&
+      effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+      effect.optional !== true &&
+      effect.cost === undefined &&
+      effect.conditionTiming === undefined &&
+      effect.failurePolicy === undefined &&
+      isSupportedQueuedEffectConditionShape(effect.condition)
     );
   }
   if (effect.category !== "auto") return false;
@@ -254,6 +290,8 @@ export const isUnsupportedSelectTargetsDecision = (
   return (
     match !== undefined &&
     (match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      (match.trigger.type === "activateMain" &&
+        !isScopedActivateMainTargetQueueEntry(entry)) ||
       (!isSupportedTargetChoiceEffectShape(match) &&
         !isSupportedTargetChoiceContinuousShape(match)) ||
       !targetRequestsEqual(match.effect.target.request, decision.request))
@@ -298,6 +336,8 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      (match.trigger.type === "activateMain" &&
+        !isScopedActivateMainTargetQueueEntry(entry)) ||
       (!isSupportedTargetChoiceEffectShape(match) &&
         !isSupportedTargetChoiceContinuousShape(match))
     ) {
@@ -347,6 +387,8 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      (match.trigger.type === "activateMain" &&
+        !isScopedActivateMainTargetQueueEntry(entry)) ||
       (!isSupportedTargetChoiceEffectShape(match) &&
         !isSupportedTargetChoiceContinuousShape(match)) ||
       !targetRequestsEqual(match.effect.target.request, decision.request)
