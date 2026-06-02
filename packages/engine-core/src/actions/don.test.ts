@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { applyAttachDon } from "./don-actions.js";
+import { applyAttachDon } from "./don.js";
 import {
   createActiveState,
   must,
   p1,
   p2,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 
 test("applyAction attaches active DON!! to own leader/character during main phase", () => {
   const state = createActiveState();

@@ -23,7 +23,7 @@ import { isReplacementContinuationDecision } from "./decision-actions.js";
 import {
   getRespondingPlayerId,
   hasMalformedRespondToDecisionPlayerId,
-} from "../respond-to-decision-player.js";
+} from "../actions/responding-player.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },

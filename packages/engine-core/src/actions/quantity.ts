@@ -8,11 +8,11 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import {
   detectPendingRuntimeWork,
   processEffectRuntime,
-} from "./effect-runtime.js";
+} from "../effect-runtime.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },

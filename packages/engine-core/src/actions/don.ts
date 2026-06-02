@@ -14,14 +14,10 @@ import {
   illegalAction,
   toEngineResult,
   toStateSeq,
-} from "./action-results.js";
-import {
-  isMatchActive,
-  targetMatchesCard,
-  toCardRef,
-} from "./actions/state.js";
-import { assertGameStateInvariants } from "./state/invariants.js";
-import { applyRuleProcessingCheckpoint } from "./rules/rule-processing.js";
+} from "../action-results.js";
+import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
+import { assertGameStateInvariants } from "../state/invariants.js";
+import { isMatchActive, targetMatchesCard, toCardRef } from "./state.js";
 
 const getAttachTargets = (state: GameState, playerId: PlayerId): CardRef[] => {
   const player = state.players[playerId];

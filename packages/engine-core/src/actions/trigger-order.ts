@@ -6,8 +6,8 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { processEffectRuntimeAfterTriggerOrderChoice } from "./effect-runtime.js";
+import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import { processEffectRuntimeAfterTriggerOrderChoice } from "../effect-runtime.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },

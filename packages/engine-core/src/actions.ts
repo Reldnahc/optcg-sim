@@ -17,7 +17,7 @@ import {
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle/actions.js";
-import { applyAttachDon, getAttachDonLegalActions } from "./don-actions.js";
+import { applyAttachDon, getAttachDonLegalActions } from "./actions/don.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
@@ -68,7 +68,7 @@ import {
   getHandSelectionDecisionLegalActions,
   isHandSelectionSelectCardsDecision,
 } from "./effect-runtime-hand-selection.js";
-import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
+import { applyChooseTriggerOrderDecisionResponse } from "./actions/trigger-order.js";
 import {
   applyConcede,
   applyEndMainPhase,
@@ -87,11 +87,11 @@ import {
 import {
   applyChooseQuantityDecisionResponse,
   getChooseQuantityLegalActions,
-} from "./choose-quantity-actions.js";
+} from "./actions/quantity.js";
 import {
   getRespondingPlayerId,
   hasMalformedRespondToDecisionPlayerId,
-} from "./respond-to-decision-player.js";
+} from "./actions/responding-player.js";
 import {
   applyChooseReplacementDecisionResponse,
   getChooseReplacementLegalActions,
