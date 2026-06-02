@@ -71,8 +71,9 @@ import {
   zoneClickVisibleInstanceIds,
   type MatchClientUi,
 } from "./useMatchClient-support.js";
-import { loadInitialMatchClientState } from "./initial-match-client-state.js";
+import { useInitialMatchClientState } from "./use-initial-match-client-state.js";
 import { useMatchLiveConnections } from "./use-match-live-connections.js";
+import { useMatchRollbackActions } from "./use-match-rollback-actions.js";
 import { useMatchSessionActions } from "./use-match-session-actions.js";
 
 export const useMatchClient = (): MatchClientUi => {
@@ -257,35 +258,7 @@ export const useMatchClient = (): MatchClientUi => {
     activeCardCostGroup,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async (): Promise<void> => {
-      try {
-        const loaded = await loadInitialMatchClientState(controller);
-        if (cancelled) {
-          return;
-        }
-        if (
-          isMatchClientState(loaded) ||
-          isFirstPlayerSetupClientState(loaded)
-        ) {
-          setMatchLocation(loaded.matchId);
-        } else if (isLobbyClientState(loaded)) {
-          setLobbyLocation(loaded.lobbyId);
-        }
-        setClientState(loaded);
-        setErrors([]);
-      } catch (error) {
-        if (!cancelled) {
-          setErrors([error instanceof Error ? error.message : String(error)]);
-        }
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [controller]);
+  useInitialMatchClientState({ controller, setClientState, setErrors });
 
   useCostReset(
     optionalCardCostChoice?.decisionId,
@@ -344,41 +317,23 @@ export const useMatchClient = (): MatchClientUi => {
     [controller],
   );
 
-  const requestRollback = useCallback(
-    async (rollbackPointId: string): Promise<void> => {
-      setActionInFlight(true);
-      try {
-        const result = await controller.requestRollback({ rollbackPointId });
-        setClientState(result);
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        setDecisionDraft(undefined);
-        setActiveCardCostChoice(undefined);
-        setActiveCardCostSelectedInstanceIds([]);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        setErrors([]);
-      } catch (error) {
-        setErrors([error instanceof Error ? error.message : String(error)]);
-      } finally {
-        setActionInFlight(false);
-      }
-    },
-    [controller],
-  );
+  const resetInteractionState = useCallback((): void => {
+    setSelectedCardInstanceId(undefined);
+    setSelectedDonInstanceIds([]);
+    setDecisionDraft(undefined);
+    setActiveCardCostChoice(undefined);
+    setActiveCardCostSelectedInstanceIds([]);
+    setActiveAttackTargetChoice(undefined);
+    setActiveCounterTargetChoice(undefined);
+  }, []);
 
-  const cancelRollback = useCallback(async (): Promise<void> => {
-    setActionInFlight(true);
-    try {
-      const result = await controller.cancelRollback();
-      setClientState(result);
-      setErrors([]);
-    } catch (error) {
-      setErrors([error instanceof Error ? error.message : String(error)]);
-    } finally {
-      setActionInFlight(false);
-    }
-  }, [controller]);
+  const { requestRollback, cancelRollback } = useMatchRollbackActions({
+    controller,
+    resetInteractionState,
+    setActionInFlight,
+    setClientState,
+    setErrors,
+  });
 
   const attachSelectedDonToTarget = useCallback(
     async (targetInstanceId: string): Promise<void> => {
