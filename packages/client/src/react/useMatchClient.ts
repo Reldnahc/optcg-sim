@@ -1,42 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { DecisionResponse, InstanceId } from "@optcg/types";
+import type { InstanceId } from "@optcg/types";
 
 import {
-  attackTargetActionForInstance,
-  attackTargetInstanceIds,
-  ATTACK_TARGET_CHOICE_ACTION_INDEX,
-  buildDecisionResponse,
-  createBoardViewModel,
   createDecisionDraft,
-  createDecisionModalModel,
-  getPendingDecisionInteractionMode,
-  isDecisionModalSuppressed,
-  ATTACH_SELECTED_DON_ACTION_INDEX,
-  autoOptionalCardCostGroup,
-  autoPayCostActionIndex,
-  directReturnDonCostClick,
-  findAttachDonActionIndex,
-  createCanonicalDonPaymentActions,
-  createOptionalCardCostChoice,
-  createOptionalCardCostModalActions,
-  isSelectableCostAreaDon,
-  optionalCardCostActionForInstance,
-  optionalCardCostActionForSelection,
-  optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
-  createAttackTargetChoice,
-  counterTargetActionForInstance,
-  counterTargetInstanceIds,
-  COUNTER_TARGET_CHOICE_ACTION_INDEX,
-  createCounterTargetChoice,
   chooseDecisionTrigger,
   moveOrderedCardNear,
   setOrderedCardsPlacementDestination,
   setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
-  toggleSelectedDonInstanceId,
   toggleDecisionSelectedCard,
 } from "../index.js";
 import type {
@@ -48,31 +22,23 @@ import type {
 } from "../index.js";
 import { createController } from "../match-client-controller-factory.js";
 import {
-  CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
-  CLEAR_DECISION_SELECTION_ACTION_INDEX,
-  CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   buildGlobalActions,
-  activeCardInstanceIdsForUi,
-  applyActiveCardCostLifeChoiceCards,
-  applyPendingDecisionLifeChoiceCards,
   cardActionsForInstance,
-  decisionCandidateInstanceIds,
-  decisionHasCandidate,
   isFirstPlayerSetupClientState,
   isLobbyClientState,
   isMatchClientState,
-  isSelfAttachmentTarget,
-  prominentDecisionPrompt,
   setLobbyLocation,
   setMatchLocation,
   toggleCardCostSelectedInstanceId,
   useCostReset,
   visibleErrors,
-  zoneClickVisibleInstanceIds,
   type MatchClientUi,
 } from "./useMatchClient-support.js";
 import { useInitialMatchClientState } from "./use-initial-match-client-state.js";
 import { useMatchLiveConnections } from "./use-match-live-connections.js";
+import { useMatchClientActions } from "./use-match-client-actions.js";
+import { useMatchClientCardSelection } from "./use-match-client-card-selection.js";
+import { createMatchClientDecisionModel } from "./use-match-client-decision-model.js";
 import { useMatchRollbackActions } from "./use-match-rollback-actions.js";
 import { useMatchSessionActions } from "./use-match-session-actions.js";
 
@@ -107,20 +73,6 @@ export const useMatchClient = (): MatchClientUi => {
       ? undefined
       : clientState.snapshot.players[currentPlayerId];
   const pendingDecision = playerSnapshot?.view.pendingDecision;
-  const activeCardInstanceIds = activeCardInstanceIdsForUi({
-    attackSourceInstanceId: activeAttackTargetChoice?.attackerInstanceId,
-    counterSourceInstanceId: activeCounterTargetChoice?.counterCardInstanceId,
-    playerSnapshot,
-    pendingDecision,
-  });
-  const baseBoard = !isMatchClientState(clientState)
-    ? undefined
-    : createBoardViewModel({
-        snapshot: clientState.snapshot,
-        catalog: clientState.cards,
-        playerId: clientState.seat.playerId,
-        activeCardInstanceIds,
-      });
   const liveConnectionKey =
     isMatchClientState(clientState) ||
     isFirstPlayerSetupClientState(clientState)
@@ -130,133 +82,32 @@ export const useMatchClient = (): MatchClientUi => {
     clientState === undefined || !isLobbyClientState(clientState)
       ? undefined
       : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
-  const pendingDecisionResponseActions =
-    pendingDecision === undefined || playerSnapshot === undefined
-      ? []
-      : playerSnapshot.actions
-          .filter(
-            (action) =>
-              action.type === "respondToDecision" &&
-              action.placement === undefined,
-          )
-          .map((action) => ({
-            index: action.index,
-            label: action.label,
-            type: action.type,
-            ...(action.decisionPayment === undefined
-              ? {}
-              : { decisionPayment: action.decisionPayment }),
-          }));
-  const optionalCardCostChoice =
-    pendingDecision === undefined
-      ? undefined
-      : createOptionalCardCostChoice(
-          pendingDecision,
-          pendingDecisionResponseActions,
-        );
-  const canonicalDonPaymentActions =
-    pendingDecision?.type === "payCost" && optionalCardCostChoice === undefined
-      ? createCanonicalDonPaymentActions(pendingDecisionResponseActions)
-      : undefined;
-  const automaticPayCostActionIndex = autoPayCostActionIndex(
+  const decisionModel = createMatchClientDecisionModel({
+    clientState,
+    playerSnapshot,
     pendingDecision,
-    pendingDecisionResponseActions,
-  );
-  const explicitCardCostGroup =
-    activeCardCostChoice === undefined ||
-    optionalCardCostChoice === undefined ||
-    activeCardCostChoice.decisionId !==
-      String(optionalCardCostChoice.decisionId)
-      ? undefined
-      : optionalCardCostGroupForActionIndex(
-          optionalCardCostChoice,
-          activeCardCostChoice.actionIndex,
-        );
-  const autoCardCostGroup =
-    explicitCardCostGroup === undefined
-      ? autoOptionalCardCostGroup(optionalCardCostChoice)
-      : undefined;
-  const activeCardCostGroup = explicitCardCostGroup ?? autoCardCostGroup;
-  const explicitCardCostChoiceActive = explicitCardCostGroup !== undefined;
-  const cardCostChoiceActive = activeCardCostGroup !== undefined;
-  const board = applyActiveCardCostLifeChoiceCards(
-    applyPendingDecisionLifeChoiceCards(baseBoard, pendingDecision),
-    activeCardCostGroup,
-  );
-  const zoneClickVisibleIds = zoneClickVisibleInstanceIds(board);
-  const pendingDecisionInteractionMode =
-    pendingDecision === undefined
-      ? undefined
-      : getPendingDecisionInteractionMode(pendingDecision, {
-          visibleZoneClickInstanceIds: zoneClickVisibleIds,
-        });
-  const selectedCardCostActionIndex = optionalCardCostActionForSelection(
-    activeCardCostGroup,
+    activeAttackTargetChoice,
+    activeCounterTargetChoice,
+    activeCardCostChoice,
     activeCardCostSelectedInstanceIds,
-  );
-  const activeCardCostSelection =
-    activeCardCostGroup === undefined || activeCardCostGroup.requiredCount <= 1
-      ? undefined
-      : {
-          title: activeCardCostGroup.chooseLabel,
-          ...(activeCardCostGroup.source === undefined
-            ? {}
-            : { source: activeCardCostGroup.source }),
-          selectableInstanceIds:
-            optionalCardCostInstanceIds(activeCardCostGroup),
-          selectedInstanceIds: activeCardCostSelectedInstanceIds,
-          canConfirm: selectedCardCostActionIndex !== undefined,
-          confirmLabel: "Pay cost",
-          ...(activeCardCostGroup.operation === "moveCards" &&
-          activeCardCostGroup.source?.zone === "trash"
-            ? { orderHint: "1 is highest, last is bottom-most." }
-            : {}),
-        };
-  const modalResponseActions =
-    optionalCardCostChoice === undefined || cardCostChoiceActive
-      ? (canonicalDonPaymentActions ?? pendingDecisionResponseActions)
-      : createOptionalCardCostModalActions(optionalCardCostChoice);
-  const activeDecisionDraft =
-    pendingDecision === undefined
-      ? undefined
-      : decisionDraft?.decisionId === pendingDecision.id
-        ? decisionDraft
-        : createDecisionDraft(pendingDecision, modalResponseActions);
-  const decisionModal =
-    pendingDecision === undefined ||
-    activeDecisionDraft === undefined ||
-    cardCostChoiceActive ||
-    automaticPayCostActionIndex !== undefined ||
-    pendingDecisionInteractionMode !== "modal" ||
-    isDecisionModalSuppressed(pendingDecision)
-      ? undefined
-      : createDecisionModalModel(
-          pendingDecision,
-          activeDecisionDraft,
-          modalResponseActions,
-        );
-  const pendingChoiceInstanceIds =
-    activeAttackTargetChoice !== undefined
-      ? attackTargetInstanceIds(activeAttackTargetChoice)
-      : activeCounterTargetChoice !== undefined
-        ? counterTargetInstanceIds(activeCounterTargetChoice)
-        : activeCardCostGroup
-          ? optionalCardCostInstanceIds(activeCardCostGroup)
-          : pendingDecisionInteractionMode === "zoneClick" &&
-              pendingDecision !== undefined
-            ? decisionCandidateInstanceIds(pendingDecision)
-            : [];
-  const decisionSelectedInstanceIds =
-    activeCardCostSelection !== undefined
-      ? activeCardCostSelection.selectedInstanceIds
-      : pendingDecisionInteractionMode === "zoneClick" &&
-          activeDecisionDraft?.kind === "selectCards"
-        ? activeDecisionDraft.selectedInstanceIds.map(String)
-        : [];
-  const decisionPrompt = prominentDecisionPrompt({
-    pendingDecision,
-    activeCardCostGroup,
+    decisionDraft,
   });
+  const {
+    activeCardCostGroup,
+    activeCardCostSelection,
+    activeDecisionDraft,
+    automaticPayCostActionIndex,
+    board,
+    decisionModal,
+    decisionPrompt,
+    decisionSelectedInstanceIds,
+    explicitCardCostChoiceActive,
+    modalResponseActions,
+    optionalCardCostChoice,
+    pendingChoiceInstanceIds,
+    pendingDecisionInteractionMode,
+    selectedCardCostActionIndex,
+  } = decisionModel;
 
   useInitialMatchClientState({ controller, setClientState, setErrors });
 
@@ -335,217 +186,31 @@ export const useMatchClient = (): MatchClientUi => {
     setErrors,
   });
 
-  const attachSelectedDonToTarget = useCallback(
-    async (targetInstanceId: string): Promise<void> => {
-      if (selectedDonInstanceIds.length === 0) {
-        return;
-      }
-      setActionInFlight(true);
-      try {
-        for (const donInstanceId of selectedDonInstanceIds) {
-          const current = controller.currentState();
-          const actions =
-            current?.snapshot.players[current.seat.playerId]?.actions ?? [];
-          const actionIndex = findAttachDonActionIndex(
-            actions,
-            donInstanceId,
-            targetInstanceId,
-          );
-          if (actionIndex === undefined) {
-            throw new Error(
-              `No legal attach action for ${donInstanceId} to ${targetInstanceId}.`,
-            );
-          }
-          const result = await controller.submitVisibleAction({ actionIndex });
-          setClientState(result);
-        }
-        setSelectedDonInstanceIds([]);
-        setSelectedCardInstanceId(undefined);
-        setDecisionDraft(undefined);
-        setActiveCardCostChoice(undefined);
-        setActiveCardCostSelectedInstanceIds([]);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        setErrors([]);
-      } catch (error) {
-        setErrors([error instanceof Error ? error.message : String(error)]);
-      } finally {
-        setActionInFlight(false);
-      }
-    },
-    [controller, selectedDonInstanceIds],
-  );
-
-  const submitDecisionDraft = useCallback(
-    async (draft: DecisionDraft): Promise<void> => {
-      if (pendingDecision === undefined) {
-        return;
-      }
-      if (draft.kind === "actionOptions") {
-        const cardCostGroup = optionalCardCostGroupForActionIndex(
-          optionalCardCostChoice,
-          draft.actionIndex,
-        );
-        if (
-          cardCostGroup !== undefined &&
-          optionalCardCostChoice !== undefined
-        ) {
-          setActiveCardCostChoice({
-            decisionId: String(optionalCardCostChoice.decisionId),
-            actionIndex: cardCostGroup.chooseActionIndex,
-          });
-          setSelectedCardInstanceId(undefined);
-          setSelectedDonInstanceIds([]);
-          setActiveCardCostSelectedInstanceIds([]);
-          setDecisionDraft(undefined);
-          return;
-        }
-        setActionInFlight(true);
-        try {
-          const result = await controller.submitVisibleAction({
-            actionIndex: draft.actionIndex,
-          });
-          setClientState(result);
-          setSelectedCardInstanceId(undefined);
-          setSelectedDonInstanceIds([]);
-          setDecisionDraft(undefined);
-          setActiveCardCostChoice(undefined);
-          setActiveCardCostSelectedInstanceIds([]);
-          setActiveAttackTargetChoice(undefined);
-          setActiveCounterTargetChoice(undefined);
-          setErrors([]);
-        } catch (error) {
-          setErrors([error instanceof Error ? error.message : String(error)]);
-        } finally {
-          setActionInFlight(false);
-        }
-        return;
-      }
-      let response: DecisionResponse;
-      try {
-        response = buildDecisionResponse(pendingDecision, draft);
-      } catch (error) {
-        setErrors([error instanceof Error ? error.message : String(error)]);
-        return;
-      }
-      setActionInFlight(true);
-      try {
-        const result = await controller.respondToDecision({
-          decisionId: pendingDecision.id,
-          response,
-        });
-        setClientState(result);
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        setDecisionDraft(undefined);
-        setActiveCardCostChoice(undefined);
-        setActiveCardCostSelectedInstanceIds([]);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        setErrors([]);
-      } catch (error) {
-        setErrors([error instanceof Error ? error.message : String(error)]);
-      } finally {
-        setActionInFlight(false);
-      }
-    },
-    [controller, optionalCardCostChoice, pendingDecision],
-  );
-
-  const submitAction = useCallback(
-    async (actionIndex: number): Promise<void> => {
-      if (
-        actionIndex === ATTACH_SELECTED_DON_ACTION_INDEX &&
-        selectedCardInstanceId !== undefined
-      ) {
-        await attachSelectedDonToTarget(selectedCardInstanceId);
-        return;
-      }
-      if (
-        actionIndex === ATTACK_TARGET_CHOICE_ACTION_INDEX &&
-        selectedCardInstanceId !== undefined
-      ) {
-        const choice = createAttackTargetChoice(
-          selectedCardInstanceId,
-          board?.actionsByCardInstanceId[selectedCardInstanceId] ?? [],
-        );
-        if (choice !== undefined) {
-          setActiveAttackTargetChoice(choice);
-          setActiveCounterTargetChoice(undefined);
-          setDecisionDraft(undefined);
-          setSelectedDonInstanceIds([]);
-          setActiveCardCostSelectedInstanceIds([]);
-        }
-        return;
-      }
-      if (
-        actionIndex === COUNTER_TARGET_CHOICE_ACTION_INDEX &&
-        selectedCardInstanceId !== undefined
-      ) {
-        const choice = createCounterTargetChoice(
-          selectedCardInstanceId,
-          board?.actionsByCardInstanceId[selectedCardInstanceId] ?? [],
-        );
-        if (choice !== undefined) {
-          setActiveCounterTargetChoice(choice);
-          setActiveAttackTargetChoice(undefined);
-          setDecisionDraft(undefined);
-          setSelectedDonInstanceIds([]);
-          setActiveCardCostSelectedInstanceIds([]);
-        }
-        return;
-      }
-      if (actionIndex === CLEAR_DECISION_SELECTION_ACTION_INDEX) {
-        setDecisionDraft(undefined);
-        setActiveCardCostChoice(undefined);
-        setActiveCardCostSelectedInstanceIds([]);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        return;
-      }
-      if (actionIndex === CHOOSE_NO_DECISION_CARDS_ACTION_INDEX) {
-        if (pendingDecision !== undefined) {
-          await submitDecisionDraft(
-            createDecisionDraft(pendingDecision, modalResponseActions),
-          );
-        }
-        return;
-      }
-      if (actionIndex === CONFIRM_DECISION_SELECTION_ACTION_INDEX) {
-        if (activeDecisionDraft !== undefined) {
-          await submitDecisionDraft(activeDecisionDraft);
-        }
-        return;
-      }
-      setActionInFlight(true);
-      try {
-        const result = await controller.submitVisibleAction({ actionIndex });
-        setClientState(result);
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        setDecisionDraft(undefined);
-        setActiveCardCostChoice(undefined);
-        setActiveCardCostSelectedInstanceIds([]);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        setErrors([]);
-      } catch (error) {
-        setErrors([error instanceof Error ? error.message : String(error)]);
-      } finally {
-        setActionInFlight(false);
-      }
-    },
-    [
+  const { confirmDecision, submitAction, submitDecisionDraft } =
+    useMatchClientActions({
+      activeCardCostGroup,
       activeDecisionDraft,
-      attachSelectedDonToTarget,
       board,
       controller,
       modalResponseActions,
+      optionalCardCostChoice,
       pendingDecision,
+      selectedCardCostActionIndex,
       selectedCardInstanceId,
-      submitDecisionDraft,
-    ],
-  );
+      selectedDonInstanceIds,
+      autoSubmittedPayCostDecisionId,
+      resetInteractionState,
+      setActionInFlight,
+      setActiveAttackTargetChoice,
+      setActiveCardCostChoice,
+      setActiveCardCostSelectedInstanceIds,
+      setActiveCounterTargetChoice,
+      setClientState,
+      setDecisionDraft,
+      setErrors,
+      setSelectedCardInstanceId,
+      setSelectedDonInstanceIds,
+    });
   useEffect(() => {
     if (
       pendingDecision === undefined ||
@@ -563,168 +228,27 @@ export const useMatchClient = (): MatchClientUi => {
     pendingDecision,
     submitAction,
   ]);
-  const selectCard = useCallback(
-    (instanceId: string | undefined): void => {
-      if (instanceId === undefined) {
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        return;
-      }
-      if (activeAttackTargetChoice !== undefined) {
-        const actionIndex = attackTargetActionForInstance(
-          activeAttackTargetChoice,
-          instanceId,
-        );
-        if (actionIndex !== undefined) {
-          void submitAction(actionIndex);
-          return;
-        }
-      }
-      if (activeCounterTargetChoice !== undefined) {
-        const actionIndex = counterTargetActionForInstance(
-          activeCounterTargetChoice,
-          instanceId,
-        );
-        if (actionIndex !== undefined) {
-          void submitAction(actionIndex);
-          return;
-        }
-      }
-      if (activeCardCostGroup !== undefined) {
-        if (
-          !optionalCardCostInstanceIds(activeCardCostGroup).includes(instanceId)
-        ) {
-          return;
-        }
-        const directReturnDonClick = directReturnDonCostClick(
-          activeCardCostGroup,
-          activeCardCostSelectedInstanceIds,
-          instanceId,
-        );
-        if (directReturnDonClick !== undefined) {
-          setSelectedCardInstanceId(undefined);
-          setSelectedDonInstanceIds([]);
-          setActiveCardCostSelectedInstanceIds(
-            directReturnDonClick.selectedInstanceIds,
-          );
-          if (directReturnDonClick.actionIndex !== undefined) {
-            void submitAction(directReturnDonClick.actionIndex);
-          }
-          return;
-        }
-        if (activeCardCostGroup.requiredCount === 1) {
-          const actionIndex = optionalCardCostActionForInstance(
-            activeCardCostGroup,
-            instanceId,
-          );
-          if (actionIndex !== undefined) {
-            void submitAction(actionIndex);
-          }
-          return;
-        }
-        setActiveCardCostSelectedInstanceIds((selected) =>
-          toggleCardCostSelectedInstanceId(
-            selected,
-            instanceId,
-            activeCardCostGroup.requiredCount,
-          ),
-        );
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        return;
-      }
-      if (
-        pendingDecisionInteractionMode === "zoneClick" &&
-        pendingDecision !== undefined &&
-        (pendingDecision.type === "selectCards" ||
-          pendingDecision.type === "selectTargets") &&
-        decisionHasCandidate(pendingDecision, instanceId)
-      ) {
-        const nextDraft = toggleDecisionSelectedCard(
-          pendingDecision,
-          activeDecisionDraft?.decisionId === pendingDecision.id
-            ? activeDecisionDraft
-            : createDecisionDraft(pendingDecision, modalResponseActions),
-          instanceId as InstanceId,
-        );
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
-        setDecisionDraft(nextDraft);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        if (pendingDecision.max === 1) {
-          void submitDecisionDraft(nextDraft);
-        }
-        return;
-      }
-      if (
-        isSelectableCostAreaDon(
-          board,
-          instanceId,
-          playerSnapshot?.actions ?? [],
-        )
-      ) {
-        setSelectedCardInstanceId(undefined);
-        setActiveAttackTargetChoice(undefined);
-        setActiveCounterTargetChoice(undefined);
-        setSelectedDonInstanceIds((selected) =>
-          toggleSelectedDonInstanceId(selected, instanceId),
-        );
-        return;
-      }
-      if (
-        selectedDonInstanceIds.length > 0 &&
-        isSelfAttachmentTarget(board, instanceId)
-      ) {
-        setSelectedCardInstanceId(instanceId);
-        return;
-      }
-      setSelectedDonInstanceIds([]);
-      setActiveAttackTargetChoice(undefined);
-      setActiveCounterTargetChoice(undefined);
-      setSelectedCardInstanceId(instanceId);
-    },
-    [
-      activeDecisionDraft,
-      activeAttackTargetChoice,
-      activeCounterTargetChoice,
-      activeCardCostGroup,
-      activeCardCostSelectedInstanceIds,
-      board,
-      pendingDecision,
-      pendingDecisionInteractionMode,
-      modalResponseActions,
-      selectedDonInstanceIds.length,
-      playerSnapshot?.actions,
-      submitAction,
-      submitDecisionDraft,
-    ],
-  );
-
-  const confirmDecision = useCallback(async (): Promise<void> => {
-    if (
-      activeCardCostGroup !== undefined &&
-      activeCardCostGroup.requiredCount > 1
-    ) {
-      if (selectedCardCostActionIndex !== undefined) {
-        await submitAction(selectedCardCostActionIndex);
-      }
-      return;
-    }
-    if (pendingDecision === undefined || activeDecisionDraft === undefined) {
-      return;
-    }
-    await submitDecisionDraft(activeDecisionDraft);
-  }, [
+  const selectCard = useMatchClientCardSelection({
+    activeAttackTargetChoice,
+    activeCounterTargetChoice,
     activeCardCostGroup,
+    activeCardCostSelectedInstanceIds,
     activeDecisionDraft,
+    board,
+    modalResponseActions,
     pendingDecision,
-    selectedCardCostActionIndex,
+    pendingDecisionInteractionMode,
+    playerActions: playerSnapshot?.actions ?? [],
+    selectedDonInstanceIds,
+    setActiveAttackTargetChoice,
+    setActiveCardCostSelectedInstanceIds,
+    setActiveCounterTargetChoice,
+    setDecisionDraft,
+    setSelectedCardInstanceId,
+    setSelectedDonInstanceIds,
     submitAction,
     submitDecisionDraft,
-  ]);
+  });
 
   const cardActions = useCallback(
     (instanceId: string): ClientActionModel[] =>
