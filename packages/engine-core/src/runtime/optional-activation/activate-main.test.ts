@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { applyAction, getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "../../actions.js";
 import {
   installActivateMainDrawDefinition,
   makeMainPhaseLegalActionState,
@@ -11,11 +11,11 @@ import {
   toEffectId,
   toQueueEntryId,
   toTimingWindowId,
-} from "./action-dispatcher-test-support.js";
-import { addExtraDeckCard, must, p1, p2 } from "./action-test-fixtures.js";
-import { processEffectRuntime } from "./effect-runtime.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { hashCanonicalStateValue } from "./effect-runtime-queue-processing-test-support.js";
+} from "../../action-dispatcher-test-support.js";
+import { addExtraDeckCard, must, p1, p2 } from "../../action-test-fixtures.js";
+import { processEffectRuntime } from "../../effect-runtime.js";
+import { filterStateForPlayer } from "../../filter-state-for-player.js";
+import { hashCanonicalStateValue } from "../../effect-runtime-queue-processing-test-support.js";
 
 test("getLegalActions exposes activateEffect only for controller during legal main-phase windows", () => {
   const state = makeMainPhaseLegalActionState();

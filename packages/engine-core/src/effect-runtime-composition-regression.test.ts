@@ -732,7 +732,7 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     "packages/engine-core/src/runtime/trigger-queueing/attack.ts",
     "packages/engine-core/src/runtime/trigger-queueing/ko.ts",
     "packages/engine-core/src/runtime/trigger-queueing/main-event.ts",
-    "packages/engine-core/src/effect-runtime-activation-main.ts",
+    "packages/engine-core/src/runtime/optional-activation/activate-main.ts",
     "packages/engine-core/src/effect-runtime-sequence/support.ts",
     "packages/engine-core/src/battle/attack-timing.ts",
     "packages/engine-core/src/battle/actions.ts",

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { applyAction, getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "../../actions.js";
 import {
   installActivateMainDrawDefinition,
   makeMainPhaseLegalActionState,
   toCardId,
   toEffectId,
-} from "./action-dispatcher-test-support.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+} from "../../action-dispatcher-test-support.js";
+import { must, p1, p2, resolvedCard } from "../../action-test-fixtures.js";
 
 test("activate main supports leader-type-gated direct target power modification", () => {
   const state = makeMainPhaseLegalActionState();

@@ -40,7 +40,7 @@ import {
   isScopedActivateMainQueueEntry,
   isSupportedActivateMainNoChoiceDrawEffect,
   isSupportedOptionalActivateMainNoChoiceDrawEffect,
-} from "../effect-runtime-activation-main.js";
+} from "../runtime/optional-activation/activate-main.js";
 import { queueReferencedMainEffectFromTrigger } from "../effect-runtime-activate-referenced-effect.js";
 import {
   createContinuousRecordsForResolvedEffect,

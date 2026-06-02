@@ -13,21 +13,25 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { appendEvent, illegalAction, toStateSeq } from "./action-results.js";
-import { isMatchActive, zonesEqual } from "./action-state.js";
+import {
+  appendEvent,
+  illegalAction,
+  toStateSeq,
+} from "../../action-results.js";
+import { isMatchActive, zonesEqual } from "../../action-state.js";
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
-} from "./effect-runtime-conditions.js";
-import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
-import { isCardEffectInvalidated } from "./effect-invalidation.js";
+} from "../../effect-runtime-conditions.js";
+import { isSupportedContinuousQueueEffect } from "../../effect-runtime-continuous.js";
+import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
-} from "./effect-runtime.js";
-import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
-import { toSnapshot } from "./effect-runtime-trigger-source-lookup.js";
-import { isOncePerTurnUsed, toOncePerTurnKey } from "./once-per-turn.js";
+} from "../../effect-runtime.js";
+import { isSupportedSequenceBlock } from "../../effect-runtime-sequence-support.js";
+import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
+import { isOncePerTurnUsed, toOncePerTurnKey } from "../../once-per-turn.js";
 
 const isFieldZoneForActivateMain = (
   zone: CardRef["zone"],

@@ -3,20 +3,20 @@ import { test } from "vitest";
 
 import type { CardInstance, SelectionId } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction } from "../../actions.js";
 import {
   installActivateMainDrawDefinition,
   makeMainPhaseLegalActionState,
   toCardId,
   toEffectId,
-} from "./action-dispatcher-test-support.js";
+} from "../../action-dispatcher-test-support.js";
 import {
   addExtraDeckCard,
   must,
   p1,
   resolvedCard,
-} from "./action-test-fixtures.js";
-import { reviewedOnPlayDrawDefinition } from "./effect-runtime-queue-processing-test-support.js";
+} from "../../action-test-fixtures.js";
+import { reviewedOnPlayDrawDefinition } from "../../effect-runtime-queue-processing-test-support.js";
 
 const setupActivateMainTrashAllPlayFromTrashState = (params: {
   sameTrashNames?: boolean;

@@ -4,7 +4,7 @@ import {
   isSupportedActivateMainContinuousEffect,
   isSupportedActivateMainNoChoiceDrawEffect,
   isSupportedOptionalActivateMainNoChoiceDrawEffect,
-} from "./effect-runtime-activation-main.js";
+} from "./runtime/optional-activation/activate-main.js";
 import {
   isSupportedAutoRuntimeEffectBlock,
   type AutoRuntimeEntryAdapter,

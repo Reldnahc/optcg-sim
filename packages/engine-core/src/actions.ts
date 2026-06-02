@@ -78,7 +78,7 @@ import { advanceEndPhase } from "./phases.js";
 import {
   applyActivateMainAction,
   getActivateMainLegalActions,
-} from "./effect-runtime-activation-main.js";
+} from "./runtime/optional-activation/activate-main.js";
 import { finalizeSetupFromContinuation } from "./initial-state.js";
 import {
   applyStartOfGameSetupDecisionResponse,
