@@ -13,7 +13,7 @@ import type {
 
 import { computeView } from "../../compute-view.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "./continuous.js";
-import { createInitialState } from "../../initial-state.js";
+import { createInitialState } from "../../setup/initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;
 const toPlayerId = (value: string): PlayerId => value as PlayerId;

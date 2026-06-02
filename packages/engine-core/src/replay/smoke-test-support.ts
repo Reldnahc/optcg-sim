@@ -16,9 +16,12 @@ import type {
 
 import { applyAction } from "../actions.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { createInitialState } from "../initial-state.js";
+import { createInitialState } from "../setup/initial-state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { respondToMulliganDecision, startMulliganFlow } from "../mulligan.js";
+import {
+  respondToMulliganDecision,
+  startMulliganFlow,
+} from "../setup/mulligan.js";
 
 export const toCardId = (value: string): CardId => value as CardId;
 const toMatchId = (value: string): MatchId => value as MatchId;

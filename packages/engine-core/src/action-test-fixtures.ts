@@ -10,8 +10,11 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
-import { createInitialState } from "./initial-state.js";
-import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
+import { createInitialState } from "./setup/initial-state.js";
+import {
+  respondToMulliganDecision,
+  startMulliganFlow,
+} from "./setup/mulligan.js";
 
 export const toMatchId = (value: string): MatchId => value as MatchId;
 export const toPlayerId = (value: string): PlayerId => value as PlayerId;

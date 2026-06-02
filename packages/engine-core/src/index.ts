@@ -3,11 +3,11 @@ export {
   advanceRngUint32,
   initializeRng,
 } from "./state/rng.js";
-export { createInitialState } from "./initial-state.js";
+export { createInitialState } from "./setup/initial-state.js";
 export type {
   CreateInitialStateInput,
   PreMulliganSetupGameState,
-} from "./initial-state.js";
+} from "./setup/initial-state.js";
 export {
   canonicalSerializeStateValue,
   hashCanonicalStateValue,
@@ -17,7 +17,10 @@ export {
   collectGameStateInvariantViolations,
   GameStateInvariantError,
 } from "./state/invariants.js";
-export { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
+export {
+  respondToMulliganDecision,
+  startMulliganFlow,
+} from "./setup/mulligan.js";
 export {
   advanceDonPhase,
   advanceDrawPhase,

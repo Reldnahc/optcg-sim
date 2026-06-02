@@ -28,7 +28,7 @@ import {
 } from "./action-test-fixtures.js";
 import { getLegalActions } from "./actions.js";
 import { hashCanonicalStateValue } from "./state/canonical-state.js";
-import { createInitialState } from "./initial-state.js";
+import { createInitialState } from "./setup/initial-state.js";
 import { setupMainPlayState } from "./play-card/test-fixtures.js";
 import {
   setupAttackState,

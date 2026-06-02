@@ -3,8 +3,8 @@ import { test } from "vitest";
 
 import type { Action, CardRef, Effect, PlayerId } from "@optcg/types";
 
-import { createInitialState } from "./initial-state.js";
-import { startMulliganFlow } from "./mulligan.js";
+import { createInitialState } from "./setup/initial-state.js";
+import { startMulliganFlow } from "./setup/mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
 import { createChooseQuantityDecisionForQueuedEffect } from "./effect-runtime.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";

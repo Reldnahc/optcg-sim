@@ -17,9 +17,12 @@ import type {
 } from "@optcg/types";
 
 import { getLegalActions } from "../actions.js";
-import { createInitialState } from "../initial-state.js";
+import { createInitialState } from "../setup/initial-state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { respondToMulliganDecision, startMulliganFlow } from "../mulligan.js";
+import {
+  respondToMulliganDecision,
+  startMulliganFlow,
+} from "../setup/mulligan.js";
 import {
   advanceDonPhase,
   advanceDrawPhase,

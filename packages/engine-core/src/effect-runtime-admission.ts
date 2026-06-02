@@ -12,7 +12,7 @@ import {
 import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
 import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence/support.js";
-import { isSupportedStartOfGameEffectBlock } from "./start-of-game-effects.js";
+import { isSupportedStartOfGameEffectBlock } from "./setup/start-of-game-effects.js";
 
 export interface RuntimeSupportAdmissionResult {
   readonly supported: boolean;

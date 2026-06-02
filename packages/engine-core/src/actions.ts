@@ -79,11 +79,11 @@ import {
   applyActivateMainAction,
   getActivateMainLegalActions,
 } from "./runtime/optional-activation/activate-main.js";
-import { finalizeSetupFromContinuation } from "./initial-state.js";
+import { finalizeSetupFromContinuation } from "./setup/initial-state.js";
 import {
   applyStartOfGameSetupDecisionResponse,
   isStartOfGameSetupDecision,
-} from "./start-of-game-effects.js";
+} from "./setup/start-of-game-effects.js";
 import {
   applyChooseQuantityDecisionResponse,
   getChooseQuantityLegalActions,

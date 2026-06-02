@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { createInitialState } from "./initial-state.js";
-import { startMulliganFlow } from "./mulligan.js";
+import { createInitialState } from "./setup/initial-state.js";
+import { startMulliganFlow } from "./setup/mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
 import {
   createInput,
