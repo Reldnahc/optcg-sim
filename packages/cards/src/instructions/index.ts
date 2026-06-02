@@ -3,6 +3,7 @@ export { parseActivateReferencedEffectInstruction } from "./activate-referenced-
 export {
   parseBasePowerBecomeInstruction,
   parseSetBasePowerInstruction,
+  parseTargetedKeywordGrantInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,
 } from "./continuous-field-effects.js";

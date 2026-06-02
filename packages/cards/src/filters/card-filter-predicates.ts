@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
+import { supportedEntryPoints } from "../entry-points/supported.js";
 
 export interface CardFilterPredicateParseResult {
   readonly filter: CardFilter;
@@ -43,6 +44,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseStageCategoryPredicate,
   parseCharacterCategoryPredicate,
   parsePowerPredicate,
+  parseEffectEntryPointPredicate,
   parseDynamicDonFieldCostPredicate,
   parseCostPredicate,
   parseSelfExclusionPredicate,
@@ -527,6 +529,52 @@ function parsePowerPredicate(
       thresholdEvidence,
     ],
     rest: restText ?? "",
+  };
+}
+
+function parseEffectEntryPointPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<mode>with|without) an? (?<entry>\[[^\]]+\]) effect\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const groups = match?.groups;
+  const modeText = groups?.["mode"]?.toLowerCase();
+  const entryText = groups?.["entry"];
+  if (
+    (modeText !== "with" && modeText !== "without") ||
+    entryText === undefined
+  ) {
+    return undefined;
+  }
+
+  const entryPoint = supportedEntryPoints.find(
+    (candidate) => candidate.text.toLowerCase() === entryText.toLowerCase(),
+  );
+  if (entryPoint === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      effectEntryPoint: {
+        mode: modeText,
+        trigger: entryPoint.trigger,
+        ...(entryPoint.condition === undefined
+          ? {}
+          : { condition: entryPoint.condition }),
+      },
+    },
+    evidence: [
+      "filter:effectEntryPoint",
+      modeText === "with"
+        ? "filter:effectEntryPoint:with"
+        : "filter:effectEntryPoint:without",
+    ],
+    rest: groups?.["rest"] ?? "",
   };
 }
 

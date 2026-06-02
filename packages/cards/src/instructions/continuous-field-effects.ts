@@ -6,15 +6,18 @@ import {
   parseThisBattleDuration,
   parseThisTurnDuration,
 } from "../durations/index.js";
+import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseKeyword } from "../keywords/index.js";
 import { parsePositivePowerModifier } from "../modifiers/index.js";
 import {
   parseAllFieldTarget,
   parseThisCharacterTarget,
+  parseYourCharactersTarget,
   parseYourLeaderTarget,
 } from "../targets/index.js";
 import type {
   InstructionParseResult,
+  InstructionParser,
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
@@ -388,6 +391,57 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
       rest: "",
     };
   };
+
+export const parseTargetedKeywordGrantInstruction: InstructionParser = (
+  input,
+) => {
+  const cardinality = parseUpToCardinality(input);
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = parseYourCharactersTarget({ text: cardinality.rest });
+  if (target?.target === undefined) {
+    return undefined;
+  }
+
+  const actionMatch = /^gains\s+(?<rest>.*)$/i.exec(target.rest);
+  const keywordText = actionMatch?.groups?.["rest"];
+  if (keywordText === undefined) {
+    return undefined;
+  }
+
+  const keyword = parseKeyword({ text: keywordText });
+  if (keyword === undefined) {
+    return undefined;
+  }
+  const duration = parseExplicitFieldEffectDuration({ text: keyword.rest });
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "giveKeyword",
+      target: target.target,
+      keyword: keyword.keyword,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:giveKeyword",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      ...keyword.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+};
 
 export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionParser =
   (input, context) => {

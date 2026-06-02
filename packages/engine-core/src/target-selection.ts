@@ -42,6 +42,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "colorsAny",
   "cost",
   "currentPower",
+  "effectEntryPoint",
   "excludeSelf",
   "names",
   "nameNot",
@@ -145,6 +146,10 @@ const hasSupportedNumericFilter = (
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
+const isSupportedEffectEntryPointFilter = (
+  filter: CardFilter["effectEntryPoint"],
+): boolean => filter === undefined || typeof filter.trigger.type === "string";
+
 const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
   filter === undefined ||
   (hasOnlySupportedFilterKeys(filter) &&
@@ -157,6 +162,7 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    isSupportedEffectEntryPointFilter(filter.effectEntryPoint) &&
     (filter.excludeSelf === undefined || filter.excludeSelf) &&
     (filter.state === undefined ||
       filter.state === "active" ||
@@ -190,6 +196,47 @@ const numericFilterMatches = (
   }
 
   return true;
+};
+
+const valuesEqual = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+const cardHasKnownEffectEntryPoint = (
+  state: GameState,
+  card: ResolvedCard,
+  filter: NonNullable<CardFilter["effectEntryPoint"]>,
+): boolean => {
+  const effectDefinitionId =
+    card.support.status === "implemented-dsl"
+      ? card.support.effectDefinitionId
+      : undefined;
+  if (effectDefinitionId === undefined) {
+    return false;
+  }
+
+  const definition = state.cardManifest.effectDefinitions?.[effectDefinitionId];
+  if (definition === undefined) {
+    return false;
+  }
+
+  return definition.effects.some(
+    (effect) =>
+      valuesEqual(effect.trigger, filter.trigger) &&
+      valuesEqual(effect.condition, filter.condition),
+  );
+};
+
+const cardMatchesEffectEntryPointFilter = (
+  state: GameState,
+  card: ResolvedCard,
+  filter: CardFilter["effectEntryPoint"],
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+
+  const hasEntryPoint = cardHasKnownEffectEntryPoint(state, card, filter);
+  return filter.mode === "with" ? hasEntryPoint : !hasEntryPoint;
 };
 
 const cardMatchesFilter = (
@@ -252,6 +299,11 @@ const cardMatchesFilter = (
     return false;
   }
   if (filter.state !== undefined && instance.state !== filter.state) {
+    return false;
+  }
+  if (
+    !cardMatchesEffectEntryPointFilter(state, card, filter.effectEntryPoint)
+  ) {
     return false;
   }
 

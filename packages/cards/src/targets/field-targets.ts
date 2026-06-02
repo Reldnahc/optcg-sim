@@ -297,6 +297,14 @@ export function parseYourCharactersTarget(
   if (match === null) {
     return undefined;
   }
+  const predicateText = match.groups?.["rest"]?.trim() ?? "";
+  const predicates =
+    predicateText.length > 0
+      ? parseCardFilterPredicates(
+          { text: predicateText },
+          { powerSemantics: "current" },
+        )
+      : undefined;
 
   return {
     target: {
@@ -310,14 +318,15 @@ export function parseYourCharactersTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: { categories: ["character"] },
+        filter: { categories: ["character"], ...(predicates?.filter ?? {}) },
       },
     },
     evidence: [
       "target:yourCharacters",
       "player:self",
       "filter:category:character",
+      ...(predicates?.evidence ?? []),
     ],
-    rest: match.groups?.["rest"]?.trim() ?? "",
+    rest: predicates?.rest.trim() ?? predicateText,
   };
 }

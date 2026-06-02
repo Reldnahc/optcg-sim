@@ -313,6 +313,11 @@ export interface CardFilter {
   counter?: { op: Comparator; value: number } | { min?: number; max?: number };
   hasKeywords?: Keyword[];
   lacksKeywords?: Keyword[];
+  effectEntryPoint?: {
+    mode: "with" | "without";
+    trigger: Trigger;
+    condition?: Condition;
+  };
   state?: "active" | "rested" | "attached";
   owner?: PlayerRef;
   controller?: PlayerRef;

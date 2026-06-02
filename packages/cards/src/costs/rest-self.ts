@@ -11,7 +11,9 @@ export interface RestSelfCostParseResult {
 export function parseRestSelfCost(
   input: ParseInput,
 ): RestSelfCostParseResult | undefined {
-  const match = /^rest this (?<target>card|Character)$/i.exec(input.text);
+  const match = /^rest this (?<target>card|Character|Leader)$/i.exec(
+    input.text,
+  );
   const target = match?.groups?.["target"];
   if (target === undefined) {
     return undefined;

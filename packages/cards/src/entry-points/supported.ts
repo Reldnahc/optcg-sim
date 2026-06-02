@@ -6,7 +6,7 @@ import type {
   PrimitiveEvidence,
 } from "../types.js";
 
-interface SupportedEntryPoint {
+export interface SupportedEntryPoint {
   readonly text: string;
   readonly trigger: Trigger;
   readonly category?: EffectCategory;
@@ -14,7 +14,7 @@ interface SupportedEntryPoint {
   readonly evidence: readonly PrimitiveEvidence[];
 }
 
-const supportedEntryPoints: readonly SupportedEntryPoint[] = [
+export const supportedEntryPoints: readonly SupportedEntryPoint[] = [
   {
     text: "[On Play]",
     trigger: { type: "onPlay" },

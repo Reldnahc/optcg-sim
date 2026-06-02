@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type {
   CardId,
   CardRef,
+  EffectDefinition,
   GameState,
   PlayerId,
   TargetRequest,
@@ -89,6 +90,84 @@ const targetCards = (
 };
 
 describe("resolvePublicTargetCandidates", () => {
+  test("matches public target candidates with and without reusable effect-entry-point filters", () => {
+    const state = createActiveState();
+    const attacker = toCardId("has-when-attacking");
+    const vanilla = toCardId("without-when-attacking");
+    addManifestCard(state, {
+      cardId: attacker,
+      category: "character",
+      cost: 4,
+      power: 5000,
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "has-when-attacking-definition",
+      },
+    });
+    addManifestCard(state, {
+      cardId: vanilla,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    state.cardManifest.effectDefinitions = {
+      ...state.cardManifest.effectDefinitions,
+      ["has-when-attacking-definition"]: {
+        cardId: attacker,
+        implementationStatus: "implemented-dsl",
+        effects: [
+          {
+            id: "has-when-attacking:auto-1" as EffectDefinition["effects"][number]["id"],
+            category: "auto",
+            trigger: { type: "whenAttacking" },
+            optional: false,
+            oncePerTurn: false,
+            sourcePresencePolicy: "mustRemainInSameZone",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+        metadata: {
+          sourceTextHash: "source-hash",
+          rulesVersion: "r1",
+          effectDefinitionsVersion: "fixture",
+          tested: true,
+          reviewer: "qa-reviewer",
+        },
+      },
+    };
+    const refs = placeCharacters(state, p1, [attacker, vanilla]);
+
+    const withResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: {
+          categories: ["character"],
+          effectEntryPoint: {
+            mode: "with",
+            trigger: { type: "whenAttacking" },
+          },
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+    const withoutResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: {
+          categories: ["character"],
+          effectEntryPoint: {
+            mode: "without",
+            trigger: { type: "whenAttacking" },
+          },
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(withResult)).toEqual([refs[0]]);
+    expect(targetCards(withoutResult)).toEqual([refs[1]]);
+  });
+
   test("returns deterministic public character candidates matching category and power range", () => {
     const state = createActiveState();
     const low = toCardId("char-low");
