@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
-import eslintConfig, {
-  sourceFileSizeGuardTemporaryAllowlist,
-} from "../../eslint.config.mjs";
+import eslintConfig from "../../eslint.config.mjs";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -13,6 +11,16 @@ const repoRoot = path.resolve(
   "..",
 );
 const ESLINT_FIXTURE_TIMEOUT_MS = 15_000;
+const guardedSourceRoots = ["packages", "tools", "tests", "contracts"];
+const guardedSourceExtensions = new Set([
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".mjs",
+  ".cjs",
+]);
 
 async function readJson(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
@@ -36,6 +44,52 @@ async function createRepoEslint() {
   return new ESLint({
     cwd: repoRoot,
   });
+}
+
+async function collectGuardedSourceFiles(relativeDirectory) {
+  const absoluteDirectory = path.join(repoRoot, relativeDirectory);
+  const directoryName = path.basename(relativeDirectory);
+  let entries;
+
+  if (
+    directoryName === "node_modules" ||
+    directoryName === "dist" ||
+    directoryName === "coverage" ||
+    directoryName === "fixtures" ||
+    directoryName === "generated"
+  ) {
+    return [];
+  }
+
+  try {
+    entries = await readdir(absoluteDirectory, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+
+  const nestedFiles = await Promise.all(
+    entries.map(async (entry) => {
+      const relativePath = path.join(relativeDirectory, entry.name);
+
+      if (entry.isDirectory()) {
+        return collectGuardedSourceFiles(relativePath);
+      }
+
+      if (
+        !entry.isFile() ||
+        !guardedSourceExtensions.has(path.extname(entry.name))
+      ) {
+        return [];
+      }
+
+      return [relativePath];
+    }),
+  );
+
+  return nestedFiles.flat();
 }
 
 function getSourceFileSizeGuardConfig() {
@@ -111,26 +165,31 @@ test("eslint max-lines guard skips blank lines and comments", () => {
   assert.equal(ruleOptions.skipComments, true);
 });
 
-test("eslint max-lines temporary allowlist is exact-path only", () => {
-  assert.ok(Array.isArray(sourceFileSizeGuardTemporaryAllowlist));
+test("eslint max-lines guard has no temporary allowlist", () => {
+  const guardConfig = getSourceFileSizeGuardConfig();
 
-  for (const allowlistedPath of sourceFileSizeGuardTemporaryAllowlist) {
-    assert.doesNotMatch(
-      allowlistedPath,
-      /[*{}[\]?]/,
-      "temporary max-lines allowlist must not use globs",
-    );
-    assert.doesNotMatch(
-      allowlistedPath,
-      /(^|\/)(specs|fixtures)(\/|$)/,
-      "temporary max-lines allowlist must not target broad artifact directories",
-    );
-    assert.match(
-      allowlistedPath,
-      /^(packages|tools|tests|contracts)\//,
-      "temporary max-lines allowlist entries must be repo-relative guarded code paths",
-    );
+  assert.deepEqual(guardConfig.ignores, [
+    "**/fixtures/**",
+    "**/generated/**",
+    "**/*.generated.{ts,mts,cts,js,mjs,cjs}",
+  ]);
+});
+
+test("guarded source files cannot bypass max-lines", async () => {
+  const guardedFiles = (
+    await Promise.all(guardedSourceRoots.map(collectGuardedSourceFiles))
+  ).flat();
+  const bypassedFiles = [];
+
+  for (const relativeFile of guardedFiles) {
+    const source = await readFile(path.join(repoRoot, relativeFile), "utf8");
+
+    if (/eslint-disable(?:-next-line|-line)?\s+max-lines/.test(source)) {
+      bypassedFiles.push(relativeFile);
+    }
   }
+
+  assert.deepEqual(bypassedFiles, []);
 });
 
 test("eslint max-lines guard excludes broad generated spec fixture and artifact paths", () => {

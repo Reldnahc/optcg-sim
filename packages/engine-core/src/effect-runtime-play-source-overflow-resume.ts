@@ -1,0 +1,115 @@
+import type {
+  EngineEvent,
+  EngineResult,
+  GameState,
+  SelectCardsDecision,
+} from "@optcg/types";
+
+import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
+import type { CreateUnsupportedPendingRuntimeWorkError } from "./effect-runtime-queue-target-decisions.js";
+import type { QueueEffectResolvedCustomTriggers } from "./effect-runtime-queue-results.js";
+
+export const resumePlaySourceOverflowDecision = (params: {
+  originalState: GameState;
+  decision: SelectCardsDecision;
+  playCardResult: EngineResult;
+  createUnsupportedPendingRuntimeWorkError: CreateUnsupportedPendingRuntimeWorkError;
+  queueEffectResolvedCustomTriggers: QueueEffectResolvedCustomTriggers;
+}): EngineResult | undefined => {
+  const {
+    originalState,
+    decision,
+    playCardResult,
+    createUnsupportedPendingRuntimeWorkError,
+    queueEffectResolvedCustomTriggers,
+  } = params;
+  const runtime = decision.runtime?.playSourceOverflow;
+  if (runtime === undefined) {
+    return undefined;
+  }
+  if (
+    playCardResult.errors !== undefined ||
+    playCardResult.state.pendingDecision !== undefined
+  ) {
+    return playCardResult;
+  }
+  const selected = originalState.effectQueue.find(
+    (entry) => entry.id === runtime.queueEntryId,
+  );
+  if (selected === undefined) {
+    return toEngineResult(
+      originalState,
+      [],
+      [
+        createUnsupportedPendingRuntimeWorkError({
+          kind: "effectQueue",
+          count: originalState.effectQueue.length,
+        }),
+      ],
+    );
+  }
+
+  let nextState: GameState = {
+    ...playCardResult.state,
+    effectQueue: playCardResult.state.effectQueue.filter(
+      (entry) => entry.id !== selected.id,
+    ),
+  };
+  const resolvedEvents: EngineEvent[] = [];
+  const resolvedEventBaseState: GameState = {
+    ...nextState,
+    seq: toStateSeq(nextState.seq - 1),
+  };
+  appendEvent(
+    resolvedEventBaseState,
+    resolvedEvents,
+    "effectResolved",
+    {
+      queueEntryId: selected.id,
+      timingWindowId: selected.timingWindowId,
+      generation: selected.generation,
+      effectBlockId: selected.effectBlockId,
+      ...(selected.triggerEventId === undefined
+        ? {}
+        : { triggerEventId: selected.triggerEventId }),
+      sourcePresencePolicy: selected.sourcePresencePolicy,
+      orderingGroup: selected.orderingGroup,
+      status: "resolved" as const,
+    },
+    { type: "public" },
+  );
+  const resolvedEvent = resolvedEvents[0];
+  if (resolvedEvent !== undefined) {
+    resolvedEvent.causedBy = {
+      type: "effect",
+      queueEntryId: selected.id,
+      effectId: selected.effectBlockId,
+    };
+    nextState = {
+      ...nextState,
+      eventJournal: [...nextState.eventJournal, resolvedEvent],
+    };
+  }
+  const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+  nextState = cleanup.state;
+  const allEvents = [
+    ...playCardResult.events,
+    ...resolvedEvents,
+    ...cleanup.events,
+  ];
+
+  const triggered = queueEffectResolvedCustomTriggers(
+    nextState,
+    selected,
+    allEvents,
+  );
+  if (triggered !== undefined) {
+    if (triggered.errors !== undefined) {
+      return triggered;
+    }
+    nextState = triggered.state;
+    allEvents.push(...triggered.events);
+  }
+  return toEngineResult(nextState, allEvents);
+};

@@ -304,28 +304,31 @@ test("Character overflow rejects stale, wrong-player, wrong-card, missing, and m
 });
 
 test("Character overflow authority lives at the Character placement boundary", () => {
-  const source = readFileSync(new URL("./play-card.ts", import.meta.url), {
-    encoding: "utf8",
-  });
-  const placementStart = source.indexOf("const placePlayedCardResult =");
-  const responseStart = source.indexOf(
+  const placementSource = readFileSync(
+    new URL("./play-card-placement.ts", import.meta.url),
+    {
+      encoding: "utf8",
+    },
+  );
+  const playCardSource = readFileSync(
+    new URL("./play-card.ts", import.meta.url),
+    {
+      encoding: "utf8",
+    },
+  );
+  const placementStart = placementSource.indexOf(
+    "const placePlayedCardResult =",
+  );
+  const responseStart = playCardSource.indexOf(
     "const applyCharacterOverflowResponse =",
   );
   assert.notEqual(placementStart, -1);
   assert.notEqual(responseStart, -1);
 
   const callPattern = /createCharacterOverflowDecisionResult\(/g;
+  assert.equal([...playCardSource.matchAll(callPattern)].length, 0);
   assert.equal(
-    [...source.slice(0, placementStart).matchAll(callPattern)].length,
-    0,
-  );
-  assert.equal(
-    [...source.slice(placementStart, responseStart).matchAll(callPattern)]
-      .length,
+    [...placementSource.slice(placementStart).matchAll(callPattern)].length,
     1,
-  );
-  assert.equal(
-    [...source.slice(responseStart).matchAll(callPattern)].length,
-    0,
   );
 });

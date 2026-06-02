@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import type {
   DecisionId,
   Effect,
@@ -10,12 +9,6 @@ import type {
   SelectCardsDecision,
   QueueEntryId,
 } from "@optcg/types";
-type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
-  damageProcess?: {
-    type?: string;
-    remainingDamagePoints: number;
-  };
-};
 import {
   appendEvent,
   createEvent,
@@ -40,7 +33,6 @@ import type {
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
-  isSupportedEffectResolvedCustomDrawEffect,
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
@@ -58,7 +50,6 @@ import {
   executeMoveCardsPrimitive,
   resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
 } from "./effect-runtime-move-cards.js";
-import { chooseQuantityPromptForEffect } from "./effect-runtime-quantity-prompts.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "./effect-runtime-top-deck-placement.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
@@ -73,6 +64,15 @@ import {
 } from "./once-per-turn.js";
 import { applyRuntimePlaySource } from "./play-card.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
+import {
+  createChooseOptionalActivationDecision,
+  createChooseQuantityDecision,
+} from "./effect-runtime-queue-choice-decisions.js";
+import { resumePlaySourceOverflowDecision as resumePlaySourceOverflowDecisionHelper } from "./effect-runtime-play-source-overflow-resume.js";
+import {
+  hasExactDamageDeferredQueue,
+  isActiveDoubleAttackDamageProcess,
+} from "./effect-runtime-damage-deferred-queue.js";
 export type QueueEffectResolvedCustomTriggers = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -102,15 +102,6 @@ export interface EffectRuntimeQueueResults {
     playCardResult: EngineResult,
   ) => EngineResult | undefined;
 }
-
-const isActiveDoubleAttackDamageProcess = (state: GameState): boolean =>
-  (() => {
-    const battle = state.battle as EngineInternalBattleState | undefined;
-    return (
-      battle?.damageProcess?.type === "multipleDamage" &&
-      battle.damageProcess.remainingDamagePoints > 0
-    );
-  })();
 
 export const createEffectRuntimeQueueResults = (
   dependencies: EffectRuntimeQueueResultsDependencies,
@@ -309,159 +300,6 @@ export const createEffectRuntimeQueueResults = (
       return undefined;
     }
     return match.effect;
-  };
-
-  const isPublicFieldZone = (
-    zone: EffectQueueEntry["source"]["zone"],
-  ): boolean =>
-    zone?.zone === "leaderArea" ||
-    zone?.zone === "characterArea" ||
-    zone?.zone === "stageArea";
-
-  const isSupportedDamageDeferredEffectQueueEntry = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): boolean => {
-    if (
-      entry.causedBy.type !== "effect" ||
-      !String(entry.causedBy.queueEntryId).startsWith(
-        "queue-entry:life-trigger:",
-      ) ||
-      !String(entry.timingWindowId).startsWith("timing-window:life-trigger:") ||
-      entry.triggerEventId === undefined ||
-      entry.generation <= 0 ||
-      !isPublicFieldZone(entry.source.zone) ||
-      !isPublicFieldZone(entry.sourceSnapshot.zone)
-    ) {
-      return false;
-    }
-    const effect = resolveQueuedEffectDefinition(state, entry);
-    return (
-      effect !== undefined &&
-      effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
-      isSupportedEffectResolvedCustomDrawEffect(
-        effect,
-        `effectResolved:${String(entry.causedBy.effectId)}`,
-      )
-    );
-  };
-
-  const hasExactDamageDeferredQueue = (state: GameState): boolean => {
-    if (state.deferredTriggers.length !== 1 || state.effectQueue.length !== 1) {
-      return false;
-    }
-    const bucket = state.deferredTriggers[0];
-    const entry = state.effectQueue[0];
-    if (bucket === undefined || entry === undefined) {
-      return false;
-    }
-    return (
-      bucket.releasePolicy === "afterCurrentProcess" &&
-      bucket.triggerIds.length === 1 &&
-      bucket.triggerIds[0] === String(entry.id) &&
-      bucket.timingWindowId === entry.timingWindowId &&
-      bucket.generation === entry.generation &&
-      entry.state === "pending" &&
-      isSupportedDamageDeferredEffectQueueEntry(state, entry)
-    );
-  };
-
-  const createChooseOptionalActivationDecision = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): EngineResult => {
-    const decisionId =
-      `decision:chooseOptionalActivation:${String(entry.id)}` as DecisionId;
-    const causedBy = {
-      type: "effect",
-      queueEntryId: entry.id,
-      effectId: entry.effectBlockId,
-    } as const;
-    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
-      id: decisionId,
-      type: "chooseOptionalActivation",
-      playerId: entry.controllerId,
-      prompt: "Choose whether to activate this effect.",
-      causedBy,
-      visibility: { type: "private", playerId: entry.controllerId },
-      effectId: entry.effectBlockId,
-      source: entry.source,
-      options: ["activate", "decline"],
-    };
-    const events: EngineEvent[] = [];
-    appendEvent(
-      state,
-      events,
-      "decisionCreated",
-      {
-        decisionId: pendingDecision.id,
-        decisionType: pendingDecision.type,
-        playerId: pendingDecision.playerId,
-      },
-      { type: "private", playerId: entry.controllerId },
-    );
-    const created = events[0];
-    if (created !== undefined) {
-      created.causedBy = causedBy;
-    }
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      pendingDecision,
-      eventJournal: [...state.eventJournal, ...events],
-    };
-    return toEngineResult(nextState, events);
-  };
-
-  const createChooseQuantityDecision = (
-    state: GameState,
-    entry: EffectQueueEntry,
-    effect: Effect,
-    bounds: { min: number; max: number },
-  ): EngineResult => {
-    const decisionId =
-      `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
-    const causedBy = {
-      type: "effect",
-      queueEntryId: entry.id,
-      effectId: entry.effectBlockId,
-    } as const;
-    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
-      id: decisionId,
-      type: "chooseQuantity",
-      playerId: entry.controllerId,
-      prompt: chooseQuantityPromptForEffect(effect),
-      causedBy,
-      visibility: { type: "private", playerId: entry.controllerId },
-      mode: "upTo",
-      min: bounds.min,
-      max: bounds.max,
-    };
-    const events: EngineEvent[] = [];
-    appendEvent(
-      state,
-      events,
-      "decisionCreated",
-      {
-        decisionId: pendingDecision.id,
-        decisionType: pendingDecision.type,
-        playerId: pendingDecision.playerId,
-      },
-      pendingDecision.visibility,
-    );
-    const created = events[0];
-    if (created !== undefined) {
-      created.causedBy = causedBy;
-    }
-    return toEngineResult(
-      {
-        ...state,
-        seq: toStateSeq(state.seq + 1),
-        pendingDecision,
-        eventJournal: [...state.eventJournal, ...events],
-      },
-      events,
-    );
   };
 
   const resolveQueuedQuantity = (
@@ -999,7 +837,7 @@ export const createEffectRuntimeQueueResults = (
       state.deferredTriggers.length > 0 &&
       isActiveDoubleAttackDamageProcess(state)
     ) {
-      return hasExactDamageDeferredQueue(state)
+      return hasExactDamageDeferredQueue(state, resolveQueuedEffectDefinition)
         ? toEngineResult(state, [])
         : unsupportedEffectQueueResult(state);
     }
@@ -1140,87 +978,16 @@ export const createEffectRuntimeQueueResults = (
     originalState: GameState,
     decision: SelectCardsDecision,
     playCardResult: EngineResult,
-  ): EngineResult | undefined => {
-    const runtime = decision.runtime?.playSourceOverflow;
-    if (runtime === undefined) {
-      return undefined;
-    }
-    if (
-      playCardResult.errors !== undefined ||
-      playCardResult.state.pendingDecision !== undefined
-    ) {
-      return playCardResult;
-    }
-    const selected = originalState.effectQueue.find(
-      (entry) => entry.id === runtime.queueEntryId,
-    );
-    if (selected === undefined) {
-      return unsupportedEffectQueueResult(originalState);
-    }
-
-    let nextState: GameState = {
-      ...playCardResult.state,
-      effectQueue: playCardResult.state.effectQueue.filter(
-        (entry) => entry.id !== selected.id,
-      ),
-    };
-    const resolvedEvents: EngineEvent[] = [];
-    const resolvedEventBaseState: GameState = {
-      ...nextState,
-      seq: toStateSeq(nextState.seq - 1),
-    };
-    appendEvent(
-      resolvedEventBaseState,
-      resolvedEvents,
-      "effectResolved",
-      {
-        queueEntryId: selected.id,
-        timingWindowId: selected.timingWindowId,
-        generation: selected.generation,
-        effectBlockId: selected.effectBlockId,
-        ...(selected.triggerEventId === undefined
-          ? {}
-          : { triggerEventId: selected.triggerEventId }),
-        sourcePresencePolicy: selected.sourcePresencePolicy,
-        orderingGroup: selected.orderingGroup,
-        status: "resolved" as const,
-      },
-      { type: "public" },
-    );
-    const resolvedEvent = resolvedEvents[0];
-    if (resolvedEvent !== undefined) {
-      resolvedEvent.causedBy = {
-        type: "effect",
-        queueEntryId: selected.id,
-        effectId: selected.effectBlockId,
-      };
-      nextState = {
-        ...nextState,
-        eventJournal: [...nextState.eventJournal, resolvedEvent],
-      };
-    }
-    const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
-    nextState = cleanup.state;
-    const allEvents = [
-      ...playCardResult.events,
-      ...resolvedEvents,
-      ...cleanup.events,
-    ];
-
-    const triggered = dependencies.queueEffectResolvedCustomTriggers(
-      nextState,
-      selected,
-      allEvents,
-    );
-    if (triggered !== undefined) {
-      if (triggered.errors !== undefined) {
-        return triggered;
-      }
-      nextState = triggered.state;
-      allEvents.push(...triggered.events);
-    }
-    return toEngineResult(nextState, allEvents);
-  };
+  ): EngineResult | undefined =>
+    resumePlaySourceOverflowDecisionHelper({
+      originalState,
+      decision,
+      playCardResult,
+      createUnsupportedPendingRuntimeWorkError:
+        dependencies.createUnsupportedPendingRuntimeWorkError,
+      queueEffectResolvedCustomTriggers:
+        dependencies.queueEffectResolvedCustomTriggers,
+    });
 
   return {
     processNoChoiceEffectQueue,

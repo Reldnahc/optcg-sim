@@ -14,10 +14,6 @@ const sourceFileSizeGuardFiles = [
   "contracts/**/*.ts",
 ];
 
-export const sourceFileSizeGuardTemporaryAllowlist = [
-  // Add exact repo-relative file paths only. Each entry needs a future split/refactor story.
-];
-
 const typedConfigs = [
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.strictTypeChecked,
@@ -91,7 +87,6 @@ export default [
       "**/fixtures/**",
       "**/generated/**",
       "**/*.generated.{ts,mts,cts,js,mjs,cjs}",
-      ...sourceFileSizeGuardTemporaryAllowlist,
     ],
     rules: {
       "max-lines": [

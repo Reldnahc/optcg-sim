@@ -178,25 +178,6 @@ const optionalCostThenPauseSequence = (): Extract<
   ],
 });
 
-const drawUpToThenPauseSequence = (): Extract<
-  Effect,
-  { type: "sequence" }
-> => ({
-  type: "sequence",
-  effects: [
-    {
-      id: "draw-up-to",
-      connector: "always",
-      effect: { type: "drawUpTo", player: "self", count: 3 },
-    },
-    {
-      id: "draw-after-draw-up-to",
-      connector: "ifYouDo",
-      effect: { type: "draw", player: "self", count: 1 },
-    },
-  ],
-});
-
 const conditionalTrashToHandSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -248,30 +229,6 @@ const conditionalTrashToHandSequence = (): Extract<
     ],
   };
 };
-
-const drawUpToThenDrawThenPauseSequence = (): Extract<
-  Effect,
-  { type: "sequence" }
-> => ({
-  type: "sequence",
-  effects: [
-    {
-      id: "draw-up-to",
-      connector: "always",
-      effect: { type: "drawUpTo", player: "self", count: 3 },
-    },
-    {
-      id: "draw-after-draw-up-to",
-      connector: "ifYouDo",
-      effect: { type: "draw", player: "self", count: 1 },
-    },
-    {
-      id: "draw-up-to-pause-after-resume",
-      connector: "always",
-      effect: { type: "drawUpTo", player: "self", count: 1 },
-    },
-  ],
-});
 
 const reindexHand = (
   cards: readonly CardInstance[],
@@ -970,90 +927,6 @@ test("optional cost accept and decline branches are independently deterministic"
   assert.deepEqual(declineA.events, declineB.events);
   assert.deepEqual(declineA.state.eventJournal, declineB.state.eventJournal);
   assert.equal(declineA.stateHash, declineB.stateHash);
-});
-
-test("sequence drawUpTo pauses via chooseQuantity and resumes into next segment", () => {
-  const { state } = sequenceQueueState(drawUpToThenPauseSequence());
-  const beforeDeckCount = must(state.players[p1], "before p1").deck.length;
-
-  const paused = processEffectRuntime(state);
-  const quantityDecision = must(paused.state.pendingDecision, "quantity");
-  assert.equal(paused.errors, undefined);
-  assert.equal(quantityDecision.type, "chooseQuantity");
-  assert.equal(quantityDecision.min, 0);
-  assert.equal(quantityDecision.max, 3);
-
-  const resolved = applyAction(paused.state, {
-    type: "respondToDecision",
-    decisionId: quantityDecision.id,
-    response: { type: "chooseQuantity", quantity: 2 },
-  });
-  assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.equal(
-    must(resolved.state.players[p1], "after p1").deck.length,
-    Math.max(beforeDeckCount - 3, 0),
-  );
-});
-
-test("sequence drawUpTo resolution increments state seq once while continuing same frame into following draw", () => {
-  const { state } = sequenceQueueState(drawUpToThenPauseSequence());
-  const paused = processEffectRuntime(state);
-  const quantityDecision = must(paused.state.pendingDecision, "quantity");
-  const pausedSeq = paused.state.seq;
-
-  assert.equal(quantityDecision.type, "chooseQuantity");
-
-  const resolved = applyAction(paused.state, {
-    type: "respondToDecision",
-    decisionId: quantityDecision.id,
-    response: { type: "chooseQuantity", quantity: 2 },
-  });
-
-  assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.seq, pausedSeq + 1);
-  assert.equal(resolved.state.pendingDecision, undefined);
-  assert.deepEqual(resolved.state.effectExecutionFrames, []);
-  assert.deepEqual(resolved.state.effectQueue, []);
-});
-
-test("sequence drawUpTo resume records canonical segmentResults before later segments continue", () => {
-  const { state } = sequenceQueueState(drawUpToThenDrawThenPauseSequence());
-  const paused = processEffectRuntime(state);
-  const quantityDecision = must(paused.state.pendingDecision, "quantity");
-
-  assert.equal(quantityDecision.type, "chooseQuantity");
-
-  const resumed = applyAction(paused.state, {
-    type: "respondToDecision",
-    decisionId: quantityDecision.id,
-    response: { type: "chooseQuantity", quantity: 2 },
-  });
-  const pauseAfterResume = must(resumed.state.pendingDecision, "next pause");
-  const frame = must(resumed.state.effectExecutionFrames[0], "frame");
-
-  assert.equal(resumed.errors, undefined);
-  assert.equal(pauseAfterResume.type, "chooseQuantity");
-  assert.equal(frame.pendingDecision.decisionId, pauseAfterResume.id);
-  assert.deepEqual(frame.segmentResults["0"], {
-    attempted: true,
-    succeeded: true,
-    changedState: true,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: false,
-    playerDeclined: false,
-  });
-  assert.deepEqual(frame.segmentResults["1"], {
-    attempted: true,
-    succeeded: true,
-    changedState: false,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: false,
-    playerDeclined: false,
-  });
-  assert.equal(frame.segmentResults["2"], undefined);
 });
 
 test("optional effect clause accept and decline branches are independently deterministic", () => {

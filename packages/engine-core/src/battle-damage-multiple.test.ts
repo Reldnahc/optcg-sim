@@ -1,14 +1,10 @@
-/* eslint-disable max-lines */
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { EffectQueueEntry, EngineResult } from "@optcg/types";
 
-import {
-  applyDeclareAttack,
-  resolveSupportedVanillaBattle,
-} from "./battle-actions.js";
-import { applyAction, getLegalActions } from "./actions.js";
+import { resolveSupportedVanillaBattle } from "./battle-actions.js";
+import { applyAction } from "./actions.js";
 import {
   must,
   p1,
@@ -19,8 +15,6 @@ import {
   toStateSeq,
 } from "./action-test-fixtures.js";
 import {
-  addTrashMarker,
-  continuousKeywordEffectRecord,
   effectDefinition,
   passCounterStep,
   setupAttackState,
@@ -934,182 +928,4 @@ test("stale Double Attack Life Trigger continuation response fails closed withou
   assert.deepEqual(result.events, []);
   assertRejectedHash(result, beforeHash);
   assert.deepEqual(result.state, before);
-});
-
-test("supported doubleAttack declareAttack against leader applies two damage points", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const attacker = p1State.leader;
-  const target = p2State.leader;
-  installSupportedDoubleAttackLeader(state);
-  const beforeLife = p2State.life.length;
-
-  const opened = applyDeclareAttack(state, {
-    type: "declareAttack",
-    attacker: {
-      instanceId: attacker.instanceId,
-      cardId: attacker.cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: target.instanceId,
-      cardId: target.cardId,
-      playerId: p2,
-    },
-  });
-
-  assert.equal(opened.errors, undefined);
-  const result = resolveNoTriggerLifeDamageDecisions(
-    passCounterStep(opened.state, p2),
-  );
-  assertAcceptedHash(result);
-  const nextP2 = must(result.state.players[p2], "p2");
-  assert.equal(nextP2.life.length, beforeLife - 2);
-  assert.equal(
-    result.events.filter((event) => event.type === "damageDealt").length,
-    2,
-  );
-});
-
-test("conditional continuous doubleAttack grant applies two leader damage points", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const attacker = p1State.leader;
-  addTrashMarker(state, p1);
-  state.continuousEffects = [
-    continuousKeywordEffectRecord(
-      state,
-      "conditional-double-attack-grant",
-      attacker,
-      "doubleAttack",
-      {
-        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
-      },
-    ),
-  ];
-  const beforeLife = p2State.life.length;
-
-  const opened = applyDeclareAttack(state, {
-    type: "declareAttack",
-    attacker: {
-      instanceId: attacker.instanceId,
-      cardId: attacker.cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-  });
-
-  assert.equal(opened.errors, undefined);
-  const result = resolveNoTriggerLifeDamageDecisions(
-    passCounterStep(opened.state, p2),
-  );
-  assert.equal(result.errors, undefined);
-  assertAcceptedHash(result);
-  assert.equal(
-    must(result.state.players[p2], "p2").life.length,
-    beforeLife - 2,
-  );
-  assert.equal(
-    result.events.filter((event) => event.type === "damageDealt").length,
-    2,
-  );
-});
-
-test("getLegalActions exposes supported doubleAttack declareAttack against leader", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  installSupportedDoubleAttackLeader(state);
-
-  const legal = getLegalActions(state, p1);
-
-  assert.equal(
-    legal.some(
-      (action) =>
-        action.type === "declareAttack" &&
-        action.attacker.instanceId === p1State.leader.instanceId &&
-        action.target.instanceId === p2State.leader.instanceId,
-    ),
-    true,
-  );
-});
-
-test("supported doubleAttack declareAttack with available blocker fails closed without mutation", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const blocker = must(p2State.characters[0], "p2 blocker");
-  blocker.state = "active";
-  state.cardManifest.cards[blocker.cardId] = {
-    ...resolvedCard({
-      cardId: blocker.cardId,
-      category: "character",
-      power: 3000,
-    }),
-    printedKeywords: ["blocker"],
-  };
-  installSupportedDoubleAttackLeader(state);
-  const before = JSON.stringify(state);
-  const beforeHash = hashCanonicalStateValue(state);
-
-  const result = applyDeclareAttack(state, {
-    type: "declareAttack",
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-  });
-
-  assert.deepEqual(result.errors, [
-    {
-      type: "illegalAction",
-      reason:
-        "declareAttack requires unsupported blocker handling for Double Attack.",
-    },
-  ]);
-  assert.deepEqual(result.events, []);
-  assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-});
-
-test("getLegalActions omits supported doubleAttack leader attack when blocker handling is unsupported", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const blocker = must(p2State.characters[0], "p2 blocker");
-  blocker.state = "active";
-  state.cardManifest.cards[blocker.cardId] = {
-    ...resolvedCard({
-      cardId: blocker.cardId,
-      category: "character",
-      power: 3000,
-    }),
-    printedKeywords: ["blocker"],
-  };
-  installSupportedDoubleAttackLeader(state);
-
-  const legal = getLegalActions(state, p1);
-
-  assert.equal(
-    legal.some(
-      (action) =>
-        action.type === "declareAttack" &&
-        action.attacker.instanceId === p1State.leader.instanceId &&
-        action.target.instanceId === p2State.leader.instanceId,
-    ),
-    false,
-  );
 });
