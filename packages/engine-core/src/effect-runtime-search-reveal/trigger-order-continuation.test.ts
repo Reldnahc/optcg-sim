@@ -9,14 +9,14 @@ import {
   p1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
-import { applyAction } from "./actions.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+} from "../action-test-fixtures.js";
+import { applyAction } from "../actions.js";
+import { processEffectRuntime } from "../effect-runtime.js";
 import {
   queueDrawForP1,
   toEffectId,
   toQueueEntryId,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 
 const supportedSearch = (): Extract<Effect, { type: "search" }> => ({
   type: "search",

@@ -9,20 +9,20 @@ import {
   p2,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
-import { applyAction, getLegalActions } from "./actions.js";
+} from "../action-test-fixtures.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import {
   createSupportedSearchRevealChoiceDecision,
   createSupportedSearchRevealChoiceDecisionFromTransientSet,
   createSupportedSearchRevealTransientSet,
-} from "./effect-runtime-search-reveal.js";
-import { processEffectRuntime } from "./effect-runtime.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+} from "../effect-runtime-search-reveal.js";
+import { processEffectRuntime } from "../effect-runtime.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
 import {
   queueDrawForP1,
   toEffectId,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+} from "../effect-runtime-queue-processing-test-support.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 
 const supportedSearch = (
   overrides: Partial<Extract<Effect, { type: "search" }>["request"]> = {},
