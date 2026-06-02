@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { InstanceId } from "@optcg/types";
 import { createActionLogEntries } from "../action-log.js";
-import {
-  createCollectionDecisionSurface,
-  usesCollectionCardCostSurface,
-} from "../interactions/decision-surface.js";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
 import {
@@ -22,15 +17,7 @@ import {
   CardPreviewWindow,
   defaultCardPreviewWindowRect,
 } from "./CardPreviewWindow.js";
-import {
-  CollectionModalHost,
-  type CollectionModalModel,
-} from "./CollectionModalHost.js";
-import {
-  collectionModalFromWindowKey,
-  collectionWindowKey,
-  defaultCollectionWindowRect,
-} from "./collection-window-model.js";
+import { CollectionModalHost } from "./CollectionModalHost.js";
 import { ControlRail } from "./ControlRail.js";
 import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
@@ -61,7 +48,6 @@ import { OpponentRevealWindowLayer } from "./OpponentRevealWindowLayer.js";
 import { rollbackStatusForPlayer } from "./rollback-status.js";
 import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
 import { SettingsToggle } from "./SettingsToggle.js";
-import { sourceZoneCards } from "./source-zone-cards.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
@@ -71,6 +57,7 @@ import { useMatchClient } from "./useMatchClient.js";
 import { useConcedeConfirmation } from "./use-concede-confirmation.js";
 import { useFirstPlayerChoiceModal } from "./use-first-player-choice-modal.js";
 import { useMatchRevealWindowStateStore } from "./use-match-reveal-window-state-store.js";
+import { useMatchCollectionModal } from "./use-match-collection-modal.js";
 import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
 import {
@@ -80,9 +67,6 @@ import {
 } from "./useMatchClient-support.js";
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
-  const [collectionModal, setCollectionModal] =
-    useState<CollectionModalModel>();
-  const [collectionMinimized, setCollectionMinimized] = useState(false);
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMinimized, setPreviewMinimized] = useState(false);
@@ -245,82 +229,47 @@ export const MatchApp = (): React.JSX.Element => {
     setControlDockActiveTabId,
     updateFloatingWindowOpen,
   });
-  const collectionDecisionSurface = createCollectionDecisionSurface(
+  const completeDockableWindowDrag = (
+    windowKey: string,
+    rect: WindowRect,
+  ): WindowRect | undefined => {
+    const dockRect = completeControlDockDrop(rect);
+    if (dockRect === undefined) {
+      return undefined;
+    }
+    dockFloatingWindows({ windowKeys: [windowKey], rect: dockRect });
+    setControlDockActiveTabId(windowKey);
+    return undefined;
+  };
+  const {
+    clearCollectionModal,
+    decisionModalCoveredByCollection,
+    hostProps: collectionModalHostProps,
+    onViewCollection,
+    promptCoveredByCollection,
+  } = useMatchCollectionModal({
+    activeDockedWindowIds,
+    activeFloatingWindowRects,
+    activeOpenWindowIds,
+    board,
+    cardCostSelection,
+    cardModel,
+    completeDockableWindowDrag,
+    currentPlayerId: client.currentPlayerId,
     decisionModal,
-    client.currentPlayerId,
-  );
-  const decisionCollectionModal =
-    collectionDecisionSurface === undefined
-      ? undefined
-      : {
-          title: collectionDecisionSurface.title,
-          cards: collectionDecisionSurface.model.cards.map((choice) =>
-            cardModel(choice.card),
-          ),
-          selection: {
-            selectedInstanceIds:
-              collectionDecisionSurface.model.selectedInstanceIds.map(String),
-            selectableInstanceIds: collectionDecisionSurface.model.cards
-              .filter((choice) => choice.selectable)
-              .map((choice) => String(choice.card.instanceId)),
-            canConfirm: collectionDecisionSurface.model.canConfirm,
-            confirmLabel: collectionDecisionSurface.model.confirmLabel,
-          },
-        };
-  const cardCostCollectionModal =
-    board === undefined ||
-    cardCostSelection === undefined ||
-    !usesCollectionCardCostSurface(cardCostSelection.source)
-      ? undefined
-      : {
-          title: cardCostSelection.title,
-          cards: sourceZoneCards(board, cardCostSelection.source),
-          selection: {
-            selectedInstanceIds: cardCostSelection.selectedInstanceIds,
-            selectableInstanceIds: cardCostSelection.selectableInstanceIds,
-            canConfirm: cardCostSelection.canConfirm,
-            confirmLabel: cardCostSelection.confirmLabel,
-            ...(cardCostSelection.orderHint === undefined
-              ? {}
-              : { orderHint: cardCostSelection.orderHint }),
-          },
-        };
-  const persistedCollectionModal =
-    displayBoard === undefined
-      ? undefined
-      : [...activeOpenWindowIds]
-          .flatMap((key) => {
-            const modal = collectionModalFromWindowKey(key, displayBoard);
-            return modal === undefined ? [] : [modal];
-          })
-          .sort((left, right) => left.title.localeCompare(right.title))[0];
-  const renderedCollectionModal =
-    cardCostCollectionModal ??
-    decisionCollectionModal ??
-    collectionModal ??
-    persistedCollectionModal;
+    disabled: client.state.actionInFlight,
+    displayBoard,
+    onConfirmDecision: () => {
+      void client.confirmDecision();
+    },
+    onPreviewCard: previewHoveredCard,
+    onToggleDecisionCard: client.toggleDecisionCard,
+    updateCollectionWindowOpen,
+    updateControlDockTarget,
+    updateFloatingWindowRect,
+  });
   const decisionPromptVisible =
-    decisionModal === undefined &&
-    cardCostCollectionModal === undefined &&
-    decisionCollectionModal === undefined;
-  const renderedCollectionKey = renderedCollectionModal?.title;
-  const collectionViewerKey =
-    cardCostCollectionModal === undefined &&
-    decisionCollectionModal === undefined
-      ? renderedCollectionModal?.title
-      : undefined;
-  const collectionViewerWindowKey =
-    collectionViewerKey === undefined
-      ? undefined
-      : collectionWindowKey(collectionViewerKey);
-  const collectionViewerDocked =
-    collectionViewerWindowKey !== undefined &&
-    activeDockedWindowIds.has(collectionViewerWindowKey);
-  const collectionPresentation =
-    collectionViewerKey === undefined ? "modal" : "window";
-  useEffect(() => {
-    setCollectionMinimized(false);
-  }, [renderedCollectionKey]);
+    decisionModal === undefined && !promptCoveredByCollection;
   const opponentRevealWindows = opponentRevealWindowsFromState({
     currentPlayerId,
     playerSnapshot,
@@ -392,9 +341,7 @@ export const MatchApp = (): React.JSX.Element => {
     setGroupedInfoWindowIds,
     setControlDockActiveTabId,
     updateFloatingWindowOpen,
-    clearCollectionModal: () => {
-      setCollectionModal(undefined);
-    },
+    clearCollectionModal,
     updateCollectionWindowOpen,
     dismissRevealWindow: (revealId) => {
       updateRevealWindowState((state) => {
@@ -470,18 +417,6 @@ export const MatchApp = (): React.JSX.Element => {
         targetWindowId,
       }),
     );
-  };
-  const completeDockableWindowDrag = (
-    windowKey: string,
-    rect: WindowRect,
-  ): WindowRect | undefined => {
-    const dockRect = completeControlDockDrop(rect);
-    if (dockRect === undefined) {
-      return undefined;
-    }
-    dockFloatingWindows({ windowKeys: [windowKey], rect: dockRect });
-    setControlDockActiveTabId(windowKey);
-    return undefined;
   };
   const dockInfoWindowTabs = (
     draggedWindowIds: readonly InfoWindowTabId[],
@@ -664,13 +599,7 @@ export const MatchApp = (): React.JSX.Element => {
           }}
           onPreviewCard={previewHoveredCard}
           onMoveHandCard={moveHandCard}
-          onViewCollection={(title, cards) => {
-            const key = collectionWindowKey(title);
-            const nextOpen = renderedCollectionModal?.title !== title;
-            setCollectionMinimized(false);
-            setCollectionModal(nextOpen ? { title, cards } : undefined);
-            updateCollectionWindowOpen(key, nextOpen);
-          }}
+          onViewCollection={onViewCollection}
           onBackgroundClick={() => {
             client.selectCard(undefined);
           }}
@@ -737,9 +666,7 @@ export const MatchApp = (): React.JSX.Element => {
       />
       <DecisionModalHost
         model={
-          collectionDecisionSurface === undefined
-            ? visibleDecisionModal
-            : undefined
+          !decisionModalCoveredByCollection ? visibleDecisionModal : undefined
         }
         disabled={client.state.actionInFlight}
         cardDisplay={cardDisplay}
@@ -753,64 +680,7 @@ export const MatchApp = (): React.JSX.Element => {
         onPlacementDestination={client.setDecisionPlacementDestination}
         onConfirm={confirmVisibleDecision}
       />
-      {collectionViewerDocked && collectionPresentation === "window" ? null : (
-        <CollectionModalHost
-          model={renderedCollectionModal}
-          presentation={collectionPresentation}
-          disabled={client.state.actionInFlight}
-          minimized={collectionMinimized}
-          initialRect={
-            collectionViewerWindowKey === undefined
-              ? undefined
-              : (activeFloatingWindowRects[collectionViewerWindowKey] ??
-                defaultCollectionWindowRect())
-          }
-          onToggleMinimized={() => {
-            setCollectionMinimized((current) => !current);
-          }}
-          onRectChange={
-            collectionViewerWindowKey === undefined
-              ? undefined
-              : (rect) => {
-                  updateFloatingWindowRect(collectionViewerWindowKey, rect);
-                }
-          }
-          onDragMove={
-            collectionViewerWindowKey === undefined
-              ? undefined
-              : updateControlDockTarget
-          }
-          onDragEnd={
-            collectionViewerWindowKey === undefined
-              ? undefined
-              : (rect) =>
-                  completeDockableWindowDrag(collectionViewerWindowKey, rect)
-          }
-          onToggleCard={(instanceId) => {
-            client.toggleDecisionCard(instanceId as InstanceId);
-          }}
-          onConfirm={() => {
-            void client.confirmDecision();
-          }}
-          onPreviewCard={previewHoveredCard}
-          onClose={
-            cardCostCollectionModal === undefined &&
-            decisionCollectionModal === undefined
-              ? () => {
-                  if (collectionModal !== undefined) {
-                    setCollectionModal(undefined);
-                  }
-                  if (collectionViewerWindowKey !== undefined) {
-                    updateCollectionWindowOpen(
-                      collectionViewerWindowKey,
-                      false,
-                    );
-                  }
-                }
-              : undefined
-          }
-        />
-      )}
+      <CollectionModalHost {...collectionModalHostProps} />
       <OpponentRevealWindowLayer
         windows={opponentRevealWindows}
         activeDockedWindowIds={activeDockedWindowIds}
