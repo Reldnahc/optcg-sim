@@ -61,9 +61,9 @@ import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
   toOncePerTurnKey,
-} from "../once-per-turn.js";
+} from "../rules/once-per-turn.js";
 import { applyRuntimePlaySource } from "../play-card/core.js";
-import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
+import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import {
   createChooseOptionalActivationDecision,
   createChooseQuantityDecision,

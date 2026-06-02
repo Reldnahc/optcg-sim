@@ -31,7 +31,10 @@ import {
 } from "../../effect-runtime.js";
 import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
-import { isOncePerTurnUsed, toOncePerTurnKey } from "../../once-per-turn.js";
+import {
+  isOncePerTurnUsed,
+  toOncePerTurnKey,
+} from "../../rules/once-per-turn.js";
 
 const isFieldZoneForActivateMain = (
   zone: CardRef["zone"],

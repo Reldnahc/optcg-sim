@@ -17,7 +17,7 @@ import {
 } from "./action-results.js";
 import { isMatchActive, targetMatchesCard, toCardRef } from "./action-state.js";
 import { assertGameStateInvariants } from "./state/invariants.js";
-import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
+import { applyRuleProcessingCheckpoint } from "./rules/rule-processing.js";
 
 const getAttachTargets = (state: GameState, playerId: PlayerId): CardRef[] => {
   const player = state.players[playerId];

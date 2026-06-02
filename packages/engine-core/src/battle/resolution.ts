@@ -70,7 +70,7 @@ import {
   hasLifeTriggerText,
   registerLifeTriggerDamageContinuationResolver,
 } from "../life-trigger/actions.js";
-import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
+import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 
 const unsupportedBattleResolution = (
   state: GameState,

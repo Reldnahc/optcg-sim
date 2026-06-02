@@ -18,7 +18,7 @@ import {
   resolvePublicTargetCandidates,
   resolvePublicTargetCandidatesForRequest,
 } from "../selection/candidates.js";
-import { isOncePerTurnUsed, toOncePerTurnKey } from "../once-per-turn.js";
+import { isOncePerTurnUsed, toOncePerTurnKey } from "../rules/once-per-turn.js";
 
 export type SelectedTargetKoReplacementDetectionFailureReason =
   | "unsupported-replacement-process"

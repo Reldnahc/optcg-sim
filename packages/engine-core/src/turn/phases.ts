@@ -21,7 +21,7 @@ import {
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
+import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { hasUnsupportedSupportGateText } from "../battle/support.js";
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;

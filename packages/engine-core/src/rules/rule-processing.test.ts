@@ -10,8 +10,8 @@ import {
   p2,
   toEngineEventId,
   toStateSeq,
-} from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle/test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { setupAttackState } from "../battle/test-fixtures.js";
 
 test("terminal status is not overwritten by later rule-processing checks", () => {
   const state = setupAttackState();

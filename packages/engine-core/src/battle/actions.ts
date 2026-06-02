@@ -55,7 +55,7 @@ import {
 } from "../effect-runtime.js";
 import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
+import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 
 export { applyUseCounter };
 export {

@@ -33,7 +33,10 @@ import {
   type SelectedTargetKoReplacementCandidate,
 } from "./primitives.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
-import { consumeOncePerTurn, toOncePerTurnKey } from "../once-per-turn.js";
+import {
+  consumeOncePerTurn,
+  toOncePerTurnKey,
+} from "../rules/once-per-turn.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 export type {

@@ -60,7 +60,7 @@ import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
   toOncePerTurnKey,
-} from "../once-per-turn.js";
+} from "../rules/once-per-turn.js";
 
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
