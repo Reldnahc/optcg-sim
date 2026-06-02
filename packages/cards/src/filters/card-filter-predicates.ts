@@ -34,6 +34,7 @@ export interface CardFilterPredicateParseOptions {
 const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
   parseMultiTypeCategoryPredicate,
+  parseMultiTypeCardPredicate,
   parseTypeOrAttributeCategoryPredicate,
   parseTypeLeaderOrCharacterPredicate,
   parseTypeCharacterPredicate,
@@ -396,6 +397,38 @@ function parseMultiTypeCategoryPredicate(
       ...typeNames.map(() => "filter:type" as const),
       categoryEvidence(categoryText),
     ],
+    rest: restText ?? "",
+  };
+}
+
+function parseMultiTypeCardPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+card\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeTexts = match?.groups?.["types"];
+  const restText = match?.groups?.["rest"];
+  if (typeTexts === undefined) {
+    return undefined;
+  }
+
+  const typeNames = typeTexts
+    .split(/\s+or\s+/i)
+    .map(parseBraceName)
+    .filter((name): name is string => name !== undefined);
+  if (typeNames.length < 2) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      typesAny: typeNames,
+    },
+    evidence: typeNames.map(() => "filter:type" as const),
     rest: restText ?? "",
   };
 }

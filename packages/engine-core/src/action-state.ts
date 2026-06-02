@@ -131,6 +131,7 @@ const supportedSearchFilterKeys = new Set([
   "attributesAny",
   "categories",
   "colorsAny",
+  "cost",
   "names",
   "typesAny",
   "nameNot",
@@ -189,6 +190,7 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
       isStringArray(filter.attributesAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    isSupportedNumericFilter(filter.cost) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot))

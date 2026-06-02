@@ -132,6 +132,34 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses multi-type generic card filters with cost predicates", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 {Alabasta} or {Straw Hat Crew} type card with a cost of 2 or more and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        typesAny: ["Alabasta", "Straw Hat Crew"],
+        cost: { min: 2 },
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:type",
+        "filter:type",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses add up-to any-card selection as private search to hand", () => {
     expect(
       parseSearchSelectionToHand({

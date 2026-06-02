@@ -276,6 +276,56 @@ test("top-N filter varies look count color type and excluded name", () => {
   );
 });
 
+test("top-N search filter supports reusable minimum cost predicates", () => {
+  const state = createActiveState();
+  const looked = setDeck(state, [
+    "topn-cost-low-type",
+    "topn-cost-good-type",
+    "topn-cost-wrong-type",
+    "topn-cost-outside",
+  ]);
+  state.cardManifest.cards[must(looked[0], "low cost").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[0], "low cost").cardId],
+      "low cost manifest",
+    ),
+    cost: 1,
+  };
+  state.cardManifest.cards[must(looked[1], "good cost").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[1], "good cost").cardId],
+      "good cost manifest",
+    ),
+    cost: 2,
+  };
+  state.cardManifest.cards[must(looked[2], "wrong type").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[2], "wrong type").cardId],
+      "wrong type manifest",
+    ),
+    cost: 4,
+    types: ["Pirate"],
+  };
+
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 3,
+      filter: {
+        typesAny: ["Navy"],
+        cost: { min: 2 },
+      },
+    }),
+  );
+
+  assert.deepEqual(
+    selectDecision(opened).candidates.map(
+      (candidate) => candidate.card.instanceId,
+    ),
+    [must(looked[1], "cost match").instanceId],
+  );
+});
+
 test("top-N filter supports exact-name and disjunctive category search predicates", () => {
   const state = createActiveState();
   const looked = setDeck(state, [
