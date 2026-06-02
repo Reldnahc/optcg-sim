@@ -199,6 +199,18 @@ Preserve these package boundaries:
 - Do not use `console` in production packages; use an approved logger
   abstraction.
 - Keep files focused and cohesive.
+- When a file exceeds, approaches, or has to be changed because of a file-size
+  lint limit, do not make a token extraction just to get under the limit. Treat
+  the failure as evidence that the file likely owns too many responsibilities.
+  Perform a real decomposition by concern: identify the separate orchestration,
+  parsing, execution, rendering, state, transport, filtering, or test-helper
+  responsibilities; extract cohesive modules with named APIs; and update tests
+  so they verify the new concern owners. The goal is not merely fewer lines.
+  The goal is to prevent large files from becoming dumping grounds for unrelated
+  behavior.
+- Do not create new large multi-responsibility files while fixing old ones. If a
+  new helper starts accumulating unrelated branches, split it before it becomes
+  the next lint-limit problem.
 - Tests are part of the change, not a follow-up task.
 - Prettier formatting and ESLint compliance are required, not optional.
 
