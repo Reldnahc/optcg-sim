@@ -14,7 +14,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
-import { createContinuousRecordsForResolvedEffect } from "../effect-runtime-continuous.js";
+import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import { restFieldObjects } from "./saved-field-object.js";
 import { resolvePlayerId } from "../effect-runtime-primitives.js";
 import {

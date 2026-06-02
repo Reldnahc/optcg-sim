@@ -11,7 +11,7 @@ import type {
 import {
   deriveImplementedDslPermanentContinuousEffects,
   deriveImplementedDslPlayCostContinuousEffects,
-} from "../effect-runtime-continuous.js";
+} from "../runtime/continuous/continuous.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";

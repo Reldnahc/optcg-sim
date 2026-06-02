@@ -15,7 +15,7 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "../action-state.js";
-import { isSupportedContinuousQueueEffect } from "../effect-runtime-continuous.js";
+import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 import { isSupportedMoveCardsEffect } from "../effect-runtime-move-cards.js";
 import { isSupportedSearchRequestShape } from "../effect-runtime-search-reveal.js";

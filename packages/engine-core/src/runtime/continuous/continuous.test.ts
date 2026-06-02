@@ -13,12 +13,12 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { computeView } from "./compute-view.js";
+import { computeView } from "../../compute-view.js";
 import {
   deriveImplementedDslPermanentContinuousEffects,
   isSupportedContinuousQueueEffect,
-} from "./effect-runtime-continuous.js";
-import { createInitialState } from "./initial-state.js";
+} from "./continuous.js";
+import { createInitialState } from "../../initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;
 const toPlayerId = (value: string): PlayerId => value as PlayerId;

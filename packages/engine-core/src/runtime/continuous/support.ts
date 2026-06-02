@@ -6,8 +6,8 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
-import type { ContinuousQueueEffect } from "./effect-runtime-continuous-types.js";
+import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
+import type { ContinuousQueueEffect } from "./types.js";
 
 const supportedRestriction = new Set([
   "cannotAttack",

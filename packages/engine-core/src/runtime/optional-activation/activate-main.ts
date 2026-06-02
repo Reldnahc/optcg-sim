@@ -23,7 +23,7 @@ import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "../../effect-runtime-conditions.js";
-import { isSupportedContinuousQueueEffect } from "../../effect-runtime-continuous.js";
+import { isSupportedContinuousQueueEffect } from "../continuous/continuous.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   processEffectRuntime,

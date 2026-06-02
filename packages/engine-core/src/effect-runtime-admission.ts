@@ -9,7 +9,7 @@ import {
   isSupportedAutoRuntimeEffectBlock,
   type AutoRuntimeEntryAdapter,
 } from "./effect-runtime-block-support.js";
-import { isSupportedPermanentContinuousEffectBlock } from "./effect-runtime-continuous.js";
+import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
 import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 import { isSupportedStartOfGameEffectBlock } from "./start-of-game-effects.js";

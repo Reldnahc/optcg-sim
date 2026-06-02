@@ -11,7 +11,7 @@ import { evaluateEffectBlockRuntimeSupport } from "../../packages/engine-core/sr
 import {
   hasCombatSafeImplementedDslDefinition,
   isSupportedContinuousQueueEffect,
-} from "../../packages/engine-core/src/effect-runtime-continuous.ts";
+} from "../../packages/engine-core/src/runtime/continuous/continuous.ts";
 import { isSupportedQueuedEffectConditionShape } from "../../packages/engine-core/src/effect-runtime-conditions.ts";
 import {
   isSupportedQueuedAutoSequenceForEntryPoint,

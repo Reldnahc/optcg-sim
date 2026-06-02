@@ -6,7 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
-import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
+import { isSupportedContinuousQueueEffect } from "./runtime/continuous/continuous.js";
 import { isSupportedMainEventTargetKoEffectAllowingOncePerTurn } from "./effect-runtime-primitives.js";
 import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";

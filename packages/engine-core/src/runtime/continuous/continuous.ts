@@ -11,8 +11,8 @@ import type {
   TargetSpec,
 } from "@optcg/types";
 
-import { reifyCardRef } from "./action-state.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { reifyCardRef } from "../../action-state.js";
+import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import {
   isSupportedBasePowerDuration,
   isSupportedBasePowerSetFilter,
@@ -21,14 +21,14 @@ import {
   isSupportedDerivedKeyword,
   isSupportedDuration,
   isSupportedTarget,
-} from "./effect-runtime-continuous-support.js";
-import type { ContinuousQueueEffect } from "./effect-runtime-continuous-types.js";
-import { isCardEffectInvalidated } from "./effect-invalidation.js";
+} from "./support.js";
+import type { ContinuousQueueEffect } from "./types.js";
+import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   isSupportedFieldRemovalProtection,
   isSupportedRestProtection,
   malformedFieldRemovalProtectionMessage,
-} from "./field-removal-protection-shape.js";
+} from "../../field-removal-protection-shape.js";
 
 type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];

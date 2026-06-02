@@ -12,7 +12,7 @@ import type {
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
 import { isSupportedAutoRuntimeEffectBlock } from "../effect-runtime-block-support.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
-import { isSupportedPermanentContinuousEffectBlock } from "../effect-runtime-continuous.js";
+import { isSupportedPermanentContinuousEffectBlock } from "../runtime/continuous/continuous.js";
 import {
   isSupportedOnOpponentAttackCompatibleQueuedEffect,
   isSupportedWhenAttackingCompatibleQueuedEffect,

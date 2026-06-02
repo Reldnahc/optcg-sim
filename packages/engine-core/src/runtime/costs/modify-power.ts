@@ -7,7 +7,7 @@ import type {
   PlayerState,
 } from "@optcg/types";
 
-import { createContinuousRecordsForResolvedEffect } from "../../effect-runtime-continuous.js";
+import { createContinuousRecordsForResolvedEffect } from "../continuous/continuous.js";
 
 type ModifyPowerPaymentOption = Extract<PaymentOption, { type: "modifyPower" }>;
 

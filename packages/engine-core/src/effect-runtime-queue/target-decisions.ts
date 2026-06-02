@@ -27,7 +27,7 @@ import { cleanupResolvedLifeTrigger } from "../effect-runtime-life-trigger-clean
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
-} from "../effect-runtime-continuous.js";
+} from "../runtime/continuous/continuous.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 import {
   executeSelectedTargetEffectPrimitive,

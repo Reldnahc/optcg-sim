@@ -45,7 +45,7 @@ import { queueReferencedMainEffectFromTrigger } from "../effect-runtime-activate
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
-} from "../effect-runtime-continuous.js";
+} from "../runtime/continuous/continuous.js";
 import {
   executeMoveCardsPrimitive,
   resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,

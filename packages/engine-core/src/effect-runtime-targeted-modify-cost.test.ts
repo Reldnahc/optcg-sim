@@ -7,7 +7,7 @@ import { computeView } from "./compute-view.js";
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
-} from "./effect-runtime-continuous.js";
+} from "./runtime/continuous/continuous.js";
 import {
   createActiveState,
   p1,
