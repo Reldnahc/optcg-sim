@@ -727,11 +727,11 @@ test("activateMain adapter matrix supports reusable body only with activate-main
 test("runtime production source keeps anti-shape/card-specific authorization branches out of support paths", async () => {
   const sourceFiles = [
     "packages/engine-core/src/effect-runtime.ts",
-    "packages/engine-core/src/effect-runtime-trigger-queueing.ts",
-    "packages/engine-core/src/effect-runtime-trigger-queueing-on-play.ts",
-    "packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts",
-    "packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts",
-    "packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts",
+    "packages/engine-core/src/runtime/trigger-queueing/core.ts",
+    "packages/engine-core/src/runtime/trigger-queueing/on-play.ts",
+    "packages/engine-core/src/runtime/trigger-queueing/attack.ts",
+    "packages/engine-core/src/runtime/trigger-queueing/ko.ts",
+    "packages/engine-core/src/runtime/trigger-queueing/main-event.ts",
     "packages/engine-core/src/effect-runtime-activation-main.ts",
     "packages/engine-core/src/effect-runtime-sequence/support.ts",
     "packages/engine-core/src/battle/attack-timing.ts",
