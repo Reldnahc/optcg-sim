@@ -3,15 +3,15 @@ import { test } from "vitest";
 
 import type { CardRef, DecisionId } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   assertRejectsWithoutMutation,
   cardRef,
@@ -19,7 +19,7 @@ import {
   passCounterStep,
   setupAttackState,
   setupOpenedBlockStepDecision,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 test("rested, stale, non-blocker, and attacker-controlled cards do not open block-step decision", () => {
   const runNoDecision = (

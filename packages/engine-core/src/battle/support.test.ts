@@ -13,11 +13,11 @@ import {
   must,
   p1,
   resolvedCard,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   getUnsupportedBattleEffectMetadataReason,
   hasUnsupportedBattleEffectMetadata,
-} from "./battle-support.js";
+} from "./support.js";
 
 test("battle effect metadata ignores implemented-dsl combat cards with only battle-neutral effects", () => {
   const state = createActiveState();

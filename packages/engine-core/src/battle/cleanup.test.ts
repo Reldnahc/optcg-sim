@@ -4,14 +4,14 @@ import { test } from "vitest";
 import {
   applyDeclareAttack,
   expireBattleDurationStateForCleanup,
-} from "./battle-actions.js";
-import { must, p1, p2 } from "./action-test-fixtures.js";
+} from "./actions.js";
+import { must, p1, p2 } from "../action-test-fixtures.js";
 import {
   cardRef,
   continuousEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 type EngineInternalBattleState = NonNullable<
   ReturnType<typeof setupAttackState>["battle"]
 > & { counterPower?: number };

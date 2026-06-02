@@ -10,13 +10,13 @@ import type {
 } from "@optcg/types";
 
 import { resolveSupportedVanillaBattle } from "./actions.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { assertGameStateInvariants } from "./invariants.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { assertGameStateInvariants } from "../invariants.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   setupAttackState,
   withOnKODrawEffect,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],

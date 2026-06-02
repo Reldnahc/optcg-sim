@@ -3,23 +3,23 @@ import { test } from "vitest";
 
 import type { EffectDefinition, GameState, PlayerId } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
-} from "./battle-actions.js";
+} from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   cardRef,
   resolveNoTriggerLifeDamageDecisionsForTests,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 const addTrashCards = (
   state: ReturnType<typeof setupAttackState>,

@@ -3,15 +3,15 @@ import { test } from "vitest";
 
 import type { EffectDefinition, SelectionSetId } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   addTrashMarker,
   cardRef,
@@ -20,7 +20,7 @@ import {
   setupAttackState,
   setupOpenedBlockStepDecision,
   setupOpenedCharacterTargetBlockStepDecision,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 test("applyDeclareAttack enters block step and opens defender decline decision when defender has would-be legal blocker", () => {
   const state = setupAttackState();

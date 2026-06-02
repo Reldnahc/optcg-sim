@@ -9,14 +9,14 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { assertGameStateInvariants } from "./invariants.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import { applyAction } from "../actions.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { assertGameStateInvariants } from "../invariants.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],
