@@ -13,8 +13,8 @@ import type {
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
-} from "./effect-runtime-conditions.js";
-import { deriveImplementedDslPermanentContinuousEffects } from "./runtime/continuous/continuous.js";
+} from "../effect-runtime-conditions.js";
+import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
 import {
   isSupportedFieldRemovalProtection,
   isSupportedRestProtection,

@@ -19,7 +19,7 @@ import {
   isFieldRemovalProtectionModifier,
   isSupportedProtectionModifier,
   malformedFieldRemovalProtectionMessage,
-} from "../field-removal-protection.js";
+} from "../replacement/field-removal-protection.js";
 
 const supportedContinuousKeywordGrants = new Set<Keyword>([
   "blocker",

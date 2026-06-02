@@ -21,7 +21,7 @@ import {
   isSupportedContinuousKeywordModifier,
   recordConditionPasses,
 } from "./compute-view-continuous.js";
-import { fieldRemovalProtectionsForCard } from "../field-removal-protection.js";
+import { fieldRemovalProtectionsForCard } from "../replacement/field-removal-protection.js";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;

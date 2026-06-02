@@ -15,8 +15,8 @@ import {
   p1,
   p2,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { toCardRef } from "./action-state.js";
+} from "../effect-runtime-queue-processing-test-support.js";
+import { toCardRef } from "../action-state.js";
 import { applyFieldRemovalProtection } from "./field-removal-protection.js";
 
 const fieldRemovalProtection = (

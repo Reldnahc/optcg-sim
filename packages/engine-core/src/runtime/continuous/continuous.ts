@@ -28,7 +28,7 @@ import {
   isSupportedFieldRemovalProtection,
   isSupportedRestProtection,
   malformedFieldRemovalProtectionMessage,
-} from "../../field-removal-protection-shape.js";
+} from "../../replacement/field-removal-protection-shape.js";
 
 type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];

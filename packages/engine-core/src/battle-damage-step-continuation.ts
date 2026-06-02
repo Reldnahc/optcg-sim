@@ -9,7 +9,7 @@ import {
 } from "./battle-support.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
-import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
+import { hasOnlyFieldRemovalProtections } from "./replacement/field-removal-protection.js";
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,

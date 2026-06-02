@@ -21,7 +21,7 @@ import type { SupportedSequenceSegment } from "./support.js";
 import {
   applyRestProtection,
   type RestProtectionAttempt,
-} from "../field-removal-protection.js";
+} from "../replacement/field-removal-protection.js";
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];

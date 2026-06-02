@@ -28,7 +28,7 @@ import {
   normalizeSelectedTargetKoProcess,
   pauseSelectedTargetKoReplacementProcess,
 } from "./effect-runtime-ko-replacement-process.js";
-import { applyFieldRemovalProtection } from "./field-removal-protection.js";
+import { applyFieldRemovalProtection } from "./replacement/field-removal-protection.js";
 
 export type SelectedTargetKoExecutionFailureReason =
   | "unsupported-effect-shape"

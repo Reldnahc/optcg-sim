@@ -23,26 +23,26 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { resolveSupportedVanillaBattle } from "./actions.js";
+import { resolveSupportedVanillaBattle } from "../actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+} from "../action-test-fixtures.js";
+import { applyDeclareAttack } from "../battle-actions.js";
 import {
   cardRef,
   effectDefinition,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { computeView } from "./compute-view.js";
-import { executeSelectedTargetEffectPrimitive } from "./effect-runtime-primitives.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
-import { setupFullCharacterPlayState } from "./play-card-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { computeView } from "../compute-view.js";
+import { executeSelectedTargetEffectPrimitive } from "../effect-runtime-primitives.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { applyPlayCard, applyPlayCardDecisionResponse } from "../play-card.js";
+import { setupFullCharacterPlayState } from "../play-card-test-fixtures.js";
 
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;

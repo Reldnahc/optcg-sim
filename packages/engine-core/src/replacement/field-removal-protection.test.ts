@@ -20,8 +20,8 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { computeView } from "./compute-view.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { computeView } from "../compute-view.js";
 import { applyFieldRemovalProtection } from "./field-removal-protection.js";
 import {
   createActiveState,
@@ -29,15 +29,15 @@ import {
   p1,
   p2,
   resolvedCard,
-} from "./action-test-fixtures.js";
-import { effectDefinition } from "./battle-actions-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { effectDefinition } from "../battle-actions-test-fixtures.js";
 import {
   buildSelectedTargetKoReplacementProcess,
   executeSelectedTargetEffectPrimitive,
   executeUnreplacedSelectedTargetKoProcess,
-} from "./effect-runtime-primitives.js";
-import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
-import { setupFullCharacterPlayState } from "./play-card-test-fixtures.js";
+} from "../effect-runtime-primitives.js";
+import { applyPlayCard, applyPlayCardDecisionResponse } from "../play-card.js";
+import { setupFullCharacterPlayState } from "../play-card-test-fixtures.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

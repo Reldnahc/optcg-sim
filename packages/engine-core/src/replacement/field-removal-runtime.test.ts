@@ -15,15 +15,15 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction } from "../actions.js";
 import {
   createActiveState,
   must,
   p1,
   p2,
   resolvedCard,
-} from "./action-test-fixtures.js";
-import { executeSelectedTargetEffectPrimitive } from "./effect-runtime-primitives.js";
+} from "../action-test-fixtures.js";
+import { executeSelectedTargetEffectPrimitive } from "../effect-runtime-primitives.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
