@@ -23,24 +23,14 @@ import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
 import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
-import {
-  combineDropTargetForWindow,
-  type GroupableWindow,
-} from "./floating-window-grouping.js";
-import { InfoTabbedWindow, type InfoWindowTabId } from "./InfoTabbedWindow.js";
+import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
-  floatingGroupedInfoWindowIds,
-  groupedInfoWindowIdsAfterDrop,
   groupedInfoWindowIdsAfterTabDragOut,
   infoWindowKey,
   infoWindowTabIdForKey,
-  infoWindowKeyForTab,
-  infoWindowRect,
   settingsWindowKey,
-  standaloneInfoWindowIds as standaloneInfoWindowIdsFromState,
-  visibleInfoWindowIds as visibleInfoWindowIdsFromState,
 } from "./info-window-model.js";
 import { createInfoWindowToolbarControls } from "./info-window-toolbar-controls.js";
 import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
@@ -53,6 +43,7 @@ import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowDragOut } from "./use-info-window-drag-out.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
+import { useInfoWindowOrchestration } from "./use-info-window-orchestration.js";
 import { useMatchClient } from "./useMatchClient.js";
 import { useConcedeConfirmation } from "./use-concede-confirmation.js";
 import { useFirstPlayerChoiceModal } from "./use-first-player-choice-modal.js";
@@ -73,7 +64,6 @@ export const MatchApp = (): React.JSX.Element => {
   const [actionLogOpen, setActionLogOpen] = useState(false);
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
-  const [combineDropTarget, setCombineDropTarget] = useState<InfoWindowTabId>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [controlDockActiveTabId, setControlDockActiveTabId] =
     useState<string>();
@@ -295,25 +285,35 @@ export const MatchApp = (): React.JSX.Element => {
   const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
-  const visibleInfoWindowIds = visibleInfoWindowIdsFromState({
-    showPreviewWindow,
-    showActionLogWindow,
-    showSettingsWindow,
-  });
-  const configuredVisibleGroupedInfoWindowIds = floatingGroupedInfoWindowIds({
-    visibleIds: visibleInfoWindowIds,
-    groupedIds: configuredGroupedInfoWindowIds,
-    dockedWindowIds: activeDockedWindowIds,
-  });
-  const groupedInfoWindowIds =
-    configuredVisibleGroupedInfoWindowIds.length >= 2
-      ? configuredVisibleGroupedInfoWindowIds
-      : [];
-  const standaloneInfoWindowIds = standaloneInfoWindowIdsFromState(
-    visibleInfoWindowIds,
+  const {
+    combineDropTarget,
+    completeInfoGroupDrag,
+    completeInfoWindowDrag,
+    dockInfoWindowTabs,
     groupedInfoWindowIds,
-  );
-  const showTabbedInfoWindow = groupedInfoWindowIds.length >= 2;
+    reorderInfoWindowTabs,
+    showTabbedInfoWindow,
+    standaloneInfoWindowIds,
+    updateInfoWindowDragTargets,
+    visibleInfoWindowIds,
+  } = useInfoWindowOrchestration({
+    activeDockedWindowIds,
+    activeFloatingWindowRects,
+    completeControlDockDrop,
+    configuredGroupedInfoWindowIds,
+    dockFloatingWindows,
+    setActionLogMinimized,
+    setControlDockActiveTabId,
+    setGroupedInfoWindowIds,
+    setInfoWindowActiveTab,
+    setInfoWindowMinimized,
+    setPreviewMinimized,
+    showActionLogWindow,
+    showPreviewWindow,
+    showSettingsWindow,
+    updateControlDockTarget,
+    updateFloatingWindowRect,
+  });
   const {
     controlDockTabs,
     dockedInfoTabIds,
@@ -358,130 +358,6 @@ export const MatchApp = (): React.JSX.Element => {
     },
     previewCardModel: previewHoveredCard,
   });
-  const groupedInfoWindowRect =
-    activeFloatingWindowRects[infoWindowKey] ??
-    (groupedInfoWindowIds[0] === undefined
-      ? undefined
-      : infoWindowRect(groupedInfoWindowIds[0], activeFloatingWindowRects));
-  const groupableInfoWindows: GroupableWindow<InfoWindowTabId>[] =
-    visibleInfoWindowIds.map((id) => ({
-      id,
-      visible: true,
-      rect:
-        groupedInfoWindowIds.includes(id) && groupedInfoWindowRect !== undefined
-          ? groupedInfoWindowRect
-          : infoWindowRect(id, activeFloatingWindowRects),
-    }));
-  const matchingCombineDropTarget = (
-    draggedWindowId: InfoWindowTabId,
-    rect: WindowRect,
-  ): InfoWindowTabId | undefined =>
-    combineDropTargetForWindow(draggedWindowId, rect, groupableInfoWindows);
-  const updateCombineDropTarget = (
-    draggedWindowId: InfoWindowTabId,
-    rect: WindowRect,
-  ): void => {
-    setCombineDropTarget(matchingCombineDropTarget(draggedWindowId, rect));
-  };
-  const updateInfoWindowDragTargets = (
-    draggedWindowId: InfoWindowTabId,
-    rect: WindowRect,
-  ): void => {
-    updateCombineDropTarget(draggedWindowId, rect);
-    updateControlDockTarget(rect);
-  };
-  const tryGroupInfoWindow = (
-    draggedWindowId: InfoWindowTabId,
-    rect: WindowRect,
-  ): void => {
-    const targetWindowId = matchingCombineDropTarget(draggedWindowId, rect);
-    setCombineDropTarget(undefined);
-    if (targetWindowId === undefined) {
-      return;
-    }
-    const targetRect =
-      groupedInfoWindowIds.includes(targetWindowId) &&
-      groupedInfoWindowRect !== undefined
-        ? groupedInfoWindowRect
-        : infoWindowRect(targetWindowId, activeFloatingWindowRects);
-    updateFloatingWindowRect(infoWindowKey, targetRect);
-    setInfoWindowActiveTab(draggedWindowId);
-    setInfoWindowMinimized(false);
-    setPreviewMinimized(false);
-    setActionLogMinimized(false);
-    setGroupedInfoWindowIds(
-      groupedInfoWindowIdsAfterDrop({
-        visibleInfoWindowIds,
-        currentGroupedInfoWindowIds: groupedInfoWindowIds,
-        draggedWindowId,
-        targetWindowId,
-      }),
-    );
-  };
-  const dockInfoWindowTabs = (
-    draggedWindowIds: readonly InfoWindowTabId[],
-    dockRect: WindowRect,
-  ): void => {
-    const windowKeys = draggedWindowIds.map(infoWindowKeyForTab);
-    dockFloatingWindows({
-      windowKeys,
-      rect: dockRect,
-      replacedWindowKeys: [infoWindowKey],
-    });
-    setControlDockActiveTabId(windowKeys[0]);
-    setInfoWindowActiveTab(
-      draggedWindowIds[0] ?? groupedInfoWindowIds[0] ?? "preview",
-    );
-    setInfoWindowMinimized(false);
-    setPreviewMinimized(false);
-    setActionLogMinimized(false);
-  };
-  const completeInfoWindowDrag = (
-    draggedWindowId: InfoWindowTabId,
-    rect: WindowRect,
-  ): WindowRect | undefined => {
-    const dockRect = completeControlDockDrop(rect);
-    if (dockRect === undefined) {
-      tryGroupInfoWindow(draggedWindowId, rect);
-      return undefined;
-    }
-    dockInfoWindowTabs([draggedWindowId], dockRect);
-    setCombineDropTarget(undefined);
-    return undefined;
-  };
-  const completeInfoGroupDrag = (rect: WindowRect): WindowRect | undefined => {
-    const dockRect = completeControlDockDrop(rect);
-    if (dockRect === undefined) {
-      return undefined;
-    }
-    dockInfoWindowTabs(groupedInfoWindowIds, dockRect);
-    setCombineDropTarget(undefined);
-    return undefined;
-  };
-  const completePoppedOutInfoGroupDrag = (
-    rect: WindowRect,
-  ): WindowRect | undefined => {
-    const dockRect = completeControlDockDrop(rect);
-    if (dockRect === undefined) {
-      return undefined;
-    }
-    dockInfoWindowTabs(
-      dockedInfoTabIds.length >= 2 ? dockedInfoTabIds : groupedInfoWindowIds,
-      dockRect,
-    );
-    setCombineDropTarget(undefined);
-    return undefined;
-  };
-  const reorderInfoWindowTabs = (
-    draggedTabId: InfoWindowTabId,
-    targetTabId: InfoWindowTabId,
-    placement: ReorderPlacement,
-  ): void => {
-    setGroupedInfoWindowIds(
-      moveIdNear(groupedInfoWindowIds, draggedTabId, targetTabId, placement),
-    );
-    setInfoWindowActiveTab(draggedTabId);
-  };
   const reorderDockTab = (
     draggedWindowKey: string,
     targetWindowKey: string,
@@ -508,6 +384,19 @@ export const MatchApp = (): React.JSX.Element => {
     }
     reorderDockedWindow(draggedWindowKey, targetWindowKey, placement);
     setControlDockActiveTabId(draggedWindowKey);
+  };
+  const completePoppedOutInfoGroupDrag = (
+    rect: WindowRect,
+  ): WindowRect | undefined => {
+    const dockRect = completeControlDockDrop(rect);
+    if (dockRect === undefined) {
+      return undefined;
+    }
+    dockInfoWindowTabs(
+      dockedInfoTabIds.length >= 2 ? dockedInfoTabIds : groupedInfoWindowIds,
+      dockRect,
+    );
+    return undefined;
   };
   const { dragOutDockGroup, dragOutDockWindow, splitInfoWindowTab } =
     useInfoWindowDragOut({
@@ -540,19 +429,6 @@ export const MatchApp = (): React.JSX.Element => {
         });
       },
     });
-  useEffect(() => {
-    if (
-      configuredGroupedInfoWindowIds.length > 0 &&
-      configuredVisibleGroupedInfoWindowIds.length < 2
-    ) {
-      setGroupedInfoWindowIds([]);
-      setCombineDropTarget(undefined);
-    }
-  }, [
-    configuredGroupedInfoWindowIds.length,
-    configuredVisibleGroupedInfoWindowIds.length,
-    setGroupedInfoWindowIds,
-  ]);
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
