@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import { createActiveState, must, p1 } from "../../action-test-fixtures.js";
 import { executeNoChoiceEffectPrimitive } from "../../effect-runtime.js";
-import { queueDrawForP1 } from "../../effect-runtime-queue-processing-test-support.js";
+import { queueDrawForP1 } from "../../effect-runtime-queue/test-support.js";
 
 test("no-choice draw primitive remains unchanged for direct draw resolution", () => {
   const state = createActiveState();

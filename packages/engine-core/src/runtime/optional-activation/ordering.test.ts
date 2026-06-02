@@ -27,7 +27,7 @@ import {
   toSourceSnapshot,
   toStateSeq,
   toTimingWindowId,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 
 const installDefinition = (
   state: ReturnType<typeof createActiveState>,

@@ -28,7 +28,7 @@ import { processEffectRuntime } from "../effect-runtime.js";
 import {
   queueDrawForP1,
   toSourceSnapshot,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue/test-support.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const installDefinition = (

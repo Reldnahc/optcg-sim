@@ -21,7 +21,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 };
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-processing.js";
+import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/processing.js";
 import { isSupportedEffectResolvedCustomDrawEffect } from "./runtime/primitives/execute.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence/frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";

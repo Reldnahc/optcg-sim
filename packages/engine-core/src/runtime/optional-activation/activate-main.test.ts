@@ -15,7 +15,7 @@ import {
 import { addExtraDeckCard, must, p1, p2 } from "../../action-test-fixtures.js";
 import { processEffectRuntime } from "../../effect-runtime.js";
 import { filterStateForPlayer } from "../../filter-state-for-player.js";
-import { hashCanonicalStateValue } from "../../effect-runtime-queue-processing-test-support.js";
+import { hashCanonicalStateValue } from "../../effect-runtime-queue/test-support.js";
 
 test("getLegalActions exposes activateEffect only for controller during legal main-phase windows", () => {
   const state = makeMainPhaseLegalActionState();

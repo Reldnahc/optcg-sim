@@ -22,8 +22,8 @@ import {
   evaluateQueueOrdering,
   orderNoChoiceQueueEntries,
 } from "./ordering.js";
-import { hasUniqueQueueEntryIdsWithin } from "../effect-runtime-queue-id-matching.js";
-import { evaluateQueuedEffectSourcePresence } from "../effect-runtime-queue-source-presence.js";
+import { hasUniqueQueueEntryIdsWithin } from "./id-matching.js";
+import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 import { createChooseTriggerOrderDecision } from "../effect-runtime-trigger-order-decision.js";
 import type {
   CreateUnsupportedPendingRuntimeWorkError,
@@ -67,7 +67,7 @@ import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
 import {
   createChooseOptionalActivationDecision,
   createChooseQuantityDecision,
-} from "../effect-runtime-queue-choice-decisions.js";
+} from "./choice-decisions.js";
 import { resumePlaySourceOverflowDecision as resumePlaySourceOverflowDecisionHelper } from "../effect-runtime-play-source-overflow-resume.js";
 import {
   hasExactDamageDeferredQueue,

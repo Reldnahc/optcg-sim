@@ -9,7 +9,7 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
   setupOnPlayDefinition,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 
 test("non-once-per-turn queued no-choice draw behavior is unchanged", () => {
   const { state, played } = queueingState();

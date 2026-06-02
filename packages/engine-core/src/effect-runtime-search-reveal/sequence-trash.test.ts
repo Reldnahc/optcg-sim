@@ -14,7 +14,7 @@ import {
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue/test-support.js";
 
 test("sequence resumes from search reveal into later trash-from-hand segment", () => {
   const state = createActiveState();

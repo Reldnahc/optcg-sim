@@ -29,7 +29,7 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 
 const optionalHandTrashThenFilteredKoSequence = (
   costMax: number,

@@ -7,8 +7,8 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { chooseQuantityPromptForEffect } from "./effect-runtime-quantity-prompts.js";
+import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import { chooseQuantityPromptForEffect } from "../effect-runtime-quantity-prompts.js";
 
 export const createChooseOptionalActivationDecision = (
   state: GameState,

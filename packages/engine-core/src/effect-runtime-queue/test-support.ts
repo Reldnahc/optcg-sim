@@ -30,8 +30,8 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { applyAction, getLegalActions } from "./index.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { applyAction, getLegalActions } from "../index.js";
 import {
   createActiveState,
   must,
@@ -40,9 +40,9 @@ import {
   resolvedCard,
   toEngineEventId,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
-import { processEffectRuntime } from "./effect-runtime.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+} from "../action-test-fixtures.js";
+import { processEffectRuntime } from "../effect-runtime.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
 
 export const toCardId = (value: string): CardId => value as CardId;
 export const toDecisionId = (value: string): DecisionId => value as DecisionId;

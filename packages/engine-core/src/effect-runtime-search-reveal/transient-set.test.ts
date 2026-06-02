@@ -21,7 +21,7 @@ import { filterStateForPlayer } from "../filter-state-for-player.js";
 import {
   queueDrawForP1,
   toEffectId,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue/test-support.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 
 const supportedSearch = (

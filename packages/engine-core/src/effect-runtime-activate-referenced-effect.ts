@@ -7,7 +7,7 @@ import type {
 
 import { appendEvent, toStateSeq } from "./action-results.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
-import type { ResolveImplementedDslEffectDefinition } from "./effect-runtime-queue-target-decisions.js";
+import type { ResolveImplementedDslEffectDefinition } from "./effect-runtime-queue/target-decisions.js";
 
 const isSupportedActivateReferencedMainTrigger = (
   effect: EffectDefinition["effects"][number],

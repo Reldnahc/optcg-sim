@@ -16,7 +16,7 @@ import {
   queueDrawForP1,
   toEffectId,
   toQueueEntryId,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue/test-support.js";
 
 const supportedSearch = (): Extract<Effect, { type: "search" }> => ({
   type: "search",

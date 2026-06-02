@@ -16,7 +16,7 @@ import {
   p1,
   resolvedCard,
 } from "../../action-test-fixtures.js";
-import { reviewedOnPlayDrawDefinition } from "../../effect-runtime-queue-processing-test-support.js";
+import { reviewedOnPlayDrawDefinition } from "../../effect-runtime-queue/test-support.js";
 
 const setupActivateMainTrashAllPlayFromTrashState = (params: {
   sameTrashNames?: boolean;

@@ -43,7 +43,7 @@ import {
   toStateSeq,
   toTimingWindowId,
   withCardInZone,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 import { setupMainPlayState } from "../../play-card-test-fixtures.js";
 
 const installDefinition = (

@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { Effect } from "@optcg/types";
-import type {
-  CardInstance,
-  QueueEntryId,
-} from "../effect-runtime-queue-processing-test-support.js";
+import type { CardInstance, QueueEntryId } from "./test-support.js";
 import {
   hashCanonicalStateValue,
   applyAction,
@@ -20,7 +17,7 @@ import {
   publicCharacterTargetRequest,
   targetSelectionQueueState,
   mixedOrderedDrawThenTargetState,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "./test-support.js";
 import { advanceEndPhase, advanceRefreshPhase } from "../phases.js";
 
 const removeFieldCardsFromHands = (state: {

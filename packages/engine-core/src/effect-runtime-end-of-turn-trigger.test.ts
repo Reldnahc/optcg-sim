@@ -12,7 +12,7 @@ import {
   resolvedCard,
   toEffectId,
   reviewedOnPlayDrawDefinition,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 
 const setupEndOfTurnDonActivationDefinition = (
   state: GameState,

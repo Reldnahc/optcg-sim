@@ -29,7 +29,7 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 import { applyRuntimePlaySelectedFromHand } from "../../play-card.js";
 import { setupFullCharacterPlayState } from "../../play-card-test-fixtures.js";
 

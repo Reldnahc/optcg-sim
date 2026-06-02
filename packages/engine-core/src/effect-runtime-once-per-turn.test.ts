@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { CardInstance, EffectDefinition } from "@optcg/types";
 
-import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
+import type { EffectQueueEntry } from "./effect-runtime-queue/test-support.js";
 import { addExtraDeckCard } from "./action-test-fixtures.js";
 import {
   cardRef,
@@ -40,7 +40,7 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 import { resolveSupportedVanillaBattle } from "./index.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
 

@@ -3,7 +3,7 @@ import { test } from "vitest";
 import type { Condition } from "@optcg/types";
 import { evaluateQueuedEffectCondition } from "./evaluator.js";
 
-import type { EffectQueueEntry } from "../../effect-runtime-queue-processing-test-support.js";
+import type { EffectQueueEntry } from "../../effect-runtime-queue/test-support.js";
 import { filterStateForPlayer } from "../../filter-state-for-player.js";
 import {
   applyAction,
@@ -20,7 +20,7 @@ import {
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 
 test("queued conditioned supported search-reveal pauses for private choice and then resolves", () => {
   const state = createActiveState();

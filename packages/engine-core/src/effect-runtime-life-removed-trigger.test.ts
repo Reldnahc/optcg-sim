@@ -31,7 +31,7 @@ import {
   toQueueEntryId,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 
 const setupLifeRemovedDefinition = (
   state: ReturnType<typeof createActiveState>,

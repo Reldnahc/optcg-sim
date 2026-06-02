@@ -21,7 +21,7 @@ import { hashCanonicalStateValue } from "../canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { createSupportedSearchRevealChoiceDecision } from "../effect-runtime-search-reveal.js";
 import { toCardRefForPlayer } from "./remainder.js";
-import type { EffectQueueEntry } from "../effect-runtime-queue-processing-test-support.js";
+import type { EffectQueueEntry } from "../effect-runtime-queue/test-support.js";
 import {
   processEffectRuntime,
   queueDrawForP1,
@@ -30,7 +30,7 @@ import {
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue/test-support.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 

@@ -7,7 +7,7 @@ import {
   createActiveState,
   p1,
   queueDrawForP1,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,

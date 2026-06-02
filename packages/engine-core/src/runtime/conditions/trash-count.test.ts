@@ -17,7 +17,7 @@ import {
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 import { evaluateQueuedEffectCondition } from "./evaluator.js";
 
 const setTrashCount = (

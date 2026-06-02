@@ -16,7 +16,7 @@ import {
   toCardId,
   toInstanceId,
   withCardInZone,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 
 const fieldCharacter = (): CardInstance => ({
   instanceId: toInstanceId("target-character"),

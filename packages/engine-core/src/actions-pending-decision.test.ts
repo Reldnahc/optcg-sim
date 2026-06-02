@@ -19,7 +19,7 @@ import {
 import {
   queueDrawForP1,
   queueingState,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import {
   setupFullCharacterPlayState,

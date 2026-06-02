@@ -19,7 +19,7 @@ import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
-import { targetSelectionQueueState } from "./effect-runtime-queue-processing-test-support.js";
+import { targetSelectionQueueState } from "./effect-runtime-queue/test-support.js";
 import { enterMainPhase } from "./phases.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";

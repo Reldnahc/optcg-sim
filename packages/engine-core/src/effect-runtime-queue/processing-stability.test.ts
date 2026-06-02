@@ -5,7 +5,7 @@ import {
   createActiveState,
   processEffectRuntime,
   queueDrawForP1,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "./test-support.js";
 
 test("queued resolution keeps event journal and state hash stable for identical input", () => {
   const run = () => {

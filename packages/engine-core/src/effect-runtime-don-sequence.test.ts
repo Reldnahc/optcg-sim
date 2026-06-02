@@ -23,7 +23,7 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "./effect-runtime-queue/test-support.js";
 
 const attachDonSequence = (): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",

@@ -22,7 +22,7 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
   setupOnPlayDefinition,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

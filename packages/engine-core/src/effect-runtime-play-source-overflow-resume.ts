@@ -7,8 +7,8 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
-import type { CreateUnsupportedPendingRuntimeWorkError } from "./effect-runtime-queue-target-decisions.js";
-import type { QueueEffectResolvedCustomTriggers } from "./effect-runtime-queue-results.js";
+import type { CreateUnsupportedPendingRuntimeWorkError } from "./effect-runtime-queue/target-decisions.js";
+import type { QueueEffectResolvedCustomTriggers } from "./effect-runtime-queue/results.js";
 
 export const resumePlaySourceOverflowDecision = (params: {
   originalState: GameState;

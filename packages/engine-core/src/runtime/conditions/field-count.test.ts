@@ -18,7 +18,7 @@ import {
   toQueueEntryId,
   toSourceSnapshot,
   withCardInZone,
-} from "../../effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue/test-support.js";
 import { applyDeclareAttack } from "../../battle-actions.js";
 import {
   setupAttackState,

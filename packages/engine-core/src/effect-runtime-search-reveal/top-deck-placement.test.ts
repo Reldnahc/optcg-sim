@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectQueueEntry } from "../effect-runtime-queue-processing-test-support.js";
+import type { EffectQueueEntry } from "../effect-runtime-queue/test-support.js";
 import {
   applyAction,
   createActiveState,
@@ -17,7 +17,7 @@ import {
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
-} from "../effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue/test-support.js";
 
 test("queued top-deck placement chooses one destination for all looked cards", () => {
   const state = createActiveState();
