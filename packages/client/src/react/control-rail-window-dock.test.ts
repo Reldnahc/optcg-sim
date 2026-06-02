@@ -118,10 +118,13 @@ describe("control rail window dock", () => {
   });
 
   test("docked tabs reorder inside the tab strip before dragging out", async () => {
-    const [controlRailSource, matchAppSource, floatingStateSource] =
+    const [controlRailSource, dockingSource, floatingStateSource] =
       await Promise.all([
         readFile(join(sourceDirectory, "ControlRail.tsx"), "utf8"),
-        readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+        readFile(
+          join(sourceDirectory, "use-match-app-window-docking.ts"),
+          "utf8",
+        ),
         readFile(join(sourceDirectory, "use-floating-window-state.ts"), "utf8"),
       ]);
 
@@ -129,11 +132,8 @@ describe("control rail window dock", () => {
     assert.match(controlRailSource, /tabDragIntentFromPoint/u);
     assert.match(controlRailSource, /tabReorderTargetFromPointer/u);
     assert.match(controlRailSource, /tabStripRect/u);
-    assert.match(matchAppSource, /onDockTabReorder/u);
-    assert.match(
-      matchAppSource,
-      /activeDockedWindowIds\.has\(infoWindowKey\)/u,
-    );
+    assert.match(dockingSource, /reorderDockTab/u);
+    assert.match(dockingSource, /activeDockedWindowIds\.has\(infoWindowKey\)/u);
     assert.match(floatingStateSource, /reorderDockedWindow/u);
     assert.match(
       controlRailSource,
@@ -142,20 +142,23 @@ describe("control rail window dock", () => {
   });
 
   test("dock drop handlers do not return the dock rect to the floating shell", async () => {
-    const matchAppSource = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+    const dockingSource = await readFile(
+      join(sourceDirectory, "use-match-app-window-docking.ts"),
       "utf8",
     );
 
     assert.doesNotMatch(
-      matchAppSource,
+      dockingSource,
       /(?:dockFloatingWindows|dockInfoWindowTabs)\([\s\S]{0,260}return dockRect/u,
     );
   });
 
   test("dragging one tab out of a docked group preserves any remaining dock tab", async () => {
-    const [matchAppSource, dragOutSource] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+    const [dockingSource, dragOutSource] = await Promise.all([
+      readFile(
+        join(sourceDirectory, "use-match-app-window-docking.ts"),
+        "utf8",
+      ),
       readFile(join(sourceDirectory, "use-info-window-drag-out.ts"), "utf8"),
     ]);
 
@@ -163,9 +166,9 @@ describe("control rail window dock", () => {
     assert.match(dragOutSource, /replacementDockWindowKeys/u);
     assert.match(dragOutSource, /replacedDockWindowKeys/u);
     assert.match(dragOutSource, /onDockInfoWindowGroupSplit/u);
-    assert.match(matchAppSource, /onDockInfoWindowGroupSplit/u);
+    assert.match(dockingSource, /onDockInfoWindowGroupSplit/u);
     assert.match(
-      matchAppSource,
+      dockingSource,
       /dockFloatingWindows\(\{\s*windowKeys,\s*rect,\s*replacedWindowKeys,/u,
     );
     assert.match(

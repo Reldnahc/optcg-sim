@@ -185,20 +185,21 @@ describe("action log window", () => {
   });
 
   test("action log window uses persisted floating window rectangle wiring", async () => {
-    const [matchApp, actionLogWindow, infoWindowModel] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "ActionLogWindow.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
-    ]);
+    const [matchInfoWindows, actionLogWindow, infoWindowModel] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "ActionLogWindow.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
+      ]);
 
     assert.match(infoWindowModel, /const actionLogWindowKey = "action-log";/u);
-    assert.match(matchApp, /actionLogWindowKey/u);
+    assert.match(matchInfoWindows, /actionLogWindowKey/u);
     assert.match(
-      matchApp,
+      matchInfoWindows,
       /activeFloatingWindowRects\[actionLogWindowKey\]\s*\?\?\s*defaultActionLogWindowRect/u,
     );
     assert.match(
-      matchApp,
+      matchInfoWindows,
       /updateFloatingWindowRect\(actionLogWindowKey, rect\)/u,
     );
     assert.match(actionLogWindow, /initialRect\?: WindowRect/u);

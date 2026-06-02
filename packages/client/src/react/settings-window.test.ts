@@ -28,19 +28,31 @@ describe("settings window", () => {
   });
 
   test("match app wires the settings icon to the settings window", async () => {
-    const [controlRail, matchApp] = await Promise.all([
-      readFile(join(sourceDirectory, "ControlRail.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
-    ]);
+    const [controlRail, matchApp, matchInfoWindows, toolbarControls] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "ControlRail.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+        readFile(
+          join(sourceDirectory, "info-window-toolbar-controls.ts"),
+          "utf8",
+        ),
+      ]);
 
     assert.match(controlRail, /settingsControl/u);
     assert.match(matchApp, /<SettingsToggle/u);
     assert.match(matchApp, /toggleSettingsOpen/u);
     assert.match(matchApp, /settingsWindowKey/u);
     assert.match(matchApp, /showSettingsWindow/u);
-    assert.match(matchApp, /updateFloatingWindowOpen\(settingsWindowKey/u);
-    assert.match(matchApp, /<SettingsWindow/u);
-    assert.match(matchApp, /completeInfoWindowDrag\("settings", rect\)/u);
+    assert.match(
+      toolbarControls,
+      /updateFloatingWindowOpen\(settingsWindowKey/u,
+    );
+    assert.match(matchInfoWindows, /<SettingsWindow/u);
+    assert.match(
+      matchInfoWindows,
+      /completeInfoWindowDrag\("settings", rect\)/u,
+    );
   });
 
   test("settings icon uses the same open highlight contract as other controls", () => {
@@ -85,14 +97,17 @@ describe("settings window", () => {
   });
 
   test("match app restores settings and tab config from persisted window state", async () => {
-    const [matchApp, floatingWindowHook, infoConfigHook] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "use-floating-window-state.ts"), "utf8"),
-      readFile(join(sourceDirectory, "use-info-window-config.ts"), "utf8"),
-    ]);
+    const [matchApp, matchInfoWindows, floatingWindowHook, infoConfigHook] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "use-floating-window-state.ts"), "utf8"),
+        readFile(join(sourceDirectory, "use-info-window-config.ts"), "utf8"),
+      ]);
 
     assert.match(floatingWindowHook, /loadOpenWindowIds\(\)/u);
     assert.match(matchApp, /activeOpenWindowIds\.has\(settingsWindowKey\)/u);
+    assert.match(matchInfoWindows, /settingsWindowKey/u);
     assert.match(matchApp, /useInfoWindowConfig/u);
     assert.match(infoConfigHook, /loadInfoWindowConfig\(\)/u);
     assert.match(infoConfigHook, /saveInfoWindowConfig/u);

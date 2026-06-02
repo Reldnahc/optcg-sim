@@ -49,40 +49,49 @@ describe("tabbed floating window", () => {
   });
 
   test("match app keeps windows independent until explicit drag grouping", async () => {
-    const [matchApp, infoWindowModel] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
-    ]);
+    const [infoWindows, orchestration, docking, infoWindowModel] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+        readFile(
+          join(sourceDirectory, "use-info-window-orchestration.ts"),
+          "utf8",
+        ),
+        readFile(
+          join(sourceDirectory, "use-match-app-window-docking.ts"),
+          "utf8",
+        ),
+        readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
+      ]);
 
     assert.match(infoWindowModel, /const infoWindowKey = "info-window";/u);
-    assert.match(matchApp, /infoWindowKey/u);
-    assert.match(matchApp, /groupedInfoWindowIds/u);
+    assert.match(infoWindows, /infoWindowKey/u);
+    assert.match(orchestration, /groupedInfoWindowIds/u);
     assert.match(
-      matchApp,
+      orchestration,
       /showTabbedInfoWindow\s*=\s*groupedInfoWindowIds\.length\s*>=\s*2/u,
     );
-    assert.match(matchApp, /InfoTabbedWindow/u);
-    assert.match(matchApp, /tabIds=\{groupedInfoWindowIds\}/u);
-    assert.match(matchApp, /floatingGroupedInfoWindowIds/u);
-    assert.match(matchApp, /completeInfoWindowDrag\("preview", rect\)/u);
-    assert.match(matchApp, /completeInfoWindowDrag\("log", rect\)/u);
-    assert.match(matchApp, /completeInfoWindowDrag\("settings", rect\)/u);
-    assert.match(matchApp, /tryGroupInfoWindow\(draggedWindowId, rect\)/u);
-    assert.match(matchApp, /splitInfoWindowTab/u);
+    assert.match(infoWindows, /InfoTabbedWindow/u);
+    assert.match(infoWindows, /tabIds=\{groupedInfoWindowIds\}/u);
+    assert.match(orchestration, /floatingGroupedInfoWindowIds/u);
+    assert.match(infoWindows, /completeInfoWindowDrag\("preview", rect\)/u);
+    assert.match(infoWindows, /completeInfoWindowDrag\("log", rect\)/u);
+    assert.match(infoWindows, /completeInfoWindowDrag\("settings", rect\)/u);
+    assert.match(orchestration, /tryGroupInfoWindow\(draggedWindowId, rect\)/u);
+    assert.match(docking, /splitInfoWindowTab/u);
     assert.match(
-      matchApp,
+      infoWindows,
       /showTabbedInfoWindow && !activeDockedWindowIds\.has\(infoWindowKey\)/u,
     );
     assert.doesNotMatch(
-      matchApp,
+      infoWindows,
       /showTabbedInfoWindow && dockedInfoTabIds\.length === 0/u,
     );
     assert.doesNotMatch(
-      matchApp,
+      orchestration,
       /showTabbedInfoWindow\s*=\s*showPreviewWindow\s*&&\s*showActionLogWindow/u,
     );
     assert.doesNotMatch(
-      matchApp,
+      orchestration,
       /showTabbedInfoWindow\s*=\s*infoWindowsGrouped/u,
     );
   });
@@ -99,10 +108,13 @@ describe("tabbed floating window", () => {
   });
 
   test("tabbed windows reorder tabs before dragging them out of the tab strip", async () => {
-    const [tabbedWindow, infoWindow, matchApp] = await Promise.all([
+    const [tabbedWindow, infoWindow, docking] = await Promise.all([
       readFile(join(sourceDirectory, "TabbedFloatingWindow.tsx"), "utf8"),
       readFile(join(sourceDirectory, "InfoTabbedWindow.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "use-match-app-window-docking.ts"),
+        "utf8",
+      ),
     ]);
 
     assert.match(tabbedWindow, /tabDragIntentFromPoint/u);
@@ -110,8 +122,8 @@ describe("tabbed floating window", () => {
     assert.match(tabbedWindow, /onTabReorder/u);
     assert.match(tabbedWindow, /tabStripRect/u);
     assert.match(infoWindow, /onTabReorder/u);
-    assert.match(matchApp, /moveIdNear/u);
-    assert.match(matchApp, /onTabReorder/u);
+    assert.match(docking, /moveIdNear/u);
+    assert.match(docking, /reorderDockTab/u);
     assert.doesNotMatch(
       tabbedWindow,
       /distance\s*>?=\s*tabDragOutDistance[\s\S]*onTabDragOut/u,
@@ -171,37 +183,45 @@ describe("tabbed floating window", () => {
   });
 
   test("match app exposes combine drop feedback classes", async () => {
-    const [matchApp, tabbedStyles] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+    const [infoWindows, orchestration, tabbedStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "use-info-window-orchestration.ts"),
+        "utf8",
+      ),
       readFile(
         join(sourceDirectory, "styles", "tabbed-floating-window.css"),
         "utf8",
       ),
     ]);
 
-    assert.match(matchApp, /combineDropTarget/u);
-    assert.match(matchApp, /is-combine-drop-target/u);
+    assert.match(infoWindows, /combineDropTarget/u);
+    assert.match(infoWindows, /is-combine-drop-target/u);
     assert.match(
-      matchApp,
+      infoWindows,
       /groupedInfoWindowIds\.includes\(combineDropTarget\)/u,
     );
-    assert.match(matchApp, /groupableInfoWindows/u);
-    assert.match(matchApp, /combineDropTargetForWindow/u);
+    assert.match(orchestration, /groupableInfoWindows/u);
+    assert.match(orchestration, /combineDropTargetForWindow/u);
     assert.match(tabbedStyles, /\.is-combine-drop-target/u);
   });
 
   test("match app docks info tabs through the generic control dock host", async () => {
+    const docking = await readFile(
+      join(sourceDirectory, "use-match-app-window-docking.ts"),
+      "utf8",
+    );
     const matchApp = await readFile(
       join(sourceDirectory, "MatchApp.tsx"),
       "utf8",
     );
 
-    assert.match(matchApp, /dockInfoWindowTabs/u);
-    assert.match(matchApp, /dockFloatingWindows/u);
+    assert.match(docking, /dockInfoWindowTabs/u);
+    assert.match(docking, /dockFloatingWindows/u);
     assert.match(matchApp, /controlDockTabs/u);
     assert.match(matchApp, /dockTabs=\{controlDockTabs\}/u);
-    assert.doesNotMatch(matchApp, /groupedInfoWindowIdsAfterDockDrop/u);
-    assert.match(matchApp, /completeInfoGroupDrag/u);
+    assert.doesNotMatch(docking, /groupedInfoWindowIdsAfterDockDrop/u);
+    assert.match(docking, /completePoppedOutInfoGroupDrag/u);
   });
 
   test("grouped info windows can show combine drop feedback on the parent shell", () => {
@@ -270,12 +290,15 @@ describe("tabbed floating window", () => {
 
   test("match app keeps popped-out tabs attached to the drag gesture", async () => {
     const [
-      matchApp,
+      docking,
       infoDragOutHook,
       poppedOutDragHook,
       routedPoppedOutDragHook,
     ] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "use-match-app-window-docking.ts"),
+        "utf8",
+      ),
       readFile(join(sourceDirectory, "use-info-window-drag-out.ts"), "utf8"),
       readFile(join(sourceDirectory, "use-popped-out-window-drag.ts"), "utf8"),
       readFile(
@@ -284,7 +307,7 @@ describe("tabbed floating window", () => {
       ),
     ]);
 
-    assert.match(matchApp, /useInfoWindowDragOut/u);
+    assert.match(docking, /useInfoWindowDragOut/u);
     assert.match(infoDragOutHook, /useRoutedPoppedOutWindowDrag/u);
     assert.match(infoDragOutHook, /onInfoGroupDragEnd,\s*\}/u);
     assert.match(infoDragOutHook, /pointerId: point\.pointerId/u);

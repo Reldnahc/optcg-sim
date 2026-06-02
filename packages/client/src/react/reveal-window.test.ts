@@ -14,7 +14,10 @@ import { RevealWindowHost } from "./RevealWindowHost.js";
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const revealStylesPath = join(sourceDirectory, "styles", "reveal-window.css");
 const mainPath = join(sourceDirectory, "main.tsx");
-const matchAppPath = join(sourceDirectory, "MatchApp.tsx");
+const matchInteractionModalsPath = join(
+  sourceDirectory,
+  "MatchInteractionModals.tsx",
+);
 const revealLayerPath = join(sourceDirectory, "OpponentRevealWindowLayer.tsx");
 
 const card = (imageUrl: string): ClientCardModel => ({
@@ -81,12 +84,12 @@ describe("reveal window", () => {
   });
 
   test("match app renders one reveal window for each active reveal", async () => {
-    const [matchAppSource, revealLayerSource] = await Promise.all([
-      readFile(matchAppPath, "utf8"),
+    const [modalLayerSource, revealLayerSource] = await Promise.all([
+      readFile(matchInteractionModalsPath, "utf8"),
       readFile(revealLayerPath, "utf8"),
     ]);
 
-    assert.match(matchAppSource, /OpponentRevealWindowLayer/u);
+    assert.match(modalLayerSource, /OpponentRevealWindowLayer/u);
     assert.match(revealLayerSource, /windows\s*[\s\S]*\.filter/u);
     assert.match(
       revealLayerSource,

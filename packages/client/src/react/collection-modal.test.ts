@@ -275,7 +275,7 @@ describe("collection modal", () => {
 
   test("clicking the same trash collection toggles the viewer closed", async () => {
     const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+      join(sourceDirectory, "use-match-collection-modal.ts"),
       "utf8",
     );
 
@@ -292,7 +292,7 @@ describe("collection modal", () => {
 
   test("client-side collection viewers remember their last window rectangle", async () => {
     const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+      join(sourceDirectory, "use-match-collection-modal.ts"),
       "utf8",
     );
     const hostSource = await readFile(
@@ -300,7 +300,7 @@ describe("collection modal", () => {
       "utf8",
     );
 
-    assert.match(source, /floatingWindowRects/u);
+    assert.match(source, /activeFloatingWindowRects/u);
     assert.doesNotMatch(source, /useState<\s*Record<string, WindowRect>\s*>/u);
     assert.match(source, /collectionViewerKey/u);
     assert.match(source, /collectionViewerWindowKey/u);
@@ -312,15 +312,15 @@ describe("collection modal", () => {
       source,
       /updateFloatingWindowRect\(collectionViewerWindowKey, rect\)/u,
     );
-    assert.match(source, /initialRect=\{/u);
-    assert.match(source, /onRectChange=\{/u);
+    assert.match(source, /initialRect:/u);
+    assert.match(source, /onRectChange:/u);
     assert.match(hostSource, /onRectChange/u);
     assert.match(hostSource, /initialRect/u);
   });
 
   test("client-side collection viewers remember whether they were open", async () => {
     const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+      join(sourceDirectory, "use-match-collection-modal.ts"),
       "utf8",
     );
     const windowStateHook = await readFile(
@@ -343,7 +343,7 @@ describe("collection modal", () => {
 
   test("match app keeps opponent reveal out of the collection window", async () => {
     const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+      join(sourceDirectory, "MatchInteractionModals.tsx"),
       "utf8",
     );
     const revealViewerSource = await readFile(
@@ -359,16 +359,21 @@ describe("collection modal", () => {
       "utf8",
     );
 
-    assert.match(source, /opponentRevealWindowsFromState/u);
+    const matchAppSource = await readFile(
+      join(sourceDirectory, "MatchApp.tsx"),
+      "utf8",
+    );
+
+    assert.match(matchAppSource, /opponentRevealWindowsFromState/u);
     assert.match(opponentRevealWindowsSource, /opponentRevealsFromEvents/u);
     assert.match(opponentRevealWindowsSource, /title: reveal\.title/u);
     assert.match(revealViewerSource, /Opponent revealed/u);
     assert.match(revealViewerSource, /Revealed/u);
-    assert.match(source, /updateRevealWindowState/u);
+    assert.match(matchAppSource, /updateRevealWindowState/u);
     assert.match(source, /OpponentRevealWindowLayer/u);
     assert.match(revealWindowLayerSource, /RevealWindowHost/u);
     assert.doesNotMatch(source, /opponentRevealModal/u);
-    assert.match(source, /activeRevealWindowState\.minimized/u);
+    assert.match(matchAppSource, /activeRevealWindowState\.minimized/u);
   });
 
   test("collection modal can render selectable decision cards with confirm control", () => {

@@ -122,6 +122,8 @@ describe("card preview window", () => {
       collectionModal,
       decisionModal,
       matchApp,
+      matchInfoWindows,
+      matchInteractionModals,
     ] = await Promise.all([
       readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
       readFile(join(sourceDirectory, "Zone.tsx"), "utf8"),
@@ -129,6 +131,8 @@ describe("card preview window", () => {
       readFile(join(sourceDirectory, "CollectionModalHost.tsx"), "utf8"),
       readFile(join(sourceDirectory, "DecisionModalHost.tsx"), "utf8"),
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "MatchInteractionModals.tsx"), "utf8"),
     ]);
 
     assert.match(boardLayout, /onPreviewCard/u);
@@ -136,12 +140,15 @@ describe("card preview window", () => {
     assert.match(handRow, /onCardPreview/u);
     assert.match(collectionModal, /onPreviewCard/u);
     assert.match(decisionModal, /onPreviewCard/u);
-    assert.match(matchApp, /onMoveOrderedCard=\{client\.moveDecisionCard\}/u);
+    assert.match(
+      matchInteractionModals,
+      /onMoveOrderedCard=\{onMoveOrderedCard\}/u,
+    );
     assert.match(matchApp, /previewHoveredCard/u);
     assert.match(matchApp, /previewControl=/u);
     assert.match(matchApp, /CardPreviewToggle/u);
-    assert.match(matchApp, /CardPreviewWindow/u);
-    assert.match(matchApp, /InfoTabbedWindow/u);
+    assert.match(matchInfoWindows, /CardPreviewWindow/u);
+    assert.match(matchInfoWindows, /InfoTabbedWindow/u);
   });
 
   test("preview toggle controls whether the preview window is open", () => {
@@ -193,8 +200,8 @@ describe("card preview window", () => {
   });
 
   test("closing the preview window closes its normal window state", async () => {
-    const [matchApp, toolbarControls] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+    const [matchInfoWindows, toolbarControls] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
       readFile(
         join(sourceDirectory, "info-window-toolbar-controls.ts"),
         "utf8",
@@ -207,27 +214,28 @@ describe("card preview window", () => {
       toolbarControls,
       /updateFloatingWindowOpen\(cardPreviewWindowKey, false\)/u,
     );
-    assert.match(matchApp, /onClose=\{closeCardPreview\}/u);
+    assert.match(matchInfoWindows, /onClose=\{closeCardPreview\}/u);
   });
 
   test("preview window uses persisted floating window rectangle wiring", async () => {
-    const [matchApp, previewWindow, infoWindowModel] = await Promise.all([
-      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "CardPreviewWindow.tsx"), "utf8"),
-      readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
-    ]);
+    const [matchInfoWindows, previewWindow, infoWindowModel] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "CardPreviewWindow.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "info-window-model.ts"), "utf8"),
+      ]);
 
     assert.match(
       infoWindowModel,
       /const cardPreviewWindowKey = "card-preview";/u,
     );
-    assert.match(matchApp, /cardPreviewWindowKey/u);
+    assert.match(matchInfoWindows, /cardPreviewWindowKey/u);
     assert.match(
-      matchApp,
+      matchInfoWindows,
       /activeFloatingWindowRects\[cardPreviewWindowKey\]\s*\?\?\s*defaultCardPreviewWindowRect/u,
     );
     assert.match(
-      matchApp,
+      matchInfoWindows,
       /updateFloatingWindowRect\(cardPreviewWindowKey, rect\)/u,
     );
     assert.match(previewWindow, /initialRect\?: WindowRect/u);
