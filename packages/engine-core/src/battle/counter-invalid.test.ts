@@ -3,15 +3,15 @@ import { test } from "vitest";
 
 import type { CardInstance, CardRef } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   assertRejectsWithoutMutation,
   cardRef,
@@ -21,7 +21,7 @@ import {
   installSupportedCounterEvent,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 test("useCounter with an Event card fails closed with unsupported Counter Event error and no mutation", () => {
   const { openedState, counterCard } = setupOpenedCounterStepPassDecision();

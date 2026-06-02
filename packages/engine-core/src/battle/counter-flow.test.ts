@@ -3,8 +3,8 @@ import { test } from "vitest";
 
 import type { EffectDefinition, SelectionId } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 type EngineInternalBattleState = NonNullable<
   ReturnType<typeof setupAttackState>["battle"]
 > & { counterPower?: number };
@@ -18,7 +18,7 @@ import {
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   cardRef,
   continuousEffectRecord,
@@ -27,7 +27,7 @@ import {
   resolveNoTriggerLifeDamageDecisionsForTests,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 test("banish attacker with defender Character Counter metadata opens counter-step pass decision", () => {
   const state = setupAttackState();

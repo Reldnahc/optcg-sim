@@ -3,16 +3,16 @@ import { test } from "vitest";
 
 import type { CardInstance, EffectDefinition, SelectionId } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   cardRef,
   ensureActiveDonInCostArea,
   installSupportedCounterEvent,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
-import { computeView } from "./compute-view.js";
+} from "../battle-actions-test-fixtures.js";
+import { computeView } from "../compute-view.js";
 
 type EngineInternalBattleState = NonNullable<
   ReturnType<typeof setupAttackState>["battle"]
