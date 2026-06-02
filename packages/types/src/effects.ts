@@ -147,6 +147,14 @@ export type Cost =
       order: "chooserChoice";
       optional?: boolean;
     }
+  | {
+      type: "modifyPower";
+      target: Target;
+      requiredState?: "active" | "rested";
+      value: number;
+      duration: Duration;
+      optional?: boolean;
+    }
   | { type: "trashSelf" }
   | {
       type: "discard";
@@ -205,6 +213,14 @@ export type OptionalCost =
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
   | { type: "trashSelf"; optional: true }
+  | {
+      type: "modifyPower";
+      target: Target;
+      requiredState?: "active" | "rested";
+      value: number;
+      duration: Duration;
+      optional: true;
+    }
   | {
       type: "turnLifeFaceUp";
       count: number;

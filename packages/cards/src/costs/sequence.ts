@@ -8,6 +8,7 @@ import {
 } from "./rest-don.js";
 import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
+import { parseModifyPowerCost } from "./modify-power.js";
 import { parseRestSelfCost } from "./rest-self.js";
 import { parseReturnDonSequenceCost } from "./return-don.js";
 import { parseTrashFromHandCost } from "./trash-from-hand.js";
@@ -19,6 +20,7 @@ const costParsers = [
   parseTrashSelfCost,
   parseRestDonCost,
   parseMoveCardsCost,
+  parseModifyPowerCost,
   parseTurnLifeFaceUpCost,
   parseTrashFromHandCost,
 ] as const;
@@ -114,6 +116,8 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       };
     case "moveCards":
       return { ...cost, optional: true };
+    case "modifyPower":
+      return { ...cost, optional: true };
   }
 }
 
@@ -157,6 +161,16 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         from: cost.from,
         to: cost.to,
         order: cost.order,
+      };
+    case "modifyPower":
+      return {
+        type: "modifyPower",
+        target: cost.target,
+        ...(cost.requiredState === undefined
+          ? {}
+          : { requiredState: cost.requiredState }),
+        value: cost.value,
+        duration: cost.duration,
       };
   }
 }

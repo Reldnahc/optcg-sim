@@ -55,6 +55,58 @@ it("parses comma-separated return-DON plus hand-trash costs into one optional co
   });
 });
 
+it("parses active leader power reduction as an optional cost before draw", () => {
+  expect(
+    parseCardEffectLine(
+      "[On Play] You may give your active Leader -5000 power during this turn: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "paidCost",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "modifyPower",
+                target: { type: "myLeader" },
+                requiredState: "active",
+                value: -5000,
+                duration: { type: "thisTurn" },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:onPlay",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "cost:modifyPower",
+      "target:yourLeader",
+      "state:active",
+      "modifier:negativePower",
+      "duration:thisTurn",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
 it("parses return-DON cost into temporary keyword grant then hand-trash sequence", () => {
   expect(
     parseCardEffectLine(

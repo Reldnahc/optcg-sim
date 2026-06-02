@@ -14,10 +14,12 @@ import type {
   CardFilter,
   CardSelectionRequest,
   Cost,
+  Duration,
   EffectOption,
   ExactCardinality,
   MultiZoneTargetRequest,
   OptionalCost,
+  Target,
   TargetRequest,
 } from "./effects.js";
 
@@ -41,6 +43,14 @@ export type PaymentOption =
   | { id: string; type: "returnDon"; count: number }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
+  | {
+      id: string;
+      type: "modifyPower";
+      target: Target;
+      requiredState?: "active" | "rested";
+      value: number;
+      duration: Duration;
+    }
   | {
       id: string;
       type: "moveCards";

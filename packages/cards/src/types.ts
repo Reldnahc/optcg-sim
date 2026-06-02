@@ -108,6 +108,7 @@ export type PrimitiveEvidence =
   | "cost:trashFromField"
   | "cost:trashFromHand"
   | "cost:moveCards"
+  | "cost:modifyPower"
   | "cost:returnToOwnerHand"
   | "composition:costSequence"
   | "composition:costedEffect"

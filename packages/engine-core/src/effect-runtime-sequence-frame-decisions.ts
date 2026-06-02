@@ -40,6 +40,10 @@ type TurnLifeFaceUpPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
   { type: "turnLifeFaceUp" }
 >;
+type ModifyPowerPaymentOption = Extract<
+  OptionalPayCostDecision["paymentOptions"][number],
+  { type: "modifyPower" }
+>;
 
 const expandMoveCardsCostRoutes = (
   cost: Extract<OptionalCost, { type: "moveCards" }>,
@@ -146,6 +150,16 @@ const canTurnLifeFaceUp = (
     selected.every((lifeCard) => !lifeCard.faceUp)
   );
 };
+
+const canPayModifyPowerCost = (
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+  option: ModifyPowerPaymentOption,
+): boolean =>
+  option.target.type === "myLeader" &&
+  (option.requiredState === undefined ||
+    player.leader.state === option.requiredState) &&
+  Number.isSafeInteger(option.value) &&
+  option.value !== 0;
 
 export const findSequenceFrameByDecisionId = (
   state: GameState,
@@ -592,6 +606,19 @@ export const getSequencePayCostLegalActions = (
       }
       continue;
     }
+    if (option.type === "modifyPower") {
+      if (canPayModifyPowerCost(player, option)) {
+        legalPayments.push({
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+          },
+        });
+      }
+      continue;
+    }
     if (option.type === "restDon" || option.type === "returnDon") {
       const selectableDonIds =
         option.type === "returnDon"
@@ -639,7 +666,8 @@ export const getSequenceOptionalPayCostOptions = (
         | "trashFromHand"
         | "trashFromField"
         | "moveCards"
-        | "turnLifeFaceUp";
+        | "turnLifeFaceUp"
+        | "modifyPower";
     }
   >
 > => {
@@ -655,7 +683,8 @@ export const getSequenceOptionalPayCostOptions = (
           | "trashFromHand"
           | "trashFromField"
           | "moveCards"
-          | "turnLifeFaceUp";
+          | "turnLifeFaceUp"
+          | "modifyPower";
       }
     >
   > = [];
@@ -749,6 +778,25 @@ export const getSequenceOptionalPayCostOptions = (
     if (
       currentPlayer !== undefined &&
       canTurnLifeFaceUp(currentPlayer, option)
+    ) {
+      paymentOptions.push(option);
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "modifyPower") {
+    const option: ModifyPowerPaymentOption = {
+      id: "modifyPower:myLeader",
+      type: "modifyPower",
+      target: cost.target,
+      ...(cost.requiredState === undefined
+        ? {}
+        : { requiredState: cost.requiredState }),
+      value: cost.value,
+      duration: cost.duration,
+    };
+    if (
+      currentPlayer !== undefined &&
+      canPayModifyPowerCost(currentPlayer, option)
     ) {
       paymentOptions.push(option);
     }

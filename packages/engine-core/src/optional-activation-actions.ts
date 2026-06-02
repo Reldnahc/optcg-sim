@@ -3,12 +3,10 @@ import type {
   CardFilter,
   CardInstance,
   CardRef,
-  EngineError,
   EngineEvent,
   EngineResult,
   GameState,
   LegalAction,
-  PaymentOption,
   PlayerId,
   PlayerState,
   QueueEntryId,
@@ -23,7 +21,13 @@ import {
   zonesEqual,
 } from "./action-state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
+import { selectedFieldTrashSourceZone } from "./effect-runtime-field-trash-payment.js";
 import { applyTurnLifeFaceUpPayment } from "./effect-runtime-life-face-up-cost.js";
+import { applyModifyPowerPayment } from "./effect-runtime-modify-power-cost.js";
+import {
+  isSupportedMoveCardsPaymentRoute,
+  type MoveCardsPaymentOption,
+} from "./effect-runtime-move-cards-payment.js";
 import { restSourceCard } from "./effect-runtime-rest-self-cost.js";
 import {
   processEffectRuntimeAfterOptionalActivationAccept,
@@ -43,34 +47,7 @@ import {
   getReturnDonEligibleInstanceIds,
 } from "./effect-runtime-return-don.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
-
-const invalidDecision = (reason: string): readonly [EngineError] => [
-  { type: "invalidDecisionResponse", reason },
-];
-
-type MoveCardsPaymentOption = Extract<PaymentOption, { type: "moveCards" }>;
-
-const isSupportedMoveCardsPaymentRoute = (
-  option: MoveCardsPaymentOption,
-): boolean => {
-  if (option.from.player !== "self" || option.to.player !== "self") {
-    return false;
-  }
-  if (
-    option.from.zone === "trash" &&
-    option.from.position === undefined &&
-    option.to.zone === "deck" &&
-    option.to.position === "bottom"
-  ) {
-    return true;
-  }
-  return (
-    option.from.zone === "life" &&
-    (option.from.position === "top" || option.from.position === "bottom") &&
-    option.to.zone === "hand" &&
-    option.to.position === undefined
-  );
-};
+import { invalidDecision } from "./engine-error-helpers.js";
 
 const applyMoveCardsPayment = (params: {
   decisionId: NonNullable<GameState["pendingDecision"]>["id"];
@@ -279,25 +256,6 @@ const fieldTrashCandidates = (player: PlayerState): readonly CardInstance[] => [
   ...(player.stage === undefined ? [] : [player.stage]),
 ];
 
-const selectedFieldTrashSourceZone = (
-  selectedCards: readonly CardInstance[],
-): "characterArea" | "stageArea" | null => {
-  const sourceZones = new Set(
-    selectedCards.map((card) =>
-      card.zone.zone === "characterArea" || card.zone.zone === "stageArea"
-        ? card.zone.zone
-        : null,
-    ),
-  );
-  if (sourceZones.size !== 1) {
-    return null;
-  }
-  const sourceZone = [...sourceZones][0];
-  return sourceZone === "characterArea" || sourceZone === "stageArea"
-    ? sourceZone
-    : null;
-};
-
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -331,6 +289,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "returnDon" &&
         decision.cost.type !== "moveCards" &&
         decision.cost.type !== "turnLifeFaceUp" &&
+        decision.cost.type !== "modifyPower" &&
         decision.cost.type !== "trashFromHand" &&
         decision.cost.type !== "chooseOne")
     ) {
@@ -344,6 +303,7 @@ export const applyOptionalActivationDecisionResponse = (
     const events: EngineEvent[] = [];
     let paidCost = false;
     let nextPlayer = player;
+    let nextContinuousEffects = state.continuousEffects;
     if (action.response.type === "payment") {
       const paymentResponse = action.response;
       const selectedOption = decision.paymentOptions.find(
@@ -393,6 +353,11 @@ export const applyOptionalActivationDecisionResponse = (
             optionId: "turnLifeFaceUp";
             count: number;
             position: "top" | "bottom";
+          }
+        | {
+            playerId: PlayerId;
+            optionId: "modifyPower";
+            value: number;
           };
       if (selectedOption.type === "moveCards") {
         if (!isSupportedMoveCardsPaymentRoute(selectedOption)) {
@@ -482,6 +447,37 @@ export const applyOptionalActivationDecisionResponse = (
           count: selectedOption.count,
           position: selectedOption.position,
         };
+      } else if (selectedOption.type === "modifyPower") {
+        const paidPowerCost = applyModifyPowerPayment({
+          causedBy: decision.causedBy,
+          player,
+          playerId: decision.playerId,
+          ...(paymentResponse.selectedCardInstanceIds === undefined
+            ? {}
+            : {
+                selectedCardInstanceIds:
+                  paymentResponse.selectedCardInstanceIds,
+              }),
+          ...(paymentResponse.selectedDonInstanceIds === undefined
+            ? {}
+            : {
+                selectedDonInstanceIds: paymentResponse.selectedDonInstanceIds,
+              }),
+          selectedOption,
+          state,
+        });
+        if (paidPowerCost === null) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment power modification is unsupported."),
+          );
+        }
+        nextContinuousEffects = [
+          ...nextContinuousEffects,
+          ...paidPowerCost.continuousEffects,
+        ];
+        costPaidPayload = paidPowerCost.costPaidPayload;
       } else if (
         selectedOption.type === "trashFromHand" ||
         selectedOption.type === "trashFromField"
@@ -835,6 +831,7 @@ export const applyOptionalActivationDecisionResponse = (
       seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
       players: { ...state.players, [decision.playerId]: nextPlayer },
+      continuousEffects: nextContinuousEffects,
       eventJournal: [...state.eventJournal, ...events],
     };
     delete nextState.pendingDecision;

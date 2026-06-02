@@ -177,6 +177,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { ...cost, optional: true };
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
+    case "modifyPower":
+      return { ...cost, optional: true };
     case "sequence":
     case "discard":
     case "custom":
@@ -381,6 +383,14 @@ const isSupportedPayCostSegment = (
   if (cost.type === "turnLifeFaceUp") {
     return (
       cost.player === "self" && Number.isInteger(cost.count) && cost.count > 0
+    );
+  }
+  if (cost.type === "modifyPower") {
+    return (
+      cost.target.type === "myLeader" &&
+      Number.isSafeInteger(cost.value) &&
+      cost.value !== 0 &&
+      isSupportedSequenceContinuousDuration(cost.duration)
     );
   }
   return (
