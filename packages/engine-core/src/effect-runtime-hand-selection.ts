@@ -23,7 +23,7 @@ import {
   isSupportedHandSelectionCardFilter,
   toCardRef,
   zonesEqual,
-} from "./action-state.js";
+} from "./actions/state.js";
 import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence/frames.js";
 
 type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;

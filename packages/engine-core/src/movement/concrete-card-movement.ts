@@ -9,7 +9,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent } from "../action-results.js";
-import { reindexZoneCards } from "../action-state.js";
+import { reindexZoneCards } from "../actions/state.js";
 
 export const KO_TRASH_MOVEMENT_REASON = "ko";
 

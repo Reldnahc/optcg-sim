@@ -12,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
-import { toCardRef, zonesEqual } from "../action-state.js";
+import { toCardRef, zonesEqual } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import {

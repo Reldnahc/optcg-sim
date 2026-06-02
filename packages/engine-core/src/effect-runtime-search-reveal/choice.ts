@@ -6,7 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toStateSeq } from "../action-results.js";
-import { cardMatchesSearchFilter } from "../action-state.js";
+import { cardMatchesSearchFilter } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   createSearchRevealOrderCardsDecision,

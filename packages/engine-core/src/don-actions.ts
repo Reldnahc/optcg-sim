@@ -15,7 +15,11 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { isMatchActive, targetMatchesCard, toCardRef } from "./action-state.js";
+import {
+  isMatchActive,
+  targetMatchesCard,
+  toCardRef,
+} from "./actions/state.js";
 import { assertGameStateInvariants } from "./state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rules/rule-processing.js";
 

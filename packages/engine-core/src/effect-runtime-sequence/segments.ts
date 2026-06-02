@@ -11,7 +11,7 @@ import type {
   SequenceSegmentResult,
 } from "@optcg/types";
 
-import { toCardRef } from "../action-state.js";
+import { toCardRef } from "../actions/state.js";
 import { appendEvent, toStateSeq } from "../action-results.js";
 import {
   executeDrawPrimitiveForResolvedQuantity,

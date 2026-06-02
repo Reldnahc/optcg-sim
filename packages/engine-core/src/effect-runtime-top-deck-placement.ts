@@ -20,7 +20,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reorderDeckSlice, zonesEqual } from "./action-state.js";
+import { reorderDeckSlice, zonesEqual } from "./actions/state.js";
 import { resolvePlayerId } from "./runtime/primitives/execute.js";
 
 type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;

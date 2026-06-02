@@ -7,14 +7,14 @@ import type { CardFilter } from "@optcg/types";
 import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
-} from "./action-state.js";
+} from "./state.js";
 import {
   createActiveState,
   must,
   p1,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 
 test("hand-selection filters support separated anyOf type and attribute alternatives with shared suffix filters", () => {
   const filter: CardFilter = {

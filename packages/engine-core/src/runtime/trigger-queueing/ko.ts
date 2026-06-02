@@ -20,7 +20,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
-import { zonesEqual } from "../../action-state.js";
+import { zonesEqual } from "../../actions/state.js";
 import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
 import { isSupportedEffectResolvedCustomDrawEffect } from "../primitives/execute.js";
 import type {

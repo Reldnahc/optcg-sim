@@ -11,7 +11,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toStateSeq } from "../action-results.js";
-import { getOpponentId } from "../action-state.js";
+import { getOpponentId } from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import {
   executeSelectedTargetEffectPrimitive,

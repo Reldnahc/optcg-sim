@@ -9,7 +9,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent } from "../../action-results.js";
-import { cardMatchesHandSelectionFilter } from "../../action-state.js";
+import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
 
 export type AttachDonPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],

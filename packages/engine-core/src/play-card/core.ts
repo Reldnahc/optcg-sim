@@ -21,7 +21,7 @@ import {
   isMatchActive,
   targetMatchesCard,
   zonesEqual,
-} from "../action-state.js";
+} from "../actions/state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getPlayCardPendingDecisionLegalActions,

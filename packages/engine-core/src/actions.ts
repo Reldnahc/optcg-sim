@@ -7,7 +7,7 @@ import type {
 } from "@optcg/types";
 
 import { illegalAction, toEngineResult } from "./action-results.js";
-import { isMatchActive } from "./action-state.js";
+import { isMatchActive } from "./actions/state.js";
 import {
   applyBattleDecisionResponse,
   continueAttackTimingDecisionResultIfReady,

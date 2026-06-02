@@ -15,7 +15,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { canConcede, getOpponentId, isMatchActive } from "../action-state.js";
+import { canConcede, getOpponentId, isMatchActive } from "../actions/state.js";
 import { processEffectRuntime } from "../effect-runtime.js";
 import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
 import { assertGameStateInvariants } from "../state/invariants.js";

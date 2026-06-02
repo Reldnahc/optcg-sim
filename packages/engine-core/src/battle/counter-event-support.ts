@@ -12,7 +12,7 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { reifyCardRef } from "../action-state.js";
+import { reifyCardRef } from "../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 

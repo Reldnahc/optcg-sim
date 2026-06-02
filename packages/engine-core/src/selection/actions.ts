@@ -11,7 +11,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
-import { zonesEqual } from "../action-state.js";
+import { zonesEqual } from "../actions/state.js";
 import {
   continueSelectedTargetEffect,
   resolveImplementedDslEffectDefinition,

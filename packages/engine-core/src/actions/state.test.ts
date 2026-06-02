@@ -3,8 +3,8 @@ import { test } from "vitest";
 
 import type { CardId, CardInstance, PlayerId } from "@optcg/types";
 
-import { reorderDeckSlice } from "./action-state.js";
-import { must } from "./action-test-fixtures.js";
+import { must } from "../action-test-fixtures.js";
+import { reorderDeckSlice } from "./state.js";
 
 const p1 = "p1" as PlayerId;
 

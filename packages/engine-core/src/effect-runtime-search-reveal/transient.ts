@@ -1,6 +1,6 @@
 import type { EffectQueueEntry, GameState } from "@optcg/types";
 
-import { cardMatchesSearchFilter } from "../action-state.js";
+import { cardMatchesSearchFilter } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   failClosed,

@@ -31,7 +31,7 @@ import {
   addCardsToHand,
   reifyCardRef,
   reindexZoneCards,
-} from "../action-state.js";
+} from "../actions/state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   expireBattleDurationStateForCleanup,

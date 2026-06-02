@@ -21,7 +21,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
-import { getOpponentId } from "../../action-state.js";
+import { getOpponentId } from "../../actions/state.js";
 import {
   KO_TRASH_MOVEMENT_REASON,
   moveConcreteCardsToTrash,

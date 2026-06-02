@@ -1,6 +1,6 @@
 import type { CardInstance, PlayerId, PlayerState } from "@optcg/types";
 
-import { reindexZoneCards } from "../../action-state.js";
+import { reindexZoneCards } from "../../actions/state.js";
 
 type DonHost = { kind: "leader" } | { kind: "character"; index: number };
 

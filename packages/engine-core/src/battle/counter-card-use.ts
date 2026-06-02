@@ -23,7 +23,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { reifyCardRef } from "../action-state.js";
+import { reifyCardRef } from "../actions/state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import { getUnsupportedCombatViewMetadataReason } from "./combat-view-support.js";
 import {

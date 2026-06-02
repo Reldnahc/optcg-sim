@@ -18,7 +18,7 @@ import {
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
-import { isMatchActive, zonesEqual } from "../../action-state.js";
+import { isMatchActive, zonesEqual } from "../../actions/state.js";
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,

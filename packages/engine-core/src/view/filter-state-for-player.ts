@@ -19,7 +19,7 @@ import type {
 } from "@optcg/types";
 
 import { getLegalActions } from "../actions.js";
-import { toCardRef, zonesEqual } from "../action-state.js";
+import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
   isEventVisibleToPlayer,
   isVisibleToPlayer,

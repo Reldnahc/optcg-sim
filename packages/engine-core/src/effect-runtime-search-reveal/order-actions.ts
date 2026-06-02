@@ -15,7 +15,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { reindexZoneCards, zonesEqual } from "../action-state.js";
+import { reindexZoneCards, zonesEqual } from "../actions/state.js";
 import { hasSequenceFrameForDecision } from "../effect-runtime-sequence/frame-decisions.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [

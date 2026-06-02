@@ -12,7 +12,7 @@ import type {
   Zone,
 } from "@optcg/types";
 
-import { getOpponentId, toCardRef } from "../action-state.js";
+import { getOpponentId, toCardRef } from "../actions/state.js";
 import { computeView } from "../view/compute-view.js";
 
 export type TargetCandidateResolutionErrorReason =

@@ -17,7 +17,7 @@ import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
-} from "../action-state.js";
+} from "../actions/state.js";
 import {
   getReturnDonEligibleCount,
   getReturnDonEligibleInstanceIds,

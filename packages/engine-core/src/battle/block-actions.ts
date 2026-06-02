@@ -17,7 +17,7 @@ import {
   toDecisionId,
   toEngineResult,
 } from "../action-results.js";
-import { reifyCardRef, toCardRef } from "../action-state.js";
+import { reifyCardRef, toCardRef } from "../actions/state.js";
 import { hasUnsupportedBattleEffectMetadata, sameCardRef } from "./support.js";
 import { hasUnsupportedCounterWindow } from "./counter-actions.js";
 import { computeView } from "../view/compute-view.js";

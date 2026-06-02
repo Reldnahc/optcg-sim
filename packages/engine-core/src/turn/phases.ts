@@ -12,7 +12,7 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
-import { isMatchActive } from "../action-state.js";
+import { isMatchActive } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   detectPendingRuntimeWork,

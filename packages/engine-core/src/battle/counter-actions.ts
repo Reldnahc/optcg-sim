@@ -13,7 +13,7 @@ import {
   toDecisionId,
   toEngineResult,
 } from "../action-results.js";
-import { reifyCardRef } from "../action-state.js";
+import { reifyCardRef } from "../actions/state.js";
 import { getUnsupportedDamageStepContinuationReason } from "./damage-step-continuation.js";
 import {
   parseCounterPayCostDecisionId,

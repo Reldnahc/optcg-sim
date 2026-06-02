@@ -16,7 +16,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { reindexZoneCards, toCardRef } from "../action-state.js";
+import { reindexZoneCards, toCardRef } from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { getCharacterOverflowDecisionId } from "./legal-actions.js";

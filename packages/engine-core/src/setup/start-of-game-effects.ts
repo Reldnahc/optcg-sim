@@ -20,7 +20,7 @@ import {
   reindexZoneCards,
   toCardRef,
   zonesEqual,
-} from "../action-state.js";
+} from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";

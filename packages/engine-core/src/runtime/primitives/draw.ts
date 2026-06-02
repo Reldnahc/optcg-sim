@@ -20,7 +20,7 @@ import {
   addCardsToHand,
   getOpponentId,
   reindexZoneCards,
-} from "../../action-state.js";
+} from "../../actions/state.js";
 
 export type DrawExecutionFailureReason =
   | "unsupported-effect-shape"

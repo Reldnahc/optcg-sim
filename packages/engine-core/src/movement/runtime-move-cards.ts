@@ -12,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { toEngineResult, toStateSeq } from "../action-results.js";
-import { addCardsToHand, reindexZoneCards } from "../action-state.js";
+import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 

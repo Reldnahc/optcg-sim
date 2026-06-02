@@ -14,7 +14,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
-import { getOpponentId } from "../../action-state.js";
+import { getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
 import type {

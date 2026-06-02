@@ -15,7 +15,7 @@ import {
   cardMatchesHandSelectionFilter,
   getOpponentId,
   toCardRef,
-} from "../action-state.js";
+} from "../actions/state.js";
 import { appendEvent } from "../action-results.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { computeView } from "../view/compute-view.js";

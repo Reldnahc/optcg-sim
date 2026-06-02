@@ -21,7 +21,7 @@ import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
   zonesEqual,
-} from "../../action-state.js";
+} from "../../actions/state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";

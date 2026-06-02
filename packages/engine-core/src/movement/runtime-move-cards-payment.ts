@@ -8,7 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent } from "../action-results.js";
-import { addCardsToHand, reindexZoneCards } from "../action-state.js";
+import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
 
 export type MoveCardsPaymentOption = Extract<
   PaymentOption,

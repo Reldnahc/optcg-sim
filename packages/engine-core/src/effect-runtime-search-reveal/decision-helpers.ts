@@ -9,7 +9,7 @@ import type {
 } from "@optcg/types";
 
 import { toDecisionId } from "../action-results.js";
-import { isSupportedSearchCardFilter, zonesEqual } from "../action-state.js";
+import { isSupportedSearchCardFilter, zonesEqual } from "../actions/state.js";
 import { toCardRefForPlayer } from "./remainder.js";
 import type { EngineInternalTransientCardSet } from "./types.js";
 

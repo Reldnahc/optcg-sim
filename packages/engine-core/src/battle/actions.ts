@@ -24,7 +24,7 @@ import {
   isMatchActive,
   reifyCardRef,
   toCardRef,
-} from "../action-state.js";
+} from "../actions/state.js";
 import {
   withAllAttackTimingCombatMetadataHidden,
   withAllSupportedAttackTimingCombatMetadataHidden,

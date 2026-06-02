@@ -17,7 +17,7 @@ import {
   cardMatchesSearchFilter,
   reindexZoneCards,
   zonesEqual,
-} from "../action-state.js";
+} from "../actions/state.js";
 import {
   createSearchRevealOrderCardsDecision,
   hasSupportedDeckBottomRemainingCardsPolicy,

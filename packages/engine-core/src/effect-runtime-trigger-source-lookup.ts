@@ -7,7 +7,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { zonesEqual } from "./action-state.js";
+import { zonesEqual } from "./actions/state.js";
 
 export const findCardInstance = (
   state: GameState,

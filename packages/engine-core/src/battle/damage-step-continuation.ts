@@ -1,6 +1,6 @@
 import type { GameState, ResolvedCard } from "@optcg/types";
 
-import { reifyCardRef } from "../action-state.js";
+import { reifyCardRef } from "../actions/state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   getUnsupportedBattleEffectMetadataReason,
