@@ -10,7 +10,7 @@ const readSource = (path: string): string =>
 
 test("trash front doors delegate concrete movement to the shared zone movement helper", () => {
   const frontDoors = [
-    "packages/engine-core/src/effect-runtime-move-cards.ts",
+    "packages/engine-core/src/movement/runtime-move-cards.ts",
     "packages/engine-core/src/effect-runtime-trash-from-hand.ts",
     "packages/engine-core/src/effect-runtime-target-ko-primitives.ts",
   ];
@@ -106,7 +106,7 @@ test("search reveal trash remainder delegates concrete movement", () => {
 
 test("life trigger cleanup delegates concrete movement", () => {
   const source = readSource(
-    "packages/engine-core/src/effect-runtime-life-trigger-cleanup.ts",
+    "packages/engine-core/src/movement/life-trigger-cleanup.ts",
   );
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);
