@@ -6,7 +6,7 @@ import {
   advanceDonPhase,
   advanceDrawPhase,
   advanceRefreshPhase,
-} from "./phases.js";
+} from "./turn/phases.js";
 import { createActiveState, p1, p2 } from "./action-test-fixtures.js";
 import { makeMainPhaseLegalActionState } from "./action-dispatcher-test-support.js";
 

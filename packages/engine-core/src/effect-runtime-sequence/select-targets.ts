@@ -26,7 +26,7 @@ import {
   toSupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./support.js";
-import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type ContinuousResolvedEffect = Extract<

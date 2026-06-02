@@ -15,7 +15,7 @@ import type {
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
-import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 interface PendingReplacementRestInsteadPayload {
   decisionId: string;

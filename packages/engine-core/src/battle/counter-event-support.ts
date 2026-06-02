@@ -14,7 +14,7 @@ import type {
 
 import { reifyCardRef } from "../action-state.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
-import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 export interface SupportedCounterEventPower {
   effectCost?: Extract<OptionalCost, { type: "trashFromHand" }>;

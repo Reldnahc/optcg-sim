@@ -18,7 +18,7 @@ import {
   targetSelectionQueueState,
   mixedOrderedDrawThenTargetState,
 } from "./test-support.js";
-import { advanceEndPhase, advanceRefreshPhase } from "../phases.js";
+import { advanceEndPhase, advanceRefreshPhase } from "../turn/phases.js";
 
 const removeFieldCardsFromHands = (state: {
   players: Record<

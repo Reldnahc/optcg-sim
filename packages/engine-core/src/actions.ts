@@ -26,14 +26,14 @@ import {
 import {
   applySelectTargetsDecisionResponse,
   getSelectTargetsLegalActions,
-} from "./target-selection-actions.js";
+} from "./selection/actions.js";
 import {
   detectPendingRuntimeWork,
   finalizeSelectedTargetEffectResolution,
   resumePlaySourceOverflowDecision,
 } from "./effect-runtime.js";
-import { getReplacementDecisionLegalActions } from "./replacement-decision-actions.js";
-import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement-rest-target-actions.js";
+import { getReplacementDecisionLegalActions } from "./replacement/decision-actions.js";
+import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement/rest-target-actions.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
   resumeSequenceFrameAfterPlaySelectedOverflow,
@@ -42,11 +42,11 @@ import {
 import {
   applyLifeTriggerDecisionResponse,
   getLifeTriggerLegalActions,
-} from "./life-trigger-actions.js";
+} from "./life-trigger/actions.js";
 import {
   applyOptionalActivationDecisionResponse,
   getOptionalActivationLegalActions,
-} from "./optional-activation-actions.js";
+} from "./runtime/optional-activation/actions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
 import {
   applySearchRevealOrderResponse,
@@ -73,8 +73,8 @@ import {
   applyConcede,
   applyEndMainPhase,
   getTurnLegalActions,
-} from "./turn-actions.js";
-import { advanceEndPhase } from "./phases.js";
+} from "./turn/actions.js";
+import { advanceEndPhase } from "./turn/phases.js";
 import {
   applyActivateMainAction,
   getActivateMainLegalActions,
@@ -95,7 +95,7 @@ import {
 import {
   applyChooseReplacementDecisionResponse,
   getChooseReplacementLegalActions,
-} from "./replacement-choice-actions.js";
+} from "./replacement/choice-actions.js";
 
 const getSetupStartOfGameLegalActions = (
   state: GameState,

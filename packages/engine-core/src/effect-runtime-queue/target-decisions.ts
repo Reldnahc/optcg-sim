@@ -41,7 +41,7 @@ import {
   toOncePerTurnKey,
 } from "../once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
-import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 export type EffectQueuePendingRuntimeWork = {
   kind: "effectQueue";

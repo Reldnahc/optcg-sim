@@ -30,7 +30,7 @@ import {
   queueingState,
   setupOnPlayDefinition,
 } from "./runtime/trigger-queueing/test-support.js";
-import { getSupportedLifeTriggerDecision } from "./life-trigger-actions.js";
+import { getSupportedLifeTriggerDecision } from "./life-trigger/actions.js";
 import { reviewedOnPlayDrawDefinition } from "./action-test-fixtures.js";
 
 const repoRoot = path.resolve(

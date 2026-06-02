@@ -26,7 +26,7 @@ import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-pro
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
-} from "../life-trigger-actions.js";
+} from "../life-trigger/actions.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
 

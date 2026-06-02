@@ -69,7 +69,7 @@ import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
   registerLifeTriggerDamageContinuationResolver,
-} from "../life-trigger-actions.js";
+} from "../life-trigger/actions.js";
 import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
 
 const unsupportedBattleResolution = (

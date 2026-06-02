@@ -17,7 +17,7 @@ import { isSupportedLifeTopToHandEffect } from "../effect-runtime-move-cards.js"
 import {
   resolvePublicTargetCandidates,
   resolvePublicTargetCandidatesForRequest,
-} from "../target-selection.js";
+} from "../selection/candidates.js";
 import { isOncePerTurnUsed, toOncePerTurnKey } from "../once-per-turn.js";
 
 export type SelectedTargetKoReplacementDetectionFailureReason =

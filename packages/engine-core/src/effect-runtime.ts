@@ -33,12 +33,12 @@ export {
   applyReplacementRestTargetDecisionResponse,
   getReplacementRestTargetLegalActions,
   isReplacementRestTargetsDecision,
-} from "./replacement-rest-target-decision.js";
+} from "./replacement/rest-target-decision.js";
 export {
   applyReplacementTrashFromHandDecisionResponse,
   getReplacementTrashFromHandLegalActions,
   isReplacementTrashFromHandDecision,
-} from "./replacement-trash-from-hand-actions.js";
+} from "./replacement/trash-from-hand-actions.js";
 export type {
   BattleKOTriggerCandidate,
   DetectBattleKOTriggerCandidatesResult,

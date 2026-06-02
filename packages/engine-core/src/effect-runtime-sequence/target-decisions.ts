@@ -16,7 +16,7 @@ import {
   stateWithPausedSequenceFrame,
 } from "./frame-decisions.js";
 import type { SegmentLedgers, SequenceFrameRunResult } from "./runner.js";
-import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 type ContinuousResolvedEffect = Extract<
   Effect,

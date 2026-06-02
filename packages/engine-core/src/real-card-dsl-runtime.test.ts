@@ -20,7 +20,7 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { targetSelectionQueueState } from "./effect-runtime-queue/test-support.js";
-import { enterMainPhase } from "./phases.js";
+import { enterMainPhase } from "./turn/phases.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,

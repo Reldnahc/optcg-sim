@@ -20,7 +20,7 @@ export {
   advanceEndPhase,
   advanceRefreshPhase,
   enterMainPhase,
-} from "./phases.js";
+} from "./turn/phases.js";
 export {
   applyAction,
   getLegalActions,
