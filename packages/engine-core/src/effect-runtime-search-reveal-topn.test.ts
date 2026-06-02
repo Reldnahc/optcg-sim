@@ -20,7 +20,7 @@ import {
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
-import { toCardRefForPlayer } from "./effect-runtime-search-reveal-remainder.js";
+import { toCardRefForPlayer } from "./effect-runtime-search-reveal/remainder.js";
 import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
 import {
   processEffectRuntime,

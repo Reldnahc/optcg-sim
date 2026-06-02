@@ -88,7 +88,7 @@ test("counter card trash front door delegates concrete movement", () => {
 
 test("search reveal trash remainder delegates concrete movement", () => {
   const source = readSource(
-    "packages/engine-core/src/effect-runtime-search-reveal-remainder.ts",
+    "packages/engine-core/src/effect-runtime-search-reveal/remainder.ts",
   );
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);

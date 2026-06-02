@@ -211,6 +211,11 @@ Preserve these package boundaries:
 - Do not create new large multi-responsibility files while fixing old ones. If a
   new helper starts accumulating unrelated branches, split it before it becomes
   the next lint-limit problem.
+- When decomposing one large module into several private implementation files,
+  place those files in a named folder for that subsystem and keep the original
+  module path as the public barrel when existing callers use it. Do not scatter
+  decomposition siblings across the package root unless they are genuinely
+  shared package-level concepts.
 - Tests are part of the change, not a follow-up task.
 - Prettier formatting and ESLint compliance are required, not optional.
 

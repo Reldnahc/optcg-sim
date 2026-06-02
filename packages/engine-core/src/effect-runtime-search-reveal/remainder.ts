@@ -9,8 +9,8 @@ import type {
   SelectCardsDecision,
 } from "@optcg/types";
 
-import { toDecisionId } from "./action-results.js";
-import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
+import { toDecisionId } from "../action-results.js";
+import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type SearchRemainingCardsPolicyCarrier = {

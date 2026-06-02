@@ -8,10 +8,10 @@ import type {
   SelectCardsDecision,
 } from "@optcg/types";
 
-import { toDecisionId } from "./action-results.js";
-import { isSupportedSearchCardFilter, zonesEqual } from "./action-state.js";
-import { toCardRefForPlayer } from "./effect-runtime-search-reveal-remainder.js";
-import type { EngineInternalTransientCardSet } from "./effect-runtime-search-reveal-types.js";
+import { toDecisionId } from "../action-results.js";
+import { isSupportedSearchCardFilter, zonesEqual } from "../action-state.js";
+import { toCardRefForPlayer } from "./remainder.js";
+import type { EngineInternalTransientCardSet } from "./types.js";
 
 export const revealIdForEntry = (entry: EffectQueueEntry): string =>
   `reveal:search-reveal:${String(entry.id)}`;

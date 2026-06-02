@@ -51,7 +51,7 @@ import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-searc
 import {
   applySearchRevealOrderResponse,
   getSearchRevealDecisionLegalActions,
-} from "./effect-runtime-search-reveal-order-actions.js";
+} from "./effect-runtime-search-reveal/order-actions.js";
 import {
   applySearchRevealSequenceChoiceResponse,
   applySequenceSelectCardsChoiceResponse,
