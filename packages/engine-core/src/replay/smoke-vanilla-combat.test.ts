@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { loadFixtureV2, replayScenario } from "./replay-smoke-test-support.js";
+import { loadFixtureV2, replayScenario } from "./smoke-test-support.js";
 
 test("replay smoke fixture reproduces expected hashes for vanilla Leader damage, Character K.O., and terminal defeats", () => {
   const fixture = loadFixtureV2();

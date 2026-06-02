@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { loadFixtureV1, replayFixtureV1 } from "./replay-smoke-test-support.js";
+import { loadFixtureV1, replayFixtureV1 } from "./smoke-test-support.js";
 
 test("ENG-002F replay smoke fixture reproduces expected checkpoint and final hashes", () => {
   const fixture = loadFixtureV1();

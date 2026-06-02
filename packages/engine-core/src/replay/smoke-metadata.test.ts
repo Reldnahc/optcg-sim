@@ -6,7 +6,7 @@ import {
   loadFixtureV1,
   loadFixtureV2,
   loadPlayCardFixture,
-} from "./replay-smoke-test-support.js";
+} from "./smoke-test-support.js";
 
 test("ENG-002F fixture rejects timestamp-like and transport-only metadata keys", () => {
   const fixture = loadFixtureV1();

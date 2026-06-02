@@ -12,7 +12,7 @@ import {
   replayFixtureV1,
   replayPlayCardScenario,
   replayScenario,
-} from "./replay-smoke-test-support.js";
+} from "./smoke-test-support.js";
 
 test("ENG-002F action-script drift changes final hash from fixture expectation", () => {
   const fixture = loadFixtureV1();

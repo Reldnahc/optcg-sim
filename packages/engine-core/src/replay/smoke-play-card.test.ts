@@ -5,7 +5,7 @@ import {
   assertPlayCardFinalState,
   loadPlayCardFixture,
   replayPlayCardScenario,
-} from "./replay-smoke-test-support.js";
+} from "./smoke-test-support.js";
 
 test("ENG-005C/ENG-006 replay smoke fixture reproduces paid Character, Stage replacement, Character overflow, and Event play hashes", () => {
   const fixture = loadPlayCardFixture();

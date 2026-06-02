@@ -14,11 +14,11 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { createInitialState } from "./initial-state.js";
-import { assertGameStateInvariants } from "./invariants.js";
-import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
+import { applyAction } from "../actions.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { createInitialState } from "../initial-state.js";
+import { assertGameStateInvariants } from "../invariants.js";
+import { respondToMulliganDecision, startMulliganFlow } from "../mulligan.js";
 
 export const toCardId = (value: string): CardId => value as CardId;
 const toMatchId = (value: string): MatchId => value as MatchId;
@@ -165,15 +165,15 @@ type ReplaySetupFixture = Pick<
 
 const fixturePathV2 = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../../fixtures/replays/eng-003e-vanilla-combat.local.json",
+  "../../../../fixtures/replays/eng-003e-vanilla-combat.local.json",
 );
 const fixturePathEng005C = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../../fixtures/replays/eng-005c-play-card.local.json",
+  "../../../../fixtures/replays/eng-005c-play-card.local.json",
 );
 const fixturePathV1 = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../../fixtures/replays/eng-002-smoke.local.json",
+  "../../../../fixtures/replays/eng-002-smoke.local.json",
 );
 
 const forbiddenFixtureKeyPatterns = [
