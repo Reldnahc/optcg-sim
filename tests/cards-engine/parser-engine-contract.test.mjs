@@ -16,14 +16,14 @@ import { isSupportedQueuedEffectConditionShape } from "../../packages/engine-cor
 import {
   isSupportedQueuedAutoSequenceForEntryPoint,
   isSupportedSequenceBlock,
-} from "../../packages/engine-core/src/effect-runtime-sequence-support.ts";
+} from "../../packages/engine-core/src/effect-runtime-sequence/support.ts";
 import { createSupportedSearchRevealTransientSet } from "../../packages/engine-core/src/effect-runtime-search-reveal.ts";
 import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/runtime/trigger-queueing/attack.ts";
 import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/runtime/trigger-queueing/ko.ts";
 import {
   createActiveState,
   queueDrawForP1,
-} from "../../packages/engine-core/src/effect-runtime-queue-processing-test-support.ts";
+} from "../../packages/engine-core/src/effect-runtime-queue/test-support.ts";
 
 const parseSupportedEffectBlock = (text, evidence = []) => {
   const parsed = parseCardEffectLine(text);
