@@ -9,17 +9,14 @@ import type {
   TargetRequest,
 } from "@optcg/types";
 
-import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
-import { resolvePlayerId } from "./runtime/primitives/execute.js";
+import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
-} from "./effect-runtime-sequence-frame-decisions.js";
-import type {
-  SegmentLedgers,
-  SequenceFrameRunResult,
-} from "./effect-runtime-sequence-runner.js";
-import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
+} from "./frame-decisions.js";
+import type { SegmentLedgers, SequenceFrameRunResult } from "./runner.js";
+import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
 
 type ContinuousResolvedEffect = Extract<
   Effect,

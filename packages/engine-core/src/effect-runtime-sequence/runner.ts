@@ -13,9 +13,9 @@ import {
   createSequenceSelectTargetsPause,
   hasSavedFieldObjectContinuousTarget,
   isContinuousResolvedEffect,
-} from "../effect-runtime-sequence-target-decisions.js";
+} from "./target-decisions.js";
 import { createSupportedHandSelectionChoiceDecision } from "../effect-runtime-hand-selection.js";
-import { applyFieldMutationSequenceSegment } from "../effect-runtime-sequence-field-segments.js";
+import { applyFieldMutationSequenceSegment } from "./field-segments.js";
 import {
   createChooseQuantityDecisionForSequenceSegment,
   createOptionalActivationDecisionForSequenceSegment,
@@ -47,13 +47,13 @@ import {
   segmentKey,
   segmentKeyForPath,
   toSingleEffectSequence,
-} from "../effect-runtime-sequence-paths.js";
+} from "./paths.js";
 
 export {
   resolveSequenceForPath,
   segmentKey,
   segmentKeyForPath,
-} from "../effect-runtime-sequence-paths.js";
+} from "./paths.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];

@@ -22,7 +22,7 @@ import {
 import { toCardRef, zonesEqual } from "../../action-state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import { resolvePlayerId } from "./draw.js";
-import { resumeSequenceFrameAfterTrashFromHand } from "../../effect-runtime-sequence-frames.js";
+import { resumeSequenceFrameAfterTrashFromHand } from "../../effect-runtime-sequence/frames.js";
 
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 

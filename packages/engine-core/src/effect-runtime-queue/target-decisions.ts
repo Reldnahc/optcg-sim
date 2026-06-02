@@ -34,7 +34,7 @@ import {
   isSupportedMainEventTargetKoEffect,
   resolvePlayerId,
 } from "../runtime/primitives/execute.js";
-import { restFieldObjects } from "../effect-runtime-sequence-saved-field-object.js";
+import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,

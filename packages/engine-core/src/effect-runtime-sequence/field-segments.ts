@@ -7,30 +7,30 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { createSequenceSelectTargetsPause } from "./effect-runtime-sequence-target-decisions.js";
+import { createSequenceSelectTargetsPause } from "./target-decisions.js";
 import {
   applyAllTargetKoSequenceSegment,
   applyAllTargetTrashSequenceSegment,
-} from "./effect-runtime-sequence-all-target-segments.js";
+} from "./all-target-segments.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
-} from "./effect-runtime-sequence-frame-decisions.js";
+} from "./frame-decisions.js";
 import {
   applySavedFieldObjectActivateSequenceSegment,
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,
   applySavedFieldObjectRestrictionSequenceSegment,
   applySavedFieldObjectTrashSequenceSegment,
-} from "./effect-runtime-sequence-saved-field-object.js";
+} from "./saved-field-object.js";
 import {
   applyAttachSelectedDonSequenceSegment,
   applyBounceToOwnerHandSequenceSegment,
   applySelectedCardMoveSegment,
-} from "./effect-runtime-sequence-selected-segments.js";
-import type { SegmentLedgers } from "./effect-runtime-sequence-runner.js";
-import { restChooseTargetRequest } from "./effect-runtime-sequence-target-decisions.js";
-import type { SupportedSequenceSegment } from "./effect-runtime-sequence-support.js";
+} from "./selected-segments.js";
+import type { SegmentLedgers } from "./runner.js";
+import { restChooseTargetRequest } from "./target-decisions.js";
+import type { SupportedSequenceSegment } from "./support.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type KoEffect = Extract<Effect, { type: "ko" }>;

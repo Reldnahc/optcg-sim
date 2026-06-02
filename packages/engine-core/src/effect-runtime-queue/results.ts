@@ -52,7 +52,7 @@ import {
 } from "../effect-runtime-move-cards.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-runtime-top-deck-placement.js";
 import { createSupportedSearchRevealChoiceDecision } from "../effect-runtime-search-reveal.js";
-import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence-frames.js";
+import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
 import {
   createSupportedTrashFromHandChoiceDecision,
   isSupportedQueuedTrashFromHandEffect,

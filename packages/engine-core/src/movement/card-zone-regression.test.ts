@@ -160,7 +160,7 @@ test("start-of-game stage replacement delegates concrete movement", () => {
 
 test("sequence effect trash delegates concrete movement", () => {
   const source = [
-    "packages/engine-core/src/effect-runtime-sequence-all-target-segments.ts",
+    "packages/engine-core/src/effect-runtime-sequence/all-target-segments.ts",
     "packages/engine-core/src/effect-runtime-sequence/saved-field-object.ts",
   ]
     .map(readSource)

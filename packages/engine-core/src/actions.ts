@@ -38,7 +38,7 @@ import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-co
 import {
   resumeSequenceFrameAfterPlaySelectedOverflow,
   resumeSequenceFrameAfterReplacement,
-} from "./effect-runtime-sequence-frames.js";
+} from "./effect-runtime-sequence/frames.js";
 import {
   applyLifeTriggerDecisionResponse,
   getLifeTriggerLegalActions,

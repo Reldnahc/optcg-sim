@@ -24,7 +24,7 @@ import {
   toCardRef,
   zonesEqual,
 } from "./action-state.js";
-import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence-frames.js";
+import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence/frames.js";
 
 type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
 

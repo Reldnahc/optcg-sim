@@ -17,8 +17,8 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "../effect-runtime.js";
 import { isUnsupportedSelectTargetsDecision } from "../effect-runtime-queue-target-decisions.js";
-import { resumeSequenceFrameAfterSelectTargets } from "../effect-runtime-sequence-frames.js";
-import { isSequenceFrameSelectTargetsDecision } from "../effect-runtime-sequence-select-targets.js";
+import { resumeSequenceFrameAfterSelectTargets } from "../effect-runtime-sequence/frames.js";
+import { isSequenceFrameSelectTargetsDecision } from "../effect-runtime-sequence/select-targets.js";
 import { assertGameStateInvariants } from "../invariants.js";
 import { resolvePublicTargetCandidatesForRequest } from "./candidates.js";
 

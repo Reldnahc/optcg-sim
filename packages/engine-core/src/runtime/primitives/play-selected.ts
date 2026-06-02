@@ -15,12 +15,12 @@ import { toCardRef } from "../../action-state.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
-} from "../../effect-runtime-sequence-frame-decisions.js";
+} from "../../effect-runtime-sequence/frame-decisions.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   SequenceFrameResumeResult,
-} from "../../effect-runtime-sequence-frames.js";
-import type { SupportedSequenceBlock } from "../../effect-runtime-sequence-support.js";
+} from "../../effect-runtime-sequence/frames.js";
+import type { SupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
 import {
   parseCharacterOverflowDecisionInstanceId,
   parseRuntimePlaySelectedOverflowDecisionInstanceId,

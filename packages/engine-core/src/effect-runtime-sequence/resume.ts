@@ -6,14 +6,14 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEffectResolvedForCompletedSequence } from "../effect-runtime-sequence-frame-events.js";
+import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
 import { removeFrame } from "./segments.js";
 import {
   conditionalParentForPath,
   isRootSequencePath,
   resolveSequenceForPath,
   segmentKeyForPath,
-} from "../effect-runtime-sequence-paths.js";
+} from "./paths.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   SegmentLedgers,

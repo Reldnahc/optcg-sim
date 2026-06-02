@@ -1,6 +1,6 @@
 import type { EffectQueueEntry, EngineEvent, GameState } from "@optcg/types";
 
-import { appendEvent, toStateSeq } from "./action-results.js";
+import { appendEvent, toStateSeq } from "../action-results.js";
 
 export const appendEffectResolvedForCompletedSequence = (
   state: GameState,

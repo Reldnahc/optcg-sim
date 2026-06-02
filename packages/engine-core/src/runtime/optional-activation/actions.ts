@@ -39,12 +39,12 @@ import {
 import {
   getSequencePayCostLegalActions,
   hasSequenceFrameForDecision,
-} from "../../effect-runtime-sequence-frame-decisions.js";
+} from "../../effect-runtime-sequence/frame-decisions.js";
 import { applyTrashSelfPayment } from "../primitives/trash-self-cost.js";
 import {
   resumeSequenceFrameAfterOptionalActivation,
   resumeSequenceFrameAfterOptionalCost,
-} from "../../effect-runtime-sequence-frames.js";
+} from "../../effect-runtime-sequence/frames.js";
 import {
   applyReturnDonPayment,
   getReturnDonEligibleInstanceIds,

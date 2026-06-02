@@ -15,11 +15,11 @@ import {
   cardMatchesHandSelectionFilter,
   getOpponentId,
   toCardRef,
-} from "./action-state.js";
-import { appendEvent } from "./action-results.js";
-import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
-import { computeView } from "./compute-view.js";
-import { executeSelectedTargetEffectPrimitive } from "./runtime/primitives/execute.js";
+} from "../action-state.js";
+import { appendEvent } from "../action-results.js";
+import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
+import { computeView } from "../compute-view.js";
+import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type AllTargetTrashEffect = Extract<Effect, { type: "trash" }> & {
