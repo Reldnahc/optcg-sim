@@ -45,7 +45,7 @@ export function conditionalExpressionSegmentParser(options: {
     }
 
     const condition = parseConditionExpression(
-      conditionText,
+      conditionText.replace(/\.$/u, "").trim(),
       options.conditions,
     );
     if (condition !== undefined) {
@@ -78,6 +78,56 @@ export function conditionalExpressionSegmentParser(options: {
     }
 
     return undefined;
+  };
+}
+
+export function trailingConditionalExpressionSegmentParser(options: {
+  readonly conditions: readonly ConditionParser[];
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly InstructionParser[];
+}): SegmentParser {
+  return (input: ParseInput) => {
+    const match = /^(?<then>.+?)\s+if (?<condition>.+)$/i.exec(input.text);
+    const conditionText = match?.groups?.["condition"];
+    const thenText = match?.groups?.["then"];
+    if (conditionText === undefined || thenText === undefined) {
+      return undefined;
+    }
+
+    const condition = parseConditionExpression(
+      conditionText.replace(/\.$/u, "").trim(),
+      options.conditions,
+    );
+    if (condition === undefined) {
+      return undefined;
+    }
+
+    const then = parseExpression(thenText, {
+      connectors: options.connectors,
+      segments: [
+        instructionExpressionSegmentParser({
+          connectors: options.connectors,
+          instructions: options.instructions,
+        }),
+        syntheticInstructionSegmentParser(options.instructions),
+      ],
+    });
+    if (then === undefined || then.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "conditional",
+        if: condition.condition,
+        then: then.effect,
+      },
+      evidence: [
+        "expression:conditional",
+        ...condition.evidence,
+        ...then.evidence,
+      ],
+    };
   };
 }
 

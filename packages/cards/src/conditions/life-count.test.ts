@@ -35,5 +35,24 @@ describe("life count condition parser", () => {
         value: 4,
       },
     });
+    expect(
+      parseLifeCountCondition({
+        text: "your opponent has 3 or less Life cards",
+      }),
+    ).toEqual({
+      condition: {
+        type: "lifeCount",
+        player: "opponent",
+        op: "lte",
+        value: 3,
+      },
+      evidence: [
+        "condition:lifeCount",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+      ],
+      rest: "",
+    });
   });
 });

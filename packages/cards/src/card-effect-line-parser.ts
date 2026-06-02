@@ -87,6 +87,7 @@ import {
   conditionalBlockExpressionParser,
   conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
+  trailingConditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
   lifeRemovedReactionExpressionParser,
@@ -191,6 +192,11 @@ const generalExpressionParser = (input: ParseInput) =>
     connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
     segments: [
       conditionalExpressionSegmentParser({
+        conditions: conditionParsers,
+        connectors: [parseAndConnector],
+        instructions: instructionParsers,
+      }),
+      trailingConditionalExpressionSegmentParser({
         conditions: conditionParsers,
         connectors: [parseAndConnector],
         instructions: instructionParsers,

@@ -9,16 +9,20 @@ export const lifeCountConditionPrimitive: PrimitivePatternDefinition<ConditionPa
     primitiveId: "condition:lifeCount",
     matches: [
       {
-        id: "you-have-n-or-threshold-life-cards",
+        id: "player-has-n-or-threshold-life-cards",
         pattern:
-          /^you have (?<count>[1-9]\d*) or (?<direction>more|less) Life cards$/i,
+          /^(?<player>you have|your opponent has) (?<count>[1-9]\d*) or (?<direction>more|less) Life cards$/i,
         build: (groups) => {
           const direction = groups["direction"]?.toLowerCase();
           const op = direction === "more" ? "gte" : "lte";
+          const player =
+            groups["player"]?.toLowerCase() === "your opponent has"
+              ? "opponent"
+              : "self";
           return {
             condition: {
               type: "lifeCount",
-              player: "self",
+              player,
               op,
               value: Number.parseInt(groups["count"] ?? "", 10),
             },
@@ -28,7 +32,7 @@ export const lifeCountConditionPrimitive: PrimitivePatternDefinition<ConditionPa
                 ? "condition:comparator:gte"
                 : "condition:comparator:lte",
               "condition:threshold:positiveInteger",
-              "player:self",
+              player === "opponent" ? "player:opponent" : "player:self",
             ],
             rest: "",
           };
