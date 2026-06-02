@@ -10,13 +10,13 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+import { applyAction } from "../actions.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
-import { resolvedCard } from "./action-test-fixtures.js";
+import { resolvedCard } from "../action-test-fixtures.js";
 
 const toPlayerId = (value: string): PlayerId => value as PlayerId;
 const toCardId = (value: string): CardId => value as CardId;
