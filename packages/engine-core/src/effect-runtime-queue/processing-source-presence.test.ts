@@ -4,7 +4,7 @@ import { test } from "vitest";
 import type {
   EffectQueueEntry,
   SourcePresencePolicy,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 import {
   hashCanonicalStateValue,
   createActiveState,
@@ -23,7 +23,7 @@ import {
   toSourceSnapshot,
   setupOnPlayDefinition,
   setupOnKODefinition,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 
 test("queued On K.O. draw with unsupported source-presence policy fails closed without mutation", () => {
   const state = createActiveState();

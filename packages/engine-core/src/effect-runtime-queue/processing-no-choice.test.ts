@@ -5,7 +5,7 @@ import type {
   CardInstance,
   EffectDefinition,
   EffectQueueEntry,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 import {
   createActiveState,
   must,
@@ -25,8 +25,8 @@ import {
   setupOnPlayDefinition,
   setupOnKODefinition,
   queueingState,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+} from "../effect-runtime-queue-processing-test-support.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 
 test("resolves one queued supported On Play draw entry and removes it from effectQueue", () => {
   const { state, played } = queueingState();

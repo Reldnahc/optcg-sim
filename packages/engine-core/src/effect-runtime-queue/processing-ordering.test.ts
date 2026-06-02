@@ -7,7 +7,7 @@ import type {
   EffectQueueEntry,
   PlayerId,
   QueueEntryId,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 import {
   createActiveState,
   must,
@@ -27,7 +27,7 @@ import {
   setupOnPlayDefinition,
   setupCustomEffectResolvedDefinition,
   queueingState,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 
 test("resolves multiple no-choice queued entries in deterministic ENG-010F order", () => {
   const run = () => {

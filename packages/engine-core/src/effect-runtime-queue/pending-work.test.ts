@@ -22,11 +22,11 @@ import {
   p2,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   detectPendingRuntimeWork,
   processEffectRuntime,
-} from "./effect-runtime.js";
+} from "../effect-runtime.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
