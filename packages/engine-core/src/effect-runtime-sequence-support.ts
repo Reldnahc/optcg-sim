@@ -169,6 +169,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { type: "trashSelf", optional: true };
     case "restDon":
       return { ...cost, optional: true };
+    case "attachDon":
+      return { ...cost, optional: true };
     case "returnDon":
       return { ...cost, optional: true };
     case "trashFromHand":
@@ -377,6 +379,14 @@ const isSupportedPayCostSegment = (
   if (cost.type === "restSelf") {
     return true;
   }
+  if (cost.type === "attachDon") {
+    return (
+      Number.isInteger(cost.count) &&
+      cost.count > 0 &&
+      cost.target.type === "chooseFromZones" &&
+      isSupportedAttachDonCostTarget(cost.target)
+    );
+  }
   if (cost.type === "trashSelf") {
     return true;
   }
@@ -427,6 +437,25 @@ const isSupportedMoveCardsCostRoute = (
       cost.from.position === "topOrBottom") &&
     cost.to.zone === "hand" &&
     cost.to.position === undefined
+  );
+};
+
+const isSupportedAttachDonCostTarget = (
+  target: Extract<Target, { type: "chooseFromZones" }>,
+): boolean => {
+  const request = target.request;
+  return (
+    request.timing === "onResolution" &&
+    request.chooser === "self" &&
+    request.player === "self" &&
+    request.zones.length === 2 &&
+    request.zones[0] === "leaderArea" &&
+    request.zones[1] === "characterArea" &&
+    request.min === 1 &&
+    request.max === 1 &&
+    !request.allowFewerIfUnavailable &&
+    request.visibility === "public" &&
+    isSupportedAttachDonTargetFilter(request.filter)
   );
 };
 

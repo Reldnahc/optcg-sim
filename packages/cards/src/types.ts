@@ -101,6 +101,7 @@ export type PrimitiveEvidence =
   | "cardinality:exact"
   | "cost:restSelf"
   | "cost:restDon"
+  | "cost:attachDon"
   | "cost:returnDon"
   | "cost:turnLifeFaceUp"
   | "cost:chooseOne"

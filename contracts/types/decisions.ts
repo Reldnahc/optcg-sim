@@ -40,6 +40,13 @@ export type PaymentOption =
       position: "top" | "bottom";
     }
   | { id: string; type: "restDon"; count: number }
+  | {
+      id: string;
+      type: "attachDon";
+      count: number;
+      sourceState: "active" | "rested";
+      target: Target;
+    }
   | { id: string; type: "returnDon"; count: number }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }

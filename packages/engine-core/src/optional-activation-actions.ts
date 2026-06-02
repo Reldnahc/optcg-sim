@@ -14,19 +14,18 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import {
-  addCardsToHand,
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
-  reindexZoneCards,
   zonesEqual,
 } from "./action-state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
+import { applyAttachDonCostPayment } from "./effect-runtime-attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "./effect-runtime-field-trash-payment.js";
 import { applyTurnLifeFaceUpPayment } from "./effect-runtime-life-face-up-cost.js";
 import { applyModifyPowerPayment } from "./effect-runtime-modify-power-cost.js";
 import {
+  applyMoveCardsPayment,
   isSupportedMoveCardsPaymentRoute,
-  type MoveCardsPaymentOption,
 } from "./effect-runtime-move-cards-payment.js";
 import { restSourceCard } from "./effect-runtime-rest-self-cost.js";
 import {
@@ -48,169 +47,6 @@ import {
 } from "./effect-runtime-return-don.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
 import { invalidDecision } from "./engine-error-helpers.js";
-
-const applyMoveCardsPayment = (params: {
-  decisionId: NonNullable<GameState["pendingDecision"]>["id"];
-  events: EngineEvent[];
-  player: PlayerState;
-  playerId: PlayerId;
-  selected: readonly CardInstance["instanceId"][];
-  selectedOption: MoveCardsPaymentOption;
-  state: GameState;
-}): PlayerState | null => {
-  if (
-    params.selectedOption.from.zone === "trash" &&
-    params.selectedOption.to.zone === "deck" &&
-    params.selectedOption.to.position === "bottom"
-  ) {
-    const selectedCards: CardInstance[] = [];
-    for (const selectedId of params.selected) {
-      const card = params.player.trash.find(
-        (candidate) => candidate.instanceId === selectedId,
-      );
-      if (card === undefined) {
-        return null;
-      }
-      selectedCards.push(card);
-    }
-    const selectedSet = new Set(params.selected);
-    const movedCards = selectedCards.map((card, index) => ({
-      ...card,
-      attachedDon: [],
-      zone: {
-        zone: "deck" as const,
-        playerId: params.playerId,
-        slot: "deck" as const,
-        index: params.player.deck.length + index,
-      },
-    }));
-    for (let index = 0; index < selectedCards.length; index += 1) {
-      appendEvent(
-        params.state,
-        params.events,
-        "cardMoved",
-        {
-          from: "trash",
-          to: "deck",
-          playerId: params.playerId,
-          reason: "moveCardsCost",
-        },
-        { type: "public" },
-      );
-      const moved = params.events[params.events.length - 1];
-      if (moved !== undefined) {
-        moved.causedBy = { type: "decision", decisionId: params.decisionId };
-      }
-    }
-    return {
-      ...params.player,
-      trash: reindexZoneCards(
-        params.player.trash.filter((card) => !selectedSet.has(card.instanceId)),
-        "trash",
-        params.playerId,
-        "trash",
-      ),
-      deck: reindexZoneCards(
-        [...params.player.deck, ...movedCards],
-        "deck",
-        params.playerId,
-        "deck",
-      ),
-    };
-  }
-
-  if (
-    params.selectedOption.from.zone !== "life" ||
-    params.selectedOption.to.zone !== "hand" ||
-    params.selectedOption.to.position !== undefined ||
-    params.selected.length !== 1
-  ) {
-    return null;
-  }
-  const lifeIndex =
-    params.selectedOption.from.position === "top"
-      ? 0
-      : params.player.life.length - 1;
-  const lifeCard = params.player.life[lifeIndex];
-  if (
-    lifeCard === undefined ||
-    lifeCard.card.instanceId !== params.selected[0]
-  ) {
-    return null;
-  }
-  const movedCard: CardInstance = {
-    ...lifeCard.card,
-    zone: {
-      zone: "hand",
-      playerId: params.playerId,
-      slot: "hand",
-      index: params.player.hand.length,
-    },
-  };
-  appendEvent(
-    params.state,
-    params.events,
-    "cardMoved",
-    {
-      from: {
-        zone: "life",
-        playerId: params.playerId,
-        slot: "life",
-        index: lifeIndex,
-      },
-      to: movedCard.zone,
-      reason: "moveCardsCost",
-    },
-    { type: "public" },
-  );
-  const publicMoved = params.events[params.events.length - 1];
-  if (publicMoved !== undefined) {
-    publicMoved.causedBy = { type: "decision", decisionId: params.decisionId };
-  }
-  appendEvent(
-    params.state,
-    params.events,
-    "cardMoved",
-    {
-      instanceId: movedCard.instanceId,
-      cardId: movedCard.cardId,
-      from: {
-        zone: "life",
-        playerId: params.playerId,
-        slot: "life",
-        index: lifeIndex,
-      },
-      to: movedCard.zone,
-      reason: "moveCardsCost",
-    },
-    { type: "private", playerId: params.playerId },
-  );
-  const privateMoved = params.events[params.events.length - 1];
-  if (privateMoved !== undefined) {
-    privateMoved.causedBy = {
-      type: "decision",
-      decisionId: params.decisionId,
-    };
-  }
-  return {
-    ...params.player,
-    life: params.player.life
-      .filter((_, index) => index !== lifeIndex)
-      .map((entry, index) => ({
-        ...entry,
-        card: {
-          ...entry.card,
-          zone: {
-            zone: "life" as const,
-            playerId: params.playerId,
-            slot: "life" as const,
-            index,
-          },
-        },
-      })),
-    hand: addCardsToHand(params.player.hand, [movedCard], params.playerId),
-  };
-};
 
 const sameSource = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -287,6 +123,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "restSelf" &&
         decision.cost.type !== "trashSelf" &&
         decision.cost.type !== "returnDon" &&
+        decision.cost.type !== "attachDon" &&
         decision.cost.type !== "moveCards" &&
         decision.cost.type !== "turnLifeFaceUp" &&
         decision.cost.type !== "modifyPower" &&
@@ -322,6 +159,16 @@ export const applyOptionalActivationDecisionResponse = (
             optionId: "restDon" | "returnDon";
             selectedDonInstanceIds: NonNullable<
               typeof action.response.selectedDonInstanceIds
+            >;
+          }
+        | {
+            playerId: PlayerId;
+            optionId: "attachDon";
+            selectedDonInstanceIds: NonNullable<
+              typeof action.response.selectedDonInstanceIds
+            >;
+            selectedCardInstanceIds: NonNullable<
+              typeof action.response.selectedCardInstanceIds
             >;
           }
         | {
@@ -414,6 +261,21 @@ export const applyOptionalActivationDecisionResponse = (
           optionId: "moveCards",
           selectedCardInstanceIds: selected,
         };
+      } else if (selectedOption.type === "attachDon") {
+        const paid = applyAttachDonCostPayment({
+          decisionId: decision.id,
+          paymentResponse,
+          player,
+          playerId: decision.playerId,
+          selectedOption,
+          state,
+        });
+        if (!paid.ok) {
+          return toEngineResult(state, [], invalidDecision(paid.reason));
+        }
+        nextPlayer = paid.player;
+        events.push(...paid.events);
+        costPaidPayload = paid.costPaidPayload;
       } else if (selectedOption.type === "turnLifeFaceUp") {
         if (
           paymentResponse.selectedCardInstanceIds !== undefined ||

@@ -1,4 +1,5 @@
 export { parseOptionalChooseOneTrashCost } from "./optional-choose-one-trash.js";
+export { parseAttachDonCost } from "./attach-don.js";
 export { parseReturnDonCost } from "./return-don.js";
 export { parseRestDonCost } from "./rest-don.js";
 export { parseMoveCardsCost } from "./move-cards.js";

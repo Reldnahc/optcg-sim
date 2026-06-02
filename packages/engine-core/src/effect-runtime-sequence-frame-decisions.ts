@@ -24,6 +24,10 @@ import {
 } from "./effect-runtime-return-don.js";
 import { chooseQuantityPromptForEffect } from "./effect-runtime-quantity-prompts.js";
 import { activeDonCount } from "./effect-runtime-sequence-segments.js";
+import {
+  attachDonTargetCandidates,
+  type AttachDonPaymentOption,
+} from "./effect-runtime-attach-don-cost.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -44,7 +48,6 @@ type ModifyPowerPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
   { type: "modifyPower" }
 >;
-
 const expandMoveCardsCostRoutes = (
   cost: Extract<OptionalCost, { type: "moveCards" }>,
 ): MoveCardsPaymentOption[] => {
@@ -160,6 +163,25 @@ const canPayModifyPowerCost = (
     player.leader.state === option.requiredState) &&
   Number.isSafeInteger(option.value) &&
   option.value !== 0;
+
+const attachDonSourceIds = (
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+  option: AttachDonPaymentOption,
+): CardInstance["instanceId"][] =>
+  player.costArea
+    .filter((card) => card.state === option.sourceState)
+    .map((card) => card.instanceId);
+
+const canPayAttachDonCost = (
+  state: GameState,
+  playerId: EffectQueueEntry["controllerId"],
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+  option: AttachDonPaymentOption,
+): boolean =>
+  Number.isInteger(option.count) &&
+  option.count > 0 &&
+  attachDonSourceIds(player, option).length >= option.count &&
+  attachDonTargetCandidates(state, playerId, player, option).length > 0;
 
 export const findSequenceFrameByDecisionId = (
   state: GameState,
@@ -637,6 +659,30 @@ export const getSequencePayCostLegalActions = (
           },
         })),
       );
+      continue;
+    }
+    if (option.type === "attachDon") {
+      const selectableDonIds = attachDonSourceIds(player, option);
+      const targetCandidates = attachDonTargetCandidates(
+        state,
+        playerId,
+        player,
+        option,
+      );
+      legalPayments.push(
+        ...chooseCombos(selectableDonIds, option.count).flatMap((combo) =>
+          targetCandidates.map((target) => ({
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: {
+              type: "payment" as const,
+              optionId: option.id,
+              selectedDonInstanceIds: combo,
+              selectedCardInstanceIds: [target.instanceId],
+            },
+          })),
+        ),
+      );
     }
   }
 
@@ -662,6 +708,7 @@ export const getSequenceOptionalPayCostOptions = (
         | "restSelf"
         | "trashSelf"
         | "restDon"
+        | "attachDon"
         | "returnDon"
         | "trashFromHand"
         | "trashFromField"
@@ -679,6 +726,7 @@ export const getSequenceOptionalPayCostOptions = (
           | "restSelf"
           | "trashSelf"
           | "restDon"
+          | "attachDon"
           | "returnDon"
           | "trashFromHand"
           | "trashFromField"
@@ -718,6 +766,22 @@ export const getSequenceOptionalPayCostOptions = (
         type: "restDon",
         count: cost.count,
       });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "attachDon") {
+    const option: AttachDonPaymentOption = {
+      id: "attachDon",
+      type: "attachDon",
+      count: cost.count,
+      sourceState: cost.sourceState,
+      target: cost.target,
+    };
+    if (
+      currentPlayer !== undefined &&
+      canPayAttachDonCost(state, entry.controllerId, currentPlayer, option)
+    ) {
+      paymentOptions.push(option);
     }
     return paymentOptions;
   }

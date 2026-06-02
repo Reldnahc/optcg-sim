@@ -107,6 +107,107 @@ it("parses active leader power reduction as an optional cost before draw", () =>
   });
 });
 
+it("parses active DON attachment and trash-self as reusable optional cost sequence", () => {
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] You may give 1 of your active DON!! cards to 1 of your Leader or Character cards and trash this Character: Give up to 1 of your opponent's Characters -3000 power during this turn.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "paidCost",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "sequence",
+                optional: true,
+                costs: [
+                  {
+                    type: "attachDon",
+                    count: 1,
+                    sourceState: "active",
+                    target: {
+                      type: "chooseFromZones",
+                      request: {
+                        timing: "onResolution",
+                        chooser: "self",
+                        player: "self",
+                        zones: ["leaderArea", "characterArea"],
+                        min: 1,
+                        max: 1,
+                        allowFewerIfUnavailable: false,
+                        visibility: "public",
+                        filter: { categories: ["leader", "character"] },
+                      },
+                    },
+                  },
+                  { type: "trashSelf" },
+                ],
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "choose",
+                request: {
+                  timing: "onResolution",
+                  chooser: "self",
+                  player: "opponent",
+                  zone: "characterArea",
+                  min: 0,
+                  max: 1,
+                  allowFewerIfUnavailable: true,
+                  visibility: "public",
+                  filter: { categories: ["character"] },
+                },
+              },
+              value: -3000,
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:activateMain",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "composition:costSequence",
+      "cost:attachDon",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "state:active",
+      "target:yourDonCards",
+      "target:yourLeaderOrCharacters",
+      "player:self",
+      "filter:category:leader",
+      "filter:category:character",
+      "cost:trashSelf",
+      "target:thisCharacter",
+      "instruction:modifyPower",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "chooser:self:upTo",
+      "player:opponent",
+      "target:opponentCharacters",
+      "filter:category:character",
+      "modifier:negativePower",
+      "duration:thisTurn",
+      "composition:entryExpression",
+    ],
+  });
+});
+
 it("parses return-DON cost into temporary keyword grant then hand-trash sequence", () => {
   expect(
     parseCardEffectLine(

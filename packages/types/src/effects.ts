@@ -116,6 +116,13 @@ export type Condition =
 export type Cost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
   | {
+      type: "attachDon";
+      count: number;
+      sourceState: "active" | "rested";
+      target: Target;
+      optional?: boolean;
+    }
+  | {
       type: "returnDon";
       count: number;
       chooser?: PlayerRef;
@@ -210,6 +217,13 @@ export type OptionalChooseOneTrashCost = {
 
 export type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | {
+      type: "attachDon";
+      count: number;
+      sourceState: "active" | "rested";
+      target: Target;
+      optional: true;
+    }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
   | { type: "trashSelf"; optional: true }

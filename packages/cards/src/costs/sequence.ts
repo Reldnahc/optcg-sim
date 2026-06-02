@@ -6,6 +6,7 @@ import {
   type CostParseResult,
   type SequenceCostPrimitive,
 } from "./rest-don.js";
+import { parseAttachDonCost } from "./attach-don.js";
 import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseModifyPowerCost } from "./modify-power.js";
@@ -18,6 +19,7 @@ const costParsers = [
   parseReturnDonSequenceCost,
   parseRestSelfCost,
   parseTrashSelfCost,
+  parseAttachDonCost,
   parseRestDonCost,
   parseMoveCardsCost,
   parseModifyPowerCost,
@@ -93,6 +95,8 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
         optional: true,
       };
+    case "attachDon":
+      return { ...cost, optional: true };
     case "returnDon":
       return {
         type: "returnDon",
@@ -128,6 +132,13 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         type: "restDon",
         count: cost.count,
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
+      };
+    case "attachDon":
+      return {
+        type: "attachDon",
+        count: cost.count,
+        sourceState: cost.sourceState,
+        target: cost.target,
       };
     case "restSelf":
       return { type: "restSelf" };
