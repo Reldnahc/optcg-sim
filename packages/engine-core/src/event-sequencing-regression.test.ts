@@ -37,7 +37,7 @@ import {
   withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],

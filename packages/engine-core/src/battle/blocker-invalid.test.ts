@@ -19,7 +19,7 @@ import {
   passCounterStep,
   setupAttackState,
   setupOpenedBlockStepDecision,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 test("rested, stale, non-blocker, and attacker-controlled cards do not open block-step decision", () => {
   const runNoDecision = (

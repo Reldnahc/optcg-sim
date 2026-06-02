@@ -22,7 +22,7 @@ import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.j
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
 import { assertGameStateInvariants } from "../invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rule-processing.js";
-import { hasUnsupportedSupportGateText } from "../battle-support.js";
+import { hasUnsupportedSupportGateText } from "../battle/support.js";
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toEngineEventId = (value: string): EngineEventId =>

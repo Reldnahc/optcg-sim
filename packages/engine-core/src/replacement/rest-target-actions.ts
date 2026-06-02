@@ -1,6 +1,6 @@
 import type { Action, EngineResult, GameState } from "@optcg/types";
 
-import { finalizeBattleAfterReplacementResolution } from "../battle-actions.js";
+import { finalizeBattleAfterReplacementResolution } from "../battle/actions.js";
 import { finalizeSelectedTargetEffectResolution } from "../effect-runtime.js";
 import { applyReplacementRestTargetDecisionResponse } from "./rest-target-decision.js";
 import { applyReplacementTrashFromHandDecisionResponse } from "./trash-from-hand-actions.js";

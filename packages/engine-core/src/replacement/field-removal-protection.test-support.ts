@@ -26,7 +26,7 @@ import {
   p2,
   resolvedCard,
 } from "../action-test-fixtures.js";
-import { effectDefinition } from "../battle-actions-test-fixtures.js";
+import { effectDefinition } from "../battle/test-fixtures.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,

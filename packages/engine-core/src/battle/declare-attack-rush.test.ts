@@ -8,7 +8,7 @@ import {
   continuousKeywordEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 test("played-this-turn rush character can legally attack leader and rested character", () => {
   const state = setupAttackState();

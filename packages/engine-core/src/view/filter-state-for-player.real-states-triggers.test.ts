@@ -14,7 +14,7 @@ import {
   passCounterStep,
   setupAttackState,
   withOnKODrawEffect,
-} from "../battle-actions-test-fixtures.js";
+} from "../battle/test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const findScalarPaths = (

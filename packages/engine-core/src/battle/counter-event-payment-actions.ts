@@ -5,12 +5,12 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { chooseDonCombos } from "./play-card/legal-actions.js";
-import { parseCounterPayCostDecisionId } from "./battle-counter-event-payment-context.js";
+import { chooseDonCombos } from "../play-card/legal-actions.js";
+import { parseCounterPayCostDecisionId } from "./counter-event-payment-context.js";
 import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
-} from "./battle-counter-event-support.js";
+} from "./counter-event-support.js";
 
 export const getCounterEventPaymentLegalActions = (
   state: GameState,

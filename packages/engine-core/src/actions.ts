@@ -16,7 +16,7 @@ import {
   getBattleDecisionLegalActions,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
-} from "./battle-actions.js";
+} from "./battle/actions.js";
 import { applyAttachDon, getAttachDonLegalActions } from "./don-actions.js";
 import {
   applyPlayCard,

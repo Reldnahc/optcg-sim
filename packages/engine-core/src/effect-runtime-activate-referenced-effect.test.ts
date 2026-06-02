@@ -20,7 +20,7 @@ import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 
 const supportedLifeTriggerDefinition = (
   cardId: ReturnType<typeof toCardId>,

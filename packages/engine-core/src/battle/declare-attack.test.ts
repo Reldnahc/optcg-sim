@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { applyDeclareAttack, getDeclareAttackLegalActions } from "./actions.js";
-import {
-  effectDefinition,
-  setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+import { effectDefinition, setupAttackState } from "./test-fixtures.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 
 test("implemented-dsl no-keyword combat bodies can attack as normal without effect definitions", () => {

@@ -19,7 +19,7 @@ import {
   withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 const ensureDeckHasAtLeast = (
   state: ReturnType<typeof setupAttackState>,

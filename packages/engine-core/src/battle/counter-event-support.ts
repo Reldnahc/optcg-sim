@@ -12,9 +12,9 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { reifyCardRef } from "./action-state.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
-import { resolvePublicTargetCandidatesForRequest } from "./target-selection.js";
+import { reifyCardRef } from "../action-state.js";
+import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
+import { resolvePublicTargetCandidatesForRequest } from "../target-selection.js";
 
 export interface SupportedCounterEventPower {
   effectCost?: Extract<OptionalCost, { type: "trashFromHand" }>;

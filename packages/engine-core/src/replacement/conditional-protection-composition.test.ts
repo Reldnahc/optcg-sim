@@ -31,12 +31,12 @@ import {
   resolvedCard,
   toCardId,
 } from "../action-test-fixtures.js";
-import { applyDeclareAttack } from "../battle-actions.js";
+import { applyDeclareAttack } from "../battle/actions.js";
 import {
   cardRef,
   effectDefinition,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "../battle/test-fixtures.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 import { computeView } from "../compute-view.js";
 import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";

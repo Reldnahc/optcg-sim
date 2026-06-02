@@ -14,24 +14,24 @@ import {
   toEngineResult,
 } from "../action-results.js";
 import { reifyCardRef } from "../action-state.js";
-import { getUnsupportedDamageStepContinuationReason } from "../battle-damage-step-continuation.js";
+import { getUnsupportedDamageStepContinuationReason } from "./damage-step-continuation.js";
 import {
   parseCounterPayCostDecisionId,
   parseCounterTargetDecisionId,
-} from "../battle-counter-event-payment-context.js";
-import { getCounterEventPaymentLegalActions } from "../battle-counter-event-payment-actions.js";
+} from "./counter-event-payment-context.js";
+import { getCounterEventPaymentLegalActions } from "./counter-event-payment-actions.js";
 import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
 import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
-} from "../battle-counter-event-support.js";
+} from "./counter-event-support.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { assertGameStateInvariants } from "../invariants.js";
 import {
   getUnsupportedCounterWindowReason,
   hasPotentialCharacterCounterActions,
   hasUnsupportedCounterWindow,
-} from "../battle-counter-window-support.js";
+} from "./counter-window-support.js";
 import {
   applyCounterEventEffectCostDecisionResponse,
   applyCounterEventTargetDecisionResponse,
@@ -44,7 +44,7 @@ export { applyUseCounter } from "./counter-card-use.js";
 export {
   getUnsupportedCounterWindowReason,
   hasUnsupportedCounterWindow,
-} from "../battle-counter-window-support.js";
+} from "./counter-window-support.js";
 
 export const createCounterStepPassDecision = (
   state: GameState,

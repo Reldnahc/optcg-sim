@@ -11,7 +11,7 @@ import {
   continuousEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {

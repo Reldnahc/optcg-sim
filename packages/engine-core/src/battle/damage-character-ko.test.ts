@@ -21,7 +21,7 @@ import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

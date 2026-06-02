@@ -4,10 +4,7 @@ import { test } from "vitest";
 import type { EffectBlock, EffectDefinition } from "@optcg/types";
 
 import { must, p2, resolvedCard, toCardId } from "../action-test-fixtures.js";
-import {
-  effectDefinition,
-  setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+import { effectDefinition, setupAttackState } from "../battle/test-fixtures.js";
 import { getSupportedLifeTriggerDecision } from "./actions.js";
 
 const supportedLifeTriggerDefinition = (

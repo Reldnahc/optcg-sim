@@ -15,7 +15,7 @@ import {
   ensureActiveDonInCostArea,
   setupAttackState,
   withOnOpponentAttackDrawEffect,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 const optionalRestDonThenRestTargetSequence = (): Extract<
   Effect,

@@ -8,12 +8,12 @@ import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
 
 import { must, p1, p2 } from "./action-test-fixtures.js";
 import { applyAction, getLegalActions } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyDeclareAttack } from "./battle/actions.js";
 import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import {
   processEffectRuntime,

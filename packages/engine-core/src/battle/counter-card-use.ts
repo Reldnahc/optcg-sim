@@ -25,21 +25,21 @@ import {
 } from "../action-results.js";
 import { reifyCardRef } from "../action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
-import { getUnsupportedCombatViewMetadataReason } from "../battle-combat-view-support.js";
+import { getUnsupportedCombatViewMetadataReason } from "./combat-view-support.js";
 import {
   counterPayCostDecisionId,
   counterTargetDecisionId,
-} from "../battle-counter-event-payment-context.js";
-import { createCounterEventPowerRecord } from "../battle-counter-event-power-record.js";
+} from "./counter-event-payment-context.js";
+import { createCounterEventPowerRecord } from "./counter-event-power-record.js";
 import {
   continueCounterEventTrailingSequence,
   type CounterEventTrailingSequence,
-} from "../battle-counter-event-trailing-sequence.js";
+} from "./counter-event-trailing-sequence.js";
 import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
   type SupportedCounterEventPower,
-} from "../battle-counter-event-support.js";
+} from "./counter-event-support.js";
 import {
   getUnsupportedBattleEffectMetadataReason,
   hasUnsupportedBattleEffectMetadata,
@@ -52,7 +52,7 @@ import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../invariants.js";
 import { getActiveDonCount } from "../play-card/support.js";
-import { getUnsupportedCounterWindowReason } from "../battle-counter-window-support.js";
+import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
 
 type CreateCounterStepPassDecision = (
   state: GameState,

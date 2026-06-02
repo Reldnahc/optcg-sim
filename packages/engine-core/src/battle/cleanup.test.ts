@@ -11,7 +11,7 @@ import {
   continuousEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 type EngineInternalBattleState = NonNullable<
   ReturnType<typeof setupAttackState>["battle"]
 > & { counterPower?: number };

@@ -12,7 +12,7 @@ import {
   p2,
   resolvedCard,
 } from "../action-test-fixtures.js";
-import { setupAttackState } from "../battle-actions-test-fixtures.js";
+import { setupAttackState } from "../battle/test-fixtures.js";
 import { queuedEffect, toCardId } from "../action-dispatcher-test-support.js";
 
 test("getLegalActions exposes defender decline and legal blocker response during block step decision", () => {

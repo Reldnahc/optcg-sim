@@ -26,7 +26,7 @@ import {
   toStateSeq,
 } from "../action-test-fixtures.js";
 import { applyAction, getLegalActions } from "../actions.js";
-import { cardRef, setupAttackState } from "../battle-actions-test-fixtures.js";
+import { cardRef, setupAttackState } from "../battle/test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createInitialState } from "../initial-state.js";
 import { startMulliganFlow } from "../mulligan.js";

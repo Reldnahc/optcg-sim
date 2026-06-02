@@ -11,7 +11,7 @@ import {
   continuousKeywordEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 
 const installSupportedDoubleAttackLeader = (

@@ -20,7 +20,7 @@ import {
   setupAttackState,
   setupOpenedBlockStepDecision,
   setupOpenedCharacterTargetBlockStepDecision,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 test("applyDeclareAttack enters block step and opens defender decline decision when defender has would-be legal blocker", () => {
   const state = setupAttackState();

@@ -1,19 +1,19 @@
 import type { GameState, ResolvedCard } from "@optcg/types";
 
-import { reifyCardRef } from "./action-state.js";
+import { reifyCardRef } from "../action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   getUnsupportedBattleEffectMetadataReason,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
-} from "./battle-support.js";
-import { computeView } from "./compute-view.js";
-import { detectPendingRuntimeWork } from "./effect-runtime.js";
-import { hasOnlyFieldRemovalProtections } from "./replacement/field-removal-protection.js";
+} from "./support.js";
+import { computeView } from "../compute-view.js";
+import { detectPendingRuntimeWork } from "../effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
-} from "./life-trigger-actions.js";
+} from "../life-trigger/actions.js";
 
 const isSupportedDoubleAttackDamageSource = (
   card: ResolvedCard | undefined,

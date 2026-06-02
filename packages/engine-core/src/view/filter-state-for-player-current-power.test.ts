@@ -10,7 +10,7 @@ import {
   continuousKeywordEffectRecord,
   setupAttackState,
   withWhenAttackingDrawEffect,
-} from "../battle-actions-test-fixtures.js";
+} from "../battle/test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 test("projects computed current power only for public board card views", () => {

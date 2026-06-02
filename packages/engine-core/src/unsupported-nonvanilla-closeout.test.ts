@@ -18,7 +18,7 @@ import {
 import {
   setupAttackState,
   setupOpenedCounterStepPassDecision,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import { queueDrawForP1 } from "./effect-runtime-queue/test-support.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";

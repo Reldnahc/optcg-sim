@@ -25,7 +25,7 @@ import {
   setupFullCharacterPlayState,
   setupMainPlayState,
 } from "./play-card/test-fixtures.js";
-import { effectDefinition } from "./battle-actions-test-fixtures.js";
+import { effectDefinition } from "./battle/test-fixtures.js";
 import {
   toDecisionId,
   toEffectId,

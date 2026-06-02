@@ -13,7 +13,7 @@ import {
   cardRef,
   continuousKeywordEffectRecord,
   setupAttackState,
-} from "../../packages/engine-core/src/battle-actions-test-fixtures.ts";
+} from "../../packages/engine-core/src/battle/test-fixtures.ts";
 import { filterStateForPlayer } from "../../packages/engine-core/src/filter-state-for-player.ts";
 
 test("conditional keyword grants do not expose continuous records or private zone identities", () => {

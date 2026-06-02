@@ -17,7 +17,7 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
 } from "../action-test-fixtures.js";
-import { hasUnsupportedSupportGateText } from "../battle-support.js";
+import { hasUnsupportedSupportGateText } from "../battle/support.js";
 import {
   canResolveDestinationConflict,
   getActiveDonCount,

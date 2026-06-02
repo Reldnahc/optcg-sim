@@ -11,7 +11,7 @@ import {
   withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 import {
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedNoChoiceOnKODrawEffect,

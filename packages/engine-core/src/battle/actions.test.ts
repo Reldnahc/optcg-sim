@@ -19,7 +19,7 @@ import {
   cardRef,
   resolveNoTriggerLifeDamageDecisionsForTests,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 const addTrashCards = (
   state: ReturnType<typeof setupAttackState>,

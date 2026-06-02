@@ -7,8 +7,8 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { continueSupportedSequenceFrameFromSegment } from "./effect-runtime-sequence/frames.js";
-import type { getSupportedCounterEventPower } from "./battle-counter-event-support.js";
+import { continueSupportedSequenceFrameFromSegment } from "../effect-runtime-sequence/frames.js";
+import type { getSupportedCounterEventPower } from "./counter-event-support.js";
 
 export type CounterEventTrailingSequence = NonNullable<
   NonNullable<

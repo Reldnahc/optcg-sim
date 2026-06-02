@@ -3,8 +3,8 @@ import type { CardInstance, CardRef, GameState, PlayerId } from "@optcg/types";
 import {
   getSupportedCounterEventPowerShapeTargets,
   getSupportedCounterEventPowerTargets,
-} from "./battle-counter-event-support.js";
-import { getActiveDonCount } from "./play-card/support.js";
+} from "./counter-event-support.js";
+import { getActiveDonCount } from "../play-card/support.js";
 
 const unsupportedCounterEventReason =
   "Counter Events are unsupported in the Counter Step.";

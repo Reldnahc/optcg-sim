@@ -23,7 +23,7 @@ import {
   cardRef,
   installSupportedCounterEvent,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 import {
   queueDrawForP1,
   toCardId,

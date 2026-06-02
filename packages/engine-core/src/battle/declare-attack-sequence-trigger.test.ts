@@ -8,7 +8,7 @@ import { applyDeclareAttack } from "./actions.js";
 import {
   setupAttackState,
   withWhenAttackingDrawEffect,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { must, p1, p2 } from "../action-test-fixtures.js";

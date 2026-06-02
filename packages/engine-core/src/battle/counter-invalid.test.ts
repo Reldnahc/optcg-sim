@@ -21,7 +21,7 @@ import {
   installSupportedCounterEvent,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 test("useCounter with an Event card fails closed with unsupported Counter Event error and no mutation", () => {
   const { openedState, counterCard } = setupOpenedCounterStepPassDecision();

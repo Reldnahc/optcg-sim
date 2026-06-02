@@ -12,7 +12,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction } from "../index.js";
 import {
   createActiveState,
   must,
@@ -20,8 +20,8 @@ import {
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+} from "../action-test-fixtures.js";
+import { applyDeclareAttack } from "./actions.js";
 
 export const cardRef = (card: CardInstance, playerId: PlayerId) => ({
   instanceId: card.instanceId,

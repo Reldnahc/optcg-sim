@@ -12,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
-import { finalizeBattleAfterReplacementResolution } from "../battle-actions.js";
+import { finalizeBattleAfterReplacementResolution } from "../battle/actions.js";
 import {
   executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,

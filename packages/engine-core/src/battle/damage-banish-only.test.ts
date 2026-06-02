@@ -12,14 +12,11 @@ import {
   resolvedCard,
   toCardId,
 } from "../action-test-fixtures.js";
-import {
-  passCounterStep,
-  setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+import { passCounterStep, setupAttackState } from "./test-fixtures.js";
 import {
   addTrashMarker,
   continuousKeywordEffectRecord,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 test("banish attacker dealing leader damage moves top life to trash instead of hand", () => {
   const state = setupAttackState();

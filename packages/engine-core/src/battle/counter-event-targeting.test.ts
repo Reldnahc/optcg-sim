@@ -11,7 +11,7 @@ import {
   ensureActiveDonInCostArea,
   installSupportedCounterEvent,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 import { computeView } from "../compute-view.js";
 
 type EngineInternalBattleState = NonNullable<

@@ -15,7 +15,7 @@ import {
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
-import { hasUnsupportedSupportGateText } from "../battle-support.js";
+import { hasUnsupportedSupportGateText } from "../battle/support.js";
 
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";

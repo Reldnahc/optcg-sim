@@ -8,10 +8,7 @@ import { hashCanonicalStateValue } from "../canonical-state.js";
 import { assertGameStateInvariants } from "../invariants.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
-import {
-  passCounterStep,
-  setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+import { passCounterStep, setupAttackState } from "./test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],

@@ -10,7 +10,7 @@ import {
   resolvedCard,
 } from "./action-test-fixtures.js";
 import { toDecisionId } from "./action-dispatcher-test-support.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import { setupAttackState } from "./battle/test-fixtures.js";
 
 test("illegal actions return errors and do not mutate input state", () => {
   const state = createActiveState();

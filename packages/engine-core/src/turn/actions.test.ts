@@ -14,7 +14,7 @@ import {
   p1,
   p2,
 } from "../action-test-fixtures.js";
-import { setupAttackState } from "../battle-actions-test-fixtures.js";
+import { setupAttackState } from "../battle/test-fixtures.js";
 
 const applyTurnTestAction = (
   state: GameState,

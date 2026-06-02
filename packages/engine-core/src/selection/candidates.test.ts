@@ -18,7 +18,7 @@ import {
   resolvedCard,
   toCardId,
 } from "../action-test-fixtures.js";
-import { cardRef } from "../battle-actions-test-fixtures.js";
+import { cardRef } from "../battle/test-fixtures.js";
 import { resolvePublicTargetCandidates } from "./candidates.js";
 
 const publicCharacterRequest = (

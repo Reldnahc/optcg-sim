@@ -23,7 +23,7 @@ import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "../battle/test-fixtures.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 

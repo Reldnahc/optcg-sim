@@ -8,7 +8,7 @@ import {
   p1,
   resolvedCard,
 } from "../action-test-fixtures.js";
-import { cardRef } from "../battle-actions-test-fixtures.js";
+import { cardRef } from "../battle/test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 test("selectCards projection exposes visible different-name selection groups", () => {

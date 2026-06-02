@@ -14,7 +14,7 @@ import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 
 const applySupportedLifeTriggerAttack = () => {

@@ -19,11 +19,11 @@ import {
   toSourceSnapshot,
   withCardInZone,
 } from "../../effect-runtime-queue/test-support.js";
-import { applyDeclareAttack } from "../../battle-actions.js";
+import { applyDeclareAttack } from "../../battle/actions.js";
 import {
   setupAttackState,
   withWhenAttackingDrawEffect,
-} from "../../battle-actions-test-fixtures.js";
+} from "../../battle/test-fixtures.js";
 import { evaluateQueuedEffectCondition } from "./evaluator.js";
 
 const removeFirstDonFromDeck = (

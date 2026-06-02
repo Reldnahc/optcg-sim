@@ -27,7 +27,7 @@ import {
   toStateSeq,
 } from "../action-results.js";
 import { addCardsToHand, reifyCardRef } from "../action-state.js";
-import { isSupportedBattleResolutionEnvelope } from "../battle-support.js";
+import { isSupportedBattleResolutionEnvelope } from "../battle/support.js";
 import {
   processEffectRuntime,
   releaseDamageDeferredEffectQueue,

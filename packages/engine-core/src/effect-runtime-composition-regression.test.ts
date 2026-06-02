@@ -18,7 +18,7 @@ import {
   effectDefinition,
   installSupportedCounterEvent,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "./battle/test-fixtures.js";
 import {
   processDefenderOpponentAttackTiming,
   processEffectRuntime,

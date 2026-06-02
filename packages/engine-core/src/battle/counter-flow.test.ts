@@ -27,7 +27,7 @@ import {
   resolveNoTriggerLifeDamageDecisionsForTests,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
-} from "../battle-actions-test-fixtures.js";
+} from "./test-fixtures.js";
 
 test("banish attacker with defender Character Counter metadata opens counter-step pass decision", () => {
   const state = setupAttackState();

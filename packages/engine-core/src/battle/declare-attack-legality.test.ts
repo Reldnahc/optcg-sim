@@ -11,7 +11,7 @@ import {
   resolvedCard,
   toCardId,
 } from "../action-test-fixtures.js";
-import { setupAttackState } from "../battle-actions-test-fixtures.js";
+import { setupAttackState } from "./test-fixtures.js";
 
 test("getLegalActions includes Leader-to-Leader declareAttack for turn player", () => {
   const state = setupAttackState();
