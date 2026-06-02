@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-const repoRoot = join(import.meta.dirname, "..", "..", "..");
+const repoRoot = join(import.meta.dirname, "..", "..", "..", "..");
 
 const readSource = (path: string): string =>
   readFileSync(join(repoRoot, path), "utf8");
