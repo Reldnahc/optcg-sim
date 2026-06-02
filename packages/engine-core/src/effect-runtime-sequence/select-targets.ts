@@ -16,7 +16,7 @@ import type {
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import { restFieldObjects } from "./saved-field-object.js";
-import { resolvePlayerId } from "../effect-runtime-primitives.js";
+import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,

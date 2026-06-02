@@ -14,7 +14,7 @@ import type {
 import { toEngineResult, toStateSeq } from "../action-results.js";
 import { addCardsToHand, reindexZoneCards } from "../action-state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
-import { resolvePlayerId } from "../effect-runtime-primitives.js";
+import { resolvePlayerId } from "../runtime/primitives/execute.js";
 
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 

@@ -16,7 +16,7 @@ import { appendEvent, toStateSeq } from "../action-results.js";
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
-} from "../effect-runtime-primitives.js";
+} from "../runtime/primitives/execute.js";
 import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;

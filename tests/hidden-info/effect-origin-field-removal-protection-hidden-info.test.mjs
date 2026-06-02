@@ -10,7 +10,7 @@ import {
   toCardId,
 } from "../../packages/engine-core/src/action-test-fixtures.ts";
 import { filterStateForPlayer } from "../../packages/engine-core/src/filter-state-for-player.ts";
-import { executeSelectedTargetEffectPrimitive } from "../../packages/engine-core/src/effect-runtime-primitives.ts";
+import { executeSelectedTargetEffectPrimitive } from "../../packages/engine-core/src/runtime/primitives/execute.ts";
 
 const protectTargetFromOpponentEffectRemoval = (state, target, condition) => {
   state.continuousEffects = [

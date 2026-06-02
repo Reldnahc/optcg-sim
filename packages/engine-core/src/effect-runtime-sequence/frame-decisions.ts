@@ -21,13 +21,13 @@ import {
 import {
   getReturnDonEligibleCount,
   getReturnDonEligibleInstanceIds,
-} from "../effect-runtime-return-don.js";
+} from "../runtime/primitives/return-don.js";
 import { chooseQuantityPromptForEffect } from "../effect-runtime-quantity-prompts.js";
 import { activeDonCount } from "./segments.js";
 import {
   attachDonTargetCandidates,
   type AttachDonPaymentOption,
-} from "../effect-runtime-attach-don-cost.js";
+} from "../runtime/primitives/attach-don-cost.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({

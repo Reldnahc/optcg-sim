@@ -1,4 +1,4 @@
-export type { DrawExecutionFailureReason } from "./effect-runtime-draw-primitives.js";
+export type { DrawExecutionFailureReason } from "./draw.js";
 export {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
@@ -16,24 +16,24 @@ export {
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
   resolvePlayerId,
-} from "./effect-runtime-draw-primitives.js";
+} from "./draw.js";
 export type {
   DetectSelectedTargetKoReplacementCandidateResult,
   SelectedTargetKoReplacementCandidate,
   SelectedTargetKoReplacementDetectionFailureReason,
-} from "./effect-runtime-ko-replacement-process.js";
+} from "../../effect-runtime-ko-replacement-process.js";
 export {
   buildKoReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
   executeAcceptedSelectedTargetKoReplacementProcess,
   pauseSelectedTargetKoReplacementProcess,
-} from "./effect-runtime-ko-replacement-process.js";
-export type { SelectedTargetKoExecutionFailureReason } from "./effect-runtime-target-ko-primitives.js";
+} from "../../effect-runtime-ko-replacement-process.js";
+export type { SelectedTargetKoExecutionFailureReason } from "./target-ko.js";
 export {
   executeSelectedTargetEffectPrimitive,
   resolveSavedFieldObjectKoSelection,
   executeUnreplacedSelectedTargetKoProcess,
   isSupportedMainEventTargetKoEffect,
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
-} from "./effect-runtime-target-ko-primitives.js";
+} from "./target-ko.js";

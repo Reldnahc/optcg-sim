@@ -3,11 +3,11 @@ import { test } from "vitest";
 
 import type { CardInstance, Effect } from "@optcg/types";
 
-import { computeView } from "./compute-view.js";
+import { computeView } from "../../compute-view.js";
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
-} from "./runtime/continuous/continuous.js";
+} from "../continuous/continuous.js";
 import {
   createActiveState,
   p1,
@@ -16,7 +16,7 @@ import {
   toCardId,
   toInstanceId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
 
 const fieldCharacter = (): CardInstance => ({
   instanceId: toInstanceId("target-character"),

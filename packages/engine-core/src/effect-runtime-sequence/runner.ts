@@ -24,7 +24,7 @@ import {
   getSequenceOptionalPayCostOptions,
   stateWithPausedSequenceFrame,
 } from "./frame-decisions.js";
-import { applyPlaySelectedSequenceSegment } from "../effect-runtime-play-selected.js";
+import { applyPlaySelectedSequenceSegment } from "../runtime/primitives/play-selected.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import { applySelectTargetsSequenceSegment } from "./select-targets.js";

@@ -18,7 +18,7 @@ import {
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
   isSupportedNoChoiceOnPlayDrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
-} from "./effect-runtime-primitives.js";
+} from "./runtime/primitives/execute.js";
 import {
   applyAction,
   createActiveState,

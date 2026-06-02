@@ -21,7 +21,7 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { reorderDeckSlice, zonesEqual } from "./action-state.js";
-import { resolvePlayerId } from "./effect-runtime-primitives.js";
+import { resolvePlayerId } from "./runtime/primitives/execute.js";
 
 type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;
 

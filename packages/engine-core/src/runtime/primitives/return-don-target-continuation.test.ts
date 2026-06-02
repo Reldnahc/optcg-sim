@@ -24,7 +24,7 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
 
 const reindexHand = (
   cards: readonly CardInstance[],

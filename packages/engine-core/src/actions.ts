@@ -62,7 +62,7 @@ import {
   applySupportedTrashFromHandChoiceResponse,
   getTrashFromHandDecisionLegalActions,
   isTrashFromHandSelectCardsDecision,
-} from "./effect-runtime-trash-from-hand.js";
+} from "./runtime/primitives/trash-from-hand.js";
 import {
   applySupportedHandSelectionChoiceResponse,
   getHandSelectionDecisionLegalActions,

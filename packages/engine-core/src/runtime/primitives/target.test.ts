@@ -16,20 +16,20 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { applyAction, getLegalActions } from "../../actions.js";
+import { hashCanonicalStateValue } from "../../canonical-state.js";
 import {
   createActiveState,
   must,
   p1,
   p2,
   resolvedCard,
-} from "./action-test-fixtures.js";
+} from "../../action-test-fixtures.js";
 import {
   buildSelectedTargetKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
   executeSelectedTargetEffectPrimitive,
-} from "./effect-runtime-primitives.js";
+} from "./execute.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

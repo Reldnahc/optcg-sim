@@ -29,7 +29,7 @@ import {
   toTimingWindowId,
   withCardInZone,
   createActiveState,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
 
 const handRef = (card: CardInstance, playerId = p1): CardRef => ({
   instanceId: card.instanceId,

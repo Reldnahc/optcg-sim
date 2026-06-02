@@ -9,7 +9,7 @@ import {
 } from "./effect-runtime-sequence-frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
-import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
+import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
 
 const isCardRef = (value: unknown): value is CardRef => {

@@ -23,7 +23,7 @@ import {
   p2,
   resolvedCard,
 } from "../action-test-fixtures.js";
-import { executeSelectedTargetEffectPrimitive } from "../effect-runtime-primitives.js";
+import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

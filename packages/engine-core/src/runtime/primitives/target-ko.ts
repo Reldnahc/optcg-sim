@@ -16,19 +16,23 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { getOpponentId } from "./action-state.js";
+import {
+  appendEvent,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
+import { getOpponentId } from "../../action-state.js";
 import {
   KO_TRASH_MOVEMENT_REASON,
   moveConcreteCardsToTrash,
-} from "./concrete-card-movement.js";
+} from "../../concrete-card-movement.js";
 import {
   buildSelectedTargetKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
   normalizeSelectedTargetKoProcess,
   pauseSelectedTargetKoReplacementProcess,
-} from "./effect-runtime-ko-replacement-process.js";
-import { applyFieldRemovalProtection } from "./replacement/field-removal-protection.js";
+} from "../../effect-runtime-ko-replacement-process.js";
+import { applyFieldRemovalProtection } from "../../replacement/field-removal-protection.js";
 
 export type SelectedTargetKoExecutionFailureReason =
   | "unsupported-effect-shape"

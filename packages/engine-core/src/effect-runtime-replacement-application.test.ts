@@ -32,7 +32,7 @@ import { executeAcceptedSelectedTargetKoReplacementProcess } from "./effect-runt
 import {
   buildSelectedTargetKoReplacementProcess,
   executeSelectedTargetEffectPrimitive,
-} from "./effect-runtime-primitives.js";
+} from "./runtime/primitives/execute.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toDecisionId = (value: string): DecisionId => value as DecisionId;

@@ -11,18 +11,18 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { createActiveState, must, p1 } from "./action-test-fixtures.js";
-import { applyAction } from "./actions.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { executeNoChoiceEffectPrimitive } from "./effect-runtime.js";
+import { createActiveState, must, p1 } from "../../action-test-fixtures.js";
+import { applyAction } from "../../actions.js";
+import { filterStateForPlayer } from "../../filter-state-for-player.js";
+import { hashCanonicalStateValue } from "../../canonical-state.js";
+import { executeNoChoiceEffectPrimitive } from "../../effect-runtime.js";
 import {
   processEffectRuntime,
   queueingState,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
   setupOnPlayDefinition,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

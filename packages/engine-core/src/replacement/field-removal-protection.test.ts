@@ -35,7 +35,7 @@ import {
   buildSelectedTargetKoReplacementProcess,
   executeSelectedTargetEffectPrimitive,
   executeUnreplacedSelectedTargetKoProcess,
-} from "../effect-runtime-primitives.js";
+} from "../runtime/primitives/execute.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "../play-card.js";
 import { setupFullCharacterPlayState } from "../play-card-test-fixtures.js";
 

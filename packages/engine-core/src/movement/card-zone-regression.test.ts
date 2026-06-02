@@ -11,8 +11,8 @@ const readSource = (path: string): string =>
 test("trash front doors delegate concrete movement to the shared zone movement helper", () => {
   const frontDoors = [
     "packages/engine-core/src/movement/runtime-move-cards.ts",
-    "packages/engine-core/src/effect-runtime-trash-from-hand.ts",
-    "packages/engine-core/src/effect-runtime-target-ko-primitives.ts",
+    "packages/engine-core/src/runtime/primitives/trash-from-hand.ts",
+    "packages/engine-core/src/runtime/primitives/target-ko.ts",
   ];
 
   for (const path of frontDoors) {

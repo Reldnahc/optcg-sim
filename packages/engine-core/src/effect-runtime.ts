@@ -22,12 +22,12 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-processing.js";
-import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
+import { isSupportedEffectResolvedCustomDrawEffect } from "./runtime/primitives/execute.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence-frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";
-import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
+import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 
-export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
+export type { DrawExecutionFailureReason } from "./runtime/primitives/execute.js";
 export { executeAcceptedSelectedTargetKoReplacementProcess } from "./effect-runtime-ko-replacement-process.js";
 export {
   applyReplacementRestTargetDecisionResponse,
@@ -56,7 +56,7 @@ export {
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
   isSupportedNoChoiceOnPlayDrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
-} from "./effect-runtime-primitives.js";
+} from "./runtime/primitives/execute.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";
 

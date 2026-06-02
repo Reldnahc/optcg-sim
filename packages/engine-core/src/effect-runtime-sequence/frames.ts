@@ -21,7 +21,7 @@ import {
   stateWithPausedSequenceFrame,
 } from "./frame-decisions.js";
 import { appendEffectResolvedForCompletedSequence } from "../effect-runtime-sequence-frame-events.js";
-import { resumePlaySelectedOverflowFrame } from "../effect-runtime-play-selected.js";
+import { resumePlaySelectedOverflowFrame } from "../runtime/primitives/play-selected.js";
 import {
   resumeSequenceFrameAfterHandSelection as resumeSequenceFrameAfterHandSelectionHelper,
   resumeSequenceFrameAfterTrashFromHand as resumeSequenceFrameAfterTrashFromHandHelper,

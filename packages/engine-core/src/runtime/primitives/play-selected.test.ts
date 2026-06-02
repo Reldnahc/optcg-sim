@@ -29,9 +29,9 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { applyRuntimePlaySelectedFromHand } from "./play-card.js";
-import { setupFullCharacterPlayState } from "./play-card-test-fixtures.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
+import { applyRuntimePlaySelectedFromHand } from "../../play-card.js";
+import { setupFullCharacterPlayState } from "../../play-card-test-fixtures.js";
 
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({

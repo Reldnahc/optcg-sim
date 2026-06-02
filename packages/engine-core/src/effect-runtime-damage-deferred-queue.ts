@@ -4,7 +4,7 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
+import { isSupportedEffectResolvedCustomDrawEffect } from "./runtime/primitives/execute.js";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   damageProcess?: {

@@ -26,7 +26,7 @@ import {
   buildKoReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
-} from "./effect-runtime-primitives.js";
+} from "./runtime/primitives/execute.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

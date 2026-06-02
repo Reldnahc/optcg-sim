@@ -39,7 +39,7 @@ import {
 } from "../battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "../canonical-state.js";
 import { computeView } from "../compute-view.js";
-import { executeSelectedTargetEffectPrimitive } from "../effect-runtime-primitives.js";
+import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
 import { filterStateForPlayer } from "../filter-state-for-player.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "../play-card.js";
 import { setupFullCharacterPlayState } from "../play-card-test-fixtures.js";

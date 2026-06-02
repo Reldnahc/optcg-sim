@@ -10,7 +10,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
-import { resolvePlayerId } from "./effect-runtime-primitives.js";
+import { resolvePlayerId } from "./runtime/primitives/execute.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,

@@ -22,7 +22,7 @@ import {
 } from "../../action-results.js";
 import { zonesEqual } from "../../action-state.js";
 import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
-import { isSupportedEffectResolvedCustomDrawEffect } from "../../effect-runtime-primitives.js";
+import { isSupportedEffectResolvedCustomDrawEffect } from "../primitives/execute.js";
 import type {
   BattleKOTriggerCandidate,
   DetectBattleKOTriggerCandidatesResult,

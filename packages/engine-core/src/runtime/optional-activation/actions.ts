@@ -23,10 +23,10 @@ import {
   zonesEqual,
 } from "../../action-state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
-import { applyAttachDonCostPayment } from "../../effect-runtime-attach-don-cost.js";
+import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";
 import { applyTurnLifeFaceUpPayment } from "../../effect-runtime-life-face-up-cost.js";
-import { applyModifyPowerPayment } from "../../effect-runtime-modify-power-cost.js";
+import { applyModifyPowerPayment } from "../primitives/modify-power-cost.js";
 import {
   applyMoveCardsPayment,
   isSupportedMoveCardsPaymentRoute,
@@ -40,7 +40,7 @@ import {
   getSequencePayCostLegalActions,
   hasSequenceFrameForDecision,
 } from "../../effect-runtime-sequence-frame-decisions.js";
-import { applyTrashSelfPayment } from "../../effect-runtime-trash-self-cost.js";
+import { applyTrashSelfPayment } from "../primitives/trash-self-cost.js";
 import {
   resumeSequenceFrameAfterOptionalActivation,
   resumeSequenceFrameAfterOptionalCost,
@@ -48,8 +48,8 @@ import {
 import {
   applyReturnDonPayment,
   getReturnDonEligibleInstanceIds,
-} from "../../effect-runtime-return-don.js";
-import { createSupportedTrashFromHandChoiceDecision } from "../../effect-runtime-trash-from-hand.js";
+} from "../primitives/return-don.js";
+import { createSupportedTrashFromHandChoiceDecision } from "../primitives/trash-from-hand.js";
 import { invalidDecision } from "../../engine-error-helpers.js";
 
 const sameSource = (left: CardRef, right: CardRef): boolean =>

@@ -61,7 +61,7 @@ import {
   buildKoReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
   pauseSelectedTargetKoReplacementProcess,
-} from "../effect-runtime-primitives.js";
+} from "../runtime/primitives/execute.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../invariants.js";
 import {

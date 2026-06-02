@@ -17,7 +17,7 @@ import {
   executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,
 } from "../effect-runtime.js";
-import { executeUnreplacedSelectedTargetKoProcess } from "../effect-runtime-primitives.js";
+import { executeUnreplacedSelectedTargetKoProcess } from "../runtime/primitives/execute.js";
 import { hasSequenceFrameForDecision } from "../effect-runtime-sequence-frame-decisions.js";
 import { isReplacementContinuationDecision } from "./decision-actions.js";
 import {

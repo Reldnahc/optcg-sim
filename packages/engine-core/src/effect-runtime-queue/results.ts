@@ -35,7 +35,7 @@ import {
   executeNoChoiceEffectPrimitive,
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
-} from "../effect-runtime-primitives.js";
+} from "../runtime/primitives/execute.js";
 import {
   isScopedActivateMainQueueEntry,
   isSupportedActivateMainNoChoiceDrawEffect,
@@ -56,7 +56,7 @@ import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence
 import {
   createSupportedTrashFromHandChoiceDecision,
   isSupportedQueuedTrashFromHandEffect,
-} from "../effect-runtime-trash-from-hand.js";
+} from "../runtime/primitives/trash-from-hand.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,

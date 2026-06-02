@@ -16,7 +16,7 @@ import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import {
   executeSelectedTargetEffectPrimitive,
   resolveSavedFieldObjectKoSelection,
-} from "../effect-runtime-primitives.js";
+} from "../runtime/primitives/execute.js";
 import type { SupportedSequenceSegment } from "./support.js";
 import {
   applyRestProtection,
