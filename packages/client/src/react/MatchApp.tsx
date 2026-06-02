@@ -1,61 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
-import { createActionLogEntries } from "../action-log.js";
+import { useEffect, useState } from "react";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
-import {
-  ActionLogWindow,
-  defaultActionLogWindowRect,
-} from "./ActionLogWindow.js";
-import { BoardLayout } from "./BoardLayout.js";
-import {
-  actionLogCardModel,
-  cardDisplayFromCatalog,
-  cardModelFromCatalog,
-} from "./card-model.js";
+import { actionLogCardModel } from "./card-model.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
-import {
-  CardPreviewWindow,
-  defaultCardPreviewWindowRect,
-} from "./CardPreviewWindow.js";
-import { CollectionModalHost } from "./CollectionModalHost.js";
-import { ControlRail } from "./ControlRail.js";
-import { DecisionModalHost } from "./DecisionModalHost.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
-import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
-import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
+import { MatchBoardSurface } from "./MatchBoardSurface.js";
+import { MatchControlPanel } from "./MatchControlPanel.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
-  groupedInfoWindowIdsAfterTabDragOut,
-  infoWindowKey,
-  infoWindowTabIdForKey,
   settingsWindowKey,
 } from "./info-window-model.js";
 import { createInfoWindowToolbarControls } from "./info-window-toolbar-controls.js";
 import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
-import { OpponentRevealWindowLayer } from "./OpponentRevealWindowLayer.js";
-import { rollbackStatusForPlayer } from "./rollback-status.js";
-import { defaultSettingsWindowRect, SettingsWindow } from "./SettingsWindow.js";
+import { MatchInfoWindows } from "./MatchInfoWindows.js";
+import { MatchInteractionModals } from "./MatchInteractionModals.js";
 import { SettingsToggle } from "./SettingsToggle.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
-import { useInfoWindowDragOut } from "./use-info-window-drag-out.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
 import { useInfoWindowOrchestration } from "./use-info-window-orchestration.js";
 import { useMatchClient } from "./useMatchClient.js";
 import { useConcedeConfirmation } from "./use-concede-confirmation.js";
-import { useFirstPlayerChoiceModal } from "./use-first-player-choice-modal.js";
 import { useMatchRevealWindowStateStore } from "./use-match-reveal-window-state-store.js";
+import { useMatchAppSession } from "./use-match-app-session.js";
+import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
-import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
-import {
-  isFirstPlayerSetupClientState,
-  isLobbyClientState,
-  isMatchClientState,
-} from "./useMatchClient-support.js";
 export const MatchApp = (): React.JSX.Element => {
   const client = useMatchClient();
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
@@ -78,28 +50,24 @@ export const MatchApp = (): React.JSX.Element => {
     selectedCardInstanceId,
     selectedDonInstanceIds,
   } = client.state;
-  const matchState = isMatchClientState(clientState) ? clientState : undefined;
-  const firstPlayerSetupState = isFirstPlayerSetupClientState(clientState)
-    ? clientState
-    : undefined;
-  const lobbyState = isLobbyClientState(clientState) ? clientState : undefined;
-  const firstPlayerChoiceModal = useFirstPlayerChoiceModal(
-    firstPlayerSetupState,
-    client.chooseFirstPlayer,
-  );
-  const visibleDecisionModal = firstPlayerChoiceModal.model ?? decisionModal;
-  const setVisibleDecisionOption =
-    firstPlayerChoiceModal.onOption ?? client.setDecisionOptionValue;
-  const confirmVisibleDecision =
-    firstPlayerChoiceModal.onConfirm ??
-    (() => {
-      void client.confirmDecision();
-    });
-  const scopedMatchState = matchState ?? firstPlayerSetupState;
-  const matchScope =
-    scopedMatchState === undefined && lobbyState === undefined
-      ? undefined
-      : String(scopedMatchState?.matchId ?? lobbyState?.lobbyId);
+  const {
+    actionLogEntries,
+    cardDisplay,
+    cardModel,
+    concedeAction,
+    confirmVisibleDecision,
+    currentPlayerId,
+    displayBoard,
+    lobbyState,
+    matchScope,
+    matchState,
+    moveHandCard,
+    playerSnapshot,
+    rollbackStatus,
+    setVisibleDecisionOption,
+    visibleDecisionModal,
+    visibleGlobalActions,
+  } = useMatchAppSession(client);
   const revealWindowStateStore = useMatchRevealWindowStateStore({
     enabled: matchScope !== undefined,
     matchId: matchScope,
@@ -157,25 +125,6 @@ export const MatchApp = (): React.JSX.Element => {
     resetFloatingWindowState,
     revealWindowStateStore,
   ]);
-  const currentPlayerId = client.currentPlayerId;
-  const { displayBoard, moveHandCard } = useOrderedHandBoard({
-    board,
-    matchScope,
-    currentPlayerId,
-  });
-  const playerSnapshot =
-    currentPlayerId === undefined || matchState === undefined
-      ? undefined
-      : matchState.snapshot.players[currentPlayerId];
-  const globalActions =
-    decisionModal === undefined ? client.globalActions() : [];
-  const concedeAction = useMemo(
-    () => client.globalActions().find((action) => action.type === "concede"),
-    [client],
-  );
-  const visibleGlobalActions = globalActions.filter(
-    (action) => action.type !== "concede",
-  );
   const {
     concedeDisabled,
     concedeConfirming,
@@ -186,14 +135,6 @@ export const MatchApp = (): React.JSX.Element => {
     actionInFlight: client.state.actionInFlight,
     matchActive: matchState?.snapshot.status === "active",
   });
-  const rollbackStatus = rollbackStatusForPlayer(
-    matchState?.snapshot,
-    currentPlayerId,
-  );
-  const cardDisplay = (card: Parameters<typeof cardDisplayFromCatalog>[1]) =>
-    cardDisplayFromCatalog(matchState?.cards, card);
-  const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
-    cardModelFromCatalog(matchState?.cards, card);
   const {
     previewHoveredCard,
     showCardPreview,
@@ -268,20 +209,6 @@ export const MatchApp = (): React.JSX.Element => {
     activeDismissedRevealIds: activeRevealWindowState.dismissed,
     cardModel,
   });
-  const actionLogEntries = useMemo(
-    () =>
-      playerSnapshot === undefined || matchState === undefined
-        ? []
-        : createActionLogEntries({
-            events: playerSnapshot.view.events,
-            catalog: matchState.cards,
-            rollbackPoints:
-              matchState.snapshot.rollback?.canRequest === true
-                ? matchState.snapshot.rollback.points
-                : [],
-          }),
-    [matchState, playerSnapshot],
-  );
   const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
@@ -358,77 +285,34 @@ export const MatchApp = (): React.JSX.Element => {
     },
     previewCardModel: previewHoveredCard,
   });
-  const reorderDockTab = (
-    draggedWindowKey: string,
-    targetWindowKey: string,
-    placement: ReorderPlacement,
-  ): void => {
-    const draggedInfoTabId = infoWindowTabIdForKey(draggedWindowKey);
-    const targetInfoTabId = infoWindowTabIdForKey(targetWindowKey);
-    if (
-      draggedInfoTabId !== undefined &&
-      targetInfoTabId !== undefined &&
-      activeDockedWindowIds.has(infoWindowKey) &&
-      dockedInfoTabIds.includes(draggedInfoTabId) &&
-      dockedInfoTabIds.includes(targetInfoTabId)
-    ) {
-      setGroupedInfoWindowIds(
-        moveIdNear(
-          dockedInfoTabIds,
-          draggedInfoTabId,
-          targetInfoTabId,
-          placement,
-        ),
-      );
-      setInfoWindowActiveTab(draggedInfoTabId);
-    }
-    reorderDockedWindow(draggedWindowKey, targetWindowKey, placement);
-    setControlDockActiveTabId(draggedWindowKey);
-  };
-  const completePoppedOutInfoGroupDrag = (
-    rect: WindowRect,
-  ): WindowRect | undefined => {
-    const dockRect = completeControlDockDrop(rect);
-    if (dockRect === undefined) {
-      return undefined;
-    }
-    dockInfoWindowTabs(
-      dockedInfoTabIds.length >= 2 ? dockedInfoTabIds : groupedInfoWindowIds,
-      dockRect,
-    );
-    return undefined;
-  };
-  const { dragOutDockGroup, dragOutDockWindow, splitInfoWindowTab } =
-    useInfoWindowDragOut({
-      activeFloatingWindowRects,
-      dockedInfoTabIds,
-      groupedInfoWindowIds,
-      currentControlDockSlotRect,
-      updateFloatingWindowRect,
-      updateFloatingWindowOpen,
-      setControlDockActiveTabId,
-      setGroupedInfoWindowIds,
-      setInfoWindowActiveTab,
-      setInfoWindowMinimized,
-      setActionLogOpen,
-      setSettingsOpen,
-      onControlWindowDragMove: updateControlDockTarget,
-      onDockableWindowDragEnd: completeDockableWindowDrag,
-      onInfoWindowDragMove: updateInfoWindowDragTargets,
-      onInfoWindowDragEnd: completeInfoWindowDrag,
-      onInfoGroupDragEnd: completePoppedOutInfoGroupDrag,
-      onDockInfoWindowGroupSplit: ({
-        windowKeys,
-        rect,
-        replacedWindowKeys,
-      }) => {
-        dockFloatingWindows({
-          windowKeys,
-          rect,
-          replacedWindowKeys,
-        });
-      },
-    });
+  const {
+    dragOutDockGroup,
+    dragOutDockWindow,
+    reorderDockTab,
+    splitInfoWindowTab,
+  } = useMatchAppWindowDocking({
+    activeDockedWindowIds,
+    activeFloatingWindowRects,
+    completeControlDockDrop,
+    completeDockableWindowDrag,
+    completeInfoWindowDrag,
+    currentControlDockSlotRect,
+    dockedInfoTabIds,
+    dockFloatingWindows,
+    dockInfoWindowTabs,
+    groupedInfoWindowIds,
+    reorderDockedWindow,
+    setActionLogOpen,
+    setControlDockActiveTabId,
+    setGroupedInfoWindowIds,
+    setInfoWindowActiveTab,
+    setInfoWindowMinimized,
+    setSettingsOpen,
+    updateControlDockTarget,
+    updateFloatingWindowOpen,
+    updateFloatingWindowRect,
+    updateInfoWindowDragTargets,
+  });
   useEffect(() => {
     if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
       return;
@@ -457,31 +341,28 @@ export const MatchApp = (): React.JSX.Element => {
   ]);
   return (
     <main className="match-app">
-      {displayBoard === undefined ? (
-        <MatchLoadingPanel clientState={clientState} />
-      ) : (
-        <BoardLayout
-          board={displayBoard}
-          decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
-          selectedCardInstanceId={selectedCardInstanceId}
-          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-          selectedDonInstanceIds={selectedDonInstanceIds}
-          cardActions={client.cardActions}
-          actionDisabled={client.state.actionInFlight}
-          onCardClick={client.selectCard}
-          onCardAction={(actionIndex) => {
-            void client.submitAction(actionIndex);
-          }}
-          onPreviewCard={previewHoveredCard}
-          onMoveHandCard={moveHandCard}
-          onViewCollection={onViewCollection}
-          onBackgroundClick={() => {
-            client.selectCard(undefined);
-          }}
-        />
-      )}
-      <ControlRail
+      <MatchBoardSurface
+        board={displayBoard}
+        clientState={clientState}
+        decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
+        selectedCardInstanceId={selectedCardInstanceId}
+        pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+        decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+        selectedDonInstanceIds={selectedDonInstanceIds}
+        cardActions={client.cardActions}
+        actionDisabled={client.state.actionInFlight}
+        onCardClick={client.selectCard}
+        onCardAction={(actionIndex) => {
+          void client.submitAction(actionIndex);
+        }}
+        onPreviewCard={previewHoveredCard}
+        onMoveHandCard={moveHandCard}
+        onViewCollection={onViewCollection}
+        onBackgroundClick={() => {
+          client.selectCard(undefined);
+        }}
+      />
+      <MatchControlPanel
         errors={client.state.errors}
         globalActions={visibleGlobalActions}
         disabled={client.state.actionInFlight}
@@ -540,12 +421,42 @@ export const MatchApp = (): React.JSX.Element => {
           void client.submitAction(concedeAction.index);
         }}
       />
-      <DecisionModalHost
-        model={
-          !decisionModalCoveredByCollection ? visibleDecisionModal : undefined
-        }
-        disabled={client.state.actionInFlight}
+      <MatchInteractionModals
+        actionInFlight={client.state.actionInFlight}
         cardDisplay={cardDisplay}
+        collectionModalHostProps={collectionModalHostProps}
+        decisionModal={visibleDecisionModal}
+        decisionModalCoveredByCollection={decisionModalCoveredByCollection}
+        opponentRevealWindowLayerProps={{
+          windows: opponentRevealWindows,
+          activeDockedWindowIds,
+          activeFloatingWindowRects,
+          minimizedRevealIds: activeRevealWindowState.minimized,
+          onToggleMinimized: (revealId) => {
+            updateRevealWindowState((state) => {
+              if (state.minimized.has(revealId)) {
+                state.minimized.delete(revealId);
+              } else {
+                state.minimized.add(revealId);
+              }
+              return state;
+            });
+          },
+          onPreviewCard: previewHoveredCard,
+          onClose: (revealId) => {
+            updateRevealWindowState((state) => {
+              state.dismissed.add(revealId);
+              state.minimized.delete(revealId);
+              return state;
+            });
+          },
+          onRectChange: (windowKey, rect) => {
+            updateFloatingWindowRect(windowKey, rect);
+          },
+          onDragMove: updateControlDockTarget,
+          onDragEnd: (windowKey, rect) =>
+            completeDockableWindowDrag(windowKey, rect),
+        }}
         onToggleCard={client.toggleDecisionCard}
         onChooseTrigger={client.chooseDecisionTriggerValue}
         onQuantity={client.setDecisionQuantityValue}
@@ -556,188 +467,47 @@ export const MatchApp = (): React.JSX.Element => {
         onPlacementDestination={client.setDecisionPlacementDestination}
         onConfirm={confirmVisibleDecision}
       />
-      <CollectionModalHost {...collectionModalHostProps} />
-      <OpponentRevealWindowLayer
-        windows={opponentRevealWindows}
+      <MatchInfoWindows
+        actionLogEntries={actionLogEntries}
+        actionLogMinimized={actionLogMinimized}
         activeDockedWindowIds={activeDockedWindowIds}
         activeFloatingWindowRects={activeFloatingWindowRects}
-        minimizedRevealIds={activeRevealWindowState.minimized}
-        onToggleMinimized={(revealId) => {
-          updateRevealWindowState((state) => {
-            if (state.minimized.has(revealId)) {
-              state.minimized.delete(revealId);
-            } else {
-              state.minimized.add(revealId);
-            }
-            return state;
-          });
+        closeActionLogWindow={closeActionLogWindow}
+        closeCardPreview={closeCardPreview}
+        closeSettingsWindow={closeSettingsWindow}
+        combineDropTarget={combineDropTarget}
+        completeInfoGroupDrag={completeInfoGroupDrag}
+        completeInfoWindowDrag={completeInfoWindowDrag}
+        dockedInfoTabIds={dockedInfoTabIds}
+        groupedInfoWindowIds={groupedInfoWindowIds}
+        infoWindowActiveTab={infoWindowActiveTab}
+        infoWindowMinimized={infoWindowMinimized}
+        onPreviewActionLogCard={(card) => {
+          showCardPreview(actionLogCardModel(card));
         }}
-        onPreviewCard={previewHoveredCard}
-        onClose={(revealId) => {
-          updateRevealWindowState((state) => {
-            state.dismissed.add(revealId);
-            state.minimized.delete(revealId);
-            return state;
-          });
+        onRequestRollback={(rollbackPointId) => {
+          void client.requestRollback(rollbackPointId);
         }}
-        onRectChange={(windowKey, rect) => {
-          updateFloatingWindowRect(windowKey, rect);
-        }}
-        onDragMove={updateControlDockTarget}
-        onDragEnd={(windowKey, rect) =>
-          completeDockableWindowDrag(windowKey, rect)
-        }
+        previewCard={previewCard}
+        previewMinimized={previewMinimized}
+        reorderInfoWindowTabs={reorderInfoWindowTabs}
+        setActionLogMinimized={setActionLogMinimized}
+        setActionLogOpen={setActionLogOpen}
+        setGroupedInfoWindowIds={setGroupedInfoWindowIds}
+        setInfoWindowActiveTab={setInfoWindowActiveTab}
+        setInfoWindowMinimized={setInfoWindowMinimized}
+        setPreviewMinimized={setPreviewMinimized}
+        setSettingsOpen={setSettingsOpen}
+        showActionLogWindow={showActionLogWindow}
+        showSettingsWindow={showSettingsWindow}
+        showTabbedInfoWindow={showTabbedInfoWindow}
+        splitInfoWindowTab={splitInfoWindowTab}
+        standaloneInfoWindowIds={standaloneInfoWindowIds}
+        updateControlDockTarget={updateControlDockTarget}
+        updateFloatingWindowOpen={updateFloatingWindowOpen}
+        updateFloatingWindowRect={updateFloatingWindowRect}
+        updateInfoWindowDragTargets={updateInfoWindowDragTargets}
       />
-      {showTabbedInfoWindow && !activeDockedWindowIds.has(infoWindowKey) ? (
-        <InfoTabbedWindow
-          previewCard={previewCard}
-          entries={actionLogEntries}
-          logOpen={showActionLogWindow}
-          settingsOpen={showSettingsWindow}
-          tabIds={groupedInfoWindowIds}
-          className={
-            combineDropTarget !== undefined &&
-            groupedInfoWindowIds.includes(combineDropTarget)
-              ? "is-combine-drop-target"
-              : undefined
-          }
-          activeTabId={infoWindowActiveTab}
-          minimized={infoWindowMinimized}
-          initialRect={
-            activeFloatingWindowRects[infoWindowKey] ??
-            activeFloatingWindowRects[actionLogWindowKey] ??
-            activeFloatingWindowRects[cardPreviewWindowKey]
-          }
-          onActiveTabChange={setInfoWindowActiveTab}
-          onToggleMinimized={() => {
-            setInfoWindowMinimized((current) => !current);
-          }}
-          onCloseActiveTab={(tabId) => {
-            if (tabId === "preview") {
-              closeCardPreview();
-              return;
-            }
-            if (tabId === "settings") {
-              setSettingsOpen(false);
-              setInfoWindowActiveTab("preview");
-              setGroupedInfoWindowIds(
-                groupedInfoWindowIdsAfterTabDragOut(
-                  groupedInfoWindowIds,
-                  "settings",
-                ),
-              );
-              updateFloatingWindowOpen(settingsWindowKey, false);
-              return;
-            }
-            setActionLogOpen(false);
-            setActionLogMinimized(false);
-            setInfoWindowActiveTab("preview");
-            setGroupedInfoWindowIds(
-              groupedInfoWindowIdsAfterTabDragOut(groupedInfoWindowIds, "log"),
-            );
-            updateFloatingWindowOpen(actionLogWindowKey, false);
-          }}
-          onRectChange={(rect) => {
-            updateFloatingWindowRect(infoWindowKey, rect);
-          }}
-          onDragMove={updateControlDockTarget}
-          onDragEnd={completeInfoGroupDrag}
-          onTabDragOut={splitInfoWindowTab}
-          onTabReorder={reorderInfoWindowTabs}
-          onRequestRollback={(rollbackPointId) => {
-            void client.requestRollback(rollbackPointId);
-          }}
-          onPreviewCard={(card) => {
-            showCardPreview(actionLogCardModel(card));
-          }}
-        />
-      ) : null}
-      {standaloneInfoWindowIds.includes("log") &&
-      !dockedInfoTabIds.includes("log") ? (
-        <ActionLogWindow
-          entries={actionLogEntries}
-          className={
-            combineDropTarget === "log" ? "is-combine-drop-target" : undefined
-          }
-          minimized={actionLogMinimized}
-          initialRect={
-            activeFloatingWindowRects[actionLogWindowKey] ??
-            defaultActionLogWindowRect
-          }
-          onToggleMinimized={() => {
-            setActionLogMinimized((current) => !current);
-          }}
-          onClose={closeActionLogWindow}
-          onRectChange={(rect) => {
-            updateFloatingWindowRect(actionLogWindowKey, rect);
-          }}
-          onDragMove={(rect) => {
-            updateInfoWindowDragTargets("log", rect);
-          }}
-          onDragEnd={(rect) => {
-            return completeInfoWindowDrag("log", rect);
-          }}
-          onRequestRollback={(rollbackPointId) => {
-            void client.requestRollback(rollbackPointId);
-          }}
-          onPreviewCard={(card) => {
-            showCardPreview(actionLogCardModel(card));
-          }}
-        />
-      ) : null}
-      {standaloneInfoWindowIds.includes("preview") &&
-      !dockedInfoTabIds.includes("preview") ? (
-        <CardPreviewWindow
-          card={previewCard}
-          className={
-            combineDropTarget === "preview"
-              ? "is-combine-drop-target"
-              : undefined
-          }
-          minimized={previewMinimized}
-          initialRect={
-            activeFloatingWindowRects[cardPreviewWindowKey] ??
-            defaultCardPreviewWindowRect
-          }
-          onToggleMinimized={() => {
-            setPreviewMinimized((current) => !current);
-          }}
-          onClose={closeCardPreview}
-          onRectChange={(rect) => {
-            updateFloatingWindowRect(cardPreviewWindowKey, rect);
-          }}
-          onDragMove={(rect) => {
-            updateInfoWindowDragTargets("preview", rect);
-          }}
-          onDragEnd={(rect) => {
-            return completeInfoWindowDrag("preview", rect);
-          }}
-        />
-      ) : null}
-      {standaloneInfoWindowIds.includes("settings") &&
-      !dockedInfoTabIds.includes("settings") ? (
-        <SettingsWindow
-          className={
-            combineDropTarget === "settings"
-              ? "is-combine-drop-target"
-              : undefined
-          }
-          initialRect={
-            activeFloatingWindowRects[settingsWindowKey] ??
-            defaultSettingsWindowRect
-          }
-          onClose={closeSettingsWindow}
-          onRectChange={(rect) => {
-            updateFloatingWindowRect(settingsWindowKey, rect);
-          }}
-          onDragMove={(rect) => {
-            updateInfoWindowDragTargets("settings", rect);
-          }}
-          onDragEnd={(rect) => {
-            return completeInfoWindowDrag("settings", rect);
-          }}
-        />
-      ) : null}
     </main>
   );
 };

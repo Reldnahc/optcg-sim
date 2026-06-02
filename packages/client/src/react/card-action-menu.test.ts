@@ -141,9 +141,9 @@ describe("card action menu", () => {
     assert.equal(source.includes("cardActions={client.cardActions}"), true);
   });
 
-  test("match app removes concede from global action menu", async () => {
+  test("match app session removes concede from global action menu", async () => {
     const source = await readFile(
-      join(sourceDirectory, "MatchApp.tsx"),
+      join(sourceDirectory, "use-match-app-session.ts"),
       "utf8",
     );
 

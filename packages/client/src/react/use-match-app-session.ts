@@ -1,0 +1,147 @@
+import { useMemo } from "react";
+
+import type { PlayerId } from "@optcg/types";
+
+import { createActionLogEntries } from "../action-log.js";
+import type { MatchClientState } from "../index.js";
+import type { ClientCardModel } from "../view-model.js";
+import { cardDisplayFromCatalog, cardModelFromCatalog } from "./card-model.js";
+import { rollbackStatusForPlayer } from "./rollback-status.js";
+import { useFirstPlayerChoiceModal } from "./use-first-player-choice-modal.js";
+import { useOrderedHandBoard } from "./use-ordered-hand-board.js";
+import type { MatchClientUi } from "./useMatchClient-support.js";
+import {
+  isFirstPlayerSetupClientState,
+  isLobbyClientState,
+  isMatchClientState,
+} from "./useMatchClient-support.js";
+
+export interface MatchAppSessionModel {
+  actionLogEntries: ReturnType<typeof createActionLogEntries>;
+  cardDisplay: (
+    card: Parameters<typeof cardDisplayFromCatalog>[1],
+  ) => ReturnType<typeof cardDisplayFromCatalog>;
+  cardModel: (
+    card: Parameters<typeof cardModelFromCatalog>[1],
+  ) => ClientCardModel;
+  concedeAction: ReturnType<MatchClientUi["globalActions"]>[number] | undefined;
+  currentPlayerId: MatchClientUi["currentPlayerId"];
+  displayBoard: ReturnType<typeof useOrderedHandBoard>["displayBoard"];
+  firstPlayerSetupState:
+    | Extract<
+        NonNullable<MatchClientUi["state"]["clientState"]>,
+        { firstPlayerChoice: unknown }
+      >
+    | undefined;
+  globalActions: ReturnType<MatchClientUi["globalActions"]>;
+  lobbyState:
+    | Extract<
+        NonNullable<MatchClientUi["state"]["clientState"]>,
+        { lobbyId: string }
+      >
+    | undefined;
+  matchScope: string | undefined;
+  matchState:
+    | Extract<
+        NonNullable<MatchClientUi["state"]["clientState"]>,
+        { snapshot: unknown }
+      >
+    | undefined;
+  moveHandCard: ReturnType<typeof useOrderedHandBoard>["moveHandCard"];
+  playerSnapshot: MatchClientState["snapshot"]["players"][PlayerId] | undefined;
+  rollbackStatus: ReturnType<typeof rollbackStatusForPlayer>;
+  setVisibleDecisionOption: (option: string) => void;
+  confirmVisibleDecision: () => void;
+  visibleDecisionModal: MatchClientUi["state"]["decisionModal"];
+  visibleGlobalActions: ReturnType<MatchClientUi["globalActions"]>;
+}
+
+export const useMatchAppSession = (
+  client: MatchClientUi,
+): MatchAppSessionModel => {
+  const { board, clientState, decisionModal } = client.state;
+  const matchState = isMatchClientState(clientState) ? clientState : undefined;
+  const firstPlayerSetupState = isFirstPlayerSetupClientState(clientState)
+    ? clientState
+    : undefined;
+  const lobbyState = isLobbyClientState(clientState) ? clientState : undefined;
+  const firstPlayerChoiceModal = useFirstPlayerChoiceModal(
+    firstPlayerSetupState,
+    client.chooseFirstPlayer,
+  );
+  const visibleDecisionModal = firstPlayerChoiceModal.model ?? decisionModal;
+  const setVisibleDecisionOption =
+    firstPlayerChoiceModal.onOption ?? client.setDecisionOptionValue;
+  const confirmVisibleDecision =
+    firstPlayerChoiceModal.onConfirm ??
+    (() => {
+      void client.confirmDecision();
+    });
+  const scopedMatchState = matchState ?? firstPlayerSetupState;
+  const matchScope =
+    scopedMatchState === undefined && lobbyState === undefined
+      ? undefined
+      : String(scopedMatchState?.matchId ?? lobbyState?.lobbyId);
+  const currentPlayerId = client.currentPlayerId;
+  const { displayBoard, moveHandCard } = useOrderedHandBoard({
+    board,
+    matchScope,
+    currentPlayerId,
+  });
+  const playerSnapshot =
+    currentPlayerId === undefined || matchState === undefined
+      ? undefined
+      : matchState.snapshot.players[currentPlayerId];
+  const globalActions =
+    decisionModal === undefined ? client.globalActions() : [];
+  const concedeAction = useMemo(
+    () => client.globalActions().find((action) => action.type === "concede"),
+    [client],
+  );
+  const visibleGlobalActions = globalActions.filter(
+    (action) => action.type !== "concede",
+  );
+  const rollbackStatus = rollbackStatusForPlayer(
+    matchState?.snapshot,
+    currentPlayerId,
+  );
+  const cardDisplay = (card: Parameters<typeof cardDisplayFromCatalog>[1]) =>
+    cardDisplayFromCatalog(matchState?.cards, card);
+  const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
+    cardModelFromCatalog(matchState?.cards, card);
+  const actionLogEntries = useMemo(
+    () =>
+      playerSnapshot === undefined || matchState === undefined
+        ? []
+        : createActionLogEntries({
+            events: playerSnapshot.view.events,
+            catalog: matchState.cards,
+            rollbackPoints:
+              matchState.snapshot.rollback?.canRequest === true
+                ? matchState.snapshot.rollback.points
+                : [],
+          }),
+    [matchState, playerSnapshot],
+  );
+
+  return {
+    actionLogEntries,
+    cardDisplay,
+    cardModel,
+    concedeAction,
+    currentPlayerId,
+    displayBoard,
+    firstPlayerSetupState,
+    globalActions,
+    lobbyState,
+    matchScope,
+    matchState,
+    moveHandCard,
+    playerSnapshot,
+    rollbackStatus,
+    setVisibleDecisionOption,
+    confirmVisibleDecision,
+    visibleDecisionModal,
+    visibleGlobalActions,
+  };
+};
