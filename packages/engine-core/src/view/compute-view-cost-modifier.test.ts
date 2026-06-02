@@ -9,7 +9,7 @@ import {
   p1,
   p2,
   resolvedCard,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import { computeView } from "./compute-view.js";
 
 const handCostReductionRecord = (

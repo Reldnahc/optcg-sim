@@ -7,7 +7,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { getLegalActions } from "./actions.js";
+import { getLegalActions } from "../actions.js";
 import {
   createActiveState,
   must,
@@ -17,18 +17,18 @@ import {
   reviewedOnPlayDrawDefinition,
   toCardId,
   valueContainsScalar,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   toDecisionId,
   toEffectId,
   toQueueEntryId,
-} from "./action-dispatcher-test-support.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+} from "../action-dispatcher-test-support.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { processEffectRuntime } from "../effect-runtime.js";
 import {
   queueDrawForP1,
   toSourceSnapshot,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const installDefinition = (

@@ -10,7 +10,7 @@ import {
   toCardId,
   toEngineEventId,
   toStateSeq,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 test("preserves safe visible card identity in player event payloads", () => {

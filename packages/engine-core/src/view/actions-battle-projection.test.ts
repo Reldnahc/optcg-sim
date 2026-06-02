@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { createInitialState } from "./initial-state.js";
-import { startMulliganFlow } from "./mulligan.js";
-import { applyAction, getLegalActions } from "./actions.js";
+import { createInitialState } from "../initial-state.js";
+import { startMulliganFlow } from "../mulligan.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import {
   createActiveState,
   createInput,
@@ -11,9 +11,9 @@ import {
   p1,
   p2,
   resolvedCard,
-} from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
-import { queuedEffect, toCardId } from "./action-dispatcher-test-support.js";
+} from "../action-test-fixtures.js";
+import { setupAttackState } from "../battle-actions-test-fixtures.js";
+import { queuedEffect, toCardId } from "../action-dispatcher-test-support.js";
 
 test("getLegalActions exposes defender decline and legal blocker response during block step decision", () => {
   const state = setupAttackState();

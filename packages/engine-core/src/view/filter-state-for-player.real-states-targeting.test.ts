@@ -13,7 +13,7 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import {
   createActiveState,
   must,
@@ -21,7 +21,7 @@ import {
   p2,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;

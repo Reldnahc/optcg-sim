@@ -16,7 +16,7 @@ import {
   p1,
   p2,
   toStateSeq,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;

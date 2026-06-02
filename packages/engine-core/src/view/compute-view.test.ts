@@ -11,9 +11,9 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 import { computeView } from "./compute-view.js";
-import { createInitialState } from "./initial-state.js";
+import { createInitialState } from "../initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;
 const toPlayerId = (value: string): PlayerId => value as PlayerId;

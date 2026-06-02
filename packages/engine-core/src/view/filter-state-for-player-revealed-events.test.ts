@@ -8,8 +8,8 @@ import {
   p2,
   toEngineEventId,
   toStateSeq,
-} from "./action-test-fixtures.js";
-import { cardRef } from "./battle-actions-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { cardRef } from "../battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 test("preserves public Life reveal origin in player-visible cardRevealed events", () => {

@@ -24,13 +24,13 @@ import {
   toCardId,
   toEngineEventId,
   toStateSeq,
-} from "./action-test-fixtures.js";
-import { applyAction, getLegalActions } from "./actions.js";
-import { cardRef, setupAttackState } from "./battle-actions-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { cardRef, setupAttackState } from "../battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { createInitialState } from "./initial-state.js";
-import { startMulliganFlow } from "./mulligan.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+import { createInitialState } from "../initial-state.js";
+import { startMulliganFlow } from "../mulligan.js";
+import { setupMainPlayState } from "../play-card-test-fixtures.js";
 
 const withEvent = (
   state: GameState,

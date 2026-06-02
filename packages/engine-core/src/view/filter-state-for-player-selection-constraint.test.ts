@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { toDecisionId } from "./action-results.js";
+import { toDecisionId } from "../action-results.js";
 import {
   createActiveState,
   must,
   p1,
   resolvedCard,
-} from "./action-test-fixtures.js";
-import { cardRef } from "./battle-actions-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { cardRef } from "../battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 test("selectCards projection exposes visible different-name selection groups", () => {

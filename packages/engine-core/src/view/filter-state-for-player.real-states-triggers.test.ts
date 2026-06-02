@@ -7,14 +7,14 @@ import {
   applyAction,
   getLegalActions,
   resolveSupportedVanillaBattle,
-} from "./actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+} from "../actions.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
   withOnKODrawEffect,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const findScalarPaths = (
