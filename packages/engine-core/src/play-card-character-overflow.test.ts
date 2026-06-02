@@ -305,13 +305,13 @@ test("Character overflow rejects stale, wrong-player, wrong-card, missing, and m
 
 test("Character overflow authority lives at the Character placement boundary", () => {
   const placementSource = readFileSync(
-    new URL("./play-card-placement.ts", import.meta.url),
+    new URL("./play-card/placement.ts", import.meta.url),
     {
       encoding: "utf8",
     },
   );
   const playCardSource = readFileSync(
-    new URL("./play-card.ts", import.meta.url),
+    new URL("./play-card/core.ts", import.meta.url),
     {
       encoding: "utf8",
     },

@@ -1,0 +1,506 @@
+import type {
+  Action,
+  EngineEvent,
+  EngineResult,
+  GameState,
+  LegalAction,
+  PlayerId,
+} from "@optcg/types";
+
+import {
+  appendEvent,
+  illegalAction,
+  toDecisionId,
+  toEngineResult,
+} from "../action-results.js";
+import { reifyCardRef } from "../action-state.js";
+import { getUnsupportedDamageStepContinuationReason } from "../battle-damage-step-continuation.js";
+import {
+  parseCounterPayCostDecisionId,
+  parseCounterTargetDecisionId,
+} from "../battle-counter-event-payment-context.js";
+import { getCounterEventPaymentLegalActions } from "../battle-counter-event-payment-actions.js";
+import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
+import {
+  getSupportedCounterEventPower,
+  getSupportedCounterEventPowerTargets,
+} from "../battle-counter-event-support.js";
+import { detectPendingRuntimeWork } from "../effect-runtime.js";
+import { assertGameStateInvariants } from "../invariants.js";
+import {
+  getUnsupportedCounterWindowReason,
+  hasPotentialCharacterCounterActions,
+  hasUnsupportedCounterWindow,
+} from "../battle-counter-window-support.js";
+import {
+  applyCounterEventEffectCostDecisionResponse,
+  applyCounterEventTargetDecisionResponse,
+  createCounterEventEffectCostDecision,
+  getLegalCharacterCounterActions,
+  resolveCounterCardUse,
+} from "./counter-card-use.js";
+
+export { applyUseCounter } from "./counter-card-use.js";
+export {
+  getUnsupportedCounterWindowReason,
+  hasUnsupportedCounterWindow,
+} from "../battle-counter-window-support.js";
+
+export const createCounterStepPassDecision = (
+  state: GameState,
+  options: { requirePotentialCounterActions?: boolean } = {},
+): NonNullable<GameState["pendingDecision"]> | null => {
+  const requirePotentialCounterActions =
+    options.requirePotentialCounterActions ?? true;
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "counter") {
+    return null;
+  }
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (target === null) {
+    return null;
+  }
+  if (hasUnsupportedCounterWindow(state, target.playerId)) {
+    return null;
+  }
+  if (
+    requirePotentialCounterActions &&
+    !hasPotentialCharacterCounterActions(state, target.playerId)
+  ) {
+    return null;
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  if (attacker === null) {
+    return null;
+  }
+  return {
+    id: toDecisionId(
+      `decision:counterStep:pass:${String(attacker.card.instanceId)}:${String(state.seq + 1)}`,
+    ),
+    type: "selectCards",
+    playerId: target.playerId,
+    prompt: "Use counter or end step.",
+    causedBy: {
+      type: "playerAction",
+      actionId: `action:${String(state.actionSeq)}`,
+    },
+    visibility: { type: "public" },
+    request: {
+      timing: "onActivation",
+      chooser: "nonTurnPlayer",
+      player: "nonTurnPlayer",
+      zone: "hand",
+      filter: { categories: ["character"] },
+      min: 0,
+      max: 0,
+      allowFewerIfUnavailable: true,
+      visibility: "privateToChooser",
+    },
+    candidates: [],
+    defaultResponse: { type: "cards", cards: [] },
+  };
+};
+
+export const getCounterStepDecisionLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  const battle = state.battle;
+  if (
+    decision !== undefined &&
+    decision.type === "selectTargets" &&
+    decision.playerId === playerId &&
+    battle !== undefined &&
+    battle.step === "counter" &&
+    parseCounterTargetDecisionId(String(decision.id)) !== null
+  ) {
+    return [
+      {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "targets", targets: [] },
+      },
+    ];
+  }
+  if (
+    decision !== undefined &&
+    decision.type === "payCost" &&
+    decision.playerId === playerId &&
+    battle !== undefined &&
+    battle.step === "counter"
+  ) {
+    return getCounterEventPaymentLegalActions(state, playerId);
+  }
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.playerId !== playerId ||
+    battle === undefined ||
+    battle.step !== "counter" ||
+    decision.request.min !== 0 ||
+    decision.request.max !== 0 ||
+    decision.defaultResponse?.type !== "cards" ||
+    decision.defaultResponse.cards.length !== 0 ||
+    decision.candidates.length !== 0 ||
+    hasUnsupportedCounterWindow(state, decision.playerId)
+  ) {
+    return [];
+  }
+  const actions: LegalAction[] = canOfferCounterStepPassAction(state)
+    ? [
+        {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response: { type: "cards", cards: [] },
+        },
+      ]
+    : [];
+  actions.push(...getLegalCharacterCounterActions(state, decision.playerId));
+  return actions;
+};
+
+const canOfferCounterStepPassAction = (state: GameState): boolean => {
+  const battle = state.battle;
+  if (
+    battle === undefined ||
+    battle.step !== "counter" ||
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    !isSupportedBattleResolutionEnvelope(battle)
+  ) {
+    return false;
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return false;
+  }
+  if (!target.isLeader && target.card.state !== "rested") {
+    return false;
+  }
+  if (battle.blocker === undefined) {
+    return true;
+  }
+  const blocker = reifyCardRef(state, battle.blocker);
+  return (
+    blocker !== null &&
+    !blocker.isLeader &&
+    sameCardRef(battle.blocker, battle.currentTarget)
+  );
+};
+
+export const applyCounterStepDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+  resolveSupportedVanillaBattle: (state: GameState) => EngineResult,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  const battle = state.battle;
+  if (
+    decision === undefined ||
+    battle === undefined ||
+    battle.step !== "counter"
+  ) {
+    return null;
+  }
+  if (decision.type === "payCost") {
+    if (
+      action.response.type !== "payment" &&
+      action.response.type !== "paymentDeclined"
+    ) {
+      return illegalAction(state, "Unsupported decision response.");
+    }
+    const context = parseCounterPayCostDecisionId(String(decision.id));
+    if (context === null) {
+      return null;
+    }
+    const defender = state.players[decision.playerId];
+    if (defender === undefined) {
+      return illegalAction(state, "Decision player mismatch.");
+    }
+    const handIndex = defender.hand.findIndex(
+      (card) => String(card.instanceId) === context.counterEventInstanceId,
+    );
+    if (handIndex < 0) {
+      return illegalAction(state, "Decision card reference is stale.");
+    }
+    const handCard = defender.hand[handIndex];
+    if (handCard === undefined) {
+      return illegalAction(state, "Decision card not found.");
+    }
+    const supportedTargets = getSupportedCounterEventPowerTargets(
+      state,
+      handCard,
+      decision.playerId,
+      battle.currentTarget,
+    );
+    const selectedTarget = supportedTargets.find(
+      (supportedTarget) =>
+        String(supportedTarget.target.instanceId) === context.targetInstanceId,
+    );
+    if (selectedTarget === undefined) {
+      return illegalAction(state, "Unsupported payCost decision context.");
+    }
+    const supportedCounterEvent = getSupportedCounterEventPower(
+      state,
+      handCard,
+      selectedTarget.target,
+      battle.currentTarget,
+    );
+    if (
+      supportedCounterEvent === null ||
+      (context.kind === "printed" && supportedCounterEvent.printedCost <= 0) ||
+      (context.kind === "effect" &&
+        supportedCounterEvent.effectCost === undefined)
+    ) {
+      return illegalAction(state, "Unsupported payCost decision context.");
+    }
+    if (context.kind === "effect") {
+      return applyCounterEventEffectCostDecisionResponse({
+        action,
+        battle,
+        createCounterStepPassDecision,
+        decision,
+        defender,
+        handCard,
+        state,
+        supportedCounterEvent,
+      });
+    }
+    if (action.response.type !== "payment") {
+      return illegalAction(state, "Unsupported decision response.");
+    }
+    if (action.response.optionId !== "restDon") {
+      return illegalAction(state, "Payment option mismatch.");
+    }
+    const selected = action.response.selectedDonInstanceIds;
+    if (
+      selected === undefined ||
+      selected.length !== supportedCounterEvent.printedCost
+    ) {
+      return illegalAction(state, "Payment DON!! selection count mismatch.");
+    }
+    if (new Set(selected).size !== selected.length) {
+      return illegalAction(
+        state,
+        "Payment DON!! selection contains duplicates.",
+      );
+    }
+    const costAreaById = new Map(
+      defender.costArea.map((card) => [card.instanceId, card]),
+    );
+    for (const donId of selected) {
+      const don = costAreaById.get(donId);
+      if (don === undefined || don.state !== "active") {
+        return illegalAction(state, "Payment DON!! selection is invalid.");
+      }
+    }
+    const restedSet = new Set(selected);
+    const nextCostArea = defender.costArea.map((card) =>
+      restedSet.has(card.instanceId)
+        ? { ...card, state: "rested" as const }
+        : card,
+    );
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "costPaid",
+      {
+        playerId: decision.playerId,
+        optionId: "restDon",
+        selectedDonInstanceIds: selected,
+      },
+      { type: "public" },
+    );
+    const stagedState: GameState = {
+      ...state,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    if (supportedCounterEvent.effectCost !== undefined) {
+      const costState: GameState = {
+        ...stagedState,
+        players: {
+          ...stagedState.players,
+          [decision.playerId]: {
+            ...defender,
+            costArea: nextCostArea,
+          },
+        },
+      };
+      const effectCostDecision = createCounterEventEffectCostDecision({
+        battle,
+        cost: supportedCounterEvent.effectCost,
+        decisionPlayerId: decision.playerId,
+        handCard,
+        state: costState,
+        target: selectedTarget.target,
+      });
+      return toEngineResult(effectCostDecision.state, [
+        ...events,
+        ...effectCostDecision.events,
+      ]);
+    }
+    return resolveCounterCardUse({
+      state: stagedState,
+      decisionPlayerId: decision.playerId,
+      battle,
+      handCard,
+      target: selectedTarget.target,
+      counterValue: supportedCounterEvent.value,
+      usesBattleCounterPower: supportedCounterEvent.usesBattleCounterPower,
+      ...(supportedCounterEvent.trailingSequence === undefined
+        ? {}
+        : { trailingSequence: supportedCounterEvent.trailingSequence }),
+      costArea: nextCostArea,
+      decisionResolvedId: decision.id,
+      pendingDecision:
+        createCounterStepPassDecision(stagedState, {
+          requirePotentialCounterActions: false,
+        }) ?? undefined,
+      priorEvents: events,
+    });
+  }
+  if (decision.type === "selectTargets") {
+    const context = parseCounterTargetDecisionId(String(decision.id));
+    if (context === null) {
+      return null;
+    }
+    const defender = state.players[decision.playerId];
+    if (defender === undefined) {
+      return illegalAction(state, "Decision player mismatch.");
+    }
+    const handCard = defender.hand.find(
+      (card) => String(card.instanceId) === context.counterEventInstanceId,
+    );
+    if (handCard === undefined) {
+      return illegalAction(state, "Decision card reference is stale.");
+    }
+    return applyCounterEventTargetDecisionResponse({
+      action,
+      battle,
+      createCounterStepPassDecision,
+      decision,
+      defender,
+      handCard,
+      state,
+    });
+  }
+  if (decision.type !== "selectCards") {
+    return null;
+  }
+  if (action.response.type !== "cards" || action.response.cards.length !== 0) {
+    return illegalAction(state, "Counter Step decision supports pass only.");
+  }
+  if (
+    decision.request.min !== 0 ||
+    decision.request.max !== 0 ||
+    decision.defaultResponse?.type !== "cards" ||
+    decision.defaultResponse.cards.length !== 0 ||
+    decision.candidates.length !== 0
+  ) {
+    return illegalAction(state, "Unsupported Counter Step decision envelope.");
+  }
+  const unsupportedCounterWindowReason =
+    decision.playerId === state.turn.turnPlayerId
+      ? "Battle requires unsupported counter window handling."
+      : getUnsupportedCounterWindowReason(state, decision.playerId);
+  if (unsupportedCounterWindowReason !== undefined) {
+    return illegalAction(state, unsupportedCounterWindowReason);
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+  if (battle.blocker !== undefined) {
+    const blocker = reifyCardRef(state, battle.blocker);
+    if (
+      blocker === null ||
+      blocker.isLeader ||
+      !sameCardRef(battle.blocker, battle.currentTarget)
+    ) {
+      return illegalAction(state, "Battle blocker is stale or invalid.");
+    }
+  }
+  const unsupportedContinuationReason =
+    getUnsupportedDamageStepContinuationReason(state);
+  if (unsupportedContinuationReason !== undefined) {
+    return illegalAction(state, unsupportedContinuationReason);
+  }
+
+  const eventState: GameState = {
+    ...state,
+    actionSeq: state.actionSeq + 1,
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    eventState,
+    events,
+    "decisionResolved",
+    { decisionId: decision.id, playerId: decision.playerId },
+    { type: "public" },
+  );
+  const resumedState: GameState = {
+    ...state,
+    actionSeq: eventState.actionSeq,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete resumedState.pendingDecision;
+  const resolved = resolveSupportedVanillaBattle(resumedState);
+  if (resolved.errors !== undefined) {
+    return resolved;
+  }
+  return toEngineResult(resolved.state, [...events, ...resolved.events]);
+};
+
+export const enterCounterStepOrAutoPass = (
+  state: GameState,
+): EngineResult | null => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    return null;
+  }
+  const counterState: GameState = {
+    ...state,
+    battle: { ...battle, step: "counter" },
+  };
+  const target = reifyCardRef(counterState, battle.currentTarget);
+  if (target === null) {
+    return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+  const unsupportedCounterWindowReason = getUnsupportedCounterWindowReason(
+    counterState,
+    target.playerId,
+  );
+  if (unsupportedCounterWindowReason !== undefined) {
+    return illegalAction(state, unsupportedCounterWindowReason);
+  }
+  const decision = createCounterStepPassDecision(counterState, {
+    requirePotentialCounterActions: false,
+  });
+  if (decision === null) {
+    return null;
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    { type: "public" },
+  );
+  const nextState: GameState = {
+    ...counterState,
+    pendingDecision: decision,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};

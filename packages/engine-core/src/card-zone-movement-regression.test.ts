@@ -41,7 +41,7 @@ test("trash front doors delegate concrete movement to the shared zone movement h
 });
 
 test("battle K.O. keeps K.O. semantics but delegates concrete trash movement", () => {
-  const source = readSource("packages/engine-core/src/battle-resolution.ts");
+  const source = readSource("packages/engine-core/src/battle/resolution.ts");
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);
   assert.match(source, /appendEvent\([^)]*"cardKOd"/s);
@@ -53,7 +53,7 @@ test("battle K.O. keeps K.O. semantics but delegates concrete trash movement", (
 });
 
 test("play-card placement trash front doors delegate concrete movement", () => {
-  const source = readSource("packages/engine-core/src/play-card-placement.ts");
+  const source = readSource("packages/engine-core/src/play-card/placement.ts");
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);
   assert.doesNotMatch(
@@ -70,7 +70,7 @@ test("play-card placement trash front doors delegate concrete movement", () => {
 
 test("counter card trash front door delegates concrete movement", () => {
   const source = readSource(
-    "packages/engine-core/src/battle-counter-card-use.ts",
+    "packages/engine-core/src/battle/counter-card-use.ts",
   );
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);
@@ -161,7 +161,7 @@ test("start-of-game stage replacement delegates concrete movement", () => {
 test("sequence effect trash delegates concrete movement", () => {
   const source = [
     "packages/engine-core/src/effect-runtime-sequence-all-target-segments.ts",
-    "packages/engine-core/src/effect-runtime-sequence-saved-field-object.ts",
+    "packages/engine-core/src/effect-runtime-sequence/saved-field-object.ts",
   ]
     .map(readSource)
     .join("\n");
