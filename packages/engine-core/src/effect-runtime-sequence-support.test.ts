@@ -91,3 +91,61 @@ test("sequence support accepts targeted keyword grants filtered by reusable effe
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
+
+test("sequence support accepts selected field-object trash consumers", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select-trash-target",
+          connector: "always",
+          saveResultAs: "selected:trash-target",
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: {
+                categories: ["character"],
+                currentPower: { max: 6000 },
+              },
+            },
+          },
+        },
+        {
+          id: "trash-selected-target",
+          connector: "then",
+          effect: {
+            type: "trash",
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: "selected:trash-target",
+              },
+              zone: "characterArea",
+              player: "opponent",
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});

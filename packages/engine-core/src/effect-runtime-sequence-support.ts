@@ -55,7 +55,13 @@ type DirectContinuousEffect = Extract<
       | "cannotBlock";
   }
 >;
-type TrashEffect = Extract<Effect, { type: "trash" }>;
+type SavedFieldObjectTrashEffect = Extract<Effect, { type: "trash" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
+type AllTargetTrashEffect = Extract<Effect, { type: "trash" }> & {
+  target: Extract<Target, { type: "all" }>;
+};
+type TrashEffect = SavedFieldObjectTrashEffect | AllTargetTrashEffect;
 type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<
     Target,
@@ -594,13 +600,20 @@ const isSupportedSequenceTargetRequest = (
 
 const isSupportedAllFieldTrashSegment = (
   effect: SequenceSegmentEffect,
-): effect is TrashEffect =>
+): effect is AllTargetTrashEffect =>
   effect.type === "trash" &&
   effect.target.type === "all" &&
   (effect.target.zone === "characterArea" ||
     effect.target.zone === "stageArea") &&
   (effect.target.player === "self" || effect.target.player === "opponent") &&
   isSupportedPublicFieldTargetFilter(effect.target.filter);
+
+const isSupportedTrashSegment = (
+  effect: SequenceSegmentEffect,
+): effect is TrashEffect =>
+  effect.type === "trash" &&
+  (isSupportedAllFieldTrashSegment(effect) ||
+    isSupportedSavedFieldObjectKoTarget(effect.target));
 
 const isSupportedRestSegment = (
   effect: SequenceSegmentEffect,
@@ -684,7 +697,7 @@ const isSupportedConditionalSegment = (
     if (isSupportedBounceSegment(segment.effect)) {
       return true;
     }
-    if (isSupportedAllFieldTrashSegment(segment.effect)) {
+    if (isSupportedTrashSegment(segment.effect)) {
       return true;
     }
     if (isSupportedSearchSegment(segment.effect)) {
@@ -829,7 +842,7 @@ export const toSupportedSequenceBlock = (
       if (isSupportedAttachSelectedDonSegment(segment.effect)) {
         return true;
       }
-      if (isSupportedAllFieldTrashSegment(segment.effect)) {
+      if (isSupportedTrashSegment(segment.effect)) {
         return true;
       }
       if (isSupportedContinuousQueueEffect(segment.effect)) {

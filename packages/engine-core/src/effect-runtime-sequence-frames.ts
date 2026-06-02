@@ -54,6 +54,7 @@ import {
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,
   applySavedFieldObjectRestrictionSequenceSegment,
+  applySavedFieldObjectTrashSequenceSegment,
 } from "./effect-runtime-sequence-saved-field-object.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "./effect-runtime-continuous.js";
@@ -107,8 +108,11 @@ type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
   destination: "hand";
 };
-type TrashEffect = Extract<Effect, { type: "trash" }> & {
+type AllTargetTrashEffect = Extract<Effect, { type: "trash" }> & {
   target: Extract<Target, { type: "all" }>;
+};
+type SavedFieldObjectTrashEffect = Extract<Effect, { type: "trash" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
 };
 type AllTargetKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "all" }>;
@@ -720,7 +724,7 @@ const applyBounceToOwnerHandSequenceSegment = (params: {
 };
 
 const applyAllTargetTrashSequenceSegment = (params: {
-  effect: TrashEffect;
+  effect: AllTargetTrashEffect;
   emptySegmentResult: () => SequenceSegmentResult;
   entry: EffectQueueEntry;
   index: number;
@@ -2082,7 +2086,27 @@ const continueNoDecisionSegments = (
         ledgers: nextLedgers,
         segment,
         segmentKey: ledgerKey,
-        effect: segment.effect as TrashEffect,
+        effect: segment.effect as AllTargetTrashEffect,
+        state: nextState,
+      });
+      nextState = trashed.state;
+      nextLedgers = trashed.ledgers;
+      events.push(...trashed.events);
+      continue;
+    }
+    if (
+      segment.effect.type === "trash" &&
+      segment.effect.target.type === "savedFieldObject"
+    ) {
+      const trashed = applySavedFieldObjectTrashSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment: segment as SupportedSequenceSegment & {
+          effect: SavedFieldObjectTrashEffect;
+        },
+        segmentKey: ledgerKey,
         state: nextState,
       });
       nextState = trashed.state;

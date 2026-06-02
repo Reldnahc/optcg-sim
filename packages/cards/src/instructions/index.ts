@@ -49,6 +49,9 @@ export {
 } from "./protection.js";
 export { syntheticInstructionParser } from "./synthetic.js";
 export { parseTopDeckPlacementInstruction } from "./top-deck-placement.js";
-export { parseTrashAllYourCharactersInstruction } from "./trash-all-characters.js";
+export {
+  parseTrashAllYourCharactersInstruction,
+  parseTrashInstruction,
+} from "./trash-all-characters.js";
 export { parseTrashFromDeckTopInstruction } from "./trash-from-deck-top.js";
 export { parseTrashFromHandInstruction } from "./trash-from-hand.js";
