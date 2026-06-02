@@ -3,19 +3,19 @@ import { test } from "vitest";
 
 import type { Effect } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 import {
   createCounterStepPassDecision,
   getUnsupportedCounterWindowReason,
-} from "./battle-counter-actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
-import { detectPendingRuntimeWork } from "./effect-runtime.js";
+} from "./counter-actions.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
+import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import {
   ensureActiveDonInCostArea,
   setupAttackState,
   withOnOpponentAttackDrawEffect,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 const optionalRestDonThenRestTargetSequence = (): Extract<
   Effect,

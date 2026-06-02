@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import {
-  applyDeclareAttack,
-  getDeclareAttackLegalActions,
-} from "./battle-actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import { applyDeclareAttack, getDeclareAttackLegalActions } from "./actions.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   addTrashMarker,
   continuousKeywordEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 test("played-this-turn rush character can legally attack leader and rested character", () => {
   const state = setupAttackState();

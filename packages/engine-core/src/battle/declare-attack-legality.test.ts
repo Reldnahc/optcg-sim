@@ -3,18 +3,15 @@ import { test } from "vitest";
 
 import type { CardId, CardInstance, PlayerId } from "@optcg/types";
 
-import {
-  applyDeclareAttack,
-  getDeclareAttackLegalActions,
-} from "./battle-actions.js";
+import { applyDeclareAttack, getDeclareAttackLegalActions } from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { setupAttackState } from "../battle-actions-test-fixtures.js";
 
 test("getLegalActions includes Leader-to-Leader declareAttack for turn player", () => {
   const state = setupAttackState();

@@ -3,18 +3,15 @@ import { test } from "vitest";
 
 import type { EffectDefinition, PlayerId } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import {
-  applyDeclareAttack,
-  getDeclareAttackLegalActions,
-} from "./battle-actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { applyDeclareAttack, getDeclareAttackLegalActions } from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   passCounterStep,
   setupAttackState,
@@ -22,7 +19,7 @@ import {
   withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 const ensureDeckHasAtLeast = (
   state: ReturnType<typeof setupAttackState>,

@@ -3,15 +3,15 @@ import { test } from "vitest";
 
 import type { PlayerId } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 import {
   setupAttackState,
   withWhenAttackingDrawEffect,
-} from "./battle-actions-test-fixtures.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { must, p1, p2 } from "./action-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { must, p1, p2 } from "../action-test-fixtures.js";
 
 const ensureDeckHasAtLeast = (
   state: ReturnType<typeof setupAttackState>,
