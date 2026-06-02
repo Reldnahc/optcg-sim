@@ -738,7 +738,7 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     "packages/engine-core/src/battle/actions.ts",
     "packages/engine-core/src/battle/support.ts",
     "packages/engine-core/src/play-card/support.ts",
-    "packages/engine-core/src/life-trigger-actions.ts",
+    "packages/engine-core/src/life-trigger/actions.ts",
     "packages/engine-core/src/battle/counter-actions.ts",
   ];
   const forbidden = [
