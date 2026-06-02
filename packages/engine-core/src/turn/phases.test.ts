@@ -16,10 +16,10 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { getLegalActions } from "./actions.js";
-import { createInitialState } from "./initial-state.js";
-import { assertGameStateInvariants } from "./invariants.js";
-import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
+import { getLegalActions } from "../actions.js";
+import { createInitialState } from "../initial-state.js";
+import { assertGameStateInvariants } from "../invariants.js";
+import { respondToMulliganDecision, startMulliganFlow } from "../mulligan.js";
 import {
   advanceDonPhase,
   advanceDrawPhase,
@@ -37,7 +37,7 @@ const p2 = toPlayerId("p2");
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../..",
+  "../../../..",
 );
 
 const must = <T>(value: T | undefined, label: string): T => {

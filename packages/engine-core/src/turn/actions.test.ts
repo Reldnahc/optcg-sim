@@ -3,18 +3,18 @@ import { test } from "vitest";
 
 import type { Action, EngineResult, GameState } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { createInitialState } from "./initial-state.js";
-import { startMulliganFlow } from "./mulligan.js";
-import { applyConcede, applyEndMainPhase } from "./turn-actions.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { createInitialState } from "../initial-state.js";
+import { startMulliganFlow } from "../mulligan.js";
+import { applyConcede, applyEndMainPhase } from "./actions.js";
 import {
   createActiveState,
   createInput,
   must,
   p1,
   p2,
-} from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+} from "../action-test-fixtures.js";
+import { setupAttackState } from "../battle-actions-test-fixtures.js";
 
 const applyTurnTestAction = (
   state: GameState,
