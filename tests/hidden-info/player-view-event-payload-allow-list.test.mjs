@@ -8,7 +8,7 @@ import {
   toEngineEventId,
   toStateSeq,
 } from "../../packages/engine-core/src/action-test-fixtures.ts";
-import { filterStateForPlayer } from "../../packages/engine-core/src/filter-state-for-player.ts";
+import { filterStateForPlayer } from "../../packages/engine-core/src/view/filter-state-for-player.ts";
 
 const visibleEventBase = (state, seq, type, payload) => ({
   id: toEngineEventId(`event:allow-list:${String(seq)}`),
