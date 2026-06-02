@@ -19,7 +19,7 @@ import {
   toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../effect-runtime-queue-processing-test-support.js";
 
 const selectStageThenKoSavedSelectedTargetSequence = (): Extract<
   Effect,

@@ -8,7 +8,7 @@ import type {
   SelectionId,
 } from "@optcg/types";
 
-import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
+import { isSupportedSequenceBlock } from "./support.js";
 
 const syntheticEntry = (): EffectQueueEntry => ({
   id: "sequence-support-test-entry" as EffectQueueEntry["id"],
