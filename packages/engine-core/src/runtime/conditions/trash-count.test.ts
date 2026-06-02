@@ -17,8 +17,8 @@ import {
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
+import { evaluateQueuedEffectCondition } from "./evaluator.js";
 
 const setTrashCount = (
   state: ReturnType<typeof createActiveState>,

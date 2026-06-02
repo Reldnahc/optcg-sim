@@ -6,7 +6,7 @@ import type { Condition } from "@optcg/types";
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
-} from "./effect-runtime-conditions.js";
+} from "./evaluator.js";
 import {
   createActiveState,
   must,
@@ -16,7 +16,7 @@ import {
   resolvedCard,
   toCardId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
 
 const opponentRestedCharacterCount = (
   value: number,

@@ -18,13 +18,13 @@ import {
   toQueueEntryId,
   toSourceSnapshot,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
+import { applyDeclareAttack } from "../../battle-actions.js";
 import {
   setupAttackState,
   withWhenAttackingDrawEffect,
-} from "./battle-actions-test-fixtures.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+} from "../../battle-actions-test-fixtures.js";
+import { evaluateQueuedEffectCondition } from "./evaluator.js";
 
 const removeFirstDonFromDeck = (
   state: ReturnType<typeof createActiveState>,
