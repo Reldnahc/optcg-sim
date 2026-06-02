@@ -3,8 +3,8 @@ import { test } from "vitest";
 
 import type { EffectQueueEntry, EngineResult } from "@optcg/types";
 
-import { resolveSupportedVanillaBattle } from "./battle-actions.js";
-import { applyAction } from "./actions.js";
+import { resolveSupportedVanillaBattle } from "./actions.js";
+import { applyAction } from "../actions.js";
 import {
   must,
   p1,
@@ -13,14 +13,14 @@ import {
   toCardId,
   toEngineEventId,
   toStateSeq,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+} from "../battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
 
 const setupLeaderBattleWithDamageCount = (
   damageCount: number,

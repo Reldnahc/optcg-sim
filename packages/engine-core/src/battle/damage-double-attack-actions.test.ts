@@ -3,16 +3,16 @@ import { test } from "vitest";
 
 import type { EngineResult } from "@optcg/types";
 
-import { applyDeclareAttack } from "./battle-actions.js";
-import { applyAction, getLegalActions } from "./actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import { applyDeclareAttack } from "./actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   addTrashMarker,
   continuousKeywordEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+} from "../battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 
 const installSupportedDoubleAttackLeader = (
   state: ReturnType<typeof setupAttackState>,

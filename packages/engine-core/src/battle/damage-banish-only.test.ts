@@ -4,22 +4,22 @@ import { test } from "vitest";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
-} from "./battle-actions.js";
+} from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 import {
   addTrashMarker,
   continuousKeywordEffectRecord,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 test("banish attacker dealing leader damage moves top life to trash instead of hand", () => {
   const state = setupAttackState();

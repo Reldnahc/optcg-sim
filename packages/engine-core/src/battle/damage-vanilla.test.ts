@@ -4,15 +4,15 @@ import { test } from "vitest";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
-} from "./battle-actions.js";
-import { must, p1, p2 } from "./action-test-fixtures.js";
+} from "./actions.js";
+import { must, p1, p2 } from "../action-test-fixtures.js";
 import {
   cardRef,
   continuousEffectRecord,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
-import { hashCanonicalStateValue } from "./canonical-state.js";
+} from "../battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {
   const state = setupAttackState();

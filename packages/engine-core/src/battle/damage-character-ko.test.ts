@@ -11,17 +11,17 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction } from "../actions.js";
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
-} from "./battle-actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+} from "./actions.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
+} from "../battle-actions-test-fixtures.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;

@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { applyAction, getLegalActions } from "./actions.js";
-import { applyDeclareAttack } from "./battle-actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
+import { applyDeclareAttack } from "./actions.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   toCardId,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   effectDefinition,
   passCounterStep,
   setupAttackState,
-} from "./battle-actions-test-fixtures.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+} from "../battle-actions-test-fixtures.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
 
 const applySupportedLifeTriggerAttack = () => {
   const state = setupAttackState();
