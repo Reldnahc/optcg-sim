@@ -198,6 +198,29 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses same-category type alternatives as one reusable typesAny filter", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{Alabasta} or {Straw Hat Crew} type Character card with a cost of 5 or less",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        typesAny: ["Alabasta", "Straw Hat Crew"],
+        cost: { max: 5 },
+      },
+      evidence: [
+        "filter:type",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses self exclusion separately from attribute, category, and cost predicates", () => {
     expect(
       parseCardFilterPredicates({

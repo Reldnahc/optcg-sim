@@ -153,4 +153,56 @@ describe("play from hand instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses play from hand with multiple type alternatives and shared suffix filters", () => {
+    expect(
+      parsePlayFromHandInstruction({
+        text: "Play up to 1 {Alabasta} or {Straw Hat Crew} type Character card with a cost of 5 or less from your hand.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                typesAny: ["Alabasta", "Straw Hat Crew"],
+                cost: { max: 5 },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:playSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "zone:hand",
+        "player:self",
+        "chooser:self:upTo",
+        "filter:type",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "composition:selectThenPlay",
+      ],
+      rest: "",
+    });
+  });
 });

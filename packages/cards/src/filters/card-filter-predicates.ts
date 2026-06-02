@@ -33,6 +33,7 @@ export interface CardFilterPredicateParseOptions {
 
 const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
+  parseMultiTypeCategoryPredicate,
   parseTypeOrAttributeCategoryPredicate,
   parseTypeLeaderOrCharacterPredicate,
   parseTypeCharacterPredicate,
@@ -358,6 +359,43 @@ function parseAttributeCategoryPredicate(
       categories: [categoryText.toLowerCase() as CardCategory],
     },
     evidence: ["filter:attribute", categoryEvidence(categoryText)],
+    rest: restText ?? "",
+  };
+}
+
+function parseMultiTypeCategoryPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+(?<category>Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeTexts = match?.groups?.["types"];
+  const categoryText = match?.groups?.["category"];
+  const restText = match?.groups?.["rest"];
+  if (typeTexts === undefined || categoryText === undefined) {
+    return undefined;
+  }
+
+  const typeNames = typeTexts
+    .split(/\s+or\s+/i)
+    .map(parseBraceName)
+    .filter((name): name is string => name !== undefined);
+  if (typeNames.length < 2) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      categories: [categoryText.toLowerCase() as CardCategory],
+      typesAny: typeNames,
+    },
+    evidence: [
+      ...typeNames.map(() => "filter:type" as const),
+      categoryEvidence(categoryText),
+    ],
     rest: restText ?? "",
   };
 }

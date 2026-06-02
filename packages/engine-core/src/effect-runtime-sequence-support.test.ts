@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, EffectQueueEntry } from "@optcg/types";
+import type {
+  EffectDefinition,
+  EffectQueueEntry,
+  HandSelectionId,
+} from "@optcg/types";
 
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 
@@ -141,6 +145,69 @@ test("sequence support accepts selected field-object trash consumers", () => {
               visibility: "publicOnly",
               onFailure: "failClosed",
             },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts hand play followed by reusable play restriction", () => {
+  const selection = "handSelection:play-from-hand" as HandSelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                saveResultAs: "handSelection:play-from-hand",
+                effect: {
+                  type: "selectCards",
+                  zone: "hand",
+                  player: "self",
+                  chooser: "self",
+                  min: 0,
+                  max: 1,
+                  filter: {
+                    categories: ["character"],
+                    typesAny: ["Alabasta", "Straw Hat Crew"],
+                    cost: { max: 5 },
+                  },
+                  saveAs: selection,
+                  visibility: "chooserOnly",
+                },
+              },
+              {
+                connector: "ifPossible",
+                effect: {
+                  type: "playSelected",
+                  selection,
+                  ignoreCost: true,
+                },
+              },
+            ],
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "preventPlay",
+            player: "self",
+            filter: { categories: ["character"] },
+            duration: { type: "thisTurn" },
           },
         },
       ],

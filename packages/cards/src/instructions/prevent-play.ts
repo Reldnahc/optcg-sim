@@ -24,7 +24,9 @@ export const parsePreventPlayInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const parsedFilter = parseCardFilterPredicates({ text: filterText });
+  const parsedFilter = parseCardFilterPredicates({
+    text: normalizePlayRestrictionFilterText(filterText),
+  });
   if (parsedFilter === undefined || parsedFilter.rest.trim().length > 0) {
     return undefined;
   }
@@ -45,3 +47,9 @@ export const parsePreventPlayInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+const normalizePlayRestrictionFilterText = (text: string): string =>
+  text
+    .trim()
+    .replace(/^any\s+/i, "")
+    .replace(/\s+on your field$/i, "");
