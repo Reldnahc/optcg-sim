@@ -9,7 +9,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../../canonical-state.js";
 import {
   addExtraDeckCard,
   createActiveState,
@@ -17,8 +17,8 @@ import {
   p1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+} from "../../action-test-fixtures.js";
+import { processEffectRuntime } from "../../effect-runtime.js";
 import {
   applyAction,
   queueDrawForP1,
@@ -27,7 +27,7 @@ import {
   toSourceSnapshot,
   toStateSeq,
   toTimingWindowId,
-} from "./effect-runtime-queue-processing-test-support.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
 
 const installDefinition = (
   state: ReturnType<typeof createActiveState>,

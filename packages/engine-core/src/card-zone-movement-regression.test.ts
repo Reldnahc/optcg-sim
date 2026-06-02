@@ -124,7 +124,7 @@ test("life trigger cleanup delegates concrete movement", () => {
 
 test("optional activation trash costs delegate concrete movement", () => {
   const source = readSource(
-    "packages/engine-core/src/optional-activation-actions.ts",
+    "packages/engine-core/src/runtime/optional-activation/actions.ts",
   );
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);

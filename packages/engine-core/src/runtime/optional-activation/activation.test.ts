@@ -10,7 +10,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../../canonical-state.js";
 import {
   addExtraDeckCard,
   createActiveState,
@@ -21,16 +21,16 @@ import {
   reviewedMainEventDrawDefinition,
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
-} from "./action-test-fixtures.js";
+} from "../../action-test-fixtures.js";
 import {
   processDefenderOpponentAttackTiming,
   processEffectRuntime,
   queueBattleKOTriggers,
-} from "./effect-runtime.js";
+} from "../../effect-runtime.js";
 import {
   attackQueueingState,
   opponentAttackQueueingState,
-} from "./effect-runtime-trigger-queueing-test-support.js";
+} from "../../effect-runtime-trigger-queueing-test-support.js";
 import {
   applyAction,
   queueDrawForP1,
@@ -43,8 +43,8 @@ import {
   toStateSeq,
   toTimingWindowId,
   withCardInZone,
-} from "./effect-runtime-queue-processing-test-support.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+} from "../../effect-runtime-queue-processing-test-support.js";
+import { setupMainPlayState } from "../../play-card-test-fixtures.js";
 
 const installDefinition = (
   state: ReturnType<typeof createActiveState>,
