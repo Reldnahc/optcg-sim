@@ -28,7 +28,8 @@ export interface SupportProbeReport {
 
 interface PoneglyphCardProbePayload {
   readonly cardId: string;
-  readonly effect: string;
+  readonly effect: string | null;
+  readonly trigger: string | null;
 }
 
 interface PoneglyphFetchResponse {
@@ -134,7 +135,10 @@ const createDeckHashSupportProbeReport = async (
       continue;
     }
 
-    const effectLines = gameplayLinesFromTextParts([fetched.card.effect]);
+    const effectLines = gameplayLinesFromTextParts([
+      fetched.card.effect,
+      fetched.card.trigger,
+    ]);
     for (const [index, text] of effectLines.entries()) {
       const lineNumber = index + 1;
       const lineReport = evaluateParsedLine(
@@ -269,7 +273,10 @@ const createCardSupportProbeReport = async (
   }
 
   const lines = [`Card ID: ${fetched.card.cardId}`];
-  const effectLines = gameplayLinesFromTextParts([fetched.card.effect]);
+  const effectLines = gameplayLinesFromTextParts([
+    fetched.card.effect,
+    fetched.card.trigger,
+  ]);
 
   let exitCode = 0;
   for (const [index, text] of effectLines.entries()) {
@@ -334,6 +341,7 @@ const fetchPoneglyphCardPayload = async (
     card: {
       cardId: cardPayload.card_number,
       effect: cardPayload.effect,
+      trigger: cardPayload.trigger,
     },
   };
 };
@@ -534,26 +542,49 @@ const fetchPoneglyphCard: PoneglyphFetch = async (url) => fetch(url);
 
 const isPoneglyphCardProbePayload = (
   value: unknown,
-): value is { readonly card_number: CardId; readonly effect: string } => {
+): value is {
+  readonly card_number: CardId;
+  readonly effect: string | null;
+  readonly trigger?: string | null;
+} => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
   const candidate = value as Record<string, unknown>;
+  const effect = candidate["effect"];
+  const trigger = candidate["trigger"];
   return (
     typeof candidate["card_number"] === "string" &&
-    typeof candidate["effect"] === "string"
+    (typeof effect === "string" || effect === null) &&
+    (typeof trigger === "string" || trigger === null || trigger === undefined)
   );
 };
 
 const toPoneglyphCardProbePayload = (
   value: unknown,
-): { readonly card_number: CardId; readonly effect: string } | undefined => {
+):
+  | {
+      readonly card_number: CardId;
+      readonly effect: string | null;
+      readonly trigger: string | null;
+    }
+  | undefined => {
   if (isPoneglyphCardProbePayload(value)) {
-    return value;
+    return {
+      card_number: value.card_number,
+      effect: value.effect,
+      trigger: value.trigger ?? null,
+    };
   }
   if (typeof value !== "object" || value === null) {
     return undefined;
   }
   const data = (value as Record<string, unknown>)["data"];
-  return isPoneglyphCardProbePayload(data) ? data : undefined;
+  return isPoneglyphCardProbePayload(data)
+    ? {
+        card_number: data.card_number,
+        effect: data.effect,
+        trigger: data.trigger ?? null,
+      }
+    : undefined;
 };

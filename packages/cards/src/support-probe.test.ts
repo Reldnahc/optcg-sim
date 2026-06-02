@@ -210,6 +210,66 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Line 1 engine runtime: passed");
   });
 
+  it("includes separately fetched trigger text in card probe mode", async () => {
+    const report = await createSupportProbeReport({
+      cardId: "OP01-003",
+      fetchCard: () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: "OP01-003",
+                effect: "[On Play] Draw 1 card.",
+                trigger: "[Trigger] Draw 1 card.",
+              },
+            }),
+        }),
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Line 1 text: [On Play] Draw 1 card.");
+    expect(report.lines).toContain("Line 1 parse: passed");
+    expect(report.lines).toContain("Line 2 text: [Trigger] Draw 1 card.");
+    expect(report.lines).toContain("Line 2 parse: passed");
+    expect(report.lines).toContain("Line 2 engine runtime: passed");
+  });
+
+  it("includes separately fetched trigger text in deck-hash probe mode", async () => {
+    const report = await createSupportProbeReport({
+      deckHash: "hash-with-trigger-card",
+      deckHashCodec: {
+        decode: () =>
+          Promise.resolve({
+            leader: null,
+            main: [{ card_number: "OP01-004", count: 1 }],
+            don: null,
+          }),
+      },
+      fetchCard: () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: "OP01-004",
+                effect: "",
+                trigger: "[Trigger] Draw 1 card.",
+              },
+            }),
+        }),
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain(
+      "OP01-004 line 1 text: [Trigger] Draw 1 card.",
+    );
+    expect(report.lines).toContain("OP01-004 line 1 parse: passed");
+    expect(report.lines).toContain("OP01-004 line 1 engine runtime: passed");
+  });
+
   it("reports Poneglyph API fetch failures in card probe mode", async () => {
     const report = await createSupportProbeReport({
       cardId: "OP10-999",
