@@ -142,7 +142,7 @@ test("optional activation trash costs delegate concrete movement", () => {
 
 test("start-of-game stage replacement delegates concrete movement", () => {
   const source = readSource(
-    "packages/engine-core/src/start-of-game-effects.ts",
+    "packages/engine-core/src/setup/start-of-game-effects.ts",
   );
 
   assert.match(source, /\bmoveConcreteCardsToTrash\b/);
