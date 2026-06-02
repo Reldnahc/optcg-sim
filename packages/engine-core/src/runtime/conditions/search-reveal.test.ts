@@ -4,7 +4,7 @@ import type { Condition } from "@optcg/types";
 import { evaluateQueuedEffectCondition } from "./evaluator.js";
 
 import type { EffectQueueEntry } from "../../effect-runtime-queue/test-support.js";
-import { filterStateForPlayer } from "../../filter-state-for-player.js";
+import { filterStateForPlayer } from "../../view/filter-state-for-player.js";
 import {
   applyAction,
   createActiveState,

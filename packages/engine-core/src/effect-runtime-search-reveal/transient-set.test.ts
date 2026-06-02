@@ -17,7 +17,7 @@ import {
   createSupportedSearchRevealTransientSet,
 } from "../effect-runtime-search-reveal.js";
 import { processEffectRuntime } from "../effect-runtime.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import {
   queueDrawForP1,
   toEffectId,

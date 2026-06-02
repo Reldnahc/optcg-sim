@@ -38,9 +38,9 @@ import {
   setupAttackState,
 } from "../battle/test-fixtures.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,

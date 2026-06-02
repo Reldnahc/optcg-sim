@@ -34,7 +34,7 @@ import {
   toCardId,
 } from "../action-test-fixtures.js";
 import { applyAction, getLegalActions } from "../actions.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,

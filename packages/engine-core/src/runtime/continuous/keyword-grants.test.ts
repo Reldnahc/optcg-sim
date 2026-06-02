@@ -13,7 +13,7 @@ import type {
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "../../state/canonical-state.js";
-import { computeView } from "../../compute-view.js";
+import { computeView } from "../../view/compute-view.js";
 import { createInitialState } from "../../setup/initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;

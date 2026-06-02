@@ -22,7 +22,7 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
 } from "../action-test-fixtures.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import {
   hasPlayCardAction,
   setupMainPlayState,

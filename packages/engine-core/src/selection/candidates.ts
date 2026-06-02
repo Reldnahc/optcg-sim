@@ -13,7 +13,7 @@ import type {
 } from "@optcg/types";
 
 import { getOpponentId, toCardRef } from "../action-state.js";
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 
 export type TargetCandidateResolutionErrorReason =
   | "invalidTargetCount"

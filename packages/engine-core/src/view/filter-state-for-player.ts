@@ -33,7 +33,7 @@ import {
   toPublicLifeView,
 } from "./public-card-view.js";
 import type { ComputedBoardCardStats } from "./public-card-view.js";
-import { publicDecisionSourceFromEffectQueue } from "../public-decision-source.js";
+import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
 import { toPublicTimerState } from "./public-timers.js";
 
 const toVisiblePlayerState = (

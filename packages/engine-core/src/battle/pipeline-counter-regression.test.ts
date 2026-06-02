@@ -6,7 +6,7 @@ import type { EngineEvent, EngineResult, GameState } from "@optcg/types";
 import { applyAction, getLegalActions } from "../actions.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import { passCounterStep, setupAttackState } from "./test-fixtures.js";
 

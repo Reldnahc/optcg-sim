@@ -42,7 +42,7 @@ import {
   reviewedOnPlayDrawDefinition,
 } from "../action-test-fixtures.js";
 import { processEffectRuntime } from "../effect-runtime.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 
 export const toCardId = (value: string): CardId => value as CardId;
 export const toDecisionId = (value: string): DecisionId => value as DecisionId;

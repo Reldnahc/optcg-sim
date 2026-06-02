@@ -6,7 +6,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { toCardRef } from "./action-state.js";
+import { toCardRef } from "../action-state.js";
 
 export interface VisibleDecisionSourceCard {
   card: CardInstance;

@@ -20,7 +20,7 @@ import {
   setupAttackState,
 } from "./test-fixtures.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 
 const setupLeaderBattleWithDamageCount = (
   damageCount: number,

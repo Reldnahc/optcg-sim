@@ -44,7 +44,7 @@ import {
   createCounterStepPassDecision,
   getUnsupportedCounterWindowReason,
 } from "./counter-actions.js";
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 import {
   KO_TRASH_MOVEMENT_REASON,
   moveConcreteCardsToTrash,

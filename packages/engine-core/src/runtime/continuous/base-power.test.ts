@@ -11,7 +11,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { computeView } from "../../compute-view.js";
+import { computeView } from "../../view/compute-view.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "./continuous.js";
 import { createInitialState } from "../../setup/initial-state.js";
 

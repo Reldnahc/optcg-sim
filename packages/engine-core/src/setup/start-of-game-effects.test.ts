@@ -12,7 +12,7 @@ import type {
 
 import { applyAction } from "../actions.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";

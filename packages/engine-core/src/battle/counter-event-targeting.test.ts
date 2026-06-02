@@ -12,7 +12,7 @@ import {
   installSupportedCounterEvent,
   setupAttackState,
 } from "./test-fixtures.js";
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 
 type EngineInternalBattleState = NonNullable<
   ReturnType<typeof setupAttackState>["battle"]

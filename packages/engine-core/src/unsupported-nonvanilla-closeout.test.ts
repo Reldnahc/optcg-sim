@@ -21,7 +21,7 @@ import {
 } from "./battle/test-fixtures.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import { queueDrawForP1 } from "./effect-runtime-queue/test-support.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+import { filterStateForPlayer } from "./view/filter-state-for-player.js";
 import { setupMainPlayState } from "./play-card/test-fixtures.js";
 
 const unsupportedSupport = { status: "unsupported" as const, tested: false };

@@ -7,7 +7,7 @@ import { createInitialState } from "./setup/initial-state.js";
 import { startMulliganFlow } from "./setup/mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
 import { createChooseQuantityDecisionForQueuedEffect } from "./effect-runtime.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+import { filterStateForPlayer } from "./view/filter-state-for-player.js";
 import {
   createActiveState,
   createInput,

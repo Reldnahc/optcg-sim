@@ -25,7 +25,7 @@ import {
   setupAttackState,
 } from "../battle/test-fixtures.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 
 const supportedLifeTriggerDefinition = (
   cardId: ReturnType<typeof toCardId>,

@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { CardInstance, Effect } from "@optcg/types";
 
-import { computeView } from "../../compute-view.js";
+import { computeView } from "../../view/compute-view.js";
 import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,

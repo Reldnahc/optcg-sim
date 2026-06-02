@@ -1,6 +1,6 @@
 import type { GameState } from "@optcg/types";
 
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 
 export const getUnsupportedCombatViewMetadataReason = (
   state: GameState,

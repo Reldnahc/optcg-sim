@@ -8,7 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 import { setupFullCharacterPlayState } from "../play-card/test-fixtures.js";
 import {
   buildSelectedTargetKoReplacementProcess,

@@ -10,7 +10,7 @@ import type {
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 import { applyAction } from "../actions.js";
 import {
   applyPlayCard,

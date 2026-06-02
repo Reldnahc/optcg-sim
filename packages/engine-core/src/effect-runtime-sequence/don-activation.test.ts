@@ -27,7 +27,7 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
-import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 
 const setupSequenceDefinition = (
   state: GameState,

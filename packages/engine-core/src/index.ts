@@ -33,7 +33,7 @@ export {
   getLegalActions,
   resolveSupportedVanillaBattle,
 } from "./actions.js";
-export { computeView } from "./compute-view.js";
-export { filterStateForPlayer } from "./filter-state-for-player.js";
+export { computeView } from "./view/compute-view.js";
+export { filterStateForPlayer } from "./view/filter-state-for-player.js";
 export { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 export type { RuntimeSupportAdmissionResult } from "./effect-runtime-admission.js";

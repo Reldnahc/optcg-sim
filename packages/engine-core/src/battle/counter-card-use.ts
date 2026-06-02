@@ -46,7 +46,7 @@ import {
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
 } from "./support.js";
-import { computeView } from "../compute-view.js";
+import { computeView } from "../view/compute-view.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
