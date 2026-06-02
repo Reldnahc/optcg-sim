@@ -1,31 +1,18 @@
 import type {
   Action,
-  CardRef,
-  EngineError,
-  EngineEvent,
   EngineResult,
   GameState,
   LegalAction,
-  OrderCardsDecision,
   PlayerId,
-  ReplacementProcess,
-  ReplacementProcessState,
 } from "@optcg/types";
 
-import {
-  appendEffectResolvedEvent,
-  appendEvent,
-  illegalAction,
-  toEngineResult,
-  toStateSeq,
-} from "./action-results.js";
-import { isMatchActive, reindexZoneCards, zonesEqual } from "./action-state.js";
+import { illegalAction, toEngineResult } from "./action-results.js";
+import { isMatchActive } from "./action-state.js";
 import {
   applyBattleDecisionResponse,
   continueAttackTimingDecisionResultIfReady,
   applyDeclareAttack,
   applyUseCounter,
-  finalizeBattleAfterReplacementResolution,
   getBattleDecisionLegalActions,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
@@ -42,22 +29,16 @@ import {
 } from "./target-selection-actions.js";
 import {
   detectPendingRuntimeWork,
-  executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,
   resumePlaySourceOverflowDecision,
 } from "./effect-runtime.js";
-import {
-  getReplacementDecisionLegalActions,
-  isReplacementContinuationDecision,
-} from "./replacement-decision-actions.js";
+import { getReplacementDecisionLegalActions } from "./replacement-decision-actions.js";
 import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement-rest-target-actions.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
   resumeSequenceFrameAfterPlaySelectedOverflow,
   resumeSequenceFrameAfterReplacement,
 } from "./effect-runtime-sequence-frames.js";
-import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
-import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import {
   applyLifeTriggerDecisionResponse,
   getLifeTriggerLegalActions,
@@ -67,6 +48,10 @@ import {
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
+import {
+  applySearchRevealOrderResponse,
+  getSearchRevealDecisionLegalActions,
+} from "./effect-runtime-search-reveal-order-actions.js";
 import {
   applySearchRevealSequenceChoiceResponse,
   applySequenceSelectCardsChoiceResponse,
@@ -107,300 +92,10 @@ import {
   getRespondingPlayerId,
   hasMalformedRespondToDecisionPlayerId,
 } from "./respond-to-decision-player.js";
-
-const invalidDecision = (reason: string): readonly [EngineError] => [
-  { type: "invalidDecisionResponse", reason },
-];
-
-const isCardRef = (value: unknown): value is CardRef => {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  const zone = candidate["zone"];
-  return (
-    typeof candidate["instanceId"] === "string" &&
-    typeof candidate["cardId"] === "string" &&
-    typeof candidate["playerId"] === "string" &&
-    (zone === undefined || (typeof zone === "object" && zone !== null))
-  );
-};
-
-const effectIdFromStoredReplacementPayload = (
-  payload: unknown,
-  fallback: string,
-): string => {
-  if (
-    typeof payload === "object" &&
-    payload !== null &&
-    "effectId" in payload &&
-    typeof payload.effectId === "string"
-  ) {
-    return payload.effectId;
-  }
-  return fallback;
-};
-
-const queueEntryIdFromStoredReplacementPayload = (
-  payload: unknown,
-): string | undefined => {
-  if (
-    typeof payload === "object" &&
-    payload !== null &&
-    "queueEntryId" in payload &&
-    typeof payload.queueEntryId === "string"
-  ) {
-    return payload.queueEntryId;
-  }
-  return undefined;
-};
-
-const hasBattleKoReplacementContinuation = (payload: unknown): boolean => {
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("battleContinuation" in payload)
-  ) {
-    return false;
-  }
-  const continuation = payload.battleContinuation;
-  return (
-    typeof continuation === "object" &&
-    continuation !== null &&
-    "type" in continuation &&
-    continuation.type === "endBattleAfterCharacterKoAttempt"
-  );
-};
-
-const replacementProcessFromState = (
-  decision: Extract<
-    NonNullable<GameState["pendingDecision"]>,
-    { type: "chooseReplacement" }
-  >,
-  processState: ReplacementProcessState,
-): ReplacementProcess | null => {
-  const payload = processState.payload;
-  if (typeof payload !== "object" || payload === null) {
-    return null;
-  }
-  const source = "source" in payload ? payload.source : undefined;
-  const target = "target" in payload ? payload.target : undefined;
-  if (source !== undefined && !isCardRef(source)) {
-    return null;
-  }
-  if (target !== undefined && !isCardRef(target)) {
-    return null;
-  }
-  return {
-    id: processState.processId,
-    type: processState.type,
-    ...(source === undefined ? {} : { source }),
-    ...(target === undefined ? {} : { target }),
-    payload,
-    causedBy: decision.causedBy,
-    usedReplacementIds: [...processState.usedReplacementIds],
-  };
-};
-
-const getChooseReplacementLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): LegalAction[] => {
-  const decision = state.pendingDecision;
-  if (
-    decision === undefined ||
-    decision.type !== "chooseReplacement" ||
-    decision.playerId !== playerId
-  ) {
-    return [];
-  }
-  return [
-    ...(decision.mandatory
-      ? []
-      : [
-          {
-            type: "respondToDecision" as const,
-            decisionId: decision.id,
-            response: { type: "replacement" as const },
-          },
-        ]),
-    ...decision.replacementIds.map(
-      (replacementId): LegalAction => ({
-        type: "respondToDecision",
-        decisionId: decision.id,
-        response: { type: "replacement", replacementId },
-      }),
-    ),
-  ];
-};
-
-const getSearchRevealDecisionLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): LegalAction[] => {
-  const decision = state.pendingDecision;
-  if (
-    decision !== undefined &&
-    isSearchRevealOrderCardsDecision(decision) &&
-    decision.playerId === playerId
-  ) {
-    return [
-      {
-        type: "respondToDecision",
-        decisionId: decision.id,
-        response: {
-          type: "orderedIds",
-          ids: decision.cards.map((card) => String(card.instanceId)),
-        },
-      },
-    ];
-  }
-  if (
-    decision === undefined ||
-    decision.type !== "selectCards" ||
-    decision.playerId !== playerId ||
-    decision.request.set === undefined ||
-    !String(decision.request.set).startsWith("set:search-reveal:")
-  ) {
-    return [];
-  }
-
-  return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "cards", cards: [] },
-    },
-    ...decision.candidates.map(
-      (candidate): LegalAction => ({
-        type: "respondToDecision",
-        decisionId: decision.id,
-        response: { type: "cards", cards: [candidate.card] },
-      }),
-    ),
-  ];
-};
-
-const searchRevealOrderPrefix = "decision:orderCards:search-reveal:";
-
-const isSearchRevealOrderCardsDecision = (
-  decision: NonNullable<GameState["pendingDecision"]>,
-): decision is OrderCardsDecision =>
-  decision.type === "orderCards" &&
-  String(decision.id).startsWith(searchRevealOrderPrefix);
-
-const hasDuplicateIds = (ids: readonly string[]): boolean =>
-  ids.some((id, index) => ids.slice(index + 1).includes(id));
-
-const applySearchRevealOrderResponse = (
-  state: GameState,
-  action: Extract<Action, { type: "respondToDecision" }>,
-): EngineResult | null => {
-  const decision = state.pendingDecision;
-  if (decision === undefined || !isSearchRevealOrderCardsDecision(decision)) {
-    return null;
-  }
-  const fail = (reason: string): EngineResult =>
-    toEngineResult(state, [], invalidDecision(reason));
-  if (action.response.type !== "orderedIds") {
-    return fail("Response type must be orderedIds for search reveal order.");
-  }
-  const responseIds = (action.response as { ids?: unknown }).ids;
-  const expectedIds = decision.cards.map((card) => String(card.instanceId));
-  if (
-    !Array.isArray(responseIds) ||
-    !responseIds.every((id) => typeof id === "string") ||
-    hasDuplicateIds(responseIds) ||
-    responseIds.length !== expectedIds.length ||
-    !responseIds.every((id) => expectedIds.includes(id))
-  ) {
-    return fail("Ordered ids must match the remaining search cards.");
-  }
-  const player = state.players[decision.playerId];
-  if (player === undefined)
-    return fail("Search reveal order player is missing.");
-  const activeDeckCards = player.deck.slice(0, decision.cards.length);
-  if (
-    activeDeckCards.length !== decision.cards.length ||
-    !decision.cards.every((card, index) => {
-      const deckCard = activeDeckCards[index];
-      return (
-        deckCard !== undefined &&
-        card.instanceId === deckCard.instanceId &&
-        card.cardId === deckCard.cardId &&
-        card.zone !== undefined &&
-        zonesEqual(card.zone, deckCard.zone)
-      );
-    })
-  ) {
-    return fail("Search reveal order cards are stale or unsupported.");
-  }
-  const orderedCards = responseIds.flatMap((id) => {
-    const card = activeDeckCards.find(
-      (candidate) => String(candidate.instanceId) === id,
-    );
-    return card === undefined ? [] : [card];
-  });
-  const causedBy = decision.causedBy;
-  const queuedEntry =
-    causedBy.type === "effect"
-      ? state.effectQueue.find(
-          (entry) =>
-            entry.id === causedBy.queueEntryId &&
-            entry.effectBlockId === causedBy.effectId,
-        )
-      : undefined;
-  const events: EngineEvent[] = [];
-  appendEvent(
-    state,
-    events,
-    "decisionResolved",
-    {
-      decisionId: decision.id,
-      decisionType: decision.type,
-      playerId: decision.playerId,
-      responseType: action.response.type,
-      orderedCount: responseIds.length,
-    },
-    decision.visibility,
-  );
-  const resolved = events[0];
-  if (resolved !== undefined) {
-    resolved.causedBy = { type: "decision", decisionId: decision.id };
-  }
-  const shouldResumeSequence = hasSequenceFrameForDecision(state, decision.id);
-  if (queuedEntry !== undefined && !shouldResumeSequence) {
-    appendEffectResolvedEvent(state, events, queuedEntry);
-  }
-  const finalDeck = reindexZoneCards(
-    [...player.deck.slice(decision.cards.length), ...orderedCards],
-    "deck",
-    decision.playerId,
-    "deck",
-  );
-  const queueEntryId = String(decision.id).slice(
-    searchRevealOrderPrefix.length,
-  );
-  const nextState: GameState = {
-    ...state,
-    seq: toStateSeq(state.seq + 1),
-    actionSeq: state.actionSeq + 1,
-    players: {
-      ...state.players,
-      [decision.playerId]: { ...player, deck: finalDeck },
-    },
-    effectQueue:
-      queuedEntry === undefined || shouldResumeSequence
-        ? state.effectQueue
-        : state.effectQueue.filter((entry) => entry.id !== queuedEntry.id),
-    revealedCards: state.revealedCards.filter(
-      (record) => record.id !== `reveal:search-reveal:${queueEntryId}`,
-    ),
-    eventJournal: [...state.eventJournal, ...events],
-  };
-  delete nextState.pendingDecision;
-  return toEngineResult(nextState, events);
-};
+import {
+  applyChooseReplacementDecisionResponse,
+  getChooseReplacementLegalActions,
+} from "./replacement-choice-actions.js";
 
 const getSetupStartOfGameLegalActions = (
   state: GameState,
@@ -428,202 +123,6 @@ const getSetupStartOfGameLegalActions = (
       response: { type: "cards" as const, cards: [candidate.card] },
     })),
   ];
-};
-
-const applyChooseReplacementDecisionResponse = (
-  state: GameState,
-  action: Extract<Action, { type: "respondToDecision" }>,
-): EngineResult | null => {
-  const decision = state.pendingDecision;
-  if (decision === undefined || decision.type !== "chooseReplacement") {
-    return null;
-  }
-  if (hasMalformedRespondToDecisionPlayerId(action)) {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("Player does not match current pending decision."),
-    );
-  }
-  if (getRespondingPlayerId(action, decision.playerId) !== decision.playerId) {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("Player does not match current pending decision."),
-    );
-  }
-
-  const response: unknown = action.response;
-  if (typeof response !== "object" || response === null) {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("Response must be an object for chooseReplacement."),
-    );
-  }
-  const responseType = (response as { type?: unknown }).type;
-  if (responseType !== "replacement") {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision(
-        "Response type must be replacement for chooseReplacement.",
-      ),
-    );
-  }
-
-  const replacementId = (response as { replacementId?: unknown }).replacementId;
-  if (replacementId !== undefined && typeof replacementId !== "string") {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("replacementId must be a string."),
-    );
-  }
-  if (replacementId !== undefined) {
-    if (!decision.replacementIds.includes(replacementId)) {
-      return toEngineResult(
-        state,
-        [],
-        invalidDecision("replacementId must match an available replacement."),
-      );
-    }
-  }
-  if (decision.mandatory && replacementId === undefined) {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("Mandatory replacement decisions cannot be declined."),
-    );
-  }
-
-  const storedProcess = state.replacementState.find(
-    (processState) => processState.processId === decision.processId,
-  );
-  if (storedProcess === undefined) {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision(
-        "chooseReplacement decision is stale for current replacement process.",
-      ),
-    );
-  }
-  const process = replacementProcessFromState(decision, storedProcess);
-  if (process === null) {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision(
-        "chooseReplacement decision is stale for current replacement process.",
-      ),
-    );
-  }
-
-  const events: EngineEvent[] = [];
-  appendEvent(
-    state,
-    events,
-    "decisionResolved",
-    {
-      decisionId: decision.id,
-      decisionType: decision.type,
-      playerId: decision.playerId,
-      responseType: action.response.type,
-    },
-    decision.visibility,
-  );
-  const resolved = events[0];
-  if (resolved !== undefined) {
-    resolved.causedBy = { type: "decision", decisionId: decision.id };
-  }
-
-  const processState: GameState = {
-    ...state,
-    replacementState: state.replacementState.filter(
-      (candidate) => candidate.processId !== decision.processId,
-    ),
-  };
-  delete processState.pendingDecision;
-  const queuedEntryId = queueEntryIdFromStoredReplacementPayload(
-    storedProcess.payload,
-  );
-  const queuedEntry =
-    queuedEntryId === undefined
-      ? undefined
-      : state.effectQueue.find((entry) => entry.id === queuedEntryId);
-  const shouldResumeSequence = hasSequenceFrameForDecision(state, decision.id);
-  const shouldFinalizeBattle =
-    queuedEntry === undefined &&
-    hasBattleKoReplacementContinuation(storedProcess.payload);
-
-  if (replacementId !== undefined) {
-    const applied = executeAcceptedSelectedTargetKoReplacementProcess(
-      processState,
-      events,
-      effectIdFromStoredReplacementPayload(storedProcess.payload, decision.id),
-      process,
-      replacementId,
-    );
-    if ("error" in applied) {
-      return toEngineResult(state, [], [applied.error]);
-    }
-    const nextState = {
-      ...applied.state,
-      actionSeq: state.actionSeq + 1,
-    };
-    if (
-      nextState.pendingDecision !== undefined &&
-      isReplacementContinuationDecision(nextState, nextState.pendingDecision)
-    ) {
-      return toEngineResult(nextState, events);
-    }
-    if (shouldFinalizeBattle) {
-      return finalizeBattleAfterReplacementResolution(state, nextState, events);
-    }
-    return queuedEntry === undefined
-      ? toEngineResult(nextState, events)
-      : shouldResumeSequence
-        ? toEngineResult(nextState, events)
-        : finalizeSelectedTargetEffectResolution(
-            nextState,
-            state,
-            queuedEntry,
-            events,
-            events.slice(1),
-          );
-  }
-
-  const unreplaced = executeUnreplacedSelectedTargetKoProcess(
-    processState,
-    events,
-    effectIdFromStoredReplacementPayload(storedProcess.payload, decision.id),
-    process,
-  );
-  if ("error" in unreplaced) {
-    return toEngineResult(state, [], [unreplaced.error]);
-  }
-
-  const nextState: GameState = {
-    ...unreplaced.state,
-    seq: toStateSeq(state.seq + 1),
-    actionSeq: state.actionSeq + 1,
-    eventJournal: [...state.eventJournal, ...events],
-  };
-  if (shouldFinalizeBattle) {
-    return finalizeBattleAfterReplacementResolution(state, nextState, events);
-  }
-  return queuedEntry === undefined
-    ? toEngineResult(nextState, events)
-    : shouldResumeSequence
-      ? toEngineResult(nextState, events)
-      : finalizeSelectedTargetEffectResolution(
-          nextState,
-          state,
-          queuedEntry,
-          events,
-          events.slice(1),
-        );
 };
 
 export const getLegalActions = (
