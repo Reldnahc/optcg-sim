@@ -8,18 +8,18 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
-} from "./play-card.js";
-import { must, p1 } from "./action-test-fixtures.js";
+} from "./core.js";
+import { must, p1 } from "../action-test-fixtures.js";
 import {
   hasPlayCardAction,
   setupFullCharacterPlayState,
   setupOccupiedStagePlayState,
-} from "./play-card-test-fixtures.js";
+} from "../play-card-test-fixtures.js";
 
 const applyPlayCardTestAction = (
   state: GameState,

@@ -16,19 +16,19 @@ import {
   p1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
-import { hasUnsupportedSupportGateText } from "./battle-support.js";
+} from "../action-test-fixtures.js";
+import { hasUnsupportedSupportGateText } from "../battle-support.js";
 import {
   canResolveDestinationConflict,
   getActiveDonCount,
   getPlayableHandCards,
   getSupportedPlayMetadata,
-} from "./play-card-support.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
+} from "./support.js";
+import { setupMainPlayState } from "../play-card-test-fixtures.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../..",
+  "../../../..",
 );
 
 const plainDataClone = <T>(value: T): T =>

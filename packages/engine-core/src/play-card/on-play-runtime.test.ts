@@ -9,25 +9,25 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
-} from "./play-card.js";
+} from "./core.js";
 import {
   must,
   p1,
   p2,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-} from "./action-test-fixtures.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
+} from "../action-test-fixtures.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
 import {
   hasPlayCardAction,
   setupMainPlayState,
   toTestCardRef,
-} from "./play-card-test-fixtures.js";
+} from "../play-card-test-fixtures.js";
 
 const applyPlayCardTestAction = (
   state: GameState,

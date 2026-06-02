@@ -4,19 +4,19 @@ import { test } from "vitest";
 
 import type { Action, EngineResult, GameState } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
-} from "./play-card.js";
-import { must, p1, p2 } from "./action-test-fixtures.js";
+} from "./core.js";
+import { must, p1, p2 } from "../action-test-fixtures.js";
 import {
   hasPlayCardAction,
   respondToDecisionActions,
   setupFullCharacterPlayState,
   toTestCardRef,
-} from "./play-card-test-fixtures.js";
+} from "../play-card-test-fixtures.js";
 
 const applyPlayCardTestAction = (
   state: GameState,
@@ -305,17 +305,14 @@ test("Character overflow rejects stale, wrong-player, wrong-card, missing, and m
 
 test("Character overflow authority lives at the Character placement boundary", () => {
   const placementSource = readFileSync(
-    new URL("./play-card/placement.ts", import.meta.url),
+    new URL("./placement.ts", import.meta.url),
     {
       encoding: "utf8",
     },
   );
-  const playCardSource = readFileSync(
-    new URL("./play-card/core.ts", import.meta.url),
-    {
-      encoding: "utf8",
-    },
-  );
+  const playCardSource = readFileSync(new URL("./core.ts", import.meta.url), {
+    encoding: "utf8",
+  });
   const placementStart = placementSource.indexOf(
     "const placePlayedCardResult =",
   );

@@ -3,17 +3,17 @@ import { test } from "vitest";
 
 import type { CardInstance, EffectDefinition } from "@optcg/types";
 
-import { applyPlayCard, getPlayCardLegalActions } from "./play-card.js";
+import { applyPlayCard, getPlayCardLegalActions } from "./core.js";
 import {
   must,
   p1,
   resolvedCard,
   reviewedMainEventDrawDefinition,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   hasPlayCardAction,
   setupMainPlayState,
-} from "./play-card-test-fixtures.js";
+} from "../play-card-test-fixtures.js";
 
 const reviewedMainEventSearchDefinition = (
   cardId: CardInstance["cardId"],

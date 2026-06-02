@@ -9,14 +9,14 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { hashCanonicalStateValue } from "./canonical-state.js";
-import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { applyAction } from "./actions.js";
+import { hashCanonicalStateValue } from "../canonical-state.js";
+import { filterStateForPlayer } from "../filter-state-for-player.js";
+import { applyAction } from "../actions.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
-} from "./play-card.js";
+} from "./core.js";
 import {
   addExtraDeckCard,
   must,
@@ -25,13 +25,13 @@ import {
   resolvedCard,
   reviewedMainEventDrawDefinition,
   valueContainsScalar,
-} from "./action-test-fixtures.js";
+} from "../action-test-fixtures.js";
 import {
   hasPlayCardAction,
   respondToDecisionActions,
   setupFullCharacterPlayState,
   setupMainPlayState,
-} from "./play-card-test-fixtures.js";
+} from "../play-card-test-fixtures.js";
 
 const applyPlayCardTestAction = (
   state: GameState,
