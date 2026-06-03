@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { AppRoot } from "./AppRoot.js";
 import "./styles.css";
+import "./styles/auth-gate.css";
 import "./styles/app-shell.css";
 import "./styles/app-shell-pages.css";
 import "./styles/count-badge.css";

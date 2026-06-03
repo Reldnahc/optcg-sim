@@ -6,7 +6,7 @@ settings:
 
 overrides:
   fast-uri: 3.1.2
-  "brace-expansion@>=5.0.0 <5.0.6": 5.0.6
+  brace-expansion@>=5.0.0 <5.0.6: 5.0.6
 
 importers:
   .:
@@ -83,6 +83,9 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
+      optcg-auth-client:
+        specifier: 0.1.3
+        version: 0.1.3
       react:
         specifier: ^19.2.6
         version: 19.2.6
@@ -1712,11 +1715,19 @@ packages:
       }
     engines: { node: ">=18" }
 
+  optcg-auth-client@0.1.3:
+    resolution:
+      {
+        integrity: sha512-kG2FsAMnfCaAlGxe7VnGyK3U42OaM+xpWCTE/wcs5wgcU2dprVsbCRlbmYepD69vWcG7QxvMU3YBne9ErVoDGg==,
+      }
+    engines: { node: ">=20" }
+
   optcg-deck-hash@0.1.1:
     resolution:
       {
         integrity: sha512-IbkUHMdeEKq9CB9vE0osu8z4BrlgksYjKG5Pq54/Ge0NkAGu/fpK16yQsilC6CA4Nfw5nUKl9fO4DjhegGK+ZQ==,
       }
+    engines: { node: ">=20" }
 
   optionator@0.9.4:
     resolution:
@@ -3176,6 +3187,8 @@ snapshots:
   onetime@7.0.0:
     dependencies:
       mimic-function: 5.0.1
+
+  optcg-auth-client@0.1.3: {}
 
   optcg-deck-hash@0.1.1: {}
 

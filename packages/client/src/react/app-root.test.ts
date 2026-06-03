@@ -3,11 +3,13 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
-import { AppRoot } from "./AppRoot.js";
+import { AppRoot, AppRootContent } from "./AppRoot.js";
 
 describe("client app root", () => {
   test("renders the dashboard at the root path", () => {
-    const html = renderToStaticMarkup(createElement(AppRoot, { path: "/" }));
+    const html = renderToStaticMarkup(
+      createElement(AppRootContent, { path: "/" }),
+    );
 
     assert.match(html, /Dashboard/u);
     assert.match(html, /Go to Play/u);
@@ -15,26 +17,26 @@ describe("client app root", () => {
 
   test("renders each shell route", () => {
     assert.match(
-      renderToStaticMarkup(createElement(AppRoot, { path: "/play" })),
+      renderToStaticMarkup(createElement(AppRootContent, { path: "/play" })),
       /Ranked Queue/u,
     );
     assert.match(
-      renderToStaticMarkup(createElement(AppRoot, { path: "/lobbies" })),
+      renderToStaticMarkup(createElement(AppRootContent, { path: "/lobbies" })),
       /Create Custom Lobby/u,
     );
     assert.match(
-      renderToStaticMarkup(createElement(AppRoot, { path: "/decks" })),
+      renderToStaticMarkup(createElement(AppRootContent, { path: "/decks" })),
       /Poneglyph deck builder/u,
     );
     assert.match(
-      renderToStaticMarkup(createElement(AppRoot, { path: "/profile" })),
+      renderToStaticMarkup(createElement(AppRootContent, { path: "/profile" })),
       /Poneglyph account/u,
     );
   });
 
   test("renders not-found for unknown routes", () => {
     const html = renderToStaticMarkup(
-      createElement(AppRoot, { path: "/missing" }),
+      createElement(AppRootContent, { path: "/missing" }),
     );
 
     assert.match(html, /Page not found/u);
@@ -43,7 +45,7 @@ describe("client app root", () => {
 
   test("delegates the match route without rendering shell dashboard", () => {
     const html = renderToStaticMarkup(
-      createElement(AppRoot, {
+      createElement(AppRootContent, {
         matchSurface: createElement("div", { "data-testid": "match-surface" }),
         path: "/match?matchId=abc&seat=p1",
       }),
@@ -56,7 +58,7 @@ describe("client app root", () => {
 
   test("delegates concrete lobby routes to the match surface", () => {
     const html = renderToStaticMarkup(
-      createElement(AppRoot, {
+      createElement(AppRootContent, {
         matchSurface: createElement("div", { "data-testid": "lobby-surface" }),
         path: "/lobbies/dev-local-lobby-1",
       }),
@@ -65,5 +67,12 @@ describe("client app root", () => {
     assert.match(html, /data-app-route="match"/u);
     assert.match(html, /data-testid="lobby-surface"/u);
     assert.doesNotMatch(html, /Create Custom Lobby/u);
+  });
+
+  test("gates the routed app while account session is unresolved", () => {
+    const html = renderToStaticMarkup(createElement(AppRoot, { path: "/" }));
+
+    assert.match(html, /Checking session/u);
+    assert.doesNotMatch(html, /Dashboard/u);
   });
 });

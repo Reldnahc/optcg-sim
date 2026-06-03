@@ -1,3 +1,4 @@
+import { AuthGate } from "./AuthGate.js";
 import { AppShell } from "./AppShell.js";
 import { appRouteFromPath } from "./app-route.js";
 import { DashboardPage } from "./DashboardPage.js";
@@ -7,13 +8,14 @@ import { MatchApp } from "./MatchApp.js";
 import { NotFoundPage } from "./NotFoundPage.js";
 import { PlayPage } from "./PlayPage.js";
 import { ProfilePage } from "./ProfilePage.js";
+import { useSimAuth } from "./use-sim-auth.js";
 
 export interface AppRootProps {
   path?: string | undefined;
   matchSurface?: React.ReactNode | undefined;
 }
 
-export const AppRoot = ({
+export const AppRootContent = ({
   path,
   matchSurface,
 }: AppRootProps): React.JSX.Element => {
@@ -40,4 +42,19 @@ export const AppRoot = ({
     );
 
   return <AppShell activeRouteId={route.id}>{page}</AppShell>;
+};
+
+export const AppRoot = (props: AppRootProps): React.JSX.Element => {
+  const auth = useSimAuth();
+  return (
+    <AuthGate
+      sessionStatus={auth.status}
+      submitStatus={auth.submitStatus}
+      error={auth.error}
+      onLogin={auth.login}
+      onRegister={auth.register}
+    >
+      <AppRootContent {...props} />
+    </AuthGate>
+  );
 };
