@@ -16,10 +16,8 @@ import {
   reindexZoneCards,
 } from "../actions/state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
-import {
-  buildSelectedTargetMoveZoneReplacementProcess,
-  executeSelectedTargetFieldRemovalReplacementProcess,
-} from "../runtime/primitives/execute.js";
+import { buildSelectedTargetFieldRemovalMoveToHandReplacementProcess } from "../replacement/field-removal-process.js";
+import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
@@ -604,12 +602,14 @@ export const applyBounceToOwnerHandSequenceSegment = (params: {
     if (card === undefined) {
       continue;
     }
-    const process = buildSelectedTargetMoveZoneReplacementProcess({
-      classification: "moveFromFieldToHand",
-      entry: params.entry,
-      target,
-      targetIndex,
-    });
+    const process = buildSelectedTargetFieldRemovalMoveToHandReplacementProcess(
+      {
+        classification: "moveFromFieldToHand",
+        entry: params.entry,
+        target,
+        targetIndex,
+      },
+    );
     const resolved = executeSelectedTargetFieldRemovalReplacementProcess(
       nextState,
       events,

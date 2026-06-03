@@ -14,7 +14,7 @@ import type {
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import { finalizeBattleAfterReplacementResolution } from "../battle/actions.js";
 import {
-  executeAcceptedSelectedTargetKoReplacementProcess,
+  executeAcceptedFieldRemovalReplacementProcess,
   finalizeSelectedTargetEffectResolution,
 } from "../effect-runtime.js";
 import { executeUnreplacedSelectedTargetFieldRemovalProcess } from "../runtime/primitives/execute.js";
@@ -279,7 +279,7 @@ export const applyChooseReplacementDecisionResponse = (
     hasBattleKoReplacementContinuation(storedProcess.payload);
 
   if (replacementId !== undefined) {
-    const applied = executeAcceptedSelectedTargetKoReplacementProcess(
+    const applied = executeAcceptedFieldRemovalReplacementProcess(
       processState,
       events,
       effectIdFromStoredReplacementPayload(storedProcess.payload, decision.id),

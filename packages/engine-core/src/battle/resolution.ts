@@ -58,10 +58,10 @@ import {
   releaseDamageDeferredEffectQueue,
 } from "../effect-runtime.js";
 import {
-  buildKoReplacementProcess,
-  detectSupportedSelectedTargetKoReplacementCandidate,
-  pauseSelectedTargetKoReplacementProcess,
-} from "../runtime/primitives/execute.js";
+  buildFieldRemovalKoReplacementProcess,
+  detectSupportedFieldRemovalReplacementCandidate,
+  pauseFieldRemovalReplacementProcess,
+} from "../replacement/field-removal-process.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import {
@@ -427,7 +427,7 @@ export const resolveSupportedVanillaBattle = (
         playerId: target.playerId,
         zone: koCard.zone,
       };
-      const battleKoProcess = buildKoReplacementProcess({
+      const battleKoProcess = buildFieldRemovalKoReplacementProcess({
         id: `battle:${String(state.seq)}:ko:${String(koCard.instanceId)}`,
         effectId: "battle:character-ko-replacement",
         source: battleKoProcessSource,
@@ -437,7 +437,7 @@ export const resolveSupportedVanillaBattle = (
         sourceControllerId: attacker.playerId,
         battleContinuation: { type: "endBattleAfterCharacterKoAttempt" },
       });
-      const replacement = detectSupportedSelectedTargetKoReplacementCandidate(
+      const replacement = detectSupportedFieldRemovalReplacementCandidate(
         nextState,
         battleKoProcess,
       );
@@ -445,7 +445,7 @@ export const resolveSupportedVanillaBattle = (
         return toEngineResult(state, [], [replacement.error]);
       }
       if (replacement.candidate !== undefined) {
-        const paused = pauseSelectedTargetKoReplacementProcess(
+        const paused = pauseFieldRemovalReplacementProcess(
           nextState,
           events,
           battleKoProcess,

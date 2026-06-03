@@ -28,7 +28,10 @@ import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/c
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 
 export type { DrawExecutionFailureReason } from "./runtime/primitives/execute.js";
-export { executeAcceptedSelectedTargetKoReplacementProcess } from "./effect-runtime-ko-replacement-process.js";
+export {
+  executeAcceptedFieldRemovalReplacementProcess,
+  executeAcceptedSelectedTargetKoReplacementProcess,
+} from "./replacement/field-removal-process.js";
 export {
   applyReplacementRestTargetDecisionResponse,
   getReplacementRestTargetLegalActions,

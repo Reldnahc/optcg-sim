@@ -56,8 +56,15 @@ export interface SelectedTargetKoReplacementCandidate {
   replacementEffect: Extract<Effect, { type: "replacement" }>;
 }
 
+export type FieldRemovalReplacementCandidate =
+  SelectedTargetKoReplacementCandidate;
+
 export type DetectSelectedTargetKoReplacementCandidateResult =
   | { ok: true; candidate?: SelectedTargetKoReplacementCandidate }
+  | { ok: false; error: EngineError };
+
+export type DetectFieldRemovalReplacementCandidateResult =
+  | { ok: true; candidate?: FieldRemovalReplacementCandidate }
   | { ok: false; error: EngineError };
 
 type LocatedCard = {
@@ -656,6 +663,9 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
     candidate,
   };
 };
+
+export const detectSupportedFieldRemovalReplacementCandidate =
+  detectSupportedSelectedTargetKoReplacementCandidate;
 
 const opponentFieldRemovalReplacementApplies = (
   state: GameState,

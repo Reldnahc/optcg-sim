@@ -18,25 +18,37 @@ export {
   resolvePlayerId,
 } from "./draw.js";
 export type {
+  DetectFieldRemovalReplacementCandidateResult,
   DetectSelectedTargetKoReplacementCandidateResult,
+  FieldRemovalReplacementCandidate,
   SelectedTargetKoReplacementCandidate,
   SelectedTargetKoReplacementDetectionFailureReason,
-} from "../../effect-runtime-ko-replacement-process.js";
+} from "../../replacement/field-removal-process.js";
 export {
+  buildFieldRemovalKoReplacementProcess,
   buildKoReplacementProcess,
+  buildSelectedTargetFieldRemovalKoReplacementProcess,
+  buildSelectedTargetFieldRemovalMoveToHandReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
   buildSelectedTargetMoveZoneReplacementProcess,
+  detectSupportedFieldRemovalReplacementCandidate,
   detectSupportedSelectedTargetKoReplacementCandidate,
+  executeAcceptedFieldRemovalReplacementProcess,
   executeAcceptedSelectedTargetKoReplacementProcess,
+  normalizeFieldRemovalProcess,
+  pauseFieldRemovalReplacementProcess,
   pauseSelectedTargetKoReplacementProcess,
-} from "../../effect-runtime-ko-replacement-process.js";
+} from "../../replacement/field-removal-process.js";
 export type { SelectedTargetKoExecutionFailureReason } from "./target-ko.js";
+export type { SelectedTargetFieldRemovalExecutionFailureReason } from "./field-removal.js";
 export {
-  executeSelectedTargetEffectPrimitive,
   executeSelectedTargetFieldRemovalReplacementProcess,
   executeUnreplacedSelectedTargetFieldRemovalProcess,
-  resolveSavedFieldObjectKoSelection,
   executeUnreplacedSelectedTargetKoProcess,
+} from "./field-removal.js";
+export {
+  executeSelectedTargetEffectPrimitive,
+  resolveSavedFieldObjectKoSelection,
   isSupportedMainEventTargetKoEffect,
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
 } from "./target-ko.js";

@@ -12,7 +12,7 @@ test("trash front doors delegate concrete movement to the shared zone movement h
   const frontDoors = [
     "packages/engine-core/src/movement/runtime-move-cards.ts",
     "packages/engine-core/src/runtime/primitives/trash-from-hand.ts",
-    "packages/engine-core/src/runtime/primitives/target-ko.ts",
+    "packages/engine-core/src/runtime/primitives/field-removal.ts",
   ];
 
   for (const path of frontDoors) {
