@@ -232,13 +232,17 @@ describe("hand layout", () => {
     );
     const pointerDownStart = source.indexOf("onPointerDown={(event) => {");
     const pointerMoveStart = source.indexOf("onPointerMove={(event) => {");
+    const pointerUpStart = source.indexOf("onPointerUp={(event) => {");
     assert.notEqual(pointerDownStart, -1);
     assert.notEqual(pointerMoveStart, -1);
+    assert.notEqual(pointerUpStart, -1);
     const pointerDownSource = source.slice(pointerDownStart, pointerMoveStart);
+    const pointerMoveSource = source.slice(pointerMoveStart, pointerUpStart);
 
     assert.doesNotMatch(pointerDownSource, /stopPropagation\(\)/u);
     assert.doesNotMatch(pointerDownSource, /preventDefault\(\)/u);
-    assert.match(pointerDownSource, /setPointerCapture/u);
+    assert.doesNotMatch(pointerDownSource, /setPointerCapture/u);
+    assert.match(pointerMoveSource, /setPointerCapture/u);
   });
 
   test("card pointer reorder previews during drag and commits once on release", async () => {

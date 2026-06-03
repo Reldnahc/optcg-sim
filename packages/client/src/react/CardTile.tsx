@@ -276,9 +276,6 @@ export const CardTile = ({
         }
         const rect = event.currentTarget.getBoundingClientRect();
         completedPointerIdRef.current = undefined;
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }
         const reorderRoot =
           event.currentTarget.closest<HTMLElement>(".hand-cards");
         const reorderEntries =
