@@ -84,8 +84,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-auth-client:
-        specifier: 0.1.4
-        version: 0.1.4
+        specifier: 0.1.5
+        version: 0.1.5
       react:
         specifier: ^19.2.6
         version: 19.2.6
@@ -1715,10 +1715,10 @@ packages:
       }
     engines: { node: ">=18" }
 
-  optcg-auth-client@0.1.4:
+  optcg-auth-client@0.1.5:
     resolution:
       {
-        integrity: sha512-1wt2YKAxT51rywYZ254HWo53xlVsvRscHn9YI4TzBDLu4fV8XpuuhQ2/TTqg7dWOJ7lhrDtuh/ERP7UwI9yO0w==,
+        integrity: sha512-HdydQmAlAGV/JAZ3cBEmHWx5KP0ePA4dXmns2kSjuPM5SH80/dC35xhKRF5f9rQCWVOP4+lxYBcPQcM9L4TDhA==,
       }
     engines: { node: ">=20" }
 
@@ -3188,7 +3188,7 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  optcg-auth-client@0.1.4: {}
+  optcg-auth-client@0.1.5: {}
 
   optcg-deck-hash@0.1.1: {}
 

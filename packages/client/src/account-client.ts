@@ -36,10 +36,6 @@ const normalizeLoadout = (value: Loadout): AccountLoadout => {
   };
 };
 
-interface LoadoutResponse {
-  readonly data: Loadout;
-}
-
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
   baseUrl,
@@ -54,13 +50,10 @@ export const createPoneglyphAccountClient = ({
       return response.data.map(normalizeLoadout);
     },
     async createLoadoutFromDeckHash(input) {
-      const response = await authClient.post<LoadoutResponse>(
-        "/loadouts/import-deck-hash",
-        {
-          name: input.name,
-          deck_hash: input.deckHash,
-        },
-      );
+      const response = await authClient.createLoadoutFromDeckHash({
+        name: input.name,
+        deck_hash: input.deckHash,
+      });
       return normalizeLoadout(response.data);
     },
     async createSimHandoff(input) {
