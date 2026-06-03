@@ -96,6 +96,12 @@ interface TestSocket {
   next: () => Promise<unknown>;
 }
 
+interface TestActionResultBody {
+  type?: string;
+  accepted?: boolean;
+  clientActionId?: string;
+}
+
 const openSocket = async (url: string): Promise<TestSocket> =>
   new Promise((resolve, reject) => {
     const socket = new WebSocket(url);
@@ -136,6 +142,22 @@ const openSocket = async (url: string): Promise<TestSocket> =>
       reject(new Error("WebSocket failed to open."));
     });
   });
+
+const nextActionResult = async (
+  socket: TestSocket,
+): Promise<TestActionResultBody> => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const message = (await socket.next()) as TestActionResultBody;
+    if (message.type === "actionResult") {
+      return message;
+    }
+    if (message.type === "stateSync" || message.type === "heartbeat") {
+      continue;
+    }
+    throw new Error(`Unexpected WebSocket message ${String(message.type)}.`);
+  }
+  throw new Error("Timed out waiting for action result.");
+};
 
 const createDevMatch = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
@@ -549,11 +571,7 @@ describe("dev HTTP server", () => {
         }),
       );
 
-      const actionResult = (await p1Socket.next()) as {
-        type?: string;
-        accepted?: boolean;
-        clientActionId?: string;
-      };
+      const actionResult = await nextActionResult(p1Socket);
       const p1Update = (await p1Socket.next()) as {
         type?: string;
         snapshot?: { players?: Record<string, unknown> };

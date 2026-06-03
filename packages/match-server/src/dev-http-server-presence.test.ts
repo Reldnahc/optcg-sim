@@ -183,6 +183,20 @@ const nextStateSync = async (socket: TestSocket): Promise<StateSyncMessage> => {
   throw new Error("Timed out waiting for state sync.");
 };
 
+const nextStateSyncWithStatus = async (
+  socket: TestSocket,
+  playerId: "p1" | "p2",
+  status: "connected" | "disconnected",
+): Promise<StateSyncMessage> => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const message = await nextStateSync(socket);
+    if (connectionStatus(message, playerId) === status) {
+      return message;
+    }
+  }
+  throw new Error(`Timed out waiting for ${playerId} to become ${status}.`);
+};
+
 describe("dev HTTP server websocket presence", () => {
   test("state sync reports player connection status beside public labels", async () => {
     const server = await createFixtureDevHttpServer();
@@ -208,7 +222,11 @@ describe("dev HTTP server websocket presence", () => {
 
       p1Socket.socket.close();
 
-      const p2Update = (await p2Socket.next()) as StateSyncMessage;
+      const p2Update = await nextStateSyncWithStatus(
+        p2Socket,
+        "p1",
+        "disconnected",
+      );
 
       assert.equal(p2Update.type, "stateSync");
       assert.equal(connectionStatus(p2Update, "p1"), "disconnected");
@@ -243,11 +261,63 @@ describe("dev HTTP server websocket presence", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 25));
       p2Socket.socket.send("{}");
-      const p2Update = await nextStateSync(p2Socket);
+      const p2Update = await nextStateSyncWithStatus(
+        p2Socket,
+        "p1",
+        "disconnected",
+      );
 
       assert.equal(p2Update.type, "stateSync");
       assert.equal(connectionStatus(p2Update, "p1"), "disconnected");
       assert.equal(connectionStatus(p2Update, "p2"), "connected");
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
+      await server.close();
+    }
+  });
+
+  test("reconnected match sockets immediately update opponent presence", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = await createReadyDevMatch(server);
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p2Token = await claimDevSeat(server, match.matchId, "p2");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      const p2Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      sockets.push(p1Socket.socket, p2Socket.socket);
+      await p1Socket.next();
+      await p2Socket.next();
+
+      p1Socket.socket.close();
+      const disconnectedUpdate = await nextStateSyncWithStatus(
+        p2Socket,
+        "p1",
+        "disconnected",
+      );
+      assert.equal(connectionStatus(disconnectedUpdate, "p1"), "disconnected");
+
+      const reconnectedP1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      sockets.push(reconnectedP1Socket.socket);
+      await reconnectedP1Socket.next();
+
+      const reconnectedUpdate = await nextStateSyncWithStatus(
+        p2Socket,
+        "p1",
+        "connected",
+      );
+
+      assert.equal(connectionStatus(reconnectedUpdate, "p1"), "connected");
+      assert.equal(connectionStatus(reconnectedUpdate, "p2"), "connected");
     } finally {
       for (const socket of sockets) {
         socket.close();

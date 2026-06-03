@@ -677,13 +677,14 @@ const broadcastMatchState = (
   matchId: MatchId,
   registry: LocalDevMatchRegistry,
   connections: Set<DevSocketConnection>,
+  options: { readonly except?: DevSocketConnection } = {},
 ): void => {
   const match = registry.getMatch(matchId);
   if (match === undefined) {
     return;
   }
   for (const connection of connections) {
-    if (connection.matchId === matchId) {
+    if (connection.matchId === matchId && connection !== options.except) {
       sendSocketJson(
         connection,
         playerStatePayload(match, connection, connections),
@@ -857,6 +858,9 @@ const handleWebSocketUpgrade = (
       connection,
       playerStatePayload(match, connection, connections),
     );
+    broadcastMatchState(matchId, registry, connections, {
+      except: connection,
+    });
   }
 
   let buffered: Buffer = Buffer.alloc(0);
