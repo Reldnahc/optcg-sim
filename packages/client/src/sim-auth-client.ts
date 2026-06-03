@@ -1,9 +1,5 @@
 import { AuthClientError, createAuthClient } from "optcg-auth-client";
-import type {
-  AuthFetchImplementation,
-  AuthUser,
-  RegisterInput,
-} from "optcg-auth-client";
+import type { AuthFetchImplementation, AuthUser } from "optcg-auth-client";
 
 export interface SimAuthSession {
   readonly user: AuthUser;
@@ -47,15 +43,6 @@ const sessionFromResponse = (response: {
   },
 });
 
-const registerPayload = (input: SimRegisterInput): RegisterInput => ({
-  username: input.username,
-  password: input.password,
-  // Compatibility with optcg-auth-client 0.1.3. The shared package owns this
-  // derivation starting in 0.1.4.
-  display_name: input.username,
-  email: input.email.length === 0 ? null : input.email,
-});
-
 export const createSimAuthClient = ({
   baseUrl,
   fetch: fetchImpl,
@@ -80,7 +67,11 @@ export const createSimAuthClient = ({
     },
     async register(input) {
       return sessionFromResponse(
-        await authClient.register(registerPayload(input)),
+        await authClient.register({
+          username: input.username,
+          password: input.password,
+          email: input.email.length === 0 ? null : input.email,
+        }),
       );
     },
     async logout() {
