@@ -1862,7 +1862,7 @@
       "doc_path": "07-match-server-protocol.md",
       "heading": "Rate limiting",
       "heading_level": 2,
-      "marker_line": 356,
+      "marker_line": 359,
       "visible_line": "Section Ref: `07-match-server-protocol.s014`"
     },
     {
@@ -1871,7 +1871,7 @@
       "doc_path": "07-match-server-protocol.md",
       "heading": "Match isolation",
       "heading_level": 2,
-      "marker_line": 374,
+      "marker_line": 377,
       "visible_line": "Section Ref: `07-match-server-protocol.s015`"
     },
     {
@@ -1880,7 +1880,7 @@
       "doc_path": "07-match-server-protocol.md",
       "heading": "Horizontal scaling",
       "heading_level": 2,
-      "marker_line": 390,
+      "marker_line": 393,
       "visible_line": "Section Ref: `07-match-server-protocol.s016`"
     },
     {
@@ -1889,7 +1889,7 @@
       "doc_path": "07-match-server-protocol.md",
       "heading": "Spectator subscriptions",
       "heading_level": 2,
-      "marker_line": 416,
+      "marker_line": 419,
       "visible_line": "Section Ref: `07-match-server-protocol.s017`"
     },
     {
@@ -1898,7 +1898,7 @@
       "doc_path": "07-match-server-protocol.md",
       "heading": "Protocol compatibility",
       "heading_level": 2,
-      "marker_line": 435,
+      "marker_line": 438,
       "visible_line": "Section Ref: `07-match-server-protocol.s018`"
     },
     {

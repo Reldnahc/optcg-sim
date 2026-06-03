@@ -100,7 +100,7 @@ describe("match timers", () => {
     assert.equal(gameTimer(match, p2).isRunning, false);
   });
 
-  test("drains both player timers during the first mulligan choice and only the unanswered player after one response", () => {
+  test("drains only the current mulligan chooser during serial setup mulligans", () => {
     const match = createTimedMatch();
 
     advanceLocalDevMatchTimers(match, {
@@ -110,9 +110,9 @@ describe("match timers", () => {
     });
 
     assert.equal(gameTimer(match, p1).remainingMs, 900);
-    assert.equal(gameTimer(match, p2).remainingMs, 900);
+    assert.equal(gameTimer(match, p2).remainingMs, 1_000);
     assert.equal(gameTimer(match, p1).isRunning, true);
-    assert.equal(gameTimer(match, p2).isRunning, true);
+    assert.equal(gameTimer(match, p2).isRunning, false);
 
     answerCurrentMulligan(match);
     advanceLocalDevMatchTimers(match, {
@@ -122,7 +122,7 @@ describe("match timers", () => {
     });
 
     assert.equal(gameTimer(match, p1).remainingMs, 900);
-    assert.equal(gameTimer(match, p2).remainingMs, 800);
+    assert.equal(gameTimer(match, p2).remainingMs, 900);
     assert.equal(gameTimer(match, p1).isRunning, false);
     assert.equal(gameTimer(match, p2).isRunning, true);
   });

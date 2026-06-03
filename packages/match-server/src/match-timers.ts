@@ -79,13 +79,6 @@ const gameTimerDrainingPlayerIds = (state: GameState): readonly PlayerId[] => {
 
   const decision = state.pendingDecision;
   if (decision !== undefined) {
-    if (
-      decision.type === "mulligan" &&
-      state.status.type === "setup" &&
-      decision.playerId === state.turn.turnPlayerId
-    ) {
-      return playerIds(state);
-    }
     return [decision.playerId];
   }
 

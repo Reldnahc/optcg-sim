@@ -332,13 +332,16 @@ The normal gameplay rule is simple:
 - if neither player is currently holding up the game, no player timer drains
 - if a player's game timer reaches 0, that player loses immediately
 
-Mulligan is the setup exception because both players are independently choosing
-whether to keep or redraw their opening hands:
+Mulligan follows the official serial setup order. The first player chooses
+whether to keep or redraw first, then the second player chooses:
 
-- before either player answers, both players' game timers drain
-- once one player answers, that player's game timer stops draining
-- the unanswered player's game timer continues draining until they answer
-- if either player's game timer reaches 0 during mulligan, that player loses immediately
+- only the current mulligan chooser's game timer drains
+- the non-choosing player's game timer does not drain while waiting for their
+  mulligan prompt
+- after the first player answers, the second player's game timer drains until
+  they answer
+- if the current chooser's game timer reaches 0 during mulligan, that player
+  loses immediately
 
 ```ts
 interface PlayerGameTimer {
