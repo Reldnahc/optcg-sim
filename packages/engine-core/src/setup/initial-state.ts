@@ -106,7 +106,7 @@ const shuffleCardsDeterministic = (
   return { cards: shuffled, rng: nextRng };
 };
 
-const setupLifeFromDeck = (
+export const setupLifeFromDeck = (
   playerId: PlayerId,
   deck: CardInstance[],
   lifeCount: number,
@@ -178,7 +178,6 @@ const createPlayerState = (params: {
 
 const finalizePlayerSetup = (params: {
   player: PlayerState;
-  lifeCount: number;
   rng: RngState;
   shuffleDecks: boolean;
 }): { player: PlayerState; rng: RngState } => {
@@ -189,17 +188,12 @@ const finalizePlayerSetup = (params: {
     .slice(0, OPENING_HAND_SIZE)
     .map((card, index) => withIndexedZone(card, "hand", "hand", index));
   const afterHandDeck = shuffledDeck.cards.slice(OPENING_HAND_SIZE);
-  const lifeSetup = setupLifeFromDeck(
-    params.player.playerId,
-    afterHandDeck,
-    params.lifeCount,
-  );
   return {
     player: {
       ...params.player,
       hand: openingHand,
-      life: lifeSetup.life,
-      deck: lifeSetup.deck.map((card, index) =>
+      life: [],
+      deck: afterHandDeck.map((card, index) =>
         withIndexedZone(card, "deck", "deck", index),
       ),
     },
@@ -247,19 +241,18 @@ export const finalizeSetupFromContinuation = (
   let rng = state.rng;
   const nextPlayers: Record<PlayerId, PlayerState> = { ...state.players };
   for (const playerId of continuation.playerOrder) {
-    const lifeCount = requirePlayerValue(
+    const leaderLifeCount = requirePlayerValue(
       continuation.leaderLifeCounts,
       playerId,
       "leaderLifeCounts",
     );
-    if (!Number.isInteger(lifeCount) || lifeCount < 0) {
+    if (!Number.isInteger(leaderLifeCount) || leaderLifeCount < 0) {
       throw new TypeError(
         `leaderLifeCounts for ${playerId} must be a non-negative integer.`,
       );
     }
     const finalized = finalizePlayerSetup({
       player: requirePlayerValue(nextPlayers, playerId, "players"),
-      lifeCount,
       rng,
       shuffleDecks: continuation.shuffleDecks,
     });
@@ -272,7 +265,6 @@ export const finalizeSetupFromContinuation = (
     players: nextPlayers,
     rng,
   };
-  delete nextState.setupContinuation;
   return nextState;
 };
 

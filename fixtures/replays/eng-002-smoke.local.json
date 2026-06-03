@@ -69,15 +69,15 @@
     "checkpoints": [
       {
         "label": "setup",
-        "stateHash": "03f055b33b8284ee12909f36347e6760bff3600b1f97df365f0f9356b98b3e59"
+        "stateHash": "31b88921d2e322bec23f3b74791e94a6317f33a38c41c596c6c91b217a5c004f"
       },
       {
         "label": "mulligan-started",
-        "stateHash": "d1eab7099346afd62ebac36eded851489b8e5d521ea6a17af05d60c7fd3a9546"
+        "stateHash": "2563854b214c7794063f711f7f82194dc07ddd3794f137eb33ef3957096cf16d"
       },
       {
         "label": "mulligan-response-1",
-        "stateHash": "cdcde5605db86f47ac55322a6f83c97fca10bcf31af201e7f1a41bbdcf58a32a"
+        "stateHash": "3998858b6ee6cbb516138230e29b0622944eee53c94d8e87445150b89b44ff68"
       },
       {
         "label": "mulligan-response-2",

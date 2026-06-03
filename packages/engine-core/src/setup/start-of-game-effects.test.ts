@@ -242,8 +242,10 @@ test("no matching candidate advances setup without impossible decision", () => {
     "p1-j",
   ].map(toCardId);
   const setup = createInitialState(input);
+  const continuation = must(setup.setupContinuation, "setup continuation");
   assert.equal(setup.pendingDecision, undefined);
-  assert.equal(setup.setupContinuation, undefined);
+  assert.equal(continuation.leaderLifeCounts[p1], 3);
+  assert.equal(continuation.nextStartOfGamePlanIndex, 1);
 });
 
 test("type/deck-position variation resolves via same canonical decision path", () => {

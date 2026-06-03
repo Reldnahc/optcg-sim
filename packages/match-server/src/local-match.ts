@@ -348,8 +348,7 @@ const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
   if (
     result.errors !== undefined ||
     result.state.status.type !== "setup" ||
-    result.state.pendingDecision !== undefined ||
-    result.state.setupContinuation !== undefined
+    result.state.pendingDecision !== undefined
   ) {
     return result;
   }

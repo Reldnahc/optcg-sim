@@ -15,7 +15,10 @@ import type {
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import type { PreMulliganSetupGameState } from "./initial-state.js";
+import {
+  setupLifeFromDeck,
+  type PreMulliganSetupGameState,
+} from "./initial-state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { advanceRngUint32 } from "../state/rng.js";
 
@@ -96,24 +99,12 @@ const redrawOpeningHand = (
   player: PlayerState,
   rng: RngState,
 ): { player: PlayerState; rng: RngState } => {
-  const lifeCount = player.life.length;
-  const lifeDeckOrder = [...player.life]
-    .reverse()
-    .map((lifeCard) => lifeCard.card);
   const returnedToDeck = [
-    ...lifeDeckOrder.map((card, index) =>
+    ...player.deck.map((card, index) =>
       withIndexedZone(card, "deck", "deck", index),
     ),
-    ...player.deck.map((card, index) =>
-      withIndexedZone(card, "deck", "deck", lifeDeckOrder.length + index),
-    ),
     ...player.hand.map((card, index) =>
-      withIndexedZone(
-        card,
-        "deck",
-        "deck",
-        lifeDeckOrder.length + player.deck.length + index,
-      ),
+      withIndexedZone(card, "deck", "deck", player.deck.length + index),
     ),
   ];
   const shuffled = shuffleCardsDeterministic(returnedToDeck, rng);
@@ -121,25 +112,61 @@ const redrawOpeningHand = (
     .slice(0, OPENING_HAND_SIZE)
     .map((card, index) => withIndexedZone(card, "hand", "hand", index));
   const afterHandDeck = shuffled.cards.slice(OPENING_HAND_SIZE);
-  const lifeDeckSlice = afterHandDeck.slice(0, lifeCount);
-  const life = [...lifeDeckSlice].reverse().map((card, index) => ({
-    card: withIndexedZone(card, "life", "life", index),
-    faceUp: false,
-  }));
-  const deck = afterHandDeck
-    .slice(lifeCount)
-    .map((card, index) => withIndexedZone(card, "deck", "deck", index));
+  const deck = afterHandDeck.map((card, index) =>
+    withIndexedZone(card, "deck", "deck", index),
+  );
 
   return {
     player: {
       ...player,
       hand,
       deck,
-      life,
+      life: [],
       hasMulliganed: true,
     },
     rng: shuffled.rng,
   };
+};
+
+const finalizeLifeAfterMulligans = (
+  state: GameState,
+  players: Record<PlayerId, PlayerState>,
+): Record<PlayerId, PlayerState> => {
+  const continuation = state.setupContinuation;
+  if (continuation === undefined) {
+    throw new TypeError(
+      "Setup continuation is required to place life after mulligans.",
+    );
+  }
+  const nextPlayers: Record<PlayerId, PlayerState> = { ...players };
+  for (const playerId of continuation.playerOrder) {
+    const player = nextPlayers[playerId];
+    if (player === undefined) {
+      throw new TypeError("Setup continuation player order is invalid.");
+    }
+    if (player.life.length !== 0) {
+      throw new TypeError("Life must not be placed before mulligans resolve.");
+    }
+    const lifeCount = continuation.leaderLifeCounts[playerId];
+    if (
+      lifeCount === undefined ||
+      !Number.isInteger(lifeCount) ||
+      lifeCount < 0
+    ) {
+      throw new TypeError(
+        `leaderLifeCounts for ${playerId} must be a non-negative integer.`,
+      );
+    }
+    const lifeSetup = setupLifeFromDeck(playerId, player.deck, lifeCount);
+    nextPlayers[playerId] = {
+      ...player,
+      life: lifeSetup.life,
+      deck: lifeSetup.deck.map((card, index) =>
+        withIndexedZone(card, "deck", "deck", index),
+      ),
+    };
+  }
+  return nextPlayers;
 };
 
 const createEvent = (
@@ -190,6 +217,15 @@ export const startMulliganFlow = (
       setupState,
       [],
       invalidDecision("Mulligan flow requires no pending decision."),
+    );
+  }
+  if (setupState.setupContinuation === undefined) {
+    return toEngineResult(
+      setupState,
+      [],
+      invalidDecision(
+        "Mulligan flow requires setup continuation for post-mulligan life placement.",
+      ),
     );
   }
 
@@ -275,12 +311,24 @@ export const respondToMulliganDecision = (
   const status: SetupStatus | { type: "active" } = isFirstPlayerDecision
     ? { type: "setup" }
     : { type: "active" };
+  let playersAfterMulligan = nextPlayers;
+  if (!isFirstPlayerDecision) {
+    try {
+      playersAfterMulligan = finalizeLifeAfterMulligans(state, nextPlayers);
+    } catch (error) {
+      return toEngineResult(
+        state,
+        [],
+        invalidDecision(error instanceof Error ? error.message : String(error)),
+      );
+    }
+  }
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     status,
-    players: nextPlayers,
+    players: playersAfterMulligan,
     rng: maybeUpdated.rng,
   };
   const events: EngineEvent[] = [
@@ -332,6 +380,7 @@ export const respondToMulliganDecision = (
     );
   } else {
     delete nextState.pendingDecision;
+    delete nextState.setupContinuation;
   }
   nextState.eventJournal = [...state.eventJournal, ...events];
 

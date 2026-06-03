@@ -69,17 +69,17 @@ Players:
       [2] p1-card-3 [p1:deck:2:p1-card-3]
       [3] p1-card-4 [p1:deck:3:p1-card-4]
       [4] p1-card-5 [p1:deck:4:p1-card-5]
-    Life (5):
-      [0] p1-card-10 [p1:deck:9:p1-card-10] face-down
-      [1] p1-card-9 [p1:deck:8:p1-card-9] face-down
-      [2] p1-card-8 [p1:deck:7:p1-card-8] face-down
-      [3] p1-card-7 [p1:deck:6:p1-card-7] face-down
-      [4] p1-card-6 [p1:deck:5:p1-card-6] face-down
-    Deck (4):
-      [0] p1-card-11 [p1:deck:10:p1-card-11]
-      [1] p1-card-12 [p1:deck:11:p1-card-12]
-      [2] p1-card-13 [p1:deck:12:p1-card-13]
-      [3] p1-card-14 [p1:deck:13:p1-card-14]
+    Life: empty
+    Deck (9):
+      [0] p1-card-6 [p1:deck:5:p1-card-6]
+      [1] p1-card-7 [p1:deck:6:p1-card-7]
+      [2] p1-card-8 [p1:deck:7:p1-card-8]
+      [3] p1-card-9 [p1:deck:8:p1-card-9]
+      [4] p1-card-10 [p1:deck:9:p1-card-10]
+      [5] p1-card-11 [p1:deck:10:p1-card-11]
+      [6] p1-card-12 [p1:deck:11:p1-card-12]
+      [7] p1-card-13 [p1:deck:12:p1-card-13]
+      [8] p1-card-14 [p1:deck:13:p1-card-14]
     DON deck (10):
       [0] p1-don-1 [p1:don:0:p1-don-1]
       [1] p1-don-2 [p1:don:1:p1-don-2]
@@ -103,17 +103,17 @@ Players:
       [2] p2-card-3 [p2:deck:2:p2-card-3]
       [3] p2-card-4 [p2:deck:3:p2-card-4]
       [4] p2-card-5 [p2:deck:4:p2-card-5]
-    Life (5):
-      [0] p2-card-10 [p2:deck:9:p2-card-10] face-down
-      [1] p2-card-9 [p2:deck:8:p2-card-9] face-down
-      [2] p2-card-8 [p2:deck:7:p2-card-8] face-down
-      [3] p2-card-7 [p2:deck:6:p2-card-7] face-down
-      [4] p2-card-6 [p2:deck:5:p2-card-6] face-down
-    Deck (4):
-      [0] p2-card-11 [p2:deck:10:p2-card-11]
-      [1] p2-card-12 [p2:deck:11:p2-card-12]
-      [2] p2-card-13 [p2:deck:12:p2-card-13]
-      [3] p2-card-14 [p2:deck:13:p2-card-14]
+    Life: empty
+    Deck (9):
+      [0] p2-card-6 [p2:deck:5:p2-card-6]
+      [1] p2-card-7 [p2:deck:6:p2-card-7]
+      [2] p2-card-8 [p2:deck:7:p2-card-8]
+      [3] p2-card-9 [p2:deck:8:p2-card-9]
+      [4] p2-card-10 [p2:deck:9:p2-card-10]
+      [5] p2-card-11 [p2:deck:10:p2-card-11]
+      [6] p2-card-12 [p2:deck:11:p2-card-12]
+      [7] p2-card-13 [p2:deck:12:p2-card-13]
+      [8] p2-card-14 [p2:deck:13:p2-card-14]
     DON deck (10):
       [0] p2-don-1 [p2:don:0:p2-don-1]
       [1] p2-don-2 [p2:don:1:p2-don-2]

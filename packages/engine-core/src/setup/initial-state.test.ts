@@ -110,44 +110,32 @@ test("opening hands and remaining deck order match deterministic setup policy", 
   );
   assert.deepEqual(
     p1State.deck.map((card) => card.cardId),
-    must(input.deckCardIds[p1], "p1 deck").slice(10),
+    must(input.deckCardIds[p1], "p1 deck").slice(5),
   );
 });
 
-test("life orientation matches spec canonical top-life behavior", () => {
+test("life is not placed before official mulligan decisions resolve", () => {
   const input = createInput();
   const state = createInitialState(input);
   const p1State = must(state.players[p1], "p1 state");
 
-  const topFiveInDeckOrder = must(input.deckCardIds[p1], "p1 deck").slice(
-    5,
-    10,
-  );
+  assert.equal(p1State.life.length, 0);
   assert.deepEqual(
-    p1State.life.map((lifeCard) => lifeCard.card.cardId),
-    [...topFiveInDeckOrder].reverse(),
+    p1State.deck.map((card) => card.cardId),
+    must(input.deckCardIds[p1], "p1 deck").slice(5),
   );
-  assert.equal(p1State.life.at(-1)?.card.cardId, topFiveInDeckOrder[0]);
 });
 
-test("life count input controls setup size and orientation for non-5 fixtures", () => {
+test("life count input is retained for post-mulligan setup without placing life early", () => {
   const input = createInput();
   input.leaderLifeCounts[p1] = 3;
   const state = createInitialState(input);
   const p1State = must(state.players[p1], "p1 state");
-  assert.equal(p1State.life.length, 3);
-
-  const topThreeInDeckOrder = must(input.deckCardIds[p1], "p1 deck").slice(
-    5,
-    8,
-  );
-  assert.deepEqual(
-    p1State.life.map((lifeCard) => lifeCard.card.cardId),
-    [...topThreeInDeckOrder].reverse(),
-  );
+  assert.equal(p1State.life.length, 0);
+  assert.equal(state.setupContinuation?.leaderLifeCounts[p1], 3);
   assert.deepEqual(
     p1State.deck.map((card) => card.cardId),
-    must(input.deckCardIds[p1], "p1 deck").slice(8),
+    must(input.deckCardIds[p1], "p1 deck").slice(5),
   );
 });
 
@@ -434,7 +422,7 @@ test("zero-selection setup branch with no matching candidate finalizes determini
   const b = createInitialState(input);
   assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
   assert.equal(a.pendingDecision, undefined);
-  assert.equal(a.setupContinuation, undefined);
+  assert.equal(a.setupContinuation?.leaderLifeCounts[p1], 5);
   assert.deepEqual(a.eventJournal, []);
 });
 

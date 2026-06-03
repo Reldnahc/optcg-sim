@@ -102,6 +102,18 @@ test("first-player-then-second-player mulligan decision ordering", () => {
   assert.equal(resolvedFirst.state.pendingDecision?.playerId, p2);
 });
 
+test("mulligan flow requires setup continuation for post-mulligan life placement", () => {
+  const setup = createInitialState(createInput());
+  const malformedSetup = { ...setup };
+  delete malformedSetup.setupContinuation;
+
+  const started = startMulliganFlow(malformedSetup);
+  const error = must(started.errors?.[0], "mulligan error");
+
+  assert.equal(error.type, "invalidDecisionResponse");
+  assert.match(error.reason, /setup continuation/i);
+});
+
 test("keep behavior leaves opening hand and deck order unchanged", () => {
   const setup = createInitialState(createInput());
   const p1Setup = must(setup.players[p1], "p1 state");
@@ -158,30 +170,38 @@ test("redraw-five behavior uses deterministic reshuffle", () => {
   assert.notDeepEqual(handA, originalHand);
 });
 
-test("redraw rebuilds life from reshuffled deck and keeps deterministic orientation", () => {
+test("life is placed from post-mulligan decks only after both decisions resolve", () => {
   const setupA = createInitialState(createInput());
   const setupB = createInitialState(createInput());
 
-  const beforeLifeA = must(setupA.players[p1], "p1 before A").life.map(
-    (lifeCard) => lifeCard.card.cardId,
-  );
-  const beforeLifeB = must(setupB.players[p1], "p1 before B").life.map(
-    (lifeCard) => lifeCard.card.cardId,
-  );
-  assert.deepEqual(beforeLifeA, beforeLifeB);
+  assert.equal(must(setupA.players[p1], "p1 before A").life.length, 0);
+  assert.equal(must(setupB.players[p1], "p1 before B").life.length, 0);
 
   const startedA = startMulliganFlow(setupA);
   const startedB = startMulliganFlow(setupB);
 
-  const afterA = respondToMulliganDecision(startedA.state, {
+  const firstA = respondToMulliganDecision(startedA.state, {
     type: "respondToDecision",
     decisionId: must(startedA.state.pendingDecision, "pending decision A").id,
     response: { type: "mulligan", keep: false },
   });
-  const afterB = respondToMulliganDecision(startedB.state, {
+  const firstB = respondToMulliganDecision(startedB.state, {
     type: "respondToDecision",
     decisionId: must(startedB.state.pendingDecision, "pending decision B").id,
     response: { type: "mulligan", keep: false },
+  });
+  assert.equal(must(firstA.state.players[p1], "p1 first A").life.length, 0);
+  assert.equal(must(firstA.state.players[p2], "p2 first A").life.length, 0);
+
+  const afterA = respondToMulliganDecision(firstA.state, {
+    type: "respondToDecision",
+    decisionId: must(firstA.state.pendingDecision, "second decision A").id,
+    response: { type: "mulligan", keep: true },
+  });
+  const afterB = respondToMulliganDecision(firstB.state, {
+    type: "respondToDecision",
+    decisionId: must(firstB.state.pendingDecision, "second decision B").id,
+    response: { type: "mulligan", keep: true },
   });
 
   const lifeA = must(afterA.state.players[p1], "p1 after A").life.map(
@@ -190,9 +210,9 @@ test("redraw rebuilds life from reshuffled deck and keeps deterministic orientat
   const lifeB = must(afterB.state.players[p1], "p1 after B").life.map(
     (lifeCard) => lifeCard.card.cardId,
   );
-  assert.equal(lifeA.length, beforeLifeA.length);
+  assert.equal(lifeA.length, 2);
+  assert.equal(must(afterA.state.players[p2], "p2 after A").life.length, 2);
   assert.deepEqual(lifeA, lifeB);
-  assert.notDeepEqual(lifeA, beforeLifeA);
   assert.deepEqual(lifeA, [toCardId("p1-i"), toCardId("p1-g")]);
 });
 

@@ -14,7 +14,7 @@
       "actionCommands": ["concede"],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
           "2565f278e048fb1f0243da8bacbd9fce0b80395b30d9e399ee5f5af9226732a7"
         ],
@@ -36,7 +36,7 @@
       "actionCommands": ["attack leader opponent-leader", "respond none"],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
           "2a87211a734b3c1cd6857547fa8722ddce6531af2ee8ddff2573c30c4fcc1130",
           "71b179b414c93e471bc5e1acb05b94c066e03f0674496eb61c289f9b527755bd"
@@ -59,7 +59,7 @@
       "actionCommands": ["pass"],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
           "0e7673b2a2eb0ba169f9881a6c06cb8444711caa82ccd83db1b6409499931b25"
         ],
@@ -89,7 +89,7 @@
       "actionCommands": ["play 0", "respond pay:0"],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
           "0beaceaba8e881dccc115d2811b232f2cdc57f076611c6da3a42c89d8ce6994f",
           "b42928802f9c0c31fe90c3d3f2aa6044ddc78f04350a34d64674ff01a93dfcb9"
@@ -120,7 +120,7 @@
       "actionCommands": ["play 1", "respond pay:0,1"],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
           "2173b874313c4cd031ddaa116047e952cad5eed141bae3bf29b783d3ec8b1ed7",
           "6971617ab708026e7eea80d22ee288680203e6759d19862fa7a690b2c6974cb8"
@@ -151,7 +151,7 @@
       "actionCommands": ["play 0", "respond cards:character:0"],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
           "748f3f20220c39dc59b8978477966240ba05ece111092f871e7c4087bbd6b30c",
           "30bfc8bcd8b55d491bee096fe9de7e2cb93fb08001111f1d81f8cb0d5180dc24"
@@ -201,7 +201,7 @@
       ],
       "expected": {
         "checkpointHashes": [
-          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "ba31105a779a3712f6c91f4ed7b4c609ff1942382dbd96636a2a61e903c109c2",
           "f8564820d8eac8a117cb5df71677a0e8ab98d4d597427591e55b1fbfc7235cf4",
           "3f84be9f4071f264f9c5493fceb649bb70d54a07ae207222762d0a933604f977",
           "bd8d8b2e91a12befd972806201cf6066ddf5d3656e367da821b99ea46e91512a",
