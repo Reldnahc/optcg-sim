@@ -35,8 +35,6 @@ export interface ControlRailProps {
   opponentIsTurnPlayer?: boolean | undefined;
   selfConnectionStatus?: "connected" | "disconnected" | undefined;
   opponentConnectionStatus?: "connected" | "disconnected" | undefined;
-  selfRestrictions?: readonly string[] | undefined;
-  opponentRestrictions?: readonly string[] | undefined;
   matchStatus?: string | undefined;
   width?: number | undefined;
   dockHeight?: number | undefined;
@@ -96,8 +94,6 @@ export const ControlRail = ({
   opponentIsTurnPlayer = false,
   selfConnectionStatus,
   opponentConnectionStatus,
-  selfRestrictions = [],
-  opponentRestrictions = [],
   matchStatus,
   width,
   dockHeight,
@@ -186,7 +182,6 @@ export const ControlRail = ({
           label={opponentLabel}
           status={opponentConnectionStatus}
           timer={opponentTimer}
-          restrictions={opponentRestrictions}
         />
       </section>
       <section className="controls-panel" style={controlsPanelStyle}>
@@ -523,7 +518,6 @@ export const ControlRail = ({
           label={selfLabel}
           status={selfConnectionStatus}
           timer={selfTimer}
-          restrictions={selfRestrictions}
         />
       </section>
     </aside>
@@ -534,12 +528,10 @@ const PlayerSummaryLabel = ({
   label,
   status,
   timer,
-  restrictions = [],
 }: {
   label: string;
   status?: "connected" | "disconnected" | undefined;
   timer?: PlayerSummaryTimerModel | undefined;
-  restrictions?: readonly string[] | undefined;
 }): React.JSX.Element => (
   <div className="player-summary-label">
     <h2>
@@ -569,25 +561,5 @@ const PlayerSummaryLabel = ({
         )}
       </div>
     )}
-    {restrictions.length === 0 ? null : (
-      <div
-        className="player-restriction-badges"
-        aria-label={`${label} restrictions`}
-      >
-        {restrictions.map((restriction) => (
-          <span key={restriction} className="player-restriction-badge">
-            {restrictionLabel(restriction)}
-          </span>
-        ))}
-      </div>
-    )}
   </div>
 );
-
-const restrictionLabel = (restriction: string): string =>
-  restriction
-    .replaceAll("-", " ")
-    .replace("don", "DON")
-    .replace("event", "Event")
-    .replace("stage", "Stage")
-    .replace("leader", "Leader");

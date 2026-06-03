@@ -9,6 +9,7 @@ import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
 import { CardMovementOverlay } from "./presentation-effects/CardMovementOverlay.js";
+import { PlayerRestrictionBadges } from "./PlayerRestrictionBadges.js";
 import { usePresentationEffects } from "./presentation-effects/use-presentation-effects.js";
 import { Zone } from "./Zone.js";
 
@@ -227,6 +228,12 @@ export const BoardLayout = ({
             onCardPreview={onPreviewCard}
           />
         </div>
+        <div className="playmat-zone opponent-restriction-area">
+          <PlayerRestrictionBadges
+            label={board.opponentLabel}
+            restrictions={board.opponentRestrictions}
+          />
+        </div>
         <div className="playmat-zone opponent-stage">
           <Zone
             label="Stage"
@@ -319,6 +326,12 @@ export const BoardLayout = ({
             onCardClick={onCardClick}
             onCardAction={onCardAction}
             onCardPreview={onPreviewCard}
+          />
+        </div>
+        <div className="playmat-zone player-restriction-area">
+          <PlayerRestrictionBadges
+            label={board.selfLabel}
+            restrictions={board.selfRestrictions}
           />
         </div>
         <div className="playmat-zone player-stage">

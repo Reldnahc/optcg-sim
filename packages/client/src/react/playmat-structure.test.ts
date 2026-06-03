@@ -25,6 +25,7 @@ describe("playmat structure", () => {
       "opponent-characters",
       "opponent-cost",
       "opponent-leader",
+      "opponent-restriction-area",
       "opponent-stage",
       "opponent-deck",
       "opponent-don-deck",
@@ -36,6 +37,7 @@ describe("playmat structure", () => {
       "player-characters",
       "player-cost",
       "player-leader",
+      "player-restriction-area",
       "player-stage",
       "player-deck",
       "player-don-deck",
@@ -219,13 +221,13 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '"opponent-deck . opponent-stage opponent-leader . opponent-life"',
+        '"opponent-deck . opponent-stage opponent-leader opponent-restrictions opponent-life"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '"player-life . player-leader player-stage . player-deck"',
+        '"player-life player-restrictions player-leader player-stage . player-deck"',
       ),
       true,
     );
@@ -265,7 +267,7 @@ describe("playmat structure", () => {
     );
     assert.equal(
       styles.includes(
-        '"opponent-deck . opponent-stage opponent-leader . opponent-life"',
+        '"opponent-deck . opponent-stage opponent-leader opponent-restrictions opponent-life"',
       ),
       true,
     );

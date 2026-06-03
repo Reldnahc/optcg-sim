@@ -95,25 +95,41 @@ describe("card action menu", () => {
     );
   });
 
-  test("renders player-level restriction badges in player summaries", () => {
-    const markup = renderToStaticMarkup(
-      createElement(ControlRail, {
-        errors: [],
-        globalActions: [],
-        disabled: false,
-        selfLabel: "Player",
-        opponentLabel: "Opponent",
-        selfRestrictions: ["no-character-don-refresh"],
-        opponentRestrictions: ["no-event-don-refresh"],
-        onAction: () => undefined,
-        onNewMatch: () => undefined,
+  test("renders player-level restriction badges beside the leader zones", () => {
+    const layout = board();
+    layout.selfRestrictions = ["no-character-don-refresh"];
+    layout.opponentRestrictions = ["no-event-don-refresh"];
+
+    const boardMarkup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
       }),
     );
 
-    assert.match(markup, /class="[^"]*player-restriction-badges/u);
-    assert.match(markup, /class="[^"]*player-restriction-badge/u);
-    assert.equal(markup.includes("no character DON refresh"), true);
-    assert.equal(markup.includes("no Event DON refresh"), true);
+    assert.match(boardMarkup, /class="[^"]*player-restriction-area/u);
+    assert.match(boardMarkup, /class="[^"]*opponent-restriction-area/u);
+    assert.match(boardMarkup, /class="[^"]*player-restriction-badges/u);
+    assert.match(boardMarkup, /class="[^"]*player-restriction-badge/u);
+    assert.equal(boardMarkup.includes("no character DON refresh"), true);
+    assert.equal(boardMarkup.includes("no Event DON refresh"), true);
+  });
+
+  test("player-level restriction badges are not buried in player summaries", async () => {
+    const controlRailSource = await readFile(
+      join(sourceDirectory, "ControlRail.tsx"),
+      "utf8",
+    );
+
+    assert.equal(
+      controlRailSource.includes("player-restriction-badges"),
+      false,
+    );
+    assert.equal(controlRailSource.includes("PlayerRestrictionBadges"), false);
   });
 
   test("active-turn player summary uses outline feedback without a dot indicator", async () => {

@@ -118,24 +118,6 @@
   color: #ff7777;
 }
 
-.player-restriction-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-width: 0;
-}
-
-.player-restriction-badge {
-  border-radius: 3px;
-  padding: 2px 4px;
-  color: #ff5f68;
-  background: rgba(12, 12, 12, 0.78);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.1;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
-}
-
 .loading-panel {
   display: grid;
   align-content: start;

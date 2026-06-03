@@ -4,11 +4,11 @@
   height: calc(100vh - (var(--match-app-padding) * 2));
   grid-template-areas:
     "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"
-    "opponent-deck . opponent-stage opponent-leader . opponent-life"
+    "opponent-deck . opponent-stage opponent-leader opponent-restrictions opponent-life"
     "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"
     ". . center-spacer center-spacer . ."
     "player-life player-characters player-characters player-characters player-characters player-characters"
-    "player-life . player-leader player-stage . player-deck"
+    "player-life player-restrictions player-leader player-stage . player-deck"
     "player-don-deck player-cost player-cost player-cost player-cost player-trash";
   grid-template-columns:
     var(--card-zone-width) var(--playmat-wide-zone-width)
@@ -74,6 +74,10 @@
   grid-area: opponent-leader;
 }
 
+.opponent-restriction-area {
+  grid-area: opponent-restrictions;
+}
+
 .opponent-stage {
   grid-area: opponent-stage;
 }
@@ -108,6 +112,10 @@
   grid-area: player-leader;
 }
 
+.player-restriction-area {
+  grid-area: player-restrictions;
+}
+
 .player-stage {
   grid-area: player-stage;
 }
@@ -126,4 +134,45 @@
 
 .player-cost {
   grid-area: player-cost;
+}
+
+.opponent-restriction-area,
+.player-restriction-area {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.opponent-restriction-area {
+  justify-content: flex-start;
+}
+
+.player-restriction-area {
+  justify-content: flex-end;
+}
+
+.player-restriction-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.opponent-restriction-area .player-restriction-badges {
+  justify-content: flex-start;
+}
+
+.player-restriction-area .player-restriction-badges {
+  justify-content: flex-end;
+}
+
+.player-restriction-badge {
+  border-radius: 3px;
+  padding: 2px 4px;
+  color: #ff5f68;
+  background: rgba(12, 12, 12, 0.78);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
 }
