@@ -263,11 +263,11 @@ export interface MatchTransport {
   createLobby: () => Promise<LocalLobby>;
   joinLobby: (input: {
     lobbyId: string;
-    guestToken: string;
+    sessionToken: string;
   }) => Promise<JoinedLobby>;
   submitLobbyDeck: (input: {
     lobbyId: string;
-    guestToken: string;
+    sessionToken: string;
     deckHash: string;
     donDeckCount: number;
   }) => Promise<LocalLobby>;

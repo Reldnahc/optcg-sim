@@ -65,7 +65,7 @@ describe("dev HTTP match transport", () => {
     await transport.createLobby();
     const joined = await transport.joinLobby({
       lobbyId: "lobby-1",
-      guestToken: "guest-a",
+      sessionToken: "user:user-1:session-1",
     });
     await transport.loadLobby("lobby-1");
 
@@ -83,11 +83,11 @@ describe("dev HTTP match transport", () => {
       new Headers(recorder.requests[1]?.init?.headers).get(
         "x-optcg-session-token",
       ),
-      "guest-a",
+      "user:user-1:session-1",
     );
   });
 
-  test("submits lobby deck hashes with the guest token", async () => {
+  test("submits lobby deck hashes with the account session token", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({
         lobbyId: "lobby-1",
@@ -112,7 +112,7 @@ describe("dev HTTP match transport", () => {
 
     await transport.submitLobbyDeck({
       lobbyId: "lobby-1",
-      guestToken: "guest-a",
+      sessionToken: "user:user-1:session-1",
       deckHash: "hash-a",
       donDeckCount: 6,
     });
@@ -131,7 +131,7 @@ describe("dev HTTP match transport", () => {
     );
     assert.equal(
       new Headers(request.init.headers).get("x-optcg-session-token"),
-      "guest-a",
+      "user:user-1:session-1",
     );
   });
 

@@ -128,8 +128,12 @@ const createDevAuthProvider = (): AuthProvider => ({
     if (typeof token !== "string" || token.length === 0) {
       return undefined;
     }
+    const subject = parseDevSessionToken(token);
+    if (subject === undefined) {
+      return undefined;
+    }
     return {
-      subject: parseDevSessionToken(token),
+      subject,
     };
   },
 });
@@ -191,7 +195,7 @@ const handleApiRequest = async (
       return;
     }
     if (result === "unauthenticated") {
-      sendJson(response, 401, { errors: ["Guest identity is required."] });
+      sendJson(response, 401, { errors: ["Account session is required."] });
       return;
     }
     if (result === "full") {
@@ -238,7 +242,7 @@ const handleApiRequest = async (
       return;
     }
     if (result === "unauthenticated") {
-      sendJson(response, 401, { errors: ["Guest identity is required."] });
+      sendJson(response, 401, { errors: ["Account session is required."] });
       return;
     }
     if (result === "seatNotFound") {
@@ -327,6 +331,10 @@ const handleApiRequest = async (
       sendJson(response, 404, {
         errors: [`Seat ${String(playerId)} not found.`],
       });
+      return;
+    }
+    if (result === "unauthenticated") {
+      sendJson(response, 401, { errors: ["Account session is required."] });
       return;
     }
     if (result === "claimed") {
@@ -705,9 +713,9 @@ const handleWebSocketUpgrade = (
     return;
   }
   void authProvider;
-  const auth: AuthContext = {
-    subject: { type: "anonymousDev", devSessionId: sessionToken },
-  };
+  const subject = parseDevSessionToken(sessionToken);
+  const auth: AuthContext | undefined =
+    subject === undefined ? undefined : { subject };
   if (registry.authorizeSeat(auth, matchId, playerId) !== "authorized") {
     socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
     return;

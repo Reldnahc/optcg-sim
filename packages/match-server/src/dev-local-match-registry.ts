@@ -1,9 +1,9 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import { devSessionMetadata } from "./dev-session-metadata.js";
-import type { AuthContext } from "./dev-auth.js";
+import { createDevUserSessionToken, type AuthContext } from "./dev-auth.js";
 import { subjectsMatch } from "./dev-auth.js";
 import {
   createLocalDevMatch,
@@ -96,7 +96,12 @@ export interface LocalDevMatchRegistry {
     matchId: MatchId,
     playerId: PlayerId,
     auth: AuthContext | undefined,
-  ) => ClaimedDevSeatResponse | "matchNotFound" | "seatNotFound" | "claimed";
+  ) =>
+    | ClaimedDevSeatResponse
+    | "matchNotFound"
+    | "seatNotFound"
+    | "unauthenticated"
+    | "claimed";
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
   chooseFirstPlayer: (
     matchId: MatchId,
@@ -121,7 +126,7 @@ export interface LocalDevMatchRegistry {
   defaultMatchId: MatchId;
 }
 
-const createLocalAnonSeats = (
+const createLocalSeats = (
   setup: LocalDevMatchSetup,
 ): Record<string, LocalDevMatchSeat> =>
   Object.fromEntries(
@@ -198,7 +203,7 @@ const createActiveLocalDevMatchSession = (
     status: "active",
     match,
     setup,
-    seats: createLocalAnonSeats(setup),
+    seats: createLocalSeats(setup),
     firstPlayerChoice: resolvedChoice,
   };
 };
@@ -210,7 +215,7 @@ const createPendingLocalDevMatchSession = (
 ): PendingFirstPlayerLocalDevMatchSession => ({
   status: "choosingFirstPlayer",
   setup,
-  seats: seats ?? createLocalAnonSeats(setup),
+  seats: seats ?? createLocalSeats(setup),
   firstPlayerChoice: pendingFirstPlayerChoice(setup, firstPlayerChoice),
 });
 
@@ -418,16 +423,18 @@ export const createLocalDevMatchRegistry = async (
         return "seatNotFound";
       }
       if (seat.subject !== undefined) {
-        if (
-          auth !== undefined &&
-          subjectsMatch(seat.subject, auth.subject) &&
-          seat.subject.type === "anonymousDev"
-        ) {
+        if (auth === undefined) {
+          return "unauthenticated";
+        }
+        if (subjectsMatch(seat.subject, auth.subject)) {
           return {
             matchId,
             seat: {
               playerId,
-              sessionToken: seat.subject.devSessionId,
+              sessionToken: createDevUserSessionToken(
+                seat.subject.userId,
+                seat.subject.sessionId,
+              ),
             },
             ...(session.status === "active"
               ? {}
@@ -440,11 +447,14 @@ export const createLocalDevMatchRegistry = async (
         }
         return "claimed";
       }
-      const sessionToken =
-        auth?.subject.type === "anonymousDev"
-          ? auth.subject.devSessionId
-          : `dev-local:${String(matchId)}:${String(playerId)}:${randomUUID()}`;
-      seat.subject = { type: "anonymousDev", devSessionId: sessionToken };
+      if (auth === undefined) {
+        return "unauthenticated";
+      }
+      const sessionToken = createDevUserSessionToken(
+        auth.subject.userId,
+        auth.subject.sessionId,
+      );
+      seat.subject = auth.subject;
       return {
         matchId,
         seat: { playerId, sessionToken },

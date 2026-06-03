@@ -23,6 +23,9 @@ import type {
 } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
 
+const accountSessionToken = "user:user-1:session-1";
+const playerTwoAccountSessionToken = "user:user-2:session-1";
+
 const createFakeTransport = (): MatchTransport & {
   claimedSeats: Array<{
     matchId: MatchId;
@@ -31,11 +34,11 @@ const createFakeTransport = (): MatchTransport & {
   }>;
   joinedLobbies: Array<{
     lobbyId: string;
-    guestToken: string;
+    sessionToken: string;
   }>;
   submittedLobbyDecks: Array<{
     lobbyId: string;
-    guestToken: string;
+    sessionToken: string;
     deckHash: string;
     donDeckCount: number;
   }>;
@@ -51,11 +54,11 @@ const createFakeTransport = (): MatchTransport & {
   }> = [];
   const joinedLobbies: Array<{
     lobbyId: string;
-    guestToken: string;
+    sessionToken: string;
   }> = [];
   const submittedLobbyDecks: Array<{
     lobbyId: string;
-    guestToken: string;
+    sessionToken: string;
     deckHash: string;
     donDeckCount: number;
   }> = [];
@@ -94,9 +97,10 @@ const createFakeTransport = (): MatchTransport & {
     },
     joinLobby(input) {
       joinedLobbies.push(input);
-      const rematchPlayerId = input.guestToken.includes("p2")
-        ? ("p2" as PlayerId)
-        : ("p1" as PlayerId);
+      const rematchPlayerId =
+        input.sessionToken === playerTwoAccountSessionToken
+          ? ("p2" as PlayerId)
+          : ("p1" as PlayerId);
       return Promise.resolve({
         lobbyId: input.lobbyId,
         seat: { playerId: rematchPlayerId },
@@ -305,6 +309,7 @@ describe("match client controller", () => {
   test("starts a local match by creating, claiming, and loading data", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
@@ -323,7 +328,7 @@ describe("match client controller", () => {
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-1",
       playerId: "p1",
-      sessionToken: "token-p1",
+      sessionToken: accountSessionToken,
     });
   });
 
@@ -356,6 +361,7 @@ describe("match client controller", () => {
       });
     };
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
@@ -374,6 +380,7 @@ describe("match client controller", () => {
   test("requests rematch and moves to a deck-selection lobby with the existing token", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
@@ -391,12 +398,12 @@ describe("match client controller", () => {
     assert.deepEqual(rematch.seat, {
       lobbyId: "match-1-rematch-lobby-1",
       playerId: "p1",
-      sessionToken: "token-p1",
+      sessionToken: accountSessionToken,
     });
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-1",
       playerId: "p1",
-      sessionToken: "token-p1",
+      sessionToken: accountSessionToken,
     });
   });
 
@@ -404,6 +411,7 @@ describe("match client controller", () => {
     const transport = createFakeTransport();
     const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
+      accountSessionToken: playerTwoAccountSessionToken,
       transport,
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -433,12 +441,12 @@ describe("match client controller", () => {
     assert.equal(rematch !== undefined && "lobbyId" in rematch, true);
     assert.deepEqual(transport.joinedLobbies.at(-1), {
       lobbyId: "match-1-rematch-lobby-1",
-      guestToken: "token-p2",
+      sessionToken: playerTwoAccountSessionToken,
     });
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-1",
       playerId: "p2",
-      sessionToken: "token-p2",
+      sessionToken: playerTwoAccountSessionToken,
     });
   });
 
@@ -472,6 +480,7 @@ describe("match client controller", () => {
     };
     const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -505,6 +514,7 @@ describe("match client controller", () => {
   test("joins an existing local match by claiming only the requested seat", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
@@ -522,7 +532,7 @@ describe("match client controller", () => {
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-2",
       playerId: "p2",
-      sessionToken: "token-p2",
+      sessionToken: accountSessionToken,
     });
   });
 
@@ -530,6 +540,7 @@ describe("match client controller", () => {
     const transport = createFakeTransport();
     const lobbyLiveTransport = createFakeLobbyLiveTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       lobbyLiveTransport,
       sessionStore: createClientSessionStore({
@@ -577,22 +588,23 @@ describe("match client controller", () => {
       {
         matchId: "match-1",
         playerId: "p1",
-        sessionToken: transport.joinedLobbies[0]?.guestToken,
+        sessionToken: transport.joinedLobbies[0]?.sessionToken,
       },
     ]);
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-1",
       playerId: "p1",
-      sessionToken: transport.joinedLobbies[0]?.guestToken,
+      sessionToken: transport.joinedLobbies[0]?.sessionToken,
     });
   });
 
-  test("starts a local lobby by joining with guest identity and assigned seat", async () => {
+  test("starts a local lobby by joining with account session and assigned seat", async () => {
     const transport = createFakeTransport();
     const sessionStore = createClientSessionStore({
       storage: createMemoryClientStorage(),
     });
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore,
     });
@@ -605,7 +617,7 @@ describe("match client controller", () => {
       throw new Error("Expected lobby join request.");
     }
     assert.equal(joinedLobby.lobbyId, "lobby-1");
-    assert.match(joinedLobby.guestToken, /^guest:/u);
+    assert.equal(joinedLobby.sessionToken, accountSessionToken);
   });
 
   test("joins a local lobby without caller-selected player id", async () => {
@@ -614,6 +626,7 @@ describe("match client controller", () => {
       storage: createMemoryClientStorage(),
     });
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore,
     });
@@ -622,13 +635,14 @@ describe("match client controller", () => {
 
     assert.deepEqual(Object.keys(transport.joinedLobbies[0] ?? {}), [
       "lobbyId",
-      "guestToken",
+      "sessionToken",
     ]);
   });
 
   test("submits a verified loadout handoff without using the deck hash route", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
@@ -652,6 +666,7 @@ describe("match client controller", () => {
 
   test("refuses to submit actions before a seat is claimed", async () => {
     const controller = createMatchClientController({
+      accountSessionToken,
       transport: createFakeTransport(),
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
@@ -667,6 +682,7 @@ describe("match client controller", () => {
   test("submits gameplay actions through the live connection", async () => {
     const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport: createFakeTransport(),
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -689,6 +705,7 @@ describe("match client controller", () => {
       },
     };
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -712,6 +729,7 @@ describe("match client controller", () => {
       },
     };
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -742,6 +760,7 @@ describe("match client controller", () => {
       sessionToken: "existing-token-p1",
     });
     const controller = createMatchClientController({
+      accountSessionToken,
       transport,
       sessionStore,
     });
@@ -770,6 +789,7 @@ describe("match client controller", () => {
       decisionErrors: ["Unsupported decision type."],
     });
     const controller = createMatchClientController({
+      accountSessionToken,
       transport: createFakeTransport(),
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -793,6 +813,7 @@ describe("match client controller", () => {
   test("requests rollback through the live connection", async () => {
     const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport: createFakeTransport(),
       liveTransport,
       sessionStore: createClientSessionStore({
@@ -810,6 +831,7 @@ describe("match client controller", () => {
   test("cancels rollback through the live connection", async () => {
     const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
+      accountSessionToken,
       transport: createFakeTransport(),
       liveTransport,
       sessionStore: createClientSessionStore({

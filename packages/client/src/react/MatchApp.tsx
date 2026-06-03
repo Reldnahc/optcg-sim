@@ -28,8 +28,14 @@ import { useMatchAppSession } from "./use-match-app-session.js";
 import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
-export const MatchApp = (): React.JSX.Element => {
-  const client = useMatchClient();
+export interface MatchAppProps {
+  readonly accountSessionToken: string;
+}
+
+export const MatchApp = ({
+  accountSessionToken,
+}: MatchAppProps): React.JSX.Element => {
+  const client = useMatchClient({ accountSessionToken });
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMinimized, setPreviewMinimized] = useState(false);

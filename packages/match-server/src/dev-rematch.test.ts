@@ -217,15 +217,14 @@ const claimDevSeat = async (
   playerId: "p1" | "p2",
   sessionToken?: string,
 ): Promise<string> => {
+  const actualSessionToken = sessionToken ?? `user:user-${playerId}:session-1`;
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/seats/${playerId}/claim`,
     {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        ...(sessionToken === undefined
-          ? {}
-          : { "x-optcg-session-token": sessionToken }),
+        "x-optcg-session-token": actualSessionToken,
       },
       body: JSON.stringify({}),
     },
@@ -270,7 +269,7 @@ const createRematch = async (
 const submitDevLobbyDeck = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
   lobbyId: string,
-  guestToken: string,
+  sessionToken: string,
   deckHash: string,
   donDeckCount = 10,
 ): Promise<CreatedDevLobbyBody> => {
@@ -278,7 +277,7 @@ const submitDevLobbyDeck = async (
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-optcg-session-token": guestToken,
+      "x-optcg-session-token": sessionToken,
     },
     body: JSON.stringify({ deckHash, donDeckCount }),
   });

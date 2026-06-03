@@ -54,26 +54,4 @@ describe("client session store", () => {
     });
     assert.equal(store.loadClaimedSeat(), undefined);
   });
-
-  test("creates and reuses a local guest identity", () => {
-    const storage = createMemoryClientStorage();
-    const store = createClientSessionStore({ storage });
-
-    const first = store.loadOrCreateGuestIdentity();
-    const second = store.loadOrCreateGuestIdentity();
-
-    assert.equal(first.guestToken, second.guestToken);
-    assert.match(first.guestToken, /^guest:/u);
-  });
-
-  test("clears guest identity with session state", () => {
-    const storage = createMemoryClientStorage();
-    const store = createClientSessionStore({ storage });
-
-    const guest = store.loadOrCreateGuestIdentity();
-    store.clear();
-    const nextGuest = store.loadOrCreateGuestIdentity();
-
-    assert.notEqual(nextGuest.guestToken, guest.guestToken);
-  });
 });

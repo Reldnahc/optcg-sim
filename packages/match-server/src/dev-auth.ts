@@ -1,6 +1,4 @@
-export type AuthSubject =
-  | { type: "anonymousDev"; devSessionId: string }
-  | { type: "user"; userId: string; sessionId: string };
+export type AuthSubject = { type: "user"; userId: string; sessionId: string };
 
 export interface AuthContext {
   subject: AuthSubject;
@@ -12,7 +10,9 @@ export const createDevUserSessionToken = (
 ): string =>
   `user:${encodeURIComponent(userId)}:${encodeURIComponent(sessionId)}`;
 
-export const parseDevSessionToken = (token: string): AuthSubject => {
+export const parseDevSessionToken = (
+  token: string,
+): AuthSubject | undefined => {
   if (token.startsWith("user:")) {
     const [, encodedUserId, encodedSessionId] = token.split(":");
     if (
@@ -28,24 +28,12 @@ export const parseDevSessionToken = (token: string): AuthSubject => {
       };
     }
   }
-  return { type: "anonymousDev", devSessionId: token };
+  return undefined;
 };
 
 export const subjectsMatch = (
   left: AuthSubject,
   right: AuthSubject,
 ): boolean => {
-  switch (left.type) {
-    case "anonymousDev":
-      return (
-        right.type === "anonymousDev" &&
-        left.devSessionId === right.devSessionId
-      );
-    case "user":
-      return (
-        right.type === "user" &&
-        left.userId === right.userId &&
-        left.sessionId === right.sessionId
-      );
-  }
+  return left.userId === right.userId && left.sessionId === right.sessionId;
 };

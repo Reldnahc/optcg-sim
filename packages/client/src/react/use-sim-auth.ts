@@ -25,6 +25,11 @@ export interface UseSimAuthState {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+export const simAuthSessionToken = (session: SimAuthSession): string =>
+  `user:${encodeURIComponent(session.user.id)}:${encodeURIComponent(
+    session.session.id,
+  )}`;
+
 const registerInput = (input: RegisterCredentials): SimRegisterInput => ({
   username: input.username,
   password: input.password,

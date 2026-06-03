@@ -137,11 +137,11 @@ const createDevLobby = async (
 const joinDevLobby = async (
   server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
   lobbyId: string,
-  guestToken: string,
+  sessionToken: string,
 ): Promise<CreatedDevLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
     method: "POST",
-    headers: { "x-optcg-session-token": guestToken },
+    headers: { "x-optcg-session-token": sessionToken },
   });
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedDevLobbyBody;
@@ -150,7 +150,7 @@ const joinDevLobby = async (
 const submitDevLobbyDeck = async (
   server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
   lobbyId: string,
-  guestToken: string,
+  sessionToken: string,
   deckHash: string,
   donDeckCount = 10,
 ): Promise<CreatedDevLobbyBody> => {
@@ -158,7 +158,7 @@ const submitDevLobbyDeck = async (
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-optcg-session-token": guestToken,
+      "x-optcg-session-token": sessionToken,
     },
     body: JSON.stringify({ deckHash, donDeckCount }),
   });
@@ -295,12 +295,20 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(requireLobbySeat(created, "p1").deck.status, "missing");
       assert.equal(requireLobbySeat(created, "p2").deck.status, "missing");
 
-      const oneSeat = await joinDevLobby(server, lobbyId, "guest-p1");
+      const oneSeat = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-p1:session-1",
+      );
       assert.equal(oneSeat.matchId, undefined);
       assert.equal(oneSeat.seat?.playerId, "p1");
       assert.equal(requireLobbySeat(oneSeat, "p1").deck.status, "missing");
 
-      const twoSeats = await joinDevLobby(server, lobbyId, "guest-p2");
+      const twoSeats = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-p2:session-1",
+      );
       assert.equal(twoSeats.matchId, undefined);
       assert.equal(twoSeats.seats["p1"]?.claimed, true);
       assert.equal(twoSeats.seats["p2"]?.claimed, true);
@@ -308,7 +316,7 @@ describe("dev HTTP lobby deck submissions", () => {
       const oneDeck = await submitDevLobbyDeck(
         server,
         lobbyId,
-        "guest-p1",
+        "user:user-p1:session-1",
         "p1-hash",
       );
       assert.equal(oneDeck.matchId, undefined);
@@ -318,7 +326,7 @@ describe("dev HTTP lobby deck submissions", () => {
       const ready = await submitDevLobbyDeck(
         server,
         lobbyId,
-        "guest-p2",
+        "user:user-p2:session-1",
         "p2-hash",
       );
       const matchId = ready.matchId;
@@ -347,7 +355,7 @@ describe("dev HTTP lobby deck submissions", () => {
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
-      await joinDevLobby(server, lobbyId, "guest-p1");
+      await joinDevLobby(server, lobbyId, "user:user-p1:session-1");
       const p1LobbySocket = await openSocket(
         lobbyWebSocketUrl(server, lobbyId, "p1"),
       );
@@ -360,7 +368,7 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(initial.type, "lobbySync");
       assert.equal(initial.lobby?.matchId, undefined);
 
-      await joinDevLobby(server, lobbyId, "guest-p2");
+      await joinDevLobby(server, lobbyId, "user:user-p2:session-1");
       const joinUpdate = (await p1LobbySocket.next()) as {
         type?: string;
         lobby?: CreatedDevLobbyBody;
@@ -368,7 +376,12 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(joinUpdate.type, "lobbySync");
       assert.equal(joinUpdate.lobby?.matchId, undefined);
 
-      await submitDevLobbyDeck(server, lobbyId, "guest-p1", "p1-hash");
+      await submitDevLobbyDeck(
+        server,
+        lobbyId,
+        "user:user-p1:session-1",
+        "p1-hash",
+      );
       const deckUpdate = (await p1LobbySocket.next()) as {
         type?: string;
         lobby?: CreatedDevLobbyBody;
@@ -383,7 +396,12 @@ describe("dev HTTP lobby deck submissions", () => {
         "ready",
       );
 
-      await submitDevLobbyDeck(server, lobbyId, "guest-p2", "p2-hash");
+      await submitDevLobbyDeck(
+        server,
+        lobbyId,
+        "user:user-p2:session-1",
+        "p2-hash",
+      );
       const ready = (await p1LobbySocket.next()) as {
         type?: string;
         lobby?: CreatedDevLobbyBody;
@@ -404,7 +422,7 @@ describe("dev HTTP lobby deck submissions", () => {
     }
   });
 
-  test("lobby deck status does not expose deck contents to the other guest", async () => {
+  test("lobby deck status does not expose deck contents to the other player", async () => {
     const server = await createDeckHashDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -414,8 +432,13 @@ describe("dev HTTP lobby deck submissions", () => {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      await joinDevLobby(server, lobbyId, "guest-a");
-      await submitDevLobbyDeck(server, lobbyId, "guest-a", "p1-hash");
+      await joinDevLobby(server, lobbyId, "user:user-a:session-1");
+      await submitDevLobbyDeck(
+        server,
+        lobbyId,
+        "user:user-a:session-1",
+        "p1-hash",
+      );
       const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}`);
       assert.equal(response.status, 200);
       const lobby = (await response.json()) as CreatedDevLobbyBody;
@@ -439,14 +462,14 @@ describe("dev HTTP lobby deck submissions", () => {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      await joinDevLobby(server, lobbyId, "guest-a");
+      await joinDevLobby(server, lobbyId, "user:user-a:session-1");
       const response = await fetch(
         `${server.url()}/api/lobbies/${lobbyId}/deck`,
         {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            "x-optcg-session-token": "guest-a",
+            "x-optcg-session-token": "user:user-a:session-1",
           },
           body: JSON.stringify({
             deckHash: "bad-cache-hash",

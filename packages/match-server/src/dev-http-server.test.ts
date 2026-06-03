@@ -209,9 +209,13 @@ const claimDevSeat = async (
   matchId: string,
   playerId: "p1" | "p2",
 ): Promise<string> => {
+  const sessionToken = `user:user-${playerId}:session-1`;
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/seats/${playerId}/claim`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: { "x-optcg-session-token": sessionToken },
+    },
   );
   assert.equal(response.status, 200);
   const body = (await response.json()) as ClaimedDevSeatBody;
@@ -238,11 +242,11 @@ const createDevLobby = async (
 const joinDevLobby = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
   lobbyId: string,
-  guestToken: string,
+  sessionToken: string,
 ): Promise<CreatedDevLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
     method: "POST",
-    headers: { "x-optcg-session-token": guestToken },
+    headers: { "x-optcg-session-token": sessionToken },
   });
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedDevLobbyBody;
@@ -274,7 +278,7 @@ describe("dev HTTP server", () => {
     assert.equal(frame.subarray(10).toString("utf8"), payload);
   });
 
-  test("seatless lobby join assigns first open seat by guest identity", async () => {
+  test("seatless lobby join assigns first open seat by account session", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -284,8 +288,16 @@ describe("dev HTTP server", () => {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const first = await joinDevLobby(server, lobbyId, "guest-a");
-      const second = await joinDevLobby(server, lobbyId, "guest-b");
+      const first = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-a:session-1",
+      );
+      const second = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-b:session-1",
+      );
 
       assert.equal(first.seat?.playerId, "p1");
       assert.equal(second.seat?.playerId, "p2");
@@ -299,7 +311,7 @@ describe("dev HTTP server", () => {
     }
   });
 
-  test("seatless lobby join is idempotent for the same guest identity", async () => {
+  test("seatless lobby join is idempotent for the same account session", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -309,8 +321,16 @@ describe("dev HTTP server", () => {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const first = await joinDevLobby(server, lobbyId, "guest-a");
-      const second = await joinDevLobby(server, lobbyId, "guest-a");
+      const first = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-a:session-1",
+      );
+      const second = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-a:session-1",
+      );
 
       assert.equal(first.seat?.playerId, "p1");
       assert.equal(second.seat?.playerId, "p1");
@@ -330,13 +350,13 @@ describe("dev HTTP server", () => {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      await joinDevLobby(server, lobbyId, "guest-a");
-      await joinDevLobby(server, lobbyId, "guest-b");
+      await joinDevLobby(server, lobbyId, "user:user-a:session-1");
+      await joinDevLobby(server, lobbyId, "user:user-b:session-1");
       const response = await fetch(
         `${server.url()}/api/lobbies/${lobbyId}/join`,
         {
           method: "POST",
-          headers: { "x-optcg-session-token": "guest-c" },
+          headers: { "x-optcg-session-token": "user:user-c:session-1" },
         },
       );
       const body = (await response.json()) as CreatedDevLobbyBody;
@@ -348,7 +368,7 @@ describe("dev HTTP server", () => {
     }
   });
 
-  test("lobby join responses do not expose guest tokens", async () => {
+  test("lobby join responses do not expose account session tokens", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -358,15 +378,22 @@ describe("dev HTTP server", () => {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const joined = await joinDevLobby(server, lobbyId, "guest-a");
+      const joined = await joinDevLobby(
+        server,
+        lobbyId,
+        "user:user-a:session-1",
+      );
 
-      assert.equal(JSON.stringify(joined).includes("guest-a"), false);
+      assert.equal(
+        JSON.stringify(joined).includes("user:user-a:session-1"),
+        false,
+      );
     } finally {
       await server.close();
     }
   });
 
-  test("creates independent local anonymous dev matches keyed by matchId", async () => {
+  test("creates independent local authenticated dev matches keyed by matchId", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
@@ -590,7 +617,7 @@ describe("dev HTTP server", () => {
     }
   });
 
-  test("rejects duplicate local anonymous claims for the same seat", async () => {
+  test("rejects duplicate local account claims for the same seat", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -601,15 +628,15 @@ describe("dev HTTP server", () => {
         `${server.url()}/api/matches/${match.matchId}/seats/p1/claim`,
         { method: "POST" },
       );
-      assert.equal(duplicate.status, 409);
+      assert.equal(duplicate.status, 401);
       const body = (await duplicate.json()) as { errors?: string[] };
-      assert.deepEqual(body.errors, ["Seat p1 is already claimed."]);
+      assert.deepEqual(body.errors, ["Account session is required."]);
     } finally {
       await server.close();
     }
   });
 
-  test("allows idempotent local anonymous claims with the matching seat token", async () => {
+  test("allows idempotent local account claims with the matching seat token", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -637,12 +664,12 @@ describe("dev HTTP server", () => {
     }
   });
 
-  test("reuses a supplied local anonymous token when claiming an unclaimed seat", async () => {
+  test("reuses a supplied local account token when claiming an unclaimed seat", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
-      const token = `dev-local:${match.matchId}:p1:existing`;
+      const token = "user:user-p1:session-existing";
 
       const claim = await fetch(
         `${server.url()}/api/matches/${match.matchId}/seats/p1/claim`,

@@ -44,8 +44,17 @@ import { createMatchClientDecisionModel } from "./use-match-client-decision-mode
 import { useMatchRollbackActions } from "./use-match-rollback-actions.js";
 import { useMatchSessionActions } from "./use-match-session-actions.js";
 
-export const useMatchClient = (): MatchClientUi => {
-  const controller = useMemo(() => createController(), []);
+export interface UseMatchClientOptions {
+  readonly accountSessionToken: string;
+}
+
+export const useMatchClient = ({
+  accountSessionToken,
+}: UseMatchClientOptions): MatchClientUi => {
+  const controller = useMemo(
+    () => createController({ accountSessionToken }),
+    [accountSessionToken],
+  );
   const accountClient = useMemo(() => createPoneglyphAccountClient(), []);
   const [clientState, setClientState] = useState<MatchClientSessionState>();
   const [accountLoadouts, setAccountLoadouts] = useState<

@@ -137,11 +137,13 @@ export const createMatchClientController = ({
   transport,
   liveTransport,
   lobbyLiveTransport,
+  accountSessionToken,
   sessionStore,
 }: {
   transport: MatchTransport;
   liveTransport?: MatchLiveTransport;
   lobbyLiveTransport?: LobbyLiveTransport;
+  accountSessionToken: string;
   sessionStore: ClientSessionStore;
 }): MatchClientController => {
   let currentState: MatchClientState | undefined;
@@ -196,13 +198,11 @@ export const createMatchClientController = ({
     const existingSessionToken =
       sessionToken ??
       sessionStore.loadClaimedSeat()?.sessionToken ??
-      sessionStore.loadGuestIdentity()?.guestToken;
+      accountSessionToken;
     sessionStore.setCurrentSeat(seat);
     const claimed = await transport.claimSeat({
       ...seat,
-      ...(existingSessionToken === undefined
-        ? {}
-        : { sessionToken: existingSessionToken }),
+      sessionToken: existingSessionToken,
     });
     sessionStore.saveClaimedSeat({
       matchId: claimed.matchId,
@@ -232,33 +232,31 @@ export const createMatchClientController = ({
   return {
     async startNewLocalLobby() {
       const lobby = await transport.createLobby();
-      const guestToken = sessionStore.loadOrCreateGuestIdentity().guestToken;
       const joinedLobby = await transport.joinLobby({
         lobbyId: lobby.lobbyId,
-        guestToken,
+        sessionToken: accountSessionToken,
       });
       return claimMatchIfReady({
         lobbyId: joinedLobby.lobbyId,
         seat: {
           lobbyId: joinedLobby.lobbyId,
           playerId: joinedLobby.seat.playerId,
-          sessionToken: guestToken,
+          sessionToken: accountSessionToken,
         },
         lobby: joinedLobby,
       });
     },
     async joinLocalLobby(input) {
-      const guestToken = sessionStore.loadOrCreateGuestIdentity().guestToken;
       const joinedLobby = await transport.joinLobby({
         lobbyId: input.lobbyId,
-        guestToken,
+        sessionToken: accountSessionToken,
       });
       return claimMatchIfReady({
         lobbyId: joinedLobby.lobbyId,
         seat: {
           lobbyId: joinedLobby.lobbyId,
           playerId: joinedLobby.seat.playerId,
-          sessionToken: guestToken,
+          sessionToken: accountSessionToken,
         },
         lobby: joinedLobby,
       });
@@ -288,7 +286,10 @@ export const createMatchClientController = ({
       const created = await transport.createMatch();
       const seat = { matchId: created.matchId, playerId };
       sessionStore.setCurrentSeat(seat);
-      const claimed = await transport.claimSeat(seat);
+      const claimed = await transport.claimSeat({
+        ...seat,
+        sessionToken: accountSessionToken,
+      });
       sessionStore.saveClaimedSeat({
         matchId: claimed.matchId,
         playerId: claimed.seat.playerId,
@@ -452,7 +453,7 @@ export const createMatchClientController = ({
               : transport
                   .joinLobby({
                     lobbyId: message.nextLobbyId,
-                    guestToken: credential.sessionToken,
+                    sessionToken: credential.sessionToken,
                   })
                   .then((joinedLobby) =>
                     claimMatchIfReady({
