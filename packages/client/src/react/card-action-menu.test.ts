@@ -95,6 +95,20 @@ describe("card action menu", () => {
     );
   });
 
+  test("active-turn player summary uses outline feedback without a dot indicator", async () => {
+    const controlsCss = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.equal(
+      controlsCss.includes(".summary-panel.is-turn-player::after"),
+      false,
+    );
+    assert.equal(controlsCss.includes(".summary-panel.is-turn-player"), true);
+    assert.equal(controlsCss.includes("border-color: #59ff8f"), true);
+  });
+
   test("renders selected-card actions on the selected card instead of the control rail", () => {
     const playActions: readonly ClientActionModel[] = [
       { index: 7, type: "playCard", label: "Play" },

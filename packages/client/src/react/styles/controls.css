@@ -56,20 +56,6 @@
     0 0 18px rgba(89, 255, 143, 0.38);
 }
 
-.summary-panel.is-turn-player::after {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #59ff8f;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.55),
-    0 0 10px rgba(89, 255, 143, 0.8);
-  content: "";
-}
-
 .summary-panel h2 {
   display: flex;
   align-items: center;
