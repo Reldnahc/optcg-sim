@@ -126,8 +126,8 @@ describe("board view model", () => {
       matchId: "match-1" as MatchId,
       stateSeq: 7,
       playerLabels: {
-        [p1]: { displayName: "Alice" },
-        [p2]: { displayName: "Bob" },
+        [p1]: { displayName: "Alice", connectionStatus: "connected" },
+        [p2]: { displayName: "Bob", connectionStatus: "disconnected" },
       },
       players: {
         [p1]: {
@@ -145,6 +145,8 @@ describe("board view model", () => {
 
     assert.equal(p1Model.selfLabel, "Alice");
     assert.equal(p1Model.opponentLabel, "Bob");
+    assert.equal(p1Model.selfConnectionStatus, "connected");
+    assert.equal(p1Model.opponentConnectionStatus, "disconnected");
   });
 
   test("builds zones and card-attached action menus from a filtered player view", () => {

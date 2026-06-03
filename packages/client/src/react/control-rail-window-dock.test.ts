@@ -11,6 +11,31 @@ import { ControlRail } from "./ControlRail.js";
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 describe("control rail window dock", () => {
+  test("renders connection status directly beside player names", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        selfLabel: "Alice",
+        opponentLabel: "Bob",
+        selfConnectionStatus: "connected",
+        opponentConnectionStatus: "disconnected",
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+
+    assert.match(
+      markup,
+      /<h2><span class="player-name">Bob<\/span><span class="connection-status is-disconnected"/u,
+    );
+    assert.match(
+      markup,
+      /<h2><span class="player-name">Alice<\/span><span class="connection-status is-connected"/u,
+    );
+  });
+
   test("renders docked windows as tabbed content inside the control rail", async () => {
     const props = {
       errors: [],

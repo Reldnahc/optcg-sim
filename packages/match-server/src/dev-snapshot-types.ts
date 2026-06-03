@@ -77,7 +77,15 @@ export interface DevMatchSnapshot {
   status: GameState["status"]["type"];
   turn: GameState["turn"];
   activePlayerId: PlayerId;
-  playerLabels?: Partial<Record<PlayerId, { displayName: string }>>;
+  playerLabels?: Partial<
+    Record<
+      PlayerId,
+      {
+        displayName?: string;
+        connectionStatus?: "connected" | "disconnected";
+      }
+    >
+  >;
   players: Record<PlayerId, DevPlayerSnapshot>;
   rollback?: DevRollbackView;
 }

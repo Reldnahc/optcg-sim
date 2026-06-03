@@ -164,6 +164,22 @@ const openSocket = async (url: string): Promise<TestSocket> =>
     });
   });
 
+const nextSessionTransition = async (
+  socket: TestSocket,
+): Promise<TestSessionTransitionBody> => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const message = (await socket.next()) as TestSessionTransitionBody;
+    if (message.type === "sessionTransition") {
+      return message;
+    }
+    if (message.type === "stateSync" || message.type === "heartbeat") {
+      continue;
+    }
+    throw new Error(`Unexpected WebSocket message ${String(message.type)}.`);
+  }
+  throw new Error("Timed out waiting for session transition.");
+};
+
 const createDevMatch = async (
   server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
@@ -503,7 +519,7 @@ describe("dev rematches", () => {
       if (rematchLobbyId === undefined) {
         throw new Error("Rematch response did not include lobby id.");
       }
-      const transition = (await sourceP2.next()) as TestSessionTransitionBody;
+      const transition = await nextSessionTransition(sourceP2);
       assert.equal(transition.type, "sessionTransition");
       assert.equal(transition.matchId, match.matchId);
       assert.equal(transition.nextLobbyId, rematchLobbyId);

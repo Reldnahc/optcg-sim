@@ -55,7 +55,15 @@ export interface MatchSnapshot {
   stateSeq: number;
   actionSeq?: number;
   status?: string;
-  playerLabels?: Partial<Record<PlayerId, { displayName: string }>>;
+  playerLabels?: Partial<
+    Record<
+      PlayerId,
+      {
+        displayName?: string;
+        connectionStatus?: "connected" | "disconnected";
+      }
+    >
+  >;
   players: Record<PlayerId, ClientPlayerSnapshot>;
   rollback?: {
     enabled: boolean;

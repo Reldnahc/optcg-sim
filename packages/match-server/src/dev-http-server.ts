@@ -512,6 +512,7 @@ const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
 interface DevSocketBaseConnection {
   socket: Duplex;
   serverSeq: number;
+  heartbeat?: ReturnType<typeof setInterval>;
 }
 
 interface DevSocketConnection extends DevSocketBaseConnection {
@@ -534,11 +535,84 @@ const sendSocketJson = (
   connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
 };
 
+const clearConnectionHeartbeat = (
+  connection: DevSocketBaseConnection,
+): void => {
+  if (connection.heartbeat === undefined) {
+    return;
+  }
+  clearInterval(connection.heartbeat);
+  delete connection.heartbeat;
+};
+
+const startConnectionHeartbeat = (
+  connection: DevSocketBaseConnection,
+  type: "heartbeat" | "lobbyHeartbeat",
+): void => {
+  connection.heartbeat = setInterval(() => {
+    sendSocketJson(connection, {
+      type,
+      serverSeq: ++connection.serverSeq,
+    });
+  }, 25_000);
+  connection.heartbeat.unref();
+};
+
+const disableSocketIdleTimeout = (socket: Duplex): void => {
+  const socketWithTimeout = socket as Duplex & {
+    setTimeout?: (timeout: number) => void;
+  };
+  socketWithTimeout.setTimeout?.(0);
+};
+
+const playerConnectionStatus = (
+  matchId: MatchId,
+  playerId: PlayerId,
+  connections: ReadonlySet<DevSocketConnection>,
+): "connected" | "disconnected" => {
+  for (const connection of connections) {
+    if (
+      connection.matchId === matchId &&
+      connection.playerId === playerId &&
+      !connection.socket.destroyed &&
+      !connection.socket.writableEnded
+    ) {
+      return "connected";
+    }
+  }
+  return "disconnected";
+};
+
+const snapshotWithConnectionStatuses = (
+  snapshot: ReturnType<typeof getLocalDevSnapshotForPlayer>,
+  match: LocalDevMatch,
+  matchId: MatchId,
+  connections: ReadonlySet<DevSocketConnection>,
+): ReturnType<typeof getLocalDevSnapshotForPlayer> => {
+  const playerLabels = { ...(snapshot.playerLabels ?? {}) };
+  for (const playerId of Object.keys(match.state.players) as PlayerId[]) {
+    playerLabels[playerId] = {
+      ...(playerLabels[playerId] ?? {}),
+      connectionStatus: playerConnectionStatus(matchId, playerId, connections),
+    };
+  }
+  return {
+    ...snapshot,
+    playerLabels,
+  };
+};
+
 const playerStatePayload = (
   match: LocalDevMatch,
   connection: DevSocketConnection,
+  connections: ReadonlySet<DevSocketConnection>,
 ): Record<string, unknown> => {
-  const snapshot = getLocalDevSnapshotForPlayer(match, connection.playerId);
+  const snapshot = snapshotWithConnectionStatuses(
+    getLocalDevSnapshotForPlayer(match, connection.playerId),
+    match,
+    connection.matchId,
+    connections,
+  );
   return {
     type: "stateSync",
     matchId: connection.matchId,
@@ -592,7 +666,10 @@ const broadcastMatchState = (
   }
   for (const connection of connections) {
     if (connection.matchId === matchId) {
-      sendSocketJson(connection, playerStatePayload(match, connection));
+      sendSocketJson(
+        connection,
+        playerStatePayload(match, connection, connections),
+      );
     }
   }
 };
@@ -664,6 +741,7 @@ const handleWebSocketUpgrade = (
         "\r\n",
       ].join("\r\n"),
     );
+    disableSocketIdleTimeout(socket);
 
     const connection: DevLobbySocketConnection = {
       lobbyId,
@@ -672,7 +750,9 @@ const handleWebSocketUpgrade = (
       serverSeq: 0,
     };
     lobbyConnections.add(connection);
+    startConnectionHeartbeat(connection, "lobbyHeartbeat");
     socket.on("close", () => {
+      clearConnectionHeartbeat(connection);
       lobbyConnections.delete(connection);
     });
     sendSocketJson(connection, lobbyStatePayload(lobby, connection));
@@ -730,6 +810,7 @@ const handleWebSocketUpgrade = (
       "\r\n",
     ].join("\r\n"),
   );
+  disableSocketIdleTimeout(socket);
 
   const connection: DevSocketConnection = {
     matchId,
@@ -738,8 +819,11 @@ const handleWebSocketUpgrade = (
     serverSeq: 0,
   };
   connections.add(connection);
+  startConnectionHeartbeat(connection, "heartbeat");
   socket.on("close", () => {
+    clearConnectionHeartbeat(connection);
     connections.delete(connection);
+    broadcastMatchState(matchId, registry, connections);
   });
   if (match === undefined) {
     sendSocketJson(
@@ -747,7 +831,10 @@ const handleWebSocketUpgrade = (
       playerSetupPayload(matchId, firstPlayerChoice, connection),
     );
   } else {
-    sendSocketJson(connection, playerStatePayload(match, connection));
+    sendSocketJson(
+      connection,
+      playerStatePayload(match, connection, connections),
+    );
   }
 
   let buffered: Buffer = Buffer.alloc(0);
@@ -887,10 +974,12 @@ export const createDevHttpServer = async (
     },
     close: async () => {
       for (const connection of socketConnections) {
+        clearConnectionHeartbeat(connection);
         connection.socket.destroy();
       }
       socketConnections.clear();
       for (const connection of lobbySocketConnections) {
+        clearConnectionHeartbeat(connection);
         connection.socket.destroy();
       }
       lobbySocketConnections.clear();

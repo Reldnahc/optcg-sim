@@ -26,6 +26,8 @@ export interface ControlRailProps {
   disabled: boolean;
   selfLabel?: string | undefined;
   opponentLabel?: string | undefined;
+  selfConnectionStatus?: "connected" | "disconnected" | undefined;
+  opponentConnectionStatus?: "connected" | "disconnected" | undefined;
   matchStatus?: string | undefined;
   width?: number | undefined;
   dockHeight?: number | undefined;
@@ -79,6 +81,8 @@ export const ControlRail = ({
   disabled,
   selfLabel = "Player",
   opponentLabel = "Opponent",
+  selfConnectionStatus,
+  opponentConnectionStatus,
   matchStatus,
   width,
   dockHeight,
@@ -155,7 +159,10 @@ export const ControlRail = ({
         onPointerDown={onResizePointerDown}
       />
       <section className="summary-panel opponent-summary">
-        <h2>{opponentLabel}</h2>
+        <PlayerSummaryLabel
+          label={opponentLabel}
+          status={opponentConnectionStatus}
+        />
       </section>
       <section className="controls-panel" style={controlsPanelStyle}>
         <div className="control-tool-strip">
@@ -479,8 +486,27 @@ export const ControlRail = ({
         </div>
       </section>
       <section className="summary-panel player-summary">
-        <h2>{selfLabel}</h2>
+        <PlayerSummaryLabel label={selfLabel} status={selfConnectionStatus} />
       </section>
     </aside>
   );
 };
+
+const PlayerSummaryLabel = ({
+  label,
+  status,
+}: {
+  label: string;
+  status?: "connected" | "disconnected" | undefined;
+}): React.JSX.Element => (
+  <h2>
+    <span className="player-name">{label}</span>
+    {status === undefined ? null : (
+      <span
+        className={`connection-status is-${status}`}
+        aria-label={`${label} ${status}`}
+        title={status === "connected" ? "Connected" : "Disconnected"}
+      />
+    )}
+  </h2>
+);

@@ -69,6 +69,8 @@ export interface BoardViewModel {
   playerId: PlayerId;
   selfLabel: string;
   opponentLabel: string;
+  selfConnectionStatus?: "connected" | "disconnected";
+  opponentConnectionStatus?: "connected" | "disconnected";
   self: ClientPlayerZonesModel;
   opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
@@ -340,11 +342,17 @@ const playerDisplayLabel = (
   playerId: PlayerId,
   fallback: string,
 ): string => {
-  const displayName = snapshot.playerLabels?.[playerId]?.displayName.trim();
+  const displayName = snapshot.playerLabels?.[playerId]?.displayName?.trim();
   return displayName === undefined || displayName.length === 0
     ? fallback
     : displayName;
 };
+
+const playerConnectionStatus = (
+  snapshot: MatchSnapshot,
+  playerId: PlayerId,
+): "connected" | "disconnected" | undefined =>
+  snapshot.playerLabels?.[playerId]?.connectionStatus;
 
 export const createBoardViewModel = ({
   snapshot,
@@ -363,14 +371,23 @@ export const createBoardViewModel = ({
       `Player ${String(playerId)} is not present in the snapshot.`,
     );
   }
+  const selfConnectionStatus = playerConnectionStatus(snapshot, playerId);
+  const opponentConnectionStatus = playerConnectionStatus(
+    snapshot,
+    player.view.opponent.playerId,
+  );
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
+    ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),
     opponentLabel: playerDisplayLabel(
       snapshot,
       player.view.opponent.playerId,
       "Opponent",
     ),
+    ...(opponentConnectionStatus === undefined
+      ? {}
+      : { opponentConnectionStatus }),
     self: selfZones(player.view, catalog),
     opponent: opponentZones(player.view, catalog),
     actionsByCardInstanceId: actionMenusByCard(player.actions),

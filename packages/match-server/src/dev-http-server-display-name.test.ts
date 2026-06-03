@@ -200,13 +200,17 @@ describe("dev HTTP server display names", () => {
         "user:user-b:session-1:Bob",
       );
 
-      assert.deepEqual(
-        await initialPlayerLabels(server, match.matchId, "p1", p1Token),
-        {
-          p1: { displayName: "Alice" },
-          p2: { displayName: "Bob" },
-        },
+      const labels = await initialPlayerLabels(
+        server,
+        match.matchId,
+        "p1",
+        p1Token,
       );
+
+      const p1Label = labels?.["p1"];
+      const p2Label = labels?.["p2"];
+      assert.equal(p1Label?.displayName, "Alice");
+      assert.equal(p2Label?.displayName, "Bob");
     } finally {
       await server.close();
     }

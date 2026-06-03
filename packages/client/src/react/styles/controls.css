@@ -40,10 +40,37 @@
 }
 
 .summary-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   color: #fff;
   font-size: 28px;
   font-weight: 400;
+}
+
+.player-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-status {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.65);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.connection-status.is-connected {
+  background: #59ff8f;
+}
+
+.connection-status.is-disconnected {
+  background: #72706e;
 }
 
 .loading-panel {
