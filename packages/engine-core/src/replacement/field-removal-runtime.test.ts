@@ -187,12 +187,13 @@ test("accepted opponent field-removal replacement moves top life to hand instead
   if (decision?.type !== "chooseReplacement") {
     assert.fail("expected chooseReplacement decision");
   }
-  assert.equal(decision.replacementIds[0], effectId);
+  const replacementId = must(decision.replacementIds[0], "replacement id");
+  assert.match(replacementId, new RegExp(`${effectId}$`, "u"));
 
   const accepted = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: decision.id,
-    response: { type: "replacement", replacementId: effectId },
+    response: { type: "replacement", replacementId },
   });
   const nextP2 = must(accepted.state.players[p2], "next p2");
 
@@ -504,12 +505,13 @@ test("opponent field-removal replacement from another field source protects matc
   if (decision?.type !== "chooseReplacement") {
     assert.fail("expected chooseReplacement decision");
   }
-  assert.equal(decision.replacementIds[0], effectId);
+  const replacementId = must(decision.replacementIds[0], "replacement id");
+  assert.match(replacementId, new RegExp(`${effectId}$`, "u"));
 
   const accepted = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: decision.id,
-    response: { type: "replacement", replacementId: effectId },
+    response: { type: "replacement", replacementId },
   });
   const nextP2 = must(accepted.state.players[p2], "next p2");
 
@@ -657,11 +659,16 @@ test("accepted K.O. replacement trashes from hand instead of KOing matching base
   if (replacementDecision?.type !== "chooseReplacement") {
     assert.fail("expected chooseReplacement decision");
   }
+  const replacementId = must(
+    replacementDecision.replacementIds[0],
+    "replacement id",
+  );
+  assert.match(replacementId, new RegExp(`${effectId}$`, "u"));
 
   const accepted = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: replacementDecision.id,
-    response: { type: "replacement", replacementId: effectId },
+    response: { type: "replacement", replacementId },
   });
   const trashDecision = accepted.state.pendingDecision;
   if (trashDecision?.type !== "selectCards") {
@@ -856,11 +863,16 @@ test("accepted opponent effect field-removal replacement rests selected own card
   if (replacementDecision?.type !== "chooseReplacement") {
     assert.fail("expected chooseReplacement decision");
   }
+  const replacementId = must(
+    replacementDecision.replacementIds[0],
+    "replacement id",
+  );
+  assert.match(replacementId, new RegExp(`${effectId}$`, "u"));
 
   const accepted = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: replacementDecision.id,
-    response: { type: "replacement", replacementId: effectId },
+    response: { type: "replacement", replacementId },
   });
   const restDecision = accepted.state.pendingDecision;
   if (restDecision?.type !== "selectTargets") {

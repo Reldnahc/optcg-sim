@@ -306,7 +306,11 @@ test("battle K.O. pauses for opponent field-removal life replacement", () => {
   const decision = must(result.state.pendingDecision, "replacement decision");
   assert.equal(decision.type, "chooseReplacement");
   assert.equal(decision.playerId, p2);
-  assert.deepEqual(decision.replacementIds, [replacementId]);
+  const offeredReplacementId = must(
+    decision.replacementIds[0],
+    "replacement id",
+  );
+  assert.match(offeredReplacementId, new RegExp(`${replacementId}$`, "u"));
   assert.deepEqual(
     result.events
       .filter((event) =>
@@ -321,7 +325,7 @@ test("battle K.O. pauses for opponent field-removal life replacement", () => {
   const accepted = applyAction(result.state, {
     type: "respondToDecision",
     decisionId: decision.id,
-    response: { type: "replacement", replacementId },
+    response: { type: "replacement", replacementId: offeredReplacementId },
   });
   const nextP2 = must(accepted.state.players[p2], "accepted p2");
 

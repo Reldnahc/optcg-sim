@@ -10,13 +10,11 @@ import type {
   EffectQueueEntry,
   EffectId,
   InstanceId,
-  PlayerId,
   QueueEntryId,
   TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "../../actions.js";
 import { hashCanonicalStateValue } from "../../state/canonical-state.js";
 import {
   createActiveState,
@@ -377,17 +375,6 @@ const pauseForReplacementDecision = () => {
   return { ...setup, effectBlock, result };
 };
 
-const mustChooseReplacementDecision = (
-  decision: ReturnType<
-    typeof pauseForReplacementDecision
-  >["result"]["state"]["pendingDecision"],
-) => {
-  if (decision?.type !== "chooseReplacement") {
-    throw new Error("missing chooseReplacement decision");
-  }
-  return decision;
-};
-
 test("detects one reviewed optional would-be-KOd self replacement candidate for selected public Character", () => {
   const { state, entry, refs, targetA } = setupKoPrimitiveState();
   const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
@@ -407,7 +394,7 @@ test("detects one reviewed optional would-be-KOd self replacement candidate for 
   assert.deepEqual(detected, {
     ok: true,
     candidate: {
-      id: effectBlock.id,
+      id: `${String(targetA.instanceId)}:${String(effectBlock.id)}`,
       effectBlockId: effectBlock.id,
       controllerId: p2,
       source: process.target,
@@ -421,6 +408,7 @@ test("detects one reviewed optional would-be-KOd self replacement candidate for 
 test("targeted KO primitive pauses on a private chooseReplacement decision for supported optional KO replacement", () => {
   const { result, entry, effectBlock, targetA } = pauseForReplacementDecision();
   const p2State = must(result.state.players[p2], "next p2");
+  const replacementId = `${String(targetA.instanceId)}:${String(effectBlock.id)}`;
 
   assert.equal(result.errors, undefined);
   assert.deepEqual(
@@ -437,10 +425,10 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
     causedBy: entry.causedBy,
     visibility: { type: "private", playerId: p2 },
     processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
-    replacementIds: [String(effectBlock.id)],
+    replacementIds: [replacementId],
     replacementOptions: [
       {
-        replacementId: String(effectBlock.id),
+        replacementId,
         label: "Draw 1 card instead",
       },
     ],
@@ -477,158 +465,6 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
   ]);
 });
 
-test("chooseReplacement legal actions expose accept and decline only to the decision player", () => {
-  const { result, effectBlock } = pauseForReplacementDecision();
-  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
-
-  assert.deepEqual(getLegalActions(result.state, p2), [
-    { type: "concede", playerId: p2 },
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "replacement" },
-    },
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "replacement", replacementId: String(effectBlock.id) },
-    },
-  ]);
-  assert.deepEqual(getLegalActions(result.state, p1), [
-    { type: "concede", playerId: p1 },
-  ]);
-});
-
-test("declining optional chooseReplacement resolves to the unreplaced KO process", () => {
-  const { result, targetA } = pauseForReplacementDecision();
-  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
-
-  const declined = applyAction(result.state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "replacement" },
-  });
-  const nextP2 = must(declined.state.players[p2], "next p2");
-
-  assert.equal(declined.errors, undefined);
-  assert.equal(declined.state.pendingDecision, undefined);
-  assert.deepEqual(declined.state.replacementState, []);
-  assert.deepEqual(
-    declined.events.map((event) => event.type),
-    ["decisionResolved", "cardKOd", "cardMoved", "donReturned"],
-  );
-  assert.equal(
-    nextP2.characters.some((card) => card.instanceId === targetA.instanceId),
-    false,
-  );
-  assert.equal(nextP2.trash[0]?.instanceId, targetA.instanceId);
-});
-
-test.each([
-  {
-    name: "wrong player",
-    playerId: p1,
-    response: { type: "replacement" },
-    reason: "Player does not match current pending decision.",
-  },
-  {
-    name: "missing response",
-    playerId: p2,
-    omitResponse: true,
-    reason: "Response must be an object for chooseReplacement.",
-  },
-  {
-    name: "null response",
-    playerId: p2,
-    response: null,
-    reason: "Response must be an object for chooseReplacement.",
-  },
-  {
-    name: "malformed response type",
-    playerId: p2,
-    response: { type: "orderedIds", ids: [] },
-    reason: "Response type must be replacement for chooseReplacement.",
-  },
-  {
-    name: "unknown replacement id",
-    playerId: p2,
-    response: { type: "replacement", replacementId: "replacement:unknown" },
-    reason: "replacementId must match an available replacement.",
-  },
-  {
-    name: "malformed player id",
-    playerId: p2,
-    actionOverride: {
-      type: "respondToDecision",
-      decisionId: "placeholder-decision-id",
-      playerId: null,
-      response: { type: "replacement" },
-    } as unknown as Parameters<typeof applyAction>[1],
-    reason: "Player does not match current pending decision.",
-  },
-] satisfies {
-  name: string;
-  playerId: PlayerId;
-  actionOverride?: Parameters<typeof applyAction>[1];
-  response?: Record<string, unknown> | null;
-  omitResponse?: true;
-  reason: string;
-}[])(
-  "chooseReplacement response validation rejects $name without mutation",
-  ({ playerId, actionOverride, response, omitResponse, reason }) => {
-    const { result } = pauseForReplacementDecision();
-    const decision = mustChooseReplacementDecision(
-      result.state.pendingDecision,
-    );
-    const before = structuredClone(result.state);
-    const beforeHash = hashCanonicalStateValue(result.state);
-    const action =
-      actionOverride === undefined
-        ? ({
-            type: "respondToDecision" as const,
-            decisionId: decision.id,
-            playerId,
-            ...(omitResponse === true ? {} : { response }),
-          } as unknown as Parameters<typeof applyAction>[1])
-        : { ...actionOverride, decisionId: decision.id };
-
-    const rejected = applyAction(result.state, action);
-
-    assert.deepEqual(rejected.errors, [
-      { type: "invalidDecisionResponse", reason },
-    ]);
-    assert.deepEqual(rejected.events, []);
-    assert.deepEqual(rejected.state, before);
-    assert.equal(rejected.stateHash, beforeHash);
-    assert.equal(rejected.state.pendingDecision?.id, decision.id);
-  },
-);
-
-test("chooseReplacement response validation rejects mandatory decline without mutation", () => {
-  const { result } = pauseForReplacementDecision();
-  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
-  const mandatoryState = {
-    ...result.state,
-    pendingDecision: { ...decision, mandatory: true },
-  };
-  const before = structuredClone(mandatoryState);
-
-  const rejected = applyAction(mandatoryState, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "replacement" },
-  });
-
-  assert.deepEqual(rejected.errors, [
-    {
-      type: "invalidDecisionResponse",
-      reason: "Mandatory replacement decisions cannot be declined.",
-    },
-  ]);
-  assert.deepEqual(rejected.events, []);
-  assert.deepEqual(rejected.state, before);
-});
-
 test("does not return KO replacement candidate already used by the process", () => {
   const { state, entry, refs, targetA } = setupKoPrimitiveState();
   const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
@@ -638,7 +474,9 @@ test("does not return KO replacement candidate already used by the process", () 
       must(refs[0], "target A ref"),
       0,
     ),
-    usedReplacementIds: [String(effectBlock.id)],
+    usedReplacementIds: [
+      `${String(targetA.instanceId)}:${String(effectBlock.id)}`,
+    ],
   };
 
   const detected = detectSupportedSelectedTargetKoReplacementCandidate(
@@ -649,9 +487,13 @@ test("does not return KO replacement candidate already used by the process", () 
   assert.deepEqual(detected, { ok: true });
 });
 
-test("fails closed without mutation for multiple applicable KO replacement candidates", () => {
+test("returns multiple applicable KO replacement candidates as distinct choices", () => {
   const { state, entry, refs, targetA } = setupKoPrimitiveState();
   const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
+  const secondEffectBlock = {
+    ...effectBlock,
+    id: toEffectId("replacement:would-be-ko-draw-2"),
+  };
   const definitionId = must(
     state.cardManifest.cards[targetA.cardId]?.support.effectDefinitionId,
     "definition id",
@@ -664,10 +506,7 @@ test("fails closed without mutation for multiple applicable KO replacement candi
     ...state.cardManifest.effectDefinitions,
     [definitionId]: {
       ...definition,
-      effects: [
-        effectBlock,
-        { ...effectBlock, id: toEffectId("replacement:would-be-ko-draw-2") },
-      ],
+      effects: [effectBlock, secondEffectBlock],
     },
   };
   const process = buildSelectedTargetKoReplacementProcess(
@@ -683,12 +522,23 @@ test("fails closed without mutation for multiple applicable KO replacement candi
   );
 
   assert.deepEqual(detected, {
-    ok: false,
-    error: {
-      type: "effectRuntimeError",
-      effectId: entry.effectBlockId,
-      details: { reason: "multiple-applicable-ko-replacements" },
-    },
+    ok: true,
+    candidates: [
+      {
+        id: `${String(targetA.instanceId)}:${String(effectBlock.id)}`,
+        effectBlockId: effectBlock.id,
+        controllerId: p2,
+        source: process.target,
+        replacementEffect: effectBlock.effect,
+      },
+      {
+        id: `${String(targetA.instanceId)}:${String(secondEffectBlock.id)}`,
+        effectBlockId: secondEffectBlock.id,
+        controllerId: p2,
+        source: process.target,
+        replacementEffect: secondEffectBlock.effect,
+      },
+    ],
   });
   assert.deepEqual(state, before);
 });

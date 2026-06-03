@@ -470,7 +470,9 @@ test("supported would-be-KOd replacement decision opens before field-removal pro
     "replacement decision",
   );
   assert.equal(pendingDecision.type, "chooseReplacement");
-  assert.deepEqual(pendingDecision.replacementIds, [String(replacement.id)]);
+  assert.deepEqual(pendingDecision.replacementIds, [
+    `${String(target.instanceId)}:${String(replacement.id)}`,
+  ]);
   assert.equal(
     nextP2.characters.some((card) => card.instanceId === target.instanceId),
     true,

@@ -1027,7 +1027,7 @@ test("selected-target continuation pauses for chooseReplacement without resolvin
   assert.equal(result.state.pendingDecision?.type, "chooseReplacement");
   assert.equal(result.state.pendingDecision.playerId, p2);
   assert.deepEqual(result.state.pendingDecision.replacementIds, [
-    String(effectBlock.id),
+    `${String(target.instanceId)}:${String(effectBlock.id)}`,
   ]);
   assert.equal(
     result.state.eventJournal.some((event) => event.type === "effectResolved"),

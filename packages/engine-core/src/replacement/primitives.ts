@@ -60,11 +60,19 @@ export type FieldRemovalReplacementCandidate =
   SelectedTargetKoReplacementCandidate;
 
 export type DetectSelectedTargetKoReplacementCandidateResult =
-  | { ok: true; candidate?: SelectedTargetKoReplacementCandidate }
+  | {
+      ok: true;
+      candidate?: SelectedTargetKoReplacementCandidate;
+      candidates?: readonly SelectedTargetKoReplacementCandidate[];
+    }
   | { ok: false; error: EngineError };
 
 export type DetectFieldRemovalReplacementCandidateResult =
-  | { ok: true; candidate?: FieldRemovalReplacementCandidate }
+  | {
+      ok: true;
+      candidate?: FieldRemovalReplacementCandidate;
+      candidates?: readonly FieldRemovalReplacementCandidate[];
+    }
   | { ok: false; error: EngineError };
 
 type LocatedCard = {
@@ -506,6 +514,11 @@ const isReplacementTriggerEffect = (
   effect.trigger.type === "replacement" ||
   effect.effect.type === "replacement";
 
+const toReplacementCandidateId = (
+  source: LocatedReplacementSource,
+  effect: SupportedReplacementEffectBlock,
+): string => `${String(source.ref.instanceId)}:${String(effect.id)}`;
+
 export const isSupportedReplacementEffectBlock = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -605,11 +618,11 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
       return failure(effectId, "unsupported-ko-replacement-shape");
     }
 
-    const unused = supported.filter(
-      (effect) => !process.usedReplacementIds.includes(String(effect.id)),
-    );
-    if (unused.length === 0) continue;
-    for (const effect of unused) {
+    for (const effect of supported) {
+      const candidateId = toReplacementCandidateId(source, effect);
+      if (process.usedReplacementIds.includes(candidateId)) {
+        continue;
+      }
       if (
         isSupportedSelfKoDrawReplacementEffect(effect) &&
         (process.type !== "ko" ||
@@ -643,7 +656,7 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
         continue;
       }
       applicable.push({
-        id: String(effect.id),
+        id: candidateId,
         effectBlockId: effect.id,
         controllerId: source.card.controller,
         ...(effect.oncePerTurn === true ? { oncePerTurn: true } : {}),
@@ -654,7 +667,10 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
   }
   if (applicable.length === 0) return { ok: true };
   if (applicable.length > 1) {
-    return failure(effectId, "multiple-applicable-ko-replacements");
+    return {
+      ok: true,
+      candidates: applicable,
+    };
   }
   const candidate = applicable[0];
   if (candidate === undefined) return { ok: true };

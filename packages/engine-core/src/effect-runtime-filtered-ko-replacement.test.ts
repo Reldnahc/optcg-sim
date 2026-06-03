@@ -218,7 +218,7 @@ test("detects opponent-effect K.O.-only rest-self replacement through reusable t
   assert.deepEqual(detected, {
     ok: true,
     candidate: {
-      id: effectBlock.id,
+      id: `${String(replacementSource.instanceId)}:${String(effectBlock.id)}`,
       effectBlockId: effectBlock.id,
       controllerId: p2,
       source: cardRef(replacementSource, p2),

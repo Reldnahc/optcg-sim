@@ -52,6 +52,20 @@ export {
   detectSupportedSelectedTargetKoReplacementCandidate,
 };
 
+const replacementCandidatesFromDetection = (detected: {
+  candidate?: SelectedTargetKoReplacementCandidate;
+  candidates?: readonly SelectedTargetKoReplacementCandidate[];
+}): readonly SelectedTargetKoReplacementCandidate[] =>
+  detected.candidates ??
+  (detected.candidate === undefined ? [] : [detected.candidate]);
+
+const isReplacementCandidateArray = (
+  value:
+    | SelectedTargetKoReplacementCandidate
+    | readonly SelectedTargetKoReplacementCandidate[],
+): value is readonly SelectedTargetKoReplacementCandidate[] =>
+  Array.isArray(value);
+
 interface SelectedTargetKoReplacementPayload {
   effectId: string;
   queueEntryId?: EffectQueueEntry["id"];
@@ -263,24 +277,30 @@ export const pauseSelectedTargetKoReplacementProcess = (
   state: GameState,
   events: EngineEvent[],
   process: ReplacementProcess,
-  candidate: SelectedTargetKoReplacementCandidate,
+  candidatesInput:
+    | SelectedTargetKoReplacementCandidate
+    | readonly SelectedTargetKoReplacementCandidate[],
 ): { state: GameState; paused: true } => {
-  const replacementLabel = replacementOptionLabel(candidate);
+  const candidates = isReplacementCandidateArray(candidatesInput)
+    ? candidatesInput
+    : [candidatesInput];
+  const firstCandidate = candidates[0];
+  if (firstCandidate === undefined) {
+    throw new Error("Replacement process pause requires a candidate.");
+  }
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: toDecisionId(`decision:chooseReplacement:${process.id}`),
     type: "chooseReplacement",
-    playerId: candidate.controllerId,
+    playerId: firstCandidate.controllerId,
     prompt: "Choose replacement effect.",
     causedBy: process.causedBy,
-    visibility: { type: "private", playerId: candidate.controllerId },
+    visibility: { type: "private", playerId: firstCandidate.controllerId },
     processId: process.id,
-    replacementIds: [candidate.id],
-    replacementOptions: [
-      {
-        replacementId: candidate.id,
-        label: replacementLabel,
-      },
-    ],
+    replacementIds: candidates.map((candidate) => candidate.id),
+    replacementOptions: candidates.map((candidate) => ({
+      replacementId: candidate.id,
+      label: replacementOptionLabel(candidate),
+    })),
     mandatory: false,
   };
   appendEvent(
@@ -596,8 +616,10 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     process,
   );
   if (!detected.ok) return { error: detected.error };
-  const candidate = detected.candidate;
-  if (candidate === undefined || candidate.id !== replacementId) {
+  const candidate = replacementCandidatesFromDetection(detected).find(
+    (replacementCandidate) => replacementCandidate.id === replacementId,
+  );
+  if (candidate === undefined) {
     return {
       error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
     };

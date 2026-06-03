@@ -296,7 +296,10 @@ export const executeSelectedTargetFieldRemovalReplacementProcess = (
   if (!detected.ok) {
     return { error: detected.error };
   }
-  if (detected.candidate === undefined) {
+  const candidates =
+    detected.candidates ??
+    (detected.candidate === undefined ? [] : [detected.candidate]);
+  if (candidates.length === 0) {
     return executeUnreplacedSelectedTargetFieldRemovalProcess(
       state,
       events,
@@ -309,6 +312,6 @@ export const executeSelectedTargetFieldRemovalReplacementProcess = (
     state,
     events,
     currentProcess,
-    detected.candidate,
+    candidates,
   );
 };

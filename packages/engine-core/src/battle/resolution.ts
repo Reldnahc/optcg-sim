@@ -444,12 +444,15 @@ export const resolveSupportedVanillaBattle = (
       if (!replacement.ok) {
         return toEngineResult(state, [], [replacement.error]);
       }
-      if (replacement.candidate !== undefined) {
+      const replacementCandidates =
+        replacement.candidates ??
+        (replacement.candidate === undefined ? [] : [replacement.candidate]);
+      if (replacementCandidates.length > 0) {
         const paused = pauseFieldRemovalReplacementProcess(
           nextState,
           events,
           battleKoProcess,
-          replacement.candidate,
+          replacementCandidates,
         );
         assertGameStateInvariants(paused.state);
         return toEngineResult(paused.state, events);

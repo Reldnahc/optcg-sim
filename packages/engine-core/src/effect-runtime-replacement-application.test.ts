@@ -213,6 +213,13 @@ const pauseForReplacementDecision = () => {
   };
 };
 
+const replacementIdFromDecision = (
+  decision: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "chooseReplacement" }
+  >,
+): string => must(decision.replacementIds[0], "replacement id");
+
 const attachQueuedKoEffect = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -303,15 +310,16 @@ const pauseQueuedTargetKoForReplacementDecision = () => {
 
 const acceptReplacement = () => {
   const paused = pauseForReplacementDecision();
+  const replacementId = replacementIdFromDecision(paused.decision);
   const accepted = applyAction(paused.result.state, {
     type: "respondToDecision",
     decisionId: paused.decision.id,
     response: {
       type: "replacement",
-      replacementId: String(paused.effectBlock.id),
+      replacementId,
     },
   });
-  return { ...paused, accepted };
+  return { ...paused, accepted, replacementId };
 };
 
 const declineReplacement = () => {
@@ -385,19 +393,19 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
   );
   assert.deepEqual(replacementApplied.payload, {
     processId: first.decision.processId,
-    replacementId: String(first.effectBlock.id),
+    replacementId: first.replacementId,
     previousPayloadHash: hashCanonicalStateValue(storedProcess.payload),
     transformedPayloadHash: hashCanonicalStateValue({
       controllerId: p2,
       effect: { type: "draw", count: 1, player: "self" },
-      replacementId: String(first.effectBlock.id),
+      replacementId: first.replacementId,
       source: first.targetRef,
     }),
   });
   assert.deepEqual(replacementApplied.visibility, { type: "public" });
   assert.deepEqual(replacementApplied.causedBy, {
     type: "replacement",
-    replacementId: String(first.effectBlock.id),
+    replacementId: first.replacementId,
   });
   assert.equal(
     nextP2.characters.some(
@@ -438,7 +446,7 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
 
 test("accepted KO replacement marks the process used and rejects duplicate use without mutation", () => {
   const paused = pauseForReplacementDecision();
-  const replacementId = String(paused.effectBlock.id);
+  const replacementId = replacementIdFromDecision(paused.decision);
   const process = buildSelectedTargetKoReplacementProcess(
     paused.entry,
     paused.targetRef,
@@ -483,7 +491,7 @@ test("accepted KO replacement marks the process used and rejects duplicate use w
 
 test("accepted KO replacement allows the same replacement id on a separate process", () => {
   const paused = pauseForReplacementDecision();
-  const replacementId = String(paused.effectBlock.id);
+  const replacementId = replacementIdFromDecision(paused.decision);
   const firstProcess = buildSelectedTargetKoReplacementProcess(
     paused.entry,
     paused.targetRef,
@@ -566,7 +574,7 @@ test.each([
     const result = applyAction(paused.paused.state, {
       type: "respondToDecision",
       decisionId: paused.decision.id,
-      response: response(String(paused.replacementBlock.id)),
+      response: response(replacementIdFromDecision(paused.decision)),
     });
 
     assert.equal(result.errors, undefined);
@@ -637,7 +645,7 @@ test("chooseReplacement accepts canonical respondToDecision payload without play
     decisionId: paused.decision.id,
     response: {
       type: "replacement",
-      replacementId: String(paused.effectBlock.id),
+      replacementId: replacementIdFromDecision(paused.decision),
     },
   });
   assert.equal(accepted.errors, undefined);
@@ -655,7 +663,7 @@ test("chooseReplacement response validation accepts mandatory selected replaceme
     decisionId: paused.decision.id,
     response: {
       type: "replacement",
-      replacementId: String(paused.effectBlock.id),
+      replacementId: replacementIdFromDecision(paused.decision),
     },
   });
   const nextP2 = must(accepted.state.players[p2], "next p2");

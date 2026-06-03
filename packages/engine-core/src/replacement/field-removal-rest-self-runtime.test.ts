@@ -213,11 +213,13 @@ test("accepted opponent effect field-removal replacement rests its source Charac
   if (decision?.type !== "chooseReplacement") {
     assert.fail("expected chooseReplacement decision");
   }
+  const replacementId = must(decision.replacementIds[0], "replacement id");
+  assert.match(replacementId, new RegExp(`${fixture.effectId}$`, "u"));
 
   const accepted = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: decision.id,
-    response: { type: "replacement", replacementId: fixture.effectId },
+    response: { type: "replacement", replacementId },
   });
   const nextP2 = must(accepted.state.players[p2], "next p2");
   const nextReplacementSource = must(
