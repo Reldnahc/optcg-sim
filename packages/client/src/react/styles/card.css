@@ -247,7 +247,8 @@
 }
 
 .power-delta-negative,
-.cost-delta-negative {
+.cost-delta-negative,
+.keyword-badge-negative {
   color: #ff5f68;
 }
 

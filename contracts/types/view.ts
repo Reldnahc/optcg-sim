@@ -52,6 +52,7 @@ export interface PublicCardView {
   printedCost?: number;
   currentCost?: number;
   keywords?: Keyword[];
+  restrictions?: string[];
 }
 
 export interface PublicLifeView {

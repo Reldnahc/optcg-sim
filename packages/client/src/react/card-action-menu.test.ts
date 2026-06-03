@@ -474,6 +474,33 @@ describe("card action menu", () => {
     );
   });
 
+  test("renders field card restriction labels with the shared badge treatment", () => {
+    const layout = board();
+    layout.self.characters = [
+      {
+        ...card("self-character", "Restricted Character"),
+        restrictions: ["cannot-attack", "cannot-become-active"],
+      },
+    ];
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        selectedCardInstanceId: undefined,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*keyword-badges/u);
+    assert.match(markup, /class="[^"]*keyword-badge-negative/u);
+    assert.equal(markup.includes("can&#x27;t attack"), true);
+    assert.equal(markup.includes("no refresh"), true);
+  });
+
   test("power delta badge sits near the top-right power area", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "card.css"),

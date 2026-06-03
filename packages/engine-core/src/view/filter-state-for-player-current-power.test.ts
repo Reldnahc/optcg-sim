@@ -49,6 +49,20 @@ test("projects computed current power only for public board card views", () => {
       "blocker",
       { duration: { type: "permanent" } },
     ),
+    {
+      ...continuousKeywordEffectRecord(
+        state,
+        "player-view-character-cannot-attack",
+        p1Character,
+        "blocker",
+        { duration: { type: "permanent" } },
+      ),
+      modifier: {
+        layer: "restriction",
+        target: { type: "self" },
+        operation: { type: "restriction", restriction: "cannotAttack" },
+      },
+    },
   ];
 
   const beforeLeaderPower = must(
@@ -64,6 +78,14 @@ test("projects computed current power only for public board card views", () => {
   assert.deepEqual(must(view.self.characters[0], "self char").keywords, [
     "blocker",
   ]);
+  assert.deepEqual(
+    (
+      must(view.self.characters[0], "self char") as {
+        restrictions?: string[];
+      }
+    ).restrictions,
+    ["cannot-attack"],
+  );
   assert.equal(view.opponent.leader.currentPower, 5000);
   assert.equal(
     must(view.opponent.characters[0], "opponent char").currentPower,
@@ -117,6 +139,10 @@ test("projects computed current power only for public board card views", () => {
   assert.deepEqual(doubleAttackView.self.leader.keywords, ["doubleAttack"]);
   assert.equal(
     "keywords" in must(doubleAttackView.self.hand[0], "self hand"),
+    false,
+  );
+  assert.equal(
+    "restrictions" in must(doubleAttackView.self.hand[0], "self hand"),
     false,
   );
 });

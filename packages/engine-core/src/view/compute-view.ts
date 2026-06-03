@@ -203,7 +203,7 @@ const hasRestriction = (
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
     if (!durationIsActive(state, effect)) continue;
-    if (effect.condition !== undefined) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "restriction") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
     if (effect.modifier.operation.restriction !== restriction) continue;
@@ -211,6 +211,39 @@ const hasRestriction = (
     return true;
   }
   return false;
+};
+
+const restrictionLabel = (restriction: string): string | undefined => {
+  switch (restriction) {
+    case "cannotAttack":
+      return "cannot-attack";
+    case "cannotBlock":
+      return "cannot-block";
+    case "cannotBecomeActive":
+      return "cannot-become-active";
+    default:
+      return undefined;
+  }
+};
+
+const continuousRestrictionLabelsForCard = (
+  state: GameState,
+  card: CardInstance,
+): string[] => {
+  const restrictions: string[] = [];
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
+    if (!durationIsActive(state, effect)) continue;
+    if (effect.modifier.layer !== "restriction") continue;
+    if (effect.modifier.operation.type !== "restriction") continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    const label = restrictionLabel(effect.modifier.operation.restriction);
+    if (label !== undefined && !restrictions.includes(label)) {
+      restrictions.push(label);
+    }
+  }
+  return restrictions;
 };
 
 const continuousKeywordsForCard = (
@@ -421,6 +454,7 @@ const computeCardView = (
       : 0;
   const continuousPowerBonus = continuousPowerBonusForCard(state, card);
   const keywords = computedKeywordsForCard(state, card, metadata);
+  const restrictions = continuousRestrictionLabelsForCard(state, card);
   const fieldRemovalProtections = fieldRemovalProtectionsForCard(state, card);
   if (!fieldRemovalProtections.ok) {
     throw new TypeError(
@@ -442,6 +476,7 @@ const computeCardView = (
           currentCost: Math.max(0, baseCost + continuousCostBonus),
         }),
     keywords,
+    restrictions,
     canAttack: canAttackNow(state, card, keywords),
     canBlock: canBlockNow(state, card, keywords),
     cannotBeAttacked: false,

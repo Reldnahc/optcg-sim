@@ -277,6 +277,7 @@ export interface ComputedCardView {
   baseCost?: number;
   currentCost?: number;
   keywords: Keyword[];
+  restrictions: string[];
   canAttack: boolean;
   canBlock: boolean;
   cannotBeAttacked: boolean;

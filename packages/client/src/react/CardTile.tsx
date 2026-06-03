@@ -11,6 +11,7 @@ import type {
 const pointerReorderDragThreshold = 2;
 const handCardReorderDraggingClassName = "is-hand-card-reorder-dragging";
 type ClientKeyword = NonNullable<ClientCardModel["keywords"]>[number];
+type ClientRestriction = NonNullable<ClientCardModel["restrictions"]>[number];
 
 const keywordLabel = (keyword: ClientKeyword): string => {
   switch (keyword) {
@@ -26,6 +27,19 @@ const keywordLabel = (keyword: ClientKeyword): string => {
       return "blocker";
     case "unblockable":
       return "unblockable";
+  }
+};
+
+const restrictionLabel = (restriction: ClientRestriction): string => {
+  switch (restriction) {
+    case "cannot-attack":
+      return "can't attack";
+    case "cannot-block":
+      return "can't block";
+    case "cannot-become-active":
+      return "no refresh";
+    default:
+      return restriction;
   }
 };
 
@@ -137,6 +151,18 @@ export const CardTile = ({
     card.costDelta === undefined
       ? undefined
       : `${card.costDelta > 0 ? "+" : ""}${String(card.costDelta)}`;
+  const statusBadges = [
+    ...(card.keywords ?? []).map((keyword) => ({
+      id: `keyword:${keyword}`,
+      label: keywordLabel(keyword),
+      tone: "positive" as const,
+    })),
+    ...(card.restrictions ?? []).map((restriction) => ({
+      id: `restriction:${restriction}`,
+      label: restrictionLabel(restriction),
+      tone: "negative" as const,
+    })),
+  ];
   const pointerDragStyle =
     pointerDrag?.moved === true
       ? ({
@@ -425,14 +451,14 @@ export const CardTile = ({
             {costDeltaText}
           </span>
         )}
-        {card.keywords === undefined || card.keywords.length === 0 ? null : (
-          <span className="keyword-badges" aria-label="Card keywords">
-            {card.keywords.map((keyword) => (
+        {statusBadges.length === 0 ? null : (
+          <span className="keyword-badges" aria-label="Card status">
+            {statusBadges.map((badge) => (
               <span
-                key={keyword}
-                className="keyword-badge keyword-badge-positive"
+                key={badge.id}
+                className={`keyword-badge keyword-badge-${badge.tone}`}
               >
-                {keywordLabel(keyword)}
+                {badge.label}
               </span>
             ))}
           </span>

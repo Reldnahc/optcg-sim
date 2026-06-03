@@ -30,6 +30,7 @@ export interface ClientCardModel {
   currentCost?: number;
   costDelta?: number;
   keywords?: Keyword[];
+  restrictions?: string[];
   freshlyPlayedAttackRestricted?: boolean;
   state?: PublicCardView["state"];
   attachedDonCount: number;
@@ -160,6 +161,9 @@ const cardModel = (
     ...(card.keywords === undefined || card.keywords.length === 0
       ? {}
       : { keywords: [...card.keywords] }),
+    ...(card.restrictions === undefined || card.restrictions.length === 0
+      ? {}
+      : { restrictions: [...card.restrictions] }),
     ...(options.freshlyPlayedAttackRestricted === true
       ? { freshlyPlayedAttackRestricted: true }
       : {}),

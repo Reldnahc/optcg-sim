@@ -117,6 +117,7 @@ interface PublicCardView {
   state?: "active" | "rested";
   attachedDonCount: number;
   turnPlayed?: number;
+  restrictions?: string[];
 }
 
 interface PublicLifeView {

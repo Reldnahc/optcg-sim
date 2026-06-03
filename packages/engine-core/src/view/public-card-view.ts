@@ -14,6 +14,7 @@ export interface ComputedBoardCardStats {
   currentPower?: number;
   currentCost?: number;
   keywords?: readonly Keyword[];
+  restrictions?: readonly string[];
 }
 
 export const toPublicCardView = (card: CardInstance): PublicCardView => ({
@@ -53,6 +54,10 @@ export const toBoardPublicCardView = (
     computedStats.keywords.length === 0
       ? {}
       : { keywords: [...computedStats.keywords] }),
+    ...(computedStats?.restrictions === undefined ||
+    computedStats.restrictions.length === 0
+      ? {}
+      : { restrictions: [...computedStats.restrictions] }),
   };
 };
 
@@ -102,6 +107,9 @@ export const computedBoardCardStatsByInstance = (
           ? {}
           : { currentCost: card.currentCost }),
         ...(card.keywords.length === 0 ? {} : { keywords: card.keywords }),
+        ...(card.restrictions.length === 0
+          ? {}
+          : { restrictions: card.restrictions }),
       },
     ]),
   );
