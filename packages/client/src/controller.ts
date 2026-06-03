@@ -195,10 +195,7 @@ export const createMatchClientController = ({
     seat: ClientSeatIdentity,
     sessionToken?: string,
   ): Promise<MatchClientSessionState> => {
-    const existingSessionToken =
-      sessionToken ??
-      sessionStore.loadClaimedSeat()?.sessionToken ??
-      accountSessionToken;
+    const existingSessionToken = sessionToken ?? accountSessionToken;
     sessionStore.setCurrentSeat(seat);
     const claimed = await transport.claimSeat({
       ...seat,

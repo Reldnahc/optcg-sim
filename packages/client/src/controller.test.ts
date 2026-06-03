@@ -749,7 +749,7 @@ describe("match client controller", () => {
     );
   });
 
-  test("revalidates an existing seat credential when joining a match", async () => {
+  test("revalidates an existing seat with the current account token when joining a match", async () => {
     const transport = createFakeTransport();
     const sessionStore = createClientSessionStore({
       storage: createMemoryClientStorage(),
@@ -774,13 +774,13 @@ describe("match client controller", () => {
       {
         matchId: "match-1",
         playerId: "p1",
-        sessionToken: "existing-token-p1",
+        sessionToken: accountSessionToken,
       },
     ]);
     assert.deepEqual(controller.currentCredential(), {
       matchId: "match-1",
       playerId: "p1",
-      sessionToken: "existing-token-p1",
+      sessionToken: accountSessionToken,
     });
   });
 

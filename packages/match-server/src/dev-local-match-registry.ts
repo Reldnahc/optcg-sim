@@ -259,6 +259,19 @@ const syncActiveSessionPlayerLabels = (session: LocalDevMatchSession): void => {
   );
 };
 
+const refreshSeatSubject = (
+  seat: LocalDevMatchSeat,
+  subject: AuthContext["subject"],
+): void => {
+  seat.subject = {
+    ...seat.subject,
+    ...subject,
+    ...(subject.displayName === undefined
+      ? {}
+      : { displayName: subject.displayName }),
+  };
+};
+
 export const matchSeatsWithMatchId = (
   sourceSeats: Record<string, Omit<LocalDevMatchSeat, "matchId">>,
   matchId: MatchId,
@@ -458,6 +471,8 @@ export const createLocalDevMatchRegistry = async (
           return "unauthenticated";
         }
         if (subjectsMatch(seat.subject, auth.subject)) {
+          refreshSeatSubject(seat, auth.subject);
+          syncActiveSessionPlayerLabels(session);
           return {
             matchId,
             seat: {

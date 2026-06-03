@@ -157,6 +157,13 @@ export const createLocalDevLobbyRegistry = (
   ): LocalDevLobbySeat | "full" => {
     const existing = findSeatForAuth(lobby, auth);
     if (existing !== undefined) {
+      existing.subject = {
+        ...existing.subject,
+        ...auth.subject,
+        ...(auth.subject.displayName === undefined
+          ? {}
+          : { displayName: auth.subject.displayName }),
+      };
       return existing;
     }
     const open = Object.values(lobby.seats).find(
