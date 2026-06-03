@@ -94,12 +94,32 @@ export interface OpponentVisibleState {
 
 export type SpectatorVisiblePlayerState = OpponentVisibleState;
 
+export interface PublicDecisionChoicePresentation {
+  responseKey: string;
+  label: string;
+  description?: string;
+  cards?: CardRef[];
+  zones?: Zone[];
+  count?: { min: number; max: number };
+  disabled?: boolean;
+}
+
+export interface PublicDecisionPresentation {
+  title: string;
+  instruction: string;
+  source?: CardRef;
+  sourceLabel?: string;
+  effectText?: string;
+  choices?: PublicDecisionChoicePresentation[];
+}
+
 export interface PublicDecision<TType extends string = string> {
   id: DecisionId;
   type: TType;
   playerId: PlayerId;
   prompt: string;
   causedBy: CausalityRef;
+  presentation: PublicDecisionPresentation;
   source?: CardRef;
   timeoutMs?: number;
 }
@@ -180,7 +200,11 @@ export type PublicLegalAction =
   | { type: "useCounter"; card: CardRef; target: CardRef }
   | { type: "endMainPhase" }
   | { type: "concede"; playerId: PlayerId }
-  | { type: "respondToDecision"; decisionId: DecisionId };
+  | {
+      type: "respondToDecision";
+      decisionId: DecisionId;
+      responseKey?: string;
+    };
 
 export interface PublicRevealRecord {
   id: string;

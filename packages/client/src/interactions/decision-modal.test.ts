@@ -44,6 +44,10 @@ const baseDecision = {
   playerId: p1,
   prompt: "Choose cards",
   causedBy: { type: "playerAction", actionId: "action-1" },
+  presentation: {
+    title: "Choose cards",
+    instruction: "Choose cards",
+  },
 } satisfies Omit<PublicPendingDecision, "type">;
 
 const selectDecision = (): PublicSelectCardsDecision => ({

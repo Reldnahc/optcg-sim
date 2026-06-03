@@ -29,6 +29,10 @@ const payCostDecision = {
   playerId: "p1" as PlayerId,
   prompt: "Choose whether to pay this optional cost.",
   causedBy: { type: "ruleProcess", name: "privateCausality" },
+  presentation: {
+    title: "Pay cost",
+    instruction: "Choose whether to pay this optional cost",
+  },
 } satisfies PublicPendingDecision;
 
 describe("optional card-cost interaction", () => {
