@@ -149,6 +149,46 @@ describe("board view model", () => {
     assert.equal(p1Model.opponentConnectionStatus, "disconnected");
   });
 
+  test("projects game and disconnect timers for both player summaries", () => {
+    const view = minimalView();
+    view.timers = {
+      activePlayerId: p1,
+      players: {
+        [p1]: { remainingMs: 1_050_000, isRunning: true },
+        [p2]: { remainingMs: 65_000, isRunning: false },
+      },
+      disconnects: {
+        [p2]: { remainingMs: 119_000, isRunning: true },
+      },
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const p1Model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(p1Model.selfTimer, {
+      game: "17:30",
+      isRunning: true,
+    });
+    assert.deepEqual(p1Model.opponentTimer, {
+      game: "1:05",
+      isRunning: false,
+      disconnect: "1:59",
+    });
+  });
+
   test("builds zones and card-attached action menus from a filtered player view", () => {
     const snapshot: MatchSnapshot = {
       matchId: "match-1" as MatchId,

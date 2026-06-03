@@ -12,6 +12,13 @@ import {
   type LocalDevMatch,
 } from "./local-match.js";
 import {
+  advanceLocalDevMatchTimers,
+  applyLocalDevMatchTimerExpiries,
+  defaultMatchTimerPolicy,
+  initializeLocalDevMatchTimers,
+  type MatchTimerPolicy,
+} from "./match-timers.js";
+import {
   createMatchSessionService,
   type MatchSessionService,
 } from "./session-service.js";
@@ -119,6 +126,11 @@ export interface LocalDevMatchRegistry {
   applyEnvelope: (
     envelope: ClientActionEnvelope,
   ) => SessionActionResult | "matchNotFound";
+  advanceTimers: (input: {
+    readonly elapsedMs: number;
+    readonly connectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
+    readonly matchIds?: readonly MatchId[];
+  }) => readonly MatchId[];
   authorizeSeat: (
     auth: AuthContext | undefined,
     matchId: MatchId,
@@ -185,9 +197,11 @@ const resolvedFirstPlayerId = (
 const createActiveLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
   sessionService: MatchSessionService,
+  matchTimerPolicy: MatchTimerPolicy,
   firstPlayerChoice?: FirstPlayerChoiceState,
 ): ActiveLocalDevMatchSession => {
   const match = createLocalDevMatch(setup);
+  initializeLocalDevMatchTimers(match, matchTimerPolicy);
   const resolvedChoice =
     firstPlayerChoice ??
     ({
@@ -322,10 +336,12 @@ const previousLoserId = (
 export const createLocalDevMatchRegistry = async (
   createDefaultSetup: (matchId?: MatchId) => Promise<LocalDevMatchSetup>,
   initialSetup?: LocalDevMatchSetup,
+  options: { readonly matchTimerPolicy?: MatchTimerPolicy } = {},
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
   const sessionService = createMatchSessionService();
+  const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
   const createTemplateSetup = async (
     matchId: MatchId,
   ): Promise<LocalDevMatchSetup> => {
@@ -341,7 +357,11 @@ export const createLocalDevMatchRegistry = async (
   const defaultMatchId = defaultSetup.matchId;
   sessions.set(
     defaultMatchId,
-    createActiveLocalDevMatchSession(defaultSetup, sessionService),
+    createActiveLocalDevMatchSession(
+      defaultSetup,
+      sessionService,
+      matchTimerPolicy,
+    ),
   );
 
   const buildCreatedResponse = (
@@ -416,6 +436,7 @@ export const createLocalDevMatchRegistry = async (
       const session = createActiveLocalDevMatchSession(
         normalizedSetup,
         sessionService,
+        matchTimerPolicy,
       );
       sessions.set(matchId, session);
       return buildCreatedResponse(normalizedSetup, session);
@@ -449,6 +470,7 @@ export const createLocalDevMatchRegistry = async (
         ...createActiveLocalDevMatchSession(
           resolvedSetup,
           sessionService,
+          matchTimerPolicy,
           resolvedChoice,
         ),
         seats: session.seats,
@@ -543,6 +565,31 @@ export const createLocalDevMatchRegistry = async (
         };
       }
       return sessionService.applyEnvelope(envelope);
+    },
+    advanceTimers({ elapsedMs, connectedPlayerIds, matchIds }) {
+      const allowedMatchIds =
+        matchIds === undefined ? undefined : new Set(matchIds);
+      const changedMatchIds: MatchId[] = [];
+      for (const [matchId, session] of sessions) {
+        if (
+          session.status !== "active" ||
+          (allowedMatchIds !== undefined && !allowedMatchIds.has(matchId))
+        ) {
+          continue;
+        }
+        const result = advanceLocalDevMatchTimers(session.match, {
+          elapsedMs,
+          connectedPlayerIds: connectedPlayerIds(matchId),
+          policy: matchTimerPolicy,
+        });
+        if (result.expiries.length > 0) {
+          applyLocalDevMatchTimerExpiries(session.match, result.expiries);
+        }
+        if (result.changed || result.expiries.length > 0) {
+          changedMatchIds.push(matchId);
+        }
+      }
+      return changedMatchIds;
     },
     authorizeSeat(auth, matchId, playerId) {
       if (auth === undefined) {

@@ -2,7 +2,10 @@ import { useRef, type CSSProperties, type ReactNode } from "react";
 
 import type { AccountLoadout } from "../account-client.js";
 import type { LobbyClientState } from "../controller.js";
-import type { ClientActionModel } from "../view-model.js";
+import type {
+  ClientActionModel,
+  PlayerSummaryTimerModel,
+} from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
@@ -26,6 +29,8 @@ export interface ControlRailProps {
   disabled: boolean;
   selfLabel?: string | undefined;
   opponentLabel?: string | undefined;
+  selfTimer?: PlayerSummaryTimerModel | undefined;
+  opponentTimer?: PlayerSummaryTimerModel | undefined;
   selfConnectionStatus?: "connected" | "disconnected" | undefined;
   opponentConnectionStatus?: "connected" | "disconnected" | undefined;
   matchStatus?: string | undefined;
@@ -81,6 +86,8 @@ export const ControlRail = ({
   disabled,
   selfLabel = "Player",
   opponentLabel = "Opponent",
+  selfTimer,
+  opponentTimer,
   selfConnectionStatus,
   opponentConnectionStatus,
   matchStatus,
@@ -162,6 +169,7 @@ export const ControlRail = ({
         <PlayerSummaryLabel
           label={opponentLabel}
           status={opponentConnectionStatus}
+          timer={opponentTimer}
         />
       </section>
       <section className="controls-panel" style={controlsPanelStyle}>
@@ -486,7 +494,11 @@ export const ControlRail = ({
         </div>
       </section>
       <section className="summary-panel player-summary">
-        <PlayerSummaryLabel label={selfLabel} status={selfConnectionStatus} />
+        <PlayerSummaryLabel
+          label={selfLabel}
+          status={selfConnectionStatus}
+          timer={selfTimer}
+        />
       </section>
     </aside>
   );
@@ -495,18 +507,39 @@ export const ControlRail = ({
 const PlayerSummaryLabel = ({
   label,
   status,
+  timer,
 }: {
   label: string;
   status?: "connected" | "disconnected" | undefined;
+  timer?: PlayerSummaryTimerModel | undefined;
 }): React.JSX.Element => (
-  <h2>
-    <span className="player-name">{label}</span>
-    {status === undefined ? null : (
-      <span
-        className={`connection-status is-${status}`}
-        aria-label={`${label} ${status}`}
-        title={status === "connected" ? "Connected" : "Disconnected"}
-      />
+  <div className="player-summary-label">
+    <h2>
+      <span className="player-name">{label}</span>
+      {status === undefined ? null : (
+        <span
+          className={`connection-status is-${status}`}
+          aria-label={`${label} ${status}`}
+          title={status === "connected" ? "Connected" : "Disconnected"}
+        />
+      )}
+    </h2>
+    {timer === undefined ? null : (
+      <div className="player-timers" aria-label={`${label} timers`}>
+        <span
+          className={["game-timer", timer.isRunning ? "is-running" : ""]
+            .filter(Boolean)
+            .join(" ")}
+          title="Game timer"
+        >
+          {timer.game}
+        </span>
+        {timer.disconnect === undefined ? null : (
+          <span className="disconnect-timer" title="Reconnect timer">
+            {timer.disconnect}
+          </span>
+        )}
+      </div>
     )}
-  </h2>
+  </div>
 );

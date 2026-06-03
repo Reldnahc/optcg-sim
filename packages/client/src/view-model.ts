@@ -69,6 +69,8 @@ export interface BoardViewModel {
   playerId: PlayerId;
   selfLabel: string;
   opponentLabel: string;
+  selfTimer?: PlayerSummaryTimerModel;
+  opponentTimer?: PlayerSummaryTimerModel;
   selfConnectionStatus?: "connected" | "disconnected";
   opponentConnectionStatus?: "connected" | "disconnected";
   self: ClientPlayerZonesModel;
@@ -79,6 +81,12 @@ export interface BoardViewModel {
     attackerInstanceId: string;
     targetInstanceId: string;
   };
+}
+
+export interface PlayerSummaryTimerModel {
+  game: string;
+  isRunning: boolean;
+  disconnect?: string;
 }
 
 type LegacyPublicCardView = Omit<PublicCardView, "attachedDonIds"> & {
@@ -354,6 +362,31 @@ const playerConnectionStatus = (
 ): "connected" | "disconnected" | undefined =>
   snapshot.playerLabels?.[playerId]?.connectionStatus;
 
+const formatTimer = (remainingMs: number): string => {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes)}:${String(seconds).padStart(2, "0")}`;
+};
+
+const playerTimer = (
+  view: PlayerView,
+  playerId: PlayerId,
+): PlayerSummaryTimerModel | undefined => {
+  const timer = view.timers.players[playerId];
+  if (timer === undefined) {
+    return undefined;
+  }
+  const disconnect = view.timers.disconnects?.[playerId];
+  return {
+    game: formatTimer(timer.remainingMs),
+    isRunning: timer.isRunning,
+    ...(disconnect === undefined
+      ? {}
+      : { disconnect: formatTimer(disconnect.remainingMs) }),
+  };
+};
+
 export const createBoardViewModel = ({
   snapshot,
   catalog,
@@ -376,15 +409,19 @@ export const createBoardViewModel = ({
     snapshot,
     player.view.opponent.playerId,
   );
+  const selfTimer = playerTimer(player.view, playerId);
+  const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
+    ...(selfTimer === undefined ? {} : { selfTimer }),
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),
     opponentLabel: playerDisplayLabel(
       snapshot,
       player.view.opponent.playerId,
       "Opponent",
     ),
+    ...(opponentTimer === undefined ? {} : { opponentTimer }),
     ...(opponentConnectionStatus === undefined
       ? {}
       : { opponentConnectionStatus }),

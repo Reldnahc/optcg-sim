@@ -36,10 +36,27 @@ import {
   type LocalDevMatchRegistry,
 } from "./dev-local-match-registry.js";
 import {
+  defaultMatchTimerPolicy,
+  type MatchTimerPolicy,
+} from "./match-timers.js";
+import {
   parseWebSocketFrames,
   websocketAccept,
-  websocketTextFrame,
 } from "./dev-websocket-protocol.js";
+import {
+  clearConnectionHeartbeat,
+  clearConnectionIdleTimeout,
+  resetConnectionIdleTimeout,
+  sendSocketJson,
+  startConnectionHeartbeat,
+  type DevLobbySocketConnection,
+  type DevSocketConnection,
+} from "./dev-socket-connections.js";
+import {
+  connectedPlayerIdsForMatch,
+  snapshotWithConnectionStatuses,
+} from "./dev-match-connection-state.js";
+import { advanceMatchTimersAndBroadcast } from "./dev-match-timer-broadcast.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 
@@ -72,9 +89,12 @@ export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOp
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;
+  readonly matchTimerPolicy?: MatchTimerPolicy;
+  readonly matchTimerTickMs?: number;
 }
 
 const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
+const defaultMatchTimerTickMs = 1_000;
 
 const sendJson = (
   response: ServerResponse,
@@ -512,114 +532,6 @@ const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
   return Promise.resolve();
 };
 
-interface DevSocketBaseConnection {
-  socket: Duplex;
-  serverSeq: number;
-  heartbeat?: ReturnType<typeof setInterval>;
-  idleTimeout?: ReturnType<typeof setTimeout>;
-}
-
-interface DevSocketConnection extends DevSocketBaseConnection {
-  matchId: MatchId;
-  playerId: PlayerId;
-}
-
-interface DevLobbySocketConnection extends DevSocketBaseConnection {
-  lobbyId: string;
-  playerId: PlayerId;
-}
-
-const sendSocketJson = (
-  connection: DevSocketBaseConnection,
-  payload: Record<string, unknown>,
-): void => {
-  if (connection.socket.destroyed || connection.socket.writableEnded) {
-    return;
-  }
-  connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
-};
-
-const clearConnectionHeartbeat = (
-  connection: DevSocketBaseConnection,
-): void => {
-  if (connection.heartbeat === undefined) {
-    return;
-  }
-  clearInterval(connection.heartbeat);
-  delete connection.heartbeat;
-};
-
-const clearConnectionIdleTimeout = (
-  connection: DevSocketBaseConnection,
-): void => {
-  if (connection.idleTimeout === undefined) {
-    return;
-  }
-  clearTimeout(connection.idleTimeout);
-  delete connection.idleTimeout;
-};
-
-const resetConnectionIdleTimeout = (
-  connection: DevSocketBaseConnection,
-  idleTimeoutMs: number,
-): void => {
-  clearConnectionIdleTimeout(connection);
-  connection.idleTimeout = setTimeout(() => {
-    connection.socket.end();
-  }, idleTimeoutMs);
-  connection.idleTimeout.unref();
-};
-
-const startConnectionHeartbeat = (
-  connection: DevSocketBaseConnection,
-  type: "heartbeat" | "lobbyHeartbeat",
-): void => {
-  connection.heartbeat = setInterval(() => {
-    sendSocketJson(connection, {
-      type,
-      serverSeq: ++connection.serverSeq,
-    });
-  }, 25_000);
-  connection.heartbeat.unref();
-};
-
-const playerConnectionStatus = (
-  matchId: MatchId,
-  playerId: PlayerId,
-  connections: ReadonlySet<DevSocketConnection>,
-): "connected" | "disconnected" => {
-  for (const connection of connections) {
-    if (
-      connection.matchId === matchId &&
-      connection.playerId === playerId &&
-      !connection.socket.destroyed &&
-      !connection.socket.writableEnded
-    ) {
-      return "connected";
-    }
-  }
-  return "disconnected";
-};
-
-const snapshotWithConnectionStatuses = (
-  snapshot: ReturnType<typeof getLocalDevSnapshotForPlayer>,
-  match: LocalDevMatch,
-  matchId: MatchId,
-  connections: ReadonlySet<DevSocketConnection>,
-): ReturnType<typeof getLocalDevSnapshotForPlayer> => {
-  const playerLabels = { ...(snapshot.playerLabels ?? {}) };
-  for (const playerId of Object.keys(match.state.players) as PlayerId[]) {
-    playerLabels[playerId] = {
-      ...(playerLabels[playerId] ?? {}),
-      connectionStatus: playerConnectionStatus(matchId, playerId, connections),
-    };
-  }
-  return {
-    ...snapshot,
-    playerLabels,
-  };
-};
-
 const playerStatePayload = (
   match: LocalDevMatch,
   connection: DevSocketConnection,
@@ -842,10 +754,20 @@ const handleWebSocketUpgrade = (
   connections.add(connection);
   startConnectionHeartbeat(connection, "heartbeat");
   resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
+  registry.advanceTimers({
+    elapsedMs: 0,
+    connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
+    matchIds: [matchId],
+  });
   socket.on("close", () => {
     clearConnectionHeartbeat(connection);
     clearConnectionIdleTimeout(connection);
     connections.delete(connection);
+    registry.advanceTimers({
+      elapsedMs: 0,
+      connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
+      matchIds: [matchId],
+    });
     broadcastMatchState(matchId, registry, connections);
   });
   if (match === undefined) {
@@ -945,11 +867,15 @@ export const createDevHttpServer = async (
   const registry = await createLocalDevMatchRegistry(
     createDefaultSetup,
     options.setup,
+    {
+      matchTimerPolicy: options.matchTimerPolicy ?? defaultMatchTimerPolicy,
+    },
   );
   const lobbyRegistry = createLocalDevLobbyRegistry(registry, options);
   const authProvider = createDevAuthProvider();
   const socketIdleTimeoutMs =
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
+  const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
   const simHandoffVerifier =
     options.simHandoffVerifier ??
     createPoneglyphSimHandoffVerifier({
@@ -959,6 +885,21 @@ export const createDevHttpServer = async (
     });
   const socketConnections = new Set<DevSocketConnection>();
   const lobbySocketConnections = new Set<DevLobbySocketConnection>();
+  let lastMatchTimerTickMs = Date.now();
+  const matchTimerInterval = setInterval(() => {
+    const now = Date.now();
+    const elapsedMs = Math.max(0, now - lastMatchTimerTickMs);
+    lastMatchTimerTickMs = now;
+    advanceMatchTimersAndBroadcast(
+      registry,
+      socketConnections,
+      elapsedMs,
+      (matchId) => {
+        broadcastMatchState(matchId, registry, socketConnections);
+      },
+    );
+  }, matchTimerTickMs);
+  matchTimerInterval.unref();
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
@@ -1003,6 +944,7 @@ export const createDevHttpServer = async (
       });
     },
     close: async () => {
+      clearInterval(matchTimerInterval);
       for (const connection of socketConnections) {
         clearConnectionHeartbeat(connection);
         clearConnectionIdleTimeout(connection);

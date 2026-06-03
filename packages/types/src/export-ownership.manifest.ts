@@ -79,6 +79,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   EngineEventType: "TYP-001C",
   CausalityRef: "TYP-001C",
   PlayerGameTimer: "TYP-001F",
+  PlayerDisconnectTimer: "TYP-001F",
   TimerState: "TYP-001F",
   PublicTimerState: "TYP-001F",
   SequenceSegmentResultMap: "TYP-007B",

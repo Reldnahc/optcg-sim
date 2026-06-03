@@ -31,19 +31,22 @@ export interface PlayerGameTimer {
   isRunning: boolean;
 }
 
+export interface PlayerDisconnectTimer {
+  playerId: PlayerId;
+  remainingMs: number;
+  isRunning: boolean;
+}
+
 export interface TimerState {
   drainingPlayerId?: PlayerId;
   players: Record<PlayerId, PlayerGameTimer>;
-  disconnect?: {
-    playerId: PlayerId;
-    startedAt: string;
-    expiresAt: string;
-  };
+  disconnects?: Record<PlayerId, PlayerDisconnectTimer>;
 }
 
 export interface PublicTimerState {
   activePlayerId?: PlayerId;
   players: Record<PlayerId, { remainingMs: number; isRunning: boolean }>;
+  disconnects?: Record<PlayerId, { remainingMs: number; isRunning: boolean }>;
 }
 
 export interface RngState {

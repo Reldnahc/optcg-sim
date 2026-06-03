@@ -347,14 +347,16 @@ interface PlayerGameTimer {
   isRunning: boolean;
 }
 
+interface PlayerDisconnectTimer {
+  playerId: PlayerId;
+  remainingMs: number;
+  isRunning: boolean;
+}
+
 interface TimerState {
   drainingPlayerId?: PlayerId;
   players: Record<PlayerId, PlayerGameTimer>;
-  disconnect?: {
-    playerId: PlayerId;
-    startedAt: string;
-    expiresAt: string;
-  };
+  disconnects?: Record<PlayerId, PlayerDisconnectTimer>;
 }
 ```
 

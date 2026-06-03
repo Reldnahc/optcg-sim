@@ -26,7 +26,25 @@ interface ClaimedDevSeatBody {
 interface StateSyncMessage {
   type?: string;
   snapshot?: {
+    status?: string;
     playerLabels?: Record<string, { connectionStatus?: string }>;
+    players?: Record<
+      string,
+      {
+        view?: {
+          timers?: {
+            players?: Record<
+              string,
+              { remainingMs?: number; isRunning?: boolean }
+            >;
+            disconnects?: Record<
+              string,
+              { remainingMs?: number; isRunning?: boolean }
+            >;
+          };
+        };
+      }
+    >;
   };
 }
 
@@ -36,7 +54,14 @@ interface TestSocket {
 }
 
 const createFixtureDevHttpServer = async (
-  options: { readonly socketIdleTimeoutMs?: number } = {},
+  options: {
+    readonly socketIdleTimeoutMs?: number;
+    readonly matchTimerPolicy?: {
+      readonly gameTimeMs: number;
+      readonly disconnectGraceMs: number;
+    };
+    readonly matchTimerTickMs?: number;
+  } = {},
 ) =>
   createDevHttpServer({
     setup: await createFixtureDevMatchSetup(),
@@ -154,7 +179,7 @@ const openSocket = async (url: string): Promise<TestSocket> =>
               messageReject(
                 new Error("Timed out waiting for WebSocket message."),
               );
-            }, 1000);
+            }, 3000);
             waiters.push((message) => {
               clearTimeout(timeout);
               messageResolve(message);
@@ -166,6 +191,26 @@ const openSocket = async (url: string): Promise<TestSocket> =>
       reject(new Error("WebSocket failed to open."));
     });
   });
+
+const waitForSocketClose = async (socket: WebSocket): Promise<void> => {
+  await new Promise<void>((resolve, reject) => {
+    if (socket.readyState === WebSocket.CLOSED) {
+      resolve();
+      return;
+    }
+    const timeout = setTimeout(() => {
+      reject(new Error("Timed out waiting for WebSocket close."));
+    }, 3000);
+    socket.addEventListener(
+      "close",
+      () => {
+        clearTimeout(timeout);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+};
 
 const connectionStatus = (
   message: StateSyncMessage,
@@ -241,7 +286,7 @@ describe("dev HTTP server websocket presence", () => {
 
   test("idle match sockets close and mark that player disconnected without ending the match", async () => {
     const server = await createFixtureDevHttpServer({
-      socketIdleTimeoutMs: 50,
+      socketIdleTimeoutMs: 500,
     });
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
@@ -259,8 +304,9 @@ describe("dev HTTP server websocket presence", () => {
       await p1Socket.next();
       await p2Socket.next();
 
-      await new Promise((resolve) => setTimeout(resolve, 25));
+      await new Promise((resolve) => setTimeout(resolve, 250));
       p2Socket.socket.send("{}");
+      await waitForSocketClose(p1Socket.socket);
       const p2Update = await nextStateSyncWithStatus(
         p2Socket,
         "p1",
@@ -318,6 +364,61 @@ describe("dev HTTP server websocket presence", () => {
 
       assert.equal(connectionStatus(reconnectedUpdate, "p1"), "connected");
       assert.equal(connectionStatus(reconnectedUpdate, "p2"), "connected");
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
+      await server.close();
+    }
+  });
+
+  test("disconnect grace timer is visible and auto-concedes after expiry", async () => {
+    const server = await createFixtureDevHttpServer({
+      matchTimerPolicy: { gameTimeMs: 1_000, disconnectGraceMs: 250 },
+      matchTimerTickMs: 10,
+    });
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = await createReadyDevMatch(server);
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p2Token = await claimDevSeat(server, match.matchId, "p2");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      const p2Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      sockets.push(p1Socket.socket, p2Socket.socket);
+      await p1Socket.next();
+      await p2Socket.next();
+
+      p1Socket.socket.close();
+
+      const disconnectedUpdate = await nextStateSyncWithStatus(
+        p2Socket,
+        "p1",
+        "disconnected",
+      );
+      const visibleDisconnectTimer =
+        disconnectedUpdate.snapshot?.players?.["p2"]?.view?.timers
+          ?.disconnects?.["p1"];
+      assert.ok(visibleDisconnectTimer !== undefined);
+      assert.equal(visibleDisconnectTimer.isRunning, true);
+      const remainingDisconnectMs = visibleDisconnectTimer.remainingMs;
+      assert.ok(remainingDisconnectMs !== undefined);
+      assert.ok(remainingDisconnectMs <= 250);
+
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const update = await nextStateSync(p2Socket);
+        if (update.snapshot?.status === "completed") {
+          const completedP1Timer =
+            update.snapshot.players?.["p2"]?.view?.timers?.players?.["p1"];
+          assert.equal(completedP1Timer?.isRunning, false);
+          return;
+        }
+      }
+      throw new Error("Timed out waiting for disconnect auto-concede.");
     } finally {
       for (const socket of sockets) {
         socket.close();
