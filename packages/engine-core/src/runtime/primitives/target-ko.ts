@@ -32,6 +32,7 @@ import {
   normalizeSelectedTargetKoProcess,
   pauseSelectedTargetKoReplacementProcess,
 } from "../../effect-runtime-ko-replacement-process.js";
+import { moveFieldCardToOwnerHand } from "../../movement/field-to-hand.js";
 import { applyFieldRemovalProtection } from "../../replacement/field-removal-protection.js";
 
 export type SelectedTargetKoExecutionFailureReason =
@@ -275,6 +276,120 @@ export const executeUnreplacedSelectedTargetKoProcess = (
   effectId: string,
   process: ReplacementProcess,
 ): { state: GameState } | { error: EngineError } => {
+  return executeUnreplacedSelectedTargetFieldRemovalProcess(
+    state,
+    events,
+    effectId,
+    process,
+  );
+};
+
+const isMoveFromFieldToHandProcess = (process: ReplacementProcess): boolean => {
+  if (process.type !== "moveZone") {
+    return false;
+  }
+  const payload = process.payload;
+  if (typeof payload !== "object" || payload === null) {
+    return false;
+  }
+  if (!("fieldRemovalAttempt" in payload)) {
+    return false;
+  }
+  const attempt = payload.fieldRemovalAttempt;
+  return (
+    typeof attempt === "object" &&
+    attempt !== null &&
+    "classification" in attempt &&
+    attempt.classification === "moveFromFieldToHand"
+  );
+};
+
+const executeUnreplacedSelectedTargetMoveToHandProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+): { state: GameState } | { error: EngineError } => {
+  const target = process.target;
+  if (!isMoveFromFieldToHandProcess(process) || target === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(
+        effectId,
+        "unsupported-effect-shape",
+      ),
+    };
+  }
+
+  const located = findCardByInstanceId(state, target.instanceId);
+  if (
+    located === null ||
+    (located.zone !== "characterArea" && located.zone !== "stageArea")
+  ) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "stale-target"),
+    };
+  }
+
+  const player = state.players[located.playerId];
+  if (player === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "missing-card"),
+    };
+  }
+
+  const targetIndex =
+    located.zone === "characterArea"
+      ? player.characters.findIndex(
+          (candidate) => candidate.instanceId === located.card.instanceId,
+        )
+      : player.stage?.instanceId === located.card.instanceId
+        ? 0
+        : -1;
+  const movedCard =
+    located.zone === "characterArea"
+      ? player.characters[targetIndex]
+      : player.stage;
+  if (targetIndex < 0 || movedCard === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "stale-target"),
+    };
+  }
+
+  const protection = applyFieldRemovalProtection(state, movedCard, process);
+  if (!protection.ok) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, protection.reason),
+    };
+  }
+  if (protection.prevented) {
+    return { state };
+  }
+
+  return moveFieldCardToOwnerHand({
+    card: movedCard,
+    causedBy: process.causedBy,
+    events,
+    playerId: located.playerId,
+    sourceZone: located.zone,
+    state,
+  });
+};
+
+export const executeUnreplacedSelectedTargetFieldRemovalProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+): { state: GameState } | { error: EngineError } => {
+  if (process.type === "moveZone") {
+    return executeUnreplacedSelectedTargetMoveToHandProcess(
+      state,
+      events,
+      effectId,
+      process,
+    );
+  }
+
   const target = process.target;
   if (process.type !== "ko" || target === undefined) {
     return {
@@ -380,7 +495,7 @@ export const executeUnreplacedSelectedTargetKoProcess = (
   return { state: movedResult.state };
 };
 
-const executeSelectedTargetKoReplacementProcess = (
+export const executeSelectedTargetFieldRemovalReplacementProcess = (
   state: GameState,
   events: EngineEvent[],
   effectId: string,
@@ -395,7 +510,7 @@ const executeSelectedTargetKoReplacementProcess = (
     return { error: detected.error };
   }
   if (detected.candidate === undefined) {
-    return executeUnreplacedSelectedTargetKoProcess(
+    return executeUnreplacedSelectedTargetFieldRemovalProcess(
       state,
       events,
       effectId,
@@ -552,7 +667,7 @@ const executeSelectedTargetKoEffect = (
       target,
       targetIndex,
     );
-    const resolvedProcess = executeSelectedTargetKoReplacementProcess(
+    const resolvedProcess = executeSelectedTargetFieldRemovalReplacementProcess(
       nextState,
       events,
       entry.effectBlockId,

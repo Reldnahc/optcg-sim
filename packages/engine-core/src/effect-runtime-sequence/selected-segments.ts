@@ -16,6 +16,10 @@ import {
   reindexZoneCards,
 } from "../actions/state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import {
+  buildSelectedTargetMoveZoneReplacementProcess,
+  executeSelectedTargetFieldRemovalReplacementProcess,
+} from "../runtime/primitives/execute.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
@@ -576,6 +580,7 @@ export const applyBounceToOwnerHandSequenceSegment = (params: {
       events: EngineEvent[];
       ledgers: SegmentLedgers;
       ok: true;
+      paused?: true;
       state: GameState;
     }
   | { ok: false } => {
@@ -587,7 +592,7 @@ export const applyBounceToOwnerHandSequenceSegment = (params: {
   let nextState = params.state;
   const events: EngineEvent[] = [];
   const movedTargets: CardRef[] = [];
-  for (const selectedTarget of selected.targets) {
+  for (const [targetIndex, selectedTarget] of selected.targets.entries()) {
     const target = selectedTarget.object;
     const player = nextState.players[target.playerId];
     if (player === undefined || target.zone?.zone !== "characterArea") {
@@ -599,62 +604,40 @@ export const applyBounceToOwnerHandSequenceSegment = (params: {
     if (card === undefined) {
       continue;
     }
-    const attachedDonIds = new Set(card.attachedDon);
-    const nextCharacters = reindexZoneCards(
-      player.characters.filter(
-        (candidate) => candidate.instanceId !== card.instanceId,
-      ),
-      "characterArea",
-      target.playerId,
-      "character",
-    );
-    const nextHand = addCardsToHand(
-      player.hand,
-      [{ ...card, attachedDon: [] }],
-      target.playerId,
-    );
-    const nextCostArea = player.costArea.map((don) =>
-      attachedDonIds.has(don.instanceId)
-        ? { ...don, state: "rested" as const }
-        : don,
-    );
-    const eventBaseState: GameState = {
-      ...nextState,
-      players: {
-        ...nextState.players,
-        [target.playerId]: {
-          ...player,
-          characters: nextCharacters,
-          costArea: nextCostArea,
-          hand: nextHand,
-        },
-      },
-    };
-    const movedCard = nextHand.find(
-      (candidate) => candidate.instanceId === card.instanceId,
-    );
-    appendEvent(
-      eventBaseState,
+    const process = buildSelectedTargetMoveZoneReplacementProcess({
+      classification: "moveFromFieldToHand",
+      entry: params.entry,
+      target,
+      targetIndex,
+    });
+    const resolved = executeSelectedTargetFieldRemovalReplacementProcess(
+      nextState,
       events,
-      "cardMoved",
-      {
-        instanceId: card.instanceId,
-        cardId: card.cardId,
-        from: card.zone,
-        to: movedCard?.zone,
-        reason: "effect",
-      },
-      { type: "public" },
+      params.entry.effectBlockId,
+      process,
     );
-    const event = events[events.length - 1];
-    if (event !== undefined) {
-      event.causedBy = {
-        type: "effect",
-        queueEntryId: params.entry.id,
-        effectId: params.entry.effectBlockId,
+    if ("error" in resolved) {
+      return { ok: false };
+    }
+    if (resolved.paused === true) {
+      return {
+        events,
+        ledgers: {
+          ...params.ledgers,
+          segmentResults: {
+            ...params.ledgers.segmentResults,
+            [params.segmentKey(params.segment, params.index)]: {
+              ...params.emptySegmentResult(),
+              attempted: true,
+            },
+          },
+        },
+        ok: true,
+        paused: true,
+        state: resolved.state,
       };
     }
-    nextState = eventBaseState;
+    nextState = resolved.state;
     movedTargets.push(target);
   }
   return {

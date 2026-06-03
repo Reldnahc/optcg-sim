@@ -53,7 +53,7 @@ interface SelectedTargetKoReplacementPayload {
   target: CardRef;
   fieldRemovalAttempt: {
     processFamily: "fieldRemoval";
-    classification: "moveFromFieldToTrash";
+    classification: "moveFromFieldToHand" | "moveFromFieldToTrash";
     sourceKind: "battle" | "cardEffect";
     sourceControllerId: PlayerId;
   };
@@ -157,6 +157,37 @@ export const buildSelectedTargetKoReplacementProcess = (
     sourceControllerId: entry.controllerId,
   });
 
+export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
+  classification: "moveFromFieldToHand";
+  entry: EffectQueueEntry;
+  target: CardRef;
+  targetIndex: number;
+}): ReplacementProcess => {
+  const payload: SelectedTargetKoReplacementPayload = {
+    effectId: params.entry.effectBlockId,
+    queueEntryId: params.entry.id,
+    source: params.entry.source,
+    target: params.target,
+    fieldRemovalAttempt: {
+      processFamily: "fieldRemoval",
+      classification: params.classification,
+      sourceKind: "cardEffect",
+      sourceControllerId: params.entry.controllerId,
+    },
+  };
+  return {
+    id: `${params.entry.id}:moveZone:${params.target.instanceId}:${String(
+      params.targetIndex,
+    )}`,
+    type: "moveZone",
+    source: params.entry.source,
+    target: params.target,
+    payload,
+    causedBy: params.entry.causedBy,
+    usedReplacementIds: [],
+  };
+};
+
 const findKoTargetByInstanceId = (
   state: GameState,
   instanceId: CardInstance["instanceId"],
@@ -183,7 +214,10 @@ export const normalizeSelectedTargetKoProcess = (
   process: ReplacementProcess,
 ): ReplacementProcess => {
   const target = process.target;
-  if (process.type !== "ko" || target === undefined) {
+  if (
+    (process.type !== "ko" && process.type !== "moveZone") ||
+    target === undefined
+  ) {
     return process;
   }
   const located = findKoTargetByInstanceId(state, target.instanceId);
@@ -484,6 +518,45 @@ const replacementInsteadTransformedPayload = (
   replacementId: candidate.id,
   source: candidate.source,
 });
+
+const currentPublicFieldRefForInstance = (
+  state: GameState,
+  source: CardRef,
+): CardRef | undefined => {
+  for (const [playerId, player] of Object.entries(state.players) as [
+    PlayerId,
+    GameState["players"][PlayerId],
+  ][]) {
+    if (player.leader.instanceId === source.instanceId) {
+      return {
+        instanceId: player.leader.instanceId,
+        cardId: player.leader.cardId,
+        playerId,
+        zone: player.leader.zone,
+      };
+    }
+    const character = player.characters.find(
+      (card) => card.instanceId === source.instanceId,
+    );
+    if (character !== undefined) {
+      return {
+        instanceId: character.instanceId,
+        cardId: character.cardId,
+        playerId,
+        zone: character.zone,
+      };
+    }
+    if (player.stage?.instanceId === source.instanceId) {
+      return {
+        instanceId: player.stage.instanceId,
+        cardId: player.stage.cardId,
+        playerId,
+        zone: player.stage.zone,
+      };
+    }
+  }
+  return undefined;
+};
 
 export const executeAcceptedSelectedTargetKoReplacementProcess = (
   state: GameState,
@@ -809,7 +882,8 @@ const executeReplacementInsteadEffect = (
     });
   }
   if (isSupportedRestSelfInsteadEffect(effect)) {
-    const rested = restFieldObjects(state, [entry.source]);
+    const source = currentPublicFieldRefForInstance(state, entry.source);
+    const rested = restFieldObjects(state, [source ?? entry.source]);
     return toEngineResult(rested.state, []);
   }
   return executeNoChoiceEffectPrimitive(state, entry, effect, {

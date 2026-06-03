@@ -133,8 +133,30 @@ export const applyFieldMutationSequenceSegment = (params: {
     if (!bounced.ok) {
       return { handled: true, ok: false };
     }
+    const nextEvents = [...events, ...bounced.events];
+    if (
+      bounced.paused === true &&
+      bounced.state.pendingDecision !== undefined
+    ) {
+      const frame = frameForPausedSequenceDecision({
+        decision: bounced.state.pendingDecision,
+        entry,
+        effectPath: [...effectPath],
+        index,
+        savedReferences: bounced.ledgers.savedReferences,
+        segmentResults: bounced.ledgers.segmentResults,
+        state: bounced.state,
+      });
+      return {
+        events: nextEvents,
+        handled: true,
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(bounced.state, entry, frame),
+      };
+    }
     return {
-      events: [...events, ...bounced.events],
+      events: nextEvents,
       handled: true,
       kind: "continue",
       ledgers: bounced.ledgers,

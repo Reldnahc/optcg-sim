@@ -5,6 +5,7 @@ import { finalizeSelectedTargetEffectResolution } from "../effect-runtime.js";
 import { applyReplacementRestTargetDecisionResponse } from "./rest-target-decision.js";
 import { applyReplacementTrashFromHandDecisionResponse } from "./trash-from-hand-actions.js";
 import { toEngineResult } from "../action-results.js";
+import { resumeSequenceFrameAfterReplacement } from "../effect-runtime-sequence/frames.js";
 
 const queueEntryIdFromReplacementPayload = (
   payload: unknown,
@@ -53,10 +54,25 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
   }
   const completedPayload = replacementRestTargetResult.completedPayload;
   const queuedEntryId = queueEntryIdFromReplacementPayload(completedPayload);
-  const queuedEntry =
+  const frameFromQueueEntry =
     queuedEntryId === undefined
       ? undefined
-      : state.effectQueue.find((entry) => entry.id === queuedEntryId);
+      : (result.state.effectExecutionFrames.find(
+          (frame) => frame.queueEntryId === queuedEntryId,
+        ) ??
+        state.effectExecutionFrames.find(
+          (frame) => frame.queueEntryId === queuedEntryId,
+        ));
+  const pausedFrame =
+    frameFromQueueEntry ??
+    (state.effectExecutionFrames.length === 1
+      ? state.effectExecutionFrames[0]
+      : undefined);
+  const queuedEntryIdFromFrame = pausedFrame?.queueEntryId;
+  const queuedEntry =
+    queuedEntryIdFromFrame === undefined
+      ? undefined
+      : state.effectQueue.find((entry) => entry.id === queuedEntryIdFromFrame);
   const nextState: GameState = {
     ...result.state,
     actionSeq: state.actionSeq + 1,
@@ -67,6 +83,34 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
       nextState,
       result.events,
     );
+  }
+  if (queuedEntry !== undefined && pausedFrame !== undefined) {
+    const resumeState = nextState.effectExecutionFrames.some(
+      (frame) =>
+        frame.pendingDecision.decisionId ===
+        pausedFrame.pendingDecision.decisionId,
+    )
+      ? nextState
+      : {
+          ...nextState,
+          effectExecutionFrames: [
+            ...nextState.effectExecutionFrames,
+            pausedFrame,
+          ],
+        };
+    const resumed = resumeSequenceFrameAfterReplacement(
+      resumeState,
+      pausedFrame.pendingDecision.decisionId,
+    );
+    if (resumed !== undefined) {
+      if (!resumed.ok) {
+        return toEngineResult(state, [], [resumed.error]);
+      }
+      return toEngineResult(resumed.state, [
+        ...result.events,
+        ...resumed.events,
+      ]);
+    }
   }
   return queuedEntry === undefined
     ? toEngineResult(nextState, result.events)

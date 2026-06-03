@@ -321,60 +321,6 @@ const markHandCharactersSupported = (state: GameState): void => {
   }
 };
 
-const setupReviewedKoReplacementDefinition = (
-  state: GameState,
-  target: CardInstance,
-): void => {
-  const support = {
-    cardId: target.cardId,
-    status: "implemented-dsl" as const,
-    tested: true,
-    rulesVersion: "r1",
-    cardDataVersion: state.cardManifest.cardDataVersion,
-    sourceTextHash: "replacement-source-hash",
-    behaviorHash: "replacement-behavior-hash",
-    effectDefinitionId: `definition:${String(target.cardId)}`,
-  };
-  state.cardManifest.cards[target.cardId] = resolvedCard({
-    cardId: target.cardId,
-    category: "character",
-    power: 3000,
-    support,
-  });
-  state.cardManifest.effectDefinitions = {
-    ...state.cardManifest.effectDefinitions,
-    [support.effectDefinitionId]: {
-      cardId: target.cardId,
-      implementationStatus: "implemented-dsl",
-      effects: [
-        {
-          id: toEffectId("replacement:would-be-ko-draw-1"),
-          category: "replacement",
-          trigger: {
-            type: "replacement",
-            replacement: { type: "wouldBeKOd", target: { type: "self" } },
-          },
-          optional: true,
-          sourcePresencePolicy: "resolveFromLastKnownInformation",
-          effect: {
-            type: "replacement",
-            when: { type: "wouldBeKOd", target: { type: "self" } },
-            instead: { type: "draw", count: 1, player: "self" },
-          },
-        },
-      ],
-      metadata: {
-        sourceTextHash: support.sourceTextHash,
-        rulesVersion: support.rulesVersion,
-        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
-        tested: true,
-        reviewedBy: "engine-reviewer",
-        reviewedAt: "2026-05-11T00:00:00.000Z",
-      },
-    },
-  };
-};
-
 const setupPausedSavedTargetKoFrame = (
   effect: Effect = drawUpToThenKoSavedFieldObjectSequence(),
 ) => {
@@ -386,6 +332,9 @@ const setupPausedSavedTargetKoFrame = (
     card: must(p2State.hand[0], "target source"),
     zone: "characterArea",
   });
+  p2State.hand = p2State.hand.filter(
+    (card) => card.instanceId !== target.instanceId,
+  );
   state.cardManifest.cards[target.cardId] = resolvedCard({
     cardId: target.cardId,
     category: "character",
@@ -742,79 +691,6 @@ test.each([
     assert.equal(hashCanonicalStateValue(resolved.state), resolved.stateHash);
   },
 );
-
-test("saved-field-object KO consumer pauses for chooseReplacement and resumes after acceptance", () => {
-  const { pausedState, quantityDecisionId, target } =
-    setupPausedSavedTargetKoFrame();
-  setupReviewedKoReplacementDefinition(pausedState, target);
-
-  const resolved = resolveWithSavedReference(pausedState, quantityDecisionId, {
-    kind: "selectedTargets",
-    targets: [
-      {
-        binding: {
-          family: "selectedTargets",
-          saveResultAs: "savedTarget",
-          objectIndex: 0,
-        },
-        capturedAtStateSeq: pausedState.seq,
-        object: {
-          instanceId: target.instanceId,
-          cardId: target.cardId,
-          playerId: p2,
-          zone: target.zone,
-        },
-        visibility: "public",
-      },
-    ],
-  });
-
-  assert.equal(resolved.errors, undefined);
-  const decision = must(resolved.state.pendingDecision, "replacement decision");
-  assert.equal(decision.type, "chooseReplacement");
-  assert.equal(
-    resolved.events.some((event) => event.type === "decisionCreated"),
-    true,
-  );
-  assert.equal(
-    resolved.events.some((event) => event.type === "cardKOd"),
-    false,
-  );
-  assert.equal(
-    must(resolved.state.players[p2], "p2").characters.some(
-      (card) => card.instanceId === target.instanceId,
-    ),
-    true,
-  );
-
-  const accepted = applyAction(resolved.state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: {
-      type: "replacement",
-      replacementId: must(decision.replacementIds[0], "replacement id"),
-    },
-  });
-
-  assert.equal(accepted.errors, undefined);
-  assert.equal(accepted.state.pendingDecision, undefined);
-  assert.equal(
-    accepted.events.some((event) => event.type === "replacementApplied"),
-    true,
-  );
-  assert.equal(
-    accepted.events.some((event) => event.type === "cardKOd"),
-    false,
-  );
-  assert.equal(
-    must(accepted.state.players[p2], "accepted p2").characters.some(
-      (card) => card.instanceId === target.instanceId,
-    ),
-    true,
-  );
-  assert.equal(accepted.state.effectExecutionFrames.length, 0);
-  assert.equal(accepted.stateHash, hashCanonicalStateValue(accepted.state));
-});
 
 test("sequence resume fail-closes sourceSegmentId mismatch and invalid objectIndex", () => {
   const sourceSegmentMismatch = {

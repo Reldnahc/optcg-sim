@@ -25,6 +25,7 @@ export type {
 export {
   buildKoReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
+  buildSelectedTargetMoveZoneReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
   executeAcceptedSelectedTargetKoReplacementProcess,
   pauseSelectedTargetKoReplacementProcess,
@@ -32,6 +33,8 @@ export {
 export type { SelectedTargetKoExecutionFailureReason } from "./target-ko.js";
 export {
   executeSelectedTargetEffectPrimitive,
+  executeSelectedTargetFieldRemovalReplacementProcess,
+  executeUnreplacedSelectedTargetFieldRemovalProcess,
   resolveSavedFieldObjectKoSelection,
   executeUnreplacedSelectedTargetKoProcess,
   isSupportedMainEventTargetKoEffect,

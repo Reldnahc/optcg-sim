@@ -556,7 +556,10 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
 ): DetectSelectedTargetKoReplacementCandidateResult => {
   const effectId = effectIdFromReplacementProcess(process);
   const target = process.target;
-  if (process.type !== "ko" || target === undefined) {
+  if (
+    (process.type !== "ko" && process.type !== "moveZone") ||
+    target === undefined
+  ) {
     return failure(effectId, "unsupported-replacement-process");
   }
 
@@ -602,7 +605,14 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
     for (const effect of unused) {
       if (
         isSupportedSelfKoDrawReplacementEffect(effect) &&
-        source.card.instanceId !== located.card.instanceId
+        (process.type !== "ko" ||
+          source.card.instanceId !== located.card.instanceId)
+      ) {
+        continue;
+      }
+      if (
+        isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) &&
+        process.type !== "ko"
       ) {
         continue;
       }

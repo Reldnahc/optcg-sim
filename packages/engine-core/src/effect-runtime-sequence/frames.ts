@@ -707,7 +707,11 @@ export const resumeSequenceFrameAfterReplacement = (
   }
   const pausedSegment =
     supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (pausedSegment === undefined || pausedSegment.effect.type !== "ko") {
+  if (
+    pausedSegment === undefined ||
+    (pausedSegment.effect.type !== "ko" &&
+      pausedSegment.effect.type !== "bounce")
+  ) {
     return {
       error: sequenceRuntimeError(
         entry.effectBlockId,
