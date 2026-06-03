@@ -325,17 +325,20 @@ Section Ref: `07-match-server-protocol.s013`
 
 Use one primary game timer per player plus a disconnect grace timer. Do **not** create a separate mulligan timer or decision timer.
 
-The rule is simple:
+The normal gameplay rule is simple:
 
 - the timer only drains for the player currently holding up progress
 - if the engine is resolving mandatory work, no player timer drains
 - if neither player is currently holding up the game, no player timer drains
 - if a player's game timer reaches 0, that player loses immediately
 
-Mulligan example:
+Mulligan is the setup exception because both players are independently choosing
+whether to keep or redraw their opening hands:
 
-- if neither player has chosen keep/mulligan yet, neither timer drains
-- once one player has chosen, the other player is now holding up setup, so only that player's timer drains
+- before either player answers, both players' game timers drain
+- once one player answers, that player's game timer stops draining
+- the unanswered player's game timer continues draining until they answer
+- if either player's game timer reaches 0 during mulligan, that player loses immediately
 
 ```ts
 interface PlayerGameTimer {
