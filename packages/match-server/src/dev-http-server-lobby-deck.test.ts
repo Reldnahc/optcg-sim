@@ -1,7 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type { DeckHashDeck } from "optcg-deck-hash";
-import type { CardId } from "@optcg/types";
 
 import { createDevHttpServer } from "./dev-http-server.js";
 import {
@@ -91,8 +90,6 @@ const verifiedHandoff = (
     mainDeck: {
       deckId: "deck-1",
       hash: "deck-hash",
-      leader: { cardId: "OP13-079" as CardId, count: 1 },
-      main: [{ cardId: "OP13-080" as CardId, count: 8 }],
     },
     donDeck: {
       donDeckId: "don-1",
@@ -107,11 +104,24 @@ const verifiedHandoff = (
   ...overrides,
 });
 
-const createHandoffDevHttpServer = async (verifier: SimHandoffVerifier) =>
+const createHandoffDevHttpServer = async (
+  verifier: SimHandoffVerifier,
+  decodedHashes: string[],
+) =>
   createDevHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
     simHandoffVerifier: verifier,
+    deckHashCodec: {
+      decode(hash): Promise<DeckHashDeck> {
+        decodedHashes.push(hash);
+        return Promise.resolve({
+          leader: { card_number: "OP13-079", count: 1 },
+          main: [{ card_number: "OP13-080", count: 8 }],
+          don: null,
+        });
+      },
+    },
   });
 
 const createDevLobby = async (
@@ -230,12 +240,16 @@ const openSocket = async (url: string): Promise<TestSocket> =>
 describe("dev HTTP lobby deck submissions", () => {
   test("verified account loadout claims a lobby seat without browser-supplied deck data", async () => {
     const verifiedTokens: string[] = [];
-    const server = await createHandoffDevHttpServer({
-      verify(token) {
-        verifiedTokens.push(token);
-        return Promise.resolve(verifiedHandoff());
+    const decodedHashes: string[] = [];
+    const server = await createHandoffDevHttpServer(
+      {
+        verify(token) {
+          verifiedTokens.push(token);
+          return Promise.resolve(verifiedHandoff());
+        },
       },
-    });
+      decodedHashes,
+    );
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -251,6 +265,7 @@ describe("dev HTTP lobby deck submissions", () => {
       );
 
       assert.deepEqual(verifiedTokens, ["handoff-token"]);
+      assert.deepEqual(decodedHashes, ["deck-hash"]);
       const seat = result.seat;
       if (seat === undefined) {
         throw new Error("Expected account handoff to claim a lobby seat.");

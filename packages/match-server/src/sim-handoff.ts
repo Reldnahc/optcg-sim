@@ -1,5 +1,3 @@
-import type { CardId } from "@optcg/types";
-
 export interface SimHandoffClaims {
   readonly jti: string;
   readonly sub: string;
@@ -12,21 +10,12 @@ export interface SimHandoffClaims {
   readonly exp: number;
 }
 
-export interface ResolvedLoadoutDeckEntry {
-  readonly cardId: CardId;
-  readonly count: number;
-  readonly variantIndex?: number;
-}
-
 export interface ResolvedLoadout {
   readonly loadoutId: string;
   readonly userId: string;
   readonly mainDeck: {
     readonly deckId: string;
-    readonly hash: string | null;
-    readonly leader: ResolvedLoadoutDeckEntry;
-    readonly main: readonly ResolvedLoadoutDeckEntry[];
-    readonly format?: string;
+    readonly hash: string;
   };
   readonly donDeck: {
     readonly donDeckId: string | null;
@@ -86,30 +75,6 @@ const readInteger = (
     : undefined;
 };
 
-const normalizeDeckEntry = (
-  value: unknown,
-  label: string,
-): ResolvedLoadoutDeckEntry => {
-  if (!isRecord(value)) {
-    throw new TypeError(`${label} must be an object.`);
-  }
-  const cardId = readString(value, "card") ?? readString(value, "card_number");
-  if (cardId === undefined) {
-    throw new TypeError(`${label} card id is required.`);
-  }
-  const count = readInteger(value, "count") ?? 1;
-  if (count < 1) {
-    throw new TypeError(`${label} count must be a positive integer.`);
-  }
-  const variantIndex =
-    readInteger(value, "variant_index") ?? readInteger(value, "variantIndex");
-  return {
-    cardId: cardId as CardId,
-    count,
-    ...(variantIndex === undefined ? {} : { variantIndex }),
-  };
-};
-
 const normalizeDonDeckCount = (payload: unknown): number => {
   if (!isRecord(payload)) {
     return 10;
@@ -152,31 +117,17 @@ export const normalizeResolvedLoadout = (value: unknown): ResolvedLoadout => {
   if (!isRecord(cosmetics)) {
     throw new TypeError("resolved_loadout.cosmetics must be an object.");
   }
-  const deck = mainDeck["deck"];
-  if (!isRecord(deck)) {
-    throw new TypeError("resolved_loadout.main_deck.deck must be an object.");
+  const hash = readString(mainDeck, "hash");
+  if (hash === undefined) {
+    throw new TypeError("resolved_loadout main deck hash is required.");
   }
-  const leader = normalizeDeckEntry(deck["leader"], "leader");
-  if (leader.count !== 1) {
-    throw new TypeError("resolved_loadout leader must have count 1.");
-  }
-  const main = deck["main"];
-  if (!Array.isArray(main)) {
-    throw new TypeError("resolved_loadout main deck must be an array.");
-  }
-  const format = readString(deck, "format");
   const donDeckPayload = donDeck["payload"];
   return {
     loadoutId,
     userId,
     mainDeck: {
       deckId: readString(mainDeck, "deck_id") ?? "",
-      hash: readNullableString(mainDeck, "hash"),
-      leader,
-      main: main.map((entry, index) =>
-        normalizeDeckEntry(entry, `main card ${String(index + 1)}`),
-      ),
-      ...(format === undefined ? {} : { format }),
+      hash,
     },
     donDeck: {
       donDeckId: readNullableString(donDeck, "don_deck_id"),

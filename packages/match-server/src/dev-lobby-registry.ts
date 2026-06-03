@@ -5,7 +5,6 @@ import {
   validateReadyDevDeckSubmission,
 } from "./default-dev-manifest.js";
 import {
-  createDeckSubmissionFromResolvedLoadout,
   decodeDeckHashSubmission,
   type DeckHashCodecPort,
   type DeckSubmission,
@@ -321,9 +320,16 @@ export const createLocalDevLobbyRegistry = (
       ) {
         return "seatNotFound";
       }
-      const submission = createDeckSubmissionFromResolvedLoadout(
-        handoff.resolvedLoadout,
-      );
+      const submission = await decodeDeckHashSubmission({
+        hash: handoff.resolvedLoadout.mainDeck.hash,
+        donDeckCount: handoff.resolvedLoadout.donDeck.count,
+        ...(options.deckHashCodec === undefined
+          ? {}
+          : { codec: options.deckHashCodec }),
+      });
+      if (submission.status !== "ready") {
+        return "invalidDeck";
+      }
       if (!(await validateReadySubmission(submission))) {
         return "invalidDeck";
       }

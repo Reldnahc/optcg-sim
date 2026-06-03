@@ -3,11 +3,9 @@ import { describe, test } from "vitest";
 import type { CardId } from "@optcg/types";
 
 import {
-  createDeckSubmissionFromResolvedLoadout,
   decodeDeckHashSubmission,
   type DeckHashCodecPort,
 } from "./deck-submission.js";
-import type { ResolvedLoadout } from "./sim-handoff.js";
 
 const fakeCodec = (
   deck: Awaited<ReturnType<DeckHashCodecPort["decode"]>>,
@@ -114,50 +112,5 @@ describe("deck hash submissions", () => {
     });
     assert.equal(failedDecode.status, "invalid");
     assert.match(failedDecode.error, /bad hash/u);
-  });
-});
-
-describe("resolved loadout submissions", () => {
-  test("converts verified resolved loadouts into ready deck submissions", () => {
-    const loadout: ResolvedLoadout = {
-      loadoutId: "loadout-1",
-      userId: "user-1",
-      mainDeck: {
-        deckId: "deck-1",
-        hash: "deck-hash",
-        leader: { cardId: "OP15-058" as CardId, count: 1, variantIndex: 3 },
-        main: [
-          { cardId: "OP15-061" as CardId, count: 4, variantIndex: 2 },
-          { cardId: "OP15-066" as CardId, count: 2 },
-        ],
-        format: "opcg",
-      },
-      donDeck: {
-        donDeckId: "don-1",
-        count: 6,
-      },
-      cosmetics: {
-        playmatId: "playmat-1",
-        donSleeveId: "don-sleeve-1",
-        deckSleeveId: "deck-sleeve-1",
-      },
-    };
-
-    const submission = createDeckSubmissionFromResolvedLoadout(loadout);
-
-    assert.equal(submission.status, "ready");
-    assert.equal(submission.source, "resolvedLoadout");
-    assert.equal(submission.hash, "deck-hash");
-    assert.equal(submission.donDeckCount, 6);
-    assert.deepEqual(submission.decoded.leader, {
-      cardId: "OP15-058" as CardId,
-      count: 1,
-      variantIndex: 3,
-    });
-    assert.deepEqual(submission.decoded.main, [
-      { cardId: "OP15-061" as CardId, count: 4, variantIndex: 2 },
-      { cardId: "OP15-066" as CardId, count: 2 },
-    ]);
-    assert.equal(submission.decoded.format, "opcg");
   });
 });

@@ -23,15 +23,6 @@ const resolvedLoadoutBody = () => ({
   main_deck: {
     deck_id: "deck-1",
     hash: "deck-hash",
-    deck: {
-      leader: { card: "OP15-058", count: 1, variantIndex: 2 },
-      main: [
-        { card: "OP15-061", count: 4, variantIndex: 3 },
-        { card_number: "OP15-066", count: 2 },
-      ],
-      don: null,
-      format: "opcg",
-    },
   },
   don_deck: {
     don_deck_id: "don-1",
@@ -102,8 +93,7 @@ describe("sim handoff verification client", () => {
       iat: 1,
       exp: 2,
     });
-    assert.equal(result.resolvedLoadout.mainDeck.leader.variantIndex, 2);
-    assert.equal(result.resolvedLoadout.mainDeck.main[0]?.variantIndex, 3);
+    assert.equal(result.resolvedLoadout.mainDeck.hash, "deck-hash");
     assert.equal(result.resolvedLoadout.donDeck.count, 6);
   });
 
@@ -126,10 +116,12 @@ describe("sim handoff verification client", () => {
 });
 
 describe("resolved loadout normalization", () => {
-  test("fails closed when leader is not exactly one copy", () => {
-    const body = resolvedLoadoutBody();
-    body.main_deck.deck.leader.count = 2;
+  test("fails closed when the verified loadout has no deck hash", () => {
+    const body: {
+      main_deck: { hash: string | null };
+    } = resolvedLoadoutBody();
+    body.main_deck.hash = null;
 
-    assert.throws(() => normalizeResolvedLoadout(body), /leader/u);
+    assert.throws(() => normalizeResolvedLoadout(body), /deck hash/u);
   });
 });
