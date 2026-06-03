@@ -2,15 +2,28 @@ import type {
   PresentationSoundCue,
   PresentationSoundIntent,
 } from "./sound-planner.js";
+import { presentationSoundAssetUrls } from "./sound-assets.js";
 
 export interface PresentationSoundOptions {
   enabled?: boolean;
   volume?: number;
+  assetUrls?: Partial<Record<PresentationSoundCue, string>>;
+  audioFactory?: PresentationAudioFactory;
 }
 
 type BrowserAudioContext = AudioContext & {
   resume: () => Promise<void>;
 };
+
+export interface PresentationAudioElement {
+  currentTime: number;
+  volume: number;
+  play: () => Promise<void> | void;
+}
+
+export type PresentationAudioFactory = (
+  url: string,
+) => PresentationAudioElement | undefined;
 
 const audioConstructor = (): (new () => BrowserAudioContext) | undefined => {
   if (typeof window === "undefined") {
@@ -21,6 +34,13 @@ const audioConstructor = (): (new () => BrowserAudioContext) | undefined => {
     webkitAudioContext?: new () => BrowserAudioContext;
   };
   return constructors.AudioContext ?? constructors.webkitAudioContext;
+};
+
+const defaultAudioFactory: PresentationAudioFactory = (url) => {
+  if (typeof Audio === "undefined") {
+    return undefined;
+  }
+  return new Audio(url);
 };
 
 let sharedContext: BrowserAudioContext | undefined;
@@ -51,10 +71,31 @@ const cueFrequency = (cue: PresentationSoundCue): number => {
   }
 };
 
+const playAssetCue = (
+  cue: PresentationSoundCue,
+  options: Required<PresentationSoundOptions>,
+): boolean => {
+  const url = options.assetUrls[cue];
+  if (url === undefined) {
+    return false;
+  }
+  const audio = options.audioFactory(url);
+  if (audio === undefined) {
+    return false;
+  }
+  audio.volume = options.volume;
+  audio.currentTime = 0;
+  void Promise.resolve(audio.play()).catch(() => undefined);
+  return true;
+};
+
 const playCue = (
   cue: PresentationSoundCue,
   options: Required<PresentationSoundOptions>,
 ): void => {
+  if (playAssetCue(cue, options)) {
+    return;
+  }
   const audio = context();
   if (audio === undefined) {
     return;
@@ -85,6 +126,8 @@ export const playPresentationSoundIntents = (
   const resolvedOptions: Required<PresentationSoundOptions> = {
     enabled: options.enabled ?? true,
     volume: options.volume ?? 0.16,
+    assetUrls: options.assetUrls ?? presentationSoundAssetUrls,
+    audioFactory: options.audioFactory ?? defaultAudioFactory,
   };
   if (!resolvedOptions.enabled) {
     return;
