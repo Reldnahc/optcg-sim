@@ -329,8 +329,11 @@ describe("playmat structure", () => {
   test("single-card zones center cards in both axes", async () => {
     const styles = await readFile(zoneStylesPath, "utf8");
 
+    assert.match(styles, /\.zone\s*\{[^}]*box-sizing:\s*border-box;/u);
+    assert.match(styles, /\.zone\s*\{[^}]*width:\s*100%;/u);
     assert.match(styles, /\.zone-cards\s*\{[^}]*align-items:\s*center;/u);
     assert.match(styles, /\.zone-cards\s*\{[^}]*justify-content:\s*center;/u);
+    assert.match(styles, /\.zone-cards\s*\{[^}]*min-width:\s*0;/u);
   });
 
   test("battle arrow layer sits above the play field but below modals", async () => {
