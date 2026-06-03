@@ -35,6 +35,7 @@ import {
 import type { ComputedBoardCardStats } from "./public-card-view.js";
 import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
 import { toPublicTimerState } from "./public-timers.js";
+import { playerRestrictionLabels } from "./player-restrictions.js";
 
 const toVisiblePlayerState = (
   state: GameState,
@@ -42,24 +43,32 @@ const toVisiblePlayerState = (
   computedStatsByInstance:
     | ReadonlyMap<InstanceId, ComputedBoardCardStats>
     | undefined,
-): VisiblePlayerState => ({
-  playerId: player.playerId,
-  deckCount: player.deck.length,
-  donDeckCount: player.donDeck.length,
-  hand: player.hand.map((card) => toPublicCardView(card)),
-  trash: player.trash.map((card) => toPublicCardView(card)),
-  leader: toBoardPublicCardView(player.leader, state, computedStatsByInstance),
-  characters: player.characters.map((card) =>
-    toBoardPublicCardView(card, state, computedStatsByInstance),
-  ),
-  ...(player.stage === undefined
-    ? {}
-    : { stage: toPublicCardView(player.stage) }),
-  costArea: player.costArea.map((card) => toPublicCardView(card)),
-  life: toPublicLifeView(player),
-  hasMulliganed: player.hasMulliganed,
-  turnCount: player.turnCount,
-});
+): VisiblePlayerState => {
+  const restrictions = playerRestrictionLabels(state, player.playerId);
+  return {
+    playerId: player.playerId,
+    deckCount: player.deck.length,
+    donDeckCount: player.donDeck.length,
+    hand: player.hand.map((card) => toPublicCardView(card)),
+    trash: player.trash.map((card) => toPublicCardView(card)),
+    leader: toBoardPublicCardView(
+      player.leader,
+      state,
+      computedStatsByInstance,
+    ),
+    characters: player.characters.map((card) =>
+      toBoardPublicCardView(card, state, computedStatsByInstance),
+    ),
+    ...(player.stage === undefined
+      ? {}
+      : { stage: toPublicCardView(player.stage) }),
+    costArea: player.costArea.map((card) => toPublicCardView(card)),
+    life: toPublicLifeView(player),
+    hasMulliganed: player.hasMulliganed,
+    turnCount: player.turnCount,
+    ...(restrictions.length === 0 ? {} : { restrictions }),
+  };
+};
 
 const toOpponentVisibleState = (
   state: GameState,
@@ -67,24 +76,32 @@ const toOpponentVisibleState = (
   computedStatsByInstance:
     | ReadonlyMap<InstanceId, ComputedBoardCardStats>
     | undefined,
-): OpponentVisibleState => ({
-  playerId: player.playerId,
-  deckCount: player.deck.length,
-  donDeckCount: player.donDeck.length,
-  handCount: player.hand.length,
-  trash: player.trash.map((card) => toPublicCardView(card)),
-  leader: toBoardPublicCardView(player.leader, state, computedStatsByInstance),
-  characters: player.characters.map((card) =>
-    toBoardPublicCardView(card, state, computedStatsByInstance),
-  ),
-  ...(player.stage === undefined
-    ? {}
-    : { stage: toPublicCardView(player.stage) }),
-  costArea: player.costArea.map((card) => toPublicCardView(card)),
-  life: toPublicLifeView(player),
-  hasMulliganed: player.hasMulliganed,
-  turnCount: player.turnCount,
-});
+): OpponentVisibleState => {
+  const restrictions = playerRestrictionLabels(state, player.playerId);
+  return {
+    playerId: player.playerId,
+    deckCount: player.deck.length,
+    donDeckCount: player.donDeck.length,
+    handCount: player.hand.length,
+    trash: player.trash.map((card) => toPublicCardView(card)),
+    leader: toBoardPublicCardView(
+      player.leader,
+      state,
+      computedStatsByInstance,
+    ),
+    characters: player.characters.map((card) =>
+      toBoardPublicCardView(card, state, computedStatsByInstance),
+    ),
+    ...(player.stage === undefined
+      ? {}
+      : { stage: toPublicCardView(player.stage) }),
+    costArea: player.costArea.map((card) => toPublicCardView(card)),
+    life: toPublicLifeView(player),
+    hasMulliganed: player.hasMulliganed,
+    turnCount: player.turnCount,
+    ...(restrictions.length === 0 ? {} : { restrictions }),
+  };
+};
 
 const toPublicDecisionCausedBy = (
   pending: NonNullable<GameState["pendingDecision"]>,

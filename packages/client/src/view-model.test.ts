@@ -189,6 +189,31 @@ describe("board view model", () => {
     });
   });
 
+  test("projects player-level restrictions for summary badges", () => {
+    const view = minimalView();
+    view.self.restrictions = ["no-character-don-refresh"];
+    view.opponent.restrictions = ["no-event-don-refresh"];
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(model.selfRestrictions, ["no-character-don-refresh"]);
+    assert.deepEqual(model.opponentRestrictions, ["no-event-don-refresh"]);
+  });
+
   test("marks which player summary owns the current turn", () => {
     const view = minimalView();
     view.turn.turnPlayerId = p2;

@@ -76,6 +76,8 @@ export interface BoardViewModel {
   opponentIsTurnPlayer: boolean;
   selfConnectionStatus?: "connected" | "disconnected";
   opponentConnectionStatus?: "connected" | "disconnected";
+  selfRestrictions?: string[];
+  opponentRestrictions?: string[];
   self: ClientPlayerZonesModel;
   opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
@@ -424,6 +426,10 @@ export const createBoardViewModel = ({
     ...(selfTimer === undefined ? {} : { selfTimer }),
     selfIsTurnPlayer: turnPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),
+    ...(player.view.self.restrictions === undefined ||
+    player.view.self.restrictions.length === 0
+      ? {}
+      : { selfRestrictions: [...player.view.self.restrictions] }),
     opponentLabel: playerDisplayLabel(
       snapshot,
       player.view.opponent.playerId,
@@ -434,6 +440,10 @@ export const createBoardViewModel = ({
     ...(opponentConnectionStatus === undefined
       ? {}
       : { opponentConnectionStatus }),
+    ...(player.view.opponent.restrictions === undefined ||
+    player.view.opponent.restrictions.length === 0
+      ? {}
+      : { opponentRestrictions: [...player.view.opponent.restrictions] }),
     self: selfZones(player.view, catalog),
     opponent: opponentZones(player.view, catalog),
     actionsByCardInstanceId: actionMenusByCard(player.actions),

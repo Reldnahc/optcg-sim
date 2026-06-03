@@ -260,3 +260,45 @@ test("projects computed current cost only for public board card views", () => {
     assert.equal("currentCost" in view.self.costArea[0], false);
   }
 });
+
+test("projects player-level DON activation restrictions separately from card restrictions", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  const source = p1State.leader;
+  const record: ContinuousEffectRecord = {
+    id: "player-view-don-activation-restriction",
+    source: cardRef(source, p1),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      power: 5000,
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "restriction",
+      target: { type: "player", player: "self" },
+      operation: {
+        type: "restriction",
+        restriction: "cannotActivateDon",
+        sourceCategories: ["character"],
+      },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "player-view-test" },
+    createdAtStateSeq: state.seq,
+  };
+  state.continuousEffects = [record];
+
+  const p1View = filterStateForPlayer(state, p1);
+  const p2View = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(p1View.self.restrictions, ["no-character-don-refresh"]);
+  assert.deepEqual(p1View.opponent.restrictions, undefined);
+  assert.deepEqual(p2View.opponent.restrictions, ["no-character-don-refresh"]);
+});

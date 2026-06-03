@@ -138,6 +138,7 @@ interface VisiblePlayerState {
   life: PublicLifeView;
   hasMulliganed: boolean;
   turnCount: number;
+  restrictions?: string[];
 }
 
 interface OpponentVisibleState {
@@ -153,6 +154,7 @@ interface OpponentVisibleState {
   life: PublicLifeView;
   hasMulliganed: boolean;
   turnCount: number;
+  restrictions?: string[];
 }
 
 type SpectatorVisiblePlayerState = OpponentVisibleState;

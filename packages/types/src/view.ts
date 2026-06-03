@@ -73,6 +73,7 @@ export interface VisiblePlayerState {
   life: PublicLifeView;
   hasMulliganed: boolean;
   turnCount: number;
+  restrictions?: string[];
 }
 
 export interface OpponentVisibleState {
@@ -88,6 +89,7 @@ export interface OpponentVisibleState {
   life: PublicLifeView;
   hasMulliganed: boolean;
   turnCount: number;
+  restrictions?: string[];
 }
 
 export type SpectatorVisiblePlayerState = OpponentVisibleState;

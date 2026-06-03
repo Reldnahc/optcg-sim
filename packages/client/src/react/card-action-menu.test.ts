@@ -95,6 +95,27 @@ describe("card action menu", () => {
     );
   });
 
+  test("renders player-level restriction badges in player summaries", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        selfLabel: "Player",
+        opponentLabel: "Opponent",
+        selfRestrictions: ["no-character-don-refresh"],
+        opponentRestrictions: ["no-event-don-refresh"],
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*player-restriction-badges/u);
+    assert.match(markup, /class="[^"]*player-restriction-badge/u);
+    assert.equal(markup.includes("no character DON refresh"), true);
+    assert.equal(markup.includes("no Event DON refresh"), true);
+  });
+
   test("active-turn player summary uses outline feedback without a dot indicator", async () => {
     const controlsCss = await readFile(
       join(sourceDirectory, "styles", "controls.css"),

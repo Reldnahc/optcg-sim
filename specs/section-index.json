@@ -1574,7 +1574,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Temporary visibility",
       "heading_level": 2,
-      "marker_line": 214,
+      "marker_line": 216,
       "visible_line": "Section Ref: `06-visibility-security.s005`"
     },
     {
@@ -1583,7 +1583,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Effect event visibility",
       "heading_level": 2,
-      "marker_line": 252,
+      "marker_line": 254,
       "visible_line": "Section Ref: `06-visibility-security.s006`"
     },
     {
@@ -1592,7 +1592,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Legal-action visibility",
       "heading_level": 2,
-      "marker_line": 278,
+      "marker_line": 280,
       "visible_line": "Section Ref: `06-visibility-security.s007`"
     },
     {
@@ -1601,7 +1601,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Spectator modes",
       "heading_level": 2,
-      "marker_line": 292,
+      "marker_line": 294,
       "visible_line": "Section Ref: `06-visibility-security.s008`"
     },
     {
@@ -1610,7 +1610,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Anti-cheat layers",
       "heading_level": 2,
-      "marker_line": 319,
+      "marker_line": 321,
       "visible_line": "Section Ref: `06-visibility-security.s009`"
     },
     {
@@ -1619,7 +1619,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Layer 1: server authority",
       "heading_level": 3,
-      "marker_line": 325,
+      "marker_line": 327,
       "visible_line": "Section Ref: `06-visibility-security.s010`"
     },
     {
@@ -1628,7 +1628,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Layer 2: information hiding",
       "heading_level": 3,
-      "marker_line": 341,
+      "marker_line": 343,
       "visible_line": "Section Ref: `06-visibility-security.s011`"
     },
     {
@@ -1637,7 +1637,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Layer 3: sequencing and idempotency",
       "heading_level": 3,
-      "marker_line": 349,
+      "marker_line": 351,
       "visible_line": "Section Ref: `06-visibility-security.s012`"
     },
     {
@@ -1646,7 +1646,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Layer 4: timing/rate limiting",
       "heading_level": 3,
-      "marker_line": 357,
+      "marker_line": 359,
       "visible_line": "Section Ref: `06-visibility-security.s013`"
     },
     {
@@ -1655,7 +1655,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Layer 5: behavior analytics",
       "heading_level": 3,
-      "marker_line": 365,
+      "marker_line": 367,
       "visible_line": "Section Ref: `06-visibility-security.s014`"
     },
     {
@@ -1664,7 +1664,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Layer 6: moderation and reports",
       "heading_level": 3,
-      "marker_line": 379,
+      "marker_line": 381,
       "visible_line": "Section Ref: `06-visibility-security.s015`"
     },
     {
@@ -1673,7 +1673,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Client integrity reality",
       "heading_level": 2,
-      "marker_line": 387,
+      "marker_line": 389,
       "visible_line": "Section Ref: `06-visibility-security.s016`"
     },
     {
@@ -1682,7 +1682,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Filter checklist",
       "heading_level": 2,
-      "marker_line": 395,
+      "marker_line": 397,
       "visible_line": "Section Ref: `06-visibility-security.s017`"
     },
     {
@@ -1691,7 +1691,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Hidden-information rollback policy",
       "heading_level": 2,
-      "marker_line": 417,
+      "marker_line": 419,
       "visible_line": "Section Ref: `06-visibility-security.s018`"
     },
     {
@@ -1700,7 +1700,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "View-engine split",
       "heading_level": 2,
-      "marker_line": 425,
+      "marker_line": 427,
       "visible_line": "Section Ref: `06-visibility-security.s019`"
     },
     {
@@ -1709,7 +1709,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Original spectator model and v2 hardening",
       "heading_level": 2,
-      "marker_line": 452,
+      "marker_line": 454,
       "visible_line": "Section Ref: `06-visibility-security.s020`"
     },
     {
@@ -1718,7 +1718,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Original state-filtering categories preserved",
       "heading_level": 2,
-      "marker_line": 469,
+      "marker_line": 471,
       "visible_line": "Section Ref: `06-visibility-security.s021`"
     },
     {
@@ -1727,7 +1727,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Anti-cheat layers from the original plan",
       "heading_level": 2,
-      "marker_line": 486,
+      "marker_line": 488,
       "visible_line": "Section Ref: `06-visibility-security.s022`"
     },
     {
@@ -1736,7 +1736,7 @@
       "doc_path": "06-visibility-security.md",
       "heading": "Security checklist from source spec",
       "heading_level": 2,
-      "marker_line": 502,
+      "marker_line": 504,
       "visible_line": "Section Ref: `06-visibility-security.s023`"
     },
     {
