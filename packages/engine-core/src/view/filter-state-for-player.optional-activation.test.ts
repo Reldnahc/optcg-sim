@@ -139,6 +139,20 @@ test("filterStateForPlayer keeps chooseOptionalActivation pending decision priva
     playerId: p1,
     prompt: "Activate optional effect?",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    presentation: {
+      title: "Optional effect",
+      instruction: "Activate optional effect?",
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      choices: [
+        { responseKey: "activate", label: "Activate effect" },
+        { responseKey: "decline", label: "Decline effect" },
+      ],
+    },
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
@@ -148,6 +162,12 @@ test("filterStateForPlayer keeps chooseOptionalActivation pending decision priva
       {
         type: "respondToDecision",
         decisionId: toDecisionId("decision:choose-optional-activation"),
+        responseKey: "activate",
+      },
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("decision:choose-optional-activation"),
+        responseKey: "decline",
       },
     ],
   );

@@ -34,6 +34,7 @@ import {
 } from "./public-card-view.js";
 import type { ComputedBoardCardStats } from "./public-card-view.js";
 import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
+import { publicDecisionPresentation } from "./public-decision-presentation.js";
 import { toPublicTimerState } from "./public-timers.js";
 import { playerRestrictionLabels } from "./player-restrictions.js";
 
@@ -228,12 +229,17 @@ const toPublicDecision = (
     pending,
     visibleCards: visibleCardsForPlayer(state, playerId),
   });
+  const presentation = publicDecisionPresentation({
+    pending,
+    ...(source === undefined ? {} : { source }),
+  });
   const base = {
     id: pending.id,
     type: pending.type,
     playerId: pending.playerId,
     prompt: pending.prompt,
     causedBy: toPublicDecisionCausedBy(pending),
+    presentation,
     ...(source === undefined ? {} : { source }),
     ...(pending.timeoutMs === undefined
       ? {}
@@ -440,7 +446,14 @@ const toPublicLegalAction = (
     case "endMainPhase":
       return action;
     case "respondToDecision":
-      return { type: "respondToDecision", decisionId: action.decisionId };
+      return {
+        type: "respondToDecision",
+        decisionId: action.decisionId,
+        ...(() => {
+          const responseKey = responseKeyForDecisionAction(action);
+          return responseKey === undefined ? {} : { responseKey };
+        })(),
+      };
     case "declareAttack":
       if (
         !isCardRefVisibleToPlayer(state, playerId, action.attacker) ||
@@ -501,9 +514,44 @@ const toPublicLegalAction = (
   }
 };
 
+const responseKeyForDecisionAction = (
+  action: Extract<LegalAction, { type: "respondToDecision" }>,
+): string | undefined => {
+  const response = action.response;
+  switch (response.type) {
+    case "payment":
+      return response.optionId;
+    case "paymentDeclined":
+      return "decline";
+    case "optionalActivation":
+      return response.choice;
+    case "lifeTrigger":
+      return response.choice;
+    case "replacement":
+      return response.replacementId ?? "decline";
+    case "chooseQuantity":
+      return String(response.quantity);
+    case "effectOption":
+      return response.optionId;
+    case "mulligan":
+      return response.keep ? "keep" : "mulligan";
+    case "loopCount":
+      return String(response.count);
+    case "rollbackConsent":
+      return response.allow ? "allow" : "deny";
+    case "cards":
+    case "targets":
+    case "orderedIds":
+    case "topBottomPlacement":
+      return undefined;
+  }
+};
+
 const publicLegalActionKey = (action: PublicLegalAction): string => {
   if (action.type === "respondToDecision") {
-    return `${action.type}:${String(action.decisionId)}`;
+    return `${action.type}:${String(action.decisionId)}:${
+      action.responseKey ?? ""
+    }`;
   }
   return JSON.stringify(action);
 };

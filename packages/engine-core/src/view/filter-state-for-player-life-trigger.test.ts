@@ -49,6 +49,37 @@ test("confirmLifeTrigger projection shows the damaged card only to decision play
     playerId: p2,
     prompt: "Activate life trigger?",
     causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+    presentation: {
+      title: "Life trigger",
+      instruction:
+        "Choose whether to activate this trigger or add it to your hand.",
+      choices: [
+        {
+          responseKey: "activateTrigger",
+          label: "Activate trigger",
+          cards: [
+            {
+              instanceId: lifeCard.instanceId,
+              cardId: hiddenLifeCardId,
+              playerId: p2,
+              zone: lifeCard.zone,
+            },
+          ],
+        },
+        {
+          responseKey: "addToHand",
+          label: "Add to hand",
+          cards: [
+            {
+              instanceId: lifeCard.instanceId,
+              cardId: hiddenLifeCardId,
+              playerId: p2,
+              zone: lifeCard.zone,
+            },
+          ],
+        },
+      ],
+    },
     card: {
       instanceId: lifeCard.instanceId,
       cardId: hiddenLifeCardId,
@@ -64,6 +95,7 @@ test("confirmLifeTrigger projection shows the damaged card only to decision play
       {
         type: "respondToDecision",
         decisionId: toDecisionId("decision:life-trigger"),
+        responseKey: "addToHand",
       },
     ],
   );
