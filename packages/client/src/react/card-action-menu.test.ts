@@ -42,6 +42,8 @@ const board = (): BoardViewModel => ({
   playerId: "p1" as PlayerId,
   selfLabel: "Player",
   opponentLabel: "Opponent",
+  selfIsTurnPlayer: true,
+  opponentIsTurnPlayer: false,
   self: {
     leader: card("self-leader", "Self Leader"),
     hand: [card("hand-1", "Playable Card")],
@@ -68,6 +70,31 @@ const board = (): BoardViewModel => ({
 });
 
 describe("card action menu", () => {
+  test("renders active-turn feedback on the matching player summary", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        selfLabel: "Player",
+        opponentLabel: "Opponent",
+        selfIsTurnPlayer: true,
+        opponentIsTurnPlayer: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+
+    assert.equal(
+      markup.includes("summary-panel player-summary is-turn-player"),
+      true,
+    );
+    assert.equal(
+      markup.includes("summary-panel opponent-summary is-turn-player"),
+      false,
+    );
+  });
+
   test("renders selected-card actions on the selected card instead of the control rail", () => {
     const playActions: readonly ClientActionModel[] = [
       { index: 7, type: "playCard", label: "Play" },

@@ -39,6 +39,37 @@
   padding: 10px;
 }
 
+.summary-panel {
+  position: relative;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+
+.summary-panel.is-turn-player {
+  border-color: #59ff8f;
+  background: #8f9790;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 0 0 2px rgba(89, 255, 143, 0.34),
+    0 0 18px rgba(89, 255, 143, 0.38);
+}
+
+.summary-panel.is-turn-player::after {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #59ff8f;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 10px rgba(89, 255, 143, 0.8);
+  content: "";
+}
+
 .summary-panel h2 {
   display: flex;
   align-items: center;

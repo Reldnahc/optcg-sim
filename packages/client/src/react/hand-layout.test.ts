@@ -57,6 +57,8 @@ const board = (): BoardViewModel => ({
   playerId: "p1" as PlayerId,
   selfLabel: "Player",
   opponentLabel: "Opponent",
+  selfIsTurnPlayer: true,
+  opponentIsTurnPlayer: false,
   self: {
     leader: card(100),
     hand: [card(1), card(2), card(3)],

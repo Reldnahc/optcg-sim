@@ -178,6 +178,8 @@ const boardWithLife = (): BoardViewModel => {
     playerId: "p1" as PlayerId,
     selfLabel: "Player",
     opponentLabel: "Opponent",
+    selfIsTurnPlayer: true,
+    opponentIsTurnPlayer: false,
     self: {
       leader: selfLeader,
       hand: [],

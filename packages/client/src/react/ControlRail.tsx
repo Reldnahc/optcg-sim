@@ -31,6 +31,8 @@ export interface ControlRailProps {
   opponentLabel?: string | undefined;
   selfTimer?: PlayerSummaryTimerModel | undefined;
   opponentTimer?: PlayerSummaryTimerModel | undefined;
+  selfIsTurnPlayer?: boolean | undefined;
+  opponentIsTurnPlayer?: boolean | undefined;
   selfConnectionStatus?: "connected" | "disconnected" | undefined;
   opponentConnectionStatus?: "connected" | "disconnected" | undefined;
   matchStatus?: string | undefined;
@@ -88,6 +90,8 @@ export const ControlRail = ({
   opponentLabel = "Opponent",
   selfTimer,
   opponentTimer,
+  selfIsTurnPlayer = false,
+  opponentIsTurnPlayer = false,
   selfConnectionStatus,
   opponentConnectionStatus,
   matchStatus,
@@ -165,7 +169,15 @@ export const ControlRail = ({
         title="Resize controls"
         onPointerDown={onResizePointerDown}
       />
-      <section className="summary-panel opponent-summary">
+      <section
+        className={[
+          "summary-panel",
+          "opponent-summary",
+          opponentIsTurnPlayer ? "is-turn-player" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <PlayerSummaryLabel
           label={opponentLabel}
           status={opponentConnectionStatus}
@@ -493,7 +505,15 @@ export const ControlRail = ({
           )}
         </div>
       </section>
-      <section className="summary-panel player-summary">
+      <section
+        className={[
+          "summary-panel",
+          "player-summary",
+          selfIsTurnPlayer ? "is-turn-player" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <PlayerSummaryLabel
           label={selfLabel}
           status={selfConnectionStatus}

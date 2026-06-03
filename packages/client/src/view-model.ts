@@ -71,6 +71,8 @@ export interface BoardViewModel {
   opponentLabel: string;
   selfTimer?: PlayerSummaryTimerModel;
   opponentTimer?: PlayerSummaryTimerModel;
+  selfIsTurnPlayer: boolean;
+  opponentIsTurnPlayer: boolean;
   selfConnectionStatus?: "connected" | "disconnected";
   opponentConnectionStatus?: "connected" | "disconnected";
   self: ClientPlayerZonesModel;
@@ -411,10 +413,12 @@ export const createBoardViewModel = ({
   );
   const selfTimer = playerTimer(player.view, playerId);
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
+  const turnPlayerId = player.view.turn.turnPlayerId;
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
     ...(selfTimer === undefined ? {} : { selfTimer }),
+    selfIsTurnPlayer: turnPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),
     opponentLabel: playerDisplayLabel(
       snapshot,
@@ -422,6 +426,7 @@ export const createBoardViewModel = ({
       "Opponent",
     ),
     ...(opponentTimer === undefined ? {} : { opponentTimer }),
+    opponentIsTurnPlayer: turnPlayerId === player.view.opponent.playerId,
     ...(opponentConnectionStatus === undefined
       ? {}
       : { opponentConnectionStatus }),

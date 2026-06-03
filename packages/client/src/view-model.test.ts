@@ -189,6 +189,30 @@ describe("board view model", () => {
     });
   });
 
+  test("marks which player summary owns the current turn", () => {
+    const view = minimalView();
+    view.turn.turnPlayerId = p2;
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const p1Model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(p1Model.selfIsTurnPlayer, false);
+    assert.equal(p1Model.opponentIsTurnPlayer, true);
+  });
+
   test("builds zones and card-attached action menus from a filtered player view", () => {
     const snapshot: MatchSnapshot = {
       matchId: "match-1" as MatchId,
