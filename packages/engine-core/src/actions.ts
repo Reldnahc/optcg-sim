@@ -434,6 +434,20 @@ const applyRespondToDecision = (
     if (!trashResult.ok) {
       return trashResult.result;
     }
+    const resumedPendingDecision = trashResult.state.pendingDecision;
+    const resumedSequenceDecision =
+      resumedPendingDecision !== undefined &&
+      trashResult.state.effectExecutionFrames.some(
+        (frame) =>
+          frame.pendingDecision.decisionId === resumedPendingDecision.id,
+      );
+    if (resumedSequenceDecision) {
+      return continueAfterEffectDecision(
+        state,
+        decision,
+        toEngineResult(trashResult.state, trashResult.allEvents),
+      );
+    }
     const finalized = finalizeSelectedTargetEffectResolution(
       trashResult.state,
       trashResult.eventBaseState,

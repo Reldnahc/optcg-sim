@@ -12,6 +12,7 @@ import type {
 import {
   applyAction,
   createActiveState,
+  getLegalActions,
   hashCanonicalStateValue,
   must,
   p1,
@@ -146,6 +147,40 @@ const selectRestedDonThenActivateSavedTargetSequence = (
   ],
 });
 
+const drawTrashThenSelectRestedDonSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: { type: "draw", count: 2, player: "self" },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "trashFromHand",
+              count: 1,
+              player: "self",
+              chooser: "self",
+            },
+          },
+        ],
+      },
+    },
+    {
+      connector: "then",
+      effect: selectRestedDonThenActivateSavedTargetSequence(),
+    },
+  ],
+});
+
 test("selectTargets saved reference can feed activate for rested DON in cost area", () => {
   const { state } = sequenceQueueState(
     selectRestedDonThenActivateSavedTargetSequence(),
@@ -190,6 +225,82 @@ test("selectTargets saved reference can feed activate for rested DON in cost are
   );
   assert.equal(afterDon?.state, "active");
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("sequence resumes from trash-from-hand before accepting later rested DON targets", () => {
+  const { state } = sequenceQueueState(drawTrashThenSelectRestedDonSequence());
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source");
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const restedDon = must(p1State.donDeck[0], "rested don");
+  p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = [
+    {
+      ...restedDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "rested",
+    },
+  ];
+  state.cardManifest.cards[restedDon.cardId] = resolvedCard({
+    cardId: restedDon.cardId,
+    category: "don",
+  });
+
+  const pausedForTrash = processEffectRuntime(state);
+  assert.equal(pausedForTrash.errors, undefined);
+  const trashDecision = must(
+    pausedForTrash.state.pendingDecision,
+    "trash decision",
+  );
+  assert.equal(trashDecision.type, "selectCards");
+
+  const afterTrash = applyAction(pausedForTrash.state, {
+    type: "respondToDecision",
+    decisionId: trashDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(trashDecision.candidates[0], "trash candidate").card],
+    },
+  });
+  assert.equal(afterTrash.errors, undefined);
+  const targetDecision = must(
+    afterTrash.state.pendingDecision,
+    "DON target decision",
+  );
+  assert.equal(targetDecision.type, "selectTargets");
+  const targetCandidate = must(
+    targetDecision.candidates.find(
+      (candidate) => candidate.card.instanceId === restedDon.instanceId,
+    ),
+    "rested DON target candidate",
+  );
+  must(
+    getLegalActions(afterTrash.state, p1).find(
+      (action) => action.type === "respondToDecision",
+    ),
+    "legal target action",
+  );
+
+  const resolved = applyAction(afterTrash.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: {
+      type: "targets",
+      targets: [targetCandidate.card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const afterDon = must(resolved.state.players[p1], "after p1").costArea.find(
+    (card) => card.instanceId === restedDon.instanceId,
+  );
+  assert.equal(afterDon?.state, "active");
 });
 
 const selectRestedCharacterThenActivateSavedTargetSequence = (): Extract<
