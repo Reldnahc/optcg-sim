@@ -675,6 +675,72 @@ test("DON activation restriction does not block non-matching source categories",
   assert.equal(afterDon?.state, "active");
 });
 
+test("inactive DON activation restriction does not block saved target activation", () => {
+  const { source, state } = sequenceQueueState(
+    selectRestedDonThenActivateSavedTargetSequence(),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const restedDon = must(p1State.donDeck[0], "rested don");
+  p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = [
+    {
+      ...restedDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "rested",
+    },
+  ];
+  state.cardManifest.cards[restedDon.cardId] = resolvedCard({
+    cardId: restedDon.cardId,
+    category: "don",
+  });
+  state.continuousEffects = [
+    {
+      id: "continuous:inactive-don-activation-restriction",
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      controller: p1,
+      modifier: {
+        layer: "restriction",
+        target: { type: "player", player: "self" },
+        operation: {
+          type: "restriction",
+          restriction: "cannotActivateDon",
+          sourceCategories: ["character"],
+        },
+      },
+      duration: { type: "thisBattle" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    } satisfies ContinuousEffectRecord,
+  ];
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "candidate").card],
+    },
+  });
+  const afterDon = must(resolved.state.players[p1], "after p1").costArea.find(
+    (card) => card.instanceId === restedDon.instanceId,
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(afterDon?.state, "active");
+});
+
 test("sequence support admits selecting up to 10 DON in cost area", () => {
   const { state } = sequenceQueueState(
     selectRestedDonThenActivateSavedTargetSequence(10),

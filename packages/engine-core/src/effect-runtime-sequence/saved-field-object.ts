@@ -22,6 +22,10 @@ import {
   applyRestProtection,
   type RestProtectionAttempt,
 } from "../replacement/field-removal-protection.js";
+import {
+  continuousEffectConditionPasses,
+  durationIsActive,
+} from "../view/compute-view-continuous.js";
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -314,6 +318,12 @@ const isDonActivationPrevented = (
       effect.modifier.operation.type !== "restriction" ||
       effect.modifier.operation.restriction !== "cannotActivateDon"
     ) {
+      return false;
+    }
+    if (!durationIsActive(state, effect)) {
+      return false;
+    }
+    if (!continuousEffectConditionPasses(state, effect)) {
       return false;
     }
     const sourceCategories = effect.modifier.operation.sourceCategories;
