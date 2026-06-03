@@ -355,6 +355,26 @@ const applyTrashToHandSelectedCardMoveSegment = (
       state: GameState;
     }
   | { ok: false } => {
+  if (selected.length === 0) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: false,
+            selectedCards: [],
+          },
+        },
+      },
+      ok: true,
+      state: params.state,
+    };
+  }
   const playerId = selectedRefsPlayerId(selected);
   const player = playerId === null ? undefined : params.state.players[playerId];
   if (playerId === null || player === undefined) {

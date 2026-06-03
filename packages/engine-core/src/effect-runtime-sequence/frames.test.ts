@@ -230,6 +230,46 @@ const conditionalTrashToHandSequence = (): Extract<
   };
 };
 
+const optionalTrashToHandSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const selection = "trashSelection:optional" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        saveResultAs: selection,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {
+            colorsAny: ["black"],
+            categories: ["character"],
+            cost: { max: 3 },
+          },
+          saveAs: selection,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: "trash",
+          to: "hand",
+        },
+      },
+    ],
+  };
+};
+
 const reindexHand = (
   cards: readonly CardInstance[],
   playerId = p1,
@@ -530,6 +570,29 @@ test("generic sequence selects matching cards from trash and moves them to hand"
     false,
   );
   assert.equal(resolved.state.effectQueue.length, 0);
+});
+
+test("generic sequence treats empty up-to trash-to-hand selection as successful no-op", () => {
+  const { state } = sequenceQueueState(optionalTrashToHandSequence());
+  const beforeP1 = structuredClone(must(state.players[p1], "before p1"));
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "trash decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.request.zone, "trash");
+  assert.equal(decision.request.min, 0);
+  assert.equal(decision.request.max, 1);
+  assert.deepEqual(decision.candidates, []);
+
+  const resolved = respondWithCards(paused.state, []);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  const afterP1 = must(resolved.state.players[p1], "after p1");
+  assert.deepEqual(afterP1.trash, beforeP1.trash);
+  assert.deepEqual(afterP1.hand, beforeP1.hand);
 });
 
 test("sequence response resumes after the paused segment without replaying completed segments", () => {
