@@ -26,6 +26,67 @@ import {
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
 
+const attackDeclaredPayloadMatchesBattle = (
+  event: EngineEvent,
+  battle: NonNullable<GameState["battle"]>,
+): boolean => {
+  if (event.type !== "attackDeclared") {
+    return false;
+  }
+  const payload = event.payload as {
+    attacker?: {
+      playerId?: PlayerId;
+      instanceId?: string;
+      cardId?: string;
+    };
+    target?: {
+      playerId?: PlayerId;
+      instanceId?: string;
+      cardId?: string;
+    };
+  };
+  return (
+    payload.attacker?.playerId === battle.attacker.playerId &&
+    payload.attacker.instanceId === battle.attacker.instanceId &&
+    payload.attacker.cardId === battle.attacker.cardId &&
+    payload.target?.playerId === battle.originalTarget.playerId &&
+    payload.target.instanceId === battle.originalTarget.instanceId &&
+    payload.target.cardId === battle.originalTarget.cardId
+  );
+};
+
+const hasQueuedOpponentAttackTimingWindow = (
+  state: GameState,
+  event: EngineEvent,
+): boolean => {
+  const timingWindowId = `timing-window:${String(event.id)}:onOpponentAttack`;
+  return state.eventJournal.some((candidate) => {
+    if (candidate.type !== "effectQueued") {
+      return false;
+    }
+    const payload = candidate.payload as { timingWindowId?: string };
+    return payload.timingWindowId === timingWindowId;
+  });
+};
+
+const attackDeclaredEventsForOpponentAttackTiming = (
+  state: GameState,
+  battle: NonNullable<GameState["battle"]>,
+): EngineEvent[] => {
+  const currentSequenceEvents = state.eventJournal.filter(
+    (event) =>
+      event.type === "attackDeclared" && event.createdAtStateSeq === state.seq,
+  );
+  if (currentSequenceEvents.length > 0) {
+    return currentSequenceEvents;
+  }
+  return state.eventJournal.filter(
+    (event) =>
+      attackDeclaredPayloadMatchesBattle(event, battle) &&
+      !hasQueuedOpponentAttackTimingWindow(state, event),
+  );
+};
+
 export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   effect: Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0],
 ): effect is Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0] & {
@@ -261,10 +322,9 @@ export const createAttackTriggerQueueing = (
       );
     }
 
-    const attackDeclaredEvents = state.eventJournal.filter(
-      (event) =>
-        event.type === "attackDeclared" &&
-        event.createdAtStateSeq === state.seq,
+    const attackDeclaredEvents = attackDeclaredEventsForOpponentAttackTiming(
+      state,
+      battle,
     );
     if (attackDeclaredEvents.length === 0) {
       return undefined;

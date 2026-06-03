@@ -220,6 +220,8 @@ const shouldContinueRuntimeAfterEffectDecision = (
       queueEntry.causedBy.name ===
         "effectRuntime:opponentActivationTriggerQueueing" ||
       queueEntry.causedBy.name ===
+        "effectRuntime:whenAttackingTriggerQueueing" ||
+      queueEntry.causedBy.name ===
         "effectRuntime:onOpponentAttackTriggerQueueing" ||
       queueEntry.causedBy.name === "effectRuntime:endOfYourTurnTriggerQueueing")
   );

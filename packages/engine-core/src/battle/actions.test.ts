@@ -19,6 +19,7 @@ import {
   cardRef,
   resolveNoTriggerLifeDamageDecisionsForTests,
   setupAttackState,
+  withOnOpponentAttackDrawEffect,
 } from "./test-fixtures.js";
 
 const addTrashCards = (
@@ -43,6 +44,32 @@ const addTrashCards = (
       attachedDon: [],
     };
   });
+};
+
+const ensureDeckHasAtLeast = (
+  state: ReturnType<typeof setupAttackState>,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = must(state.players[playerId], "deck owner");
+  while (player.deck.length < count) {
+    const index = player.deck.length;
+    const cardId = toCardId(`${String(playerId)}-deck-extra-${String(index)}`);
+    state.cardManifest.cards[cardId] = resolvedCard({
+      cardId,
+      category: "character",
+      power: 1000,
+    });
+    player.deck.push({
+      instanceId: `${String(playerId)}:deck:extra:${String(index)}` as never,
+      cardId,
+      owner: playerId,
+      controller: playerId,
+      zone: { zone: "deck", playerId, slot: "deck", index },
+      state: "active",
+      attachedDon: [],
+    });
+  }
 };
 
 const assertCounterPassDecision = (
@@ -494,6 +521,83 @@ test("When Attacking target selection resumes battle after selecting no target",
   assert.equal(passed.errors, undefined);
   assert.equal(passed.state.pendingDecision, undefined);
   assert.equal(passed.state.battle, undefined);
+});
+
+test("When Attacking target selection resumes into defender On Your Opponent's Attack timing", () => {
+  const state = setupAttackState();
+  installWhenAttackingConditionalPowerReduction(state);
+  addTrashCards(state, 10);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderDefinition = withOnOpponentAttackDrawEffect(
+    state,
+    p2State.leader,
+    "def-after-paused-when-attacking",
+  );
+  defenderDefinition.metadata.effectDefinitionsVersion = "test";
+  state.cardManifest.effectDefinitionsVersion = "test";
+  const defenderEffect = must(
+    defenderDefinition.effects[0],
+    "defender On Opponent Attack effect",
+  );
+  ensureDeckHasAtLeast(state, p2, 2);
+  const beforeDefenderHand = p2State.hand.length;
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "selectTargets");
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "pending decision").id,
+    response: { type: "targets", targets: [] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.battle?.step, "counter");
+  assert.equal(resolved.state.pendingDecision?.type, "selectCards");
+  assert.equal(resolved.state.pendingDecision.playerId, p2);
+  assert.equal(
+    must(resolved.state.players[p2], "resolved p2").hand.length,
+    beforeDefenderHand + 1,
+  );
+
+  const attackerResolvedIndex = resolved.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectResolved" &&
+      payload.effectBlockId === "when-attacking-power-reduction"
+    );
+  });
+  const defenderQueuedIndex = resolved.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectQueued" &&
+      payload.effectBlockId === defenderEffect.id
+    );
+  });
+  const defenderResolvedIndex = resolved.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectResolved" &&
+      payload.effectBlockId === defenderEffect.id
+    );
+  });
+  const counterDecisionIndex = resolved.events.findIndex(
+    (event) => event.type === "decisionCreated",
+  );
+
+  assert.notEqual(attackerResolvedIndex, -1);
+  assert.notEqual(defenderQueuedIndex, -1);
+  assert.notEqual(defenderResolvedIndex, -1);
+  assert.notEqual(counterDecisionIndex, -1);
+  assert.ok(attackerResolvedIndex < defenderQueuedIndex);
+  assert.ok(defenderQueuedIndex < defenderResolvedIndex);
+  assert.ok(defenderResolvedIndex < counterDecisionIndex);
 });
 
 test("When Attacking target selection resumes battle after selecting a target", () => {
