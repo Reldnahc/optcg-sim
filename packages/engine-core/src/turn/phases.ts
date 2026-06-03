@@ -473,10 +473,13 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
       const nextDeck = turnPlayer.deck
         .slice(1)
         .map((card, index) => withIndexedZone(card, "deck", "deck", index));
-      const nextHand = [
-        ...turnPlayer.hand,
-        withIndexedZone(drawn, "hand", "hand", turnPlayer.hand.length),
-      ];
+      const moved = withIndexedZone(
+        drawn,
+        "hand",
+        "hand",
+        turnPlayer.hand.length,
+      );
+      const nextHand = [...turnPlayer.hand, moved];
       nextPlayer = { ...turnPlayer, deck: nextDeck, hand: nextHand };
       appendEvent(
         events,
@@ -484,6 +487,32 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
         "cardDrawn",
         { playerId: turnPlayerId, cardInstanceId: drawn.instanceId },
         { type: "replayOnly" },
+      );
+      appendEvent(
+        events,
+        state,
+        "cardMoved",
+        { from: "deck", to: "hand", playerId: turnPlayerId, reason: "draw" },
+        { type: "public" },
+      );
+      appendEvent(
+        events,
+        state,
+        "cardMoved",
+        {
+          from: {
+            zone: "deck",
+            playerId: turnPlayerId,
+            slot: "deck",
+            index: 0,
+          },
+          to: moved.zone,
+          playerId: turnPlayerId,
+          reason: "draw",
+          instanceId: moved.instanceId,
+          cardId: moved.cardId,
+        },
+        { type: "private", playerId: turnPlayerId },
       );
     }
   }

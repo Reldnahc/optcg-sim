@@ -293,6 +293,42 @@ test("normal draw on non-skipped draw phase", () => {
   );
 });
 
+test("normal draw emits visible deck-to-hand movement evidence", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.turn.globalTurn = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  state.turn.phase = "draw";
+  const drawn = must(
+    must(state.players[p2], "p2 before draw").deck[0],
+    "drawn card",
+  );
+
+  const draw = advanceDrawPhase(state);
+  const movementEvents = draw.events.filter(
+    (event) => event.type === "cardMoved",
+  );
+
+  assert.deepEqual(
+    movementEvents.map((event) => event.visibility),
+    [{ type: "public" }, { type: "private", playerId: p2 }],
+  );
+  assert.deepEqual(
+    movementEvents.map((event) => event.payload),
+    [
+      { from: "deck", to: "hand", playerId: p2, reason: "draw" },
+      {
+        from: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
+        to: { zone: "hand", playerId: p2, slot: "hand", index: 5 },
+        playerId: p2,
+        reason: "draw",
+        instanceId: drawn.instanceId,
+        cardId: drawn.cardId,
+      },
+    ],
+  );
+});
+
 test("first-player one-DON!! first turn and normal two-DON!! later turns", () => {
   const firstTurn = createActiveState();
   firstTurn.turn.phase = "don";
