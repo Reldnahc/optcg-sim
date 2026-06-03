@@ -75,4 +75,56 @@ describe("sim auth client", () => {
     );
     assert.equal(requests[0]?.init?.credentials, "include");
   });
+
+  test("uses the submitted username as the initial display name when registering", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createSimAuthClient({
+      baseUrl: "https://auth.example",
+      fetch(input, init) {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              user: {
+                id: "user-1",
+                username: "tester",
+                display_name: "Tester",
+                email: null,
+                email_verified: false,
+              },
+              session: {
+                id: "session-1",
+                expires_at: "2026-06-03T00:00:00.000Z",
+              },
+              token: "opaque-token",
+            },
+          }),
+        );
+      },
+    });
+
+    await client.register({
+      username: "Tester",
+      password: "password",
+      email: "",
+    });
+
+    const request = requests[0];
+    if (request === undefined) throw new Error("Expected a register request");
+    const body = request.init?.body;
+    if (typeof body !== "string") {
+      throw new Error("Expected register request body to be JSON text");
+    }
+    assert.equal(request.url, "https://auth.example/v1/auth/register");
+    assert.equal(request.init?.credentials, "include");
+    assert.deepEqual(JSON.parse(body), {
+      username: "Tester",
+      password: "password",
+      display_name: "Tester",
+      email: null,
+    });
+  });
 });

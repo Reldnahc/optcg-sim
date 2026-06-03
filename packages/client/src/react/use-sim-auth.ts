@@ -33,7 +33,6 @@ export const simAuthSessionToken = (session: SimAuthSession): string =>
 const registerInput = (input: RegisterCredentials): SimRegisterInput => ({
   username: input.username,
   password: input.password,
-  displayName: input.displayName,
   email: input.email,
 });
 

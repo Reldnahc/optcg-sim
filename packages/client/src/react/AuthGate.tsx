@@ -10,7 +10,6 @@ export interface AuthCredentials {
 }
 
 export interface RegisterCredentials extends AuthCredentials {
-  readonly displayName: string;
   readonly email: string;
 }
 
@@ -36,7 +35,6 @@ export const AuthGate = ({
   const [mode, setMode] = useState<AuthMode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
 
   if (sessionStatus === "authenticated") {
@@ -86,7 +84,7 @@ export const AuthGate = ({
               void onLogin({ username, password });
               return;
             }
-            void onRegister({ username, password, displayName, email });
+            void onRegister({ username, password, email });
           }}
         >
           <label>
@@ -102,33 +100,19 @@ export const AuthGate = ({
             />
           </label>
           {mode === "register" ? (
-            <>
-              <label>
-                <span>Display name</span>
-                <input
-                  name="displayName"
-                  autoComplete="nickname"
-                  value={displayName}
-                  disabled={submitting}
-                  onChange={(event) => {
-                    setDisplayName(event.target.value);
-                  }}
-                />
-              </label>
-              <label>
-                <span>Email</span>
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  disabled={submitting}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                  }}
-                />
-              </label>
-            </>
+            <label>
+              <span>Email</span>
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                disabled={submitting}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
+              />
+            </label>
           ) : null}
           <label>
             <span>Password</span>

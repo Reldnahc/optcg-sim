@@ -19,7 +19,6 @@ export interface SimLoginInput {
 }
 
 export interface SimRegisterInput extends SimLoginInput {
-  readonly displayName: string;
   readonly email: string;
 }
 
@@ -51,7 +50,9 @@ const sessionFromResponse = (response: {
 const registerPayload = (input: SimRegisterInput): RegisterInput => ({
   username: input.username,
   password: input.password,
-  display_name: input.displayName,
+  // Compatibility with optcg-auth-client 0.1.3. The shared package owns this
+  // derivation starting in 0.1.4.
+  display_name: input.username,
   email: input.email.length === 0 ? null : input.email,
 });
 
