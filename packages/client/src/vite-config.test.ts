@@ -14,4 +14,13 @@ describe("client Vite dev proxy", () => {
     assert.equal(config.includes('"/api"'), true);
     assert.equal(config.includes("ws: true"), true);
   });
+
+  test("suppresses expected aborted websocket proxy writes only", async () => {
+    const config = await readFile(join(clientRoot, "vite.config.mjs"), "utf8");
+
+    assert.match(config, /configure:\s*\(proxy\)\s*=>/u);
+    assert.equal(config.includes('"ECONNABORTED"'), true);
+    assert.equal(config.includes('"ECONNRESET"'), true);
+    assert.match(config, /throw error/u);
+  });
 });
