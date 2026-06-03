@@ -17,6 +17,7 @@ import "./styles/tabbed-floating-window.css";
 import "./styles/decision-modal.css";
 import "./styles/collection-modal.css";
 import "./styles/reveal-window.css";
+import "./styles/presentation-effects.css";
 
 const root = document.getElementById("root");
 if (root === null) {

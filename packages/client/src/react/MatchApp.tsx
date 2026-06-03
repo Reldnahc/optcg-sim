@@ -350,6 +350,7 @@ export const MatchApp = ({
       <MatchBoardSurface
         board={displayBoard}
         clientState={clientState}
+        presentationEvents={playerSnapshot?.view.events ?? []}
         decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
         selectedCardInstanceId={selectedCardInstanceId}
         pendingChoiceInstanceIds={pendingChoiceInstanceIds}

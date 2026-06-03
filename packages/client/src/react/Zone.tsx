@@ -11,6 +11,7 @@ import { CardTile } from "./CardTile.js";
 export interface ZoneProps {
   label: string;
   cards: readonly ClientCardModel[];
+  presentationZoneKey?: string | undefined;
   size?: "normal" | "small" | "mini" | "hand";
   displayMode?: "spread" | "stack" | "overlap" | "slots" | "life" | undefined;
   stackCount?: number | undefined;
@@ -33,6 +34,7 @@ export interface ZoneProps {
 export const Zone = ({
   label,
   cards,
+  presentationZoneKey,
   size = "normal",
   displayMode = "spread",
   stackCount,
@@ -125,7 +127,11 @@ export const Zone = ({
   const displayedStackCount = stackCount ?? cards.length;
 
   return (
-    <section ref={zoneRef} className={`zone zone-${size} zone-${displayMode}`}>
+    <section
+      ref={zoneRef}
+      className={`zone zone-${size} zone-${displayMode}`}
+      data-presentation-zone={presentationZoneKey}
+    >
       <div className="zone-label">{label}</div>
       {displayMode === "stack" ? (
         <div

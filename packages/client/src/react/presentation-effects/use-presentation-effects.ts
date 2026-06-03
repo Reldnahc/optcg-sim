@@ -1,0 +1,76 @@
+import { useLayoutEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
+
+import type { EngineEvent } from "@optcg/types";
+
+import type { BoardViewModel } from "../../view-model.js";
+import {
+  planCardMovementIntents,
+  type CardMovementIntent,
+  type PresentationSnapshot,
+} from "./movement-planner.js";
+import { collectPresentationSnapshot } from "./position-registry.js";
+import { playPresentationSoundIntents } from "./sound-controller.js";
+import { planSoundIntents } from "./sound-planner.js";
+
+const movementDurationMs = 150;
+
+export interface PresentationEffectsController {
+  movements: readonly CardMovementIntent[];
+}
+
+export const usePresentationEffects = (input: {
+  rootRef: RefObject<HTMLElement | null>;
+  board: BoardViewModel;
+  events: readonly EngineEvent[];
+  soundEnabled?: boolean | undefined;
+}): PresentationEffectsController => {
+  const previousSnapshotRef = useRef<PresentationSnapshot | undefined>(
+    undefined,
+  );
+  const seenEventIdsRef = useRef<Set<string>>(new Set());
+  const clearTimerRef = useRef<number | undefined>(undefined);
+  const [movements, setMovements] = useState<readonly CardMovementIntent[]>([]);
+
+  useLayoutEffect(() => {
+    const root = input.rootRef.current;
+    if (root === null) {
+      return;
+    }
+
+    const currentSnapshot = collectPresentationSnapshot(root, input.board);
+    const newEvents = input.events.filter((event) => {
+      const id = String(event.id);
+      if (seenEventIdsRef.current.has(id)) {
+        return false;
+      }
+      seenEventIdsRef.current.add(id);
+      return true;
+    });
+    const plannedMovements = planCardMovementIntents({
+      previous: previousSnapshotRef.current,
+      current: currentSnapshot,
+      events: newEvents,
+      currentPlayerId: input.board.playerId,
+    });
+    previousSnapshotRef.current = currentSnapshot;
+
+    if (plannedMovements.length === 0) {
+      return;
+    }
+
+    setMovements(plannedMovements);
+    playPresentationSoundIntents(planSoundIntents(plannedMovements), {
+      enabled: input.soundEnabled ?? true,
+    });
+    if (clearTimerRef.current !== undefined) {
+      window.clearTimeout(clearTimerRef.current);
+    }
+    clearTimerRef.current = window.setTimeout(() => {
+      setMovements([]);
+      clearTimerRef.current = undefined;
+    }, movementDurationMs);
+  }, [input.board, input.events, input.rootRef, input.soundEnabled]);
+
+  return { movements };
+};

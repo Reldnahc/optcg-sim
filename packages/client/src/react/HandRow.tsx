@@ -38,6 +38,7 @@ export interface HandRowProps {
   label: string;
   cards: readonly ClientCardModel[];
   overflowDirection: HandOverflowDirection;
+  presentationZoneKey?: string | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
@@ -63,6 +64,7 @@ export const HandRow = ({
   label,
   cards,
   overflowDirection,
+  presentationZoneKey,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
@@ -140,7 +142,12 @@ export const HandRow = ({
     Record<"--hand-lane-extension" | "--hand-overlap", string>;
 
   return (
-    <section ref={rowRef} className="hand-row" aria-label={label}>
+    <section
+      ref={rowRef}
+      className="hand-row"
+      aria-label={label}
+      data-presentation-zone={presentationZoneKey}
+    >
       <div ref={cardsRef} className={handCardsClassName} style={handStyle}>
         {cards.map((card) => {
           const instanceId = String(card.instanceId);

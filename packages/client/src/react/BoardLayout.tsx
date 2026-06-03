@@ -3,9 +3,13 @@ import type {
   ClientActionModel,
   ClientCardModel,
 } from "../view-model.js";
+import type { EngineEvent } from "@optcg/types";
+import { useRef } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
+import { CardMovementOverlay } from "./presentation-effects/CardMovementOverlay.js";
+import { usePresentationEffects } from "./presentation-effects/use-presentation-effects.js";
 import { Zone } from "./Zone.js";
 
 export interface BoardLayoutProps {
@@ -29,6 +33,8 @@ export interface BoardLayoutProps {
     | undefined;
   onViewCollection: (title: string, cards: readonly ClientCardModel[]) => void;
   onBackgroundClick: () => void;
+  presentationEvents?: readonly EngineEvent[] | undefined;
+  soundEnabled?: boolean | undefined;
 }
 
 const hiddenCards = (
@@ -73,21 +79,33 @@ export const BoardLayout = ({
   onMoveHandCard,
   onViewCollection,
   onBackgroundClick,
+  presentationEvents = [],
+  soundEnabled = true,
 }: BoardLayoutProps): React.JSX.Element => {
   const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
+  const boardShellRef = useRef<HTMLElement | null>(null);
+  const presentationEffects = usePresentationEffects({
+    rootRef: boardShellRef,
+    board,
+    events: presentationEvents,
+    soundEnabled,
+  });
 
   return (
     <section
+      ref={boardShellRef}
       className="board-shell"
       onClick={() => {
         onBackgroundClick();
       }}
     >
+      <CardMovementOverlay movements={presentationEffects.movements} />
       <div className="hand-rail">
         <HandRow
           label="Opponent hand"
           cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
           overflowDirection="right"
+          presentationZoneKey="opponent:hand"
         />
         {handCount(board.opponentLabel, "opponent", board.opponent.handCount)}
         {handCount(board.selfLabel, "player", board.self.hand.length)}
@@ -100,6 +118,7 @@ export const BoardLayout = ({
           label="Player hand"
           cards={board.self.hand}
           overflowDirection="left"
+          presentationZoneKey="self:hand"
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
@@ -119,6 +138,7 @@ export const BoardLayout = ({
           <Zone
             label="Cost Area"
             cards={board.opponent.costArea}
+            presentationZoneKey="opponent:costArea"
             size="mini"
             displayMode="overlap"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -133,6 +153,7 @@ export const BoardLayout = ({
           <Zone
             label="Life"
             cards={board.opponent.lifeCards}
+            presentationZoneKey="opponent:life"
             size="small"
             displayMode="life"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -150,6 +171,7 @@ export const BoardLayout = ({
               "hidden-deck-opponent",
               10,
             )}
+            presentationZoneKey="opponent:deck"
             size="small"
             displayMode="stack"
             stackCount={board.opponent.deckCount}
@@ -164,6 +186,7 @@ export const BoardLayout = ({
               "hidden-don-deck-opponent",
               10,
             )}
+            presentationZoneKey="opponent:donDeck"
             size="small"
             displayMode="stack"
             stackCount={board.opponent.donDeckCount}
@@ -174,6 +197,7 @@ export const BoardLayout = ({
           <Zone
             label="Trash"
             cards={board.opponent.trash}
+            presentationZoneKey="opponent:trash"
             size="small"
             displayMode="stack"
             onCardPreview={onPreviewCard}
@@ -189,6 +213,7 @@ export const BoardLayout = ({
           <Zone
             label="Leader"
             cards={[board.opponent.leader]}
+            presentationZoneKey="opponent:leaderArea"
             size="small"
             selectedCardInstanceId={selectedCardInstanceId}
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -205,6 +230,7 @@ export const BoardLayout = ({
         <div className="playmat-zone opponent-stage">
           <Zone
             label="Stage"
+            presentationZoneKey="opponent:stageArea"
             cards={
               board.opponent.stage === undefined ? [] : [board.opponent.stage]
             }
@@ -225,6 +251,7 @@ export const BoardLayout = ({
           <Zone
             label="Character Area"
             cards={board.opponent.characters}
+            presentationZoneKey="opponent:characterArea"
             displayMode="slots"
             slotCount={5}
             selectedCardInstanceId={selectedCardInstanceId}
@@ -247,6 +274,7 @@ export const BoardLayout = ({
           <Zone
             label="Character Area"
             cards={board.self.characters}
+            presentationZoneKey="self:characterArea"
             displayMode="slots"
             slotCount={5}
             selectedCardInstanceId={selectedCardInstanceId}
@@ -265,6 +293,7 @@ export const BoardLayout = ({
           <Zone
             label="Life"
             cards={board.self.lifeCards}
+            presentationZoneKey="self:life"
             size="small"
             displayMode="life"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -278,6 +307,7 @@ export const BoardLayout = ({
           <Zone
             label="Leader"
             cards={[board.self.leader]}
+            presentationZoneKey="self:leaderArea"
             size="small"
             selectedCardInstanceId={selectedCardInstanceId}
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -295,6 +325,7 @@ export const BoardLayout = ({
           <Zone
             label="Stage"
             cards={board.self.stage === undefined ? [] : [board.self.stage]}
+            presentationZoneKey="self:stageArea"
             size="small"
             selectedCardInstanceId={selectedCardInstanceId}
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -312,6 +343,7 @@ export const BoardLayout = ({
           <Zone
             label="Deck"
             cards={hiddenCards(board.self.deckCount, "hidden-deck-self", 10)}
+            presentationZoneKey="self:deck"
             size="small"
             displayMode="stack"
             stackCount={board.self.deckCount}
@@ -326,6 +358,7 @@ export const BoardLayout = ({
               "hidden-don-deck-self",
               10,
             )}
+            presentationZoneKey="self:donDeck"
             size="small"
             displayMode="stack"
             stackCount={board.self.donDeckCount}
@@ -336,6 +369,7 @@ export const BoardLayout = ({
           <Zone
             label="Trash"
             cards={board.self.trash}
+            presentationZoneKey="self:trash"
             size="small"
             displayMode="stack"
             onCardPreview={onPreviewCard}
@@ -348,6 +382,7 @@ export const BoardLayout = ({
           <Zone
             label="Cost Area"
             cards={board.self.costArea}
+            presentationZoneKey="self:costArea"
             size="mini"
             displayMode="overlap"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
