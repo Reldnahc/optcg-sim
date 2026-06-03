@@ -61,6 +61,9 @@ export interface MatchClientController {
     deckHash: string;
     donDeckCount: number;
   }) => Promise<MatchClientSessionState>;
+  submitLobbyLoadoutHandoff: (input: {
+    handoffToken: string;
+  }) => Promise<MatchClientSessionState>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
   joinLocalMatch: (
     input: ClientSeatIdentity,
@@ -276,6 +279,27 @@ export const createMatchClientController = ({
       });
       return claimMatchIfReady({
         ...currentLobbyState,
+        lobby,
+      });
+    },
+    async submitLobbyLoadoutHandoff(input) {
+      if (currentLobbyState === undefined) {
+        throw new Error("Cannot submit a loadout before joining a lobby.");
+      }
+      const lobby = await transport.submitLobbyLoadoutHandoff({
+        lobbyId: currentLobbyState.lobbyId,
+        handoffToken: input.handoffToken,
+      });
+      return claimMatchIfReady({
+        lobbyId: lobby.lobbyId,
+        seat: {
+          lobbyId: lobby.lobbyId,
+          playerId: lobby.seat.playerId,
+          sessionToken:
+            lobby.seat.sessionToken ??
+            sessionStore.loadClaimedSeat()?.sessionToken ??
+            currentLobbyState.seat.sessionToken,
+        },
         lobby,
       });
     },

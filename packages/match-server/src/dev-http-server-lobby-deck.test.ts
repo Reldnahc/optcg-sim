@@ -1,17 +1,20 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type { DeckHashDeck } from "optcg-deck-hash";
+import type { CardId } from "@optcg/types";
 
 import { createDevHttpServer } from "./dev-http-server.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
+import type { SimHandoffVerifier, VerifiedSimHandoff } from "./sim-handoff.js";
 
 interface CreatedDevLobbyBody {
   lobbyId?: string;
   matchId?: string;
-  seat?: { playerId?: string };
+  seat?: { playerId?: string; sessionToken?: string };
+  sessionToken?: string;
   seats: Record<
     string,
     {
@@ -67,6 +70,50 @@ const createDeckHashDevHttpServer = async () =>
     },
   });
 
+const verifiedHandoff = (
+  overrides: Partial<VerifiedSimHandoff> = {},
+): VerifiedSimHandoff => ({
+  claims: {
+    jti: "token-1",
+    sub: "user-1",
+    sid: "session-1",
+    loadout_id: "loadout-1",
+    lobby_id: null,
+    seat_id: null,
+    aud: "optcg-sim",
+    iat: 1,
+    exp: 2,
+    ...overrides.claims,
+  },
+  resolvedLoadout: {
+    loadoutId: "loadout-1",
+    userId: "user-1",
+    mainDeck: {
+      deckId: "deck-1",
+      hash: "deck-hash",
+      leader: { cardId: "OP13-079" as CardId, count: 1 },
+      main: [{ cardId: "OP13-080" as CardId, count: 8 }],
+    },
+    donDeck: {
+      donDeckId: "don-1",
+      count: 10,
+    },
+    cosmetics: {
+      playmatId: "playmat-1",
+      donSleeveId: "don-sleeve-1",
+      deckSleeveId: "deck-sleeve-1",
+    },
+  },
+  ...overrides,
+});
+
+const createHandoffDevHttpServer = async (verifier: SimHandoffVerifier) =>
+  createDevHttpServer({
+    setup: await createFixtureDevMatchSetup(),
+    fetchCard: createDefaultDevFixtureFetch(),
+    simHandoffVerifier: verifier,
+  });
+
 const createDevLobby = async (
   server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
 ): Promise<CreatedDevLobbyBody> => {
@@ -105,6 +152,23 @@ const submitDevLobbyDeck = async (
     },
     body: JSON.stringify({ deckHash, donDeckCount }),
   });
+  assert.equal(response.status, 200);
+  return (await response.json()) as CreatedDevLobbyBody;
+};
+
+const submitDevLobbyLoadout = async (
+  server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
+  lobbyId: string,
+  handoffToken: string,
+): Promise<CreatedDevLobbyBody> => {
+  const response = await fetch(
+    `${server.url()}/api/lobbies/${lobbyId}/loadout`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ handoffToken }),
+    },
+  );
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedDevLobbyBody;
 };
@@ -164,6 +228,43 @@ const openSocket = async (url: string): Promise<TestSocket> =>
   });
 
 describe("dev HTTP lobby deck submissions", () => {
+  test("verified account loadout claims a lobby seat without browser-supplied deck data", async () => {
+    const verifiedTokens: string[] = [];
+    const server = await createHandoffDevHttpServer({
+      verify(token) {
+        verifiedTokens.push(token);
+        return Promise.resolve(verifiedHandoff());
+      },
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      const result = await submitDevLobbyLoadout(
+        server,
+        lobbyId,
+        "handoff-token",
+      );
+
+      assert.deepEqual(verifiedTokens, ["handoff-token"]);
+      const seat = result.seat;
+      if (seat === undefined) {
+        throw new Error("Expected account handoff to claim a lobby seat.");
+      }
+      assert.equal(seat.playerId, "p1");
+      assert.equal(seat.sessionToken, "user:user-1:session-1");
+      assert.equal(requireLobbySeat(result, "p1").claimed, true);
+      assert.equal(requireLobbySeat(result, "p1").deck.status, "ready");
+      assert.equal(requireLobbySeat(result, "p2").claimed, false);
+    } finally {
+      await server.close();
+    }
+  });
+
   test("custom lobby waits for both claimed seats and ready deck submissions", async () => {
     const server = await createDeckHashDevHttpServer();
     await server.listen(0, "127.0.0.1");

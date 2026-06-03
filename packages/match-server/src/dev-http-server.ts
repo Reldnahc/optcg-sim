@@ -24,6 +24,11 @@ import {
   type createLocalDevMatch,
 } from "./local-match.js";
 import type { AuthContext } from "./dev-auth.js";
+import { parseDevSessionToken } from "./dev-auth.js";
+import {
+  createPoneglyphSimHandoffVerifier,
+  type SimHandoffVerifier,
+} from "./sim-handoff.js";
 import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
 import {
@@ -64,6 +69,8 @@ export interface DevHttpServer {
 export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
   readonly deckHashCodec?: DeckHashCodecPort;
+  readonly simHandoffVerifier?: SimHandoffVerifier;
+  readonly authBaseUrl?: string;
 }
 
 const sendJson = (
@@ -122,7 +129,7 @@ const createDevAuthProvider = (): AuthProvider => ({
       return undefined;
     }
     return {
-      subject: { type: "anonymousDev", devSessionId: token },
+      subject: parseDevSessionToken(token),
     };
   },
 });
@@ -135,6 +142,7 @@ const handleApiRequest = async (
   matchConnections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
+  simHandoffVerifier: SimHandoffVerifier,
 ): Promise<void> => {
   const url = request.url ?? "/";
   const pathname = new URL(url, "http://localhost").pathname;
@@ -241,6 +249,54 @@ const handleApiRequest = async (
     }
     if (result === "invalidDeck") {
       sendJson(response, 400, { errors: ["Deck hash is invalid."] });
+      return;
+    }
+    broadcastLobbyState(result, lobbyConnections);
+    sendJson(response, 200, result);
+    return;
+  }
+  const lobbyLoadoutRoute =
+    /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/loadout$/u.exec(pathname);
+  if (request.method === "POST" && lobbyLoadoutRoute !== null) {
+    const lobbyId = decodeURIComponent(
+      lobbyLoadoutRoute.groups?.["lobbyId"] ?? "",
+    );
+    const body = await readRequestJson(request);
+    const handoffToken = isRecord(body) ? body["handoffToken"] : undefined;
+    if (typeof handoffToken !== "string" || handoffToken.trim().length === 0) {
+      sendJson(response, 400, { errors: ["Sim handoff token is required."] });
+      return;
+    }
+    let handoff;
+    try {
+      handoff = await simHandoffVerifier.verify(handoffToken.trim());
+    } catch (error: unknown) {
+      sendJson(response, 401, {
+        errors: [
+          error instanceof Error
+            ? error.message
+            : "Sim handoff verification failed.",
+        ],
+      });
+      return;
+    }
+    const result = await lobbyRegistry.submitVerifiedLoadout(lobbyId, handoff);
+    if (result === "lobbyNotFound") {
+      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
+      return;
+    }
+    if (result === "seatNotFound") {
+      sendJson(response, 403, {
+        errors: ["Sim handoff token is not authorized for this lobby seat."],
+      });
+      return;
+    }
+    if (result === "full") {
+      sendJson(response, 409, { errors: ["Lobby is full."] });
+      return;
+    }
+    if (result === "invalidDeck") {
+      sendJson(response, 400, { errors: ["Resolved loadout is invalid."] });
       return;
     }
     broadcastLobbyState(result, lobbyConnections);
@@ -770,6 +826,13 @@ export const createDevHttpServer = async (
   );
   const lobbyRegistry = createLocalDevLobbyRegistry(registry, options);
   const authProvider = createDevAuthProvider();
+  const simHandoffVerifier =
+    options.simHandoffVerifier ??
+    createPoneglyphSimHandoffVerifier({
+      ...(options.authBaseUrl === undefined
+        ? {}
+        : { authBaseUrl: options.authBaseUrl }),
+    });
   const socketConnections = new Set<DevSocketConnection>();
   const lobbySocketConnections = new Set<DevLobbySocketConnection>();
   const server = createServer((request, response) => {
@@ -783,6 +846,7 @@ export const createDevHttpServer = async (
           socketConnections,
           lobbySocketConnections,
           authProvider,
+          simHandoffVerifier,
         )
       : handleNotFoundRequest(response);
     operation.catch((error: unknown) => {

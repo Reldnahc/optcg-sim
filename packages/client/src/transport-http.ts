@@ -77,6 +77,11 @@ export const createDevHttpMatchTransport = ({
         input.guestToken,
       );
     },
+    async submitLobbyLoadoutHandoff(input) {
+      return postJson<JoinedLobby>(lobbyPath(input.lobbyId, "/loadout"), {
+        handoffToken: input.handoffToken,
+      });
+    },
     async loadLobby(lobbyId) {
       const response = await fetchImpl(lobbyPath(lobbyId));
       return readJson<LocalLobby>(response);

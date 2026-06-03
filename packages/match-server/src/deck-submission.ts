@@ -4,6 +4,7 @@ import {
   type DeckHashDeck,
 } from "optcg-deck-hash";
 import type { CardId } from "@optcg/types";
+import type { ResolvedLoadout } from "./sim-handoff.js";
 
 export interface DeckSubmissionEntry {
   readonly cardId: CardId;
@@ -12,7 +13,7 @@ export interface DeckSubmissionEntry {
 }
 
 export interface ReadyDeckSubmission {
-  readonly source: "deckHash";
+  readonly source: "deckHash" | "resolvedLoadout";
   readonly hash: string;
   readonly status: "ready";
   readonly decoded: {
@@ -24,7 +25,7 @@ export interface ReadyDeckSubmission {
 }
 
 export interface InvalidDeckSubmission {
-  readonly source: "deckHash";
+  readonly source: "deckHash" | "resolvedLoadout";
   readonly hash: string;
   readonly status: "invalid";
   readonly error: string;
@@ -128,3 +129,19 @@ export const decodeDeckHashSubmission = async ({
     );
   }
 };
+
+export const createDeckSubmissionFromResolvedLoadout = (
+  loadout: ResolvedLoadout,
+): ReadyDeckSubmission => ({
+  source: "resolvedLoadout",
+  hash: loadout.mainDeck.hash ?? `loadout:${loadout.loadoutId}`,
+  status: "ready",
+  decoded: {
+    leader: loadout.mainDeck.leader,
+    main: loadout.mainDeck.main,
+    ...(loadout.mainDeck.format === undefined
+      ? {}
+      : { format: loadout.mainDeck.format }),
+  },
+  donDeckCount: loadout.donDeck.count,
+});

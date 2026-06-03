@@ -39,6 +39,10 @@ const createFakeTransport = (): MatchTransport & {
     deckHash: string;
     donDeckCount: number;
   }>;
+  submittedLoadoutHandoffs: Array<{
+    lobbyId: string;
+    handoffToken: string;
+  }>;
 } => {
   const claimedSeats: Array<{
     matchId: MatchId;
@@ -54,6 +58,10 @@ const createFakeTransport = (): MatchTransport & {
     guestToken: string;
     deckHash: string;
     donDeckCount: number;
+  }> = [];
+  const submittedLoadoutHandoffs: Array<{
+    lobbyId: string;
+    handoffToken: string;
   }> = [];
   const lobbySeats = ({
     p1Ready = false,
@@ -77,6 +85,7 @@ const createFakeTransport = (): MatchTransport & {
     claimedSeats,
     joinedLobbies,
     submittedLobbyDecks,
+    submittedLoadoutHandoffs,
     createLobby() {
       return Promise.resolve({
         lobbyId: "lobby-1",
@@ -101,6 +110,14 @@ const createFakeTransport = (): MatchTransport & {
       submittedLobbyDecks.push(input);
       return Promise.resolve({
         lobbyId: input.lobbyId,
+        seats: lobbySeats({ p1Ready: true }),
+      });
+    },
+    submitLobbyLoadoutHandoff(input) {
+      submittedLoadoutHandoffs.push(input);
+      return Promise.resolve({
+        lobbyId: input.lobbyId,
+        seat: { playerId: "p1" as PlayerId, sessionToken: "user:u:s" },
         seats: lobbySeats({ p1Ready: true }),
       });
     },

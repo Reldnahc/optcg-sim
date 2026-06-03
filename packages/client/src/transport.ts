@@ -143,7 +143,7 @@ export interface LobbyDeckStatus {
 }
 
 export interface JoinedLobby extends LocalLobby {
-  seat: { playerId: PlayerId };
+  seat: { playerId: PlayerId; sessionToken?: string };
 }
 
 export interface SubmitVisibleActionInput {
@@ -271,6 +271,10 @@ export interface MatchTransport {
     deckHash: string;
     donDeckCount: number;
   }) => Promise<LocalLobby>;
+  submitLobbyLoadoutHandoff: (input: {
+    lobbyId: string;
+    handoffToken: string;
+  }) => Promise<JoinedLobby>;
   loadLobby: (lobbyId: string) => Promise<LocalLobby>;
   createMatch: () => Promise<CreatedMatch>;
   createRematch: (input: {
