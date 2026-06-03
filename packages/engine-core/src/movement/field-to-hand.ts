@@ -28,11 +28,9 @@ export const moveFieldCardToOwnerHand = (params: {
       ? { ...card, state: "rested" as const }
       : card,
   );
-  const nextHand = addCardsToHand(
-    player.hand,
-    [{ ...params.card, attachedDon: [] }],
-    params.playerId,
-  );
+  const handCard = { ...params.card, attachedDon: [] };
+  delete handCard.state;
+  const nextHand = addCardsToHand(player.hand, [handCard], params.playerId);
   const nextCharacters =
     params.sourceZone === "characterArea"
       ? reindexZoneCards(
