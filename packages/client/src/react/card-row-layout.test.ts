@@ -35,4 +35,20 @@ describe("card row layout", () => {
       },
     );
   });
+
+  test("includes retained row gaps when calculating overlap", () => {
+    assert.deepEqual(
+      calculateCardRowLayout({
+        availableWidth: 420,
+        cardWidth: 60,
+        cardCount: 10,
+        retainedGapWidth: 5,
+      }),
+      {
+        overlap: 25,
+        laneExtension: 0,
+        edgePacked: true,
+      },
+    );
+  });
 });

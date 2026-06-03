@@ -81,6 +81,7 @@ export const Zone = ({
           availableWidth: cardsElement.clientWidth,
           cardWidth: firstCard?.getBoundingClientRect().width ?? 0,
           cardCount: visibleCards.length,
+          retainedGapWidth: 5,
         }),
       );
     };

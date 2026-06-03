@@ -6,6 +6,7 @@ export interface CardRowLayoutInput {
   laneExtensionWidth?: number;
   cardWidth: number;
   cardCount: number;
+  retainedGapWidth?: number;
 }
 
 export interface CardRowLayout {
@@ -19,6 +20,7 @@ export const calculateCardRowLayout = ({
   laneExtensionWidth = 0,
   cardWidth,
   cardCount,
+  retainedGapWidth = 0,
 }: CardRowLayoutInput): CardRowLayout => {
   if (cardCount <= 1 || availableWidth <= 0 || cardWidth <= 0) {
     return { overlap: 0, laneExtension: 0, edgePacked: false };
@@ -30,7 +32,8 @@ export const calculateCardRowLayout = ({
     return { overlap: 0, laneExtension: 0, edgePacked: false };
   }
 
-  const overlapNaturalWidth = cardCount * cardWidth;
+  const overlapNaturalWidth =
+    cardCount * cardWidth + (cardCount - 1) * retainedGapWidth;
   const laneExtension = Math.min(
     Math.max(0, laneExtensionWidth),
     overlapNaturalWidth - availableWidth,
