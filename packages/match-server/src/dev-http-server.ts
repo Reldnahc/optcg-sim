@@ -71,7 +71,10 @@ export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOp
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly authBaseUrl?: string;
+  readonly socketIdleTimeoutMs?: number;
 }
+
+const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
 
 const sendJson = (
   response: ServerResponse,
@@ -513,6 +516,7 @@ interface DevSocketBaseConnection {
   socket: Duplex;
   serverSeq: number;
   heartbeat?: ReturnType<typeof setInterval>;
+  idleTimeout?: ReturnType<typeof setTimeout>;
 }
 
 interface DevSocketConnection extends DevSocketBaseConnection {
@@ -545,6 +549,27 @@ const clearConnectionHeartbeat = (
   delete connection.heartbeat;
 };
 
+const clearConnectionIdleTimeout = (
+  connection: DevSocketBaseConnection,
+): void => {
+  if (connection.idleTimeout === undefined) {
+    return;
+  }
+  clearTimeout(connection.idleTimeout);
+  delete connection.idleTimeout;
+};
+
+const resetConnectionIdleTimeout = (
+  connection: DevSocketBaseConnection,
+  idleTimeoutMs: number,
+): void => {
+  clearConnectionIdleTimeout(connection);
+  connection.idleTimeout = setTimeout(() => {
+    connection.socket.end();
+  }, idleTimeoutMs);
+  connection.idleTimeout.unref();
+};
+
 const startConnectionHeartbeat = (
   connection: DevSocketBaseConnection,
   type: "heartbeat" | "lobbyHeartbeat",
@@ -556,13 +581,6 @@ const startConnectionHeartbeat = (
     });
   }, 25_000);
   connection.heartbeat.unref();
-};
-
-const disableSocketIdleTimeout = (socket: Duplex): void => {
-  const socketWithTimeout = socket as Duplex & {
-    setTimeout?: (timeout: number) => void;
-  };
-  socketWithTimeout.setTimeout?.(0);
 };
 
 const playerConnectionStatus = (
@@ -711,6 +729,7 @@ const handleWebSocketUpgrade = (
   authProvider: AuthProvider,
   connections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
+  socketIdleTimeoutMs: number,
 ): void => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(
@@ -741,7 +760,6 @@ const handleWebSocketUpgrade = (
         "\r\n",
       ].join("\r\n"),
     );
-    disableSocketIdleTimeout(socket);
 
     const connection: DevLobbySocketConnection = {
       lobbyId,
@@ -751,14 +769,17 @@ const handleWebSocketUpgrade = (
     };
     lobbyConnections.add(connection);
     startConnectionHeartbeat(connection, "lobbyHeartbeat");
+    resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
     socket.on("close", () => {
       clearConnectionHeartbeat(connection);
+      clearConnectionIdleTimeout(connection);
       lobbyConnections.delete(connection);
     });
     sendSocketJson(connection, lobbyStatePayload(lobby, connection));
 
     let buffered: Buffer = Buffer.alloc(0);
     socket.on("data", (chunk: Buffer) => {
+      resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
       buffered = Buffer.concat([buffered, chunk]);
       const parsed = parseWebSocketFrames(buffered);
       buffered = parsed.remaining;
@@ -810,7 +831,6 @@ const handleWebSocketUpgrade = (
       "\r\n",
     ].join("\r\n"),
   );
-  disableSocketIdleTimeout(socket);
 
   const connection: DevSocketConnection = {
     matchId,
@@ -820,8 +840,10 @@ const handleWebSocketUpgrade = (
   };
   connections.add(connection);
   startConnectionHeartbeat(connection, "heartbeat");
+  resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
   socket.on("close", () => {
     clearConnectionHeartbeat(connection);
+    clearConnectionIdleTimeout(connection);
     connections.delete(connection);
     broadcastMatchState(matchId, registry, connections);
   });
@@ -839,6 +861,7 @@ const handleWebSocketUpgrade = (
 
   let buffered: Buffer = Buffer.alloc(0);
   socket.on("data", (chunk: Buffer) => {
+    resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
     buffered = Buffer.concat([buffered, chunk]);
     const parsed = parseWebSocketFrames(buffered);
     buffered = parsed.remaining;
@@ -921,6 +944,8 @@ export const createDevHttpServer = async (
   );
   const lobbyRegistry = createLocalDevLobbyRegistry(registry, options);
   const authProvider = createDevAuthProvider();
+  const socketIdleTimeoutMs =
+    options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
   const simHandoffVerifier =
     options.simHandoffVerifier ??
     createPoneglyphSimHandoffVerifier({
@@ -959,6 +984,7 @@ export const createDevHttpServer = async (
       authProvider,
       socketConnections,
       lobbySocketConnections,
+      socketIdleTimeoutMs,
     );
   });
 
@@ -975,11 +1001,13 @@ export const createDevHttpServer = async (
     close: async () => {
       for (const connection of socketConnections) {
         clearConnectionHeartbeat(connection);
+        clearConnectionIdleTimeout(connection);
         connection.socket.destroy();
       }
       socketConnections.clear();
       for (const connection of lobbySocketConnections) {
         clearConnectionHeartbeat(connection);
+        clearConnectionIdleTimeout(connection);
         connection.socket.destroy();
       }
       lobbySocketConnections.clear();
