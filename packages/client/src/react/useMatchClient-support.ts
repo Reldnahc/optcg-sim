@@ -26,6 +26,7 @@ import type {
   OptionalCardCostGroup,
   PendingDecisionInteractionMode,
 } from "../index.js";
+import type { AccountLoadout } from "../account-client.js";
 
 export interface MatchClientUiState {
   clientState?: MatchClientSessionState;
@@ -46,6 +47,9 @@ export interface MatchClientUiState {
   };
   pendingChoiceInstanceIds: string[];
   decisionSelectedInstanceIds: string[];
+  accountLoadouts: readonly AccountLoadout[];
+  accountLoadoutsStatus: "idle" | "loading" | "ready" | "error";
+  accountLoadoutsError?: string | undefined;
   actionInFlight: boolean;
   errors: string[];
 }
@@ -74,10 +78,7 @@ export interface MatchClientUi {
   requestRollback: (rollbackPointId: string) => Promise<void>;
   cancelRollback: () => Promise<void>;
   createNewMatch: () => Promise<void>;
-  submitLobbyDeckHash: (
-    deckHash: string,
-    donDeckCount: number,
-  ) => Promise<void>;
+  submitLobbyLoadout: (loadoutId: string) => Promise<void>;
 }
 
 export const matchIdFromUrl = (): MatchId | undefined => {

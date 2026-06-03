@@ -626,7 +626,7 @@ describe("match client controller", () => {
     ]);
   });
 
-  test("submits a lobby deck hash using the local guest identity", async () => {
+  test("submits a verified loadout handoff without using the deck hash route", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
       transport,
@@ -636,17 +636,15 @@ describe("match client controller", () => {
     });
 
     await controller.joinLocalLobby({ lobbyId: "lobby-1" });
-    const next = await controller.submitLobbyDeckHash({
-      deckHash: "deck-hash",
-      donDeckCount: 6,
+    const next = await controller.submitLobbyLoadoutHandoff({
+      handoffToken: "handoff-token",
     });
 
-    assert.deepEqual(transport.submittedLobbyDecks, [
+    assert.deepEqual(transport.submittedLobbyDecks, []);
+    assert.deepEqual(transport.submittedLoadoutHandoffs, [
       {
         lobbyId: "lobby-1",
-        guestToken: transport.joinedLobbies[0]?.guestToken,
-        deckHash: "deck-hash",
-        donDeckCount: 6,
+        handoffToken: "handoff-token",
       },
     ]);
     assert.equal("lobbyId" in next, true);

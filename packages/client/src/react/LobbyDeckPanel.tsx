@@ -1,28 +1,40 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import type { AccountLoadout } from "../account-client.js";
 import type { LobbyClientState } from "../controller.js";
 import { lobbyDeckStatuses } from "./useMatchClient-support.js";
 
 export interface LobbyDeckPanelProps {
   lobbyState: LobbyClientState;
   disabled?: boolean | undefined;
-  onSubmitDeckHash: (deckHash: string, donDeckCount: number) => Promise<void>;
+  loadouts: readonly AccountLoadout[];
+  loadoutsStatus: "idle" | "loading" | "ready" | "error";
+  loadoutsError?: string | undefined;
+  onSubmitLoadout: (loadoutId: string) => Promise<void>;
 }
 
 export const LobbyDeckPanel = ({
   disabled = false,
   lobbyState,
-  onSubmitDeckHash,
+  loadouts,
+  loadoutsStatus,
+  loadoutsError,
+  onSubmitLoadout,
 }: LobbyDeckPanelProps): React.JSX.Element => {
-  const [deckHash, setDeckHash] = useState("");
-  const [donDeckCount, setDonDeckCount] = useState(10);
+  const [selectedLoadoutId, setSelectedLoadoutId] = useState(
+    loadouts[0]?.id ?? "",
+  );
   const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
-  const canSubmit =
-    deckHash.trim().length > 0 &&
-    Number.isInteger(donDeckCount) &&
-    donDeckCount > 0 &&
-    donDeckCount <= 10 &&
-    !disabled;
+  const selectedLoadoutExists = loadouts.some(
+    (loadout) => loadout.id === selectedLoadoutId,
+  );
+  const canSubmit = selectedLoadoutExists && !disabled;
+
+  useEffect(() => {
+    if (!selectedLoadoutExists) {
+      setSelectedLoadoutId(loadouts[0]?.id ?? "");
+    }
+  }, [loadouts, selectedLoadoutExists]);
 
   return (
     <section className="lobby-deck-panel">
@@ -31,41 +43,39 @@ export const LobbyDeckPanel = ({
         className="deck-hash-form"
         onSubmit={(event) => {
           event.preventDefault();
-          const trimmed = deckHash.trim();
-          if (trimmed.length === 0) {
+          if (!selectedLoadoutExists) {
             return;
           }
-          void onSubmitDeckHash(trimmed, donDeckCount);
+          void onSubmitLoadout(selectedLoadoutId);
         }}
       >
         <label className="deck-hash-field">
-          <span>Deck hash</span>
-          <textarea
-            value={deckHash}
-            disabled={disabled}
-            spellCheck={false}
-            rows={4}
+          <span>Account loadout</span>
+          <select
+            value={selectedLoadoutId}
+            disabled={disabled || loadoutsStatus !== "ready"}
             onChange={(event) => {
-              setDeckHash(event.target.value);
+              setSelectedLoadoutId(event.target.value);
             }}
-          />
+          >
+            {loadouts.map((loadout) => (
+              <option key={loadout.id} value={loadout.id}>
+                {loadout.name}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="deck-hash-field">
-          <span>DON deck size</span>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            step={1}
-            value={donDeckCount}
-            disabled={disabled}
-            onChange={(event) => {
-              setDonDeckCount(Number(event.target.value));
-            }}
-          />
-        </label>
+        {loadoutsStatus === "loading" ? <p>Loading loadouts...</p> : null}
+        {loadoutsStatus === "error" ? (
+          <p className="error-text">
+            {loadoutsError ?? "Unable to load account loadouts."}
+          </p>
+        ) : null}
+        {loadoutsStatus === "ready" && loadouts.length === 0 ? (
+          <p>No account loadouts are available.</p>
+        ) : null}
         <button type="submit" disabled={!canSubmit}>
-          Submit deck
+          Submit loadout
         </button>
       </form>
       <dl className="deck-status-list">

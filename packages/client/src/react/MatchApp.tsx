@@ -412,8 +412,11 @@ export const MatchApp = (): React.JSX.Element => {
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
         lobbyDeckState={lobbyState}
+        accountLoadouts={client.state.accountLoadouts}
+        accountLoadoutsStatus={client.state.accountLoadoutsStatus}
+        accountLoadoutsError={client.state.accountLoadoutsError}
         deckSubmissionDisabled={client.state.actionInFlight}
-        onSubmitDeckHash={client.submitLobbyDeckHash}
+        onSubmitLoadout={client.submitLobbyLoadout}
         onConcede={() => {
           if (concedeAction === undefined || !requestConcedeConfirmation()) {
             return;

@@ -13,6 +13,8 @@ import {
   setDecisionOption,
   toggleDecisionSelectedCard,
 } from "../index.js";
+import { createPoneglyphAccountClient } from "../account-client.js";
+import type { AccountLoadout } from "../account-client.js";
 import type {
   ClientActionModel,
   DecisionDraft,
@@ -44,7 +46,15 @@ import { useMatchSessionActions } from "./use-match-session-actions.js";
 
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
+  const accountClient = useMemo(() => createPoneglyphAccountClient(), []);
   const [clientState, setClientState] = useState<MatchClientSessionState>();
+  const [accountLoadouts, setAccountLoadouts] = useState<
+    readonly AccountLoadout[]
+  >([]);
+  const [accountLoadoutsStatus, setAccountLoadoutsStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [accountLoadoutsError, setAccountLoadoutsError] = useState<string>();
   const [selectedCardInstanceId, setSelectedCardInstanceId] =
     useState<string>();
   const [selectedDonInstanceIds, setSelectedDonInstanceIds] = useState<
@@ -141,13 +151,54 @@ export const useMatchClient = (): MatchClientUi => {
       setSelectedDonInstanceIds,
     });
 
-  const submitLobbyDeckHash = useCallback(
-    async (deckHash: string, donDeckCount: number): Promise<void> => {
+  useEffect(() => {
+    if (!isLobbyClientState(clientState)) {
+      setAccountLoadouts([]);
+      setAccountLoadoutsStatus("idle");
+      setAccountLoadoutsError(undefined);
+      return;
+    }
+    let cancelled = false;
+    setAccountLoadoutsStatus("loading");
+    setAccountLoadoutsError(undefined);
+    void accountClient
+      .listLoadouts()
+      .then((loadouts) => {
+        if (cancelled) {
+          return;
+        }
+        setAccountLoadouts(loadouts);
+        setAccountLoadoutsStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setAccountLoadouts([]);
+        setAccountLoadoutsStatus("error");
+        setAccountLoadoutsError(
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountClient, lobbyConnectionKey]);
+
+  const submitLobbyLoadout = useCallback(
+    async (loadoutId: string): Promise<void> => {
+      if (!isLobbyClientState(clientState)) {
+        setErrors(["Cannot submit a loadout before joining a lobby."]);
+        return;
+      }
       setActionInFlight(true);
       try {
-        const result = await controller.submitLobbyDeckHash({
-          deckHash,
-          donDeckCount,
+        const handoffToken = await accountClient.createSimHandoff({
+          loadoutId,
+          lobbyId: clientState.lobbyId,
+        });
+        const result = await controller.submitLobbyLoadoutHandoff({
+          handoffToken,
         });
         if (
           isMatchClientState(result) ||
@@ -165,7 +216,7 @@ export const useMatchClient = (): MatchClientUi => {
         setActionInFlight(false);
       }
     },
-    [controller],
+    [accountClient, clientState, controller],
   );
 
   const resetInteractionState = useCallback((): void => {
@@ -460,6 +511,9 @@ export const useMatchClient = (): MatchClientUi => {
         : { cardCostSelection: activeCardCostSelection }),
       pendingChoiceInstanceIds,
       decisionSelectedInstanceIds,
+      accountLoadouts,
+      accountLoadoutsStatus,
+      ...(accountLoadoutsError === undefined ? {} : { accountLoadoutsError }),
       actionInFlight,
       errors: visibleErrors(errors),
     },
@@ -481,6 +535,6 @@ export const useMatchClient = (): MatchClientUi => {
     requestRollback,
     cancelRollback,
     createNewMatch,
-    submitLobbyDeckHash,
+    submitLobbyLoadout,
   };
 };

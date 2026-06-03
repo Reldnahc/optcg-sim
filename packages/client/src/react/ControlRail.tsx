@@ -1,5 +1,6 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 
+import type { AccountLoadout } from "../account-client.js";
 import type { LobbyClientState } from "../controller.js";
 import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
@@ -63,10 +64,11 @@ export interface ControlRailProps {
   actionLogControl?: ReactNode | undefined;
   settingsControl?: ReactNode | undefined;
   lobbyDeckState?: LobbyClientState | undefined;
+  accountLoadouts?: readonly AccountLoadout[] | undefined;
+  accountLoadoutsStatus?: "idle" | "loading" | "ready" | "error" | undefined;
+  accountLoadoutsError?: string | undefined;
   deckSubmissionDisabled?: boolean | undefined;
-  onSubmitDeckHash?:
-    | ((deckHash: string, donDeckCount: number) => Promise<void>)
-    | undefined;
+  onSubmitLoadout?: ((loadoutId: string) => Promise<void>) | undefined;
 }
 
 export const ControlRail = ({
@@ -98,8 +100,11 @@ export const ControlRail = ({
   actionLogControl,
   settingsControl,
   lobbyDeckState,
+  accountLoadouts = [],
+  accountLoadoutsStatus = "idle",
+  accountLoadoutsError,
   deckSubmissionDisabled = false,
-  onSubmitDeckHash,
+  onSubmitLoadout,
 }: ControlRailProps): React.JSX.Element => {
   const tabDragStart = useRef<
     | {
@@ -225,12 +230,15 @@ export const ControlRail = ({
           </section>
         )}
         {lobbyDeckState === undefined ||
-        onSubmitDeckHash === undefined ? null : (
+        onSubmitLoadout === undefined ? null : (
           <div className="control-session-content">
             <LobbyDeckPanel
               disabled={deckSubmissionDisabled}
               lobbyState={lobbyDeckState}
-              onSubmitDeckHash={onSubmitDeckHash}
+              loadouts={accountLoadouts}
+              loadoutsStatus={accountLoadoutsStatus}
+              loadoutsError={accountLoadoutsError}
+              onSubmitLoadout={onSubmitLoadout}
             />
           </div>
         )}
