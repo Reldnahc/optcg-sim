@@ -38,6 +38,8 @@ const hiddenLifeCards = (count: number): ClientCardModel[] =>
 
 const board = (): BoardViewModel => ({
   playerId: "p1" as BoardViewModel["playerId"],
+  selfLabel: "Player",
+  opponentLabel: "Opponent",
   self: {
     leader: card("leader-1", "active"),
     hand: [],

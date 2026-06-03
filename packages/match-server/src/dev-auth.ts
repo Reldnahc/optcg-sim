@@ -1,4 +1,9 @@
-export type AuthSubject = { type: "user"; userId: string; sessionId: string };
+export type AuthSubject = {
+  type: "user";
+  userId: string;
+  sessionId: string;
+  displayName?: string;
+};
 
 export interface AuthContext {
   subject: AuthSubject;
@@ -7,14 +12,21 @@ export interface AuthContext {
 export const createDevUserSessionToken = (
   userId: string,
   sessionId: string,
+  displayName?: string,
 ): string =>
-  `user:${encodeURIComponent(userId)}:${encodeURIComponent(sessionId)}`;
+  [
+    "user",
+    encodeURIComponent(userId),
+    encodeURIComponent(sessionId),
+    ...(displayName === undefined ? [] : [encodeURIComponent(displayName)]),
+  ].join(":");
 
 export const parseDevSessionToken = (
   token: string,
 ): AuthSubject | undefined => {
   if (token.startsWith("user:")) {
-    const [, encodedUserId, encodedSessionId] = token.split(":");
+    const [, encodedUserId, encodedSessionId, encodedDisplayName] =
+      token.split(":");
     if (
       encodedUserId !== undefined &&
       encodedUserId.length > 0 &&
@@ -25,6 +37,9 @@ export const parseDevSessionToken = (
         type: "user",
         userId: decodeURIComponent(encodedUserId),
         sessionId: decodeURIComponent(encodedSessionId),
+        ...(encodedDisplayName === undefined
+          ? {}
+          : { displayName: decodeURIComponent(encodedDisplayName) }),
       };
     }
   }

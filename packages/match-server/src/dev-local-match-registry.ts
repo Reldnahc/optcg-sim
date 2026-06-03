@@ -8,6 +8,7 @@ import { subjectsMatch } from "./dev-auth.js";
 import {
   createLocalDevMatch,
   getLocalDevSnapshot,
+  setLocalDevMatchPlayerLabels,
   type LocalDevMatch,
 } from "./local-match.js";
 import {
@@ -232,6 +233,32 @@ const createdSeatResponse = (
     ]),
   );
 
+const playerLabelsFromSeats = (
+  seats: Record<string, LocalDevMatchSeat>,
+): ReturnType<typeof getLocalDevSnapshot>["playerLabels"] => {
+  const labels = Object.fromEntries(
+    Object.values(seats).flatMap((seat) => {
+      const displayName = seat.subject?.displayName?.trim();
+      return displayName === undefined || displayName.length === 0
+        ? []
+        : [[seat.playerId, { displayName }] as const];
+    }),
+  ) as ReturnType<typeof getLocalDevSnapshot>["playerLabels"];
+  return labels === undefined || Object.keys(labels).length === 0
+    ? undefined
+    : labels;
+};
+
+const syncActiveSessionPlayerLabels = (session: LocalDevMatchSession): void => {
+  if (session.status !== "active") {
+    return;
+  }
+  setLocalDevMatchPlayerLabels(
+    session.match,
+    playerLabelsFromSeats(session.seats),
+  );
+};
+
 export const matchSeatsWithMatchId = (
   sourceSeats: Record<string, Omit<LocalDevMatchSeat, "matchId">>,
   matchId: MatchId,
@@ -307,14 +334,17 @@ export const createLocalDevMatchRegistry = async (
   const buildCreatedResponse = (
     setup: LocalDevMatchSetup,
     session: LocalDevMatchSession,
-  ): CreatedDevMatchResponse => ({
-    matchId: setup.matchId,
-    seats: createdSeatResponse(session.seats),
-    firstPlayerChoice: firstPlayerChoiceResponse(session.firstPlayerChoice),
-    ...(session.status === "active"
-      ? { snapshot: getLocalDevSnapshot(session.match) }
-      : {}),
-  });
+  ): CreatedDevMatchResponse => {
+    syncActiveSessionPlayerLabels(session);
+    return {
+      matchId: setup.matchId,
+      seats: createdSeatResponse(session.seats),
+      firstPlayerChoice: firstPlayerChoiceResponse(session.firstPlayerChoice),
+      ...(session.status === "active"
+        ? { snapshot: getLocalDevSnapshot(session.match) }
+        : {}),
+    };
+  };
 
   return {
     defaultMatchId,
@@ -410,6 +440,7 @@ export const createLocalDevMatchRegistry = async (
         ),
         seats: session.seats,
       };
+      syncActiveSessionPlayerLabels(sessionWithSeats);
       sessions.set(matchId, sessionWithSeats);
       return buildCreatedResponse(resolvedSetup, sessionWithSeats);
     },
@@ -434,6 +465,7 @@ export const createLocalDevMatchRegistry = async (
               sessionToken: createDevUserSessionToken(
                 seat.subject.userId,
                 seat.subject.sessionId,
+                seat.subject.displayName,
               ),
             },
             ...(session.status === "active"
@@ -453,8 +485,10 @@ export const createLocalDevMatchRegistry = async (
       const sessionToken = createDevUserSessionToken(
         auth.subject.userId,
         auth.subject.sessionId,
+        auth.subject.displayName,
       );
       seat.subject = auth.subject;
+      syncActiveSessionPlayerLabels(session);
       return {
         matchId,
         seat: { playerId, sessionToken },

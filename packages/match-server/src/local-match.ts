@@ -87,6 +87,7 @@ export interface LocalDevMatch {
   state: GameState;
   rollback: LocalRollbackState;
   cardVariantOverrides: Record<InstanceId, VariantKey>;
+  playerLabels?: DevMatchSnapshot["playerLabels"];
 }
 
 export interface CreatePremadeDevMatchSetupOptions {
@@ -330,6 +331,17 @@ export const createLocalDevMatch = (setup: DevMatchSetup): LocalDevMatch => {
   const started = startMulliganFlow(setupState);
   assertEngineResult(started, "Local dev match boot");
   return { state: started.state, rollback, cardVariantOverrides };
+};
+
+export const setLocalDevMatchPlayerLabels = (
+  match: LocalDevMatch,
+  playerLabels: DevMatchSnapshot["playerLabels"],
+): void => {
+  if (playerLabels === undefined || Object.keys(playerLabels).length === 0) {
+    delete match.playerLabels;
+    return;
+  }
+  match.playerLabels = structuredClone(playerLabels);
 };
 
 const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
@@ -615,6 +627,9 @@ export const getLocalDevSnapshot = (
   turn: match.state.turn,
   activePlayerId:
     match.state.pendingDecision?.playerId ?? match.state.turn.turnPlayerId,
+  ...(match.playerLabels === undefined
+    ? {}
+    : { playerLabels: structuredClone(match.playerLabels) }),
   players: devPlayerSnapshots(match.state),
   rollback: rollbackView(match.rollback, match.state),
 });
@@ -632,6 +647,9 @@ export const getLocalDevSnapshotForPlayer = (
     turn: match.state.turn,
     activePlayerId:
       match.state.pendingDecision?.playerId ?? match.state.turn.turnPlayerId,
+    ...(match.playerLabels === undefined
+      ? {}
+      : { playerLabels: structuredClone(match.playerLabels) }),
     players: { [playerId]: player },
     rollback: rollbackView(match.rollback, match.state),
   };

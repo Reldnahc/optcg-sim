@@ -28,6 +28,10 @@ const errorMessage = (error: unknown): string =>
 export const simAuthSessionToken = (session: SimAuthSession): string =>
   `user:${encodeURIComponent(session.user.id)}:${encodeURIComponent(
     session.session.id,
+  )}:${encodeURIComponent(
+    session.user.display_name.length === 0
+      ? session.user.username
+      : session.user.display_name,
   )}`;
 
 const registerInput = (input: RegisterCredentials): SimRegisterInput => ({

@@ -24,6 +24,8 @@ export interface ControlRailProps {
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
+  selfLabel?: string | undefined;
+  opponentLabel?: string | undefined;
   matchStatus?: string | undefined;
   width?: number | undefined;
   dockHeight?: number | undefined;
@@ -75,6 +77,8 @@ export const ControlRail = ({
   errors,
   globalActions,
   disabled,
+  selfLabel = "Player",
+  opponentLabel = "Opponent",
   matchStatus,
   width,
   dockHeight,
@@ -151,7 +155,7 @@ export const ControlRail = ({
         onPointerDown={onResizePointerDown}
       />
       <section className="summary-panel opponent-summary">
-        <h2>Opponent</h2>
+        <h2>{opponentLabel}</h2>
       </section>
       <section className="controls-panel" style={controlsPanelStyle}>
         <div className="control-tool-strip">
@@ -475,7 +479,7 @@ export const ControlRail = ({
         </div>
       </section>
       <section className="summary-panel player-summary">
-        <h2>Player</h2>
+        <h2>{selfLabel}</h2>
       </section>
     </aside>
   );

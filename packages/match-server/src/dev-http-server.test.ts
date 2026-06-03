@@ -210,6 +210,15 @@ const claimDevSeat = async (
   playerId: "p1" | "p2",
 ): Promise<string> => {
   const sessionToken = `user:user-${playerId}:session-1`;
+  return claimDevSeatWithToken(server, matchId, playerId, sessionToken);
+};
+
+const claimDevSeatWithToken = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  matchId: string,
+  playerId: "p1" | "p2",
+  sessionToken: string,
+): Promise<string> => {
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/seats/${playerId}/claim`,
     {
@@ -561,6 +570,47 @@ describe("dev HTTP server", () => {
       assert.equal(p2Update.type, "stateSync");
       assert.deepEqual(Object.keys(p1Update.snapshot?.players ?? {}), ["p1"]);
       assert.deepEqual(Object.keys(p2Update.snapshot?.players ?? {}), ["p2"]);
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
+      await server.close();
+    }
+  });
+
+  test("websocket state sync includes public account display names", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = await createReadyDevMatch(server);
+      const p1Token = await claimDevSeatWithToken(
+        server,
+        match.matchId,
+        "p1",
+        "user:user-a:session-1:Alice",
+      );
+      await claimDevSeatWithToken(
+        server,
+        match.matchId,
+        "p2",
+        "user:user-b:session-1:Bob",
+      );
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      sockets.push(p1Socket.socket);
+
+      const initial = (await p1Socket.next()) as {
+        snapshot?: {
+          playerLabels?: Record<string, { displayName?: string }>;
+        };
+      };
+
+      assert.deepEqual(initial.snapshot?.playerLabels, {
+        p1: { displayName: "Alice" },
+        p2: { displayName: "Bob" },
+      });
     } finally {
       for (const socket of sockets) {
         socket.close();

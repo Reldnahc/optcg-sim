@@ -67,6 +67,8 @@ export interface ClientActionModel {
 
 export interface BoardViewModel {
   playerId: PlayerId;
+  selfLabel: string;
+  opponentLabel: string;
   self: ClientPlayerZonesModel;
   opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
@@ -333,6 +335,17 @@ const actionMenusByCard = (
   return byCard;
 };
 
+const playerDisplayLabel = (
+  snapshot: MatchSnapshot,
+  playerId: PlayerId,
+  fallback: string,
+): string => {
+  const displayName = snapshot.playerLabels?.[playerId]?.displayName.trim();
+  return displayName === undefined || displayName.length === 0
+    ? fallback
+    : displayName;
+};
+
 export const createBoardViewModel = ({
   snapshot,
   catalog,
@@ -352,6 +365,12 @@ export const createBoardViewModel = ({
   }
   return {
     playerId,
+    selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
+    opponentLabel: playerDisplayLabel(
+      snapshot,
+      player.view.opponent.playerId,
+      "Opponent",
+    ),
     self: selfZones(player.view, catalog),
     opponent: opponentZones(player.view, catalog),
     actionsByCardInstanceId: actionMenusByCard(player.actions),

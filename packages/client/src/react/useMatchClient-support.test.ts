@@ -176,6 +176,8 @@ const boardWithLife = (): BoardViewModel => {
   const opponentLeader = hiddenLifeCard("opponent-leader", "OPP-LEADER");
   return {
     playerId: "p1" as PlayerId,
+    selfLabel: "Player",
+    opponentLabel: "Opponent",
     self: {
       leader: selfLeader,
       hand: [],

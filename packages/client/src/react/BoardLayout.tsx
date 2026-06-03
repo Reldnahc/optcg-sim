@@ -46,12 +46,13 @@ const hiddenCards = (
   }));
 
 const handCount = (
-  owner: "Opponent" | "Player",
+  label: string,
+  ownerClass: "opponent" | "player",
   count: number,
 ): React.JSX.Element => (
   <div
-    className={`count-badge is-hover-revealed hand-count ${owner.toLowerCase()}-hand-count`}
-    aria-label={`${owner} hand count: ${String(count)}`}
+    className={`count-badge is-hover-revealed hand-count ${ownerClass}-hand-count`}
+    aria-label={`${label} hand count: ${String(count)}`}
   >
     {count}
   </div>
@@ -88,8 +89,8 @@ export const BoardLayout = ({
           cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
           overflowDirection="right"
         />
-        {handCount("Opponent", board.opponent.handCount)}
-        {handCount("Player", board.self.hand.length)}
+        {handCount(board.opponentLabel, "opponent", board.opponent.handCount)}
+        {handCount(board.selfLabel, "player", board.self.hand.length)}
         {decisionPrompt === undefined ? null : (
           <div className="decision-status-prompt" role="status">
             {decisionPrompt}
@@ -177,7 +178,10 @@ export const BoardLayout = ({
             displayMode="stack"
             onCardPreview={onPreviewCard}
             onViewCollection={() => {
-              onViewCollection("Opponent trash", board.opponent.trash);
+              onViewCollection(
+                `${board.opponentLabel} trash`,
+                board.opponent.trash,
+              );
             }}
           />
         </div>
@@ -336,7 +340,7 @@ export const BoardLayout = ({
             displayMode="stack"
             onCardPreview={onPreviewCard}
             onViewCollection={() => {
-              onViewCollection("Player trash", board.self.trash);
+              onViewCollection(`${board.selfLabel} trash`, board.self.trash);
             }}
           />
         </div>
