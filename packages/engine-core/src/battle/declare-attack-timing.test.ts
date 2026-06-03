@@ -643,7 +643,7 @@ test("ENG-023B: defender On Your Opponent's Attack resolves before Counter Step 
   );
   const effectQueued = must(result.events[effectQueuedIndex], "effectQueued");
   assert.deepEqual(effectQueued.payload, {
-    queueEntryId: `queue-entry:${String(attackDeclared.id)}:onOpponentAttack:${String(effect.id)}`,
+    queueEntryId: `queue-entry:${String(attackDeclared.id)}:onOpponentAttack:${String(p2State.leader.instanceId)}:${String(effect.id)}`,
     timingWindowId: `timing-window:${String(attackDeclared.id)}:onOpponentAttack`,
     generation: 0,
     effectBlockId: effect.id,
@@ -846,7 +846,7 @@ test("ENG-023C: attacker attack timing resolves before defender attack timing an
   assert.deepEqual(defenderQueued.payload, {
     queueEntryId: `queue-entry:${String(
       attackDeclared.id,
-    )}:onOpponentAttack:${String(defenderEffect.id)}`,
+    )}:onOpponentAttack:${String(p2State.leader.instanceId)}:${String(defenderEffect.id)}`,
     timingWindowId: `timing-window:${String(
       attackDeclared.id,
     )}:onOpponentAttack`,

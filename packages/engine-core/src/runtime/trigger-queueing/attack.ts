@@ -471,7 +471,7 @@ export const createAttackTriggerQueueing = (
         }
         for (const effectBlock of matching) {
           const queueId =
-            `queue-entry:${String(event.id)}:onOpponentAttack:${String(effectBlock.id)}` as EffectQueueEntry["id"];
+            `queue-entry:${String(event.id)}:onOpponentAttack:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
           const timingWindowId =
             `timing-window:${String(event.id)}:onOpponentAttack` as EffectQueueEntry["timingWindowId"];
           const entry: EffectQueueEntry = {

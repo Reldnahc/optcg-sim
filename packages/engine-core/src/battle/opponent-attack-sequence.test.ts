@@ -481,3 +481,64 @@ test("defender On Your Opponent's Attack choice group continues remaining trigge
     "active",
   );
 });
+
+test("defender On Your Opponent's Attack duplicate card instances get distinct trigger ids", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const firstSource = must(
+    p2State.characters[0],
+    "first opponent attack source",
+  );
+  const secondSeed = must(
+    p2State.hand[0],
+    "second opponent attack source seed",
+  );
+  const secondSource = {
+    ...secondSeed,
+    cardId: firstSource.cardId,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 1,
+    },
+    state: "rested",
+    attachedDon: [],
+    turnPlayed: 1,
+  } satisfies typeof firstSource;
+  p2State.characters = [firstSource, secondSource];
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  withOnOpponentAttackDrawEffect(
+    state,
+    firstSource,
+    "def-on-opponent-attack-duplicate-card-draw",
+  );
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "chooseTriggerOrder");
+  assert.equal(opened.state.pendingDecision.playerId, p2);
+  assert.equal(opened.state.pendingDecision.triggerIds.length, 2);
+  assert.equal(new Set(opened.state.pendingDecision.triggerIds).size, 2);
+  assert.deepEqual(
+    opened.state.effectQueue.map((entry) => entry.source.instanceId),
+    [firstSource.instanceId, secondSource.instanceId],
+  );
+});
