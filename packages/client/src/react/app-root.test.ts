@@ -26,7 +26,7 @@ describe("client app root", () => {
     );
     assert.match(
       renderToStaticMarkup(createElement(AppRootContent, { path: "/decks" })),
-      /Poneglyph deck builder/u,
+      /Save Deck Configuration/u,
     );
     assert.match(
       renderToStaticMarkup(createElement(AppRootContent, { path: "/profile" })),

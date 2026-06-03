@@ -15,6 +15,69 @@ const responseJson = (body: unknown, status = 200): Response =>
   });
 
 describe("Poneglyph account client", () => {
+  test("creates loadouts from deck hashes without client-side deck payloads", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createPoneglyphAccountClient({
+      baseUrl: "https://auth.example/",
+      fetch(input, init) {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              id: "loadout-1",
+              user_id: "user-1",
+              name: "Imported deck",
+              main_deck_id: "deck-1",
+              don_deck_id: null,
+              playmat_cosmetic_id: null,
+              don_sleeve_cosmetic_id: null,
+              deck_sleeve_cosmetic_id: null,
+              created_at: "2026-06-02T00:00:00.000Z",
+              updated_at: "2026-06-02T00:00:00.000Z",
+            },
+          }),
+        );
+      },
+    });
+
+    const loadout = await client.createLoadoutFromDeckHash({
+      name: "Imported deck",
+      deckHash: "deck-hash-with-variants",
+    });
+
+    const request = requests[0];
+    if (request === undefined) {
+      throw new Error("Expected a deck-hash loadout import request.");
+    }
+    assert.equal(
+      request.url,
+      "https://auth.example/v1/loadouts/import-deck-hash",
+    );
+    const requestInit = request.init;
+    if (requestInit === undefined) {
+      throw new Error("Expected a deck-hash loadout import request init.");
+    }
+    assert.equal(requestInit.credentials, "include");
+    assert.equal(
+      requestInit.body,
+      JSON.stringify({
+        name: "Imported deck",
+        deck_hash: "deck-hash-with-variants",
+      }),
+    );
+    assert.equal(JSON.stringify(requestInit.body).includes('"deck"'), false);
+    assert.deepEqual(loadout, {
+      id: "loadout-1",
+      name: "Imported deck",
+      mainDeckId: "deck-1",
+      donDeckId: null,
+      updatedAt: "2026-06-02T00:00:00.000Z",
+    });
+  });
+
   test("lists account loadouts through cookie-backed auth", async () => {
     const requests: RecordedRequest[] = [];
     const client = createPoneglyphAccountClient({

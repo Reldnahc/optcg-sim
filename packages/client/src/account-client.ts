@@ -11,6 +11,10 @@ export interface AccountLoadout {
 
 export interface PoneglyphAccountClient {
   readonly listLoadouts: () => Promise<readonly AccountLoadout[]>;
+  readonly createLoadoutFromDeckHash: (input: {
+    name: string;
+    deckHash: string;
+  }) => Promise<AccountLoadout>;
   readonly createSimHandoff: (input: {
     loadoutId: string;
     lobbyId: string;
@@ -32,6 +36,10 @@ const normalizeLoadout = (value: Loadout): AccountLoadout => {
   };
 };
 
+interface LoadoutResponse {
+  readonly data: Loadout;
+}
+
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
   baseUrl,
@@ -44,6 +52,16 @@ export const createPoneglyphAccountClient = ({
     async listLoadouts() {
       const response = await authClient.listLoadouts();
       return response.data.map(normalizeLoadout);
+    },
+    async createLoadoutFromDeckHash(input) {
+      const response = await authClient.post<LoadoutResponse>(
+        "/loadouts/import-deck-hash",
+        {
+          name: input.name,
+          deck_hash: input.deckHash,
+        },
+      );
+      return normalizeLoadout(response.data);
     },
     async createSimHandoff(input) {
       const response = await authClient.createSimHandoff({

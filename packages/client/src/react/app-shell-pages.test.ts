@@ -53,13 +53,20 @@ describe("client app shell pages", () => {
     assert.doesNotMatch(html, /seat query/u);
   });
 
-  test("deck and profile pages describe future integrations honestly", () => {
+  test("deck page accepts account-backed deck hash imports", () => {
     const deckHtml = renderToStaticMarkup(
       createElement(AppShell, {
         activeRouteId: "decks",
         children: createElement(DecksPage),
       }),
     );
+
+    assert.match(deckHtml, /Save Deck Configuration/u);
+    assert.match(deckHtml, /Deck hash/u);
+    assert.match(deckHtml, /Account API validates/u);
+  });
+
+  test("profile page describes future integrations honestly", () => {
     const profileHtml = renderToStaticMarkup(
       createElement(AppShell, {
         activeRouteId: "profile",
@@ -67,7 +74,6 @@ describe("client app shell pages", () => {
       }),
     );
 
-    assert.match(deckHtml, /Poneglyph deck builder/u);
     assert.match(profileHtml, /Poneglyph account/u);
   });
 

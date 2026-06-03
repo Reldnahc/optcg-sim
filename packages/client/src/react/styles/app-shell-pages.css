@@ -119,3 +119,65 @@
   background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.48);
 }
+
+.deck-import-card {
+  max-width: 720px;
+}
+
+.deck-import-field {
+  display: grid;
+  gap: 6px;
+}
+
+.deck-import-field span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.deck-import-field input,
+.deck-import-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #ffffff;
+  font: inherit;
+}
+
+.deck-import-field input {
+  padding: 9px 10px;
+}
+
+.deck-import-field textarea {
+  min-height: 112px;
+  resize: vertical;
+  padding: 10px;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+}
+
+.deck-import-card button.shell-card-action {
+  border: 0;
+  cursor: pointer;
+}
+
+.deck-import-card button.shell-card-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.deck-import-status {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+}
+
+.deck-import-status.is-error {
+  color: #ff8f8f;
+}
+
+.deck-import-status.is-success {
+  color: #4fd37a;
+}
