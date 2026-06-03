@@ -26,6 +26,7 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
+import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 
 const searchThenDrawSequence = (
   lookCount: number,
@@ -62,6 +63,54 @@ const searchThenDrawSequence = (
     },
   ],
 });
+
+const revealTopPlayRestedSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const revealSet = "set:revealed-top" as SelectionSetId;
+  const selection = "revealSelection:play" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          count: 1,
+          saveAs: revealSet,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: revealSet,
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {
+            categories: ["character"],
+            typesAny: ["The Seven Warlords of the Sea"],
+            cost: { max: 4 },
+          },
+          saveAs: selection,
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "playSelected",
+          selection,
+          enterRested: true,
+          ignoreCost: true,
+        },
+      },
+    ],
+  };
+};
 
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
@@ -169,6 +218,16 @@ const respondWithCards = (state: GameState): EngineResult => {
   });
 };
 
+const respondWithNoCards = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  });
+};
+
 const respondWithOrderedIds = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
   assert.equal(decision.type, "orderCards");
@@ -223,48 +282,7 @@ test("sequence search segment resumes into following then segment", () => {
 });
 
 test("sequence reveal-top segment can select and play the revealed card rested", () => {
-  const revealSet = "set:revealed-top" as SelectionSetId;
-  const selection = "revealSelection:play" as SelectionId;
-  const effect: Effect = {
-    type: "sequence",
-    effects: [
-      {
-        connector: "always",
-        effect: {
-          type: "revealTop",
-          player: "self",
-          count: 1,
-          saveAs: revealSet,
-          visibility: "bothPlayers",
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "selectFromSet",
-          set: revealSet,
-          chooser: "self",
-          min: 0,
-          max: 1,
-          filter: {
-            categories: ["character"],
-            typesAny: ["The Seven Warlords of the Sea"],
-            cost: { max: 4 },
-          },
-          saveAs: selection,
-        },
-      },
-      {
-        connector: "ifPreviousSucceeded",
-        effect: {
-          type: "playSelected",
-          selection,
-          enterRested: true,
-          ignoreCost: true,
-        },
-      },
-    ],
-  };
+  const effect = revealTopPlayRestedSequence();
   const { state } = sequenceQueueState(effect, 1);
   const topCard = must(state.players[p1], "p1").deck[0];
   assert.ok(topCard !== undefined);
@@ -294,6 +312,64 @@ test("sequence reveal-top segment can select and play the revealed card rested",
   assert.equal(played.state, "rested");
   assert.ok(
     !player.deck.some((card) => card.instanceId === topCard.instanceId),
+  );
+});
+
+test("sequence reveal-top select-from-set projects unplayable revealed cards as disabled choices", () => {
+  const { state } = sequenceQueueState(revealTopPlayRestedSequence(), 1);
+  const topCard = must(must(state.players[p1], "p1").deck[0], "top card");
+  state.cardManifest.cards[topCard.cardId] = resolvedCard({
+    cardId: topCard.cardId,
+    category: "event",
+    cost: 4,
+  });
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+  assert.equal(paused.state.pendingDecision.candidates.length, 0);
+
+  const view = filterStateForPlayer(paused.state, p1);
+  assert.deepEqual(
+    view.pendingDecision?.type === "selectCards"
+      ? view.pendingDecision.choices
+      : undefined,
+    [
+      {
+        card: {
+          instanceId: topCard.instanceId,
+          cardId: topCard.cardId,
+          playerId: p1,
+          zone: topCard.zone,
+        },
+        selectable: false,
+      },
+    ],
+  );
+});
+
+test("sequence reveal-top select-from-set allows declining when the revealed card is unplayable", () => {
+  const { state } = sequenceQueueState(revealTopPlayRestedSequence(), 1);
+  const topCard = must(must(state.players[p1], "p1").deck[0], "top card");
+  state.cardManifest.cards[topCard.cardId] = resolvedCard({
+    cardId: topCard.cardId,
+    category: "event",
+    cost: 4,
+  });
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+
+  const resolved = respondWithNoCards(paused.state);
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectExecutionFrames.length, 0);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  const player = must(resolved.state.players[p1], "resolved p1");
+  assert.ok(player.deck.some((card) => card.instanceId === topCard.instanceId));
+  assert.ok(
+    !player.characters.some((card) => card.instanceId === topCard.instanceId),
   );
 });
 

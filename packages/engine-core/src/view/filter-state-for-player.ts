@@ -122,6 +122,15 @@ const searchRevealRecordIdForSet = (setId: string): string | undefined =>
     ? `${searchRevealRecordIdPrefix}${setId.slice(searchRevealSetIdPrefix.length)}`
     : undefined;
 
+const revealRecordForSelectionSet = (state: GameState, setId: string) =>
+  state.revealedCards.find((record) => record.selectionSetId === setId) ??
+  (() => {
+    const revealId = searchRevealRecordIdForSet(setId);
+    return revealId === undefined
+      ? undefined
+      : state.revealedCards.find((record) => record.id === revealId);
+  })();
+
 const cardRefKey = (card: CardRef): string => String(card.instanceId);
 
 const visibleChoiceCardsForSelectDecision = (
@@ -134,11 +143,7 @@ const visibleChoiceCardsForSelectDecision = (
 ): CardRef[] => {
   const set = pending.request.set;
   if (set !== undefined) {
-    const revealId = searchRevealRecordIdForSet(String(set));
-    const reveal =
-      revealId === undefined
-        ? undefined
-        : state.revealedCards.find((record) => record.id === revealId);
+    const reveal = revealRecordForSelectionSet(state, String(set));
     if (
       reveal !== undefined &&
       isVisibleToPlayer(reveal.visibility, playerId)

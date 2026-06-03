@@ -143,6 +143,7 @@ export interface RevealRecord {
   cards: CardRef[];
   visibility: EventVisibility;
   origin: ZoneRef | "topOfDeck" | "lifeDamage" | "custom";
+  selectionSetId?: string;
   createdAtStateSeq: StateSeq;
   cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
 }

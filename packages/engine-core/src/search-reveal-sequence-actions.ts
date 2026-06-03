@@ -100,8 +100,10 @@ export const applySequenceSelectCardsChoiceResponse = (
   ) {
     return null;
   }
+  const stateWithoutPendingDecision: GameState = { ...state };
+  delete stateWithoutPendingDecision.pendingDecision;
   const resumed = resumeSequenceFrameAfterHandSelection(
-    state,
+    stateWithoutPendingDecision,
     decision,
     selectedCardsFromResponse(action),
   );

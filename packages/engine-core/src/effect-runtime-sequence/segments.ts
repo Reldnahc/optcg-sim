@@ -228,6 +228,7 @@ export const applyResolvedQuantityRevealTopSegment = (
               cards: revealedCards,
               visibility: { type: "public" as const },
               origin,
+              selectionSetId: String(segment.effect.saveAs),
               createdAtStateSeq: nextSeq,
               cleanupPolicy: "returnToOrigin" as const,
             },
