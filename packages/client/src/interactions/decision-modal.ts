@@ -287,10 +287,12 @@ const simpleDecisionOptions = (
 };
 
 const donPaymentResponseKeyPattern = /^payment:don:(?<count>[1-9]\d*)$/u;
-const donPaymentLabelPattern = /^Pay(?: cost with)? (?<count>[1-9]\d*) DON!!$/u;
+const donPaymentLabelPattern =
+  /^(?:Pay(?: cost with)?|Rest) (?<count>[1-9]\d*) DON!!$/u;
 
 const donPaymentCount = (
   action: Pick<ClientActionModel, "label" | "responseKey">,
+  presentationLabel: string | undefined,
 ): string | undefined => {
   const responseKeyMatch =
     action.responseKey === undefined
@@ -300,7 +302,12 @@ const donPaymentCount = (
   if (responseKeyCount !== undefined) {
     return responseKeyCount;
   }
-  return donPaymentLabelPattern.exec(action.label)?.groups?.["count"];
+  return (
+    donPaymentLabelPattern.exec(action.label)?.groups?.["count"] ??
+    (presentationLabel === undefined
+      ? undefined
+      : donPaymentLabelPattern.exec(presentationLabel)?.groups?.["count"])
+  );
 };
 
 const actionOptionModels = (
@@ -332,14 +339,17 @@ const actionOptionModels = (
     if (action.type !== "respondToDecision") {
       continue;
     }
-    const paymentDonCount = donPaymentCount(action);
+    const presentationLabel =
+      action.responseKey === undefined
+        ? undefined
+        : presentationLabelsByResponseKey.get(action.responseKey);
+    const paymentDonCount = donPaymentCount(action, presentationLabel);
     const label =
       paymentDonCount !== undefined
         ? `Pay ${paymentDonCount} DON!!`
         : action.responseKey === undefined
           ? action.label
-          : (presentationLabelsByResponseKey.get(action.responseKey) ??
-            action.label);
+          : (presentationLabel ?? action.label);
     const donPaymentKey =
       paymentDonCount === undefined ? undefined : `don:${paymentDonCount}`;
     if (donPaymentKey !== undefined) {

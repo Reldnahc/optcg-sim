@@ -654,6 +654,90 @@ describe("headless decision modal models", () => {
     assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 4 DON!!" }]);
   });
 
+  test("default decision modal collapses restDon payment permutations by rest label", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay DON cost",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose how to pay.",
+        choices: [{ responseKey: "restDon", label: "Rest 1 DON!!" }],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Rest 1 DON!!",
+        responseKey: "restDon",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Rest 1 DON!!",
+        responseKey: "restDon",
+      },
+      {
+        index: 6,
+        type: "respondToDecision",
+        label: "Rest 1 DON!!",
+        responseKey: "restDon",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 1 DON!!" }]);
+  });
+
+  test("default decision modal collapses restDon permutations by presentation rest label", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay DON cost",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose how to pay.",
+        choices: [{ responseKey: "restDon", label: "Rest 1 DON!!" }],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw rest transport label",
+        responseKey: "restDon",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Raw rest transport label",
+        responseKey: "restDon",
+      },
+      {
+        index: 6,
+        type: "respondToDecision",
+        label: "Raw rest transport label",
+        responseKey: "restDon",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 1 DON!!" }]);
+  });
+
   test("life trigger decision modal includes the damaged card with response options", () => {
     const decision: PublicPendingDecision = {
       ...baseDecision,
