@@ -186,7 +186,6 @@ const freshlyPlayedAttackRestricted = (
   card.zone.zone === "characterArea" &&
   card.controller === turn.turnPlayerId &&
   turn.phase === "main" &&
-  card.state === "active" &&
   card.turnPlayed === turn.globalTurn &&
   !hasRushKeyword(card);
 

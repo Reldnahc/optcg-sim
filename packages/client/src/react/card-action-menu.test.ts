@@ -652,6 +652,24 @@ describe("card action menu", () => {
     assert.equal(markup.includes("is-active"), false);
   });
 
+  test("first-turn attack restriction can render together with rested state", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CardTile, {
+        card: {
+          ...card("fresh-rested-character", "Fresh Rested Character"),
+          freshlyPlayedAttackRestricted: true,
+          state: "rested",
+        },
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*card-tile[^"]*is-rested/u);
+    assert.match(
+      markup,
+      /class="[^"]*card-tile[^"]*is-freshly-played-attack-restricted/u,
+    );
+  });
+
   test("board layout passes active card ids to card tiles", () => {
     const layout = board();
     layout.self.characters = [card("active-character", "Resolving Character")];

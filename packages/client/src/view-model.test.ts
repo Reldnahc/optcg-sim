@@ -537,7 +537,7 @@ describe("board view model", () => {
     assert.deepEqual(model.activeCardInstanceIds, ["char-1"]);
   });
 
-  test("marks active turn-player characters played this turn as first-turn attack restricted", () => {
+  test("marks turn-player characters played this turn as first-turn attack restricted even when rested", () => {
     const view = minimalView();
     view.turn.globalTurn = 4;
     view.turn.turnPlayerId = p1;
@@ -546,6 +546,11 @@ describe("board view model", () => {
       {
         ...card("fresh-character", "OP13-089", "characterArea"),
         state: "active",
+        turnPlayed: 4,
+      },
+      {
+        ...card("fresh-rested-character", "OP13-089", "characterArea"),
+        state: "rested",
         turnPlayed: 4,
       },
       {
@@ -585,12 +590,13 @@ describe("board view model", () => {
     });
 
     assert.equal(model.self.characters[0]?.freshlyPlayedAttackRestricted, true);
+    assert.equal(model.self.characters[1]?.freshlyPlayedAttackRestricted, true);
     assert.equal(
-      model.self.characters[1]?.freshlyPlayedAttackRestricted,
+      model.self.characters[2]?.freshlyPlayedAttackRestricted,
       undefined,
     );
     assert.equal(
-      model.self.characters[2]?.freshlyPlayedAttackRestricted,
+      model.self.characters[3]?.freshlyPlayedAttackRestricted,
       undefined,
     );
     assert.equal(
