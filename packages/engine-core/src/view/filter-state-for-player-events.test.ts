@@ -211,3 +211,46 @@ test("preserves safe gameplay event details for player logs", () => {
   assert.equal(JSON.stringify(view.events).includes("don-1"), false);
   assert.equal(JSON.stringify(view.events).includes("card-1"), false);
 });
+
+test("keeps historical public search reveal events after transient reveal cleanup", () => {
+  const state = createActiveState();
+  const cardId = toCardId("OP13-089");
+  const instanceId = "revealed-card-1" as InstanceId;
+  state.revealedCards = [];
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:search-reveal"),
+      seq: 1,
+      type: "cardRevealed",
+      actor: p1,
+      payload: {
+        revealId: "reveal:search-reveal:selected:choice-1",
+        selectionSetId: "set:search-reveal:choice-1",
+        cards: [
+          {
+            playerId: p1,
+            instanceId,
+            cardId,
+            hiddenDeckIndex: 0,
+          },
+        ],
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+  ];
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(
+    view.events.map((event) => event.payload),
+    [
+      {
+        revealId: "reveal:search-reveal:selected:choice-1",
+        selectionSetId: "set:search-reveal:choice-1",
+        cards: [{ instanceId, cardId, playerId: p1 }],
+      },
+    ],
+  );
+  assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
+});

@@ -45,6 +45,9 @@ export const opponentRevealWindowsFromState = ({
   ) {
     return [];
   }
+  const activeRevealIds = new Set(
+    playerSnapshot.view.revealedCards.map((record) => record.id),
+  );
   return opponentRevealsFromEvents(
     playerSnapshot.view.events,
     currentPlayerId,
@@ -55,17 +58,19 @@ export const opponentRevealWindowsFromState = ({
           selfLabel: board.selfLabel,
           opponentLabel: board.opponentLabel,
         },
-  ).map((reveal, index) => ({
-    revealId: reveal.revealId,
-    initialRect: {
-      x: 380 + index * 24,
-      y: 100 + index * 24,
-      width: 300,
-      height: 420,
-    },
-    model: {
-      title: reveal.title,
-      cards: reveal.cards.map((card) => cardModel(card)),
-    },
-  }));
+  )
+    .filter((reveal) => activeRevealIds.has(reveal.revealId))
+    .map((reveal, index) => ({
+      revealId: reveal.revealId,
+      initialRect: {
+        x: 380 + index * 24,
+        y: 100 + index * 24,
+        width: 300,
+        height: 420,
+      },
+      model: {
+        title: reveal.title,
+        cards: reveal.cards.map((card) => cardModel(card)),
+      },
+    }));
 };

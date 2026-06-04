@@ -322,6 +322,9 @@ export const toPlayerEvent = (event: EngineEvent): EngineEvent => {
   return { ...base, payload: toAllowedPlayerEventPayload(event) };
 };
 
+const searchRevealSelectedRevealIdPrefix = "reveal:search-reveal:selected:";
+const searchRevealSetIdPrefix = "set:search-reveal:";
+
 export const shouldIncludePlayerEvent = (
   state: GameState,
   event: EngineEvent,
@@ -332,11 +335,19 @@ export const shouldIncludePlayerEvent = (
   const revealId = event.payload["revealId"];
   const selectionSetId = event.payload["selectionSetId"];
   if (
-    typeof revealId !== "string" ||
     typeof selectionSetId !== "string" ||
-    !selectionSetId.startsWith("set:search-reveal:")
+    !selectionSetId.startsWith(searchRevealSetIdPrefix)
   ) {
     return true;
+  }
+  if (
+    typeof revealId === "string" &&
+    revealId.startsWith(searchRevealSelectedRevealIdPrefix)
+  ) {
+    return true;
+  }
+  if (typeof revealId !== "string") {
+    return false;
   }
   return state.revealedCards.some((record) => record.id === revealId);
 };
