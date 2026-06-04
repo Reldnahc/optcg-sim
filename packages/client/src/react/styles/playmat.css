@@ -43,9 +43,9 @@
 }
 
 .life-count {
-  top: 0;
+  top: calc(var(--card-height) / 2);
   left: 50%;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, -50%);
 }
 
 .don-count {

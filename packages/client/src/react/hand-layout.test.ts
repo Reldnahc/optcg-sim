@@ -480,10 +480,13 @@ describe("hand layout", () => {
       playmatStyles,
       /\.zone:hover\s+\.zone-count\s*\{[^}]*opacity:\s*1;/u,
     );
-    assert.match(playmatStyles, /\.life-count\s*\{[^}]*top:\s*0;/u);
     assert.match(
       playmatStyles,
-      /\.life-count\s*\{[^}]*transform:\s*translate\(-50%,\s*0\);/u,
+      /\.life-count\s*\{[^}]*top:\s*calc\(var\(--card-height\)\s*\/\s*2\);/u,
+    );
+    assert.match(
+      playmatStyles,
+      /\.life-count\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
     );
     assert.match(playmatStyles, /\.don-count\s*\{[^}]*left:\s*50%;/u);
     assert.match(
