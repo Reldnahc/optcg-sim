@@ -30,6 +30,7 @@ const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "cost",
   "currentPower",
   "effectEntryPoint",
+  "nameNot",
   "power",
   "state",
   "typesAny",

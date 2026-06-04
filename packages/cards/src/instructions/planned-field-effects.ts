@@ -91,6 +91,15 @@ export const preventOpponentCharactersRefreshPrimitive = {
   ],
 } as const;
 
+export const preventOpponentCharactersAttackPrimitive = {
+  primitiveId: "instruction:preventActivation",
+  childPrimitiveIds: [
+    "cardinality:upTo",
+    "target:opponentCharacters",
+    "duration:opponentNextEndPhase",
+  ],
+} as const;
+
 export const yourLeaderPowerOpponentNextEndPrimitive = {
   primitiveId: "instruction:modifyPower",
   childPrimitiveIds: [
@@ -460,6 +469,80 @@ export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser
         "instruction:preventActivation",
         ...parsedTarget.evidence,
         ...duration.evidence,
+      ],
+      rest: "",
+    };
+  };
+
+export const parsePreventOpponentCharactersAttackInstruction: InstructionParser =
+  (input) => {
+    const cardinality = parseUpToCardinality({ text: input.text });
+    if (cardinality === undefined) {
+      return undefined;
+    }
+
+    const target = parseOpponentCharactersTarget({ text: cardinality.rest });
+    if (target === undefined) {
+      return undefined;
+    }
+
+    const actionMatch = /^cannot attack\s+(?<rest>.*)$/i.exec(target.rest);
+    const durationText = actionMatch?.groups?.["rest"];
+    if (durationText === undefined) {
+      return undefined;
+    }
+
+    const duration = parseOpponentNextEndPhaseDuration({
+      text: durationText,
+    });
+    if (
+      duration === undefined ||
+      duration.duration === undefined ||
+      duration.rest.length > 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:cannot-attack",
+            connector: "always",
+            saveResultAs: thatCharacterSelectionId,
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                filter: target.filter ?? { categories: ["character"] },
+                min: cardinality.cardinality.min,
+                max: cardinality.cardinality.max,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "cannotAttack",
+              target: thatCharacterSavedTarget,
+              duration: duration.duration,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:preventActivation",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...target.evidence,
+        ...duration.evidence,
+        "composition:selectThenApply",
       ],
       rest: "",
     };

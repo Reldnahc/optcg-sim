@@ -15,7 +15,10 @@ export const opponentNextRefreshPhaseDurationPrimitive = {
 
 export const opponentNextEndPhaseDurationPrimitive = {
   primitiveId: "duration:opponentNextEndPhase",
-  matches: [{ id: "until-end-opponent-next-end-phase" }],
+  matches: [
+    { id: "until-end-opponent-next-end-phase" },
+    { id: "until-end-opponent-next-turn" },
+  ],
 } as const;
 
 export const thisTurnDurationPrimitive = {
@@ -46,7 +49,9 @@ export function parseOpponentNextEndPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
   if (
-    !/^until the end of your opponent's next End Phase\.?$/i.test(input.text)
+    !/^until the end of your opponent's next (?:End Phase|turn)\.?$/i.test(
+      input.text,
+    )
   ) {
     return undefined;
   }

@@ -16,7 +16,7 @@ import {
   reindexZoneCards,
 } from "../actions/state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
-import { buildSelectedTargetFieldRemovalMoveToHandReplacementProcess } from "../replacement/field-removal-process.js";
+import { buildSelectedTargetFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -25,7 +25,7 @@ type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
 type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
 type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
-  destination: "hand";
+  destination: "deckBottom" | "hand";
 };
 type SegmentLedgers = {
   savedReferences: NonNullable<
@@ -581,7 +581,7 @@ const applyHandToDeckBottomSelectedCardMoveSegment = (
   };
 };
 
-export const applyBounceToOwnerHandSequenceSegment = (params: {
+export const applyBounceSequenceSegment = (params: {
   effect: BounceEffect;
   emptySegmentResult: () => SequenceSegmentResult;
   entry: EffectQueueEntry;
@@ -607,29 +607,40 @@ export const applyBounceToOwnerHandSequenceSegment = (params: {
   if (selected?.kind !== "selectedTargets") {
     return { ok: false };
   }
+  const classification =
+    params.effect.destination === "hand"
+      ? "moveFromFieldToHand"
+      : "moveFromFieldToDeckBottom";
   let nextState = params.state;
   const events: EngineEvent[] = [];
   const movedTargets: CardRef[] = [];
   for (const [targetIndex, selectedTarget] of selected.targets.entries()) {
     const target = selectedTarget.object;
     const player = nextState.players[target.playerId];
-    if (player === undefined || target.zone?.zone !== "characterArea") {
+    const sourceZone = target.zone?.zone;
+    if (
+      player === undefined ||
+      (sourceZone !== "characterArea" && sourceZone !== "stageArea")
+    ) {
       continue;
     }
-    const card = player.characters.find(
-      (candidate) => candidate.instanceId === target.instanceId,
-    );
+    const card =
+      sourceZone === "characterArea"
+        ? player.characters.find(
+            (candidate) => candidate.instanceId === target.instanceId,
+          )
+        : player.stage?.instanceId === target.instanceId
+          ? player.stage
+          : undefined;
     if (card === undefined) {
       continue;
     }
-    const process = buildSelectedTargetFieldRemovalMoveToHandReplacementProcess(
-      {
-        classification: "moveFromFieldToHand",
-        entry: params.entry,
-        target,
-        targetIndex,
-      },
-    );
+    const process = buildSelectedTargetFieldRemovalMoveZoneReplacementProcess({
+      classification,
+      entry: params.entry,
+      target,
+      targetIndex,
+    });
     const resolved = executeSelectedTargetFieldRemovalReplacementProcess(
       nextState,
       events,

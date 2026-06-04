@@ -17,7 +17,10 @@ describe("field-effect duration parsers", () => {
     });
     expect(opponentNextEndPhaseDurationPrimitive).toEqual({
       primitiveId: "duration:opponentNextEndPhase",
-      matches: [{ id: "until-end-opponent-next-end-phase" }],
+      matches: [
+        { id: "until-end-opponent-next-end-phase" },
+        { id: "until-end-opponent-next-turn" },
+      ],
     });
     expect(thisTurnDurationPrimitive).toEqual({
       primitiveId: "duration:thisTurn",

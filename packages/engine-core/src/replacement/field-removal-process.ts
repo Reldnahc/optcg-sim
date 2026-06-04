@@ -73,7 +73,10 @@ interface SelectedTargetKoReplacementPayload {
   target: CardRef;
   fieldRemovalAttempt: {
     processFamily: "fieldRemoval";
-    classification: "moveFromFieldToHand" | "moveFromFieldToTrash";
+    classification:
+      | "moveFromFieldToDeckBottom"
+      | "moveFromFieldToHand"
+      | "moveFromFieldToTrash";
     sourceKind: "battle" | "cardEffect";
     sourceControllerId: PlayerId;
   };
@@ -183,7 +186,7 @@ export const buildSelectedTargetFieldRemovalKoReplacementProcess =
   buildSelectedTargetKoReplacementProcess;
 
 export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
-  classification: "moveFromFieldToHand";
+  classification: "moveFromFieldToDeckBottom" | "moveFromFieldToHand";
   entry: EffectQueueEntry;
   target: CardRef;
   targetIndex: number;
@@ -214,6 +217,9 @@ export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
 };
 
 export const buildSelectedTargetFieldRemovalMoveToHandReplacementProcess =
+  buildSelectedTargetMoveZoneReplacementProcess;
+
+export const buildSelectedTargetFieldRemovalMoveZoneReplacementProcess =
   buildSelectedTargetMoveZoneReplacementProcess;
 
 const findKoTargetByInstanceId = (

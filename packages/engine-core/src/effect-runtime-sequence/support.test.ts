@@ -260,3 +260,120 @@ test("sequence support accepts opponent hand selection moved to deck bottom", ()
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
+
+test("sequence support accepts saved restriction followed by owner deck-bottom bounce", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                id: "select-cannot-attack",
+                connector: "always",
+                saveResultAs: "selected:thatCharacter",
+                effect: {
+                  type: "selectTargets",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "opponent",
+                    zone: "characterArea",
+                    min: 0,
+                    max: 1,
+                    allowFewerIfUnavailable: true,
+                    visibility: "public",
+                    filter: {
+                      categories: ["character"],
+                      nameNot: ["Monkey.D.Luffy"],
+                    },
+                  },
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "cannotAttack",
+                  target: {
+                    type: "savedFieldObject",
+                    binding: {
+                      family: "selectedTargets",
+                      saveResultAs: "selected:thatCharacter",
+                    },
+                    zone: "characterArea",
+                    player: "opponent",
+                    visibility: "publicOnly",
+                    onFailure: "failClosed",
+                  },
+                  duration: {
+                    type: "untilEndOfNextTurn",
+                    player: "opponent",
+                  },
+                },
+              },
+            ],
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                id: "select-owner-deck-bottom",
+                connector: "always",
+                saveResultAs: "selected:owner-deck-bottom",
+                effect: {
+                  type: "selectTargets",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "anyPlayer",
+                    zone: "characterArea",
+                    min: 0,
+                    max: 1,
+                    allowFewerIfUnavailable: true,
+                    visibility: "public",
+                    filter: {
+                      categories: ["character"],
+                      cost: { max: 1 },
+                    },
+                  },
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "bounce",
+                  destination: "deckBottom",
+                  target: {
+                    type: "savedFieldObject",
+                    binding: {
+                      family: "selectedTargets",
+                      saveResultAs: "selected:owner-deck-bottom",
+                    },
+                    zone: "characterArea",
+                    player: "anyPlayer",
+                    visibility: "publicOnly",
+                    onFailure: "failClosed",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});

@@ -41,7 +41,7 @@ type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
 type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
-  destination: "hand";
+  destination: "deckBottom" | "hand";
 };
 type DirectContinuousEffect = Extract<
   Effect,
@@ -612,7 +612,7 @@ const isSupportedBounceSegment = (
   effect: SequenceSegmentEffect,
 ): effect is BounceEffect =>
   effect.type === "bounce" &&
-  effect.destination === "hand" &&
+  (effect.destination === "hand" || effect.destination === "deckBottom") &&
   isSupportedSavedFieldObjectKoTarget(effect.target);
 
 const isSupportedSequenceTargetRequest = (

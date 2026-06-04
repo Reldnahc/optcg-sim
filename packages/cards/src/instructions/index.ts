@@ -9,6 +9,7 @@ export {
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
 export { parseHandToDeckBottomInstruction } from "./hand-to-deck-bottom.js";
+export { parsePlaceAtOwnerDeckBottomInstruction } from "./owner-deck-bottom.js";
 export { parseSetFieldActiveInstruction } from "./field-activation.js";
 export {
   parseAddActiveDonFromDonDeckInstruction,
@@ -33,6 +34,7 @@ export { parsePreventDrawInstruction } from "./prevent-draw.js";
 export { parsePreventPlayInstruction } from "./prevent-play.js";
 export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export {
+  parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,

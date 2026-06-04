@@ -13,6 +13,7 @@ import {
   moveConcreteCardsToTrash,
 } from "../../concrete-card-movement.js";
 import { moveFieldCardToOwnerHand } from "../../movement/field-to-hand.js";
+import { moveFieldCardToOwnerDeckBottom } from "../../movement/field-to-deck.js";
 import {
   detectSupportedFieldRemovalReplacementCandidate,
   normalizeFieldRemovalProcess,
@@ -92,34 +93,44 @@ const findCardByInstanceId = (
   return null;
 };
 
-const isMoveFromFieldToHandProcess = (process: ReplacementProcess): boolean => {
+const fieldRemovalMoveDestination = (
+  process: ReplacementProcess,
+): "deckBottom" | "hand" | null => {
   if (process.type !== "moveZone") {
-    return false;
+    return null;
   }
   const payload = process.payload;
   if (typeof payload !== "object" || payload === null) {
-    return false;
+    return null;
   }
   if (!("fieldRemovalAttempt" in payload)) {
-    return false;
+    return null;
   }
   const attempt = payload.fieldRemovalAttempt;
-  return (
+  if (
     typeof attempt === "object" &&
     attempt !== null &&
-    "classification" in attempt &&
-    attempt.classification === "moveFromFieldToHand"
-  );
+    "classification" in attempt
+  ) {
+    if (attempt.classification === "moveFromFieldToHand") {
+      return "hand";
+    }
+    if (attempt.classification === "moveFromFieldToDeckBottom") {
+      return "deckBottom";
+    }
+  }
+  return null;
 };
 
-const executeUnreplacedSelectedTargetMoveToHandProcess = (
+const executeUnreplacedSelectedTargetMoveZoneProcess = (
   state: GameState,
   events: EngineEvent[],
   effectId: string,
   process: ReplacementProcess,
 ): { state: GameState } | { error: EngineError } => {
   const target = process.target;
-  if (!isMoveFromFieldToHandProcess(process) || target === undefined) {
+  const destination = fieldRemovalMoveDestination(process);
+  if (destination === null || target === undefined) {
     return {
       error: selectedTargetFieldRemovalExecutionError(
         effectId,
@@ -151,7 +162,17 @@ const executeUnreplacedSelectedTargetMoveToHandProcess = (
     return { state };
   }
 
-  return moveFieldCardToOwnerHand({
+  if (destination === "hand") {
+    return moveFieldCardToOwnerHand({
+      card: located.card,
+      causedBy: process.causedBy,
+      events,
+      playerId: located.playerId,
+      sourceZone: located.zone,
+      state,
+    });
+  }
+  return moveFieldCardToOwnerDeckBottom({
     card: located.card,
     causedBy: process.causedBy,
     events,
@@ -263,7 +284,7 @@ export const executeUnreplacedSelectedTargetFieldRemovalProcess = (
   process: ReplacementProcess,
 ): { state: GameState } | { error: EngineError } => {
   if (process.type === "moveZone") {
-    return executeUnreplacedSelectedTargetMoveToHandProcess(
+    return executeUnreplacedSelectedTargetMoveZoneProcess(
       state,
       events,
       effectId,

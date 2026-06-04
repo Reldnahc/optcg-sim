@@ -25,7 +25,7 @@ import {
 } from "./saved-field-object.js";
 import {
   applyAttachSelectedDonSequenceSegment,
-  applyBounceToOwnerHandSequenceSegment,
+  applyBounceSequenceSegment,
   applySelectedCardMoveSegment,
 } from "./selected-segments.js";
 import type { SegmentLedgers } from "./runner.js";
@@ -120,7 +120,7 @@ export const applyFieldMutationSequenceSegment = (params: {
   }
 
   if (segment.effect.type === "bounce") {
-    const bounced = applyBounceToOwnerHandSequenceSegment({
+    const bounced = applyBounceSequenceSegment({
       effect: segment.effect,
       emptySegmentResult,
       entry,
