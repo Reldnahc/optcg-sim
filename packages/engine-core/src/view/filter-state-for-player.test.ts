@@ -338,10 +338,6 @@ test("chooseTriggerOrder projection exposes trigger choices and hides private so
     type: "chooseTriggerOrder",
     playerId: p1,
     prompt: "Choose next trigger to resolve.",
-    presentation: {
-      title: "Resolve trigger",
-      instruction: "Choose the next trigger to resolve.",
-    },
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [toQueueEntryId("queue-hidden-a")],
