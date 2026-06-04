@@ -211,6 +211,22 @@ describe("collection modal", () => {
     assert.equal(markup.includes('disabled=""'), false);
   });
 
+  test("trash collection viewers use possessive player labels", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "BoardLayout.tsx"),
+      "utf8",
+    );
+    const windowModelSource = await readFile(
+      join(sourceDirectory, "collection-window-model.ts"),
+      "utf8",
+    );
+
+    assert.match(source, /\$\{board\.selfLabel\}'s trash/u);
+    assert.match(source, /\$\{board\.opponentLabel\}'s trash/u);
+    assert.match(windowModelSource, /title: "Player's trash"/u);
+    assert.match(windowModelSource, /title: "Opponent's trash"/u);
+  });
+
   test("pending collection decisions render as modals instead of floating windows", () => {
     const markup = renderToStaticMarkup(
       createElement(CollectionModalHost, {

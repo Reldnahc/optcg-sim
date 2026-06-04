@@ -204,7 +204,7 @@ export const BoardLayout = ({
             onCardPreview={onPreviewCard}
             onViewCollection={() => {
               onViewCollection(
-                `${board.opponentLabel} trash`,
+                `${board.opponentLabel}'s trash`,
                 board.opponent.trash,
               );
             }}
@@ -387,7 +387,7 @@ export const BoardLayout = ({
             displayMode="stack"
             onCardPreview={onPreviewCard}
             onViewCollection={() => {
-              onViewCollection(`${board.selfLabel} trash`, board.self.trash);
+              onViewCollection(`${board.selfLabel}'s trash`, board.self.trash);
             }}
           />
         </div>

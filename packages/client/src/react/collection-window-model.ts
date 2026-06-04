@@ -28,10 +28,12 @@ export const collectionModalFromWindowKey = (
   board: BoardViewModel,
 ): CollectionModalModel | undefined => {
   switch (key) {
+    case "collection:Player's trash":
     case "collection:Player trash":
-      return { title: "Player trash", cards: board.self.trash };
+      return { title: "Player's trash", cards: board.self.trash };
+    case "collection:Opponent's trash":
     case "collection:Opponent trash":
-      return { title: "Opponent trash", cards: board.opponent.trash };
+      return { title: "Opponent's trash", cards: board.opponent.trash };
     default:
       return undefined;
   }
