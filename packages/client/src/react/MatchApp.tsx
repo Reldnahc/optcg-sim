@@ -445,6 +445,7 @@ export const MatchApp = ({
       <MatchInteractionModals
         actionInFlight={client.state.actionInFlight}
         cardDisplay={cardDisplay}
+        cardModel={cardModel}
         collectionModalHostProps={collectionModalHostProps}
         decisionModal={visibleDecisionModal}
         decisionModalCoveredByCollection={decisionModalCoveredByCollection}

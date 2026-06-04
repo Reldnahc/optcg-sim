@@ -15,6 +15,7 @@ export interface DecisionModalHostProps {
   cardDisplay?:
     | ((card: CardRef) => { name: string; imageUrl?: string })
     | undefined;
+  cardModel?: ((card: CardRef) => ClientCardModel) | undefined;
   onToggleCard: (instanceId: InstanceId) => void;
   onChooseTrigger: (triggerId: string) => void;
   onQuantity: (quantity: number) => void;
@@ -33,7 +34,7 @@ export interface DecisionModalHostProps {
   onConfirm: () => void;
 }
 
-const toDecisionOrderClientCard = (
+const fallbackDecisionClientCard = (
   card: CardRef,
   display: { name: string; imageUrl?: string },
 ): ClientCardModel => ({
@@ -45,6 +46,13 @@ const toDecisionOrderClientCard = (
   attachedDonCount: 0,
   attachedDonCards: [],
 });
+
+const decisionClientCard = (
+  card: CardRef,
+  display: { name: string; imageUrl?: string },
+  cardModel: ((card: CardRef) => ClientCardModel) | undefined,
+): ClientCardModel =>
+  cardModel?.(card) ?? fallbackDecisionClientCard(card, display);
 
 const cardDecisionModalKinds = new Set<DecisionModalModel["kind"]>([
   "selectCards",
@@ -63,6 +71,7 @@ export const DecisionModalHost = ({
   model,
   disabled,
   cardDisplay,
+  cardModel,
   onToggleCard,
   onChooseTrigger,
   onQuantity,
@@ -88,7 +97,7 @@ export const DecisionModalHost = ({
           const display = cardDisplay?.(card) ?? {
             name: String(card.cardId),
           };
-          return [toDecisionOrderClientCard(card, display)];
+          return [decisionClientCard(card, display, cardModel)];
         })
       : [];
   const orderReorder = useCardReorderPreview(
@@ -134,7 +143,7 @@ export const DecisionModalHost = ({
                 disabled={disabled || !choice.selectable}
                 onPointerEnter={() => {
                   onPreviewCard?.(
-                    toDecisionOrderClientCard(choice.card, display),
+                    decisionClientCard(choice.card, display, cardModel),
                   );
                 }}
                 onClick={() => {
@@ -208,6 +217,7 @@ export const DecisionModalHost = ({
                     onPreviewMoveNear={orderReorder.onPreviewMoveNear}
                     onMoveNear={orderReorder.onMoveNear}
                     onReorderCancel={orderReorder.onReorderCancel}
+                    reorderDragStrategy="translate"
                     onHover={onPreviewCard}
                   />
                   {orderReorder.placeholderAfter(instanceId) ? (
@@ -241,7 +251,7 @@ export const DecisionModalHost = ({
                     return;
                   }
                   onPreviewCard?.(
-                    toDecisionOrderClientCard(choice.source, display),
+                    decisionClientCard(choice.source, display, cardModel),
                   );
                 }}
                 onClick={() => {
@@ -334,7 +344,7 @@ export const DecisionModalHost = ({
                   disabled={disabled}
                   onPointerEnter={() => {
                     onPreviewCard?.(
-                      toDecisionOrderClientCard(previewCard, display),
+                      decisionClientCard(previewCard, display, cardModel),
                     );
                   }}
                 >
@@ -368,7 +378,7 @@ export const DecisionModalHost = ({
                       disabled={disabled}
                       onPointerEnter={() => {
                         onPreviewCard?.(
-                          toDecisionOrderClientCard(card, display),
+                          decisionClientCard(card, display, cardModel),
                         );
                       }}
                       onClick={() => {

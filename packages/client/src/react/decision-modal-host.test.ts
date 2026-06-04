@@ -440,6 +440,7 @@ test("return-to-deck order modal shares CardTile reorder instead of custom drag"
   assert.match(source, /useCardReorderPreview/u);
   assert.match(source, /onPreviewMoveNear/u);
   assert.match(source, /onMoveNear/u);
+  assert.match(source, /reorderDragStrategy="translate"/u);
   assert.match(source, /className="hand-cards decision-order-card-grid"/u);
   assert.doesNotMatch(source, /decision-order-card-slot/u);
   assert.doesNotMatch(styles, /\.decision-order-card-grid\s*\{[^}]*gap:/u);
@@ -467,8 +468,13 @@ test("decision modal card surfaces pass hover callbacks to card preview", async 
     source,
     /onPreviewCard\?: \(\(card: ClientCardModel\) => void\)/u,
   );
+  assert.match(
+    source,
+    /cardModel\?: \(\(card: CardRef\) => ClientCardModel\) \| undefined/u,
+  );
   assert.match(source, /onHover=\{onPreviewCard\}/u);
-  assert.match(source, /onPreviewCard\?\.\(\s*toDecisionOrderClientCard/u);
+  assert.match(source, /decisionClientCard\(/u);
+  assert.match(source, /cardModel\?\.\(card\)/u);
   assert.doesNotMatch(source, /onHover=\{\(\) => undefined\}/u);
 });
 

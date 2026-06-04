@@ -62,6 +62,8 @@ interface PointerReorderTarget {
   placement: ReorderPlacement;
 }
 
+type ReorderDragStrategy = "fixed" | "translate";
+
 interface PointerReorderFinishEvent {
   pointerId: number;
   type: "pointerup" | "pointercancel";
@@ -85,6 +87,7 @@ export interface CardTileProps {
   onAttachedDonClick?: ((instanceId: string) => void) | undefined;
   onHover?: ((card: ClientCardModel) => void) | undefined;
   reorderable?: boolean | undefined;
+  reorderDragStrategy?: ReorderDragStrategy | undefined;
   onMoveNear?:
     | ((
         draggedInstanceId: string,
@@ -118,6 +121,7 @@ export const CardTile = ({
   onAttachedDonClick,
   onHover,
   reorderable = false,
+  reorderDragStrategy = "fixed",
   onMoveNear,
   onPreviewMoveNear,
   onReorderCancel,
@@ -164,18 +168,28 @@ export const CardTile = ({
     })),
   ];
   const pointerDragStyle =
-    pointerDrag?.moved === true
-      ? ({
-          position: "fixed",
-          left:
-            pointerDrag.originLeft + pointerDrag.currentX - pointerDrag.originX,
-          top:
-            pointerDrag.originTop + pointerDrag.currentY - pointerDrag.originY,
-          width: pointerDrag.width,
-          height: pointerDrag.height,
-          pointerEvents: "none",
-        } satisfies CSSProperties)
-      : undefined;
+    pointerDrag?.moved !== true
+      ? undefined
+      : reorderDragStrategy === "translate"
+        ? ({
+            zIndex: 40,
+            transform: `translate(${String(pointerDrag.currentX - pointerDrag.originX)}px, ${String(pointerDrag.currentY - pointerDrag.originY)}px)`,
+            pointerEvents: "none",
+          } satisfies CSSProperties)
+        : ({
+            position: "fixed",
+            left:
+              pointerDrag.originLeft +
+              pointerDrag.currentX -
+              pointerDrag.originX,
+            top:
+              pointerDrag.originTop +
+              pointerDrag.currentY -
+              pointerDrag.originY,
+            width: pointerDrag.width,
+            height: pointerDrag.height,
+            pointerEvents: "none",
+          } satisfies CSSProperties);
   const finishPointerReorder = (event: PointerReorderFinishEvent): boolean => {
     if (
       pointerDrag === undefined ||

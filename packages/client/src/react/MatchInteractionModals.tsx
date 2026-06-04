@@ -13,6 +13,7 @@ type OpponentRevealWindowLayerProps = ComponentProps<
 export interface MatchInteractionModalsProps {
   actionInFlight: boolean;
   cardDisplay: DecisionModalHostProps["cardDisplay"];
+  cardModel: DecisionModalHostProps["cardModel"];
   collectionModalHostProps: CollectionModalHostProps;
   decisionModal: DecisionModalHostProps["model"];
   decisionModalCoveredByCollection: boolean;
@@ -34,6 +35,7 @@ export interface MatchInteractionModalsProps {
 export const MatchInteractionModals = ({
   actionInFlight,
   cardDisplay,
+  cardModel,
   collectionModalHostProps,
   decisionModal,
   decisionModalCoveredByCollection,
@@ -56,6 +58,7 @@ export const MatchInteractionModals = ({
       model={!decisionModalCoveredByCollection ? decisionModal : undefined}
       disabled={actionInFlight}
       cardDisplay={cardDisplay}
+      cardModel={cardModel}
       onToggleCard={onToggleCard}
       onChooseTrigger={onChooseTrigger}
       onQuantity={onQuantity}
