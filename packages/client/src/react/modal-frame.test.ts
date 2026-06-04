@@ -62,10 +62,23 @@ describe("modal frame", () => {
     assert.match(collectionMarkup, /floating-window/u);
   });
 
-  test("modal frame owns the shared smaller default size", async () => {
+  test("modal frame sizes to content with viewport guardrails", async () => {
     const styles = await readFile(modalStylesPath, "utf8");
 
-    assert.match(styles, /\.modal-frame\s*\{[^}]*inset:\s*26% 34%;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*top:\s*50%;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*left:\s*50%;/u);
+    assert.match(
+      styles,
+      /\.modal-frame\s*\{[^}]*width:\s*min\(520px,\s*calc\(100vw - 32px\)\);/u,
+    );
+    assert.match(styles, /\.modal-frame\s*\{[^}]*height:\s*auto;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*max-height:\s*82vh;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*overflow:\s*auto;/u);
+    assert.match(
+      styles,
+      /\.modal-frame\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
+    );
+    assert.doesNotMatch(styles, /\.modal-frame\s*\{[^}]*inset:\s*26% 34%;/u);
     assert.match(styles, /\.modal-frame\s*\{[^}]*display:\s*flex;/u);
     assert.match(styles, /\.modal-frame\s*\{[^}]*flex-direction:\s*column;/u);
     assert.match(
