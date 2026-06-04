@@ -97,7 +97,7 @@ describe("modal frame", () => {
     );
     assert.match(
       styles,
-      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(calc\(\(var\(--card-height\) \* 3\) \+ 132px\),\s*82vh\);/u,
+      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(calc\(\(var\(--card-height\) \* 2\) \+ 132px\),\s*82vh\);/u,
     );
   });
 
