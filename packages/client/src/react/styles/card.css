@@ -146,8 +146,14 @@
   transform: rotate(90deg);
 }
 
-.card-tile.is-freshly-played-attack-restricted .card-face {
-  filter: brightness(0.58) saturate(0.78);
+.card-tile.is-freshly-played-attack-restricted::before {
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.42);
+  content: "";
+  pointer-events: none;
 }
 
 .card-tile.is-selected .card-face {
@@ -190,6 +196,7 @@
 
 .card-tag {
   position: absolute;
+  z-index: 2;
   right: 2px;
   bottom: 2px;
   padding: 1px 3px;
@@ -201,6 +208,7 @@
 
 .selection-order-badge {
   position: absolute;
+  z-index: 2;
   top: 3px;
   left: 3px;
   display: grid;
@@ -220,6 +228,7 @@
 .cost-delta,
 .keyword-badge {
   position: absolute;
+  z-index: 2;
   border-radius: 3px;
   padding: 2px 4px;
   color: #ffffff;

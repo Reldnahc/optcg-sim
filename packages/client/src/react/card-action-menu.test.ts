@@ -647,7 +647,14 @@ describe("card action menu", () => {
     );
     assert.match(
       styles,
-      /\.card-tile\.is-freshly-played-attack-restricted \.card-face\s*\{[^}]*filter:\s*brightness\(0\.58\)\s+saturate\(0\.78\);/u,
+      /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*background:\s*rgba\(0,\s*0,\s*0,\s*0\.42\);/u,
+    );
+    assert.equal(
+      /\.card-tile\.is-freshly-played-attack-restricted \.card-face\s*\{[^}]*filter:/u.test(
+        styles,
+      ),
+      false,
+      "fresh restriction dimming must not filter the card face because that also dampens selection and highlight effects.",
     );
     assert.equal(markup.includes("is-active"), false);
   });
