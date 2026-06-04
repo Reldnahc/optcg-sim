@@ -282,7 +282,7 @@ export const opponentAttackQueueingState = (): {
       playerId: p2,
       zone: target.zone,
     },
-    step: "counter",
+    step: "attack",
     damageCount: 1,
   };
   appendAttackDeclaredEvent(state, attacker);

@@ -522,6 +522,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   if (queuedFromWhenAttacking !== undefined) {
     return queuedFromWhenAttacking;
   }
+  const queuedFromOnOpponentAttack = queueOnOpponentAttackTriggers(state);
+  if (queuedFromOnOpponentAttack !== undefined) {
+    return queuedFromOnOpponentAttack;
+  }
   const queuedFromLifeRemoved = queueLifeRemovedTriggers(state);
   if (queuedFromLifeRemoved !== undefined) {
     return queuedFromLifeRemoved;

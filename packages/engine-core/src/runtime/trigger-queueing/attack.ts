@@ -310,7 +310,7 @@ export const createAttackTriggerQueueing = (
       return undefined;
     }
     const battle = state.battle;
-    if (battle === undefined || battle.step !== "counter") {
+    if (battle === undefined || battle.step !== "attack") {
       return undefined;
     }
     const defenderId = battle.currentTarget.playerId;

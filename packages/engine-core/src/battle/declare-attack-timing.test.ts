@@ -858,7 +858,7 @@ test("ENG-023C: attacker attack timing resolves before defender attack timing an
   });
 });
 
-test("ENG-023B: defender timing waits until Block Step response completes", () => {
+test("ENG-023B: defender timing resolves before Block Step decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -895,35 +895,15 @@ test("ENG-023B: defender timing waits until Block Step response completes", () =
   assert.equal(opened.errors, undefined);
   assert.equal(opened.state.battle?.step, "block");
   assert.equal(
-    opened.events.some((event) => event.type === "effectQueued"),
-    false,
-  );
-  assert.equal(
     must(opened.state.players[p2], "opened p2").hand.length,
-    beforeP2Hand,
-  );
-
-  const declined = applyAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: must(opened.state.pendingDecision, "block decision").id,
-    response: { type: "cards", cards: [] },
-  });
-
-  assert.equal(declined.errors, undefined);
-  const passed = passCounterStep(declined.state, p2);
-  assert.equal(passed.errors, undefined);
-  assert.equal(
-    must(passed.state.players[p2], "declined p2").hand.length,
-    beforeP2Hand + 2,
+    beforeP2Hand + 1,
   );
   assert.equal(
-    must(passed.state.players[p2], "declined p2").deck.length,
+    must(opened.state.players[p2], "opened p2").deck.length,
     beforeP2Deck - 1,
   );
-  const events = [...declined.events, ...passed.events];
-  const decisionResolvedIndex = events.findIndex(
-    (event) => event.type === "decisionResolved",
-  );
+
+  const events = opened.events;
   const effectQueuedIndex = events.findIndex(
     (event) => event.type === "effectQueued",
   );
@@ -934,14 +914,19 @@ test("ENG-023B: defender timing waits until Block Step response completes", () =
     );
   });
   const damageIndex = events.findIndex((event) => event.type === "damageDealt");
+  const decisionCreatedIndex = events.findIndex(
+    (event) => event.type === "decisionCreated",
+  );
 
-  assert.notEqual(decisionResolvedIndex, -1);
   assert.notEqual(effectQueuedIndex, -1);
   assert.notEqual(effectResolvedIndex, -1);
-  assert.notEqual(damageIndex, -1);
-  assert.ok(decisionResolvedIndex < effectQueuedIndex);
+  assert.notEqual(decisionCreatedIndex, -1);
+  assert.equal(damageIndex, -1);
   assert.ok(effectQueuedIndex < effectResolvedIndex);
-  assert.ok(effectResolvedIndex < damageIndex);
+  assert.ok(effectResolvedIndex < decisionCreatedIndex);
+  const blockDecision = must(opened.state.pendingDecision, "block decision");
+  assert.equal(blockDecision.type, "selectCards");
+  assert.equal(blockDecision.playerId, p2);
 });
 
 test("ENG-023B: multiple same-player defender attack timing effects resolve as independent supported blocks", () => {

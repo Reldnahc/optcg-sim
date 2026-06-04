@@ -540,24 +540,56 @@ const resolveAttackTimingEffects = (
   declaredState: GameState,
   declaredEvents: EngineEvent[],
 ): EngineResult => {
-  const queued = processEffectRuntime(declaredState);
-  if (queued.errors !== undefined) {
-    return toEngineResult(originalState, [], toErrorTuple(queued.errors));
+  let current = toEngineResult(declaredState, []);
+  const rawRuntimeEvents: EngineEvent[] = [];
+  for (let stepCount = 0; stepCount < 20; stepCount += 1) {
+    if (
+      current.errors !== undefined ||
+      current.state.pendingDecision !== undefined ||
+      current.state.status.type !== "active"
+    ) {
+      break;
+    }
+    const next = processEffectRuntime(current.state);
+    if (next.errors !== undefined) {
+      return toEngineResult(originalState, [], toErrorTuple(next.errors));
+    }
+    if (next.events.length === 0) {
+      if (next.stateHash !== current.stateHash) {
+        current = toEngineResult(next.state, []);
+        continue;
+      }
+      break;
+    }
+    rawRuntimeEvents.push(...next.events);
+    current = toEngineResult(next.state, []);
   }
-
-  const resolved = processEffectRuntime(queued.state);
-  if (resolved.errors !== undefined) {
-    return toEngineResult(originalState, [], toErrorTuple(resolved.errors));
+  if (
+    current.errors === undefined &&
+    current.state.pendingDecision === undefined &&
+    current.state.status.type === "active" &&
+    detectPendingRuntimeWork(current.state) !== undefined
+  ) {
+    return toEngineResult(
+      originalState,
+      [],
+      [
+        {
+          type: "illegalAction",
+          reason: "Attack timing runtime continuation did not settle.",
+        },
+      ],
+    );
   }
 
   const runtimeEvents = rebaseEvents(
     originalState,
-    [...queued.events, ...resolved.events],
+    rawRuntimeEvents,
     declaredEvents.length + 1,
   );
   const events = [...declaredEvents, ...runtimeEvents];
   const stateWithJournal: GameState = {
-    ...resolved.state,
+    ...current.state,
     seq: declaredState.seq,
     cardManifest: originalState.cardManifest,
     eventJournal: [...originalState.eventJournal, ...events],

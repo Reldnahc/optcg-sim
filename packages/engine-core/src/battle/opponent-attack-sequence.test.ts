@@ -160,7 +160,7 @@ test("defender On Your Opponent's Attack sequence resolves before Counter Step p
   });
 
   assert.equal(opened.errors, undefined);
-  assert.equal(opened.state.battle?.step, "counter");
+  assert.equal(opened.state.battle?.step, "attack");
   assert.equal(opened.state.pendingDecision?.type, "payCost");
   assert.equal(opened.state.pendingDecision.playerId, p2);
   assert.equal(opened.state.effectQueue.length, 1);

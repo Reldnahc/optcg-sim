@@ -52,7 +52,6 @@ import {
 import {
   detectPendingRuntimeWork,
   isSupportedDamageDeferredEffectQueueState,
-  processDefenderOpponentAttackTiming,
   processEffectRuntime,
   queueBattleKOTriggers,
   releaseDamageDeferredEffectQueue,
@@ -226,7 +225,7 @@ export const resolveSupportedVanillaBattle = (
   }
   const events: EngineEvent[] = [];
   if (initialBattle.step !== "counter") {
-    const counterStep = enterCounterStepAfterDefenderTiming(state);
+    const counterStep = enterCounterStep(state);
     if (counterStep.result !== undefined) {
       return counterStep.result;
     }
@@ -758,7 +757,7 @@ const processLeaderDamagePoint = ({
   };
 };
 
-const enterCounterStepAfterDefenderTiming = (
+const enterCounterStep = (
   state: GameState,
 ):
   | { state: GameState; events: EngineEvent[]; result?: undefined }
@@ -790,37 +789,15 @@ const enterCounterStepAfterDefenderTiming = (
     };
   }
 
-  const defenderTiming = processDefenderOpponentAttackTiming(counterState);
-  if (defenderTiming.errors !== undefined) {
-    return {
-      result: toEngineResult(state, [], toErrorTuple(defenderTiming.errors)),
-    };
-  }
-  const events = [...defenderTiming.events];
-  if (defenderTiming.state.status.type !== "active") {
-    return { result: defenderTiming };
-  }
-  if (defenderTiming.state.pendingDecision !== undefined) {
-    return { result: defenderTiming };
-  }
-  if (!battleParticipantsRemainLegal(defenderTiming.state)) {
-    return {
-      result: finalizeSupportedEndOfBattleCleanup({
-        state,
-        nextState: defenderTiming.state,
-        events,
-      }),
-    };
-  }
-
   const decision = createCounterStepPassDecision(
-    withAllAttackTimingCombatMetadataHidden(defenderTiming.state),
+    withAllAttackTimingCombatMetadataHidden(counterState),
     { requirePotentialCounterActions: false },
   );
   if (decision === null) {
-    return { state: defenderTiming.state, events };
+    return { state: counterState, events: [] };
   }
 
+  const events: EngineEvent[] = [];
   appendEvent(
     state,
     events,
@@ -833,23 +810,12 @@ const enterCounterStepAfterDefenderTiming = (
     { type: "public" },
   );
   const nextState: GameState = {
-    ...defenderTiming.state,
+    ...counterState,
     pendingDecision: decision,
     eventJournal: [...state.eventJournal, ...events],
   };
   assertGameStateInvariants(nextState);
   return { result: toEngineResult(nextState, events) };
-};
-
-const battleParticipantsRemainLegal = (state: GameState): boolean => {
-  const battle = state.battle;
-  if (battle === undefined) {
-    return true;
-  }
-  return (
-    reifyCardRef(state, battle.attacker) !== null &&
-    reifyCardRef(state, battle.currentTarget) !== null
-  );
 };
 
 const finalizeSupportedEndOfBattleCleanup = ({
