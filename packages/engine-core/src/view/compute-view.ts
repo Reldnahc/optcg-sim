@@ -1,10 +1,8 @@
 import type {
-  CardFilter,
-  CardRef,
   CardInstance,
+  CardRef,
   ComputedCardView,
   ComputedGameView,
-  ContinuousEffectRecord,
   GameState,
   InstanceId,
   Keyword,
@@ -22,6 +20,7 @@ import {
   recordConditionPasses,
 } from "./compute-view-continuous.js";
 import { fieldRemovalProtectionsForCard } from "../replacement/field-removal-protection.js";
+import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;
@@ -38,100 +37,6 @@ const isLeaderOrCharacter = (
 ): card is CardInstance & { zone: { zone: "leaderArea" | "characterArea" } } =>
   card.zone.zone === "leaderArea" || card.zone.zone === "characterArea";
 
-const cardMatchesRef = (card: CardInstance, ref: CardRef): boolean =>
-  card.instanceId === ref.instanceId &&
-  card.cardId === ref.cardId &&
-  card.controller === ref.playerId;
-
-const numericFilterMatches = (
-  value: number | undefined,
-  filter: CardFilter["cost"] | CardFilter["power"],
-): boolean => {
-  if (filter === undefined) return true;
-  if (value === undefined) return false;
-  if ("op" in filter) return value === filter.value;
-  if (filter.min !== undefined && value < filter.min) return false;
-  if (filter.max !== undefined && value > filter.max) return false;
-  return true;
-};
-
-const cardMatchesAllFilter = (
-  state: GameState,
-  card: CardInstance,
-  filter: CardFilter | undefined,
-): boolean => {
-  if (filter === undefined) return true;
-  const metadata = state.cardManifest.cards[card.cardId];
-  if (metadata === undefined) return false;
-  if (
-    filter.categories !== undefined &&
-    !filter.categories.includes(metadata.category)
-  ) {
-    return false;
-  }
-  if (
-    filter.typesAny !== undefined &&
-    !filter.typesAny.some((type) => metadata.types.includes(type))
-  ) {
-    return false;
-  }
-  if (
-    filter.names !== undefined &&
-    !filter.names.some((name) => metadata.name === name)
-  ) {
-    return false;
-  }
-  return (
-    numericFilterMatches(metadata.cost, filter.cost) &&
-    numericFilterMatches(metadata.power, filter.power)
-  );
-};
-
-const cardMatchesAllTarget = (
-  state: GameState,
-  card: CardInstance,
-  effect: ContinuousEffectRecord,
-): boolean => {
-  const target = effect.modifier.target;
-  if (target.type !== "all") return false;
-  if (target.zone !== card.zone.zone) return false;
-  if (!cardMatchesAllFilter(state, card, target.filter)) return false;
-  if (target.player === "self") {
-    return card.controller === effect.controller;
-  }
-  if (target.player === "opponent") {
-    return card.controller !== effect.controller;
-  }
-  return false;
-};
-
-const cardMatchesModifierTarget = (
-  state: GameState,
-  card: CardInstance,
-  effect: ContinuousEffectRecord,
-): boolean => {
-  const target = effect.modifier.target;
-  if (target.type === "self") {
-    return cardMatchesRef(card, effect.source);
-  }
-  if (target.type === "myLeader") {
-    return (
-      card.zone.zone === "leaderArea" && card.controller === effect.controller
-    );
-  }
-  if (target.type === "exactCard") {
-    const cardZone = card.zone.zone;
-    const targetZone = target.card.zone?.zone;
-    if (target.binding.family !== "selectedTargets") return false;
-    if (targetZone !== "leaderArea" && targetZone !== "characterArea") {
-      return false;
-    }
-    if (cardZone !== targetZone) return false;
-    return cardMatchesRef(card, target.card);
-  }
-  return cardMatchesAllTarget(state, card, effect);
-};
-
 const continuousPowerBonusForCard = (
   state: GameState,
   card: CardInstance,
@@ -144,7 +49,7 @@ const continuousPowerBonusForCard = (
     if (!recordConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "powerAdd") continue;
     if (effect.modifier.operation.type !== "addPower") continue;
-    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
 
     powerBonus += effect.modifier.operation.value;
   }
@@ -164,7 +69,7 @@ const continuousBasePowerForCard = (
     if (effect.modifier.layer !== "basePowerSet") continue;
     if (effect.modifier.operation.type !== "setBasePower") continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
-    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
 
     basePower =
       basePower === undefined
@@ -187,7 +92,7 @@ const continuousCostBonusForCard = (
     if (!recordConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "costAdd") continue;
     if (effect.modifier.operation.type !== "addCost") continue;
-    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
 
     costBonus += effect.modifier.operation.value;
   }
@@ -207,7 +112,7 @@ const hasRestriction = (
     if (effect.modifier.layer !== "restriction") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
     if (effect.modifier.operation.restriction !== restriction) continue;
-    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     return true;
   }
   return false;
@@ -237,7 +142,7 @@ const continuousRestrictionLabelsForCard = (
     if (effect.modifier.layer !== "restriction") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
-    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     const label = restrictionLabel(effect.modifier.operation.restriction);
     if (label !== undefined && !restrictions.includes(label)) {
       restrictions.push(label);
@@ -256,7 +161,7 @@ const continuousKeywordsForCard = (
     if (!durationIsActive(state, effect)) continue;
     if (!isSupportedContinuousKeywordModifier(effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
-    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     const operation = effect.modifier.operation;
     if (operation.type !== "addKeyword") continue;
     const keyword = operation.keyword;
