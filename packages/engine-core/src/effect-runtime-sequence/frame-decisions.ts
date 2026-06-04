@@ -76,6 +76,23 @@ const expandMoveCardsCostRoutes = (
     ];
   }
   if (
+    cost.from.zone === "hand" &&
+    cost.from.position === undefined &&
+    cost.to.zone === "deck" &&
+    cost.to.position === "top" &&
+    cost.count === 1
+  ) {
+    return [
+      {
+        id: "moveCards",
+        type: "moveCards",
+        count: cost.count,
+        from: { player: cost.from.player, zone: cost.from.zone },
+        to: cost.to,
+      },
+    ];
+  }
+  if (
     cost.from.zone !== "life" ||
     cost.to.zone !== "hand" ||
     cost.to.position !== undefined
@@ -115,6 +132,14 @@ const selectableMoveCardsCostIds = (
     option.to.position === "bottom"
   ) {
     return player.trash.map((card) => card.instanceId);
+  }
+  if (
+    option.from.zone === "hand" &&
+    option.from.position === undefined &&
+    option.to.zone === "deck" &&
+    option.to.position === "top"
+  ) {
+    return player.hand.map((card) => card.instanceId);
   }
   if (
     option.from.zone === "life" &&

@@ -29,6 +29,14 @@ export const isSupportedMoveCardsPaymentRoute = (
   ) {
     return true;
   }
+  if (
+    option.from.zone === "hand" &&
+    option.from.position === undefined &&
+    option.to.zone === "deck" &&
+    option.to.position === "top"
+  ) {
+    return option.count === 1;
+  }
   return (
     option.from.zone === "life" &&
     (option.from.position === "top" || option.from.position === "bottom") &&
@@ -100,6 +108,96 @@ export const applyMoveCardsPayment = (params: {
       ),
       deck: reindexZoneCards(
         [...params.player.deck, ...movedCards],
+        "deck",
+        params.playerId,
+        "deck",
+      ),
+    };
+  }
+
+  if (
+    params.selectedOption.from.zone === "hand" &&
+    params.selectedOption.from.position === undefined &&
+    params.selectedOption.to.zone === "deck" &&
+    params.selectedOption.to.position === "top" &&
+    params.selectedOption.count === 1
+  ) {
+    const selectedCards: CardInstance[] = [];
+    for (const selectedId of params.selected) {
+      const card = params.player.hand.find(
+        (candidate) => candidate.instanceId === selectedId,
+      );
+      if (card === undefined) {
+        return null;
+      }
+      selectedCards.push(card);
+    }
+    const selectedSet = new Set(params.selected);
+    const movedCards = selectedCards.map((card, index) => ({
+      ...card,
+      attachedDon: [],
+      zone: {
+        zone: "deck" as const,
+        playerId: params.playerId,
+        slot: "deck" as const,
+        index,
+      },
+    }));
+    for (const [index, movedCard] of movedCards.entries()) {
+      const originalCard = selectedCards[index];
+      if (originalCard === undefined) {
+        return null;
+      }
+      appendEvent(
+        params.state,
+        params.events,
+        "cardMoved",
+        {
+          from: "hand",
+          to: "deck",
+          playerId: params.playerId,
+          reason: "moveCardsCost",
+        },
+        { type: "public" },
+      );
+      const publicMoved = params.events[params.events.length - 1];
+      if (publicMoved !== undefined) {
+        publicMoved.causedBy = {
+          type: "decision",
+          decisionId: params.decisionId,
+        };
+      }
+      appendEvent(
+        params.state,
+        params.events,
+        "cardMoved",
+        {
+          instanceId: movedCard.instanceId,
+          cardId: movedCard.cardId,
+          from: originalCard.zone,
+          to: movedCard.zone,
+          reason: "moveCardsCost",
+        },
+        { type: "private", playerId: params.playerId },
+      );
+      const privateMoved = params.events[params.events.length - 1];
+      if (privateMoved !== undefined) {
+        privateMoved.causedBy = {
+          type: "decision",
+          decisionId: params.decisionId,
+        };
+      }
+    }
+    return {
+      ...params.player,
+      hand: reindexZoneCards(
+        params.player.hand.filter((card) => !selectedSet.has(card.instanceId)),
+        "hand",
+        params.playerId,
+        "hand",
+      ),
+      deck: reindexZoneCards(
+        [...movedCards, ...params.player.deck],
         "deck",
         params.playerId,
         "deck",

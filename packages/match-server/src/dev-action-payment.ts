@@ -107,6 +107,9 @@ const chooseCardCostLabel = (option: CardCostPaymentOption): string => {
       if (option.from.zone === "life") {
         return "Choose Life card";
       }
+      if (option.from.zone === "hand" && option.to.zone === "deck") {
+        return "Choose card to place on top of deck";
+      }
       return "Choose cards from trash";
     case "returnDon":
       return "Choose DON!! to return";

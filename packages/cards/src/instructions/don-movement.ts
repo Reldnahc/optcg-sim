@@ -92,7 +92,7 @@ export const parseAddRestedDonFromDonDeckInstruction: InstructionParser = (
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   const match =
-    /^give (?<quantity>up to [1-9]\d*) rested DON!! cards? to 1 of your (?<target>.+)$/i.exec(
+    /^give (?<quantity>up to [1-9]\d*) rested DON!! cards? to (?<target>.+)$/i.exec(
       input.text,
     );
   const quantityText = match?.groups?.["quantity"];
@@ -160,7 +160,7 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
                 family: "selectedTargets",
                 saveResultAs: donAttachTarget,
               },
-              zone: target.savedTargetZone,
+              ...target.savedTargetZone,
               player: "self",
               filter: target.filter,
               visibility: "publicOnly",
@@ -195,11 +195,30 @@ const parseRestedDonAttachmentTarget = (
       readonly requestZone:
         | { readonly zone: "characterArea" }
         | { readonly zones: ["leaderArea", "characterArea"] };
-      readonly savedTargetZone: "characterArea";
+      readonly savedTargetZone:
+        | { readonly zone: "characterArea" }
+        | { readonly zones: ["leaderArea", "characterArea"] };
     }
   | undefined => {
+  if (/^your Leader or 1 of your Characters\.?$/iu.test(targetText)) {
+    const zoneTarget = {
+      zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
+    };
+    return {
+      evidence: [
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      filter: { categories: ["leader", "character"] },
+      requestZone: zoneTarget,
+      savedTargetZone: zoneTarget,
+    };
+  }
+  const normalizedTargetText = targetText.replace(/^1 of your /iu, "");
   const parsed = parseCardFilterPredicates(
-    { text: targetText },
+    { text: normalizedTargetText },
     { powerSemantics: "current" },
   );
   const rest = parsed?.rest.trim().replace(/\.$/u, "");
@@ -228,7 +247,7 @@ const parseRestedDonAttachmentTarget = (
     evidence: [...leaderEvidence, "zone:characterArea", ...parsed.evidence],
     filter: parsed.filter,
     requestZone,
-    savedTargetZone: "characterArea",
+    savedTargetZone: requestZone,
   };
 };
 

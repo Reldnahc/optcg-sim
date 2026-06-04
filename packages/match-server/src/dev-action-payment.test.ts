@@ -34,6 +34,15 @@ const lifeCard = (instanceId: string): CardInstance => ({
   attachedDon: [],
 });
 
+const handCard = (instanceId: string): CardInstance => ({
+  instanceId: instanceId as InstanceId,
+  cardId: "hand-card" as CardId,
+  owner: p1,
+  controller: p1,
+  zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+  attachedDon: [],
+});
+
 const minimalState = (costArea: CardInstance[]): GameState =>
   ({
     pendingDecision: {
@@ -211,6 +220,67 @@ describe("dev action payment metadata", () => {
         },
       ],
       source: { zone: "life", playerId: p1 },
+    });
+  });
+
+  test("projects hand-to-deck-top cost with a precise choose label", () => {
+    const selected = handCard("hand-1");
+    const state = minimalState([]);
+    state.pendingDecision = {
+      id: "decision:hand-to-deck-top" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: {
+        type: "moveCards",
+        count: 1,
+        chooser: "self",
+        from: { player: "self", zone: "hand" },
+        to: { player: "self", zone: "deck", position: "top" },
+        order: "chooserChoice",
+        optional: true,
+      },
+      paymentOptions: [
+        {
+          id: "moveCards",
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "hand" },
+          to: { player: "self", zone: "deck", position: "top" },
+        },
+      ],
+    };
+    const player = state.players[p1];
+    if (player === undefined) {
+      throw new Error("Expected p1 in minimal state.");
+    }
+    player.hand = [selected];
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:hand-to-deck-top" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "moveCards",
+        selectedCardInstanceIds: [selected.instanceId],
+      },
+    };
+
+    assert.deepEqual(actionDecisionPayment(state, action), {
+      kind: "cardCost",
+      operation: "moveCards",
+      chooseLabel: "Choose card to place on top of deck",
+      selectedCardInstanceIds: [selected.instanceId],
+      selectedCards: [
+        {
+          instanceId: selected.instanceId,
+          zone: "hand",
+          playerId: p1,
+          index: 0,
+        },
+      ],
+      source: { zone: "hand", playerId: p1 },
     });
   });
 });

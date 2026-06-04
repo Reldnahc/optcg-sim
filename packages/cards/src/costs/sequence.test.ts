@@ -71,6 +71,7 @@ describe("optional cost sequence parser", () => {
         "player:self",
         "zone:trash",
         "destination:deck",
+        "position:bottom",
         "order:anyOrder",
       ],
       rest: "",

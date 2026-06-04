@@ -27,16 +27,40 @@ export const parseMoveCardsCost = (
     /^cards from your trash at the bottom of your deck in any order$/i.exec(
       cardinality.rest,
     );
-  if (routeMatch === null) {
-    return undefined;
+  if (routeMatch !== null) {
+    const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+      type: "moveCards",
+      count: cardinality.count,
+      chooser: "self",
+      from: { player: "self", zone: "trash" },
+      to: { player: "self", zone: "deck", position: "bottom" },
+      order: "chooserChoice",
+      optional: true,
+    };
+    const evidence: PrimitiveEvidence[] = [
+      "cost:moveCards",
+      ...cardinality.evidence,
+      "player:self",
+      "zone:trash",
+      "destination:deck",
+      "position:bottom",
+      "order:anyOrder",
+    ];
+
+    return { cost, evidence, rest: "" };
   }
 
+  const handToDeckTopMatch =
+    /^card from your hand at the top of your deck$/i.exec(cardinality.rest);
+  if (handToDeckTopMatch === null) {
+    return undefined;
+  }
   const cost: Extract<OptionalCost, { type: "moveCards" }> = {
     type: "moveCards",
     count: cardinality.count,
     chooser: "self",
-    from: { player: "self", zone: "trash" },
-    to: { player: "self", zone: "deck", position: "bottom" },
+    from: { player: "self", zone: "hand" },
+    to: { player: "self", zone: "deck", position: "top" },
     order: "chooserChoice",
     optional: true,
   };
@@ -44,8 +68,9 @@ export const parseMoveCardsCost = (
     "cost:moveCards",
     ...cardinality.evidence,
     "player:self",
-    "zone:trash",
+    "zone:hand",
     "destination:deck",
+    "position:top",
     "order:anyOrder",
   ];
 

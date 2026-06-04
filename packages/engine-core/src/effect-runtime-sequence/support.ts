@@ -20,6 +20,10 @@ import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditi
 import { isSupportedMoveCardsEffect } from "../effect-runtime-move-cards.js";
 import { isSupportedSearchRequestShape } from "../effect-runtime-search-reveal.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../effect-runtime-top-deck-placement.js";
+import {
+  isSupportedAttachDonTargetFilter,
+  isSupportedPublicFieldTargetFilter,
+} from "./support-filters.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -440,6 +444,14 @@ const isSupportedMoveCardsCostRoute = (
   ) {
     return true;
   }
+  if (
+    cost.from.zone === "hand" &&
+    cost.from.position === undefined &&
+    cost.to.zone === "deck" &&
+    cost.to.position === "top"
+  ) {
+    return cost.count === 1;
+  }
   return (
     cost.from.zone === "life" &&
     (cost.from.position === "top" ||
@@ -514,7 +526,12 @@ const isSupportedAttachSelectedDonSegment = (
   String(effect.selection).startsWith("donSelection:") &&
   effect.target.type === "savedFieldObject" &&
   effect.target.player === "self" &&
-  effect.target.zone === "characterArea" &&
+  ((effect.target.zone === "characterArea" &&
+    effect.target.zones === undefined) ||
+    (effect.target.zone === undefined &&
+      effect.target.zones?.every(
+        (zone) => zone === "leaderArea" || zone === "characterArea",
+      ) === true)) &&
   effect.target.controller === undefined &&
   effect.target.binding.family === "selectedTargets" &&
   isSupportedAttachDonTargetFilter(effect.target.filter);
@@ -525,29 +542,6 @@ const isSupportedPlaySourceSegment = (
   effect.type === "playSource" &&
   effect.source.type === "triggerCard" &&
   effect.ignoreCost === true;
-
-const isSupportedAttachDonTargetFilter = (
-  filter: CardFilter | undefined,
-): boolean => {
-  const categories = filter?.categories;
-  if (categories === undefined) {
-    return false;
-  }
-  const categoryShape =
-    (categories.length === 1 && categories[0] === "character") ||
-    (categories.length === 2 &&
-      categories[0] === "leader" &&
-      categories[1] === "character");
-  if (!categoryShape) {
-    return false;
-  }
-  if (filter === undefined) {
-    return false;
-  }
-  return Object.keys(filter).every(
-    (key) => key === "categories" || key === "typesAny",
-  );
-};
 
 const isSupportedRevealTopSegment = (
   effect: SequenceSegmentEffect,
@@ -620,25 +614,6 @@ const isSupportedBounceSegment = (
   effect.type === "bounce" &&
   effect.destination === "hand" &&
   isSupportedSavedFieldObjectKoTarget(effect.target);
-
-const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
-  "categories",
-  "colorsAny",
-  "cost",
-  "currentPower",
-  "effectEntryPoint",
-  "power",
-  "state",
-  "typesAny",
-]);
-
-const isSupportedPublicFieldTargetFilter = (
-  filter: CardFilter | undefined,
-): boolean =>
-  filter === undefined ||
-  Object.keys(filter).every((key) =>
-    supportedPublicFieldTargetFilterKeys.has(key as keyof CardFilter),
-  );
 
 const isSupportedSequenceTargetRequest = (
   request:
