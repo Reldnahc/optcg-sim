@@ -12,6 +12,7 @@ import {
   createCanonicalDonPaymentActions,
   createCollapsedAttackActions,
   createCollapsedCounterActions,
+  cardCostGroupRequiresManualConfirm,
   cardCostPaymentLabel,
   selectedDonAttachmentMenuAction,
 } from "../index.js";
@@ -479,7 +480,7 @@ export const activeCardCostGlobalActions = ({
   selectedInstanceCount: number;
   selectedActionIndex: number | undefined;
 }): ClientActionModel[] => {
-  const clickDrivenReturnDon = group.operation === "returnDon";
+  const manualConfirm = cardCostGroupRequiresManualConfirm(group);
   const actions: ClientActionModel[] = [
     {
       index: choice.declineActionIndex,
@@ -495,7 +496,7 @@ export const activeCardCostGlobalActions = ({
     });
   }
   if (
-    !clickDrivenReturnDon &&
+    manualConfirm &&
     group.requiredCount > 1 &&
     selectedActionIndex !== undefined
   ) {
@@ -505,11 +506,7 @@ export const activeCardCostGlobalActions = ({
       type: "confirmDecisionSelection",
     });
   }
-  if (
-    !clickDrivenReturnDon &&
-    group.requiredCount > 1 &&
-    selectedInstanceCount > 0
-  ) {
+  if (manualConfirm && group.requiredCount > 1 && selectedInstanceCount > 0) {
     actions.push({
       index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
       label: "Clear selection",

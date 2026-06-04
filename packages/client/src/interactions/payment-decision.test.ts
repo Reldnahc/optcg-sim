@@ -14,13 +14,15 @@ import {
   createCanonicalDonPaymentModalActions,
   autoOptionalCardCostGroup,
   autoPayCostActionIndex,
+  cardCostGroupRequiresManualConfirm,
   cardCostPaymentLabel,
-  directReturnDonCostClick,
+  optionalCardCostActionForSelection,
   optionalCardCostActionForInstance,
   optionalCardCostInstanceIds,
   createOptionalCardCostChoice,
   createOptionalCardCostModalActions,
 } from "./payment-decision.js";
+import { progressClickSelection } from "./click-selection.js";
 import type { OptionalCardCostGroup } from "./payment-decision.js";
 import type { ClientActionModel } from "../view-model.js";
 
@@ -272,7 +274,7 @@ describe("optional card-cost interaction", () => {
     });
   });
 
-  test("returnDon costs progress from clicked DON and submit when a legal set is complete", () => {
+  test("card costs progress from clicked cards and submit when a legal set is complete", () => {
     const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
     const group: OptionalCardCostGroup = {
       chooseActionIndex: -5,
@@ -286,16 +288,39 @@ describe("optional card-cost interaction", () => {
       ],
     };
 
-    assert.deepEqual(directReturnDonCostClick(group, [], "don-1"), {
+    assert.deepEqual(
+      progressClickSelection({
+        selectableInstanceIds: optionalCardCostInstanceIds(group),
+        selectedInstanceIds: [],
+        clickedInstanceId: "don-1",
+        completionCount: group.requiredCount,
+        isCompleteSelection: (selectedInstanceIds) =>
+          optionalCardCostActionForSelection(group, selectedInstanceIds) !==
+          undefined,
+      }),
+      { selectedInstanceIds: ["don-1"], complete: false },
+    );
+    const progress = progressClickSelection({
+      selectableInstanceIds: optionalCardCostInstanceIds(group),
       selectedInstanceIds: ["don-1"],
+      clickedInstanceId: "don-3",
+      completionCount: group.requiredCount,
+      isCompleteSelection: (selectedInstanceIds) =>
+        optionalCardCostActionForSelection(group, selectedInstanceIds) !==
+        undefined,
     });
-    assert.deepEqual(directReturnDonCostClick(group, ["don-1"], "don-3"), {
+
+    assert.deepEqual(progress, {
       selectedInstanceIds: ["don-1", "don-3"],
-      actionIndex: 3,
+      complete: true,
     });
+    assert.equal(
+      optionalCardCostActionForSelection(group, ["don-1", "don-3"]),
+      3,
+    );
   });
 
-  test("returnDon costs allow unselecting and ignore illegal completed sets", () => {
+  test("card costs allow unselecting and ignore illegal completed sets", () => {
     const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
     const group: OptionalCardCostGroup = {
       chooseActionIndex: -5,
@@ -309,12 +334,47 @@ describe("optional card-cost interaction", () => {
       ],
     };
 
-    assert.deepEqual(directReturnDonCostClick(group, ["don-1"], "don-1"), {
-      selectedInstanceIds: [],
-    });
-    assert.deepEqual(directReturnDonCostClick(group, ["don-1"], "don-3"), {
-      selectedInstanceIds: ["don-1"],
-    });
+    assert.deepEqual(
+      progressClickSelection({
+        selectableInstanceIds: optionalCardCostInstanceIds(group),
+        selectedInstanceIds: ["don-1"],
+        clickedInstanceId: "don-1",
+        completionCount: group.requiredCount,
+        isCompleteSelection: (selectedInstanceIds) =>
+          optionalCardCostActionForSelection(group, selectedInstanceIds) !==
+          undefined,
+      }),
+      { selectedInstanceIds: [], complete: false },
+    );
+    assert.deepEqual(
+      progressClickSelection({
+        selectableInstanceIds: optionalCardCostInstanceIds(group),
+        selectedInstanceIds: ["don-1"],
+        clickedInstanceId: "don-3",
+        completionCount: group.requiredCount,
+        isCompleteSelection: (selectedInstanceIds) =>
+          optionalCardCostActionForSelection(group, selectedInstanceIds) !==
+          undefined,
+      }),
+      { selectedInstanceIds: ["don-1"], complete: false },
+    );
+  });
+
+  test("only ordered trash movement card costs require manual confirmation", () => {
+    assert.equal(
+      cardCostGroupRequiresManualConfirm({
+        operation: "moveCards",
+        source: { zone: "trash" as Zone, playerId: "p1" as PlayerId },
+      }),
+      true,
+    );
+    assert.equal(
+      cardCostGroupRequiresManualConfirm({
+        operation: "returnDon",
+        source: { zone: "costArea" as Zone, playerId: "p1" as PlayerId },
+      }),
+      false,
+    );
   });
 
   test("does not collapse mixed payment families", () => {

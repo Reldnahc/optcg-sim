@@ -27,6 +27,7 @@ import {
   setDecisionActionOption,
   setDecisionQuantity,
   setDecisionOption,
+  selectionDraftIsComplete,
   toggleDecisionSelectedCard,
 } from "./decision-modal.js";
 import type { ClientActionModel } from "../view-model.js";
@@ -205,6 +206,58 @@ describe("headless decision modal models", () => {
       type: "targets",
       targets: [cardRef("target-2")],
     });
+  });
+
+  test("selectTargets draft completes when every visible up-to target is selected", () => {
+    const decision: PublicSelectTargetsDecision = {
+      ...targetDecision(),
+      max: 4,
+      candidates: [
+        { card: cardRef("target-1") },
+        { card: cardRef("target-2") },
+      ],
+    };
+    let draft = createDecisionDraft(decision);
+    draft = toggleDecisionSelectedCard(
+      decision,
+      draft,
+      "target-1" as InstanceId,
+    );
+
+    assert.equal(selectionDraftIsComplete(decision, draft), false);
+
+    draft = toggleDecisionSelectedCard(
+      decision,
+      draft,
+      "target-2" as InstanceId,
+    );
+
+    assert.equal(selectionDraftIsComplete(decision, draft), true);
+  });
+
+  test("selectTargets draft does not auto-complete while more visible up-to targets remain", () => {
+    const decision: PublicSelectTargetsDecision = {
+      ...targetDecision(),
+      max: 4,
+      candidates: [
+        { card: cardRef("target-1") },
+        { card: cardRef("target-2") },
+        { card: cardRef("target-3") },
+      ],
+    };
+    let draft = createDecisionDraft(decision);
+    draft = toggleDecisionSelectedCard(
+      decision,
+      draft,
+      "target-1" as InstanceId,
+    );
+    draft = toggleDecisionSelectedCard(
+      decision,
+      draft,
+      "target-2" as InstanceId,
+    );
+
+    assert.equal(selectionDraftIsComplete(decision, draft), false);
   });
 
   test("selectCards draft exposes disabled choices and prevents selecting them", () => {

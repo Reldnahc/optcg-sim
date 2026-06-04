@@ -4,12 +4,14 @@ import type { InstanceId, PlayerId } from "@optcg/types";
 
 import {
   attackTargetActionForInstance,
+  cardCostGroupRequiresManualConfirm,
   createDecisionDraft,
   counterTargetActionForInstance,
-  directReturnDonCostClick,
   isSelectableCostAreaDon,
-  optionalCardCostActionForInstance,
+  optionalCardCostActionForSelection,
   optionalCardCostInstanceIds,
+  progressClickSelection,
+  selectionDraftIsComplete,
   toggleDecisionSelectedCard,
   toggleSelectedDonInstanceId,
 } from "../index.js";
@@ -26,7 +28,6 @@ import type {
 import {
   decisionHasCandidate,
   isSelfAttachmentTarget,
-  toggleCardCostSelectedInstanceId,
 } from "./useMatchClient-support.js";
 
 type PendingDecision =
@@ -110,46 +111,37 @@ export const useMatchClientCardSelection = ({
         }
       }
       if (activeCardCostGroup !== undefined) {
+        const selectableInstanceIds =
+          optionalCardCostInstanceIds(activeCardCostGroup);
+        const progress = progressClickSelection({
+          selectableInstanceIds,
+          selectedInstanceIds: activeCardCostSelectedInstanceIds,
+          clickedInstanceId: instanceId,
+          completionCount: activeCardCostGroup.requiredCount,
+          isCompleteSelection: (selectedInstanceIds) =>
+            optionalCardCostActionForSelection(
+              activeCardCostGroup,
+              selectedInstanceIds,
+            ) !== undefined,
+        });
+        if (progress === undefined) {
+          return;
+        }
+        setSelectedCardInstanceId(undefined);
+        setSelectedDonInstanceIds([]);
+        setActiveCardCostSelectedInstanceIds(progress.selectedInstanceIds);
         if (
-          !optionalCardCostInstanceIds(activeCardCostGroup).includes(instanceId)
+          progress.complete &&
+          !cardCostGroupRequiresManualConfirm(activeCardCostGroup)
         ) {
-          return;
-        }
-        const directReturnDonClick = directReturnDonCostClick(
-          activeCardCostGroup,
-          activeCardCostSelectedInstanceIds,
-          instanceId,
-        );
-        if (directReturnDonClick !== undefined) {
-          setSelectedCardInstanceId(undefined);
-          setSelectedDonInstanceIds([]);
-          setActiveCardCostSelectedInstanceIds(
-            directReturnDonClick.selectedInstanceIds,
-          );
-          if (directReturnDonClick.actionIndex !== undefined) {
-            void submitAction(directReturnDonClick.actionIndex);
-          }
-          return;
-        }
-        if (activeCardCostGroup.requiredCount === 1) {
-          const actionIndex = optionalCardCostActionForInstance(
+          const actionIndex = optionalCardCostActionForSelection(
             activeCardCostGroup,
-            instanceId,
+            progress.selectedInstanceIds,
           );
           if (actionIndex !== undefined) {
             void submitAction(actionIndex);
           }
-          return;
         }
-        setActiveCardCostSelectedInstanceIds((selected) =>
-          toggleCardCostSelectedInstanceId(
-            selected,
-            instanceId,
-            activeCardCostGroup.requiredCount,
-          ),
-        );
-        setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
         return;
       }
       if (
@@ -171,7 +163,7 @@ export const useMatchClientCardSelection = ({
         setDecisionDraft(nextDraft);
         setActiveAttackTargetChoice(undefined);
         setActiveCounterTargetChoice(undefined);
-        if (pendingDecision.max === 1) {
+        if (selectionDraftIsComplete(pendingDecision, nextDraft)) {
           void submitDecisionDraft(nextDraft);
         }
         return;

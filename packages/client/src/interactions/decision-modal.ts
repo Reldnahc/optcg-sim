@@ -12,6 +12,7 @@ import type {
 } from "@optcg/types";
 
 import type { ClientActionModel } from "../view-model.js";
+import { clickSelectionIsComplete } from "./click-selection.js";
 
 export type DecisionDraft =
   | {
@@ -261,6 +262,22 @@ const isSelectConfirmable = (
 ): boolean =>
   draft.selectedInstanceIds.length >= decision.min &&
   draft.selectedInstanceIds.length <= decision.max;
+
+export const selectionDraftIsComplete = (
+  decision: PublicSelectCardsDecision | PublicSelectTargetsDecision,
+  draft: DecisionDraft,
+): boolean => {
+  assertDraftForDecision(decision, draft);
+  if (draft.kind !== "selectCards") {
+    return false;
+  }
+  return clickSelectionIsComplete({
+    selectableInstanceIds: selectableDecisionCandidateIds(decision).map(String),
+    selectedInstanceIds: draft.selectedInstanceIds.map(String),
+    max: decision.max,
+    isCompleteSelection: () => isSelectConfirmable(decision, draft),
+  });
+};
 
 const isQuantityConfirmable = (
   decision: PublicChooseQuantityDecision,
