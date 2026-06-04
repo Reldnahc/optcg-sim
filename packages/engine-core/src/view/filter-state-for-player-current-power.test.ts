@@ -376,12 +376,12 @@ test("projects filtered player-level play restrictions with dynamic cost labels"
   const p2View = filterStateForPlayer(state, p2);
 
   assert.deepEqual(p1View.self.restrictions, [
-    "no-character-cost-7-or-more-play",
-    "no-character-play",
+    "no-playing-characters-cost-7-or-more",
+    "no-playing-characters",
   ]);
   assert.deepEqual(p1View.opponent.restrictions, undefined);
   assert.deepEqual(p2View.opponent.restrictions, [
-    "no-character-cost-7-or-more-play",
-    "no-character-play",
+    "no-playing-characters-cost-7-or-more",
+    "no-playing-characters",
   ]);
 });

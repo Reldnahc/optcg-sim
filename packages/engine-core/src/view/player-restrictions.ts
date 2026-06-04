@@ -39,6 +39,14 @@ const sourceCategoryLabel = (category: string): string => {
   return category;
 };
 
+const playCategoryLabel = (category: string): string => {
+  if (category === "character") return "characters";
+  if (category === "event") return "Events";
+  if (category === "stage") return "Stages";
+  if (category === "leader") return "Leaders";
+  return category;
+};
+
 const costRestrictionLabel = (filter: CardFilter | undefined): string => {
   const cost = filter?.cost;
   if (cost === undefined) {
@@ -75,8 +83,8 @@ const playRestrictionLabel = (target: TargetSpec): string | undefined => {
     filter?.categories === undefined || filter.categories.length === 0
       ? ["card"]
       : filter.categories;
-  const categoryLabel = categories.map(sourceCategoryLabel).join("/");
-  return `no-${categoryLabel}${costRestrictionLabel(filter)}-play`;
+  const categoryLabel = categories.map(playCategoryLabel).join("/");
+  return `no-playing-${categoryLabel}${costRestrictionLabel(filter)}`;
 };
 
 const playerRestrictionLabel = (

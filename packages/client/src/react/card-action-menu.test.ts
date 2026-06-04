@@ -121,7 +121,7 @@ describe("card action menu", () => {
 
   test("renders dynamic player-level play restriction badge labels", () => {
     const layout = board();
-    layout.selfRestrictions = ["no-character-cost-7-or-more-play"];
+    layout.selfRestrictions = ["no-playing-characters-cost-7-or-more"];
 
     const boardMarkup = renderToStaticMarkup(
       createElement(BoardLayout, {
@@ -135,7 +135,7 @@ describe("card action menu", () => {
     );
 
     assert.equal(
-      boardMarkup.includes("no character cost 7 or more play"),
+      boardMarkup.includes("no playing characters cost 7 or more"),
       true,
     );
   });
