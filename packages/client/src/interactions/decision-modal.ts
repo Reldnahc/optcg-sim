@@ -286,6 +286,23 @@ const simpleDecisionOptions = (
   return undefined;
 };
 
+const donPaymentResponseKeyPattern = /^payment:don:(?<count>[1-9]\d*)$/u;
+const donPaymentLabelPattern = /^Pay(?: cost with)? (?<count>[1-9]\d*) DON!!$/u;
+
+const donPaymentCount = (
+  action: Pick<ClientActionModel, "label" | "responseKey">,
+): string | undefined => {
+  const responseKeyMatch =
+    action.responseKey === undefined
+      ? null
+      : donPaymentResponseKeyPattern.exec(action.responseKey);
+  const responseKeyCount = responseKeyMatch?.groups?.["count"];
+  if (responseKeyCount !== undefined) {
+    return responseKeyCount;
+  }
+  return donPaymentLabelPattern.exec(action.label)?.groups?.["count"];
+};
+
 const actionOptionModels = (
   decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
@@ -305,23 +322,43 @@ const actionOptionModels = (
         : [[choice.responseKey, choice.cards] as const],
     ),
   );
-  return actions
-    .filter((action) => action.type === "respondToDecision")
-    .map((action) => {
-      const cards =
-        action.responseKey === undefined
-          ? undefined
-          : presentationCardsByResponseKey.get(action.responseKey);
-      return {
-        actionIndex: action.index,
-        label:
-          action.responseKey === undefined
-            ? action.label
-            : (presentationLabelsByResponseKey.get(action.responseKey) ??
-              action.label),
-        ...(cards === undefined ? {} : { cards }),
-      };
+  const seenDonPaymentKeys = new Set<string>();
+  const models: Array<{
+    actionIndex: number;
+    label: string;
+    cards?: CardRef[];
+  }> = [];
+  for (const action of actions) {
+    if (action.type !== "respondToDecision") {
+      continue;
+    }
+    const paymentDonCount = donPaymentCount(action);
+    const label =
+      paymentDonCount !== undefined
+        ? `Pay ${paymentDonCount} DON!!`
+        : action.responseKey === undefined
+          ? action.label
+          : (presentationLabelsByResponseKey.get(action.responseKey) ??
+            action.label);
+    const donPaymentKey =
+      paymentDonCount === undefined ? undefined : `don:${paymentDonCount}`;
+    if (donPaymentKey !== undefined) {
+      if (seenDonPaymentKeys.has(donPaymentKey)) {
+        continue;
+      }
+      seenDonPaymentKeys.add(donPaymentKey);
+    }
+    const cards =
+      action.responseKey === undefined
+        ? undefined
+        : presentationCardsByResponseKey.get(action.responseKey);
+    models.push({
+      actionIndex: action.index,
+      label,
+      ...(cards === undefined ? {} : { cards }),
     });
+  }
+  return models;
 };
 
 const modalPresentation = (

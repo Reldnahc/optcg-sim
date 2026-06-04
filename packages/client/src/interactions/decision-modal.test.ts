@@ -478,8 +478,8 @@ describe("headless decision modal models", () => {
       kind: "actionOptions",
       decisionId: decision.id,
       options: [
-        { actionIndex: 4, label: "Pay cost with 4 DON!!" },
-        { actionIndex: 5, label: "Pay cost with 5 DON!!" },
+        { actionIndex: 4, label: "Pay 4 DON!!" },
+        { actionIndex: 5, label: "Pay 5 DON!!" },
       ],
       selectedActionIndex: 5,
       canConfirm: true,
@@ -545,6 +545,102 @@ describe("headless decision modal models", () => {
         type: "respondToDecision",
         label: "Pay cost with 4 DON!!",
         responseKey: "payment:don:4",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 4 DON!!" }]);
+  });
+
+  test("default decision modal collapses DON payment permutations alongside decline", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay optional DON cost",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose whether to pay.",
+        choices: [
+          { responseKey: "decline", label: "Decline cost" },
+          { responseKey: "payment:don:3", label: "Pay 3 DON!!" },
+        ],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Raw decline transport label",
+        responseKey: "decline",
+      },
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+      {
+        index: 6,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [
+      { actionIndex: 3, label: "Decline cost" },
+      { actionIndex: 4, label: "Pay 3 DON!!" },
+    ]);
+  });
+
+  test("default decision modal collapses restDon payment permutations by label", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay DON cost",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose how to pay.",
+        choices: [{ responseKey: "restDon", label: "Rest DON!!" }],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Pay cost with 4 DON!!",
+        responseKey: "restDon",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Pay cost with 4 DON!!",
+        responseKey: "restDon",
+      },
+      {
+        index: 6,
+        type: "respondToDecision",
+        label: "Pay cost with 4 DON!!",
+        responseKey: "restDon",
       },
     ];
 
