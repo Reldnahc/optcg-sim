@@ -635,6 +635,76 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses costed Main Event multi-target opponent Character refresh lock sequence", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may rest 2 of your DON!! cards: Up to 2 of your opponent's rested Characters with a cost of 7 or less will not become active in your opponent's next Refresh Phase.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "restDon",
+                  count: 2,
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "cannotBecomeActive",
+                target: {
+                  type: "choose",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "opponent",
+                    zone: "characterArea",
+                    min: 0,
+                    max: 2,
+                    allowFewerIfUnavailable: true,
+                    visibility: "public",
+                    filter: {
+                      categories: ["character"],
+                      state: "rested",
+                      cost: { max: 7 },
+                    },
+                  },
+                },
+                duration: {
+                  type: "untilStartOfNextTurn",
+                  player: "opponent",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "cost:restDon",
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "filter:state:rested",
+        "filter:cost",
+        "duration:opponentNextRefreshPhase",
+      ]),
+    );
+  });
+
   it("parses costed Main Event draw then filtered opponent Character rest sequence", () => {
     const result = parseCardEffectLine(
       "[Main] DON!! \u22122: Draw 1 card. Then, rest up to 1 of your opponent's Characters with 5000 power or less.",
