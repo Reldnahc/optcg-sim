@@ -103,6 +103,10 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     type: "chooseQuantity",
     playerId: playerA,
     prompt: "Choose how many cards to draw.",
+    presentation: {
+      title: "Choose quantity",
+      instruction: "Choose how many cards to draw.",
+    },
     causedBy: { type: "playerAction", actionId: "action-1" },
     mode: "upTo",
     min: 0,
