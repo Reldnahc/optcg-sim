@@ -238,8 +238,14 @@ const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
 const toFlattenedSequenceBlock = (
   effectBlock: EffectDefinition["effects"][number] | undefined,
 ): EffectDefinition["effects"][number] | undefined => {
-  if (effectBlock?.effect.type !== "sequence") {
+  if (effectBlock === undefined) {
     return effectBlock;
+  }
+  if (effectBlock.effect.type !== "sequence") {
+    return {
+      ...effectBlock,
+      effect: toSingleEffectSequence(effectBlock.effect),
+    };
   }
   const flattened = flattenSequenceEffect(effectBlock.effect);
   if (flattened === null) {
@@ -692,6 +698,22 @@ const isSupportedSequenceContinuousDuration = (duration: Duration): boolean =>
   duration.type === "untilStartOfNextTurn" ||
   duration.type === "untilEndOfTurn";
 
+const isSourceDependentContinuousSegment = (
+  effect: SequenceSegmentEffect,
+): boolean => {
+  if (
+    effect.type !== "modifyPower" &&
+    effect.type !== "cannotAttack" &&
+    effect.type !== "cannotBlock"
+  ) {
+    return false;
+  }
+  return (
+    effect.target.type === "self" ||
+    effect.duration.type === "whileSourceOnField"
+  );
+};
+
 const isSupportedSavedTargetContinuousSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SavedTargetContinuousEffect =>
@@ -893,6 +915,12 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedContinuousQueueEffect(segment.effect)) {
+        if (
+          flattenedBlock.sourcePresencePolicy !== "mustRemainInSameZone" &&
+          isSourceDependentContinuousSegment(segment.effect)
+        ) {
+          return false;
+        }
         if (
           "target" in segment.effect &&
           segment.effect.target.type === "choose"
