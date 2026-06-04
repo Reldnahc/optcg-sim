@@ -126,6 +126,8 @@ const restrictionLabel = (restriction: string): string | undefined => {
       return "cannot-block";
     case "cannotBecomeActive":
       return "cannot-become-active";
+    case "preventBlockerActivation":
+      return "no-blocker";
     default:
       return undefined;
   }

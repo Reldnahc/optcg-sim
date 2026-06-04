@@ -341,6 +341,9 @@ test("preventBlockerActivation on current attacker disables defender blockers", 
 
   const withRestriction = computeView(state);
   assert.equal(withRestriction.cards[blocker.instanceId]?.canBlock, false);
+  assert.deepEqual(withRestriction.cards[attacker.instanceId]?.restrictions, [
+    "no-blocker",
+  ]);
 });
 
 test("continuous support accepts all rested character filters for refresh restrictions", () => {

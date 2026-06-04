@@ -38,6 +38,8 @@ const restrictionLabel = (restriction: ClientRestriction): string => {
       return "can't block";
     case "cannot-become-active":
       return "no refresh";
+    case "no-blocker":
+      return "No Blocker";
     default:
       return restriction;
   }

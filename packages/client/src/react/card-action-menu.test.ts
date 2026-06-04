@@ -516,7 +516,7 @@ describe("card action menu", () => {
     layout.self.characters = [
       {
         ...card("self-character", "Restricted Character"),
-        restrictions: ["cannot-attack", "cannot-become-active"],
+        restrictions: ["cannot-attack", "cannot-become-active", "no-blocker"],
       },
     ];
 
@@ -536,6 +536,7 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*keyword-badge-negative/u);
     assert.equal(markup.includes("can&#x27;t attack"), true);
     assert.equal(markup.includes("no refresh"), true);
+    assert.equal(markup.includes("No Blocker"), true);
   });
 
   test("power delta badge sits near the top-right power area", async () => {
