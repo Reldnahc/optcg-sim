@@ -93,11 +93,11 @@ describe("modal frame", () => {
 
     assert.match(
       styles,
-      /\.modal-frame-card-decision\s*\{[^}]*width:\s*min\(920px,\s*calc\(100vw - 32px\)\);/u,
+      /\.modal-frame-card-decision\s*\{[^}]*width:\s*min\(calc\(\(var\(--card-width\) \* 5\) \+ 96px\),\s*calc\(100vw - 32px\)\);/u,
     );
     assert.match(
       styles,
-      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(560px,\s*82vh\);/u,
+      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(calc\(\(var\(--card-height\) \* 3\) \+ 132px\),\s*82vh\);/u,
     );
   });
 

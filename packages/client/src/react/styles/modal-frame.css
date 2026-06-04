@@ -18,8 +18,8 @@
 }
 
 .modal-frame-card-decision {
-  width: min(920px, calc(100vw - 32px));
-  min-height: min(560px, 82vh);
+  width: min(calc((var(--card-width) * 5) + 96px), calc(100vw - 32px));
+  min-height: min(calc((var(--card-height) * 3) + 132px), 82vh);
 }
 
 .modal-frame-header {
