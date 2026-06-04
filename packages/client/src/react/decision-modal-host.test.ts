@@ -222,6 +222,18 @@ test("button-only decision options use pointer and hover feedback", async () => 
   );
 });
 
+test("single-card action option previews center inside the modal", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.decision-card-preview-grid\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*justify-content:\s*center;/u,
+  );
+});
+
 test("return-to-deck order modal renders card images with deck order badges", () => {
   const model: DecisionModalModel = {
     ...presentation,
