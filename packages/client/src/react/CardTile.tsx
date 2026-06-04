@@ -45,6 +45,17 @@ const restrictionLabel = (restriction: ClientRestriction): string => {
   }
 };
 
+const restrictionTone = (
+  restriction: ClientRestriction,
+): "positive" | "negative" => {
+  switch (restriction) {
+    case "no-blocker":
+      return "positive";
+    default:
+      return "negative";
+  }
+};
+
 interface PointerReorderDrag {
   pointerId: number;
   originX: number;
@@ -166,7 +177,7 @@ export const CardTile = ({
     ...(card.restrictions ?? []).map((restriction) => ({
       id: `restriction:${restriction}`,
       label: restrictionLabel(restriction),
-      tone: "negative" as const,
+      tone: restrictionTone(restriction),
     })),
   ];
   const pointerDragStyle =

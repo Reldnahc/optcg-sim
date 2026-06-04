@@ -534,6 +534,7 @@ describe("card action menu", () => {
 
     assert.match(markup, /class="[^"]*keyword-badges/u);
     assert.match(markup, /class="[^"]*keyword-badge-negative/u);
+    assert.match(markup, /class="[^"]*keyword-badge-positive/u);
     assert.equal(markup.includes("can&#x27;t attack"), true);
     assert.equal(markup.includes("no refresh"), true);
     assert.equal(markup.includes("No Blocker"), true);
