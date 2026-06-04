@@ -43,6 +43,17 @@ const toDecisionOrderClientCard = (
   attachedDonCards: [],
 });
 
+const cardDecisionModalKinds = new Set<DecisionModalModel["kind"]>([
+  "selectCards",
+  "orderCards",
+  "orderTriggers",
+]);
+
+const decisionModalFrameClass = (model: DecisionModalModel): string =>
+  cardDecisionModalKinds.has(model.kind)
+    ? "modal-frame-decision modal-frame-card-decision"
+    : "modal-frame-decision";
+
 export const DecisionModalHost = ({
   model,
   disabled,
@@ -89,7 +100,7 @@ export const DecisionModalHost = ({
     return null;
   }
   return (
-    <ModalFrame title={model.title} className="modal-frame-decision">
+    <ModalFrame title={model.title} className={decisionModalFrameClass(model)}>
       <div className="decision-modal-context">
         <p className="decision-modal-instruction">{model.instruction}</p>
       </div>

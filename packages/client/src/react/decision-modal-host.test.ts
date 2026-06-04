@@ -62,11 +62,41 @@ test("selectCards modal renders card images and disables nonselectable choices",
   );
 
   assert.match(markup, /<img class="decision-card-face"/u);
+  assert.match(markup, /modal-frame-card-decision/u);
   assert.match(markup, /Decision title/u);
   assert.match(markup, /Decision instruction\./u);
   assert.equal(markup.includes("legal-card.png"), true);
   assert.equal(markup.includes("illegal-card.png"), true);
   assert.match(markup, /disabled=""/u);
+});
+
+test("simple decision modals use compact modal sizing", () => {
+  const model: DecisionModalModel = {
+    ...presentation,
+    kind: "chooseOption",
+    decisionId: "decision-option" as never,
+    options: [{ value: "yes", label: "Yes" }],
+    selectedOption: "yes",
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /modal-frame-decision/u);
+  assert.doesNotMatch(markup, /modal-frame-card-decision/u);
 });
 
 test("chooseQuantity modal renders a range slider over the legal range", () => {
@@ -171,6 +201,7 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   );
 
   assert.match(markup, /decision-order-card-grid/u);
+  assert.match(markup, /modal-frame-card-decision/u);
   assert.match(markup, /hand-cards decision-order-card-grid/u);
   assert.match(markup, /decision-order-hint/u);
   assert.equal(markup.includes("top-card.png"), true);

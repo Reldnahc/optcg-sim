@@ -62,14 +62,14 @@ describe("modal frame", () => {
     assert.match(collectionMarkup, /floating-window/u);
   });
 
-  test("modal frame sizes to content with viewport guardrails", async () => {
+  test("modal frame defaults to compact content sizing with viewport guardrails", async () => {
     const styles = await readFile(modalStylesPath, "utf8");
 
     assert.match(styles, /\.modal-frame\s*\{[^}]*top:\s*50%;/u);
     assert.match(styles, /\.modal-frame\s*\{[^}]*left:\s*50%;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*width:\s*min\(920px,\s*calc\(100vw - 32px\)\);/u,
+      /\.modal-frame\s*\{[^}]*width:\s*min\(520px,\s*calc\(100vw - 32px\)\);/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*height:\s*auto;/u);
     assert.match(styles, /\.modal-frame\s*\{[^}]*max-height:\s*82vh;/u);
@@ -86,6 +86,19 @@ describe("modal frame", () => {
       /\.modal-frame\s*\{[^}]*border:\s*2px solid #f4eee7;/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*box-shadow:/u);
+  });
+
+  test("card decision modals use a wider and taller default frame", async () => {
+    const styles = await readFile(modalStylesPath, "utf8");
+
+    assert.match(
+      styles,
+      /\.modal-frame-card-decision\s*\{[^}]*width:\s*min\(920px,\s*calc\(100vw - 32px\)\);/u,
+    );
+    assert.match(
+      styles,
+      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(560px,\s*82vh\);/u,
+    );
   });
 
   test("decision confirm action anchors low without stretching tall", async () => {
