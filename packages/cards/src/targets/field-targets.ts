@@ -10,6 +10,23 @@ export interface FieldTargetParseResult {
   readonly rest: string;
 }
 
+const leaderOrCharacterFilterWithPredicates = (
+  predicates: ReturnType<typeof parseCardFilterPredicates> | undefined,
+): CardFilter => {
+  if (predicates === undefined) {
+    return { categories: ["leader", "character"] };
+  }
+  return {
+    anyOf: [
+      { categories: ["leader"] },
+      {
+        ...predicates.filter,
+        categories: ["character"],
+      },
+    ],
+  };
+};
+
 export const opponentCharactersTargetPrimitive = {
   primitiveId: "target:opponentCharacters",
   matches: [{ id: "of-your-opponents-characters" }],
@@ -125,10 +142,7 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: {
-          ...(predicates?.filter ?? {}),
-          categories: ["leader", "character"],
-        },
+        filter: leaderOrCharacterFilterWithPredicates(predicates),
       },
     },
     evidence: [
@@ -242,10 +256,7 @@ export function parseYourLeaderOrCharacterCardsTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: {
-          ...(predicates?.filter ?? {}),
-          categories: ["leader", "character"],
-        },
+        filter: leaderOrCharacterFilterWithPredicates(predicates),
       },
     },
     evidence: [

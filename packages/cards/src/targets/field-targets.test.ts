@@ -101,8 +101,10 @@ describe("field target parsers", () => {
           allowFewerIfUnavailable: true,
           visibility: "public",
           filter: {
-            categories: ["leader", "character"],
-            cost: { max: 7 },
+            anyOf: [
+              { categories: ["leader"] },
+              { categories: ["character"], cost: { max: 7 } },
+            ],
           },
         },
       },

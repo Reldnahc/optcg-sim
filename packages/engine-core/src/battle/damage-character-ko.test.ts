@@ -681,6 +681,7 @@ test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", 
   const p2State = must(state.players[p2], "p2");
   const attacker = must(p1State.characters[0], "attacker");
   const target = must(p2State.characters[0], "target");
+  p1State.leader = { ...p1State.leader, state: "rested" };
   const restCandidateSource = must(p1State.hand[0], "rest candidate");
   const restCandidate = {
     ...restCandidateSource,
@@ -703,6 +704,11 @@ test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", 
     cardId: attacker.cardId,
     category: "character",
     power: 7000,
+  });
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
   });
   state.cardManifest.cards[restCandidate.cardId] = resolvedCard({
     cardId: restCandidate.cardId,
@@ -732,8 +738,10 @@ test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", 
               allowFewerIfUnavailable: true,
               visibility: "public",
               filter: {
-                categories: ["leader", "character"],
-                cost: { max: 7 },
+                anyOf: [
+                  { categories: ["leader"] },
+                  { categories: ["character"], cost: { max: 7 } },
+                ],
               },
             },
           },
@@ -783,7 +791,7 @@ test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", 
   assert.equal(decision.playerId, p2);
   assert.deepEqual(
     decision.candidates.map((candidate) => candidate.card.instanceId),
-    [restCandidate.instanceId],
+    [p1State.leader.instanceId, restCandidate.instanceId],
   );
   assert.equal(
     paused.events.some(
@@ -799,7 +807,15 @@ test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", 
     decisionId: decision.id,
     response: {
       type: "targets",
-      targets: [must(decision.candidates[0], "rest target").card],
+      targets: [
+        must(
+          decision.candidates.find(
+            (candidate) =>
+              candidate.card.instanceId === restCandidate.instanceId,
+          ),
+          "rest target",
+        ).card,
+      ],
     },
   });
 

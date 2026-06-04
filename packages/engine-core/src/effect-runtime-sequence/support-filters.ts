@@ -24,6 +24,7 @@ export const isSupportedAttachDonTargetFilter = (
 };
 
 const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
+  "anyOf",
   "categories",
   "colorsAny",
   "cost",
@@ -38,6 +39,9 @@ export const isSupportedPublicFieldTargetFilter = (
   filter: CardFilter | undefined,
 ): boolean =>
   filter === undefined ||
-  Object.keys(filter).every((key) =>
+  (Object.keys(filter).every((key) =>
     supportedPublicFieldTargetFilterKeys.has(key as keyof CardFilter),
-  );
+  ) &&
+    (filter.anyOf === undefined ||
+      (filter.anyOf.length > 0 &&
+        filter.anyOf.every(isSupportedPublicFieldTargetFilter))));
