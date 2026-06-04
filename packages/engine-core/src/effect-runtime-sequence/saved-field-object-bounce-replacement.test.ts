@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type {
   CardInstance,
+  CardColor,
   Effect,
   EffectDefinition,
   EngineResult,
@@ -66,6 +67,7 @@ const setupSequenceDefinition = (
 
 const selectTargetsThenBounceSavedSelectedTargetSequence = (
   destination: "deckBottom" | "hand" = "hand",
+  maxTargets = 1,
 ): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
@@ -86,7 +88,7 @@ const selectTargetsThenBounceSavedSelectedTargetSequence = (
           zone: "characterArea",
           player: "opponent",
           min: 1,
-          max: 1,
+          max: maxTargets,
           allowFewerIfUnavailable: false,
           visibility: "public",
         },
@@ -428,12 +430,13 @@ const setupSelectedTargetBounceFrame = (): {
 
 const setupSelectedTargetBounceFrameForDestination = (
   destination: "deckBottom" | "hand",
+  maxTargets = 1,
 ): {
   state: GameState;
   target: CardInstance;
 } => {
   const { state } = sequenceQueueState(
-    selectTargetsThenBounceSavedSelectedTargetSequence(destination),
+    selectTargetsThenBounceSavedSelectedTargetSequence(destination, maxTargets),
   );
   const p2State = must(state.players[p2], "p2");
   const target = withCardInZone({
@@ -457,9 +460,46 @@ const setupSelectedTargetBounceFrameForDestination = (
   return { state, target };
 };
 
+const addP2CharacterFromHand = (
+  state: GameState,
+  index: number,
+  name: string,
+  colors: CardColor[],
+): CardInstance => {
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p2State.hand[index], `p2 hand ${String(index)}`);
+  const card = withCardInZone({
+    state,
+    playerId: p2,
+    card: source,
+    zone: "characterArea",
+    index: p2State.characters.length,
+  });
+  p2State.hand = p2State.hand.filter(
+    (candidate) => candidate.instanceId !== card.instanceId,
+  );
+  state.cardManifest.cards[card.cardId] = {
+    ...resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      power: 6000,
+    }),
+    colors,
+    name,
+  };
+  return card;
+};
+
 const resolveSelectedTargetBounce = (
   state: GameState,
   target: CardInstance,
+): EngineResult => {
+  return resolveSelectedTargetsBounce(state, [target]);
+};
+
+const resolveSelectedTargetsBounce = (
+  state: GameState,
+  targets: readonly CardInstance[],
 ): EngineResult => {
   const paused = processEffectRuntime(state);
   const decision = must(paused.state.pendingDecision, "target selection");
@@ -469,14 +509,12 @@ const resolveSelectedTargetBounce = (
     decisionId: decision.id,
     response: {
       type: "targets",
-      targets: [
-        {
-          instanceId: target.instanceId,
-          cardId: target.cardId,
-          playerId: p2,
-          zone: target.zone,
-        },
-      ],
+      targets: targets.map((target) => ({
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: p2,
+        zone: target.zone,
+      })),
     },
   });
 };
@@ -711,6 +749,115 @@ test("saved-field-object deck-bottom bounce moves through field-removal process"
     resolved.events.some((event) => event.type === "cardMoved"),
     true,
   );
+});
+
+test("saved-field-object deck-bottom bounce moves two selected targets in selection order", () => {
+  const { state, target } = setupSelectedTargetBounceFrameForDestination(
+    "deckBottom",
+    2,
+  );
+  const secondTarget = addP2CharacterFromHand(state, 0, "Second Target", [
+    "red",
+  ]);
+
+  const resolved = resolveSelectedTargetsBounce(state, [target, secondTarget]);
+  const p2State = must(resolved.state.players[p2], "resolved p2");
+  const bottomTwo = p2State.deck.slice(-2);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(
+    bottomTwo.map((card) => card.instanceId),
+    [target.instanceId, secondTarget.instanceId],
+  );
+  assert.equal(
+    p2State.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.equal(
+    p2State.characters.some(
+      (card) => card.instanceId === secondTarget.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    resolved.events.filter((event) => event.type === "cardMoved").length,
+    2,
+  );
+});
+
+test("saved-field-object deck-bottom bounce resumes after replacement and moves remaining target", () => {
+  const { state, target } = setupSelectedTargetBounceFrameForDestination(
+    "deckBottom",
+    2,
+  );
+  const p2State = must(state.players[p2], "p2");
+  const replacementSource = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(p2State.hand[0], "replacement source"),
+      cardId: "replacement-rest-self-source" as CardInstance["cardId"],
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  p2State.hand = p2State.hand.filter(
+    (card) => card.instanceId !== replacementSource.instanceId,
+  );
+  const unprotectedTarget = addP2CharacterFromHand(state, 0, "Red Target", [
+    "red",
+  ]);
+  setupReviewedFieldRemovalRestSelfReplacementDefinition(
+    state,
+    replacementSource,
+  );
+
+  const resolved = resolveSelectedTargetsBounce(state, [
+    target,
+    unprotectedTarget,
+  ]);
+
+  assert.equal(resolved.errors, undefined);
+  const decision = must(resolved.state.pendingDecision, "replacement decision");
+  assert.equal(decision.type, "chooseReplacement");
+  assert.equal(
+    resolved.events.some((event) => event.type === "cardMoved"),
+    false,
+  );
+
+  const accepted = applyAction(resolved.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "replacement",
+      replacementId: must(decision.replacementIds[0], "replacement id"),
+    },
+  });
+
+  const acceptedP2 = must(accepted.state.players[p2], "accepted p2");
+  const restedReplacementSource = must(
+    acceptedP2.characters.find(
+      (card) => card.instanceId === replacementSource.instanceId,
+    ),
+    "rested replacement source",
+  );
+  const protectedTarget = must(
+    acceptedP2.characters.find((card) => card.instanceId === target.instanceId),
+    "protected target",
+  );
+  const bottomDeckCard = must(
+    acceptedP2.deck.at(-1),
+    "remaining target moved to bottom deck",
+  );
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.equal(restedReplacementSource.state, "rested");
+  assert.equal(protectedTarget.instanceId, target.instanceId);
+  assert.equal(bottomDeckCard.instanceId, unprotectedTarget.instanceId);
+  assert.equal(accepted.state.effectExecutionFrames.length, 0);
+  assert.equal(accepted.stateHash, hashCanonicalStateValue(accepted.state));
 });
 
 test("saved-field-object deck-bottom bounce pauses for field-removal replacement", () => {

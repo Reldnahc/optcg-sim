@@ -152,7 +152,10 @@ export const applyFieldMutationSequenceSegment = (params: {
         handled: true,
         kind: "paused",
         ok: true,
-        state: stateWithPausedSequenceFrame(bounced.state, entry, frame),
+        state: stateWithPausedSequenceFrame(bounced.state, entry, {
+          ...frame,
+          nextSegmentIndex: index,
+        }),
       };
     }
     return {

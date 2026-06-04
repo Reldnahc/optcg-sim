@@ -736,6 +736,13 @@ export const resumeSequenceFrameAfterReplacement = (
             attempted: true,
             succeeded: true,
             changedState: true,
+            selectedTargets:
+              frame.segmentResults[
+                segmentKey(
+                  pausedSegment,
+                  frame.pendingDecision.resumeAtSegmentIndex,
+                )
+              ]?.selectedTargets ?? [],
           },
       },
     },

@@ -613,9 +613,20 @@ export const applyBounceSequenceSegment = (params: {
       : "moveFromFieldToDeckBottom";
   let nextState = params.state;
   const events: EngineEvent[] = [];
-  const movedTargets: CardRef[] = [];
+  const resultKey = params.segmentKey(params.segment, params.index);
+  const priorAttemptedTargets =
+    params.ledgers.segmentResults[resultKey]?.selectedTargets ?? [];
+  const attemptedTargets: CardRef[] = [...priorAttemptedTargets];
+  const attemptedTargetIds = new Set(
+    priorAttemptedTargets.map((target) => target.instanceId),
+  );
+  const changedStateBeforePause =
+    params.ledgers.segmentResults[resultKey]?.changedState ?? false;
   for (const [targetIndex, selectedTarget] of selected.targets.entries()) {
     const target = selectedTarget.object;
+    if (attemptedTargetIds.has(target.instanceId)) {
+      continue;
+    }
     const player = nextState.players[target.playerId];
     const sourceZone = target.zone?.zone;
     if (
@@ -651,15 +662,18 @@ export const applyBounceSequenceSegment = (params: {
       return { ok: false };
     }
     if (resolved.paused === true) {
+      attemptedTargets.push(target);
       return {
         events,
         ledgers: {
           ...params.ledgers,
           segmentResults: {
             ...params.ledgers.segmentResults,
-            [params.segmentKey(params.segment, params.index)]: {
+            [resultKey]: {
               ...params.emptySegmentResult(),
               attempted: true,
+              changedState: changedStateBeforePause || events.length > 0,
+              selectedTargets: attemptedTargets,
             },
           },
         },
@@ -669,7 +683,8 @@ export const applyBounceSequenceSegment = (params: {
       };
     }
     nextState = resolved.state;
-    movedTargets.push(target);
+    attemptedTargets.push(target);
+    attemptedTargetIds.add(target.instanceId);
   }
   return {
     events,
@@ -677,12 +692,14 @@ export const applyBounceSequenceSegment = (params: {
       ...params.ledgers,
       segmentResults: {
         ...params.ledgers.segmentResults,
-        [params.segmentKey(params.segment, params.index)]: {
+        [resultKey]: {
           ...params.emptySegmentResult(),
           attempted: true,
           succeeded: true,
-          changedState: movedTargets.length > 0,
-          selectedTargets: movedTargets,
+          changedState:
+            changedStateBeforePause ||
+            attemptedTargets.length > priorAttemptedTargets.length,
+          selectedTargets: attemptedTargets,
         },
       },
     },
@@ -690,7 +707,7 @@ export const applyBounceSequenceSegment = (params: {
     state: {
       ...nextState,
       seq:
-        movedTargets.length === 0
+        attemptedTargets.length === priorAttemptedTargets.length
           ? nextState.seq
           : toStateSeq(nextState.seq + 1),
       eventJournal: [...params.state.eventJournal, ...events],
