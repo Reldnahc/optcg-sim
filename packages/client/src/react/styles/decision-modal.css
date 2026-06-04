@@ -36,6 +36,16 @@
   outline: 3px solid #ffdc62;
 }
 
+.decision-choice.decision-card-choice.is-selected {
+  outline: 0;
+}
+
+.decision-choice.decision-card-choice.is-selected
+  :where(.decision-card-face, .decision-card-placeholder) {
+  outline: 3px solid #ffdc62;
+  outline-offset: 0;
+}
+
 .decision-choice.decision-card-choice {
   position: relative;
   width: auto;

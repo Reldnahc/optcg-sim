@@ -308,6 +308,22 @@ test("decision modal selectable cards use board-card pointer and hover affordanc
   );
 });
 
+test("decision modal selected cards use the board-card selected highlight", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.decision-choice\.decision-card-choice\.is-selected\s*\{[^}]*outline:\s*0;/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-choice\.decision-card-choice\.is-selected\s+:where\(\.decision-card-face,\s*\.decision-card-placeholder\)\s*\{[^}]*outline:\s*3px solid #ffdc62;[^}]*outline-offset:\s*0;/u,
+  );
+});
+
 test("trigger order modal presents source cards like a single-card selection", () => {
   const model: DecisionModalModel = {
     ...presentation,
