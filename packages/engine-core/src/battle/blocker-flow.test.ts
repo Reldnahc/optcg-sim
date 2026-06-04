@@ -174,6 +174,103 @@ test("conditional continuous blocker grant opens Block Step decision and can be 
   );
 });
 
+test("implemented Opponent's Turn rest protection plus blocker grant opens Block Step decision", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  const definitionId = "def-opponent-turn-rest-protection-blocker";
+  const definition: EffectDefinition = {
+    cardId: defenderBlocker.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "opponent-turn-rest-protection-blocker" as EffectDefinition["effects"][number]["id"],
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: { type: "opponentTurn" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "giveProtection",
+                target: { type: "self" },
+                protection: {
+                  process: "rest",
+                  sourceKind: "cardEffect",
+                  sourceControllerRelation: "opponentControlled",
+                  sourceCardCategories: ["leader", "character"],
+                },
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: { type: "opponentTurn" },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "giveKeyword",
+                target: { type: "self" },
+                keyword: "blocker",
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: { type: "opponentTurn" },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "source-hash",
+      rulesVersion: "r1",
+      effectDefinitionsVersion: "fixture",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: definition,
+  };
+  state.cardManifest.cards[defenderBlocker.cardId] = resolvedCard({
+    cardId: defenderBlocker.cardId,
+    category: "character",
+    power: 3000,
+    effectText:
+      "[Opponent's Turn] This Character cannot be rested by your opponent's Leader and Character effects and gains [Blocker].",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  const pending = must(opened.state.pendingDecision, "block decision");
+  assert.equal(pending.type, "selectCards");
+  assert.deepEqual(pending.candidates, [
+    {
+      card: cardRef(defenderBlocker, p2),
+      visibility: { type: "public" },
+    },
+  ]);
+});
+
 test("blocker activation queues opponent activation reactions before battle resolves", () => {
   const { opened, p1State, defenderBlocker, decision } =
     setupOpenedBlockStepDecision();
