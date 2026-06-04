@@ -39,6 +39,11 @@ import {
   toOncePerTurnKey,
 } from "../rules/once-per-turn.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
+import {
+  fieldRemovalProcessTargets,
+  withFieldRemovalProcessTargets,
+} from "./field-removal-targets.js";
+import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 
 export type {
   DetectFieldRemovalReplacementCandidateResult,
@@ -71,6 +76,7 @@ interface SelectedTargetKoReplacementPayload {
   queueEntryId?: EffectQueueEntry["id"];
   source: CardRef;
   target: CardRef;
+  targets?: CardRef[];
   fieldRemovalAttempt: {
     processFamily: "fieldRemoval";
     classification:
@@ -107,6 +113,8 @@ interface PendingReplacementRestInsteadPayload {
   replacementId: string;
   source: CardRef;
   target?: CardRef;
+  coveredTargets?: CardRef[];
+  causedBy: ReplacementProcess["causedBy"];
   controllerId: PlayerId;
 }
 
@@ -116,6 +124,8 @@ interface PendingReplacementTrashFromHandInsteadPayload {
   replacementId: string;
   source: CardRef;
   target?: CardRef;
+  coveredTargets?: CardRef[];
+  causedBy: ReplacementProcess["causedBy"];
   controllerId: PlayerId;
   count: number;
   oncePerTurn?: {
@@ -185,6 +195,45 @@ export const buildSelectedTargetKoReplacementProcess = (
 export const buildSelectedTargetFieldRemovalKoReplacementProcess =
   buildSelectedTargetKoReplacementProcess;
 
+export const buildSelectedTargetsFieldRemovalKoReplacementProcess = (
+  entry: EffectQueueEntry,
+  targets: readonly CardRef[],
+): ReplacementProcess => {
+  const firstTarget = targets[0];
+  if (firstTarget === undefined) {
+    throw new Error(
+      "field-removal K.O. replacement process requires a target.",
+    );
+  }
+  const payload: SelectedTargetKoReplacementPayload = {
+    effectId: entry.effectBlockId,
+    queueEntryId: entry.id,
+    source: entry.source,
+    target: firstTarget,
+    ...(targets.length > 1 ? { targets: [...targets] } : {}),
+    fieldRemovalAttempt: {
+      processFamily: "fieldRemoval",
+      classification: "moveFromFieldToTrash",
+      sourceKind: "cardEffect",
+      sourceControllerId: entry.controllerId,
+    },
+  };
+  return {
+    id:
+      targets.length === 1
+        ? `${entry.id}:ko:${firstTarget.instanceId}:0`
+        : `${entry.id}:ko:${targets
+            .map((target) => target.instanceId)
+            .join("+")}`,
+    type: "ko",
+    source: entry.source,
+    target: firstTarget,
+    payload,
+    causedBy: entry.causedBy,
+    usedReplacementIds: [],
+  };
+};
+
 export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
   classification: "moveFromFieldToDeckBottom" | "moveFromFieldToHand";
   entry: EffectQueueEntry;
@@ -222,6 +271,45 @@ export const buildSelectedTargetFieldRemovalMoveToHandReplacementProcess =
 export const buildSelectedTargetFieldRemovalMoveZoneReplacementProcess =
   buildSelectedTargetMoveZoneReplacementProcess;
 
+export const buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess =
+  (params: {
+    classification: "moveFromFieldToDeckBottom" | "moveFromFieldToHand";
+    entry: EffectQueueEntry;
+    targets: readonly CardRef[];
+  }): ReplacementProcess => {
+    const firstTarget = params.targets[0];
+    if (firstTarget === undefined) {
+      throw new Error("field-removal replacement process requires a target.");
+    }
+    const payload: SelectedTargetKoReplacementPayload = {
+      effectId: params.entry.effectBlockId,
+      queueEntryId: params.entry.id,
+      source: params.entry.source,
+      target: firstTarget,
+      ...(params.targets.length > 1 ? { targets: [...params.targets] } : {}),
+      fieldRemovalAttempt: {
+        processFamily: "fieldRemoval",
+        classification: params.classification,
+        sourceKind: "cardEffect",
+        sourceControllerId: params.entry.controllerId,
+      },
+    };
+    return {
+      id:
+        params.targets.length === 1
+          ? `${params.entry.id}:moveZone:${firstTarget.instanceId}:0`
+          : `${params.entry.id}:moveZone:${params.targets
+              .map((target) => target.instanceId)
+              .join("+")}`,
+      type: "moveZone",
+      source: params.entry.source,
+      target: firstTarget,
+      payload,
+      causedBy: params.entry.causedBy,
+      usedReplacementIds: [],
+    };
+  };
+
 const findKoTargetByInstanceId = (
   state: GameState,
   instanceId: CardInstance["instanceId"],
@@ -247,34 +335,25 @@ export const normalizeSelectedTargetKoProcess = (
   state: GameState,
   process: ReplacementProcess,
 ): ReplacementProcess => {
-  const target = process.target;
-  if (
-    (process.type !== "ko" && process.type !== "moveZone") ||
-    target === undefined
-  ) {
+  if (process.type !== "ko" && process.type !== "moveZone") {
     return process;
   }
-  const located = findKoTargetByInstanceId(state, target.instanceId);
-  if (located === null) {
-    return process;
+  const currentTargets: CardRef[] = [];
+  for (const target of fieldRemovalProcessTargets(process)) {
+    const located = findKoTargetByInstanceId(state, target.instanceId);
+    if (located === null) {
+      continue;
+    }
+    currentTargets.push({
+      instanceId: located.card.instanceId,
+      cardId: located.card.cardId,
+      playerId: located.playerId,
+      zone: located.card.zone,
+    });
   }
-  const currentTarget: CardRef = {
-    instanceId: located.card.instanceId,
-    cardId: located.card.cardId,
-    playerId: located.playerId,
-    zone: located.card.zone,
-  };
-  const payload =
-    typeof process.payload === "object" &&
-    process.payload !== null &&
-    "target" in process.payload
-      ? { ...process.payload, target: currentTarget }
-      : process.payload;
-  return {
-    ...process,
-    target: currentTarget,
-    payload,
-  };
+  return currentTargets.length === 0
+    ? process
+    : withFieldRemovalProcessTargets(process, currentTargets);
 };
 
 export const normalizeFieldRemovalProcess = normalizeSelectedTargetKoProcess;
@@ -636,6 +715,8 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     ...process,
     usedReplacementIds: [...process.usedReplacementIds, candidate.id],
   };
+  const coveredTargets =
+    candidate.coveredTargets ?? fieldRemovalProcessTargets(usedProcess);
   const restDecision = createReplacementRestTargetDecision(
     state,
     process,
@@ -683,6 +764,8 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 ...(process.target === undefined
                   ? {}
                   : { target: process.target }),
+                coveredTargets: [...coveredTargets],
+                causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
               } satisfies PendingReplacementRestInsteadPayload,
             },
@@ -748,6 +831,8 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 ...(process.target === undefined
                   ? {}
                   : { target: process.target }),
+                coveredTargets: [...coveredTargets],
+                causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
                 count: trashFromHandDecision.request.min,
                 ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
@@ -829,9 +914,19 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         )
       : replaced.state;
   events.push(...rebaseEvents(state, replaced.events, events.length + 1));
+  const continued = continueUncoveredFieldRemovalTargets(
+    afterReplacement,
+    events,
+    effectId,
+    usedProcess,
+    coveredTargets,
+  );
+  if ("error" in continued) {
+    return { error: continued.error };
+  }
   return {
     state: {
-      ...afterReplacement,
+      ...continued.state,
       eventJournal: [...state.eventJournal, ...events],
     },
     process: usedProcess,

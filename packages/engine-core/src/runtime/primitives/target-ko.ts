@@ -19,7 +19,7 @@ import type {
 
 import { toEngineResult, toStateSeq } from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
-import { buildSelectedTargetFieldRemovalKoReplacementProcess } from "../../replacement/field-removal-process.js";
+import { buildSelectedTargetsFieldRemovalKoReplacementProcess } from "../../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "./field-removal.js";
 
 export type SelectedTargetKoExecutionFailureReason =
@@ -406,31 +406,34 @@ const executeSelectedTargetKoEffect = (
   }
 
   const events: EngineEvent[] = [];
-  let nextState = state;
-
-  for (const [targetIndex, target] of selectedTargets.entries()) {
-    const process = buildSelectedTargetFieldRemovalKoReplacementProcess(
-      entry,
-      target,
-      targetIndex,
-    );
-    const resolvedProcess = executeSelectedTargetFieldRemovalReplacementProcess(
-      nextState,
+  if (selectedTargets.length === 0) {
+    return toEngineResult(
+      {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+      },
       events,
-      entry.effectBlockId,
-      process,
     );
-    if ("error" in resolvedProcess) {
-      return toEngineResult(state, [], [resolvedProcess.error]);
-    }
-    if (resolvedProcess.paused === true) {
-      return toEngineResult(resolvedProcess.state, events);
-    }
-    nextState = resolvedProcess.state;
+  }
+  const process = buildSelectedTargetsFieldRemovalKoReplacementProcess(
+    entry,
+    selectedTargets,
+  );
+  const resolvedProcess = executeSelectedTargetFieldRemovalReplacementProcess(
+    state,
+    events,
+    entry.effectBlockId,
+    process,
+  );
+  if ("error" in resolvedProcess) {
+    return toEngineResult(state, [], [resolvedProcess.error]);
+  }
+  if (resolvedProcess.paused === true) {
+    return toEngineResult(resolvedProcess.state, events);
   }
 
   const finalState: GameState = {
-    ...nextState,
+    ...resolvedProcess.state,
     seq: toStateSeq(state.seq + 1),
     eventJournal: [...state.eventJournal, ...events],
   };

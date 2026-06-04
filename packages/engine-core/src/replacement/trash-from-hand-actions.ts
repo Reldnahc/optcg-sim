@@ -2,6 +2,7 @@ import type {
   Action,
   CardInstance,
   CardRef,
+  CausalityRef,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -19,6 +20,11 @@ import {
   consumeOncePerTurn,
   toOncePerTurnKey,
 } from "../rules/once-per-turn.js";
+import {
+  isCausalityRef,
+  replacementProcessFromStoredPayload,
+} from "./field-removal-targets.js";
+import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 
 interface PendingReplacementTrashFromHandInsteadPayload {
   decisionId: string;
@@ -26,6 +32,8 @@ interface PendingReplacementTrashFromHandInsteadPayload {
   replacementId: string;
   source: CardRef;
   target?: CardRef;
+  coveredTargets?: CardRef[];
+  causedBy: CausalityRef;
   controllerId: PlayerId;
   count: number;
   oncePerTurn?: {
@@ -81,6 +89,13 @@ const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
       .some((candidate) => cardRefsEqual(target, candidate)),
   );
 
+const cardRefArrayFromPayloadValue = (value: unknown): CardRef[] | undefined =>
+  value === undefined
+    ? undefined
+    : Array.isArray(value) && value.every(isCardRef)
+      ? value
+      : undefined;
+
 const pendingReplacementOncePerTurnFromPayload = (
   value: unknown,
 ): PendingReplacementTrashFromHandInsteadPayload["oncePerTurn"] | undefined => {
@@ -128,6 +143,7 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
     typeof candidate["replacementId"] !== "string" ||
     typeof candidate["effectBlockId"] !== "string" ||
     typeof candidate["controllerId"] !== "string" ||
+    !isCausalityRef(candidate["causedBy"]) ||
     !isCardRef(candidate["source"]) ||
     !Number.isInteger(count) ||
     typeof count !== "number" ||
@@ -137,6 +153,15 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
   }
   const target = candidate["target"];
   if (target !== undefined && !isCardRef(target)) {
+    return undefined;
+  }
+  const coveredTargets = cardRefArrayFromPayloadValue(
+    candidate["coveredTargets"],
+  );
+  if (
+    candidate["coveredTargets"] !== undefined &&
+    coveredTargets === undefined
+  ) {
     return undefined;
   }
   const oncePerTurn = pendingReplacementOncePerTurnFromPayload(
@@ -153,8 +178,10 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
     ] as EffectQueueEntry["effectBlockId"],
     controllerId: candidate["controllerId"] as PlayerId,
     source: candidate["source"],
+    causedBy: candidate["causedBy"],
     count,
     ...(target === undefined ? {} : { target }),
+    ...(coveredTargets === undefined ? {} : { coveredTargets }),
     ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
   };
 };
@@ -164,6 +191,7 @@ const pendingReplacementTrashFromHandPayload = (
   decision: NonNullable<GameState["pendingDecision"]> | undefined,
 ): {
   processId: string;
+  processType: GameState["replacementState"][number]["type"];
   payload: PendingReplacementTrashFromHandInsteadPayload;
 } | null => {
   if (decision?.type !== "selectCards") {
@@ -185,7 +213,11 @@ const pendingReplacementTrashFromHandPayload = (
       : pendingReplacementTrashFromHandInsteadFromPayload(processState.payload);
   return processState === undefined || payload === undefined
     ? null
-    : { processId: processState.processId, payload };
+    : {
+        processId: processState.processId,
+        processType: processState.type,
+        payload,
+      };
 };
 
 const replacementPayloadWithoutPending = (
@@ -378,13 +410,36 @@ export const applyReplacementTrashFromHandDecisionResponse = (
           moved.state,
           toOncePerTurnKey(pending.payload.oncePerTurn),
         );
+  const process = replacementProcessFromStoredPayload({
+    causedBy: pending.payload.causedBy,
+    payload: completedPayload,
+    processId: pending.processId,
+    type: pending.processType,
+    usedReplacementIds: [pending.payload.replacementId],
+  });
+  const continued =
+    process === null
+      ? { state: afterOncePerTurn }
+      : continueUncoveredFieldRemovalTargets(
+          afterOncePerTurn,
+          events,
+          pending.payload.effectBlockId,
+          process,
+          pending.payload.coveredTargets ?? [],
+        );
+  if ("error" in continued) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(state, [], [continued.error]),
+    };
+  }
   const nextState: GameState = {
-    ...afterOncePerTurn,
-    seq: toStateSeq(afterOncePerTurn.seq + 1),
-    replacementState: afterOncePerTurn.replacementState.filter(
+    ...continued.state,
+    seq: toStateSeq(continued.state.seq + 1),
+    replacementState: continued.state.replacementState.filter(
       (candidate) => candidate.processId !== pending.processId,
     ),
-    eventJournal: [...afterOncePerTurn.eventJournal, ...events],
+    eventJournal: [...continued.state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
   return {

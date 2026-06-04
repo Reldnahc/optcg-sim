@@ -2,6 +2,7 @@ import type {
   Action,
   CardInstance,
   CardRef,
+  CausalityRef,
   EngineError,
   EngineEvent,
   EngineResult,
@@ -16,6 +17,11 @@ import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
+import {
+  isCausalityRef,
+  replacementProcessFromStoredPayload,
+} from "./field-removal-targets.js";
+import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 
 interface PendingReplacementRestInsteadPayload {
   decisionId: string;
@@ -23,6 +29,8 @@ interface PendingReplacementRestInsteadPayload {
   replacementId: string;
   source: CardRef;
   target?: CardRef;
+  coveredTargets?: CardRef[];
+  causedBy: CausalityRef;
   controllerId: PlayerId;
 }
 
@@ -72,6 +80,13 @@ const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
       .some((candidate) => cardRefsEqual(target, candidate)),
   );
 
+const cardRefArrayFromPayloadValue = (value: unknown): CardRef[] | undefined =>
+  value === undefined
+    ? undefined
+    : Array.isArray(value) && value.every(isCardRef)
+      ? value
+      : undefined;
+
 const pendingReplacementRestInsteadFromPayload = (
   payload: unknown,
 ):
@@ -94,6 +109,7 @@ const pendingReplacementRestInsteadFromPayload = (
     typeof candidate["replacementId"] !== "string" ||
     typeof candidate["effectBlockId"] !== "string" ||
     typeof candidate["controllerId"] !== "string" ||
+    !isCausalityRef(candidate["causedBy"]) ||
     !isCardRef(candidate["source"])
   ) {
     return undefined;
@@ -102,13 +118,24 @@ const pendingReplacementRestInsteadFromPayload = (
   if (target !== undefined && !isCardRef(target)) {
     return undefined;
   }
+  const coveredTargets = cardRefArrayFromPayloadValue(
+    candidate["coveredTargets"],
+  );
+  if (
+    candidate["coveredTargets"] !== undefined &&
+    coveredTargets === undefined
+  ) {
+    return undefined;
+  }
   return {
     decisionId: candidate["decisionId"],
     replacementId: candidate["replacementId"],
     effectBlockId: candidate["effectBlockId"],
     controllerId: candidate["controllerId"] as PlayerId,
     source: candidate["source"],
+    causedBy: candidate["causedBy"],
     ...(target === undefined ? {} : { target }),
+    ...(coveredTargets === undefined ? {} : { coveredTargets }),
   };
 };
 
@@ -117,6 +144,7 @@ const pendingReplacementRestPayload = (
   decision: NonNullable<GameState["pendingDecision"]> | undefined,
 ): {
   processId: string;
+  processType: GameState["replacementState"][number]["type"];
   payload: PendingReplacementRestInsteadPayload;
 } | null => {
   if (decision?.type !== "selectTargets") {
@@ -138,7 +166,11 @@ const pendingReplacementRestPayload = (
       : pendingReplacementRestInsteadFromPayload(processState.payload);
   return processState === undefined || payload === undefined
     ? null
-    : { processId: processState.processId, payload };
+    : {
+        processId: processState.processId,
+        processType: processState.type,
+        payload,
+      };
 };
 
 const findCardByInstanceId = (
@@ -335,13 +367,36 @@ export const applyReplacementRestTargetDecisionResponse = (
     state,
     pending.processId,
   );
+  const process = replacementProcessFromStoredPayload({
+    causedBy: pending.payload.causedBy,
+    payload: completedPayload,
+    processId: pending.processId,
+    type: pending.processType,
+    usedReplacementIds: [pending.payload.replacementId],
+  });
+  const continued =
+    process === null
+      ? { state: rested.state }
+      : continueUncoveredFieldRemovalTargets(
+          rested.state,
+          events,
+          pending.payload.effectBlockId,
+          process,
+          pending.payload.coveredTargets ?? [],
+        );
+  if ("error" in continued) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(state, [], [continued.error]),
+    };
+  }
   const nextState: GameState = {
-    ...rested.state,
-    seq: toStateSeq(rested.state.seq + 1),
-    replacementState: rested.state.replacementState.filter(
+    ...continued.state,
+    seq: toStateSeq(continued.state.seq + 1),
+    replacementState: continued.state.replacementState.filter(
       (candidate) => candidate.processId !== pending.processId,
     ),
-    eventJournal: [...rested.state.eventJournal, ...events],
+    eventJournal: [...continued.state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
   return {

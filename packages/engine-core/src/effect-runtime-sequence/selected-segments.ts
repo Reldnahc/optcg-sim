@@ -16,7 +16,7 @@ import {
   reindexZoneCards,
 } from "../actions/state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
-import { buildSelectedTargetFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
+import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -622,7 +622,8 @@ export const applyBounceSequenceSegment = (params: {
   );
   const changedStateBeforePause =
     params.ledgers.segmentResults[resultKey]?.changedState ?? false;
-  for (const [targetIndex, selectedTarget] of selected.targets.entries()) {
+  const processTargets: CardRef[] = [];
+  for (const selectedTarget of selected.targets) {
     const target = selectedTarget.object;
     if (attemptedTargetIds.has(target.instanceId)) {
       continue;
@@ -646,11 +647,13 @@ export const applyBounceSequenceSegment = (params: {
     if (card === undefined) {
       continue;
     }
-    const process = buildSelectedTargetFieldRemovalMoveZoneReplacementProcess({
+    processTargets.push(target);
+  }
+  if (processTargets.length > 0) {
+    const process = buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess({
       classification,
       entry: params.entry,
-      target,
-      targetIndex,
+      targets: processTargets,
     });
     const resolved = executeSelectedTargetFieldRemovalReplacementProcess(
       nextState,
@@ -662,7 +665,7 @@ export const applyBounceSequenceSegment = (params: {
       return { ok: false };
     }
     if (resolved.paused === true) {
-      attemptedTargets.push(target);
+      attemptedTargets.push(...processTargets);
       return {
         events,
         ledgers: {
@@ -683,8 +686,10 @@ export const applyBounceSequenceSegment = (params: {
       };
     }
     nextState = resolved.state;
-    attemptedTargets.push(target);
-    attemptedTargetIds.add(target.instanceId);
+    for (const target of processTargets) {
+      attemptedTargets.push(target);
+      attemptedTargetIds.add(target.instanceId);
+    }
   }
   return {
     events,
