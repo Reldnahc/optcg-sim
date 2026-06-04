@@ -10,6 +10,7 @@ export const useFirstPlayerChoiceModal = (
 ): {
   model?: DecisionModalModel | undefined;
   onOption?: ((option: string) => void) | undefined;
+  onSubmitOption?: ((option: string) => void) | undefined;
   onConfirm?: (() => void) | undefined;
 } => {
   const [selection, setSelection] = useState<"goFirst" | "goSecond">("goFirst");
@@ -49,6 +50,11 @@ export const useFirstPlayerChoiceModal = (
     onOption(option) {
       if (option === "goFirst" || option === "goSecond") {
         setSelection(option);
+      }
+    },
+    onSubmitOption(option) {
+      if (option === "goFirst" || option === "goSecond") {
+        void chooseFirstPlayer(option);
       }
     },
     onConfirm() {

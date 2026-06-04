@@ -484,6 +484,48 @@ export const useMatchClient = ({
     [modalResponseActions, pendingDecision],
   );
 
+  const submitDecisionQuantityValue = useCallback(
+    async (quantity: number): Promise<void> => {
+      if (pendingDecision?.type !== "chooseQuantity") {
+        return;
+      }
+      await submitDecisionDraft(
+        setDecisionQuantity(createDecisionDraft(pendingDecision), quantity),
+      );
+    },
+    [pendingDecision, submitDecisionDraft],
+  );
+
+  const submitDecisionOptionValue = useCallback(
+    async (option: string): Promise<void> => {
+      if (pendingDecision === undefined) {
+        return;
+      }
+      const draft = createDecisionDraft(pendingDecision, modalResponseActions);
+      if (draft.kind !== "chooseOption") {
+        return;
+      }
+      await submitDecisionDraft(
+        setDecisionOption(pendingDecision, draft, option),
+      );
+    },
+    [modalResponseActions, pendingDecision, submitDecisionDraft],
+  );
+
+  const submitDecisionActionOptionValue = useCallback(
+    async (actionIndex: number): Promise<void> => {
+      if (pendingDecision === undefined) {
+        return;
+      }
+      const draft = createDecisionDraft(pendingDecision, modalResponseActions);
+      if (draft.kind !== "actionOptions") {
+        return;
+      }
+      await submitDecisionDraft(setDecisionActionOption(draft, actionIndex));
+    },
+    [modalResponseActions, pendingDecision, submitDecisionDraft],
+  );
+
   const chooseDecisionTriggerValue = useCallback(
     (triggerId: string): void => {
       if (pendingDecision?.type !== "chooseTriggerOrder") {
@@ -537,6 +579,9 @@ export const useMatchClient = ({
     setDecisionQuantityValue,
     setDecisionOptionValue,
     setDecisionActionOptionValue,
+    submitDecisionQuantityValue,
+    submitDecisionOptionValue,
+    submitDecisionActionOptionValue,
     chooseDecisionTriggerValue,
     confirmDecision,
     chooseFirstPlayer,

@@ -51,6 +51,9 @@ export interface MatchAppSessionModel {
   playerSnapshot: MatchClientState["snapshot"]["players"][PlayerId] | undefined;
   rollbackStatus: ReturnType<typeof rollbackStatusForPlayer>;
   setVisibleDecisionOption: (option: string) => void;
+  submitVisibleDecisionActionOption: (actionIndex: number) => void;
+  submitVisibleDecisionOption: (option: string) => void;
+  submitVisibleDecisionQuantity: (quantity: number) => void;
   confirmVisibleDecision: () => void;
   visibleDecisionModal: MatchClientUi["state"]["decisionModal"];
   visibleGlobalActions: ReturnType<MatchClientUi["globalActions"]>;
@@ -72,6 +75,17 @@ export const useMatchAppSession = (
   const visibleDecisionModal = firstPlayerChoiceModal.model ?? decisionModal;
   const setVisibleDecisionOption =
     firstPlayerChoiceModal.onOption ?? client.setDecisionOptionValue;
+  const submitVisibleDecisionOption =
+    firstPlayerChoiceModal.onSubmitOption ??
+    ((option: string) => {
+      void client.submitDecisionOptionValue(option);
+    });
+  const submitVisibleDecisionActionOption = (actionIndex: number): void => {
+    void client.submitDecisionActionOptionValue(actionIndex);
+  };
+  const submitVisibleDecisionQuantity = (quantity: number): void => {
+    void client.submitDecisionQuantityValue(quantity);
+  };
   const confirmVisibleDecision =
     firstPlayerChoiceModal.onConfirm ??
     (() => {
@@ -140,6 +154,9 @@ export const useMatchAppSession = (
     playerSnapshot,
     rollbackStatus,
     setVisibleDecisionOption,
+    submitVisibleDecisionActionOption,
+    submitVisibleDecisionOption,
+    submitVisibleDecisionQuantity,
     confirmVisibleDecision,
     visibleDecisionModal,
     visibleGlobalActions,

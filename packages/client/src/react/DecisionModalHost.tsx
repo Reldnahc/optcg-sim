@@ -20,6 +20,9 @@ export interface DecisionModalHostProps {
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
   onActionOption: (actionIndex: number) => void;
+  onSubmitQuantity?: ((quantity: number) => void) | undefined;
+  onSubmitOption?: ((option: string) => void) | undefined;
+  onSubmitActionOption?: ((actionIndex: number) => void) | undefined;
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
   onMoveOrderedCard: (
     draggedId: InstanceId,
@@ -63,6 +66,9 @@ export const DecisionModalHost = ({
   onQuantity,
   onOption,
   onActionOption,
+  onSubmitQuantity,
+  onSubmitOption,
+  onSubmitActionOption,
   onPreviewCard,
   onMoveOrderedCard,
   onPlacementDestination,
@@ -99,6 +105,10 @@ export const DecisionModalHost = ({
   if (model === undefined) {
     return null;
   }
+  const renderConfirm =
+    model.kind !== "binaryQuantity" &&
+    model.kind !== "chooseOption" &&
+    model.kind !== "actionOptions";
   return (
     <ModalFrame title={model.title} className={decisionModalFrameClass(model)}>
       <div className="decision-modal-context">
@@ -275,13 +285,11 @@ export const DecisionModalHost = ({
           {model.options.map((option) => (
             <button
               key={option.quantity}
-              className={`decision-choice ${
-                option.quantity === model.selectedQuantity ? "is-selected" : ""
-              }`}
+              className="decision-choice"
               type="button"
               disabled={disabled}
               onClick={() => {
-                onQuantity(option.quantity);
+                (onSubmitQuantity ?? onQuantity)(option.quantity);
               }}
             >
               {option.label}
@@ -294,12 +302,11 @@ export const DecisionModalHost = ({
           {model.options.map((option) => (
             <button
               key={option.value}
-              className={`decision-choice ${
-                option.value === model.selectedOption ? "is-selected" : ""
-              }`}
+              className="decision-choice"
               type="button"
+              disabled={disabled}
               onClick={() => {
-                onOption(option.value);
+                (onSubmitOption ?? onOption)(option.value);
               }}
             >
               {option.label}
@@ -348,14 +355,11 @@ export const DecisionModalHost = ({
             {model.options.map((option) => (
               <button
                 key={option.actionIndex}
-                className={`decision-choice ${
-                  option.actionIndex === model.selectedActionIndex
-                    ? "is-selected"
-                    : ""
-                }`}
+                className="decision-choice"
                 type="button"
+                disabled={disabled}
                 onClick={() => {
-                  onActionOption(option.actionIndex);
+                  (onSubmitActionOption ?? onActionOption)(option.actionIndex);
                 }}
               >
                 {option.label}
@@ -367,14 +371,16 @@ export const DecisionModalHost = ({
       {model.kind === "generic" ? (
         <p className="muted">This decision needs a dedicated control.</p>
       ) : null}
-      <button
-        className="action-button primary-action"
-        type="button"
-        disabled={disabled || !model.canConfirm}
-        onClick={onConfirm}
-      >
-        {"confirmLabel" in model ? model.confirmLabel : "Confirm"}
-      </button>
+      {renderConfirm ? (
+        <button
+          className="action-button primary-action"
+          type="button"
+          disabled={disabled || !model.canConfirm}
+          onClick={onConfirm}
+        >
+          {"confirmLabel" in model ? model.confirmLabel : "Confirm"}
+        </button>
+      ) : null}
     </ModalFrame>
   );
 };

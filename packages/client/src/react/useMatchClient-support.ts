@@ -71,6 +71,9 @@ export interface MatchClientUi {
   setDecisionQuantityValue: (quantity: number) => void;
   setDecisionOptionValue: (option: string) => void;
   setDecisionActionOptionValue: (actionIndex: number) => void;
+  submitDecisionQuantityValue: (quantity: number) => Promise<void>;
+  submitDecisionOptionValue: (option: string) => Promise<void>;
+  submitDecisionActionOptionValue: (actionIndex: number) => Promise<void>;
   chooseDecisionTriggerValue: (triggerId: string) => void;
   confirmDecision: () => Promise<void>;
   chooseFirstPlayer: (choice: "goFirst" | "goSecond") => Promise<void>;

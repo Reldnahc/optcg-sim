@@ -25,6 +25,9 @@ export interface MatchInteractionModalsProps {
   onPlacementDestination: DecisionModalHostProps["onPlacementDestination"];
   onPreviewCard: DecisionModalHostProps["onPreviewCard"];
   onQuantity: DecisionModalHostProps["onQuantity"];
+  onSubmitActionOption: DecisionModalHostProps["onSubmitActionOption"];
+  onSubmitOption: DecisionModalHostProps["onSubmitOption"];
+  onSubmitQuantity: DecisionModalHostProps["onSubmitQuantity"];
   onToggleCard: DecisionModalHostProps["onToggleCard"];
 }
 
@@ -43,6 +46,9 @@ export const MatchInteractionModals = ({
   onPlacementDestination,
   onPreviewCard,
   onQuantity,
+  onSubmitActionOption,
+  onSubmitOption,
+  onSubmitQuantity,
   onToggleCard,
 }: MatchInteractionModalsProps): React.JSX.Element => (
   <>
@@ -55,6 +61,9 @@ export const MatchInteractionModals = ({
       onQuantity={onQuantity}
       onOption={onOption}
       onActionOption={onActionOption}
+      onSubmitQuantity={onSubmitQuantity}
+      onSubmitOption={onSubmitOption}
+      onSubmitActionOption={onSubmitActionOption}
       onPreviewCard={onPreviewCard}
       onMoveOrderedCard={onMoveOrderedCard}
       onPlacementDestination={onPlacementDestination}

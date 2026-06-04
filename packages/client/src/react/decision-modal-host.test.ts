@@ -97,6 +97,8 @@ test("simple decision modals use compact modal sizing", () => {
 
   assert.match(markup, /modal-frame-decision/u);
   assert.doesNotMatch(markup, /modal-frame-card-decision/u);
+  assert.doesNotMatch(markup, /primary-action/u);
+  assert.doesNotMatch(markup, /decision-choice is-selected/u);
 });
 
 test("chooseQuantity modal renders a range slider over the legal range", () => {
@@ -164,9 +166,44 @@ test("binary quantity modal renders yes-no choices instead of a slider", () => {
   assert.match(markup, /decision-option-list/u);
   assert.match(markup, />No<\/button>/u);
   assert.match(markup, />Yes<\/button>/u);
-  assert.match(markup, /decision-choice is-selected/u);
+  assert.doesNotMatch(markup, /decision-choice is-selected/u);
+  assert.doesNotMatch(markup, /primary-action/u);
   assert.doesNotMatch(markup, /type="range"/u);
   assert.doesNotMatch(markup, /quantity-slider/u);
+});
+
+test("action option modals render one-click choices without a confirm action", () => {
+  const model: DecisionModalModel = {
+    ...presentation,
+    kind: "actionOptions",
+    decisionId: "decision-action" as never,
+    options: [
+      { actionIndex: 1, label: "Use trigger" },
+      { actionIndex: 2, label: "Add to hand" },
+    ],
+    selectedActionIndex: 1,
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, />Use trigger<\/button>/u);
+  assert.match(markup, />Add to hand<\/button>/u);
+  assert.doesNotMatch(markup, /primary-action/u);
+  assert.doesNotMatch(markup, /decision-choice is-selected/u);
 });
 
 test("return-to-deck order modal renders card images with deck order badges", () => {
@@ -211,6 +248,7 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   assert.match(markup, /is-pointer-reorderable/u);
   assert.doesNotMatch(markup, /draggable=/u);
   assert.doesNotMatch(markup, /decision-order-row/u);
+  assert.match(markup, /primary-action/u);
 });
 
 test("top-or-bottom order modal uses one destination control for all ordered cards", () => {

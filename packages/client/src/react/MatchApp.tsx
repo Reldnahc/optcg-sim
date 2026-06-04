@@ -71,6 +71,9 @@ export const MatchApp = ({
     playerSnapshot,
     rollbackStatus,
     setVisibleDecisionOption,
+    submitVisibleDecisionActionOption,
+    submitVisibleDecisionOption,
+    submitVisibleDecisionQuantity,
     visibleDecisionModal,
     visibleGlobalActions,
   } = useMatchAppSession(client);
@@ -480,6 +483,9 @@ export const MatchApp = ({
         onQuantity={client.setDecisionQuantityValue}
         onOption={setVisibleDecisionOption}
         onActionOption={client.setDecisionActionOptionValue}
+        onSubmitQuantity={submitVisibleDecisionQuantity}
+        onSubmitOption={submitVisibleDecisionOption}
+        onSubmitActionOption={submitVisibleDecisionActionOption}
         onPreviewCard={previewHoveredCard}
         onMoveOrderedCard={client.moveDecisionCard}
         onPlacementDestination={client.setDecisionPlacementDestination}
