@@ -500,6 +500,40 @@ describe("DON payment interaction", () => {
     ]);
   });
 
+  test("collapses global DON payment combinations by response key", () => {
+    const actions: readonly ClientActionModel[] = [
+      { index: 0, type: "concede", label: "Concede" },
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+      {
+        index: 6,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+    ];
+
+    assert.deepEqual(createCanonicalDonPaymentActions(actions), [
+      { index: 0, type: "concede", label: "Concede" },
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:3",
+      },
+    ]);
+  });
+
   test("collapses equivalent DON payment combinations to the first canonical action", () => {
     const actions: readonly ClientActionModel[] = [
       { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
@@ -509,6 +543,38 @@ describe("DON payment interaction", () => {
 
     assert.deepEqual(createCanonicalDonPaymentModalActions(actions), [
       { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
+    ]);
+  });
+
+  test("collapses equivalent DON payment combinations by response key", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:4",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:4",
+      },
+      {
+        index: 6,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:4",
+      },
+    ];
+
+    assert.deepEqual(createCanonicalDonPaymentModalActions(actions), [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:4",
+      },
     ]);
   });
 

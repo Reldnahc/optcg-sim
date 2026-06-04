@@ -227,6 +227,23 @@ export const directReturnDonCostClick = (
 };
 
 const donPaymentLabelPattern = /^Pay cost with (?<count>[1-9]\d*) DON!!$/u;
+const donPaymentResponseKeyPattern = /^payment:don:(?<count>[1-9]\d*)$/u;
+
+const donPaymentCanonicalKey = (
+  action: ClientActionModel,
+): string | undefined => {
+  const responseKeyMatch =
+    action.responseKey === undefined
+      ? null
+      : donPaymentResponseKeyPattern.exec(action.responseKey);
+  if (responseKeyMatch?.groups?.["count"] !== undefined) {
+    return `don:${responseKeyMatch.groups["count"]}`;
+  }
+  const labelMatch = donPaymentLabelPattern.exec(action.label);
+  return labelMatch?.groups?.["count"] === undefined
+    ? undefined
+    : `don:${labelMatch.groups["count"]}`;
+};
 
 export const createCanonicalDonPaymentActions = (
   actions: readonly ClientActionModel[],
@@ -239,17 +256,22 @@ export const createCanonicalDonPaymentActions = (
     const isDonPayment =
       action.type === "respondToDecision" &&
       action.decisionPayment === undefined &&
-      donPaymentLabelPattern.exec(action.label) !== null;
+      donPaymentCanonicalKey(action) !== undefined;
     if (!isDonPayment) {
       result.push(action);
       continue;
     }
     sawDonPayment = true;
-    if (canonicalByLabel.has(action.label)) {
+    const canonicalKey = donPaymentCanonicalKey(action);
+    if (canonicalKey === undefined) {
+      result.push(action);
+      continue;
+    }
+    if (canonicalByLabel.has(canonicalKey)) {
       collapsedDonPayment = true;
       continue;
     }
-    canonicalByLabel.set(action.label, action);
+    canonicalByLabel.set(canonicalKey, action);
     result.push(action);
   }
   if (!sawDonPayment) {
@@ -259,7 +281,7 @@ export const createCanonicalDonPaymentActions = (
     (action) =>
       action.type === "respondToDecision" &&
       action.decisionPayment === undefined &&
-      donPaymentLabelPattern.exec(action.label) === null,
+      donPaymentCanonicalKey(action) === undefined,
   );
   if (nonDonPaymentAction) {
     return undefined;
@@ -275,12 +297,13 @@ export const createCanonicalDonPaymentModalActions = (
     if (
       action.type !== "respondToDecision" ||
       action.decisionPayment !== undefined ||
-      donPaymentLabelPattern.exec(action.label) === null
+      donPaymentCanonicalKey(action) === undefined
     ) {
       return undefined;
     }
-    if (!canonicalByLabel.has(action.label)) {
-      canonicalByLabel.set(action.label, action);
+    const canonicalKey = donPaymentCanonicalKey(action);
+    if (canonicalKey !== undefined && !canonicalByLabel.has(canonicalKey)) {
+      canonicalByLabel.set(canonicalKey, action);
     }
   }
   return canonicalByLabel.size === 0

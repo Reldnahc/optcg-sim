@@ -619,6 +619,9 @@ export const buildGlobalActions = ({
       index: action.index,
       label: action.label,
       type: action.type,
+      ...(action.responseKey === undefined
+        ? {}
+        : { responseKey: action.responseKey }),
     }));
   return pendingDecision?.type === "payCost"
     ? (createCanonicalDonPaymentActions(globalActions) ?? globalActions)

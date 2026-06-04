@@ -528,6 +528,36 @@ describe("headless decision modal models", () => {
     ]);
   });
 
+  test("default decision modal receives collapsed DON payment response actions", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay cost to play card",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose whether to pay.",
+        choices: [{ responseKey: "payment:don:4", label: "Pay 4 DON!!" }],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Pay cost with 4 DON!!",
+        responseKey: "payment:don:4",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 4 DON!!" }]);
+  });
+
   test("life trigger decision modal includes the damaged card with response options", () => {
     const decision: PublicPendingDecision = {
       ...baseDecision,

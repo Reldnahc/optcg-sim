@@ -124,6 +124,9 @@ export const createMatchClientDecisionModel = ({
             index: action.index,
             label: action.label,
             type: action.type,
+            ...(action.responseKey === undefined
+              ? {}
+              : { responseKey: action.responseKey }),
             ...(action.decisionPayment === undefined
               ? {}
               : { decisionPayment: action.decisionPayment }),
