@@ -289,7 +289,9 @@ const simpleDecisionOptions = (
 const actionOptionModels = (
   decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
+  options: { includePresentationCards?: boolean } = {},
 ): Array<{ actionIndex: number; label: string; cards?: CardRef[] }> => {
+  const includePresentationCards = options.includePresentationCards ?? true;
   const presentationLabelsByResponseKey = new Map(
     (decision.presentation.choices ?? []).map((choice) => [
       choice.responseKey,
@@ -298,7 +300,7 @@ const actionOptionModels = (
   );
   const presentationCardsByResponseKey = new Map(
     (decision.presentation.choices ?? []).flatMap((choice) =>
-      choice.cards === undefined
+      choice.cards === undefined || !includePresentationCards
         ? []
         : [[choice.responseKey, choice.cards] as const],
     ),
@@ -381,7 +383,9 @@ export const createDecisionDraft = (
       option: options[0] ?? "",
     };
   }
-  const actionOptions = actionOptionModels(decision, responseActions);
+  const actionOptions = actionOptionModels(decision, responseActions, {
+    includePresentationCards: decision.type !== "confirmLifeTrigger",
+  });
   const firstAction = actionOptions[0];
   if (firstAction !== undefined) {
     return {
@@ -698,7 +702,9 @@ export const createDecisionModalModel = (
       canConfirm: true,
     };
   }
-  const actionOptions = actionOptionModels(decision, responseActions);
+  const actionOptions = actionOptionModels(decision, responseActions, {
+    includePresentationCards: decision.type !== "confirmLifeTrigger",
+  });
   if (actionOptions.length > 0) {
     if (draft.decisionId !== decision.id || draft.kind !== "actionOptions") {
       throw new Error("Decision draft is not an actionOptions draft.");

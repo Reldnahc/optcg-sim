@@ -596,6 +596,58 @@ describe("headless decision modal models", () => {
     });
   });
 
+  test("life trigger response buttons do not duplicate the damaged card choice", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "confirmLifeTrigger",
+      prompt: "Activate life trigger?",
+      presentation: {
+        title: "Life trigger",
+        instruction: "Choose whether to activate this trigger.",
+        choices: [
+          {
+            responseKey: "activateTrigger",
+            label: "Activate trigger",
+            cards: [cardRef("life-trigger")],
+          },
+          {
+            responseKey: "addToHand",
+            label: "Add to hand",
+            cards: [cardRef("life-trigger")],
+          },
+        ],
+      },
+      card: cardRef("life-trigger"),
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Activate trigger",
+        responseKey: "activateTrigger",
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Add to hand",
+        responseKey: "addToHand",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.card?.instanceId, cardRef("life-trigger").instanceId);
+    assert.deepEqual(model.options, [
+      { actionIndex: 1, label: "Activate trigger" },
+      { actionIndex: 2, label: "Add to hand" },
+    ]);
+  });
+
   test("counter-step pass decisions are suppressed from modal rendering", () => {
     const counterPass: PublicSelectCardsDecision = {
       ...selectDecision(),

@@ -249,6 +249,46 @@ test("action option modals can render replacement choices as source cards", () =
   assert.doesNotMatch(markup, /primary-action/u);
 });
 
+test("life trigger action options render one card preview and text response buttons", () => {
+  const model: DecisionModalModel = {
+    ...presentation,
+    kind: "actionOptions",
+    decisionId: "decision-life-trigger" as never,
+    card: cardRef("life-trigger"),
+    options: [
+      { actionIndex: 1, label: "Activate trigger" },
+      { actionIndex: 2, label: "Add to hand" },
+    ],
+    selectedActionIndex: 1,
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      cardDisplay: (card: CardRef) => ({
+        name: String(card.cardId),
+        imageUrl: `https://cdn.example/${String(card.cardId)}.png`,
+      }),
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.equal(markup.match(/class="decision-card-face"/gu)?.length, 1);
+  assert.equal(markup.includes("life-trigger-card.png"), true);
+  assert.match(markup, />Activate trigger<\/button>/u);
+  assert.match(markup, />Add to hand<\/button>/u);
+  assert.doesNotMatch(markup, /primary-action/u);
+});
+
 test("button-only decision options use pointer and hover feedback", async () => {
   const styles = await readFile(
     join(sourceDirectory, "styles", "decision-modal.css"),
