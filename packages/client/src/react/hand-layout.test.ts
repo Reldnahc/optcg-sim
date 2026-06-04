@@ -475,7 +475,19 @@ describe("hand layout", () => {
     );
     assert.match(markup, />2 \(3\)<\/div>/u);
     assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(
+      countBadgeStyles,
+      /\.count-badge\s*\{[^}]*font-size:\s*clamp\(30px,\s*4\.2vh,\s*52px\);/u,
+    );
     assert.match(playmatStyles, /\.zone-count\s*\{[^}]*position:\s*absolute;/u);
+    assert.doesNotMatch(
+      cssSectionBetween(playmatStyles, ".zone-count", ".zone:hover"),
+      /font-size:/u,
+    );
+    assert.doesNotMatch(
+      cssSectionBetween(playmatStyles, ".don-count", ".battle-arrow-overlay"),
+      /font-size:/u,
+    );
     assert.match(
       playmatStyles,
       /\.zone:hover\s+\.zone-count\s*\{[^}]*opacity:\s*1;/u,

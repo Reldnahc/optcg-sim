@@ -35,7 +35,6 @@
 .zone-count {
   position: absolute;
   z-index: 4;
-  font-size: clamp(24px, 3.2vh, 42px);
 }
 
 .zone:hover .zone-count {
@@ -52,7 +51,6 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: clamp(20px, 2.4vh, 34px);
 }
 
 .battle-arrow-overlay {
