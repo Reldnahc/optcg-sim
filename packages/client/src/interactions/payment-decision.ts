@@ -313,13 +313,46 @@ export const autoPayCostActionIndex = (
   if (
     paymentAction === undefined ||
     paymentAction.type !== "respondToDecision" ||
-    paymentAction.label !== "Pay cost" ||
     paymentAction.decisionPayment !== undefined
   ) {
     return undefined;
   }
 
   return paymentAction.index;
+};
+
+const countLabel = (count: number, singular: string, plural: string): string =>
+  `${String(count)} ${count === 1 ? singular : plural}`;
+
+export const cardCostPaymentLabel = (
+  group: Pick<
+    OptionalCardCostGroup,
+    "operation" | "requiredCount" | "source" | "chooseLabel"
+  >,
+): string => {
+  const count = group.requiredCount;
+  switch (group.operation) {
+    case "trash":
+      if (group.source?.zone === "hand") {
+        return `Trash ${countLabel(count, "card", "cards")} from hand`;
+      }
+      if (group.source?.zone === "characterArea") {
+        return `Trash ${countLabel(count, "Character", "Characters")}`;
+      }
+      return `Trash ${countLabel(count, "card", "cards")}`;
+    case "moveCards":
+      if (group.source?.zone === "trash") {
+        return `Place ${countLabel(count, "card", "cards")} from trash at bottom`;
+      }
+      if (group.source?.zone === "life") {
+        return `Add ${countLabel(count, "Life card", "Life cards")} to hand`;
+      }
+      return group.chooseLabel;
+    case "returnDon":
+      return `Return ${countLabel(count, "DON!!", "DON!!")}`;
+    case "returnToHand":
+      return `Return ${countLabel(count, "card", "cards")} to hand`;
+  }
 };
 
 const chooseLabelForCardCostOperation = (

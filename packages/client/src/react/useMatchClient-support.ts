@@ -12,6 +12,7 @@ import {
   createCanonicalDonPaymentActions,
   createCollapsedAttackActions,
   createCollapsedCounterActions,
+  cardCostPaymentLabel,
   selectedDonAttachmentMenuAction,
 } from "../index.js";
 import type {
@@ -500,7 +501,7 @@ export const activeCardCostGlobalActions = ({
   ) {
     actions.push({
       index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
-      label: "Pay cost",
+      label: cardCostPaymentLabel(group),
       type: "confirmDecisionSelection",
     });
   }

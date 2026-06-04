@@ -427,10 +427,12 @@ describe("local dev match", () => {
       "payCost",
     );
     assert.ok(decline, "expected decline metadata");
+    assert.equal(decline.responseKey, "decline");
     assert.ok(cardCostActions.length > 0, "expected card-cost metadata");
     assert.ok(
       cardCostActions.every(
         (action) =>
+          action.responseKey !== undefined &&
           action.decisionPayment?.kind === "cardCost" &&
           action.decisionPayment.operation === "trash" &&
           action.decisionPayment.chooseLabel === "Choose card to trash" &&

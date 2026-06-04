@@ -4,6 +4,8 @@ import type {
   GameState,
   LegalAction,
   PaymentOption,
+  PaymentResponse,
+  Zone,
 } from "@optcg/types";
 
 import { allPlayerCards, cardName } from "./dev-card-utils.js";
@@ -58,6 +60,91 @@ const isDeterministicLifeToHandMoveCost = (option: PaymentOption): boolean =>
   option.to.player === "self" &&
   option.to.position === undefined;
 
+const countLabel = (count: number, singular: string, plural: string): string =>
+  `${String(count)} ${count === 1 ? singular : plural}`;
+
+const lifePositionLabel = (position: "top" | "bottom" | undefined): string => {
+  switch (position) {
+    case "top":
+      return "top Life";
+    case "bottom":
+      return "bottom Life";
+    case undefined:
+      return "Life";
+  }
+};
+
+const zoneLabel = (zone: Zone): string => {
+  switch (zone) {
+    case "deck":
+      return "deck";
+    case "life":
+      return "Life";
+    case "hand":
+      return "hand";
+    case "trash":
+      return "trash";
+    case "costArea":
+      return "cost area";
+    case "characterArea":
+      return "Character area";
+    case "stageArea":
+      return "Stage area";
+    case "leaderArea":
+      return "Leader area";
+    case "donDeck":
+      return "DON!! deck";
+    case "noZone":
+      return "revealed cards";
+  }
+};
+
+const paymentOptionLabel = (
+  option: PaymentOption,
+  response: PaymentResponse,
+): string => {
+  const selectedDonCount = response.selectedDonInstanceIds?.length ?? 0;
+  const selectedCardsCount = response.selectedCardInstanceIds?.length ?? 0;
+  switch (option.type) {
+    case "restSelf":
+      return "Rest this card";
+    case "trashSelf":
+      return "Trash this card";
+    case "turnLifeFaceUp":
+      return `Turn ${lifePositionLabel(option.position)} face-up`;
+    case "restDon":
+      return `Rest ${countLabel(selectedDonCount || option.count, "DON!!", "DON!!")}`;
+    case "attachDon":
+      return `Give ${countLabel(selectedDonCount || option.count, "DON!!", "DON!!")}`;
+    case "returnDon":
+      return `Return ${countLabel(selectedDonCount || option.count, "DON!!", "DON!!")}`;
+    case "trashFromHand":
+      return `Trash ${countLabel(selectedCardsCount || option.count, "card", "cards")} from hand`;
+    case "trashFromField":
+      return `Trash ${countLabel(selectedCardsCount || option.count, "card", "cards")} from field`;
+    case "modifyPower":
+      return `Give Leader ${String(option.value)} power`;
+    case "moveCards":
+      if (isDeterministicLifeToHandMoveCost(option)) {
+        return `Add ${lifePositionLabel(option.from.position)} to hand`;
+      }
+      if (
+        option.from.zone === "trash" &&
+        option.to.zone === "deck" &&
+        option.to.position === "bottom"
+      ) {
+        return `Place ${countLabel(selectedCardsCount || option.count, "card", "cards")} from trash at bottom`;
+      }
+      return `Move ${countLabel(selectedCardsCount || option.count, "card", "cards")} from ${zoneLabel(
+        option.from.zone,
+      )} to ${zoneLabel(option.to.zone)}`;
+    case "discard":
+      return `Discard ${countLabel(option.count, "card", "cards")}`;
+    case "custom":
+      return option.action;
+  }
+};
+
 const responseLabel = (
   state: GameState,
   action: Extract<LegalAction, { type: "respondToDecision" }>,
@@ -68,8 +155,8 @@ const responseLabel = (
   switch (action.response.type) {
     case "payment": {
       const option = paymentOptionForAction(state, action);
-      if (option !== undefined && isDeterministicLifeToHandMoveCost(option)) {
-        return "Pay cost";
+      if (option !== undefined) {
+        return paymentOptionLabel(option, action.response);
       }
       const selectedDonCount =
         action.response.selectedDonInstanceIds?.length ?? 0;
@@ -81,7 +168,7 @@ const responseLabel = (
       if (selectedCardsCount > 0) {
         return `Pay cost with ${String(selectedCardsCount)} card`;
       }
-      return "Pay cost";
+      return "Pay unrecognized cost";
     }
     case "paymentDeclined":
       return "Decline cost";

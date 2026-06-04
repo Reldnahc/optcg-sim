@@ -250,7 +250,7 @@ describe("match client support helpers", () => {
         { index: 1, label: "Decline cost", type: "respondToDecision" },
         {
           index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
-          label: "Pay cost",
+          label: "Place 2 cards from trash at bottom",
           type: "confirmDecisionSelection",
         },
         {

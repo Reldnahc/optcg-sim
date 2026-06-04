@@ -14,6 +14,7 @@ import {
   createCanonicalDonPaymentModalActions,
   autoOptionalCardCostGroup,
   autoPayCostActionIndex,
+  cardCostPaymentLabel,
   directReturnDonCostClick,
   optionalCardCostActionForInstance,
   optionalCardCostInstanceIds,
@@ -543,15 +544,15 @@ describe("generic no-choice payment interaction", () => {
         label: "Decline cost",
         decisionPayment: { kind: "paymentDeclined" },
       },
-      { index: 2, type: "respondToDecision", label: "Pay cost" },
+      { index: 2, type: "respondToDecision", label: "Rest this card" },
     ];
 
     assert.equal(autoPayCostActionIndex(payCostDecision, actions), undefined);
   });
 
-  test("auto-submits mandatory generic no-choice pay-cost actions", () => {
+  test("auto-submits mandatory generic no-choice pay-cost actions without depending on generic labels", () => {
     const actions: readonly ClientActionModel[] = [
-      { index: 2, type: "respondToDecision", label: "Pay cost" },
+      { index: 2, type: "respondToDecision", label: "Rest this card" },
     ];
 
     assert.equal(autoPayCostActionIndex(payCostDecision, actions), 2);
@@ -579,10 +580,41 @@ describe("generic no-choice payment interaction", () => {
         label: "Decline cost",
         decisionPayment: { kind: "paymentDeclined" },
       },
-      { index: 2, type: "respondToDecision", label: "Pay cost" },
-      { index: 3, type: "respondToDecision", label: "Pay cost" },
+      { index: 2, type: "respondToDecision", label: "Rest this card" },
+      { index: 3, type: "respondToDecision", label: "Trash this card" },
     ];
 
     assert.equal(autoPayCostActionIndex(payCostDecision, actions), undefined);
+  });
+});
+
+describe("card cost payment labels", () => {
+  test("formats selected hand trash costs from structured card-cost data", () => {
+    const group: OptionalCardCostGroup = {
+      chooseActionIndex: -5,
+      operation: "trash",
+      chooseLabel: "Choose card to trash",
+      requiredCount: 2,
+      source: { zone: "hand", playerId: "p1" as PlayerId },
+      cardActions: [],
+    };
+
+    assert.equal(cardCostPaymentLabel(group), "Trash 2 cards from hand");
+  });
+
+  test("formats selected trash-to-bottom costs from structured card-cost data", () => {
+    const group: OptionalCardCostGroup = {
+      chooseActionIndex: -5,
+      operation: "moveCards",
+      chooseLabel: "Choose cards from trash",
+      requiredCount: 2,
+      source: { zone: "trash", playerId: "p1" as PlayerId },
+      cardActions: [],
+    };
+
+    assert.equal(
+      cardCostPaymentLabel(group),
+      "Place 2 cards from trash at bottom",
+    );
   });
 });
