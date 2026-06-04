@@ -436,6 +436,48 @@ describe("hand layout", () => {
     );
   });
 
+  test("life and DON zones render prominent count badges", async () => {
+    const layout = board();
+    layout.self.costArea = [
+      { ...card(10), state: "active" },
+      { ...card(11), state: "active" },
+      { ...card(12), state: "rested" },
+    ];
+    layout.self.leader = { ...layout.self.leader, attachedDonCount: 2 };
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+    const [playmatStyles, countBadgeStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "playmat.css"), "utf8"),
+      readFile(countBadgeStylesPath, "utf8"),
+    ]);
+
+    assert.match(
+      markup,
+      /class="count-badge zone-count life-count player-life-count"/u,
+    );
+    assert.match(markup, /aria-label="Player life count: 5"/u);
+    assert.match(
+      markup,
+      /class="count-badge zone-count don-count player-don-count"/u,
+    );
+    assert.match(
+      markup,
+      /aria-label="Player DON count: 2 active, 3 rested or attached"/u,
+    );
+    assert.match(markup, />2 \(3\)<\/div>/u);
+    assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
+    assert.match(playmatStyles, /\.zone-count\s*\{[^}]*position:\s*absolute;/u);
+  });
+
   test("opponent hand renders every hidden card past ten cards", () => {
     const largeHandBoard = board();
     largeHandBoard.opponent.handCount = 13;

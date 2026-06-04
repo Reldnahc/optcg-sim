@@ -65,6 +65,71 @@ const handCount = (
   </div>
 );
 
+const zoneCount = ({
+  className,
+  label,
+  value,
+}: {
+  className: string;
+  label: string;
+  value: string | number;
+}): React.JSX.Element => (
+  <div className={`count-badge zone-count ${className}`} aria-label={label}>
+    {value}
+  </div>
+);
+
+const lifeCount = (
+  label: string,
+  ownerClass: "opponent" | "player",
+  count: number,
+): React.JSX.Element =>
+  zoneCount({
+    className: `life-count ${ownerClass}-life-count`,
+    label: `${label} life count: ${String(count)}`,
+    value: count,
+  });
+
+type DonCountZones = Pick<
+  BoardViewModel["self"],
+  "leader" | "characters" | "stage" | "costArea"
+>;
+
+const attachedDonCount = (zones: DonCountZones): number =>
+  zones.leader.attachedDonCount +
+  zones.characters.reduce((total, card) => total + card.attachedDonCount, 0) +
+  (zones.stage?.attachedDonCount ?? 0);
+
+const donCounts = (
+  zones: DonCountZones,
+): { active: number; restedOrAttached: number } => {
+  const active = zones.costArea.filter(
+    (card) => card.state !== "rested",
+  ).length;
+  const rested = zones.costArea.filter(
+    (card) => card.state === "rested",
+  ).length;
+  return {
+    active,
+    restedOrAttached: rested + attachedDonCount(zones),
+  };
+};
+
+const donCount = (
+  label: string,
+  ownerClass: "opponent" | "player",
+  zones: DonCountZones,
+): React.JSX.Element => {
+  const counts = donCounts(zones);
+  return zoneCount({
+    className: `don-count ${ownerClass}-don-count`,
+    label: `${label} DON count: ${String(counts.active)} active, ${String(
+      counts.restedOrAttached,
+    )} rested or attached`,
+    value: `${String(counts.active)} (${String(counts.restedOrAttached)})`,
+  });
+};
+
 export const BoardLayout = ({
   board,
   decisionPrompt,
@@ -136,6 +201,7 @@ export const BoardLayout = ({
       <div className="tabletop-board">
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-zone opponent-cost">
+          {donCount(board.opponentLabel, "opponent", board.opponent)}
           <Zone
             label="Cost Area"
             cards={board.opponent.costArea}
@@ -151,6 +217,7 @@ export const BoardLayout = ({
           />
         </div>
         <div className="playmat-zone opponent-life">
+          {lifeCount(board.opponentLabel, "opponent", board.opponent.lifeCount)}
           <Zone
             label="Life"
             cards={board.opponent.lifeCards}
@@ -297,6 +364,7 @@ export const BoardLayout = ({
           />
         </div>
         <div className="playmat-zone player-life">
+          {lifeCount(board.selfLabel, "player", board.self.lifeCount)}
           <Zone
             label="Life"
             cards={board.self.lifeCards}
@@ -392,6 +460,7 @@ export const BoardLayout = ({
           />
         </div>
         <div className="playmat-zone player-cost">
+          {donCount(board.selfLabel, "player", board.self)}
           <Zone
             label="Cost Area"
             cards={board.self.costArea}
