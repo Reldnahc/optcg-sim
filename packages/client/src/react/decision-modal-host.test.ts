@@ -292,6 +292,22 @@ test("decision modal card surfaces pass hover callbacks to card preview", async 
   assert.doesNotMatch(source, /onHover=\{\(\) => undefined\}/u);
 });
 
+test("decision modal selectable cards use board-card pointer and hover affordances", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.decision-choice\.decision-card-choice:not\(:disabled\)\s*\{[^}]*cursor:\s*pointer;/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-choice\.decision-card-choice:hover:not\(:disabled\)\s+:where\(\.decision-card-face,\s*\.decision-card-placeholder\)\s*\{[^}]*box-shadow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.95\),\s*0 0 10px rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+  );
+});
+
 test("trigger order modal presents source cards like a single-card selection", () => {
   const model: DecisionModalModel = {
     ...presentation,

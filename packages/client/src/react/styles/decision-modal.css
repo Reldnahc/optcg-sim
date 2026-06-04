@@ -43,8 +43,19 @@
   aspect-ratio: 5 / 7;
   border: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   background: transparent;
+}
+
+.decision-choice.decision-card-choice:not(:disabled) {
+  cursor: pointer;
+}
+
+.decision-choice.decision-card-choice:hover:not(:disabled)
+  :where(.decision-card-face, .decision-card-placeholder) {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 10px rgba(255, 255, 255, 0.72);
 }
 
 .decision-order-badge {
