@@ -83,7 +83,7 @@ describe("modal frame", () => {
     assert.match(styles, /\.modal-frame\s*\{[^}]*flex-direction:\s*column;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*border:\s*2px solid #f4eee7;/u,
+      /\.modal-frame\s*\{[^}]*border:\s*1px solid #f4eee7;/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*box-shadow:/u);
   });

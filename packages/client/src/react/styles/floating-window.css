@@ -7,7 +7,7 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 280px;
   min-height: 180px;
-  border: 2px solid #f4eee7;
+  border: 1px solid #f4eee7;
   border-radius: 6px;
   background: rgba(38, 35, 34, 0.97);
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
