@@ -167,6 +167,10 @@ export interface PublicChooseTriggerOrderDecision extends PublicDecision<"choose
   }>;
 }
 
+export interface PublicChooseReplacementDecision extends PublicDecision<"chooseReplacement"> {
+  type: "chooseReplacement";
+}
+
 export interface PublicConfirmLifeTriggerDecision extends PublicDecision<"confirmLifeTrigger"> {
   type: "confirmLifeTrigger";
   card: CardRef;
@@ -177,6 +181,7 @@ export type PublicPendingDecision =
       Exclude<
         PendingDecision["type"],
         | "chooseQuantity"
+        | "chooseReplacement"
         | "chooseTriggerOrder"
         | "confirmLifeTrigger"
         | "selectCards"
@@ -184,6 +189,7 @@ export type PublicPendingDecision =
         | "orderCards"
       >
     >
+  | PublicChooseReplacementDecision
   | PublicConfirmLifeTriggerDecision
   | PublicChooseQuantityDecision
   | PublicChooseTriggerOrderDecision

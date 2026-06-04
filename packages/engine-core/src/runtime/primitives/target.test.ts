@@ -406,9 +406,11 @@ test("detects one reviewed optional would-be-KOd self replacement candidate for 
 });
 
 test("targeted KO primitive pauses on a private chooseReplacement decision for supported optional KO replacement", () => {
-  const { result, entry, effectBlock, targetA } = pauseForReplacementDecision();
+  const { result, entry, effectBlock, refs, targetA } =
+    pauseForReplacementDecision();
   const p2State = must(result.state.players[p2], "next p2");
   const replacementId = `${String(targetA.instanceId)}:${String(effectBlock.id)}`;
+  const replacementSource = must(refs[0], "replacement source");
 
   assert.equal(result.errors, undefined);
   assert.deepEqual(
@@ -430,6 +432,7 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
       {
         replacementId,
         label: "Draw 1 card instead",
+        source: replacementSource,
       },
     ],
     mandatory: false,

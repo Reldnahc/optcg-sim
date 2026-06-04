@@ -206,6 +206,49 @@ test("action option modals render one-click choices without a confirm action", (
   assert.doesNotMatch(markup, /decision-choice is-selected/u);
 });
 
+test("action option modals can render replacement choices as source cards", () => {
+  const model: DecisionModalModel = {
+    ...presentation,
+    kind: "actionOptions",
+    decisionId: "decision-replacement" as never,
+    options: [
+      {
+        actionIndex: 1,
+        label: "Use replacement",
+        cards: [cardRef("replacement-source")],
+      },
+      { actionIndex: 2, label: "Do not replace" },
+    ],
+    selectedActionIndex: 1,
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      cardDisplay: (card: CardRef) => ({
+        name: String(card.cardId),
+        imageUrl: `https://cdn.example/${String(card.cardId)}.png`,
+      }),
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /decision-card-grid/u);
+  assert.match(markup, /decision-card-choice/u);
+  assert.equal(markup.includes("replacement-source-card.png"), true);
+  assert.match(markup, />Do not replace<\/button>/u);
+  assert.doesNotMatch(markup, /primary-action/u);
+});
+
 test("button-only decision options use pointer and hover feedback", async () => {
   const styles = await readFile(
     join(sourceDirectory, "styles", "decision-modal.css"),

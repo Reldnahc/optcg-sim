@@ -195,7 +195,16 @@ const addVisibleCatalogEntriesForPendingDecision = (
       pending.card,
       variantOverrides,
     );
-    return;
+  }
+  for (const choice of pending?.presentation.choices ?? []) {
+    for (const card of choice.cards ?? []) {
+      addVisibleCatalogEntryForCardRef(
+        players,
+        manifest,
+        card,
+        variantOverrides,
+      );
+    }
   }
   if (pending?.type !== "orderCards") {
     return;

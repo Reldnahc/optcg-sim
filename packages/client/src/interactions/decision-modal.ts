@@ -118,7 +118,11 @@ export type DecisionModalModel = DecisionModalPresentationModel &
         kind: "actionOptions";
         decisionId: DecisionId;
         card?: CardRef;
-        options: Array<{ actionIndex: number; label: string }>;
+        options: Array<{
+          actionIndex: number;
+          label: string;
+          cards?: CardRef[];
+        }>;
         selectedActionIndex: number;
         canConfirm: true;
       }
@@ -285,23 +289,37 @@ const simpleDecisionOptions = (
 const actionOptionModels = (
   decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
-): Array<{ actionIndex: number; label: string }> => {
+): Array<{ actionIndex: number; label: string; cards?: CardRef[] }> => {
   const presentationLabelsByResponseKey = new Map(
     (decision.presentation.choices ?? []).map((choice) => [
       choice.responseKey,
       choice.label,
     ]),
   );
+  const presentationCardsByResponseKey = new Map(
+    (decision.presentation.choices ?? []).flatMap((choice) =>
+      choice.cards === undefined
+        ? []
+        : [[choice.responseKey, choice.cards] as const],
+    ),
+  );
   return actions
     .filter((action) => action.type === "respondToDecision")
-    .map((action) => ({
-      actionIndex: action.index,
-      label:
+    .map((action) => {
+      const cards =
         action.responseKey === undefined
-          ? action.label
-          : (presentationLabelsByResponseKey.get(action.responseKey) ??
-            action.label),
-    }));
+          ? undefined
+          : presentationCardsByResponseKey.get(action.responseKey);
+      return {
+        actionIndex: action.index,
+        label:
+          action.responseKey === undefined
+            ? action.label
+            : (presentationLabelsByResponseKey.get(action.responseKey) ??
+              action.label),
+        ...(cards === undefined ? {} : { cards }),
+      };
+    });
 };
 
 const modalPresentation = (

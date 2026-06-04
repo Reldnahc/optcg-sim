@@ -82,6 +82,7 @@ export const publicDecisionPresentation = ({
         ...(pending.replacementOptions ?? []).map((option) => ({
           responseKey: option.replacementId,
           label: option.label,
+          ...(option.source === undefined ? {} : { cards: [option.source] }),
         })),
         ...(pending.mandatory
           ? []

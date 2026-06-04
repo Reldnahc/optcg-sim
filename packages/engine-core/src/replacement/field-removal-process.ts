@@ -300,6 +300,7 @@ export const pauseSelectedTargetKoReplacementProcess = (
     replacementOptions: candidates.map((candidate) => ({
       replacementId: candidate.id,
       label: replacementOptionLabel(candidate),
+      source: candidate.source,
     })),
     mandatory: false,
   };

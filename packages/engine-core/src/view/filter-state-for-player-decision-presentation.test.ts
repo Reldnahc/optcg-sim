@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { DecisionId } from "@optcg/types";
+import type { DecisionId, InstanceId } from "@optcg/types";
 
 import {
   createActiveState,
@@ -92,4 +92,58 @@ test("chooseReplacement projection includes replacement option labels", () => {
     { responseKey: "decline", label: "Do not replace" },
   ]);
   assert.equal(filterStateForPlayer(state, p2).pendingDecision, undefined);
+});
+
+test("chooseReplacement projection includes visible replacement source cards", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const replacementSource = must(p1State.hand.shift(), "replacement source");
+  replacementSource.instanceId = "replacement-source-instance" as InstanceId;
+  replacementSource.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(replacementSource);
+  state.cardManifest.cards[replacementSource.cardId] = resolvedCard({
+    cardId: replacementSource.cardId,
+    category: "character",
+  });
+  const replacementSourceRef = {
+    instanceId: replacementSource.instanceId,
+    cardId: replacementSource.cardId,
+    playerId: p1,
+    zone: replacementSource.zone,
+  };
+  state.pendingDecision = {
+    id: toDecisionId("decision:replacement"),
+    type: "chooseReplacement",
+    playerId: p1,
+    prompt: "Choose a replacement effect.",
+    causedBy: { type: "ruleProcess", name: "fieldRemovalReplacement" },
+    visibility: { type: "private", playerId: p1 },
+    processId: "process-1",
+    replacementIds: ["replacement-a"],
+    replacementOptions: [
+      {
+        replacementId: "replacement-a",
+        label: "Use replacement",
+        source: replacementSourceRef,
+      },
+    ],
+    mandatory: false,
+  };
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.pendingDecision?.type, "chooseReplacement");
+  assert.deepEqual(view.pendingDecision.presentation.choices, [
+    {
+      responseKey: "replacement-a",
+      label: "Use replacement",
+      cards: [replacementSourceRef],
+    },
+    { responseKey: "decline", label: "Do not replace" },
+  ]);
 });

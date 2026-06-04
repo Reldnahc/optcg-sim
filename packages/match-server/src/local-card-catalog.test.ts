@@ -144,6 +144,56 @@ describe("local dev card catalog", () => {
     );
   });
 
+  test("includes cards referenced by pending decision choice presentation", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const source = p1State.deck[0];
+    if (source === undefined) {
+      throw new Error("Missing replacement source card.");
+    }
+    source.zone = {
+      zone: "deck",
+      playerId: p1,
+      slot: "deck",
+      index: 0,
+    };
+    match.state.pendingDecision = {
+      id: "decision:replacement:test" as DecisionId,
+      type: "chooseReplacement",
+      playerId: p1,
+      prompt: "Choose replacement effect.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      visibility: { type: "private", playerId: p1 },
+      processId: "process:replacement:test",
+      replacementIds: ["replacement:test"],
+      replacementOptions: [
+        {
+          replacementId: "replacement:test",
+          label: "Use replacement",
+          source: {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: p1,
+            zone: source.zone,
+          },
+        },
+      ],
+      mandatory: false,
+    };
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const entry = catalog.players[p1]?.instances?.[source.instanceId];
+    if (entry === undefined) {
+      throw new Error("Missing decision choice source card catalog entry.");
+    }
+
+    assert.equal(entry.cardId, source.cardId);
+    assert.equal(entry.imageUrl?.startsWith("https://"), true);
+  });
+
   test("keys persistent revealed cards by revealed card owner", () => {
     const match = createTestMatch();
     const p1State = match.state.players[p1];

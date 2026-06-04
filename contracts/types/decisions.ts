@@ -214,6 +214,7 @@ export interface ChooseReplacementDecision extends BaseDecision {
   replacementOptions?: Array<{
     replacementId: string;
     label: string;
+    source?: CardRef;
   }>;
   mandatory: boolean;
 }

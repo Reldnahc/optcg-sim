@@ -53,7 +53,9 @@ const cardDecisionModalKinds = new Set<DecisionModalModel["kind"]>([
 ]);
 
 const decisionModalFrameClass = (model: DecisionModalModel): string =>
-  cardDecisionModalKinds.has(model.kind)
+  cardDecisionModalKinds.has(model.kind) ||
+  (model.kind === "actionOptions" &&
+    model.options.some((option) => option.cards !== undefined))
     ? "modal-frame-decision modal-frame-card-decision"
     : "modal-frame-decision";
 
@@ -351,20 +353,65 @@ export const DecisionModalHost = ({
               </div>
             );
           })()}
+          {model.options.some((option) => option.cards !== undefined) ? (
+            <div className="decision-card-grid">
+              {model.options.flatMap((option) =>
+                (option.cards ?? []).map((card) => {
+                  const display = cardDisplay?.(card) ?? {
+                    name: String(card.cardId),
+                  };
+                  return (
+                    <button
+                      key={`${String(option.actionIndex)}:${String(card.instanceId)}`}
+                      className="decision-choice decision-card-choice"
+                      type="button"
+                      disabled={disabled}
+                      onPointerEnter={() => {
+                        onPreviewCard?.(
+                          toDecisionOrderClientCard(card, display),
+                        );
+                      }}
+                      onClick={() => {
+                        (onSubmitActionOption ?? onActionOption)(
+                          option.actionIndex,
+                        );
+                      }}
+                    >
+                      {display.imageUrl === undefined ? (
+                        <span className="decision-card-placeholder">
+                          {display.name}
+                        </span>
+                      ) : (
+                        <img
+                          className="decision-card-face"
+                          src={display.imageUrl}
+                          alt={display.name}
+                        />
+                      )}
+                    </button>
+                  );
+                }),
+              )}
+            </div>
+          ) : null}
           <div className="decision-option-list">
-            {model.options.map((option) => (
-              <button
-                key={option.actionIndex}
-                className="decision-choice"
-                type="button"
-                disabled={disabled}
-                onClick={() => {
-                  (onSubmitActionOption ?? onActionOption)(option.actionIndex);
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
+            {model.options
+              .filter((option) => option.cards === undefined)
+              .map((option) => (
+                <button
+                  key={option.actionIndex}
+                  className="decision-choice"
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    (onSubmitActionOption ?? onActionOption)(
+                      option.actionIndex,
+                    );
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
           </div>
         </>
       ) : null}
