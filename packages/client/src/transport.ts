@@ -13,6 +13,7 @@ export interface ClientVisibleAction {
   index: number;
   type: PlayerView["legalActions"][number]["type"] | "advanceToMainPhase";
   label: string;
+  responseKey?: string;
   decisionPayment?:
     | { kind: "paymentDeclined" }
     | {

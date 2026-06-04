@@ -61,6 +61,7 @@ export interface ClientActionModel {
     | "clearDecisionSelection"
     | "chooseNoDecisionCards";
   label: string;
+  responseKey?: string;
   decisionPayment?: ClientVisibleAction["decisionPayment"];
   attack?: ClientVisibleAction["attack"];
   counter?: ClientVisibleAction["counter"];
@@ -329,6 +330,9 @@ const addAction = (
     index: action.index,
     type: action.type,
     label: action.label,
+    ...(action.responseKey === undefined
+      ? {}
+      : { responseKey: action.responseKey }),
     ...(action.decisionPayment === undefined
       ? {}
       : { decisionPayment: action.decisionPayment }),

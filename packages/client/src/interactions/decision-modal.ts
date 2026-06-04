@@ -50,84 +50,85 @@ export type DecisionDraft =
       decisionId: DecisionId;
     };
 
-export type DecisionModalModel =
-  | {
-      kind: "selectCards";
-      decisionId: DecisionId;
-      prompt: string;
-      min: number;
-      max: number;
-      canConfirm: boolean;
-      selectedInstanceIds: InstanceId[];
-      cards: Array<{ card: CardRef; selectable: boolean }>;
-      confirmLabel: string;
-    }
-  | {
-      kind: "orderCards";
-      decisionId: DecisionId;
-      prompt: string;
-      destination: PublicOrderCardsDecision["destination"];
-      placement?: PublicOrderCardsDecision["placement"];
-      canConfirm: true;
-      orderedInstanceIds: InstanceId[];
-      placementDestination: "top" | "bottom";
-      cards: PublicOrderCardsDecision["cards"];
-    }
-  | {
-      kind: "orderTriggers";
-      decisionId: DecisionId;
-      prompt: string;
-      canConfirm: boolean;
-      orderedTriggerIds: string[];
-      choices: Array<{
-        triggerId: string;
-        source?: CardRef;
-        selected: boolean;
-        orderIndex?: number;
-      }>;
-      confirmLabel: string;
-    }
-  | {
-      kind: "chooseQuantity";
-      decisionId: DecisionId;
-      prompt: string;
-      min: number;
-      max: number;
-      quantity: number;
-      canConfirm: boolean;
-    }
-  | {
-      kind: "binaryQuantity";
-      decisionId: DecisionId;
-      prompt: string;
-      selectedQuantity: 0 | 1;
-      options: Array<{ quantity: 0 | 1; label: string }>;
-      canConfirm: boolean;
-    }
-  | {
-      kind: "chooseOption";
-      decisionId: DecisionId;
-      prompt: string;
-      options: Array<{ value: string; label: string }>;
-      selectedOption: string;
-      canConfirm: true;
-    }
-  | {
-      kind: "actionOptions";
-      decisionId: DecisionId;
-      prompt: string;
-      card?: CardRef;
-      options: Array<{ actionIndex: number; label: string }>;
-      selectedActionIndex: number;
-      canConfirm: true;
-    }
-  | {
-      kind: "generic";
-      decisionId: DecisionId;
-      prompt: string;
-      canConfirm: false;
-      decisionType: string;
-    };
+export interface DecisionModalPresentationModel {
+  title: string;
+  instruction: string;
+  prompt: string;
+  source?: CardRef;
+}
+
+export type DecisionModalModel = DecisionModalPresentationModel &
+  (
+    | {
+        kind: "selectCards";
+        decisionId: DecisionId;
+        min: number;
+        max: number;
+        canConfirm: boolean;
+        selectedInstanceIds: InstanceId[];
+        cards: Array<{ card: CardRef; selectable: boolean }>;
+        confirmLabel: string;
+      }
+    | {
+        kind: "orderCards";
+        decisionId: DecisionId;
+        destination: PublicOrderCardsDecision["destination"];
+        placement?: PublicOrderCardsDecision["placement"];
+        canConfirm: true;
+        orderedInstanceIds: InstanceId[];
+        placementDestination: "top" | "bottom";
+        cards: PublicOrderCardsDecision["cards"];
+      }
+    | {
+        kind: "orderTriggers";
+        decisionId: DecisionId;
+        canConfirm: boolean;
+        orderedTriggerIds: string[];
+        choices: Array<{
+          triggerId: string;
+          source?: CardRef;
+          selected: boolean;
+          orderIndex?: number;
+        }>;
+        confirmLabel: string;
+      }
+    | {
+        kind: "chooseQuantity";
+        decisionId: DecisionId;
+        min: number;
+        max: number;
+        quantity: number;
+        canConfirm: boolean;
+      }
+    | {
+        kind: "binaryQuantity";
+        decisionId: DecisionId;
+        selectedQuantity: 0 | 1;
+        options: Array<{ quantity: 0 | 1; label: string }>;
+        canConfirm: boolean;
+      }
+    | {
+        kind: "chooseOption";
+        decisionId: DecisionId;
+        options: Array<{ value: string; label: string }>;
+        selectedOption: string;
+        canConfirm: true;
+      }
+    | {
+        kind: "actionOptions";
+        decisionId: DecisionId;
+        card?: CardRef;
+        options: Array<{ actionIndex: number; label: string }>;
+        selectedActionIndex: number;
+        canConfirm: true;
+      }
+    | {
+        kind: "generic";
+        decisionId: DecisionId;
+        canConfirm: false;
+        decisionType: string;
+      }
+  );
 
 type CardDecision =
   | PublicSelectCardsDecision
@@ -282,11 +283,37 @@ const simpleDecisionOptions = (
 };
 
 const actionOptionModels = (
+  decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
-): Array<{ actionIndex: number; label: string }> =>
-  actions
+): Array<{ actionIndex: number; label: string }> => {
+  const presentationLabelsByResponseKey = new Map(
+    (decision.presentation.choices ?? []).map((choice) => [
+      choice.responseKey,
+      choice.label,
+    ]),
+  );
+  return actions
     .filter((action) => action.type === "respondToDecision")
-    .map((action) => ({ actionIndex: action.index, label: action.label }));
+    .map((action) => ({
+      actionIndex: action.index,
+      label:
+        action.responseKey === undefined
+          ? action.label
+          : (presentationLabelsByResponseKey.get(action.responseKey) ??
+            action.label),
+    }));
+};
+
+const modalPresentation = (
+  decision: PublicPendingDecision,
+): DecisionModalPresentationModel => ({
+  title: decision.presentation.title,
+  instruction: decision.presentation.instruction,
+  prompt: decision.prompt,
+  ...(decision.presentation.source === undefined
+    ? {}
+    : { source: decision.presentation.source }),
+});
 
 export const createDecisionDraft = (
   decision: PublicPendingDecision,
@@ -336,7 +363,7 @@ export const createDecisionDraft = (
       option: options[0] ?? "",
     };
   }
-  const actionOptions = actionOptionModels(responseActions);
+  const actionOptions = actionOptionModels(decision, responseActions);
   const firstAction = actionOptions[0];
   if (firstAction !== undefined) {
     return {
@@ -518,9 +545,9 @@ export const createDecisionModalModel = (
     }
     const canConfirm = isSelectConfirmable(decision, draft);
     return {
+      ...modalPresentation(decision),
       kind: "selectCards",
       decisionId: decision.id,
-      prompt: decision.prompt,
       min: decision.min,
       max: decision.max,
       canConfirm,
@@ -544,9 +571,9 @@ export const createDecisionModalModel = (
     }
     const canConfirm = isSelectConfirmable(decision, draft);
     return {
+      ...modalPresentation(decision),
       kind: "selectCards",
       decisionId: decision.id,
-      prompt: decision.prompt,
       min: decision.min,
       max: decision.max,
       canConfirm,
@@ -567,9 +594,9 @@ export const createDecisionModalModel = (
       throw new Error("Decision draft is not an orderCards draft.");
     }
     return {
+      ...modalPresentation(decision),
       kind: "orderCards",
       decisionId: decision.id,
-      prompt: decision.prompt,
       destination: decision.destination,
       ...(decision.placement === undefined
         ? {}
@@ -589,9 +616,9 @@ export const createDecisionModalModel = (
       draft.orderedTriggerIds.map((triggerId, index) => [triggerId, index]),
     );
     return {
+      ...modalPresentation(decision),
       kind: "orderTriggers",
       decisionId: decision.id,
-      prompt: decision.prompt,
       canConfirm: draft.orderedTriggerIds.length === 1,
       orderedTriggerIds: draft.orderedTriggerIds,
       choices: decision.choices.map((choice) => {
@@ -615,9 +642,9 @@ export const createDecisionModalModel = (
     if (decision.min === 0 && decision.max === 1) {
       const selectedQuantity = draft.quantity === 0 ? 0 : 1;
       return {
+        ...modalPresentation(decision),
         kind: "binaryQuantity",
         decisionId: decision.id,
-        prompt: decision.prompt,
         selectedQuantity,
         options: [
           { quantity: 0, label: "No" },
@@ -627,9 +654,9 @@ export const createDecisionModalModel = (
       };
     }
     return {
+      ...modalPresentation(decision),
       kind: "chooseQuantity",
       decisionId: decision.id,
-      prompt: decision.prompt,
       min: decision.min,
       max: decision.max,
       quantity: draft.quantity,
@@ -642,9 +669,9 @@ export const createDecisionModalModel = (
       throw new Error("Decision draft is not a chooseOption draft.");
     }
     return {
+      ...modalPresentation(decision),
       kind: "chooseOption",
       decisionId: decision.id,
-      prompt: decision.prompt,
       options: simpleOptions.map((option) => ({
         value: option,
         label: optionLabel(decision.type, option),
@@ -653,15 +680,15 @@ export const createDecisionModalModel = (
       canConfirm: true,
     };
   }
-  const actionOptions = actionOptionModels(responseActions);
+  const actionOptions = actionOptionModels(decision, responseActions);
   if (actionOptions.length > 0) {
     if (draft.decisionId !== decision.id || draft.kind !== "actionOptions") {
       throw new Error("Decision draft is not an actionOptions draft.");
     }
     return {
+      ...modalPresentation(decision),
       kind: "actionOptions",
       decisionId: decision.id,
-      prompt: decision.prompt,
       ...(decision.type === "confirmLifeTrigger"
         ? { card: decision.card }
         : {}),
@@ -671,9 +698,9 @@ export const createDecisionModalModel = (
     };
   }
   return {
+    ...modalPresentation(decision),
     kind: "generic",
     decisionId: decision.id,
-    prompt: decision.prompt,
     canConfirm: false,
     decisionType: decision.type,
   };

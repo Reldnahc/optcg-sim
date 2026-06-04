@@ -50,6 +50,12 @@ const baseDecision = {
   },
 } satisfies Omit<PublicPendingDecision, "type">;
 
+const baseModalPresentation = {
+  title: "Choose cards",
+  instruction: "Choose cards",
+  prompt: "Choose cards",
+};
+
 const selectDecision = (): PublicSelectCardsDecision => ({
   ...baseDecision,
   type: "selectCards",
@@ -368,6 +374,26 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "chooseQuantity", quantity: 0 });
   });
 
+  test("modal models expose public presentation title and instruction", () => {
+    const decision: PublicChooseQuantityDecision = {
+      ...quantityDecision(),
+      prompt: "Raw engine prompt",
+      presentation: {
+        title: "Choose amount",
+        instruction: "Select how many cards to move.",
+      },
+    };
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision),
+    );
+
+    assert.equal(model.title, "Choose amount");
+    assert.equal(model.instruction, "Select how many cards to move.");
+    assert.equal(model.prompt, "Raw engine prompt");
+  });
+
   test("chooseQuantity draft defaults to the maximum legal quantity", () => {
     const decision = quantityDecision();
     const draft = createDecisionDraft(decision);
@@ -411,9 +437,9 @@ describe("headless decision modal models", () => {
     const response = buildDecisionResponse(decision, draft);
 
     assert.deepEqual(model, {
+      ...baseModalPresentation,
       kind: "chooseOption",
       decisionId: decision.id,
-      prompt: decision.prompt,
       options: [
         { value: "keep", label: "Keep hand" },
         { value: "mulligan", label: "Mulligan" },
@@ -429,6 +455,10 @@ describe("headless decision modal models", () => {
       ...baseDecision,
       type: "payCost",
       prompt: "Pay cost to play card",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose a payment option.",
+      },
     };
     const responseActions: readonly ClientActionModel[] = [
       { index: 4, type: "respondToDecision", label: "Pay cost with 4 DON!!" },
@@ -442,9 +472,11 @@ describe("headless decision modal models", () => {
     const model = createDecisionModalModel(decision, draft, responseActions);
 
     assert.deepEqual(model, {
+      title: "Pay cost",
+      instruction: "Choose a payment option.",
+      prompt: "Pay cost to play card",
       kind: "actionOptions",
       decisionId: decision.id,
-      prompt: "Pay cost to play card",
       options: [
         { actionIndex: 4, label: "Pay cost with 4 DON!!" },
         { actionIndex: 5, label: "Pay cost with 5 DON!!" },
@@ -454,11 +486,57 @@ describe("headless decision modal models", () => {
     });
   });
 
+  test("default decision modal labels response actions by response key", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay cost to play card",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose whether to pay.",
+        choices: [
+          { responseKey: "decline", label: "Decline cost" },
+          { responseKey: "payment:don:4", label: "Pay 4 DON!!" },
+        ],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Raw decline transport label",
+        responseKey: "decline",
+      },
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Raw payment transport label",
+        responseKey: "payment:don:4",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [
+      { actionIndex: 4, label: "Decline cost" },
+      { actionIndex: 5, label: "Pay 4 DON!!" },
+    ]);
+  });
+
   test("life trigger decision modal includes the damaged card with response options", () => {
     const decision: PublicPendingDecision = {
       ...baseDecision,
       type: "confirmLifeTrigger",
       prompt: "Activate life trigger?",
+      presentation: {
+        title: "Life trigger",
+        instruction: "Choose whether to activate this trigger.",
+      },
       card: cardRef("life-trigger"),
     };
     const responseActions: readonly ClientActionModel[] = [
@@ -473,9 +551,11 @@ describe("headless decision modal models", () => {
     );
 
     assert.deepEqual(model, {
+      title: "Life trigger",
+      instruction: "Choose whether to activate this trigger.",
+      prompt: "Activate life trigger?",
       kind: "actionOptions",
       decisionId: decision.id,
-      prompt: "Activate life trigger?",
       card: cardRef("life-trigger"),
       options: [
         { actionIndex: 1, label: "Activate trigger" },

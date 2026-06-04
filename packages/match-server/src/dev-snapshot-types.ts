@@ -13,6 +13,7 @@ export interface DevVisibleAction {
   index: number;
   type: LegalAction["type"] | "advanceToMainPhase";
   label: string;
+  responseKey?: string;
   decisionPayment?:
     | { kind: "paymentDeclined" }
     | {

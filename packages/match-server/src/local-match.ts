@@ -120,6 +120,41 @@ type ExecutableDevAction = DevVisibleAction & {
   response?: DecisionResponse;
 };
 
+const responseKeyForDecisionResponse = (
+  response: DecisionResponse | undefined,
+): string | undefined => {
+  if (response === undefined) {
+    return undefined;
+  }
+  switch (response.type) {
+    case "payment":
+      return response.optionId;
+    case "paymentDeclined":
+      return "decline";
+    case "optionalActivation":
+      return response.choice;
+    case "lifeTrigger":
+      return response.choice;
+    case "replacement":
+      return response.replacementId ?? "decline";
+    case "chooseQuantity":
+      return String(response.quantity);
+    case "effectOption":
+      return response.optionId;
+    case "mulligan":
+      return response.keep ? "keep" : "mulligan";
+    case "loopCount":
+      return String(response.count);
+    case "rollbackConsent":
+      return response.allow ? "allow" : "deny";
+    case "cards":
+    case "targets":
+    case "orderedIds":
+    case "topBottomPlacement":
+      return undefined;
+  }
+};
+
 const visibleAction = (
   state: GameState,
   action: LegalAction,
@@ -132,6 +167,13 @@ const visibleAction = (
   return {
     type: action.type,
     label: actionLabel(state, action),
+    ...(() => {
+      const responseKey =
+        action.type === "respondToDecision"
+          ? responseKeyForDecisionResponse(action.response)
+          : undefined;
+      return responseKey === undefined ? {} : { responseKey };
+    })(),
     ...(decisionPayment === undefined ? {} : { decisionPayment }),
     ...(placement === undefined
       ? {}
@@ -433,6 +475,7 @@ const mulliganActions = (
       index: 0,
       type: "respondToDecision",
       label: "Keep hand",
+      responseKey: "keep",
       apply: (currentState) =>
         respondToMulliganDecision(currentState, {
           type: "respondToDecision",
@@ -444,6 +487,7 @@ const mulliganActions = (
       index: 1,
       type: "respondToDecision",
       label: "Mulligan hand",
+      responseKey: "mulligan",
       apply: (currentState) =>
         respondToMulliganDecision(currentState, {
           type: "respondToDecision",
@@ -494,6 +538,7 @@ const rollbackConsentActions = (
       index: 0,
       type: "respondToDecision",
       label: "Allow rollback",
+      responseKey: "allow",
       decisionId: decision.id,
       response: { type: "rollbackConsent", allow: true },
       apply: (currentState) => ({
@@ -506,6 +551,7 @@ const rollbackConsentActions = (
       index: 1,
       type: "respondToDecision",
       label: "Deny rollback",
+      responseKey: "deny",
       decisionId: decision.id,
       response: { type: "rollbackConsent", allow: false },
       apply: (currentState) => ({
