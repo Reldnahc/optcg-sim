@@ -500,7 +500,8 @@ export interface SavedFieldObjectReferenceFailure {
 export interface SavedFieldObjectTarget {
   type: "savedFieldObject";
   binding: SavedFieldObjectTargetBinding;
-  zone: SavedFieldObjectZone;
+  zone?: SavedFieldObjectZone;
+  zones?: readonly SavedFieldObjectZone[];
   player: TargetPlayerRef;
   controller?: PlayerRef;
   filter?: CardFilter;

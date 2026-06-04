@@ -581,6 +581,7 @@ const isSupportedSavedFieldObjectKoTarget = (
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
   target.type === "savedFieldObject" &&
   (target.zone === "characterArea" || target.zone === "stageArea") &&
+  target.zones === undefined &&
   (target.player === "self" ||
     target.player === "opponent" ||
     target.player === "anyPlayer") &&
@@ -591,7 +592,11 @@ const isSupportedSavedLeaderOrCharacterTarget = (
   target: Target,
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
   target.type === "savedFieldObject" &&
-  (target.zone === "leaderArea" || target.zone === "characterArea") &&
+  (target.zone === "leaderArea" ||
+    target.zone === "characterArea" ||
+    target.zones?.every(
+      (zone) => zone === "leaderArea" || zone === "characterArea",
+    ) === true) &&
   (target.player === "self" ||
     target.player === "opponent" ||
     target.player === "anyPlayer") &&

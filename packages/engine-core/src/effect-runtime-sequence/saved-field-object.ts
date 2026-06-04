@@ -483,6 +483,23 @@ export const applySavedFieldObjectKoSequenceSegment = (params: {
       state: params.state,
     };
   }
+  const targetZone = params.segment.effect.target.zone;
+  if (targetZone === undefined) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
 
   const resolvedKo = executeSelectedTargetEffectPrimitive(
     params.state,
@@ -495,7 +512,7 @@ export const applySavedFieldObjectKoSequenceSegment = (params: {
           timing: "onResolution",
           chooser: "self",
           player: params.segment.effect.target.player,
-          zone: params.segment.effect.target.zone,
+          zone: targetZone,
           min: resolvedSavedTarget.selectedTargets.length,
           max: resolvedSavedTarget.selectedTargets.length,
           allowFewerIfUnavailable: false,

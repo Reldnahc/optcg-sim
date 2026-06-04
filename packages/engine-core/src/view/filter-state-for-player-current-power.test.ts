@@ -63,6 +63,23 @@ test("projects computed current power only for public board card views", () => {
         operation: { type: "restriction", restriction: "cannotAttack" },
       },
     },
+    {
+      ...continuousKeywordEffectRecord(
+        state,
+        "player-view-leader-no-blocker",
+        p1State.leader,
+        "blocker",
+        { duration: { type: "permanent" } },
+      ),
+      modifier: {
+        layer: "restriction",
+        target: { type: "self" },
+        operation: {
+          type: "restriction",
+          restriction: "preventBlockerActivation",
+        },
+      },
+    },
   ];
 
   const beforeLeaderPower = must(
@@ -72,6 +89,7 @@ test("projects computed current power only for public board card views", () => {
   const view = filterStateForPlayer(state, p1);
 
   assert.equal(view.self.leader.currentPower, 7000);
+  assert.deepEqual(view.self.leader.restrictions, ["no-blocker"]);
   assert.equal(view.self.leader.printedPower, 5000);
   assert.equal(must(view.self.characters[0], "self char").currentPower, 7000);
   assert.equal(must(view.self.characters[0], "self char").printedPower, 7000);

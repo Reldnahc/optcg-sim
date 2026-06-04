@@ -11,8 +11,10 @@ import type {
   PlayerId,
   SavedFieldObjectReference,
   SavedFieldObjectTarget,
+  SavedFieldObjectZone,
   SequenceSavedResultReference,
   Target,
+  Zone,
 } from "@optcg/types";
 
 import { toEngineResult, toStateSeq } from "../../action-results.js";
@@ -152,6 +154,12 @@ const toSavedFieldObjectReferenceList = (
     : { ok: false, reason: "unsupported-saved-reference-family" };
 };
 
+const isSavedFieldObjectZone = (zone: Zone): zone is SavedFieldObjectZone =>
+  zone === "leaderArea" ||
+  zone === "characterArea" ||
+  zone === "stageArea" ||
+  zone === "costArea";
+
 export const resolveSavedFieldObjectKoSelection = (params: {
   controllerId: EffectQueueEntry["controllerId"];
   savedReferences: Record<string, SequenceSavedResultReference>;
@@ -193,6 +201,12 @@ export const resolveSavedFieldObjectKoSelection = (params: {
   if (!Object.hasOwn(params.state.players, params.controllerId)) {
     return { ok: false, reason: "illegal-object" };
   }
+  const targetZones =
+    params.target.zones ??
+    (params.target.zone === undefined ? [] : [params.target.zone]);
+  if (targetZones.length === 0) {
+    return { ok: false, reason: "unsupported-target-policy" };
+  }
 
   const selectedTargets: CardRef[] = [];
   for (const object of objects) {
@@ -219,8 +233,12 @@ export const resolveSavedFieldObjectKoSelection = (params: {
     if (targetPlayerId === null) {
       return { ok: false, reason: "illegal-object" };
     }
+    const objectZone = object.object.zone.zone;
+    if (!isSavedFieldObjectZone(objectZone)) {
+      return { ok: false, reason: "illegal-object" };
+    }
     if (
-      object.object.zone.zone !== params.target.zone ||
+      !targetZones.includes(objectZone) ||
       object.object.playerId !== targetPlayerId
     ) {
       return { ok: false, reason: "illegal-object" };

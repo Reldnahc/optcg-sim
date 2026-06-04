@@ -43,33 +43,17 @@ const thatCharacterSavedTarget = {
   onFailure: "failClosed",
 } as const;
 
-const selectedBlockerRestrictedLeaderTarget = {
+const selectedBlockerRestrictedTarget = {
   type: "savedFieldObject",
   binding: {
     family: "selectedTargets",
     saveResultAs: selectedBlockerRestrictedAttackerId,
   },
-  zone: "leaderArea",
+  zones: ["leaderArea", "characterArea"],
   player: "self",
   visibility: "publicOnly",
   onFailure: "failClosed",
 } as const;
-
-const selectedBlockerRestrictedCharacterTarget = {
-  type: "savedFieldObject",
-  binding: {
-    family: "selectedTargets",
-    saveResultAs: selectedBlockerRestrictedAttackerId,
-  },
-  zone: "characterArea",
-  player: "self",
-  visibility: "publicOnly",
-  onFailure: "failClosed",
-} as const;
-
-type SelectedBlockerRestrictedTarget =
-  | typeof selectedBlockerRestrictedLeaderTarget
-  | typeof selectedBlockerRestrictedCharacterTarget;
 
 export const restOpponentCharactersPrimitive = {
   primitiveId: "instruction:rest",
@@ -195,17 +179,17 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (input: {
     },
   };
 
-  const powerEffect = (target: SelectedBlockerRestrictedTarget) => ({
+  const powerEffect = {
     type: "modifyPower" as const,
-    target,
+    target: selectedBlockerRestrictedTarget,
     value: modifier.value,
     duration: parsedDuration,
-  });
-  const preventBlockerEffect = (target: SelectedBlockerRestrictedTarget) => ({
+  };
+  const preventBlockerEffect = {
     type: "preventBlockerActivation" as const,
-    target,
+    target: selectedBlockerRestrictedTarget,
     duration: parsedDuration,
-  });
+  };
 
   return {
     effect: {
@@ -213,26 +197,14 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (input: {
       effects: [
         selectSegment,
         {
-          id: "selected-leader:power",
+          id: "selected-attacker:power",
           connector: "then",
-          effect: powerEffect(selectedBlockerRestrictedLeaderTarget),
+          effect: powerEffect,
         },
         {
-          id: "selected-character:power",
+          id: "selected-attacker:prevent-blocker",
           connector: "then",
-          effect: powerEffect(selectedBlockerRestrictedCharacterTarget),
-        },
-        {
-          id: "selected-leader:prevent-blocker",
-          connector: "then",
-          effect: preventBlockerEffect(selectedBlockerRestrictedLeaderTarget),
-        },
-        {
-          id: "selected-character:prevent-blocker",
-          connector: "then",
-          effect: preventBlockerEffect(
-            selectedBlockerRestrictedCharacterTarget,
-          ),
+          effect: preventBlockerEffect,
         },
       ],
     },

@@ -1713,18 +1713,36 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type",
-            "binding",
-            "zone",
-            "player",
-            "visibility",
-            "onFailure"
+          "required": ["type", "binding", "player", "visibility", "onFailure"],
+          "anyOf": [
+            {
+              "required": ["zone"],
+              "properties": {
+                "zone": { "$ref": "#/$defs/savedFieldObjectZone" }
+              }
+            },
+            {
+              "required": ["zones"],
+              "properties": {
+                "zones": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/savedFieldObjectZone" },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              }
+            }
           ],
           "properties": {
             "type": { "const": "savedFieldObject" },
             "binding": { "$ref": "#/$defs/savedFieldObjectTargetBinding" },
             "zone": { "$ref": "#/$defs/savedFieldObjectZone" },
+            "zones": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/savedFieldObjectZone" },
+              "minItems": 1,
+              "uniqueItems": true
+            },
             "player": { "$ref": "#/$defs/targetPlayerRef" },
             "controller": { "$ref": "#/$defs/playerRef" },
             "filter": { "$ref": "#/$defs/cardFilter" },

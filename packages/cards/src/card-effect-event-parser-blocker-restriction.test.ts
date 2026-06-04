@@ -47,24 +47,7 @@ describe("card effect event parser blocker restrictions", () => {
                     family: "selectedTargets",
                     saveResultAs: "selected:blocker-restricted-attacker",
                   },
-                  zone: "leaderArea",
-                  player: "self",
-                },
-                value: 2000,
-                duration: { type: "thisTurn" },
-              },
-            },
-            {
-              connector: "then",
-              effect: {
-                type: "modifyPower",
-                target: {
-                  type: "savedFieldObject",
-                  binding: {
-                    family: "selectedTargets",
-                    saveResultAs: "selected:blocker-restricted-attacker",
-                  },
-                  zone: "characterArea",
+                  zones: ["leaderArea", "characterArea"],
                   player: "self",
                 },
                 value: 2000,
@@ -81,23 +64,7 @@ describe("card effect event parser blocker restrictions", () => {
                     family: "selectedTargets",
                     saveResultAs: "selected:blocker-restricted-attacker",
                   },
-                  zone: "leaderArea",
-                  player: "self",
-                },
-                duration: { type: "thisTurn" },
-              },
-            },
-            {
-              connector: "then",
-              effect: {
-                type: "preventBlockerActivation",
-                target: {
-                  type: "savedFieldObject",
-                  binding: {
-                    family: "selectedTargets",
-                    saveResultAs: "selected:blocker-restricted-attacker",
-                  },
-                  zone: "characterArea",
+                  zones: ["leaderArea", "characterArea"],
                   player: "self",
                 },
                 duration: { type: "thisTurn" },
