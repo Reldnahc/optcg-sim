@@ -188,6 +188,15 @@ const addVisibleCatalogEntriesForPendingDecision = (
   variantOverrides: Record<InstanceId, VariantKey>,
 ): void => {
   const pending = view.pendingDecision;
+  if (pending?.type === "confirmLifeTrigger") {
+    addVisibleCatalogEntryForCardRef(
+      players,
+      manifest,
+      pending.card,
+      variantOverrides,
+    );
+    return;
+  }
   if (pending?.type !== "orderCards") {
     return;
   }

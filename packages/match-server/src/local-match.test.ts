@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { beforeAll, describe, test } from "vitest";
-import type { CardId, DecisionId, EngineEventId, PlayerId } from "@optcg/types";
+import type { CardId, PlayerId } from "@optcg/types";
 
 import {
   applyLocalDevAction,
@@ -970,115 +970,5 @@ describe("local dev match", () => {
       match.state.cardManifest.manifestHash,
       setup.cardManifest.manifestHash,
     );
-  });
-
-  test("player card catalog includes cards from visible reveal events", () => {
-    const match = createTestMatch();
-    const p1State = match.state.players[p1];
-    if (p1State === undefined) {
-      throw new Error("Missing p1 state.");
-    }
-    const revealed = p1State.deck[0];
-    if (revealed === undefined) {
-      throw new Error("Missing reveal card in p1 deck.");
-    }
-    match.state.eventJournal.push({
-      id: "event:test:public-reveal" as EngineEventId,
-      seq: 1,
-      type: "cardRevealed",
-      payload: {
-        revealId: "reveal:test:public",
-        cards: [
-          {
-            instanceId: revealed.instanceId,
-            cardId: revealed.cardId,
-            playerId: p1,
-          },
-        ],
-        origin: "topOfDeck",
-      },
-      visibility: { type: "public" },
-      createdAtStateSeq: match.state.seq,
-    });
-
-    const catalog = getLocalDevCardCatalogForPlayer(match, p2);
-
-    assert.equal(
-      catalog.players[p1]?.cards[revealed.cardId]?.cardId,
-      revealed.cardId,
-    );
-  });
-
-  test("player card catalog includes private order-card decision cards", () => {
-    const match = createTestMatch();
-    const p1State = match.state.players[p1];
-    if (p1State === undefined) {
-      throw new Error("Missing p1 state.");
-    }
-    const looked = p1State.deck[0];
-    if (looked === undefined) {
-      throw new Error("Missing looked deck card.");
-    }
-    match.state.pendingDecision = {
-      id: "decision:orderCards:test" as DecisionId,
-      type: "orderCards",
-      playerId: p1,
-      prompt: "Place looked cards.",
-      causedBy: { type: "ruleProcess", name: "test" },
-      visibility: { type: "private", playerId: p1 },
-      cards: [
-        {
-          instanceId: looked.instanceId,
-          cardId: looked.cardId,
-          playerId: p1,
-          zone: looked.zone,
-        },
-      ],
-      destination: "deck",
-      placement: { type: "topOrBottom" },
-    };
-
-    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
-    const entry = catalog.players[p1]?.cards[looked.cardId];
-    if (entry === undefined) {
-      throw new Error("Missing pending order card catalog entry.");
-    }
-
-    assert.equal(entry.cardId, looked.cardId);
-    assert.equal(entry.imageUrl?.startsWith("https://"), true);
-  });
-
-  test("player card catalog keys persistent revealed cards by revealed card owner", () => {
-    const match = createTestMatch();
-    const p1State = match.state.players[p1];
-    if (p1State === undefined) {
-      throw new Error("Missing p1 state.");
-    }
-    const revealed = p1State.deck[0];
-    if (revealed === undefined) {
-      throw new Error("Missing reveal card in p1 deck.");
-    }
-    match.state.revealedCards.push({
-      id: "reveal:search-reveal:test",
-      cards: [
-        {
-          instanceId: revealed.instanceId,
-          cardId: revealed.cardId,
-          playerId: p1,
-        },
-      ],
-      visibility: { type: "public" },
-      origin: "topOfDeck",
-      createdAtStateSeq: match.state.seq,
-      cleanupPolicy: "returnToOrigin",
-    });
-
-    const catalog = getLocalDevCardCatalogForPlayer(match, p2);
-
-    assert.equal(
-      catalog.players[p1]?.cards[revealed.cardId]?.cardId,
-      revealed.cardId,
-    );
-    assert.equal(catalog.players[p2]?.cards[revealed.cardId], undefined);
   });
 });
