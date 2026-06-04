@@ -190,7 +190,14 @@ const assertPublicDecisionShape = (
   const pending = view.pendingDecision;
   assert.ok(pending, `${label}: pending decision must exist`);
   const keys = Object.keys(pending).sort();
-  const required = ["causedBy", "id", "playerId", "prompt", "type"].sort();
+  const required = [
+    "causedBy",
+    "id",
+    "playerId",
+    "presentation",
+    "prompt",
+    "type",
+  ].sort();
   const publicDecisionSpecificKeys =
     pending.type === "confirmLifeTrigger" ? ["card"] : [];
   if ("timeoutMs" in pending) {

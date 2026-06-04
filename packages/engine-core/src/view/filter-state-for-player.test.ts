@@ -215,6 +215,10 @@ test("shows pending decision only to the recipient with public shape", () => {
     type: decision.type,
     playerId: decision.playerId,
     prompt: decision.prompt,
+    presentation: {
+      title: "Choose whether to keep your hand or mulligan",
+      instruction: "Choose whether to keep your hand or mulligan",
+    },
     causedBy: decision.causedBy,
     ...(decision.timeoutMs === undefined
       ? {}
@@ -334,6 +338,10 @@ test("chooseTriggerOrder projection exposes trigger choices and hides private so
     type: "chooseTriggerOrder",
     playerId: p1,
     prompt: "Choose next trigger to resolve.",
+    presentation: {
+      title: "Resolve trigger",
+      instruction: "Choose the next trigger to resolve.",
+    },
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     visibility: { type: "public" },
     triggerIds: [toQueueEntryId("queue-hidden-a")],
@@ -348,6 +356,10 @@ test("chooseTriggerOrder projection exposes trigger choices and hides private so
     type: "chooseTriggerOrder",
     playerId: p1,
     prompt: "Choose next trigger to resolve.",
+    presentation: {
+      title: "Resolve trigger",
+      instruction: "Choose the next trigger to resolve.",
+    },
     causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
     choices: [{ triggerId: toQueueEntryId("queue-hidden-a") }],
   });
@@ -497,6 +509,11 @@ test("selectTargets projection exposes public target candidates without private 
     type: "selectTargets",
     playerId: p1,
     prompt: "Select targets.",
+    presentation: {
+      title: "Select targets",
+      instruction: "Select targets",
+      source: expectedSource,
+    },
     causedBy: { type: "ruleProcess", name: "privateCausality" },
     source: expectedSource,
     min: 1,
@@ -612,13 +629,35 @@ test("chooseReplacement projection is private and metadata-only without routing 
     type: "chooseReplacement",
     playerId: p2,
     prompt: "Choose replacement effect.",
+    presentation: {
+      title: "Choose replacement",
+      instruction: "Choose replacement effect",
+      choices: [
+        {
+          responseKey: "replacement:would-be-ko-draw-1",
+          label: "Add 1 card from Life to hand instead",
+        },
+        { responseKey: "decline", label: "Do not replace" },
+      ],
+    },
     causedBy: { type: "ruleProcess", name: "privateCausality" },
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
       (action) => action.type === "respondToDecision",
     ),
-    [{ type: "respondToDecision", decisionId: state.pendingDecision.id }],
+    [
+      {
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        responseKey: "decline",
+      },
+      {
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        responseKey: "replacement:would-be-ko-draw-1",
+      },
+    ],
   );
   assert.equal(forOpponent.pendingDecision, undefined);
   assert.deepEqual(
@@ -644,10 +683,6 @@ test("chooseReplacement projection is private and metadata-only without routing 
   );
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes("replacementOptions"),
-    false,
-  );
-  assert.equal(
-    JSON.stringify(forDecisionPlayer).includes("Add 1 card from Life"),
     false,
   );
   assert.equal(JSON.stringify(forDecisionPlayer).includes("mandatory"), false);

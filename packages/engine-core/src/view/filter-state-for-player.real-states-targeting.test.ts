@@ -135,10 +135,11 @@ const assertPublicDecisionShape = (
           "max",
           "min",
           "playerId",
+          "presentation",
           "prompt",
           "type",
         ].sort()
-      : ["causedBy", "id", "playerId", "prompt", "type"].sort();
+      : ["causedBy", "id", "playerId", "presentation", "prompt", "type"].sort();
   const required = (
     "source" in pending ? [...requiredBase, "source"] : requiredBase
   ).sort();
@@ -540,18 +541,24 @@ test("real selectTargets views expose public candidates without legal responses 
   const recipientView = filterStateForPlayer(state, p1);
   const opponentView = filterStateForPlayer(state, p2);
   const source = must(state.players[p1], "p1").leader;
+  const publicSource = {
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    playerId: p1,
+    zone: source.zone,
+  };
   assert.deepEqual(recipientView.pendingDecision, {
     id: toDecisionId("real-select-targets-decision"),
     type: "selectTargets",
     playerId: p1,
     prompt: "Select a target.",
-    causedBy: { type: "ruleProcess", name: "privateCausality" },
-    source: {
-      instanceId: source.instanceId,
-      cardId: source.cardId,
-      playerId: p1,
-      zone: source.zone,
+    presentation: {
+      title: "Select a target",
+      instruction: "Select a target",
+      source: publicSource,
     },
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
+    source: publicSource,
     min: 1,
     max: 1,
     candidates: [{ card: target }],

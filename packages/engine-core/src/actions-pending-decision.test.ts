@@ -611,7 +611,21 @@ test("player view redacts effect causality for effect-originated chooseQuantity 
   });
   assert.deepEqual(ownerView.legalActions, [
     { type: "concede", playerId: p1 },
-    { type: "respondToDecision", decisionId: state.pendingDecision.id },
+    {
+      type: "respondToDecision",
+      decisionId: state.pendingDecision.id,
+      responseKey: "1",
+    },
+    {
+      type: "respondToDecision",
+      decisionId: state.pendingDecision.id,
+      responseKey: "2",
+    },
+    {
+      type: "respondToDecision",
+      decisionId: state.pendingDecision.id,
+      responseKey: "3",
+    },
   ]);
   assert.equal(serializedView.includes("queue-private-quantity"), false);
   assert.equal(serializedView.includes("effect-private-quantity"), false);
@@ -869,7 +883,7 @@ test("respondToDecision rejects malformed or wrong-player chooseQuantity envelop
   assert.equal(JSON.stringify(wrongPlayerResult.state), before);
 });
 
-test("public legal actions for chooseQuantity expose decision id only and stale id is deterministic", () => {
+test("public legal actions for chooseQuantity expose public response keys and stale id is deterministic", () => {
   const state = setupChooseQuantityDecisionState();
   const decisionId = must(state.pendingDecision, "pending decision").id;
   const ownerView = filterStateForPlayer(state, p1);
@@ -878,7 +892,9 @@ test("public legal actions for chooseQuantity expose decision id only and stale 
   assert.equal(ownerView.pendingDecision?.type, "chooseQuantity");
   assert.deepEqual(ownerView.legalActions, [
     { type: "concede", playerId: p1 },
-    { type: "respondToDecision", decisionId },
+    { type: "respondToDecision", decisionId, responseKey: "1" },
+    { type: "respondToDecision", decisionId, responseKey: "2" },
+    { type: "respondToDecision", decisionId, responseKey: "3" },
   ]);
   assert.deepEqual(opponentView.legalActions, [
     { type: "concede", playerId: p2 },

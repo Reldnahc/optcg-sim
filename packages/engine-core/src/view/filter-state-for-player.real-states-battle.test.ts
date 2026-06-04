@@ -106,7 +106,14 @@ const assertPublicDecisionShape = (
   const pending = view.pendingDecision;
   assert.ok(pending, `${label}: pending decision must exist`);
   const keys = Object.keys(pending).sort();
-  const baseRequired = ["causedBy", "id", "playerId", "prompt", "type"];
+  const baseRequired = [
+    "causedBy",
+    "id",
+    "playerId",
+    "presentation",
+    "prompt",
+    "type",
+  ];
   const typeRequired =
     pending.type === "selectCards"
       ? ["candidates", "choices", "max", "min"]

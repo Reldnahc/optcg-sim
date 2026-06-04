@@ -470,7 +470,26 @@ test("drawUpTo chooseQuantity keeps authored max, draws short deck do-as-much-as
   const ownerView = filterStateForPlayer(paused.state, p1);
   assert.deepEqual(ownerView.legalActions, [
     { type: "concede", playerId: p1 },
-    { type: "respondToDecision", decisionId: pausedDecision.id },
+    {
+      type: "respondToDecision",
+      decisionId: pausedDecision.id,
+      responseKey: "0",
+    },
+    {
+      type: "respondToDecision",
+      decisionId: pausedDecision.id,
+      responseKey: "1",
+    },
+    {
+      type: "respondToDecision",
+      decisionId: pausedDecision.id,
+      responseKey: "2",
+    },
+    {
+      type: "respondToDecision",
+      decisionId: pausedDecision.id,
+      responseKey: "3",
+    },
   ]);
 
   const resolved = applyAction(paused.state, {

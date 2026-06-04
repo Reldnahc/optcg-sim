@@ -628,6 +628,10 @@ test("search reveal PlayerViews keep legal actions and metadata content-agnostic
     type: "selectCards",
     playerId: p1,
     prompt: "Choose a revealed card or decline.",
+    presentation: {
+      title: "Choose a revealed card or decline",
+      instruction: "Choose a revealed card or decline",
+    },
     causedBy: { type: "ruleProcess", name: "privateCausality" },
     min: 0,
     max: 1,

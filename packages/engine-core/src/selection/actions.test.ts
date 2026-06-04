@@ -453,6 +453,10 @@ test("PlayerView exposes public selectTargets candidates while hiding request in
     type: "selectTargets",
     playerId: p1,
     prompt: "Select targets.",
+    presentation: {
+      title: "Select targets",
+      instruction: "Select targets",
+    },
     causedBy: { type: "ruleProcess", name: "privateCausality" },
     min: 0,
     max: 1,
