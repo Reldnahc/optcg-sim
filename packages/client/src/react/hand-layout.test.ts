@@ -462,12 +462,12 @@ describe("hand layout", () => {
 
     assert.match(
       markup,
-      /class="count-badge zone-count life-count player-life-count"/u,
+      /class="count-badge is-hover-revealed zone-count life-count player-life-count"/u,
     );
     assert.match(markup, /aria-label="Player life count: 5"/u);
     assert.match(
       markup,
-      /class="count-badge zone-count don-count player-don-count"/u,
+      /class="count-badge is-hover-revealed zone-count don-count player-don-count"/u,
     );
     assert.match(
       markup,
@@ -476,6 +476,20 @@ describe("hand layout", () => {
     assert.match(markup, />2 \(3\)<\/div>/u);
     assert.match(countBadgeStyles, /\.count-badge\s*\{[^}]*color:\s*#42e67c;/u);
     assert.match(playmatStyles, /\.zone-count\s*\{[^}]*position:\s*absolute;/u);
+    assert.match(
+      playmatStyles,
+      /\.zone:hover\s+\.zone-count\s*\{[^}]*opacity:\s*1;/u,
+    );
+    assert.match(playmatStyles, /\.life-count\s*\{[^}]*top:\s*0;/u);
+    assert.match(
+      playmatStyles,
+      /\.life-count\s*\{[^}]*transform:\s*translate\(-50%,\s*0\);/u,
+    );
+    assert.match(playmatStyles, /\.don-count\s*\{[^}]*left:\s*50%;/u);
+    assert.match(
+      playmatStyles,
+      /\.don-count\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
+    );
   });
 
   test("opponent hand renders every hidden card past ten cards", () => {

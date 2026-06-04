@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import type { ClientActionModel, ClientCardModel } from "../view-model.js";
 import {
@@ -15,6 +15,7 @@ export interface ZoneProps {
   size?: "normal" | "small" | "mini" | "hand";
   displayMode?: "spread" | "stack" | "overlap" | "slots" | "life" | undefined;
   stackCount?: number | undefined;
+  countBadge?: ReactNode | undefined;
   slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
@@ -38,6 +39,7 @@ export const Zone = ({
   size = "normal",
   displayMode = "spread",
   stackCount,
+  countBadge,
   slotCount = 0,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
@@ -134,6 +136,7 @@ export const Zone = ({
       data-presentation-zone={presentationZoneKey}
     >
       <div className="zone-label">{label}</div>
+      {countBadge}
       {displayMode === "stack" ? (
         <div
           className="count-badge is-hover-revealed stack-count"

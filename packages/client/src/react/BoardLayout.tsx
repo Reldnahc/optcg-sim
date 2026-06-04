@@ -74,7 +74,10 @@ const zoneCount = ({
   label: string;
   value: string | number;
 }): React.JSX.Element => (
-  <div className={`count-badge zone-count ${className}`} aria-label={label}>
+  <div
+    className={`count-badge is-hover-revealed zone-count ${className}`}
+    aria-label={label}
+  >
     {value}
   </div>
 );
@@ -201,11 +204,15 @@ export const BoardLayout = ({
       <div className="tabletop-board">
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-zone opponent-cost">
-          {donCount(board.opponentLabel, "opponent", board.opponent)}
           <Zone
             label="Cost Area"
             cards={board.opponent.costArea}
             presentationZoneKey="opponent:costArea"
+            countBadge={donCount(
+              board.opponentLabel,
+              "opponent",
+              board.opponent,
+            )}
             size="mini"
             displayMode="overlap"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -217,11 +224,15 @@ export const BoardLayout = ({
           />
         </div>
         <div className="playmat-zone opponent-life">
-          {lifeCount(board.opponentLabel, "opponent", board.opponent.lifeCount)}
           <Zone
             label="Life"
             cards={board.opponent.lifeCards}
             presentationZoneKey="opponent:life"
+            countBadge={lifeCount(
+              board.opponentLabel,
+              "opponent",
+              board.opponent.lifeCount,
+            )}
             size="small"
             displayMode="life"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -364,11 +375,15 @@ export const BoardLayout = ({
           />
         </div>
         <div className="playmat-zone player-life">
-          {lifeCount(board.selfLabel, "player", board.self.lifeCount)}
           <Zone
             label="Life"
             cards={board.self.lifeCards}
             presentationZoneKey="self:life"
+            countBadge={lifeCount(
+              board.selfLabel,
+              "player",
+              board.self.lifeCount,
+            )}
             size="small"
             displayMode="life"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
@@ -460,11 +475,11 @@ export const BoardLayout = ({
           />
         </div>
         <div className="playmat-zone player-cost">
-          {donCount(board.selfLabel, "player", board.self)}
           <Zone
             label="Cost Area"
             cards={board.self.costArea}
             presentationZoneKey="self:costArea"
+            countBadge={donCount(board.selfLabel, "player", board.self)}
             size="mini"
             displayMode="overlap"
             pendingChoiceInstanceIds={pendingChoiceInstanceIds}
