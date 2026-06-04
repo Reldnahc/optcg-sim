@@ -292,6 +292,18 @@ test("decision modal card surfaces pass hover callbacks to card preview", async 
   assert.doesNotMatch(source, /onHover=\{\(\) => undefined\}/u);
 });
 
+test("decision modal card grids reserve enough width for five card choices", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.decision-card-grid\s*\{[^}]*min-width:\s*min\(100%,\s*calc\(\(var\(--card-height\) \* 5 \/ 1\.4\) \+ 32px\)\);/u,
+  );
+});
+
 test("decision modal selectable cards use board-card pointer and hover affordances", async () => {
   const styles = await readFile(
     join(sourceDirectory, "styles", "decision-modal.css"),

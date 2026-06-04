@@ -12,6 +12,7 @@
 .decision-card-grid {
   display: flex;
   flex-wrap: wrap;
+  min-width: min(100%, calc((var(--card-height) * 5 / 1.4) + 32px));
   gap: 8px;
 }
 

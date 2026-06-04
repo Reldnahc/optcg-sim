@@ -69,7 +69,7 @@ describe("modal frame", () => {
     assert.match(styles, /\.modal-frame\s*\{[^}]*left:\s*50%;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*width:\s*min\(520px,\s*calc\(100vw - 32px\)\);/u,
+      /\.modal-frame\s*\{[^}]*width:\s*min\(720px,\s*calc\(100vw - 32px\)\);/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*height:\s*auto;/u);
     assert.match(styles, /\.modal-frame\s*\{[^}]*max-height:\s*82vh;/u);
