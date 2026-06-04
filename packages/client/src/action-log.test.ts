@@ -178,6 +178,29 @@ describe("action log", () => {
     );
   });
 
+  test("formats censored reveal rows without card mentions", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          type: "cardRevealed",
+          seq: 1,
+          payload: {
+            censored: true,
+            reason: "hidden-info",
+            revealedCount: 2,
+          },
+        }),
+      ],
+      catalog,
+    });
+
+    assert.deepEqual(
+      entries.map((entry) => entry.text),
+      ["Revealed 2 cards"],
+    );
+    assert.equal(entries[0]?.cardMentions, undefined);
+  });
+
   test("formats gameplay flow events with safe visible details", () => {
     const entries = createActionLogEntries({
       events: [

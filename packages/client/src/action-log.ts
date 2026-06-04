@@ -164,6 +164,14 @@ const payloadSelectedCount = (payload: unknown): number | undefined => {
 const selectedCountLabel = (count: number): string =>
   `${String(count)} ${count === 1 ? "card" : "cards"}`;
 
+const revealedCountLabel = (payload: unknown): string | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const count = payload["revealedCount"];
+  return typeof count === "number" ? selectedCountLabel(count) : undefined;
+};
+
 const stringField = (payload: unknown, field: string): string | undefined => {
   if (!isRecord(payload)) {
     return undefined;
@@ -281,6 +289,9 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
   }
 
   if (event.type === "cardRevealed") {
+    if (payloadIdentities.length === 0) {
+      return `Revealed ${revealedCountLabel(event.payload) ?? "a card"}`;
+    }
     return `Revealed ${cardListLabel(catalog, payloadIdentities)}`;
   }
   if (event.type === "cardPlayed") {

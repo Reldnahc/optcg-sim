@@ -254,3 +254,50 @@ test("keeps historical public search reveal events after transient reveal cleanu
   );
   assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
 });
+
+test("censors stale transient search reveal candidates instead of omitting the log row", () => {
+  const state = createActiveState();
+  const cardId = toCardId("OP13-089");
+  const instanceId = "stale-revealed-card-1" as InstanceId;
+  state.revealedCards = [];
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:stale-search-reveal"),
+      seq: 1,
+      type: "cardRevealed",
+      actor: p1,
+      payload: {
+        revealId: "reveal:search-reveal:candidate:choice-1",
+        selectionSetId: "set:search-reveal:choice-1",
+        cards: [
+          {
+            playerId: p1,
+            instanceId,
+            cardId,
+            hiddenDeckIndex: 0,
+          },
+        ],
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+  ];
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(
+    view.events.map((event) => event.payload),
+    [
+      {
+        censored: true,
+        reason: "hidden-info",
+        revealId: "reveal:search-reveal:candidate:choice-1",
+        selectionSetId: "set:search-reveal:choice-1",
+        revealedCount: 1,
+      },
+    ],
+  );
+  assert.equal(JSON.stringify(view.events).includes(String(cardId)), false);
+  assert.equal(JSON.stringify(view.events).includes(String(instanceId)), false);
+  assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
+});

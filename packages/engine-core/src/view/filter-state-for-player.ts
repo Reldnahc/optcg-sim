@@ -23,8 +23,7 @@ import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
   isEventVisibleToPlayer,
   isVisibleToPlayer,
-  shouldIncludePlayerEvent,
-  toPlayerEvent,
+  toPlayerEventForView,
 } from "./filter-state-events.js";
 import {
   computedBoardCardStatsByInstance,
@@ -696,8 +695,7 @@ export const filterStateForPlayer = (
     revealedCards: toPublicRevealRecord(state, playerId),
     events: state.eventJournal
       .filter((event) => isEventVisibleToPlayer(event, playerId))
-      .filter((event) => shouldIncludePlayerEvent(state, event))
-      .map(toPlayerEvent),
+      .map((event) => toPlayerEventForView(state, event)),
     timers: toPublicTimerState(state),
   };
 };

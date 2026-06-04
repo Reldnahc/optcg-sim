@@ -76,6 +76,9 @@ const toAllowedRevealCard = (
   };
 };
 
+const countRevealCards = (value: unknown): number | undefined =>
+  Array.isArray(value) ? value.length : undefined;
+
 const toAllowedCardRef = (
   value: unknown,
 ): Record<string, string> | undefined => {
@@ -325,12 +328,12 @@ export const toPlayerEvent = (event: EngineEvent): EngineEvent => {
 const searchRevealSelectedRevealIdPrefix = "reveal:search-reveal:selected:";
 const searchRevealSetIdPrefix = "set:search-reveal:";
 
-export const shouldIncludePlayerEvent = (
+const shouldCensorSearchRevealEvent = (
   state: GameState,
   event: EngineEvent,
 ): boolean => {
   if (event.type !== "cardRevealed" || !isObjectRecord(event.payload)) {
-    return true;
+    return false;
   }
   const revealId = event.payload["revealId"];
   const selectionSetId = event.payload["selectionSetId"];
@@ -338,18 +341,49 @@ export const shouldIncludePlayerEvent = (
     typeof selectionSetId !== "string" ||
     !selectionSetId.startsWith(searchRevealSetIdPrefix)
   ) {
-    return true;
+    return false;
   }
   if (
     typeof revealId === "string" &&
     revealId.startsWith(searchRevealSelectedRevealIdPrefix)
   ) {
-    return true;
-  }
-  if (typeof revealId !== "string") {
     return false;
   }
-  return state.revealedCards.some((record) => record.id === revealId);
+  if (typeof revealId !== "string") {
+    return true;
+  }
+  return !state.revealedCards.some((record) => record.id === revealId);
+};
+
+const toCensoredSearchRevealPayload = (
+  payload: Record<string, unknown>,
+): Record<string, unknown> => {
+  const revealId = payload["revealId"];
+  const selectionSetId = payload["selectionSetId"];
+  const revealedCount = countRevealCards(payload["cards"]);
+  return {
+    censored: true,
+    reason: "hidden-info",
+    ...(typeof revealId === "string" ? { revealId } : {}),
+    ...(typeof selectionSetId === "string" ? { selectionSetId } : {}),
+    ...(revealedCount === undefined ? {} : { revealedCount }),
+  };
+};
+
+export const toPlayerEventForView = (
+  state: GameState,
+  event: EngineEvent,
+): EngineEvent => {
+  if (
+    shouldCensorSearchRevealEvent(state, event) &&
+    isObjectRecord(event.payload)
+  ) {
+    return {
+      ...toPlayerEvent(event),
+      payload: toCensoredSearchRevealPayload(event.payload),
+    };
+  }
+  return toPlayerEvent(event);
 };
 
 export const isVisibleToPlayer = (
