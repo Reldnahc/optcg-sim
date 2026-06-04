@@ -320,3 +320,68 @@ test("projects player-level DON activation restrictions separately from card res
   assert.deepEqual(p1View.opponent.restrictions, undefined);
   assert.deepEqual(p2View.opponent.restrictions, ["no-character-don-refresh"]);
 });
+
+test("projects filtered player-level play restrictions with dynamic cost labels", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  const source = p1State.leader;
+  const record: ContinuousEffectRecord = {
+    id: "player-view-character-cost-play-restriction",
+    source: cardRef(source, p1),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      power: 5000,
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "restriction",
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: "self",
+        filter: { categories: ["character"], cost: { min: 7 } },
+      },
+      operation: {
+        type: "restriction",
+        restriction: "cannotPlay",
+      },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "player-view-test" },
+    createdAtStateSeq: state.seq,
+  };
+  const anyCostRecord: ContinuousEffectRecord = {
+    ...record,
+    id: "player-view-any-character-play-restriction",
+    modifier: {
+      ...record.modifier,
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+    },
+  };
+  state.continuousEffects = [record, anyCostRecord];
+
+  const p1View = filterStateForPlayer(state, p1);
+  const p2View = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(p1View.self.restrictions, [
+    "no-character-cost-7-or-more-play",
+    "no-character-play",
+  ]);
+  assert.deepEqual(p1View.opponent.restrictions, undefined);
+  assert.deepEqual(p2View.opponent.restrictions, [
+    "no-character-cost-7-or-more-play",
+    "no-character-play",
+  ]);
+});

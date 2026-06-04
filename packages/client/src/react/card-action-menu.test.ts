@@ -119,6 +119,27 @@ describe("card action menu", () => {
     assert.equal(boardMarkup.includes("no Event DON refresh"), true);
   });
 
+  test("renders dynamic player-level play restriction badge labels", () => {
+    const layout = board();
+    layout.selfRestrictions = ["no-character-cost-7-or-more-play"];
+
+    const boardMarkup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.equal(
+      boardMarkup.includes("no character cost 7 or more play"),
+      true,
+    );
+  });
+
   test("player-level restriction badges are not buried in player summaries", async () => {
     const controlRailSource = await readFile(
       join(sourceDirectory, "ControlRail.tsx"),

@@ -1,4 +1,4 @@
-import type { GameState, PlayerId } from "@optcg/types";
+import type { CardFilter, GameState, PlayerId, TargetSpec } from "@optcg/types";
 
 import {
   allContinuousEffects,
@@ -39,18 +39,74 @@ const sourceCategoryLabel = (category: string): string => {
   return category;
 };
 
+const costRestrictionLabel = (filter: CardFilter | undefined): string => {
+  const cost = filter?.cost;
+  if (cost === undefined) {
+    return "";
+  }
+  if ("op" in cost) {
+    if (cost.op === "gte") return `-cost-${String(cost.value)}-or-more`;
+    if (cost.op === "gt") return `-cost-over-${String(cost.value)}`;
+    if (cost.op === "lte") return `-cost-${String(cost.value)}-or-less`;
+    if (cost.op === "lt") return `-cost-under-${String(cost.value)}`;
+    if (cost.op === "eq") return `-cost-${String(cost.value)}`;
+    return `-cost-not-${String(cost.value)}`;
+  }
+  if (cost.min !== undefined && cost.max !== undefined) {
+    return cost.min === cost.max
+      ? `-cost-${String(cost.min)}`
+      : `-cost-${String(cost.min)}-to-${String(cost.max)}`;
+  }
+  if (cost.min !== undefined) {
+    return `-cost-${String(cost.min)}-or-more`;
+  }
+  if (cost.max !== undefined) {
+    return `-cost-${String(cost.max)}-or-less`;
+  }
+  return "";
+};
+
+const playRestrictionLabel = (target: TargetSpec): string | undefined => {
+  if (target.type !== "allMatching" || target.zone !== "hand") {
+    return undefined;
+  }
+  const filter = target.filter;
+  const categories =
+    filter?.categories === undefined || filter.categories.length === 0
+      ? ["card"]
+      : filter.categories;
+  const categoryLabel = categories.map(sourceCategoryLabel).join("/");
+  return `no-${categoryLabel}${costRestrictionLabel(filter)}-play`;
+};
+
 const playerRestrictionLabel = (
   restriction: string,
   sourceCategories: readonly string[] | undefined,
+  target: TargetSpec,
 ): string | undefined => {
-  if (restriction !== "cannotActivateDon") {
-    return undefined;
+  if (restriction === "cannotPlay") {
+    return playRestrictionLabel(target);
   }
-  const sourceLabel =
-    sourceCategories === undefined || sourceCategories.length === 0
-      ? "effect"
-      : sourceCategories.map(sourceCategoryLabel).join("/");
-  return `no-${sourceLabel}-don-refresh`;
+  if (restriction === "cannotActivateDon") {
+    const sourceLabel =
+      sourceCategories === undefined || sourceCategories.length === 0
+        ? "effect"
+        : sourceCategories.map(sourceCategoryLabel).join("/");
+    return `no-${sourceLabel}-don-refresh`;
+  }
+  return undefined;
+};
+
+const playerRestrictionTargetPlayer = (
+  target: TargetSpec,
+): string | undefined => {
+  if (target.type === "player") {
+    return target.player;
+  }
+  if (target.type === "allMatching" && target.zone === "hand") {
+    return target.player;
+  }
+  return undefined;
 };
 
 export const playerRestrictionLabels = (
@@ -62,14 +118,15 @@ export const playerRestrictionLabels = (
     if (!durationIsActive(state, effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "restriction") continue;
-    if (effect.modifier.target.type !== "player") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
+    const targetPlayer = playerRestrictionTargetPlayer(effect.modifier.target);
+    if (targetPlayer === undefined) continue;
     if (
       !playerRefMatches(
         state,
         effect.controller,
         effect.source.playerId,
-        effect.modifier.target.player,
+        targetPlayer,
         playerId,
       )
     ) {
@@ -78,6 +135,7 @@ export const playerRestrictionLabels = (
     const label = playerRestrictionLabel(
       effect.modifier.operation.restriction,
       effect.modifier.operation.sourceCategories,
+      effect.modifier.target,
     );
     if (label !== undefined && !restrictions.includes(label)) {
       restrictions.push(label);
