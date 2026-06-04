@@ -37,6 +37,18 @@
   outline: 3px solid #ffdc62;
 }
 
+.decision-option-list .decision-choice:not(:disabled) {
+  cursor: pointer;
+}
+
+.decision-option-list .decision-choice:hover:not(:disabled),
+.decision-option-list .decision-choice:focus-visible:not(:disabled) {
+  background: #706a67;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.88),
+    0 0 10px rgba(255, 255, 255, 0.42);
+}
+
 .decision-choice.decision-card-choice.is-selected {
   outline: 0;
 }

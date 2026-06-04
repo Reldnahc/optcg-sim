@@ -206,6 +206,22 @@ test("action option modals render one-click choices without a confirm action", (
   assert.doesNotMatch(markup, /decision-choice is-selected/u);
 });
 
+test("button-only decision options use pointer and hover feedback", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.decision-option-list\s+\.decision-choice:not\(:disabled\)\s*\{[^}]*cursor:\s*pointer;/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-option-list\s+\.decision-choice:hover:not\(:disabled\),\s*\.decision-option-list\s+\.decision-choice:focus-visible:not\(:disabled\)\s*\{[^}]*background:\s*#706a67;[^}]*box-shadow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.88\),\s*0 0 10px rgba\(255,\s*255,\s*255,\s*0\.42\);/u,
+  );
+});
+
 test("return-to-deck order modal renders card images with deck order badges", () => {
   const model: DecisionModalModel = {
     ...presentation,
