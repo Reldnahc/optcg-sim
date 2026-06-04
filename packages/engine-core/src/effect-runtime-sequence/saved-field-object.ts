@@ -363,9 +363,11 @@ const continuousRecordForSavedObject = (
   objectIndex: number,
 ): ContinuousEffectRecord | undefined => {
   if (
+    segment.effect.type !== "modifyPower" &&
     segment.effect.type !== "cannotBecomeActive" &&
     segment.effect.type !== "cannotAttack" &&
     segment.effect.type !== "cannotBlock" &&
+    segment.effect.type !== "preventBlockerActivation" &&
     segment.effect.type !== "invalidateEffects"
   ) {
     return undefined;
@@ -380,6 +382,29 @@ const continuousRecordForSavedObject = (
         layer: "effectInvalidation",
         target: exactTargetForSavedObject(entry, target, state, objectIndex),
         operation: { type: "invalidateEffects" },
+      },
+      duration: segment.effect.duration,
+      createdBy: {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    };
+  }
+  if (segment.effect.type === "modifyPower") {
+    if (typeof segment.effect.value !== "number") {
+      return undefined;
+    }
+    return {
+      id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
+      source: entry.source,
+      sourceSnapshot: entry.sourceSnapshot,
+      controller: entry.controllerId,
+      modifier: {
+        layer: "powerAdd",
+        target: exactTargetForSavedObject(entry, target, state, objectIndex),
+        operation: { type: "addPower", value: segment.effect.value },
       },
       duration: segment.effect.duration,
       createdBy: {
@@ -820,9 +845,11 @@ export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
   state: GameState;
 } => {
   if (
+    params.segment.effect.type !== "modifyPower" &&
     params.segment.effect.type !== "cannotBecomeActive" &&
     params.segment.effect.type !== "cannotAttack" &&
     params.segment.effect.type !== "cannotBlock" &&
+    params.segment.effect.type !== "preventBlockerActivation" &&
     params.segment.effect.type !== "invalidateEffects"
   ) {
     return { ledgers: params.ledgers, state: params.state };

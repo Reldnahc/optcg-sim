@@ -219,6 +219,7 @@ export const createEffectRuntimeQueueResults = (
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
+    | Extract<Effect, { type: "preventBlockerActivation" }>
     | Extract<Effect, { type: "cannotBlock" }>
     | undefined => {
     const match = resolveQueuedEffectDefinition(state, entry);

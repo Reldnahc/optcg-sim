@@ -69,6 +69,7 @@ import {
   parsePlayFromHandInstruction,
   parsePreventDonActivationInstruction,
   parsePreventPlayInstruction,
+  selectPowerThenPreventBlockerActivationExpressionParser,
 } from "./instructions/index.js";
 import {
   parseAttachedDonMarker,
@@ -316,6 +317,7 @@ const defaultRegistry = {
       ],
     }),
     playStageFromDeckExpressionParser,
+    selectPowerThenPreventBlockerActivationExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     generalExpressionParser,

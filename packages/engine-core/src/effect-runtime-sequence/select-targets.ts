@@ -39,7 +39,8 @@ type ContinuousResolvedEffect = Extract<
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
-      | "cannotBlock";
+      | "cannotBlock"
+      | "preventBlockerActivation";
   }
 >;
 type ContinuousEffectWithChooseTarget = ContinuousResolvedEffect & {
@@ -159,7 +160,8 @@ const isContinuousEffectWithChooseTarget = (
       candidate.type === "invalidateEffects" ||
       candidate.type === "cannotBecomeActive" ||
       candidate.type === "cannotAttack" ||
-      candidate.type === "cannotBlock") &&
+      candidate.type === "cannotBlock" ||
+      candidate.type === "preventBlockerActivation") &&
     typeof target === "object" &&
     target !== null &&
     ((target as { readonly type?: unknown }).type === "choose" ||

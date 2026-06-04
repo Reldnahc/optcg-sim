@@ -289,6 +289,60 @@ test("cannotBlock all-opponent-character restriction disables blocker", () => {
   assert.equal(view.cards[blocker.instanceId]?.canBlock, false);
 });
 
+test("preventBlockerActivation on current attacker disables defender blockers", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  setMainTurnAfterFirstTurn(state);
+  p1State.characters = [withCharacter(p1, toCardId("char-rush"), 0)];
+  p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
+  const attacker = must(p1State.characters[0], "attacker");
+  const blocker = must(p2State.characters[0], "blocker");
+  state.battle = {
+    attacker: battleRef(attacker),
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
+    step: "block",
+    damageCount: 1,
+  };
+
+  const withoutRestriction = computeView(state);
+  assert.equal(withoutRestriction.cards[blocker.instanceId]?.canBlock, true);
+
+  state.continuousEffects = [
+    {
+      ...continuousPowerEffectRecord(state, { source: attacker }),
+      id: "restrict-current-attacker-blocker-activation",
+      modifier: {
+        layer: "restriction",
+        target: {
+          type: "exactCard",
+          card: {
+            instanceId: attacker.instanceId,
+            cardId: attacker.cardId,
+            playerId: p1,
+            zone: attacker.zone,
+          },
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected:blocker-restricted-attacker",
+            objectIndex: 0,
+          },
+          createdAtStateSeq: state.seq,
+        },
+        operation: {
+          type: "restriction",
+          restriction: "preventBlockerActivation",
+        },
+      },
+      duration: { type: "thisTurn" },
+    },
+  ];
+
+  const withRestriction = computeView(state);
+  assert.equal(withRestriction.cards[blocker.instanceId]?.canBlock, false);
+});
+
 test("continuous support accepts all rested character filters for refresh restrictions", () => {
   assert.equal(
     isSupportedContinuousQueueEffect({

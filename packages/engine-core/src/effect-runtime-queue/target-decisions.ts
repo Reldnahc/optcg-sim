@@ -119,6 +119,9 @@ type SupportedSelectedTargetContinuousEffect =
   | (Extract<Effect, { type: "cannotAttack" }> & {
       target: Extract<Target, { type: "choose" }>;
     })
+  | (Extract<Effect, { type: "preventBlockerActivation" }> & {
+      target: Extract<Target, { type: "choose" }>;
+    })
   | (Extract<Effect, { type: "cannotBlock" }> & {
       target: Extract<Target, { type: "choose" }>;
     });

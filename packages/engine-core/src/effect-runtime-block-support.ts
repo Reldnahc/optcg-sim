@@ -119,7 +119,8 @@ const isSourceDependentContinuousEffect = (effect: Effect): boolean => {
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "cannotAttack" &&
-    effect.type !== "cannotBlock"
+    effect.type !== "cannotBlock" &&
+    effect.type !== "preventBlockerActivation"
   ) {
     return false;
   }

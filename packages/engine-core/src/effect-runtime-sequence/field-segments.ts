@@ -350,9 +350,11 @@ export const applyFieldMutationSequenceSegment = (params: {
   }
 
   if (
-    (segment.effect.type === "cannotBecomeActive" ||
+    (segment.effect.type === "modifyPower" ||
+      segment.effect.type === "cannotBecomeActive" ||
       segment.effect.type === "cannotAttack" ||
       segment.effect.type === "cannotBlock" ||
+      segment.effect.type === "preventBlockerActivation" ||
       segment.effect.type === "invalidateEffects") &&
     segment.effect.target.type === "savedFieldObject"
   ) {

@@ -66,6 +66,7 @@ const isSupportedContinuousPowerModifier = (
       effect.modifier.operation.type === "restriction" &&
       (effect.modifier.operation.restriction === "cannotAttack" ||
         effect.modifier.operation.restriction === "cannotBlock" ||
+        effect.modifier.operation.restriction === "preventBlockerActivation" ||
         effect.modifier.operation.restriction === "cannotBecomeActive")));
 
 const isNonEmptyStringArray = (value: unknown): value is string[] =>

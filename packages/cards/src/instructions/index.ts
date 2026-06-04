@@ -39,6 +39,7 @@ export {
   parseRestOpponentLeaderOrCharactersInstruction,
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
+  selectPowerThenPreventBlockerActivationExpressionParser,
 } from "./planned-field-effects.js";
 export {
   parseReturnToOwnerHandInstruction,

@@ -809,6 +809,11 @@ export type Effect =
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }
   | { type: "cannotBlock"; target: Target; duration: Duration }
+  | {
+      type: "preventBlockerActivation";
+      target: Target;
+      duration: Duration;
+    }
   | { type: "cannotBeAttacked"; target: Target; duration: Duration }
   | {
       type: "cannotBeBlockedBy";

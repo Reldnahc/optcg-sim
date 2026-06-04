@@ -522,6 +522,87 @@ test("selectTargets saved reference can feed rest and refresh-lock sequence chil
   );
 });
 
+test("selectTargets saved reference can feed modifyPower sequence child", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        id: "select-target",
+        connector: "always",
+        saveResultAs: "savedTarget",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character"] },
+          },
+        },
+      },
+      {
+        id: "power-saved-target",
+        connector: "then",
+        effect: {
+          type: "modifyPower",
+          value: 2000,
+          duration: { type: "thisTurn" },
+          target: {
+            type: "savedFieldObject",
+            binding: { family: "selectedTargets", saveResultAs: "savedTarget" },
+            zone: "characterArea",
+            player: "opponent",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+        },
+      },
+    ],
+  });
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "target"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 2000,
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const record = resolved.state.continuousEffects.find(
+    (effect) =>
+      effect.modifier.layer === "powerAdd" &&
+      effect.modifier.operation.type === "addPower",
+  );
+  const powerRecord = must(record, "saved target power record");
+  assert.equal(powerRecord.modifier.operation.type, "addPower");
+  assert.equal(powerRecord.modifier.operation.value, 2000);
+  assert.equal(powerRecord.modifier.target.type, "exactCard");
+});
+
 test.each([
   {
     name: "unsupported selectedCards family",
@@ -822,21 +903,16 @@ test("sequence resume fail-closes sourceSegmentId mismatch and invalid objectInd
   );
 });
 
-test("unsupported modifier/restriction saved-field-object target use remains unsupported/fail-closed", () => {
+test("unsupported saved-field-object continuous target use remains unsupported/fail-closed", () => {
   const unsupportedState = sequenceQueueState({
     type: "sequence",
     effects: [
       {
-        id: "draw-up-to",
+        id: "unsupported-saved-target-keyword",
         connector: "always",
-        effect: { type: "drawUpTo", player: "self", count: 1 },
-      },
-      {
-        id: "unsupported-saved-target-modifier",
-        connector: "then",
         effect: {
-          type: "modifyPower",
-          value: 1000,
+          type: "giveKeyword",
+          keyword: "blocker",
           duration: { type: "thisTurn" },
           target: {
             type: "savedFieldObject",

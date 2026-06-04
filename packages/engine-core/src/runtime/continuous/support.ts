@@ -12,6 +12,7 @@ import type { ContinuousQueueEffect } from "./types.js";
 const supportedRestriction = new Set([
   "cannotAttack",
   "cannotBlock",
+  "preventBlockerActivation",
   "cannotBecomeActive",
   "cannotActivateDon",
 ]);
@@ -241,7 +242,8 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "invalidateEffects" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
-    effect.type !== "cannotBlock"
+    effect.type !== "cannotBlock" &&
+    effect.type !== "preventBlockerActivation"
   ) {
     return false;
   }
@@ -290,7 +292,9 @@ export const isSupportedContinuousQueueEffect = (
     return false;
   }
   if (
-    (effect.type === "cannotAttack" || effect.type === "cannotBlock") &&
+    (effect.type === "cannotAttack" ||
+      effect.type === "cannotBlock" ||
+      effect.type === "preventBlockerActivation") &&
     !supportedRestriction.has(effect.type)
   ) {
     return false;

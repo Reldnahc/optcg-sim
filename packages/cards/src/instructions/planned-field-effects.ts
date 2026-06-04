@@ -1,9 +1,16 @@
-import type { CardFilter, Target } from "@optcg/types";
+import type {
+  CardCategory,
+  CardFilter,
+  Duration,
+  Target,
+  Zone,
+} from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import {
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
+  parseThisTurnDuration,
 } from "../durations/index.js";
 import { parsePositivePowerModifier } from "../modifiers/index.js";
 import { parseThatCharacterReference } from "../references/index.js";
@@ -14,9 +21,15 @@ import {
   parseOpponentLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
 } from "../targets/index.js";
-import type { InstructionParser, PrimitiveEvidence } from "../types.js";
+import type {
+  ExpressionParseResult,
+  InstructionParser,
+  PrimitiveEvidence,
+} from "../types.js";
 
 const thatCharacterSelectionId = "selected:thatCharacter";
+const selectedBlockerRestrictedAttackerId =
+  "selected:blocker-restricted-attacker";
 
 const thatCharacterSavedTarget = {
   type: "savedFieldObject",
@@ -29,6 +42,34 @@ const thatCharacterSavedTarget = {
   visibility: "publicOnly",
   onFailure: "failClosed",
 } as const;
+
+const selectedBlockerRestrictedLeaderTarget = {
+  type: "savedFieldObject",
+  binding: {
+    family: "selectedTargets",
+    saveResultAs: selectedBlockerRestrictedAttackerId,
+  },
+  zone: "leaderArea",
+  player: "self",
+  visibility: "publicOnly",
+  onFailure: "failClosed",
+} as const;
+
+const selectedBlockerRestrictedCharacterTarget = {
+  type: "savedFieldObject",
+  binding: {
+    family: "selectedTargets",
+    saveResultAs: selectedBlockerRestrictedAttackerId,
+  },
+  zone: "characterArea",
+  player: "self",
+  visibility: "publicOnly",
+  onFailure: "failClosed",
+} as const;
+
+type SelectedBlockerRestrictedTarget =
+  | typeof selectedBlockerRestrictedLeaderTarget
+  | typeof selectedBlockerRestrictedCharacterTarget;
 
 export const restOpponentCharactersPrimitive = {
   primitiveId: "instruction:rest",
@@ -74,6 +115,145 @@ export const yourLeaderPowerOpponentNextEndPrimitive = {
     "duration:opponentNextEndPhase",
   ],
 } as const;
+
+export const preventSelectedAttackerBlockerActivationPrimitive = {
+  primitiveId: "instruction:preventBlockerActivation",
+  childPrimitiveIds: [
+    "reference:thatCharacter",
+    "duration:thisTurn",
+    "activation:blocker",
+  ],
+} as const;
+
+export const selectPowerThenPreventBlockerActivationExpressionParser = (input: {
+  readonly text: string;
+}): ExpressionParseResult | undefined => {
+  const match =
+    /^Select\s+(?<selection>up to [^.]+?)\s+and that card\s+(?<power>gains .+?)\.\s+Then,\s+if the selected card attacks during this turn,\s+your opponent cannot activate \[Blocker\]\.?$/iu.exec(
+      input.text,
+    );
+  const selectionText = match?.groups?.["selection"];
+  const powerText = match?.groups?.["power"];
+  if (selectionText === undefined || powerText === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: selectionText });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const targetMatch =
+    /^of your \{(?<type>[^}]+)\} type Leader or Character cards?\s*$/iu.exec(
+      cardinality.rest,
+    );
+  const typeName = targetMatch?.groups?.["type"]?.trim();
+  if (typeName === undefined || typeName.length === 0) {
+    return undefined;
+  }
+
+  const modifierMatch = /^gains\s+(?<rest>.*)$/iu.exec(powerText);
+  const modifierText = modifierMatch?.groups?.["rest"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+  const modifier = parsePositivePowerModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+  const duration = parseThisTurnDuration({ text: modifier.rest });
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  const parsedDuration: Duration = duration.duration;
+  const targetZones: Zone[] = ["leaderArea", "characterArea"];
+  const targetCategories: CardCategory[] = ["leader", "character"];
+
+  const selectSegment = {
+    id: "select:blocker-restricted-attacker",
+    connector: "always" as const,
+    saveResultAs: selectedBlockerRestrictedAttackerId,
+    effect: {
+      type: "selectTargets" as const,
+      request: {
+        timing: "onResolution" as const,
+        chooser: "self" as const,
+        player: "self" as const,
+        zones: targetZones,
+        min: cardinality.cardinality.min,
+        max: cardinality.cardinality.max,
+        allowFewerIfUnavailable: true,
+        visibility: "public" as const,
+        filter: {
+          categories: targetCategories,
+          typesAny: [typeName],
+        },
+      },
+    },
+  };
+
+  const powerEffect = (target: SelectedBlockerRestrictedTarget) => ({
+    type: "modifyPower" as const,
+    target,
+    value: modifier.value,
+    duration: parsedDuration,
+  });
+  const preventBlockerEffect = (target: SelectedBlockerRestrictedTarget) => ({
+    type: "preventBlockerActivation" as const,
+    target,
+    duration: parsedDuration,
+  });
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        selectSegment,
+        {
+          id: "selected-leader:power",
+          connector: "then",
+          effect: powerEffect(selectedBlockerRestrictedLeaderTarget),
+        },
+        {
+          id: "selected-character:power",
+          connector: "then",
+          effect: powerEffect(selectedBlockerRestrictedCharacterTarget),
+        },
+        {
+          id: "selected-leader:prevent-blocker",
+          connector: "then",
+          effect: preventBlockerEffect(selectedBlockerRestrictedLeaderTarget),
+        },
+        {
+          id: "selected-character:prevent-blocker",
+          connector: "then",
+          effect: preventBlockerEffect(
+            selectedBlockerRestrictedCharacterTarget,
+          ),
+        },
+      ],
+    },
+    evidence: [
+      "composition:selectThenApply",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      "target:yourLeaderOrCharacters",
+      "player:self",
+      "filter:type",
+      "filter:category:leader",
+      "filter:category:character",
+      "instruction:modifyPower",
+      ...modifier.evidence,
+      ...duration.evidence,
+      "instruction:preventBlockerActivation",
+      "activation:blocker",
+    ],
+    rest: "",
+  };
+};
 
 export const parseRestOpponentCharactersInstruction: InstructionParser = (
   input,

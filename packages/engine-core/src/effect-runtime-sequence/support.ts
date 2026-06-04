@@ -52,7 +52,8 @@ type DirectContinuousEffect = Extract<
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
-      | "cannotBlock";
+      | "cannotBlock"
+      | "preventBlockerActivation";
   }
 >;
 type SavedFieldObjectTrashEffect = Extract<Effect, { type: "trash" }> & {
@@ -79,16 +80,19 @@ type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
-    | Extract<Effect, { type: "cannotBlock" }>;
+    | Extract<Effect, { type: "cannotBlock" }>
+    | Extract<Effect, { type: "preventBlockerActivation" }>;
 };
 type ConditionalSequenceEffect = Extract<Effect, { type: "conditional" }> & {
   then: SequenceEffect;
 };
 type ConditionalEffect = Extract<Effect, { type: "conditional" }>;
 type SavedTargetContinuousEffect = (
+  | Extract<Effect, { type: "modifyPower" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
   | Extract<Effect, { type: "cannotBlock" }>
+  | Extract<Effect, { type: "preventBlockerActivation" }>
   | Extract<Effect, { type: "invalidateEffects" }>
 ) & {
   target: Extract<Target, { type: "savedFieldObject" }>;
@@ -583,6 +587,17 @@ const isSupportedSavedFieldObjectKoTarget = (
   target.controller === undefined &&
   target.filter === undefined;
 
+const isSupportedSavedLeaderOrCharacterTarget = (
+  target: Target,
+): target is Extract<Target, { type: "savedFieldObject" }> =>
+  target.type === "savedFieldObject" &&
+  (target.zone === "leaderArea" || target.zone === "characterArea") &&
+  (target.player === "self" ||
+    target.player === "opponent" ||
+    target.player === "anyPlayer") &&
+  target.controller === undefined &&
+  target.filter === undefined;
+
 const isSupportedKoSegment = (
   effect: SequenceSegmentEffect,
 ): effect is KoEffect =>
@@ -704,7 +719,8 @@ const isSourceDependentContinuousSegment = (
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "cannotAttack" &&
-    effect.type !== "cannotBlock"
+    effect.type !== "cannotBlock" &&
+    effect.type !== "preventBlockerActivation"
   ) {
     return false;
   }
@@ -717,11 +733,17 @@ const isSourceDependentContinuousSegment = (
 const isSupportedSavedTargetContinuousSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SavedTargetContinuousEffect =>
-  (effect.type === "cannotBecomeActive" ||
+  (effect.type === "modifyPower" ||
+    effect.type === "cannotBecomeActive" ||
     effect.type === "cannotAttack" ||
     effect.type === "cannotBlock" ||
+    effect.type === "preventBlockerActivation" ||
     effect.type === "invalidateEffects") &&
-  isSupportedSavedFieldObjectKoTarget(effect.target) &&
+  (effect.type === "modifyPower" || effect.type === "preventBlockerActivation"
+    ? isSupportedSavedLeaderOrCharacterTarget(effect.target)
+    : isSupportedSavedFieldObjectKoTarget(effect.target)) &&
+  (effect.type !== "modifyPower" ||
+    (typeof effect.value === "number" && Number.isSafeInteger(effect.value))) &&
   isSupportedSequenceContinuousDuration(effect.duration);
 
 const isSupportedConditionalContinuousSegment = (

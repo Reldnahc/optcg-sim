@@ -13,6 +13,7 @@ export type ContinuousQueueEffect = Extract<
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
-      | "cannotBlock";
+      | "cannotBlock"
+      | "preventBlockerActivation";
   }
 >;

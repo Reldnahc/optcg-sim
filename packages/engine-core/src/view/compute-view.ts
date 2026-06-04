@@ -103,7 +103,7 @@ const continuousCostBonusForCard = (
 const hasRestriction = (
   state: GameState,
   card: CardInstance,
-  restriction: "cannotAttack" | "cannotBlock",
+  restriction: "cannotAttack" | "cannotBlock" | "preventBlockerActivation",
 ): boolean => {
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
@@ -325,6 +325,9 @@ const canBlockNow = (
   if (!isCardRefLive(state, battle.currentTarget)) return false;
   const attacker = findLeaderOrCharacter(state, battle.attacker);
   if (attacker === undefined) return false;
+  if (hasRestriction(state, attacker, "preventBlockerActivation")) {
+    return false;
+  }
   const attackerMetadata = resolveCombatMetadata(state, attacker);
   const attackerKeywords = computedKeywordsForCard(
     state,
