@@ -89,7 +89,10 @@ export const DecisionModalHost = ({
     return null;
   }
   return (
-    <ModalFrame title={model.prompt} className="modal-frame-decision">
+    <ModalFrame title={model.title} className="modal-frame-decision">
+      <div className="decision-modal-context">
+        <p className="decision-modal-instruction">{model.instruction}</p>
+      </div>
       {model.kind === "selectCards" ? (
         <div className="decision-card-grid">
           {model.cards.map((choice) => {

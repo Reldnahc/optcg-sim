@@ -102,11 +102,17 @@ const event = (
   ...overrides,
 });
 
+const presentation = (prompt: string) => ({
+  title: prompt,
+  instruction: prompt,
+});
+
 const decision = (id: string): NonNullable<PlayerView["pendingDecision"]> => ({
   id: id as DecisionId,
   type: "selectCards",
   playerId: "p1" as PlayerId,
   prompt: "Choose a card.",
+  presentation: presentation("Choose a card."),
   causedBy: { type: "ruleProcess", name: "privateCausality" },
   min: 0,
   max: 1,
@@ -119,6 +125,7 @@ const selectCardsDecision = (id: string): PublicSelectCardsDecision => ({
   type: "selectCards",
   playerId: "p1" as PlayerId,
   prompt: "Choose a card.",
+  presentation: presentation("Choose a card."),
   causedBy: { type: "ruleProcess", name: "privateCausality" },
   min: 0,
   max: 1,
@@ -133,6 +140,7 @@ const targetDecision = (
   type: "selectTargets",
   playerId: "p1" as PlayerId,
   prompt: "Choose a target.",
+  presentation: presentation("Choose a target."),
   causedBy: { type: "ruleProcess", name: "privateCausality" },
   min: 0,
   max: 1,
@@ -146,6 +154,7 @@ const quantityDecision = (
   type: "chooseQuantity",
   playerId: "p1" as PlayerId,
   prompt: "Choose a number.",
+  presentation: presentation("Choose a number."),
   causedBy: { type: "ruleProcess", name: "privateCausality" },
   mode: "upTo",
   min: 0,
@@ -159,6 +168,7 @@ const payCostDecision = (
   type: "payCost",
   playerId: "p1" as PlayerId,
   prompt: "Pay cost.",
+  presentation: presentation("Pay cost."),
   causedBy: { type: "ruleProcess", name: "privateCausality" },
 });
 

@@ -26,6 +26,8 @@ export const useFirstPlayerChoiceModal = (
       return undefined;
     }
     return {
+      title: "Choose first player",
+      instruction: "Choose who takes the first turn.",
       kind: "chooseOption",
       decisionId: "first-player-choice" as DecisionId,
       prompt: "Choose first player",

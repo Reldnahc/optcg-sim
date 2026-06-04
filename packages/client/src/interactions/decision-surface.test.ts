@@ -41,6 +41,8 @@ const handChoice = (
 const selectCardsModel = (
   cards: Extract<DecisionModalModel, { kind: "selectCards" }>["cards"],
 ): Extract<DecisionModalModel, { kind: "selectCards" }> => ({
+  title: "Choose cards",
+  instruction: "Choose cards from trash.",
   kind: "selectCards",
   decisionId: "decision-select-trash" as DecisionId,
   prompt: "Choose cards from trash.",

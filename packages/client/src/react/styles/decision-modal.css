@@ -1,3 +1,14 @@
+.decision-modal-context {
+  margin: 0 0 8px;
+}
+
+.decision-modal-instruction {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
 .decision-card-grid {
   display: flex;
   flex-wrap: wrap;

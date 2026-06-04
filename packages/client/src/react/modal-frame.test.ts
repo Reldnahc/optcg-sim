@@ -29,6 +29,8 @@ describe("modal frame", () => {
     const decisionMarkup = renderToStaticMarkup(
       createElement(DecisionModalHost, {
         model: {
+          title: "Choose one",
+          instruction: "Choose one option.",
           kind: "chooseOption",
           decisionId: "decision-1" as DecisionId,
           prompt: "Choose one",

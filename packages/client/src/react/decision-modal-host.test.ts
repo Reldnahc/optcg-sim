@@ -20,11 +20,17 @@ const cardRef = (id: string): CardRef => ({
   playerId: p1,
 });
 
+const presentation = {
+  title: "Decision title",
+  instruction: "Decision instruction.",
+  prompt: "Raw decision prompt.",
+};
+
 test("selectCards modal renders card images and disables nonselectable choices", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "selectCards",
     decisionId: "decision-1" as never,
-    prompt: "Choose cards",
     min: 0,
     max: 1,
     canConfirm: true,
@@ -56,6 +62,8 @@ test("selectCards modal renders card images and disables nonselectable choices",
   );
 
   assert.match(markup, /<img class="decision-card-face"/u);
+  assert.match(markup, /Decision title/u);
+  assert.match(markup, /Decision instruction\./u);
   assert.equal(markup.includes("legal-card.png"), true);
   assert.equal(markup.includes("illegal-card.png"), true);
   assert.match(markup, /disabled=""/u);
@@ -63,9 +71,9 @@ test("selectCards modal renders card images and disables nonselectable choices",
 
 test("chooseQuantity modal renders a range slider over the legal range", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "chooseQuantity",
     decisionId: "decision-quantity" as never,
-    prompt: "Choose quantity",
     min: 0,
     max: 4,
     quantity: 4,
@@ -97,9 +105,9 @@ test("chooseQuantity modal renders a range slider over the legal range", () => {
 
 test("binary quantity modal renders yes-no choices instead of a slider", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "binaryQuantity",
     decisionId: "decision-quantity" as never,
-    prompt: "Choose whether to take one.",
     selectedQuantity: 1,
     options: [
       { quantity: 0, label: "No" },
@@ -133,9 +141,9 @@ test("binary quantity modal renders yes-no choices instead of a slider", () => {
 
 test("return-to-deck order modal renders card images with deck order badges", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "orderCards",
     decisionId: "decision-order" as never,
-    prompt: "Return cards to the bottom of your deck.",
     destination: "deck",
     canConfirm: true,
     orderedInstanceIds: ["top" as InstanceId, "bottom" as InstanceId],
@@ -176,9 +184,9 @@ test("return-to-deck order modal renders card images with deck order badges", ()
 
 test("top-or-bottom order modal uses one destination control for all ordered cards", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "orderCards",
     decisionId: "decision-top-or-bottom" as never,
-    prompt: "Place cards at the top or bottom of your deck.",
     destination: "deck",
     placement: { type: "topOrBottom" },
     canConfirm: true,
@@ -214,9 +222,9 @@ test("top-or-bottom order modal uses one destination control for all ordered car
 
 test("fixed top order modal has no top-or-bottom destination control", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "orderCards",
     decisionId: "decision-fixed-top" as never,
-    prompt: "Place cards at the top of your deck.",
     destination: "deck",
     canConfirm: true,
     orderedInstanceIds: ["top" as InstanceId, "bottom" as InstanceId],
@@ -286,9 +294,9 @@ test("decision modal card surfaces pass hover callbacks to card preview", async 
 
 test("trigger order modal presents source cards like a single-card selection", () => {
   const model: DecisionModalModel = {
+    ...presentation,
     kind: "orderTriggers",
     decisionId: "decision-trigger-order" as never,
-    prompt: "Choose the next trigger.",
     canConfirm: true,
     orderedTriggerIds: ["trigger-legal"],
     choices: [
