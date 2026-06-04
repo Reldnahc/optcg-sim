@@ -2,8 +2,13 @@ import type { CardRef, EngineEvent, PlayerId } from "@optcg/types";
 
 export interface OpponentRevealViewModel {
   revealId: string;
-  title: "Opponent revealed" | "Revealed";
+  title: string;
   cards: readonly CardRef[];
+}
+
+export interface RevealPlayerLabels {
+  selfLabel: string;
+  opponentLabel: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -80,11 +85,13 @@ export const opponentRevealFromEvents = (
   events: readonly EngineEvent[],
   playerId: PlayerId,
   dismissedRevealIds: ReadonlySet<string>,
+  playerLabels?: RevealPlayerLabels,
 ): OpponentRevealViewModel | undefined => {
   const reveals = opponentRevealsFromEvents(
     events,
     playerId,
     dismissedRevealIds,
+    playerLabels,
   );
   return reveals[reveals.length - 1];
 };
@@ -93,6 +100,7 @@ export const opponentRevealsFromEvents = (
   events: readonly EngineEvent[],
   playerId: PlayerId,
   dismissedRevealIds: ReadonlySet<string>,
+  playerLabels?: RevealPlayerLabels,
 ): readonly OpponentRevealViewModel[] => {
   const reveals: OpponentRevealViewModel[] = [];
   const seenRevealIds = new Set<string>();
@@ -114,9 +122,14 @@ export const opponentRevealsFromEvents = (
       (showToBothPlayers || cards.every((card) => card.playerId !== playerId))
     ) {
       seenRevealIds.add(revealId);
+      const firstRevealedCard = cards[0];
+      const ownerLabel =
+        firstRevealedCard?.playerId === playerId
+          ? (playerLabels?.selfLabel ?? "Player")
+          : (playerLabels?.opponentLabel ?? "Opponent");
       reveals.push({
         revealId,
-        title: showToBothPlayers ? "Revealed" : "Opponent revealed",
+        title: showToBothPlayers ? "Revealed" : `${ownerLabel} revealed`,
         cards,
       });
     }

@@ -1,7 +1,7 @@
 import type { CardRef, PlayerId } from "@optcg/types";
 
 import type { ClientPlayerSnapshot } from "../transport.js";
-import type { ClientCardModel } from "../view-model.js";
+import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import type { RevealWindowModel } from "./RevealWindowHost.js";
 import { opponentRevealsFromEvents } from "./reveal-viewer.js";
 import type { RevealWindowState } from "./window-state-model.js";
@@ -24,6 +24,7 @@ export const opponentRevealWindowsFromState = ({
   currentPlayerId,
   playerSnapshot,
   matchScope,
+  board,
   revealWindowState,
   activeDismissedRevealIds,
   cardModel,
@@ -31,6 +32,7 @@ export const opponentRevealWindowsFromState = ({
   currentPlayerId?: PlayerId | undefined;
   playerSnapshot?: ClientPlayerSnapshot | undefined;
   matchScope?: string | undefined;
+  board?: BoardViewModel | undefined;
   revealWindowState: RevealWindowState;
   activeDismissedRevealIds: ReadonlySet<string>;
   cardModel: (card: CardRef) => ClientCardModel;
@@ -47,6 +49,12 @@ export const opponentRevealWindowsFromState = ({
     playerSnapshot.view.events,
     currentPlayerId,
     activeDismissedRevealIds,
+    board === undefined
+      ? undefined
+      : {
+          selfLabel: board.selfLabel,
+          opponentLabel: board.opponentLabel,
+        },
   ).map((reveal, index) => ({
     revealId: reveal.revealId,
     initialRect: {

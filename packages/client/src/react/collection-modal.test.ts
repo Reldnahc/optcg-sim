@@ -383,7 +383,7 @@ describe("collection modal", () => {
     assert.match(matchAppSource, /opponentRevealWindowsFromState/u);
     assert.match(opponentRevealWindowsSource, /opponentRevealsFromEvents/u);
     assert.match(opponentRevealWindowsSource, /title: reveal\.title/u);
-    assert.match(revealViewerSource, /Opponent revealed/u);
+    assert.match(revealViewerSource, /\$\{ownerLabel\} revealed/u);
     assert.match(revealViewerSource, /Revealed/u);
     assert.match(matchAppSource, /updateRevealWindowState/u);
     assert.match(source, /OpponentRevealWindowLayer/u);

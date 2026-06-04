@@ -57,13 +57,14 @@ describe("reveal viewer", () => {
       ],
       p2,
       new Set(),
+      { selfLabel: "Player Two", opponentLabel: "Monkey D. Luffy" },
     );
 
     if (reveal === undefined) {
       throw new Error("Expected opponent reveal.");
     }
     assert.equal(reveal.revealId, "reveal:search-reveal:selected:choice-1");
-    assert.equal(reveal.title, "Opponent revealed");
+    assert.equal(reveal.title, "Monkey D. Luffy revealed");
     assert.equal(reveal.cards[0]?.playerId, p1);
   });
 

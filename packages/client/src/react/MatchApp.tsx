@@ -214,6 +214,7 @@ export const MatchApp = ({
     currentPlayerId,
     playerSnapshot,
     matchScope,
+    board: displayBoard,
     revealWindowState,
     activeDismissedRevealIds: activeRevealWindowState.dismissed,
     cardModel,
