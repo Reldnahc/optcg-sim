@@ -300,7 +300,7 @@ test("decision modal card grids reserve enough width for five card choices", asy
 
   assert.match(
     styles,
-    /\.decision-card-grid\s*\{[^}]*min-width:\s*min\(100%,\s*calc\(\(var\(--card-height\) \* 5 \/ 1\.4\) \+ 32px\)\);/u,
+    /\.decision-card-grid\s*\{[^}]*min-width:\s*min\(calc\(100vw - 96px\),\s*calc\(\(var\(--card-width\) \* 5\) \+ 32px\)\);/u,
   );
 });
 
