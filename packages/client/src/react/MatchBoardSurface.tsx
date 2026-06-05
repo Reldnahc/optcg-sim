@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps } from "react";
 
 import type { MatchClientSessionState } from "../index.js";
 import { BoardLayout } from "./BoardLayout.js";
@@ -12,20 +12,15 @@ export interface MatchBoardSurfaceProps extends Omit<
 > {
   board: BoardLayoutProps["board"] | undefined;
   clientState: MatchClientSessionState | undefined;
-  lobbyDeckPanel?: ReactNode | undefined;
 }
 
 export const MatchBoardSurface = ({
   board,
   clientState,
-  lobbyDeckPanel,
   ...boardProps
 }: MatchBoardSurfaceProps): React.JSX.Element =>
   board === undefined ? (
-    <MatchLoadingPanel
-      clientState={clientState}
-      lobbyDeckPanel={lobbyDeckPanel}
-    />
+    <MatchLoadingPanel clientState={clientState} />
   ) : (
     <BoardLayout board={board} {...boardProps} />
   );

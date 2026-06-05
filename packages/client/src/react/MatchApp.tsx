@@ -370,22 +370,20 @@ export const MatchApp = ({
         onPreviewCard={previewHoveredCard}
         onMoveHandCard={moveHandCard}
         onViewCollection={onViewCollection}
-        lobbyDeckPanel={
-          lobbyState === undefined ? undefined : (
-            <LobbyDeckPanel
-              disabled={client.state.actionInFlight}
-              lobbyState={lobbyState}
-              loadouts={client.state.accountLoadouts}
-              loadoutsStatus={client.state.accountLoadoutsStatus}
-              loadoutsError={client.state.accountLoadoutsError}
-              onSubmitLoadout={client.submitLobbyLoadout}
-            />
-          )
-        }
         onBackgroundClick={() => {
           client.selectCard(undefined);
         }}
       />
+      {lobbyState === undefined ? null : (
+        <LobbyDeckPanel
+          disabled={client.state.actionInFlight}
+          lobbyState={lobbyState}
+          loadouts={client.state.accountLoadouts}
+          loadoutsStatus={client.state.accountLoadoutsStatus}
+          loadoutsError={client.state.accountLoadoutsError}
+          onSubmitLoadout={client.submitLobbyLoadout}
+        />
+      )}
       <MatchControlPanel
         errors={client.state.errors}
         globalActions={visibleGlobalActions}

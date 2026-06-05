@@ -53,7 +53,7 @@ describe("Poneglyph account client", () => {
                   preview_variant_index: null,
                   max_copies_of_single_card: 4,
                   main_count: 50,
-                  favorite: false,
+                  favorite: true,
                   loadout_id: "loadout-1",
                   don_deck_id: "don-1",
                   playmat_cosmetic_id: "playmat-1",
@@ -155,6 +155,7 @@ describe("Poneglyph account client", () => {
         name: "Enel",
         folderId: "folder-1",
         folderName: "Ranked",
+        favorite: true,
         updatedAt: "2026-06-02T00:00:00.000Z",
       },
       {
@@ -162,6 +163,7 @@ describe("Poneglyph account client", () => {
         name: "Unfiled Luffy",
         folderId: null,
         folderName: null,
+        favorite: false,
         updatedAt: "2026-06-03T00:00:00.000Z",
       },
     ]);

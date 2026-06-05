@@ -1,5 +1,4 @@
 import type { MatchClientSessionState } from "../controller.js";
-import type { ReactNode } from "react";
 import {
   isFirstPlayerSetupClientState,
   isLobbyClientState,
@@ -7,12 +6,10 @@ import {
 
 export interface MatchLoadingPanelProps {
   clientState: MatchClientSessionState | undefined;
-  lobbyDeckPanel?: ReactNode | undefined;
 }
 
 export const MatchLoadingPanel = ({
   clientState,
-  lobbyDeckPanel,
 }: MatchLoadingPanelProps): React.JSX.Element => {
   const firstPlayerSetup =
     clientState !== undefined && isFirstPlayerSetupClientState(clientState);
@@ -30,7 +27,6 @@ export const MatchLoadingPanel = ({
             ? "Loading match"
             : `Waiting in lobby ${lobbyId}`}
       </h1>
-      {lobbyId === undefined ? null : lobbyDeckPanel}
     </section>
   );
 };

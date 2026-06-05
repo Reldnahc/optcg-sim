@@ -38,6 +38,7 @@ const loadouts: readonly AccountLoadout[] = [
     name: "Enel Yellow",
     folderId: "folder-1",
     folderName: "Ranked",
+    favorite: true,
     updatedAt: "2026-06-02T00:00:00.000Z",
   },
   {
@@ -45,6 +46,7 @@ const loadouts: readonly AccountLoadout[] = [
     name: "Luffy Life",
     folderId: null,
     folderName: null,
+    favorite: false,
     updatedAt: "2026-06-01T00:00:00.000Z",
   },
 ];
@@ -61,7 +63,13 @@ describe("lobby deck panel", () => {
     );
 
     assert.match(html, /Account loadout/u);
+    assert.match(html, /modal-frame lobby-deck-modal/u);
+    assert.doesNotMatch(html, />Close</u);
     assert.match(html, /<optgroup label="Ranked">/u);
+    assert.match(
+      html,
+      /<option class="is-favorite-loadout" value="loadout-1"[^>]*>Enel Yellow<\/option>/u,
+    );
     assert.match(html, /Enel Yellow/u);
     assert.match(html, /<optgroup label="Unfiled">/u);
     assert.match(html, /Luffy Life/u);

@@ -142,12 +142,6 @@
 .lobby-deck-panel {
   display: grid;
   gap: 10px;
-  margin-top: 12px;
-}
-
-.lobby-deck-panel h2 {
-  margin: 0;
-  font-size: 13px;
 }
 
 .deck-hash-field {
@@ -157,7 +151,8 @@
 }
 
 .deck-hash-field textarea,
-.deck-hash-field input {
+.deck-hash-field input,
+.deck-hash-field select {
   min-height: 78px;
   max-height: 150px;
   border: 1px solid rgba(255, 255, 255, 0.36);
@@ -169,9 +164,15 @@
   word-break: break-all;
 }
 
-.deck-hash-field input {
+.deck-hash-field input,
+.deck-hash-field select {
   min-height: 34px;
   max-height: none;
+}
+
+.deck-hash-field option.is-favorite-loadout {
+  color: #ffd84d;
+  background: #3f3720;
 }
 
 .deck-hash-form button {

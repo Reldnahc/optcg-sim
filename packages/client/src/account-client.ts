@@ -6,6 +6,7 @@ export interface AccountLoadout {
   readonly name: string;
   readonly folderId: string | null;
   readonly folderName: string | null;
+  readonly favorite: boolean;
   readonly updatedAt: string;
 }
 
@@ -41,6 +42,7 @@ const normalizeLibraryDeck = (
     name: value.name,
     folderId: value.folder_id,
     folderName: folder?.name ?? null,
+    favorite: value.favorite,
     updatedAt: value.updated_at,
   };
 };
