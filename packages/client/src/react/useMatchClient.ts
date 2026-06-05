@@ -30,6 +30,7 @@ import {
   isFirstPlayerSetupClientState,
   isLobbyClientState,
   isMatchClientState,
+  quickPayActivateMainArmSurvivesDecision,
   setLobbyLocation,
   setMatchLocation,
   toggleCardCostSelectedInstanceId,
@@ -86,9 +87,7 @@ export const useMatchClient = ({
   const [activeCounterTargetChoice, setActiveCounterTargetChoice] =
     useState<CounterTargetChoice>();
   const autoSubmittedPayCostDecisionId = useRef<string | undefined>(undefined);
-  const lastSubmittedVisibleActionType = useRef<
-    ClientActionModel["type"] | undefined
-  >(undefined);
+  const quickPayActivateMainArmed = useRef(false);
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -268,7 +267,9 @@ export const useMatchClient = ({
       autoSubmittedPayCostDecisionId,
       legalActions: playerSnapshot?.actions ?? [],
       onVisibleActionSubmitted: (actionType) => {
-        lastSubmittedVisibleActionType.current = actionType;
+        if (actionType === "activateEffect") {
+          quickPayActivateMainArmed.current = true;
+        }
       },
       resetInteractionState,
       setActionInFlight,
@@ -300,14 +301,20 @@ export const useMatchClient = ({
     submitAction,
   ]);
   useEffect(() => {
-    if (pendingDecision?.type !== "payCost") {
-      lastSubmittedVisibleActionType.current = undefined;
+    if (
+      pendingDecision === undefined ||
+      !quickPayActivateMainArmSurvivesDecision(pendingDecision)
+    ) {
+      quickPayActivateMainArmed.current = false;
+      return;
+    }
+    if (pendingDecision.type === "chooseOptionalActivation") {
       return;
     }
     if (
       !quickPayActivateMainCosts ||
       actionInFlight ||
-      lastSubmittedVisibleActionType.current !== "activateEffect" ||
+      !quickPayActivateMainArmed.current ||
       autoSubmittedPayCostDecisionId.current === String(pendingDecision.id)
     ) {
       return;
@@ -320,7 +327,7 @@ export const useMatchClient = ({
       return;
     }
     autoSubmittedPayCostDecisionId.current = String(pendingDecision.id);
-    lastSubmittedVisibleActionType.current = undefined;
+    quickPayActivateMainArmed.current = false;
     void submitAction(actionIndex);
   }, [
     actionInFlight,

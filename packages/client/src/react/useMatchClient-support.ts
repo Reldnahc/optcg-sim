@@ -463,6 +463,13 @@ export const chooseNoDecisionLabel = (
 ): string =>
   decision.type === "selectTargets" ? "Choose no target" : "Choose no card";
 
+export const quickPayActivateMainArmSurvivesDecision = (
+  decision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined,
+): boolean =>
+  decision?.type === "chooseOptionalActivation" || decision?.type === "payCost";
+
 export const CONFIRM_DECISION_SELECTION_ACTION_INDEX = -2;
 export const CLEAR_DECISION_SELECTION_ACTION_INDEX = -3;
 export const CHOOSE_NO_DECISION_CARDS_ACTION_INDEX = -4;
