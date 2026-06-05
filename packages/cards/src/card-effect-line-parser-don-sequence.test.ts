@@ -32,6 +32,31 @@ it("parses DON deck-size rules text as legality metadata without a runtime block
   });
 });
 
+it("parses any-copy deck rules text as legality metadata without a runtime block", () => {
+  const result = parseCardEffectLineDetailed(
+    "Under the rules of this game, you may have any number of this card in your deck.",
+  );
+
+  expect(result).toEqual({
+    ok: true,
+    value: {
+      kind: "metadata",
+      metadata: {
+        type: "deckRestriction",
+        restriction: {
+          type: "anyCopiesOfThisCard",
+        },
+      },
+      evidence: [
+        "deckRestriction:ignored",
+        "deckRestriction:anyCopiesOfThisCard",
+        "target:thisCard",
+        "zone:deck",
+      ],
+    },
+  });
+});
+
 it("parses activate-main turn-count DON ramp and rested-DON attach compositionally", () => {
   const result = parseCardEffectLine(
     "[Activate: Main] [Once Per Turn] If it is your second turn or later, add up to 1 DON!! card from your DON!! deck and set it as active, and add up to 4 additional DON!! cards and rest them. Then, give up to 4 rested DON!! cards to 1 of your Characters.",

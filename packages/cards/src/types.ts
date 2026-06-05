@@ -176,6 +176,7 @@ export type PrimitiveEvidence =
   | "deckRestriction:ignored"
   | "deckRestriction:eventCostGte"
   | "deckRestriction:donDeckSize"
+  | "deckRestriction:anyCopiesOfThisCard"
   | "reveal:bothPlayers"
   | "reveal:chooserOnly"
   | "remaining:rest"
@@ -372,10 +373,14 @@ export interface ParsedMetadataLine {
   readonly kind: "metadata";
   readonly metadata: {
     readonly type: "deckRestriction";
-    readonly restriction: {
-      readonly type: "donDeckSize";
-      readonly count: number;
-    };
+    readonly restriction:
+      | {
+          readonly type: "donDeckSize";
+          readonly count: number;
+        }
+      | {
+          readonly type: "anyCopiesOfThisCard";
+        };
   };
   readonly evidence: readonly PrimitiveEvidence[];
 }

@@ -83,7 +83,10 @@ import {
   parseAttachedDonMarker,
   parseOncePerTurnMarker,
 } from "./markers/index.js";
-import { parseDonDeckSizeRuleLine } from "./metadata-lines/index.js";
+import {
+  parseAnyCopiesOfThisCardRuleLine,
+  parseDonDeckSizeRuleLine,
+} from "./metadata-lines/index.js";
 import {
   parseEffectLine,
   parseEffectLineDetailed,
@@ -304,7 +307,7 @@ export function parseCardEffectLineDetailed(
 }
 
 const defaultRegistry = {
-  metadataLines: [parseDonDeckSizeRuleLine],
+  metadataLines: [parseAnyCopiesOfThisCardRuleLine, parseDonDeckSizeRuleLine],
   entryPoints: [
     parseRulesStartOfGameEntryPoint,
     parseSupportedEntryPoint,
