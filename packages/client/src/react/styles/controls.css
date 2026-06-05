@@ -141,9 +141,12 @@
 
 .lobby-deck-modal {
   width: min(620px, calc(100vw - 32px));
-  height: min(850px, calc(100vh - 24px));
-  max-height: calc(100vh - 24px);
+  height: auto;
+  max-height: min(850px, calc(100vh - 24px));
   overflow: hidden;
+  transition:
+    height 120ms ease,
+    max-height 120ms ease;
 }
 
 .lobby-deck-panel {

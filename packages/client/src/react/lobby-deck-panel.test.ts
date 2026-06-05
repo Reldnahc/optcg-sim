@@ -120,7 +120,11 @@ describe("lobby deck panel", () => {
 
     assert.match(
       styles,
-      /\.lobby-deck-modal\s*\{[^}]*height:\s*min\(850px,\s*calc\(100vh - 24px\)\);/u,
+      /\.lobby-deck-modal\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(850px,\s*calc\(100vh - 24px\)\);/u,
+    );
+    assert.match(
+      styles,
+      /\.lobby-deck-modal\s*\{[^}]*transition:\s*height 120ms ease,\s*max-height 120ms ease;/u,
     );
     assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(
