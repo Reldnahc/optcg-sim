@@ -340,7 +340,8 @@ export const quickPayActivateMainCostActionIndex = (
   if (
     paymentAction === undefined ||
     paymentAction.type !== "respondToDecision" ||
-    paymentAction.decisionPayment !== undefined
+    (paymentAction.decisionPayment !== undefined &&
+      paymentAction.decisionPayment.kind !== "cardCost")
   ) {
     return undefined;
   }

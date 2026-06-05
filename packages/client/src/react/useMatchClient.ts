@@ -327,7 +327,6 @@ export const useMatchClient = ({
       return;
     }
     autoSubmittedPayCostDecisionId.current = String(pendingDecision.id);
-    quickPayActivateMainArmed.current = false;
     void submitAction(actionIndex);
   }, [
     actionInFlight,

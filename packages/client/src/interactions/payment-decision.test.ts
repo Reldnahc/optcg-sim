@@ -759,7 +759,7 @@ describe("generic no-choice payment interaction", () => {
     );
   });
 
-  test("quick activate-main payment does not pick arbitrary card costs", () => {
+  test("quick activate-main payment submits a single structured card cost", () => {
     const actions: readonly ClientActionModel[] = [
       {
         index: 1,
@@ -776,6 +776,44 @@ describe("generic no-choice payment interaction", () => {
           operation: "trash",
           chooseLabel: "Choose card to trash",
           selectedCardInstanceIds: ["hand-1" as InstanceId],
+        },
+      },
+    ];
+
+    assert.equal(
+      quickPayActivateMainCostActionIndex(payCostDecision, actions),
+      2,
+    );
+  });
+
+  test("quick activate-main payment does not pick among card-cost alternatives", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Return 1 Character",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "returnToHand",
+          chooseLabel: "Choose Character to return to hand",
+          selectedCardInstanceIds: ["character-1" as InstanceId],
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Return 1 Character",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "returnToHand",
+          chooseLabel: "Choose Character to return to hand",
+          selectedCardInstanceIds: ["character-2" as InstanceId],
         },
       },
     ];
