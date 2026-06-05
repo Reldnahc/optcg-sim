@@ -3,6 +3,15 @@ import { describe, it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
+const replacementInstead = (
+  result: NonNullable<ReturnType<typeof parseCardEffectLine>>,
+) => {
+  if (!("block" in result) || result.block.effect.type !== "replacement") {
+    assert.fail("expected replacement effect block");
+  }
+  return result.block.effect.instead;
+};
+
 describe("replacement effect parser", () => {
   it("parses opponent field-removal replacement into reusable trigger, target, filter, and instead primitives", () => {
     const target = {
@@ -318,6 +327,151 @@ describe("replacement effect parser", () => {
       "composition:entryExpression",
     ] as const) {
       assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
+  it("parses opponent effect field-removal replacement into reusable return-DON instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may return 1 DON!! card from your field to your DON!! deck instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block.effect, {
+      type: "replacement",
+      when: {
+        type: "wouldMoveZone",
+        from: "characterArea",
+        sourceKind: "cardEffect",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            power: { max: 7000 },
+          },
+        },
+      },
+      instead: {
+        type: "returnDon",
+        count: 1,
+        player: "self",
+      },
+    });
+    for (const evidence of [
+      "replacement:wouldMoveZone",
+      "replacementSource:cardEffect",
+      "filter:power",
+      "instruction:returnDon",
+      "zone:donDeck",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
+  it("parses opponent effect field-removal replacement into reusable unfiltered hand-trash instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may trash 1 card from your hand instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(replacementInstead(result), {
+      type: "trashFromHand",
+      player: "self",
+      chooser: "self",
+      count: 1,
+    });
+    assert.equal(result.evidence.includes("instruction:trashFromHand"), true);
+  });
+
+  it("parses opponent effect field-removal replacement into reusable trash-self instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If your {Straw Hat Crew} type Character other than this Character would be removed from the field by your opponent's effect, you may trash this Character instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(replacementInstead(result), {
+      type: "trash",
+      target: { type: "self" },
+    });
+    for (const evidence of [
+      "filter:type",
+      "filter:excludeSelf",
+      "instruction:trash",
+      "target:thisCharacter",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
+  it("parses opponent effect field-removal replacement into reusable leader power modifier instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may give your Leader −2000 power during this turn instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(replacementInstead(result), {
+      type: "modifyPower",
+      target: { type: "myLeader" },
+      value: -2000,
+      duration: { type: "thisTurn" },
+    });
+    for (const evidence of [
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "modifier:negativePower",
+      "duration:thisTurn",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
+  it("parses self K.O. replacement into filtered hand-trash instead primitives", () => {
+    const characterResult = parseCardEffectLine(
+      "If this Character would be K.O.'d, you may trash 1 Character card with a power of 6000 or less from your hand instead.",
+    );
+    if (characterResult === undefined || !("block" in characterResult)) {
+      assert.fail("expected parsed Character hand-trash replacement");
+    }
+    assert.deepEqual(replacementInstead(characterResult), {
+      type: "trashFromHand",
+      player: "self",
+      chooser: "self",
+      count: 1,
+      filter: {
+        categories: ["character"],
+        power: { max: 6000 },
+      },
+    });
+
+    const eventResult = parseCardEffectLine(
+      "If this Character would be K.O.'d, you may trash 1 Event from your hand instead.",
+    );
+    if (eventResult === undefined || !("block" in eventResult)) {
+      assert.fail("expected parsed Event hand-trash replacement");
+    }
+    assert.deepEqual(replacementInstead(eventResult), {
+      type: "trashFromHand",
+      player: "self",
+      chooser: "self",
+      count: 1,
+      filter: { categories: ["event"] },
+    });
+    for (const evidence of [
+      "replacement:wouldBeKOd",
+      "instruction:trashFromHand",
+      "filter:category:character",
+      "filter:power",
+    ] as const) {
+      assert.equal(characterResult.evidence.includes(evidence), true, evidence);
     }
   });
 });

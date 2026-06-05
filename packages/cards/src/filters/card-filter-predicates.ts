@@ -582,9 +582,21 @@ function parsePowerPredicate(
   current: CardFilter,
   options: CardFilterPredicateParseOptions,
 ): ReturnType<PredicateParser> {
+  const powerOfThresholdMatch =
+    /^a (?<base>base )?power of (?<value>0|[1-9]\d*) (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
+      text,
+    );
+  const normalizedPowerOfThreshold =
+    powerOfThresholdMatch === null
+      ? text
+      : `${powerOfThresholdMatch.groups?.["value"] ?? ""} ${
+          powerOfThresholdMatch.groups?.["base"] ?? ""
+        }power ${powerOfThresholdMatch.groups?.["direction"] ?? ""} ${
+          powerOfThresholdMatch.groups?.["thresholdRest"] ?? ""
+        }`.trim();
   const thresholdMatch =
     /^(?<value>0|[1-9]\d*) (?<base>base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
-      text,
+      normalizedPowerOfThreshold,
     );
   const thresholdValueText = thresholdMatch?.groups?.["value"];
   const isBasePower = thresholdMatch?.groups?.["base"] !== undefined;
@@ -618,8 +630,20 @@ function parsePowerPredicate(
     };
   }
 
+  const powerOfExactMatch =
+    /^a (?<base>base )?power of (?<value>0|[1-9]\d*)\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const normalizedPowerOfExact =
+    powerOfExactMatch === null
+      ? text
+      : `${powerOfExactMatch.groups?.["value"] ?? ""} ${
+          powerOfExactMatch.groups?.["base"] ?? ""
+        }power ${powerOfExactMatch.groups?.["rest"] ?? ""}`.trim();
   const match =
-    /^(?<value>0|[1-9]\d*) (?<base>base )?power\b\s*(?<rest>.*)$/i.exec(text);
+    /^(?<value>0|[1-9]\d*) (?<base>base )?power\b\s*(?<rest>.*)$/i.exec(
+      normalizedPowerOfExact,
+    );
   const valueText = match?.groups?.["value"];
   const isExactBasePower = match?.groups?.["base"] !== undefined;
   const restText = match?.groups?.["rest"];

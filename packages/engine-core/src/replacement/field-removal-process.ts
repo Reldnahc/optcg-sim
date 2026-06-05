@@ -8,26 +8,21 @@ import type {
   GameState,
   PlayerId,
   ReplacementProcess,
-  SelectCardsDecision,
-  SelectTargetsDecision,
-  TargetCandidate,
   TimingWindowId,
 } from "@optcg/types";
 
 import {
   appendEvent,
   rebaseEvents,
-  toEngineResult,
   toDecisionId,
+  toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { toCardRef } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
+import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { executeNoChoiceEffectPrimitive } from "../runtime/primitives/draw.js";
-import {
-  executeMoveCardsPrimitive,
-  isSupportedLifeTopToHandEffect,
-} from "../effect-runtime-move-cards.js";
+import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
+import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import {
   detectSupportedFieldRemovalReplacementCandidate,
   detectSupportedSelectedTargetKoReplacementCandidate,
@@ -38,12 +33,27 @@ import {
   consumeOncePerTurn,
   toOncePerTurnKey,
 } from "../rules/once-per-turn.js";
-import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 import {
   fieldRemovalProcessTargets,
   withFieldRemovalProcessTargets,
 } from "./field-removal-targets.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
+import {
+  isSupportedModifyLeaderPowerInsteadEffect,
+  isSupportedRestSelfInsteadEffect,
+  isSupportedTrashFromHandInsteadEffect,
+  isSupportedTrashSelfInsteadEffect,
+  replacementOptionLabel,
+} from "./instead-effects.js";
+import type {
+  EngineInternalReplacementAppliedEventPayload,
+  PendingReplacementPayCostInsteadPayload,
+} from "./continuation-payloads.js";
+import { createReplacementPayCostDecision } from "./pay-cost-decision.js";
+import {
+  createReplacementRestTargetDecision,
+  createReplacementTrashFromHandDecision,
+} from "./field-removal-decisions.js";
 
 export type {
   DetectFieldRemovalReplacementCandidateResult,
@@ -98,13 +108,6 @@ type LocatedReplacementSource = {
 type LocatedKoTarget = {
   playerId: PlayerId;
   card: CardInstance;
-};
-
-type EngineInternalReplacementAppliedEventPayload = {
-  processId: ReplacementProcess["id"];
-  replacementId: string;
-  previousPayloadHash: string;
-  transformedPayloadHash: string;
 };
 
 interface PendingReplacementRestInsteadPayload {
@@ -430,151 +433,6 @@ export const pauseSelectedTargetKoReplacementProcess = (
 export const pauseFieldRemovalReplacementProcess =
   pauseSelectedTargetKoReplacementProcess;
 
-const plural = (
-  count: number,
-  singular: string,
-  pluralLabel: string,
-): string => (count === 1 ? singular : pluralLabel);
-
-const replacementOptionLabel = (
-  candidate: SelectedTargetKoReplacementCandidate,
-): string => {
-  const instead = candidate.replacementEffect.instead;
-  if (instead.type === "draw") {
-    return `Draw ${String(instead.count)} ${plural(
-      instead.count,
-      "card",
-      "cards",
-    )} instead`;
-  }
-  if (isSupportedLifeTopToHandEffect(instead)) {
-    return `Add ${String(instead.count)} ${plural(
-      instead.count,
-      "card",
-      "cards",
-    )} from Life to hand instead`;
-  }
-  if (isSupportedRestOwnCardsInsteadEffect(instead)) {
-    return `Rest ${String(instead.target.request.min)} ${plural(
-      instead.target.request.min,
-      "card",
-      "cards",
-    )} instead`;
-  }
-  if (isSupportedRestSelfInsteadEffect(instead)) {
-    return "Rest this Character instead";
-  }
-  if (isSupportedTrashFromHandInsteadEffect(instead)) {
-    return `Trash ${String(instead.count)} ${plural(
-      instead.count,
-      "card",
-      "cards",
-    )} from hand instead`;
-  }
-  return "Use replacement effect";
-};
-
-const isSupportedRestOwnCardsInsteadEffect = (
-  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-): effect is Extract<
-  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-  { type: "rest" }
-> & {
-  target: Extract<
-    Extract<
-      SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-      { type: "rest" }
-    >["target"],
-    { type: "chooseFromZones" }
-  >;
-} =>
-  effect.type === "rest" &&
-  effect.target.type === "chooseFromZones" &&
-  effect.target.request.timing === "onResolution" &&
-  effect.target.request.chooser === "self" &&
-  effect.target.request.player === "self" &&
-  effect.target.request.filter === undefined &&
-  effect.target.request.min === effect.target.request.max &&
-  effect.target.request.min > 0 &&
-  !effect.target.request.allowFewerIfUnavailable &&
-  effect.target.request.visibility === "public";
-
-const isSupportedRestSelfInsteadEffect = (
-  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-): effect is Extract<
-  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-  { type: "rest" }
-> & {
-  target: Extract<
-    Extract<
-      SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-      { type: "rest" }
-    >["target"],
-    { type: "self" }
-  >;
-} => effect.type === "rest" && effect.target.type === "self";
-
-const isSupportedTrashFromHandInsteadEffect = (
-  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-): effect is Extract<
-  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-  { type: "trashFromHand" }
-> =>
-  effect.type === "trashFromHand" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
-  effect.filter === undefined &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0;
-
-const replacementRestCandidateIsActive = (
-  state: GameState,
-  target: CardRef,
-): boolean => {
-  const located = findKoTargetByInstanceId(state, target.instanceId);
-  if (located !== null) {
-    return located.card.state !== "rested";
-  }
-  const player = state.players[target.playerId];
-  if (player === undefined) {
-    return false;
-  }
-  if (
-    target.zone?.zone === "leaderArea" &&
-    player.leader.instanceId === target.instanceId
-  ) {
-    return player.leader.state !== "rested";
-  }
-  if (target.zone?.zone === "costArea") {
-    return player.costArea.some(
-      (card) =>
-        card.instanceId === target.instanceId && card.state !== "rested",
-    );
-  }
-  return false;
-};
-
-const replacementRestCandidates = (
-  state: GameState,
-  candidate: SelectedTargetKoReplacementCandidate,
-): TargetCandidate[] => {
-  const instead = candidate.replacementEffect.instead;
-  if (!isSupportedRestOwnCardsInsteadEffect(instead)) {
-    return [];
-  }
-  const resolved = resolvePublicTargetCandidatesForRequest(
-    state,
-    instead.target.request,
-    { sourceControllerId: candidate.controllerId },
-  );
-  if (!resolved.ok) {
-    return [];
-  }
-  return resolved.candidates.filter((target) =>
-    replacementRestCandidateIsActive(state, target.card),
-  );
-};
-
 const acceptedReplacementError = (
   effectId: string,
   reason: "missing-card" | "unsupported-effect-shape",
@@ -782,6 +640,12 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     candidate,
   );
   if (trashFromHandDecision !== undefined) {
+    const trashInstead = candidate.replacementEffect.instead;
+    if (!isSupportedTrashFromHandInsteadEffect(trashInstead)) {
+      return {
+        error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
+      };
+    }
     appendEvent(
       state,
       events,
@@ -835,8 +699,71 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
                 count: trashFromHandDecision.request.min,
+                ...(trashInstead.filter === undefined
+                  ? {}
+                  : { filter: trashInstead.filter }),
                 ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
               } satisfies PendingReplacementTrashFromHandInsteadPayload,
+            },
+          },
+        ],
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      process: usedProcess,
+    };
+  }
+  const payCostDecision = createReplacementPayCostDecision(
+    state,
+    process,
+    candidate,
+  );
+  if (payCostDecision !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: payCostDecision.id,
+        decisionType: payCostDecision.type,
+        playerId: payCostDecision.playerId,
+      },
+      payCostDecision.visibility,
+    );
+    const created = events[events.length - 1];
+    if (created !== undefined) {
+      created.causedBy = payCostDecision.causedBy;
+    }
+    return {
+      state: {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        pendingDecision: payCostDecision,
+        replacementState: [
+          ...state.replacementState.filter(
+            (candidateState) => candidateState.processId !== process.id,
+          ),
+          {
+            processId: process.id,
+            type: process.type,
+            usedReplacementIds: usedProcess.usedReplacementIds,
+            payload: {
+              ...(typeof process.payload === "object" &&
+              process.payload !== null
+                ? process.payload
+                : {}),
+              pendingReplacementPayCostInstead: {
+                decisionId: payCostDecision.id,
+                effectBlockId: candidate.effectBlockId,
+                replacementId: candidate.id,
+                source: candidate.source,
+                ...(process.target === undefined
+                  ? {}
+                  : { target: process.target }),
+                coveredTargets: [...coveredTargets],
+                causedBy: process.causedBy,
+                controllerId: candidate.controllerId,
+                cost: payCostDecision.cost,
+              } satisfies PendingReplacementPayCostInsteadPayload,
             },
           },
         ],
@@ -936,87 +863,6 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
 export const executeAcceptedFieldRemovalReplacementProcess =
   executeAcceptedSelectedTargetKoReplacementProcess;
 
-const createReplacementRestTargetDecision = (
-  state: GameState,
-  process: ReplacementProcess,
-  candidate: SelectedTargetKoReplacementCandidate,
-): SelectTargetsDecision | undefined => {
-  const instead = candidate.replacementEffect.instead;
-  if (!isSupportedRestOwnCardsInsteadEffect(instead)) {
-    return undefined;
-  }
-  const candidates = replacementRestCandidates(state, candidate);
-  if (candidates.length < instead.target.request.min) {
-    return undefined;
-  }
-  if (state.players[candidate.controllerId] === undefined) {
-    return undefined;
-  }
-  return {
-    id: toDecisionId(
-      `decision:replacementRestTargets:${process.id}:${candidate.id}`,
-    ),
-    type: "selectTargets",
-    playerId: candidate.controllerId,
-    prompt: `Rest ${String(instead.target.request.min)} ${plural(
-      instead.target.request.min,
-      "card",
-      "cards",
-    )} instead.`,
-    causedBy: { type: "replacement", replacementId: candidate.id },
-    visibility: { type: "public" },
-    request: instead.target.request,
-    candidates,
-  };
-};
-
-const createReplacementTrashFromHandDecision = (
-  state: GameState,
-  process: ReplacementProcess,
-  candidate: SelectedTargetKoReplacementCandidate,
-): SelectCardsDecision | undefined => {
-  const instead = candidate.replacementEffect.instead;
-  if (!isSupportedTrashFromHandInsteadEffect(instead)) {
-    return undefined;
-  }
-  const player = state.players[candidate.controllerId];
-  if (player === undefined || player.hand.length < instead.count) {
-    return undefined;
-  }
-  const visibility = {
-    type: "private",
-    playerId: candidate.controllerId,
-  } as const;
-  return {
-    id: toDecisionId(
-      `decision:replacementTrashFromHand:${process.id}:${candidate.id}`,
-    ),
-    type: "selectCards",
-    playerId: candidate.controllerId,
-    prompt: `Trash ${String(instead.count)} ${plural(
-      instead.count,
-      "card",
-      "cards",
-    )} from hand instead.`,
-    causedBy: { type: "replacement", replacementId: candidate.id },
-    visibility,
-    request: {
-      timing: "onResolution",
-      chooser: "self",
-      player: "self",
-      zone: "hand",
-      min: instead.count,
-      max: instead.count,
-      allowFewerIfUnavailable: false,
-      visibility: "privateToChooser",
-    },
-    candidates: player.hand.map((card) => ({
-      card: toCardRef(card, candidate.controllerId),
-      visibility,
-    })),
-  };
-};
-
 const executeReplacementInsteadEffect = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -1031,6 +877,64 @@ const executeReplacementInsteadEffect = (
     const source = currentPublicFieldRefForInstance(state, entry.source);
     const rested = restFieldObjects(state, [source ?? entry.source]);
     return toEngineResult(rested.state, []);
+  }
+  if (isSupportedModifyLeaderPowerInsteadEffect(effect)) {
+    const records = createContinuousRecordsForResolvedEffect(
+      state,
+      entry,
+      effect,
+    );
+    if (records === null) {
+      return toEngineResult(
+        state,
+        [],
+        [
+          acceptedReplacementError(
+            entry.effectBlockId,
+            "unsupported-effect-shape",
+          ),
+        ],
+      );
+    }
+    return toEngineResult(
+      {
+        ...state,
+        continuousEffects: [...state.continuousEffects, ...records],
+      },
+      [],
+    );
+  }
+  if (isSupportedTrashSelfInsteadEffect(effect)) {
+    const source = currentPublicFieldRefForInstance(state, entry.source);
+    const playerId = source?.playerId ?? entry.controllerId;
+    const player = state.players[playerId];
+    const sourceZone = source?.zone?.zone;
+    const card =
+      sourceZone === "characterArea"
+        ? player?.characters.find(
+            (candidate) => candidate.instanceId === entry.source.instanceId,
+          )
+        : undefined;
+    if (player === undefined || card === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        [acceptedReplacementError(entry.effectBlockId, "missing-card")],
+      );
+    }
+    const events: EngineEvent[] = [];
+    const moved = moveConcreteCardsToTrash(state, events, [card], {
+      cardMovedPayloadShape: "publicZoneNames",
+      cardMovedVisibility: { type: "public" },
+      cardTrashedVisibility: { type: "public" },
+      causedBy: entry.causedBy,
+      clearAttachedDon: true,
+      emitCardTrashed: true,
+      playerId,
+      reason: "trashFromField",
+      sourceZone: "characterArea",
+    });
+    return toEngineResult(moved.state, events);
   }
   return executeNoChoiceEffectPrimitive(state, entry, effect, {
     incrementStateSeq: false,

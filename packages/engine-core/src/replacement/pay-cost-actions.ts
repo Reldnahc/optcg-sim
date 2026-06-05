@@ -1,62 +1,36 @@
 import type {
   Action,
-  CardInstance,
   CardRef,
-  CausalityRef,
-  CardFilter,
-  EffectQueueEntry,
+  Cost,
   EngineError,
   EngineEvent,
   EngineResult,
   GameState,
-  LegalAction,
   PlayerId,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
-import { toCardRef, zonesEqual } from "../actions/state.js";
-import { cardMatchesHandSelectionFilter } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
-import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import {
-  consumeOncePerTurn,
-  toOncePerTurnKey,
-} from "../rules/once-per-turn.js";
+  applyReturnDonPayment,
+  getReturnDonEligibleInstanceIds,
+} from "../runtime/primitives/return-don.js";
 import {
   isCausalityRef,
   replacementProcessFromStoredPayload,
 } from "./field-removal-targets.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
-
-interface PendingReplacementTrashFromHandInsteadPayload {
-  decisionId: string;
-  effectBlockId: EffectQueueEntry["effectBlockId"];
-  replacementId: string;
-  source: CardRef;
-  target?: CardRef;
-  coveredTargets?: CardRef[];
-  causedBy: CausalityRef;
-  controllerId: PlayerId;
-  count: number;
-  filter?: CardFilter;
-  oncePerTurn?: {
-    cardInstanceId: CardInstance["instanceId"];
-    effectId: EffectQueueEntry["effectBlockId"];
-    turnNumber: GameState["turn"]["globalTurn"];
-  };
-}
-
-interface EngineInternalReplacementAppliedEventPayload {
-  processId: string;
-  replacementId: string;
-  previousPayloadHash: string;
-  transformedPayloadHash: string;
-}
+import type {
+  EngineInternalReplacementAppliedEventPayload,
+  PendingReplacementPayCostInsteadPayload,
+} from "./continuation-payloads.js";
 
 type ReplacementDecisionResult = {
   completedPayload: unknown;
   result: EngineResult;
 };
+
+type ReturnDonCost = Extract<Cost, { type: "returnDon" }>;
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -76,22 +50,6 @@ const isCardRef = (value: unknown): value is CardRef => {
   );
 };
 
-const cardRefsEqual = (left: CardRef, right: CardRef): boolean =>
-  left.instanceId === right.instanceId &&
-  left.cardId === right.cardId &&
-  left.playerId === right.playerId &&
-  ((left.zone === undefined && right.zone === undefined) ||
-    (left.zone !== undefined &&
-      right.zone !== undefined &&
-      zonesEqual(left.zone, right.zone)));
-
-const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
-  targets.some((target, index) =>
-    targets
-      .slice(index + 1)
-      .some((candidate) => cardRefsEqual(target, candidate)),
-  );
-
 const cardRefArrayFromPayloadValue = (value: unknown): CardRef[] | undefined =>
   value === undefined
     ? undefined
@@ -99,48 +57,40 @@ const cardRefArrayFromPayloadValue = (value: unknown): CardRef[] | undefined =>
       ? value
       : undefined;
 
-const pendingReplacementOncePerTurnFromPayload = (
+const returnDonCostFromPayloadValue = (
   value: unknown,
-): PendingReplacementTrashFromHandInsteadPayload["oncePerTurn"] | undefined => {
-  if (value === undefined) {
+): ReturnDonCost | undefined => {
+  if (typeof value !== "object" || value === null || !("type" in value)) {
     return undefined;
   }
-  if (typeof value !== "object" || value === null) {
+  if (value.type !== "returnDon" || !("count" in value)) {
     return undefined;
   }
-  const candidate = value as Record<string, unknown>;
-  if (
-    typeof candidate["cardInstanceId"] !== "string" ||
-    typeof candidate["effectId"] !== "string" ||
-    typeof candidate["turnNumber"] !== "number"
-  ) {
+  const count = value.count;
+  if (typeof count !== "number" || !Number.isInteger(count) || count <= 0) {
     return undefined;
   }
-  return {
-    cardInstanceId: candidate["cardInstanceId"] as CardInstance["instanceId"],
-    effectId: candidate["effectId"] as EffectQueueEntry["effectBlockId"],
-    turnNumber: candidate["turnNumber"],
-  };
+  return { type: "returnDon", count };
 };
 
-const pendingReplacementTrashFromHandInsteadFromPayload = (
+const pendingReplacementPayCostInsteadFromPayload = (
   payload: unknown,
 ):
-  | (PendingReplacementTrashFromHandInsteadPayload & { decisionId: string })
+  | (PendingReplacementPayCostInsteadPayload & { decisionId: string })
   | undefined => {
   if (
     typeof payload !== "object" ||
     payload === null ||
-    !("pendingReplacementTrashFromHandInstead" in payload)
+    !("pendingReplacementPayCostInstead" in payload)
   ) {
     return undefined;
   }
-  const pending = payload.pendingReplacementTrashFromHandInstead;
+  const pending = payload.pendingReplacementPayCostInstead;
   if (typeof pending !== "object" || pending === null) {
     return undefined;
   }
   const candidate = pending as Record<string, unknown>;
-  const count = candidate["count"];
+  const cost = returnDonCostFromPayloadValue(candidate["cost"]);
   if (
     typeof candidate["decisionId"] !== "string" ||
     typeof candidate["replacementId"] !== "string" ||
@@ -148,9 +98,7 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
     typeof candidate["controllerId"] !== "string" ||
     !isCausalityRef(candidate["causedBy"]) ||
     !isCardRef(candidate["source"]) ||
-    !Number.isInteger(count) ||
-    typeof count !== "number" ||
-    count <= 0
+    cost === undefined
   ) {
     return undefined;
   }
@@ -167,40 +115,30 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
   ) {
     return undefined;
   }
-  const oncePerTurn = pendingReplacementOncePerTurnFromPayload(
-    candidate["oncePerTurn"],
-  );
-  if (candidate["oncePerTurn"] !== undefined && oncePerTurn === undefined) {
-    return undefined;
-  }
   return {
     decisionId: candidate["decisionId"],
     replacementId: candidate["replacementId"],
     effectBlockId: candidate[
       "effectBlockId"
-    ] as EffectQueueEntry["effectBlockId"],
+    ] as PendingReplacementPayCostInsteadPayload["effectBlockId"],
     controllerId: candidate["controllerId"] as PlayerId,
     source: candidate["source"],
     causedBy: candidate["causedBy"],
-    count,
-    ...(candidate["filter"] === undefined
-      ? {}
-      : { filter: candidate["filter"] as CardFilter }),
+    cost,
     ...(target === undefined ? {} : { target }),
     ...(coveredTargets === undefined ? {} : { coveredTargets }),
-    ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
   };
 };
 
-const pendingReplacementTrashFromHandPayload = (
+const pendingReplacementPayCostPayload = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]> | undefined,
 ): {
   processId: string;
   processType: GameState["replacementState"][number]["type"];
-  payload: PendingReplacementTrashFromHandInsteadPayload;
+  payload: PendingReplacementPayCostInsteadPayload;
 } | null => {
-  if (decision?.type !== "selectCards") {
+  if (decision?.type !== "payCost") {
     return null;
   }
   const processState = state.replacementState.find((candidate) => {
@@ -208,15 +146,15 @@ const pendingReplacementTrashFromHandPayload = (
     return (
       typeof payload === "object" &&
       payload !== null &&
-      "pendingReplacementTrashFromHandInstead" in payload &&
-      pendingReplacementTrashFromHandInsteadFromPayload(payload)?.decisionId ===
+      "pendingReplacementPayCostInstead" in payload &&
+      pendingReplacementPayCostInsteadFromPayload(payload)?.decisionId ===
         decision.id
     );
   });
   const payload =
     processState === undefined
       ? undefined
-      : pendingReplacementTrashFromHandInsteadFromPayload(processState.payload);
+      : pendingReplacementPayCostInsteadFromPayload(processState.payload);
   return processState === undefined || payload === undefined
     ? null
     : {
@@ -238,85 +176,63 @@ const replacementPayloadWithoutPending = (
     return payload;
   }
   const rest = { ...(payload as Record<string, unknown>) };
-  delete rest["pendingReplacementTrashFromHandInstead"];
+  delete rest["pendingReplacementPayCostInstead"];
   return rest;
 };
 
-export const isReplacementTrashFromHandDecision = (
-  state: GameState,
-  decision: NonNullable<GameState["pendingDecision"]> | undefined,
-): boolean => pendingReplacementTrashFromHandPayload(state, decision) !== null;
-
-export const getReplacementTrashFromHandLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): LegalAction[] => {
-  const decision = state.pendingDecision;
-  const pending = pendingReplacementTrashFromHandPayload(state, decision);
-  if (
-    decision?.type !== "selectCards" ||
-    pending === null ||
-    decision.playerId !== playerId
-  ) {
-    return [];
-  }
-  const player = state.players[playerId];
-  if (player === undefined || player.hand.length < pending.payload.count) {
-    return [];
-  }
-  return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: {
-        type: "cards",
-        cards: player.hand
-          .slice(0, pending.payload.count)
-          .map((card) => toCardRef(card, playerId)),
-      },
-    },
-  ];
-};
-
-export const applyReplacementTrashFromHandDecisionResponse = (
+export const applyReplacementPayCostDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
 ): ReplacementDecisionResult | null => {
   const decision = state.pendingDecision;
-  const pending = pendingReplacementTrashFromHandPayload(state, decision);
-  if (decision?.type !== "selectCards" || pending === null) {
+  const pending = pendingReplacementPayCostPayload(state, decision);
+  if (decision?.type !== "payCost" || pending === null) {
     return null;
   }
-  if (action.response.type !== "cards") {
+  const cost = pending.payload.cost;
+  if (cost.type !== "returnDon") {
     return {
       completedPayload: undefined,
       result: toEngineResult(
         state,
         [],
-        invalidDecision("Response type must be cards for selectCards."),
+        invalidDecision("Replacement payCost type is unsupported."),
       ),
     };
   }
-  const cards = (action.response as { cards?: unknown }).cards;
-  if (!Array.isArray(cards) || !cards.every(isCardRef)) {
+  if (action.response.type !== "payment") {
     return {
       completedPayload: undefined,
       result: toEngineResult(
         state,
         [],
-        invalidDecision("Response cards must be CardRef values."),
+        invalidDecision("Response type must be payment for payCost."),
       ),
     };
   }
-  if (cards.length !== pending.payload.count || hasDuplicateTargets(cards)) {
+  if (action.response.optionId !== "returnDon") {
     return {
       completedPayload: undefined,
       result: toEngineResult(
         state,
         [],
-        invalidDecision(
-          "Selected cards must match the replacement trash-from-hand count.",
-        ),
+        invalidDecision("Payment option mismatch."),
+      ),
+    };
+  }
+  const selected = action.response.selectedDonInstanceIds;
+  if (
+    selected === undefined ||
+    selected.length !== cost.count ||
+    new Set(selected).size !== selected.length ||
+    action.response.selectedCardInstanceIds !== undefined
+  ) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(
+        state,
+        [],
+        invalidDecision("Payment DON!! selection is invalid."),
       ),
     };
   }
@@ -331,32 +247,31 @@ export const applyReplacementTrashFromHandDecisionResponse = (
       ),
     };
   }
-  const selectedCards: CardInstance[] = [];
-  for (const ref of cards) {
-    const card = player.hand.find((candidate) =>
-      cardRefsEqual(toCardRef(candidate, pending.payload.controllerId), ref),
-    );
-    if (
-      card === undefined ||
-      !cardMatchesHandSelectionFilter(
+  const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
+  if (!selected.every((donId) => eligibleIds.has(donId))) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(
         state,
-        pending.payload.controllerId,
-        card,
-        pending.payload.filter,
-      )
-    ) {
-      return {
-        completedPayload: undefined,
-        result: toEngineResult(
-          state,
-          [],
-          invalidDecision(
-            "Selected cards must be current cards in the replacement controller's hand.",
-          ),
-        ),
-      };
-    }
-    selectedCards.push(card);
+        [],
+        invalidDecision("Payment DON!! selection is invalid."),
+      ),
+    };
+  }
+  const returned = applyReturnDonPayment({
+    player,
+    playerId: pending.payload.controllerId,
+    selectedDonIds: selected,
+  });
+  if (returned === null) {
+    return {
+      completedPayload: undefined,
+      result: toEngineResult(
+        state,
+        [],
+        invalidDecision("Payment DON!! selection is invalid."),
+      ),
+    };
   }
 
   const events: EngineEvent[] = [];
@@ -369,7 +284,6 @@ export const applyReplacementTrashFromHandDecisionResponse = (
       decisionType: decision.type,
       playerId: decision.playerId,
       responseType: action.response.type,
-      selectedCount: cards.length,
     },
     decision.visibility,
   );
@@ -377,23 +291,27 @@ export const applyReplacementTrashFromHandDecisionResponse = (
   if (resolved !== undefined) {
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
-  const moved = moveConcreteCardsToTrash(state, events, selectedCards, {
-    cardMovedPayloadShape: "publicZoneNames",
-    cardMovedVisibility: { type: "public" },
-    cardTrashedVisibility: { type: "public" },
-    causedBy: { type: "decision", decisionId: decision.id },
-    clearAttachedDon: true,
-    emitCardTrashed: true,
-    playerId: pending.payload.controllerId,
-    reason: "trashFromHand",
-    sourceZone: "hand",
-  });
+  appendEvent(
+    state,
+    events,
+    "costPaid",
+    {
+      playerId: pending.payload.controllerId,
+      optionId: "returnDon",
+      selectedDonInstanceIds: selected,
+    },
+    { type: "public" },
+  );
+  const paid = events[events.length - 1];
+  if (paid !== undefined) {
+    paid.causedBy = { type: "decision", decisionId: decision.id };
+  }
   const transformedPayload = {
     replacementId: pending.payload.replacementId,
-    trashedCards: cards,
+    selectedDonInstanceIds: selected,
   };
   appendEvent(
-    moved.state,
+    state,
     events,
     "replacementApplied",
     {
@@ -413,17 +331,17 @@ export const applyReplacementTrashFromHandDecisionResponse = (
       replacementId: pending.payload.replacementId,
     };
   }
+  const nextStateWithPayment: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [pending.payload.controllerId]: returned,
+    },
+  };
   const completedPayload = replacementPayloadWithoutPending(
     state,
     pending.processId,
   );
-  const afterOncePerTurn =
-    pending.payload.oncePerTurn === undefined
-      ? moved.state
-      : consumeOncePerTurn(
-          moved.state,
-          toOncePerTurnKey(pending.payload.oncePerTurn),
-        );
   const process = replacementProcessFromStoredPayload({
     causedBy: pending.payload.causedBy,
     payload: completedPayload,
@@ -433,9 +351,9 @@ export const applyReplacementTrashFromHandDecisionResponse = (
   });
   const continued =
     process === null
-      ? { state: afterOncePerTurn }
+      ? { state: nextStateWithPayment }
       : continueUncoveredFieldRemovalTargets(
-          afterOncePerTurn,
+          nextStateWithPayment,
           events,
           pending.payload.effectBlockId,
           process,

@@ -339,6 +339,11 @@ const applyRespondToDecision = (
   if (lifeTriggerResult !== null) {
     return lifeTriggerResult;
   }
+  const replacementRestTargetResult =
+    applyReplacementRestTargetDecisionWithContinuation(state, action);
+  if (replacementRestTargetResult !== null) {
+    return replacementRestTargetResult;
+  }
   const optionalActivationResult = applyOptionalActivationDecisionResponse(
     state,
     action,
@@ -356,11 +361,6 @@ const applyRespondToDecision = (
   );
   if (triggerOrderResult !== null) {
     return continueAfterEffectDecision(state, decision, triggerOrderResult);
-  }
-  const replacementRestTargetResult =
-    applyReplacementRestTargetDecisionWithContinuation(state, action);
-  if (replacementRestTargetResult !== null) {
-    return replacementRestTargetResult;
   }
   const targetSelectionResult = applySelectTargetsDecisionResponse(
     state,

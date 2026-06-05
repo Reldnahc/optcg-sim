@@ -1,5 +1,11 @@
 import type { Effect } from "@optcg/types";
 
+import { parseThisTurnDuration } from "../durations/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
+import {
+  parseNegativePowerModifier,
+  parsePositivePowerModifier,
+} from "../modifiers/index.js";
 import { parseYourFieldReplacementTarget } from "../targets/replacement-targets.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 
@@ -65,15 +71,11 @@ function parseOpponentKoReplacement(text: string):
   if (
     target === undefined ||
     target.rest.length > 0 ||
-    target.target.type !== "all"
+    (target.target.type !== "all" && target.target.type !== "self")
   ) {
     return undefined;
   }
-  const instead =
-    parseTopLifeToHandInstead(bodyText) ??
-    parseTrashFromHandInstead(bodyText) ??
-    parseRestSelfInstead(bodyText) ??
-    parseRestCardsInstead(bodyText);
+  const instead = parseInsteadEffect(bodyText);
   if (instead === undefined) {
     return undefined;
   }
@@ -131,11 +133,7 @@ function parseOpponentFieldRemovalReplacement(text: string):
   ) {
     return undefined;
   }
-  const instead =
-    parseTopLifeToHandInstead(bodyText) ??
-    parseTrashFromHandInstead(bodyText) ??
-    parseRestSelfInstead(bodyText) ??
-    parseRestCardsInstead(bodyText);
+  const instead = parseInsteadEffect(bodyText);
   if (instead === undefined) {
     return undefined;
   }
@@ -173,6 +171,23 @@ function normalizeFieldRemovalTargetText(text: string): string {
   return trimmed;
 }
 
+function parseInsteadEffect(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  return (
+    parseTopLifeToHandInstead(text) ??
+    parseReturnDonInstead(text) ??
+    parseTrashFromHandInstead(text) ??
+    parseTrashSelfInstead(text) ??
+    parseModifyLeaderPowerInstead(text) ??
+    parseRestSelfInstead(text) ??
+    parseRestCardsInstead(text)
+  );
+}
+
 function parseTopLifeToHandInstead(text: string):
   | {
       readonly effect: Effect;
@@ -208,14 +223,14 @@ function parseTopLifeToHandInstead(text: string):
   };
 }
 
-function parseTrashFromHandInstead(text: string):
+function parseReturnDonInstead(text: string):
   | {
       readonly effect: Effect;
       readonly evidence: ExpressionParseResult["evidence"];
     }
   | undefined {
   const match =
-    /^you may trash (?<count>[1-9]\d*) cards? from your hand instead\.?$/i.exec(
+    /^you may return (?<count>[1-9]\d*) DON!! cards? from your field to your DON!! deck instead\.?$/i.exec(
       text.trim(),
     );
   const countText = match?.groups?.["count"];
@@ -225,16 +240,140 @@ function parseTrashFromHandInstead(text: string):
 
   return {
     effect: {
+      type: "returnDon",
+      count: Number.parseInt(countText, 10),
+      player: "self",
+    },
+    evidence: [
+      "instruction:returnDon",
+      "count:positiveInteger",
+      "player:self",
+      "zone:donDeck",
+    ],
+  };
+}
+
+function parseTrashFromHandInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  const match = /^you may trash (?<count>[1-9]\d*) (?<rest>.+)$/i.exec(
+    text.trim(),
+  );
+  const countText = match?.groups?.["count"];
+  const restText = match?.groups?.["rest"];
+  if (countText === undefined || restText === undefined) {
+    return undefined;
+  }
+
+  const unfilteredMatch = /^cards? from your hand instead\.?$/i.exec(restText);
+  if (unfilteredMatch !== null) {
+    return {
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: Number.parseInt(countText, 10),
+      },
+      evidence: [
+        "instruction:trashFromHand",
+        "count:positiveInteger",
+        "player:self",
+        "chooser:self",
+      ],
+    };
+  }
+
+  const filteredMatch = /^(?<filter>.+?) from your hand instead\.?$/i.exec(
+    restText,
+  );
+  const filterText = filteredMatch?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+
+  const parsedFilter = parseCardFilterPredicates({ text: filterText });
+  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
       type: "trashFromHand",
       player: "self",
       chooser: "self",
       count: Number.parseInt(countText, 10),
+      filter: parsedFilter.filter,
     },
     evidence: [
       "instruction:trashFromHand",
       "count:positiveInteger",
       "player:self",
       "chooser:self",
+      ...parsedFilter.evidence,
+    ],
+  };
+}
+
+function parseTrashSelfInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  if (!/^you may trash this Character instead\.?$/i.test(text.trim())) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "trash",
+      target: { type: "self" },
+    },
+    evidence: ["instruction:trash", "target:thisCharacter"],
+  };
+}
+
+function parseModifyLeaderPowerInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  const match = /^you may give your Leader (?<modifier>.+?) instead\.?$/iu.exec(
+    text.trim(),
+  );
+  const modifierText = match?.groups?.["modifier"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const modifier =
+    parseNegativePowerModifier({ text: modifierText }) ??
+    parsePositivePowerModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+
+  const duration = parseThisTurnDuration({ text: modifier.rest });
+  if (duration?.duration === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower",
+      target: { type: "myLeader" },
+      value: modifier.value,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:modifyPower",
+      "target:yourLeader",
+      ...modifier.evidence,
+      ...duration.evidence,
     ],
   };
 }

@@ -78,6 +78,7 @@ export type PrimitiveEvidence =
   | "instruction:moveCards"
   | "instruction:activate"
   | "instruction:rest"
+  | "instruction:returnDon"
   | "instruction:preventActivation"
   | "instruction:modifyPower"
   | "instruction:invalidateEffects"

@@ -2,6 +2,7 @@ import type { Action, EngineResult, GameState } from "@optcg/types";
 
 import { finalizeBattleAfterReplacementResolution } from "../battle/actions.js";
 import { finalizeSelectedTargetEffectResolution } from "../effect-runtime.js";
+import { applyReplacementPayCostDecisionResponse } from "./pay-cost-actions.js";
 import { applyReplacementRestTargetDecisionResponse } from "./rest-target-decision.js";
 import { applyReplacementTrashFromHandDecisionResponse } from "./trash-from-hand-actions.js";
 import { toEngineResult } from "../action-results.js";
@@ -44,7 +45,8 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
 ): EngineResult | null => {
   const replacementRestTargetResult =
     applyReplacementRestTargetDecisionResponse(state, action) ??
-    applyReplacementTrashFromHandDecisionResponse(state, action);
+    applyReplacementTrashFromHandDecisionResponse(state, action) ??
+    applyReplacementPayCostDecisionResponse(state, action);
   if (replacementRestTargetResult === null) {
     return null;
   }

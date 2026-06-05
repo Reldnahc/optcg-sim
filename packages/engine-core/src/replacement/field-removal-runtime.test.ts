@@ -527,7 +527,7 @@ test("opponent field-removal replacement from another field source protects matc
   assert.equal(nextP2.life.length, p2State.life.length - 1);
 });
 
-test("accepted K.O. replacement trashes from hand instead of KOing matching base-cost Character", () => {
+test("accepted K.O. replacement trashes filtered card from hand instead of KOing matching base-cost Character", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -585,6 +585,11 @@ test("accepted K.O. replacement trashes from hand instead of KOing matching base
       sourceTextHash: "replacement-source",
     },
   });
+  state.cardManifest.cards[replacementCostCard.cardId] = resolvedCard({
+    cardId: replacementCostCard.cardId,
+    category: "character",
+    power: 6000,
+  });
   const effectBlock: EffectDefinition["effects"][number] = {
     id: effectId,
     category: "replacement",
@@ -600,6 +605,10 @@ test("accepted K.O. replacement trashes from hand instead of KOing matching base
         player: "self",
         chooser: "self",
         count: 1,
+        filter: {
+          categories: ["character"],
+          power: { max: 6000 },
+        },
       },
     },
   };
@@ -676,6 +685,14 @@ test("accepted K.O. replacement trashes from hand instead of KOing matching base
   }
   assert.equal(trashDecision.playerId, p2);
   assert.equal(trashDecision.request.zone, "hand");
+  assert.deepEqual(trashDecision.request.filter, {
+    categories: ["character"],
+    power: { max: 6000 },
+  });
+  assert.deepEqual(
+    trashDecision.candidates.map((candidate) => candidate.card.instanceId),
+    [replacementCostCard.instanceId],
+  );
 
   const resolved = applyAction(accepted.state, {
     type: "respondToDecision",

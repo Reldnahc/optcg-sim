@@ -12,6 +12,14 @@ export interface ReplacementFieldTargetParseResult {
 export function parseYourFieldReplacementTarget(
   input: ParseInput,
 ): ReplacementFieldTargetParseResult | undefined {
+  if (/^this Character$/i.test(input.text.trim())) {
+    return {
+      target: { type: "self" },
+      evidence: ["target:thisCharacter"],
+      rest: "",
+    };
+  }
+
   const ownership = /^your\s+(?<rest>.+)$/i.exec(input.text);
   const predicateText = ownership?.groups?.["rest"];
   if (predicateText === undefined) {
