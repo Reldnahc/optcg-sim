@@ -353,15 +353,19 @@
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 38px;
+  min-height: 44px;
   border: 0;
   border-radius: 4px;
   color: rgba(255, 255, 255, 0.88);
   background: rgba(255, 255, 255, 0.1);
   padding: 0 8px;
-  font-size: 14px;
+  font-size: 16px;
   text-align: left;
   cursor: pointer;
+}
+
+.deck-loadout-folder-header span:last-child {
+  margin-right: 12px;
 }
 
 .deck-loadout-folder-header:hover:not(:disabled) {
@@ -389,13 +393,13 @@
 .deck-loadout-options {
   display: grid;
   gap: 5px;
-  padding-left: 12px;
+  padding-left: 20px;
   overflow: hidden;
   min-height: 0;
 }
 
 .deck-loadout-option {
-  grid-template-columns: 86px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   min-height: 52px;
 }
 

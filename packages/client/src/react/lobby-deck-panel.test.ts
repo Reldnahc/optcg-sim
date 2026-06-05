@@ -156,7 +156,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-loadout-options\s*\{[^}]*padding-left:\s*12px;/u,
+      /\.deck-loadout-options\s*\{[^}]*padding-left:\s*20px;/u,
     );
     assert.match(
       styles,
@@ -168,7 +168,11 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-loadout-folder-header\s*\{[^}]*min-height:\s*38px;[^}]*font-size:\s*14px;/u,
+      /\.deck-loadout-folder-header\s*\{[^}]*min-height:\s*44px;[^}]*font-size:\s*16px;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-folder-header span:last-child\s*\{[^}]*margin-right:\s*12px;/u,
     );
     assert.match(
       styles,
@@ -184,7 +188,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*86px minmax\(0,\s*1fr\);/u,
+      /\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
     );
     assert.match(
       styles,
