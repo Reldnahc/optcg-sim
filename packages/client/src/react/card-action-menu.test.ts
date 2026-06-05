@@ -630,24 +630,18 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-tile[^"]*is-selected/u);
   });
 
-  test("selected card styling uses a tiny border and hugs the card face", async () => {
+  test("card styling removes the default border while selected feedback hugs the face", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "card.css"),
       "utf8",
     );
 
-    assert.match(
-      styles,
-      /\.card-face\s*\{[^}]*border:\s*1px solid rgba\(244,\s*238,\s*231,\s*0\.45\);/u,
-    );
+    assert.match(styles, /\.card-face\s*\{[^}]*border:\s*0;/u);
     assert.match(
       styles,
       /\.card-tile\.is-selected \.card-face\s*\{[^}]*outline-offset:\s*0;/u,
     );
-    assert.equal(
-      /\.card-face\s*\{[^}]*border:\s*2px solid #f4eee7;/u.test(styles),
-      false,
-    );
+    assert.equal(/\.card-face\s*\{[^}]*border:\s*[12]px/u.test(styles), false);
   });
 
   test("card styling includes hover feedback and a separate active card state", async () => {
