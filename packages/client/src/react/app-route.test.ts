@@ -13,8 +13,8 @@ describe("client app routes", () => {
     assert.equal(appRouteFromPath("/").id, "dashboard");
     assert.equal(appRouteFromPath("/play").id, "play");
     assert.equal(appRouteFromPath("/lobbies").id, "lobbies");
-    assert.equal(appRouteFromPath("/decks").id, "decks");
-    assert.equal(appRouteFromPath("/profile").id, "profile");
+    assert.equal(appRouteFromPath("/decks").id, "notFound");
+    assert.equal(appRouteFromPath("/profile").id, "notFound");
     assert.equal(appRouteFromPath("/match").id, "match");
   });
 
@@ -48,8 +48,6 @@ describe("client app routes", () => {
     assert.equal(appRoutePath("dashboard"), "/");
     assert.equal(appRoutePath("play"), "/play");
     assert.equal(appRoutePath("lobbies"), "/lobbies");
-    assert.equal(appRoutePath("decks"), "/decks");
-    assert.equal(appRoutePath("profile"), "/profile");
     assert.equal(appRoutePath("match"), "/match");
   });
 
@@ -57,13 +55,11 @@ describe("client app routes", () => {
     assert.equal(isShellRoute("dashboard"), true);
     assert.equal(isShellRoute("play"), true);
     assert.equal(isShellRoute("lobbies"), true);
-    assert.equal(isShellRoute("decks"), true);
-    assert.equal(isShellRoute("profile"), true);
     assert.equal(isShellRoute("notFound"), true);
     assert.equal(isShellRoute("match"), false);
     assert.deepEqual(
       appRoutes.map((route) => route.id),
-      ["dashboard", "play", "lobbies", "decks", "profile", "match"],
+      ["dashboard", "play", "lobbies", "match"],
     );
   });
 });

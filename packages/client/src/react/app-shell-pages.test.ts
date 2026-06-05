@@ -5,11 +5,9 @@ import { describe, test } from "vitest";
 
 import { AppShell } from "./AppShell.js";
 import { DashboardPage } from "./DashboardPage.js";
-import { DecksPage } from "./DecksPage.js";
 import { LobbiesPage } from "./LobbiesPage.js";
 import { NotFoundPage } from "./NotFoundPage.js";
 import { PlayPage } from "./PlayPage.js";
-import { ProfilePage } from "./ProfilePage.js";
 
 describe("client app shell pages", () => {
   test("dashboard exposes the primary navigation entries", () => {
@@ -22,8 +20,8 @@ describe("client app shell pages", () => {
 
     assert.match(html, /Play/u);
     assert.match(html, /Custom Lobbies/u);
-    assert.match(html, /Decks/u);
-    assert.match(html, /Profile/u);
+    assert.doesNotMatch(html, /Decks/u);
+    assert.doesNotMatch(html, /Profile/u);
   });
 
   test("play page keeps future-service queue states separate from dev play", () => {
@@ -51,30 +49,6 @@ describe("client app shell pages", () => {
     assert.match(html, /Join Custom Lobby/u);
     assert.match(html, /server assigns seats/u);
     assert.doesNotMatch(html, /seat query/u);
-  });
-
-  test("deck page accepts account-backed deck hash imports", () => {
-    const deckHtml = renderToStaticMarkup(
-      createElement(AppShell, {
-        activeRouteId: "decks",
-        children: createElement(DecksPage),
-      }),
-    );
-
-    assert.match(deckHtml, /Save Deck Configuration/u);
-    assert.match(deckHtml, /Deck hash/u);
-    assert.match(deckHtml, /Account API validates/u);
-  });
-
-  test("profile page describes future integrations honestly", () => {
-    const profileHtml = renderToStaticMarkup(
-      createElement(AppShell, {
-        activeRouteId: "profile",
-        children: createElement(ProfilePage),
-      }),
-    );
-
-    assert.match(profileHtml, /Poneglyph account/u);
   });
 
   test("not-found page links back to the dashboard", () => {

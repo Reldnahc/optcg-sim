@@ -2,8 +2,6 @@ export type AppRouteId =
   | "dashboard"
   | "play"
   | "lobbies"
-  | "decks"
-  | "profile"
   | "match"
   | "notFound";
 
@@ -23,8 +21,6 @@ export const appRoutes = [
   { id: "dashboard", path: "/", label: "Home" },
   { id: "play", path: "/play", label: "Play" },
   { id: "lobbies", path: "/lobbies", label: "Lobbies" },
-  { id: "decks", path: "/decks", label: "Decks" },
-  { id: "profile", path: "/profile", label: "Profile" },
   { id: "match", path: "/match", label: "Match" },
 ] as const satisfies readonly AppRouteDefinition[];
 

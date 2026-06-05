@@ -5,7 +5,7 @@ export const DashboardPage = (): React.JSX.Element => (
   <section className="shell-page">
     <div className="shell-page-heading">
       <h1>Dashboard</h1>
-      <p>Choose a play flow, manage decks, or review account state.</p>
+      <p>Choose a play flow or join a custom lobby.</p>
     </div>
     <div className="shell-card-grid">
       <ShellPageCard
@@ -19,18 +19,6 @@ export const DashboardPage = (): React.JSX.Element => (
         description="Create or join custom games with the current local lobby flow."
         href={appRoutePath("lobbies")}
         label="Open Lobbies"
-      />
-      <ShellPageCard
-        title="Decks"
-        description="Future home for the Poneglyph deck builder."
-        href={appRoutePath("decks")}
-        label="View Decks"
-      />
-      <ShellPageCard
-        title="Profile"
-        description="Future account, identity, and player settings."
-        href={appRoutePath("profile")}
-        label="View Profile"
       />
     </div>
   </section>

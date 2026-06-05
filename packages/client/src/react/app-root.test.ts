@@ -24,13 +24,16 @@ describe("client app root", () => {
       renderToStaticMarkup(createElement(AppRootContent, { path: "/lobbies" })),
       /Create Custom Lobby/u,
     );
+  });
+
+  test("does not expose removed temporary shell pages", () => {
     assert.match(
       renderToStaticMarkup(createElement(AppRootContent, { path: "/decks" })),
-      /Save Deck Configuration/u,
+      /Page not found/u,
     );
     assert.match(
       renderToStaticMarkup(createElement(AppRootContent, { path: "/profile" })),
-      /Poneglyph account/u,
+      /Page not found/u,
     );
   });
 

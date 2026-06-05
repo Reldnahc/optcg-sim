@@ -1,9 +1,5 @@
 import { createAuthClient } from "optcg-auth-client";
-import type {
-  DeckCollection,
-  DeckLibraryFolder,
-  Loadout,
-} from "optcg-auth-client";
+import type { DeckCollection, DeckLibraryFolder } from "optcg-auth-client";
 
 export interface AccountLoadout {
   readonly id: string;
@@ -15,10 +11,6 @@ export interface AccountLoadout {
 
 export interface PoneglyphAccountClient {
   readonly listLoadouts: () => Promise<readonly AccountLoadout[]>;
-  readonly createLoadoutFromDeckHash: (input: {
-    name: string;
-    deckHash: string;
-  }) => Promise<AccountLoadout>;
   readonly createSimHandoff: (input: {
     loadoutId: string;
     lobbyId: string;
@@ -29,16 +21,6 @@ export interface CreatePoneglyphAccountClientOptions {
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
 }
-
-const normalizeImportedLoadout = (value: Loadout): AccountLoadout => {
-  return {
-    id: value.id,
-    name: value.name,
-    folderId: null,
-    folderName: null,
-    updatedAt: value.updated_at,
-  };
-};
 
 const folderById = (
   folders: readonly DeckLibraryFolder[],
@@ -83,13 +65,6 @@ export const createPoneglyphAccountClient = ({
       return playableDeckCollections(response.data.decks).map((deck) =>
         normalizeLibraryDeck(deck, foldersById),
       );
-    },
-    async createLoadoutFromDeckHash(input) {
-      const response = await authClient.createLoadoutFromDeckHash({
-        name: input.name,
-        deck_hash: input.deckHash,
-      });
-      return normalizeImportedLoadout(response.data);
     },
     async createSimHandoff(input) {
       const response = await authClient.createSimHandoff({
