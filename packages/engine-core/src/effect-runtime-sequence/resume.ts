@@ -213,11 +213,18 @@ export const resumeSequenceFrameFromLedgers = (params: {
   events.splice(0, events.length, ...completed.events);
   completedState = completed.state;
   if (params.finalizeCompleted) {
-    completedState = appendEffectResolvedForCompletedSequence(
+    const finalized = appendEffectResolvedForCompletedSequence(
       completedState,
       params.entry,
       events,
     );
+    if (!finalized.ok) {
+      return {
+        error: finalized.error,
+        ok: false,
+      };
+    }
+    completedState = finalized.state;
   }
   if (
     completedState.pendingDecision === undefined &&

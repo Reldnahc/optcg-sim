@@ -139,4 +139,34 @@ describe("optional cost sequence parser", () => {
       rest: "",
     });
   });
+
+  it("parses reveal-from-hand costs with reusable hand card filters", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "reveal 2 Character cards with 8000 power from your hand",
+      }),
+    ).toEqual({
+      cost: {
+        type: "revealFromHand",
+        count: 2,
+        chooser: "self",
+        filter: {
+          categories: ["character"],
+          power: { op: "eq", value: 8000 },
+        },
+        optional: true,
+      },
+      evidence: [
+        "cost:revealFromHand",
+        "count:positiveInteger",
+        "chooser:self",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        "reveal:bothPlayers",
+      ],
+      rest: "",
+    });
+  });
 });

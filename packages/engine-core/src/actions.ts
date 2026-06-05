@@ -70,6 +70,10 @@ import {
 } from "./effect-runtime-hand-selection.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./actions/trigger-order.js";
 import {
+  applyChooseEffectOptionDecisionResponse,
+  getChooseEffectOptionLegalActions,
+} from "./actions/effect-option.js";
+import {
   applyConcede,
   applyEndMainPhase,
   getTurnLegalActions,
@@ -161,6 +165,7 @@ export const getLegalActions = (
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     actions.push(...getChooseReplacementLegalActions(state, playerId));
+    actions.push(...getChooseEffectOptionLegalActions(state, playerId));
     actions.push(...getChooseQuantityLegalActions(state, playerId));
     actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
@@ -223,6 +228,7 @@ const shouldContinueRuntimeAfterEffectDecision = (
         "effectRuntime:whenAttackingTriggerQueueing" ||
       queueEntry.causedBy.name ===
         "effectRuntime:onOpponentAttackTriggerQueueing" ||
+      queueEntry.causedBy.name === "effectRuntime:onKOTriggerQueueing" ||
       queueEntry.causedBy.name === "effectRuntime:endOfYourTurnTriggerQueueing")
   );
 };
@@ -232,6 +238,7 @@ const continueAfterEffectDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
   result: EngineResult,
 ): EngineResult =>
+  result.events.some((event) => event.type === "effectQueued") ||
   shouldContinueRuntimeAfterEffectDecision(originalState, decision)
     ? continueRuntimeAndAttackTimingAfterDecision(originalState, result)
     : continueAttackTimingDecisionResultIfReady(result);
@@ -361,6 +368,13 @@ const applyRespondToDecision = (
   );
   if (triggerOrderResult !== null) {
     return continueAfterEffectDecision(state, decision, triggerOrderResult);
+  }
+  const effectOptionResult = applyChooseEffectOptionDecisionResponse(
+    state,
+    action,
+  );
+  if (effectOptionResult !== null) {
+    return continueAfterEffectDecision(state, decision, effectOptionResult);
   }
   const targetSelectionResult = applySelectTargetsDecisionResponse(
     state,

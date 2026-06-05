@@ -8,11 +8,15 @@ import type {
   EffectExecutionFrame,
   EffectQueueEntry,
   GameState,
+  SequencedEffect,
   TargetSpec,
 } from "@optcg/types";
 
 import { reifyCardRef } from "../../actions/state.js";
-import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
+import {
+  evaluateQueuedEffectCondition,
+  isSupportedQueuedEffectConditionShape,
+} from "../../effect-runtime-conditions.js";
 import {
   isSupportedBasePowerDuration,
   isSupportedBasePowerSetFilter,
@@ -251,6 +255,22 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
+  if (effect.type === "modifyCounter") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      {
+        type: "allMatching",
+        zone: "hand",
+        player: effect.player,
+        ...(effect.filter === undefined ? {} : { filter: effect.filter }),
+      },
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
   const target = effect.target;
   if (target === undefined) {
     return null;
@@ -326,6 +346,7 @@ export const isSupportedPermanentContinuousEffectBlock = (
   block: EffectDefinition["effects"][number],
 ): boolean => {
   if (!isPermanentBlock(block)) return false;
+  if (!isSupportedQueuedEffectConditionShape(block.condition)) return false;
   const effects =
     block.effect.type === "sequence"
       ? block.effect.effects
@@ -485,6 +506,28 @@ const effectToDerivedModifier = (
       operation: { type: "addCost", value: effect.value },
     };
   }
+  if (effect.type === "modifyCounter") {
+    if (
+      effect.player !== "self" ||
+      effect.sourceZone !== "hand" ||
+      !Number.isSafeInteger(effect.value) ||
+      effect.value < 0
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported counter modifier shape"),
+      );
+    }
+    return {
+      layer: "counterSet",
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: effect.player,
+        ...(effect.filter === undefined ? {} : { filter: effect.filter }),
+      },
+      operation: { type: "setCounter", value: effect.value },
+    };
+  }
   if (effect.type === "protectFromKO") {
     if (
       effect.target.type !== "self" ||
@@ -589,6 +632,19 @@ export const deriveImplementedDslPlayCostContinuousEffects = (
   });
 };
 
+const effectPartsForPermanentBlock = (
+  effect: Effect,
+): readonly SequencedEffect[] =>
+  effect.type === "sequence"
+    ? effect.effects
+    : [{ connector: "always", effect }];
+
+const hasSelfPlayCostModifierPart = (effect: Effect): boolean =>
+  effectPartsForPermanentBlock(effect).some(
+    (part) =>
+      part.effect.type === "modifyCost" && part.effect.target?.type === "self",
+  );
+
 const deriveImplementedDslContinuousEffectsForCards = (
   state: GameState,
   cards: readonly CardInstance[],
@@ -682,6 +738,12 @@ const deriveImplementedDslContinuousEffectsForCards = (
     };
 
     for (const block of permanentBlocks) {
+      if (
+        options.mode === "playCostHand" &&
+        !hasSelfPlayCostModifierPart(block.effect)
+      ) {
+        continue;
+      }
       const conditionResult = evaluateQueuedEffectCondition(
         state,
         {
@@ -705,10 +767,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
       if (!conditionResult.supported) {
         throw new TypeError(unsupportedDerivedMessage("unsupported condition"));
       }
-      const effects =
-        block.effect.type === "sequence"
-          ? block.effect.effects
-          : [{ connector: "always" as const, effect: block.effect }];
+      const effects = effectPartsForPermanentBlock(block.effect);
       for (const [index, part] of effects.entries()) {
         if (
           options.mode === "playCostHand" &&

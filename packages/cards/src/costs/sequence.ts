@@ -10,6 +10,7 @@ import { parseAttachDonCost } from "./attach-don.js";
 import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseModifyPowerCost } from "./modify-power.js";
+import { parseRevealFromHandCost } from "./reveal-from-hand.js";
 import { parseRestSelfCost } from "./rest-self.js";
 import { parseReturnDonSequenceCost } from "./return-don.js";
 import { parseTrashFromHandCost } from "./trash-from-hand.js";
@@ -23,6 +24,7 @@ const costParsers = [
   parseRestDonCost,
   parseMoveCardsCost,
   parseModifyPowerCost,
+  parseRevealFromHandCost,
   parseTurnLifeFaceUpCost,
   parseTrashFromHandCost,
 ] as const;
@@ -118,6 +120,14 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
         optional: true,
       };
+    case "revealFromHand":
+      return {
+        type: "revealFromHand",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        optional: true,
+      };
     case "moveCards":
       return { ...cost, optional: true };
     case "modifyPower":
@@ -160,6 +170,13 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
     case "trashFromHand":
       return {
         type: "trashFromHand",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      };
+    case "revealFromHand":
+      return {
+        type: "revealFromHand",
         count: cost.count,
         chooser: cost.chooser,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),

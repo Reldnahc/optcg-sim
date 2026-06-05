@@ -27,6 +27,7 @@ describe("replacement effect parser", () => {
     const when = {
       type: "wouldMoveZone",
       from: "characterArea",
+      sourceControllerRelation: "opponentControlled",
       target,
     } as const;
 
@@ -90,6 +91,7 @@ describe("replacement effect parser", () => {
       type: "wouldMoveZone",
       from: "characterArea",
       sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
       target,
     } as const;
 
@@ -167,6 +169,7 @@ describe("replacement effect parser", () => {
       type: "wouldMoveZone",
       from: "characterArea",
       sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
       target,
     } as const;
 
@@ -344,6 +347,7 @@ describe("replacement effect parser", () => {
         type: "wouldMoveZone",
         from: "characterArea",
         sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
         target: {
           type: "all",
           zone: "characterArea",
@@ -366,6 +370,88 @@ describe("replacement effect parser", () => {
       "filter:power",
       "instruction:returnDon",
       "zone:donDeck",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
+  it("parses opponent effect field-removal replacement into reusable owner deck-bottom instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may place 1 of your Characters at the bottom of the owner's deck instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block.effect, {
+      type: "replacement",
+      when: {
+        type: "wouldMoveZone",
+        from: "characterArea",
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            power: { max: 7000 },
+          },
+        },
+      },
+      instead: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:owner-deck-bottom",
+            connector: "always",
+            saveResultAs: "selected:owner-deck-bottom",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: false,
+                visibility: "public",
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "bounce",
+              destination: "deckBottom",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:owner-deck-bottom",
+                },
+                zone: "characterArea",
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    });
+    for (const evidence of [
+      "replacement:wouldMoveZone",
+      "replacementSource:cardEffect",
+      "filter:power",
+      "instruction:moveSelected",
+      "target:yourCharacters",
+      "destination:deck",
+      "position:bottom",
+      "composition:selectThenApply",
     ] as const) {
       assert.equal(result.evidence.includes(evidence), true, evidence);
     }

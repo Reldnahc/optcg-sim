@@ -132,6 +132,34 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses repeated up-to one name-or-type-including search filters independently from reveal wording", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: 'reveal up to 1 [Monkey.D.Luffy] or up to 1 card with a type including "Whitebeard Pirates" and add it to your hand. Then, place the rest at the bottom of your deck in any order.',
+      }),
+    ).toMatchObject({
+      filter: {
+        anyOf: [
+          { names: ["Monkey.D.Luffy"] },
+          { typesAny: ["Whitebeard Pirates"] },
+        ],
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:anyOf",
+        "filter:name",
+        "filter:type",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses multi-type generic card filters with cost predicates", () => {
     expect(
       parseSearchSelectionToHand({

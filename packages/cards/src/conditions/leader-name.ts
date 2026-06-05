@@ -4,6 +4,31 @@ import type { ConditionParseResult, ConditionParser } from "../types.js";
 export const parseLeaderNameCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const nameContainsMatch =
+    /^your Leader's card name includes\s+"(?<name>[^"]+)"$/i.exec(input.text);
+  const includedName = nameContainsMatch?.groups?.["name"]?.trim();
+  if (includedName !== undefined && includedName.length > 0) {
+    return {
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          nameContains: includedName,
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:name",
+      ],
+      rest: "",
+    };
+  }
+
   const subjectMatch = /^your Leader (?:is|has the)\s+(?<predicate>.+)$/i.exec(
     input.text,
   );

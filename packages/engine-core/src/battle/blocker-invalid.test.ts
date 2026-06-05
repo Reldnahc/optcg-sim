@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardRef, DecisionId } from "@optcg/types";
+import type { CardRef, ContinuousEffectRecord, DecisionId } from "@optcg/types";
 
-import { applyAction } from "../actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
 import {
   must,
@@ -15,6 +15,7 @@ import {
 import {
   assertRejectsWithoutMutation,
   cardRef,
+  continuousKeywordEffectRecord,
   effectDefinition,
   passCounterStep,
   setupAttackState,
@@ -116,6 +117,209 @@ test("rested, stale, non-blocker, and attacker-controlled cards do not open bloc
       printedKeywords: ["blocker"],
     };
   });
+});
+
+test("implemented On Play unblockable keyword grant suppresses blockers without suppressing counter step", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const blocker = must(p2State.characters[0], "blocker");
+  const counterCard = must(p2State.hand[0], "counter card");
+  blocker.state = "active";
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  const effectDefinitionId = "def:on-play-unblockable";
+  const definition = effectDefinition(
+    attacker.cardId,
+    { type: "onPlay" },
+    {
+      type: "giveKeyword",
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+      keyword: "unblockable",
+      duration: { type: "thisTurn" },
+    },
+  );
+  state.cardManifest.effectDefinitions = {
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+    effectText:
+      "[On Play] Up to 1 of your Characters gains [Unblockable] during this turn. (This card cannot be blocked.)",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "continuous:on-play-unblockable",
+      attacker,
+      "unblockable",
+      { duration: { type: "thisTurn" } },
+    ),
+  ];
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    opened.state.pendingDecision?.prompt,
+    "Use counter or end step.",
+  );
+  assert.equal(opened.state.battle?.step, "counter");
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterCard.instanceId,
+    ),
+    true,
+  );
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(countered.errors, undefined);
+});
+
+test("implemented On Play cannotBlock restriction suppresses blockers without suppressing counter step", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const blocker = must(p2State.characters[0], "blocker");
+  const counterCard = must(p2State.hand[0], "counter card");
+  blocker.state = "active";
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  const effectDefinitionId = "def:on-play-cannot-block";
+  const definition = effectDefinition(
+    attacker.cardId,
+    { type: "onPlay" },
+    {
+      type: "cannotBlock",
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "opponent",
+        filter: { categories: ["character"] },
+      },
+      duration: { type: "thisTurn" },
+    },
+  );
+  state.cardManifest.effectDefinitions = {
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+    effectText:
+      "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+  const restriction: ContinuousEffectRecord = {
+    id: "continuous:on-play-cannot-block",
+    source: cardRef(attacker, p1),
+    sourceSnapshot: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      ownerId: attacker.owner,
+      controllerId: attacker.controller,
+      zone: attacker.zone,
+      category: "character",
+      colors: ["red"],
+      power: 7000,
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "restriction",
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "opponent",
+      },
+      operation: { type: "restriction", restriction: "cannotBlock" },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-cannot-block" },
+    createdAtStateSeq: state.seq,
+  };
+  state.continuousEffects = [restriction];
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    opened.state.pendingDecision?.prompt,
+    "Use counter or end step.",
+  );
+  assert.equal(opened.state.battle?.step, "counter");
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterCard.instanceId,
+    ),
+    true,
+  );
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(countered.errors, undefined);
 });
 
 test("ineligible printed blocker does not open block-step decision", () => {
@@ -383,20 +587,6 @@ test("unsupported blocker activation states reject without mutation or events", 
           type: "cannotBeBlockedBy",
           target: { type: "self" },
           filter: { categories: ["character"] },
-          duration: { type: "thisTurn" },
-        },
-      ),
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      giveUnblockable: effectDefinition(
-        toCardId("leader-red"),
-        { type: "onPlay" },
-        {
-          type: "giveKeyword",
-          target: { type: "self" },
-          keyword: "unblockable",
           duration: { type: "thisTurn" },
         },
       ),

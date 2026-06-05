@@ -18,6 +18,7 @@ import { createSupportedHandSelectionChoiceDecision } from "../effect-runtime-ha
 import { applyFieldMutationSequenceSegment } from "./field-segments.js";
 import {
   createChooseQuantityDecisionForSequenceSegment,
+  createChooseEffectOptionDecisionForSequenceSegment,
   createOptionalActivationDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
   frameForPausedSequenceDecision,
@@ -471,6 +472,33 @@ export const continueNoDecisionSegments = (
         entry,
         cost,
         paymentOptions,
+        index,
+      );
+      const decision = decisionResult.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        effectPath: [...effectPath],
+        index,
+        savedReferences: pausedLedgers.savedReferences,
+        segmentResults: pausedLedgers.segmentResults,
+        state: decisionResult.state,
+      });
+      return {
+        events: [...events, ...decisionResult.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
+      };
+    }
+    if (segment.effect.type === "choice") {
+      const decisionResult = createChooseEffectOptionDecisionForSequenceSegment(
+        nextState,
+        entry,
+        segment.effect,
         index,
       );
       const decision = decisionResult.state.pendingDecision;

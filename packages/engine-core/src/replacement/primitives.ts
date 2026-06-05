@@ -28,6 +28,7 @@ import {
   cardRefsEqual,
   fieldRemovalProcessTargets,
 } from "./field-removal-targets.js";
+import { isSupportedOwnerDeckBottomInsteadEffect } from "./instead-effects.js";
 
 export type SelectedTargetKoReplacementDetectionFailureReason =
   | "unsupported-replacement-process"
@@ -424,7 +425,8 @@ const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedTrashFromHandInsteadEffect(effect) ||
   isSupportedReturnDonInsteadEffect(effect) ||
   isSupportedModifyLeaderPowerInsteadEffect(effect) ||
-  isSupportedTrashSelfInsteadEffect(effect);
+  isSupportedTrashSelfInsteadEffect(effect) ||
+  isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
   effect: EffectDefinition["effects"][number],
@@ -776,7 +778,8 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
           isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(
             effect,
           ) ||
-          isSupportedOpponentEffectKoRestSelfReplacementEffect(effect)
+          isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
+          isSupportedOpponentEffectFieldRemovalReplacementEffect(effect)
         ) {
           coveredTargets = opponentFieldRemovalReplacementCoveredTargets(
             state,
@@ -838,7 +841,9 @@ const opponentFieldRemovalReplacementCoveredTargets = (
 ): readonly CardRef[] => {
   const target = effect.trigger.replacement;
   const sourceControllerRelation =
-    target.type === "wouldBeKOd" ? target.sourceControllerRelation : undefined;
+    target.type === "wouldBeKOd" || target.type === "wouldMoveZone"
+      ? target.sourceControllerRelation
+      : undefined;
   const eligibleTargetLookups =
     sourceControllerRelation === "any"
       ? targetLookups
@@ -964,6 +969,18 @@ const canPayOpponentFieldRemovalReplacementCost = (
       source.resolved.category === "character" &&
       source.ref.zone?.zone === "characterArea"
     );
+  }
+  if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
+    const request = instead.effects[0]?.effect;
+    if (request?.type !== "selectTargets") {
+      return false;
+    }
+    const candidates = resolvePublicTargetCandidatesForRequest(
+      state,
+      request.request,
+      { sourceControllerId: source.card.controller },
+    );
+    return candidates.ok && candidates.candidates.length >= request.request.min;
   }
   return false;
 };

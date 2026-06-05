@@ -213,6 +213,7 @@ export const createEffectRuntimeQueueResults = (
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "giveKeyword" }>
     | Extract<Effect, { type: "modifyCost" }>
+    | Extract<Effect, { type: "modifyCounter" }>
     | Extract<Effect, { type: "preventDraw" }>
     | Extract<Effect, { type: "preventDonActivation" }>
     | Extract<Effect, { type: "preventPlay" }>
@@ -458,7 +459,9 @@ export const createEffectRuntimeQueueResults = (
               ...allEvents,
               ...sequenceFrame.events,
             ])
-          : unsupportedEffectQueueResult(originalState);
+          : sequenceFrame.error !== undefined
+            ? toEngineResult(originalState, [], [sequenceFrame.error])
+            : unsupportedEffectQueueResult(originalState);
       }
       const searchEffect = resolveQueuedSearchRevealEffect(nextState, selected);
       if (searchEffect !== undefined) {

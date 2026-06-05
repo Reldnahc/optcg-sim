@@ -132,6 +132,49 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses your Leader plus this Character base power with explicit duration", () => {
+    expect(
+      parseBasePowerBecomeInstruction(
+        {
+          text: "Your Leader and this Character's base power becomes 7000 during this turn.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: { type: "myLeader" },
+              value: 7000,
+              duration: { type: "thisTurn" },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: { type: "self" },
+              value: 7000,
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:setBasePower",
+        "target:yourLeader",
+        "target:thisCharacter",
+        "value:basePower:positiveInteger",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
   it("defines continuous bodies as primitive parents with match families", () => {
     expect(thisCharacterKeywordGrantPrimitive).toEqual({
       primitiveId: "instruction:giveKeyword",

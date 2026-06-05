@@ -20,6 +20,7 @@ import {
 import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
+  toCardRef,
   zonesEqual,
 } from "../../actions/state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
@@ -132,6 +133,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "turnLifeFaceUp" &&
         decision.cost.type !== "modifyPower" &&
         decision.cost.type !== "trashFromHand" &&
+        decision.cost.type !== "revealFromHand" &&
         decision.cost.type !== "chooseOne")
     ) {
       return toEngineResult(
@@ -187,7 +189,7 @@ export const applyOptionalActivationDecisionResponse = (
           }
         | {
             playerId: PlayerId;
-            optionId: "trashFromHand" | "trashFromField";
+            optionId: "trashFromHand" | "trashFromField" | "revealFromHand";
             selectedCardInstanceIds: NonNullable<
               typeof action.response.selectedCardInstanceIds
             >;
@@ -344,6 +346,78 @@ export const applyOptionalActivationDecisionResponse = (
           ...paidPowerCost.continuousEffects,
         ];
         costPaidPayload = paidPowerCost.costPaidPayload;
+      } else if (selectedOption.type === "revealFromHand") {
+        if (paymentResponse.selectedDonInstanceIds !== undefined) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection must not include DON!!."),
+          );
+        }
+        const selected = paymentResponse.selectedCardInstanceIds;
+        if (
+          selected === undefined ||
+          selected.length !== selectedOption.count
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection count mismatch."),
+          );
+        }
+        if (new Set(selected).size !== selected.length) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection contains duplicates."),
+          );
+        }
+        const selectedCards: CardInstance[] = [];
+        for (const selectedId of selected) {
+          const card = player.hand.find(
+            (candidate) => candidate.instanceId === selectedId,
+          );
+          if (
+            card === undefined ||
+            !supportsChooseOneTrashFilter(selectedOption.filter) ||
+            !cardMatchesHandSelectionFilter(
+              state,
+              decision.playerId,
+              card,
+              selectedOption.filter,
+            )
+          ) {
+            return toEngineResult(
+              state,
+              [],
+              invalidDecision("Payment card selection is invalid."),
+            );
+          }
+          selectedCards.push(card);
+        }
+        appendEvent(
+          state,
+          events,
+          "cardRevealed",
+          {
+            revealId: `reveal:reveal-from-hand:${String(decision.id)}`,
+            cards: selectedCards.map((card) =>
+              toCardRef(card, decision.playerId),
+            ),
+            origin: "hand",
+            reason: "revealFromHandCost",
+          },
+          { type: "public" },
+        );
+        const revealed = events[events.length - 1];
+        if (revealed !== undefined) {
+          revealed.causedBy = { type: "decision", decisionId: decision.id };
+        }
+        costPaidPayload = {
+          playerId: decision.playerId,
+          optionId: "revealFromHand",
+          selectedCardInstanceIds: selected,
+        };
       } else if (
         selectedOption.type === "trashFromHand" ||
         selectedOption.type === "trashFromField"

@@ -5,6 +5,7 @@ import {
   opponentLeaderOrCharactersTargetPrimitive,
   parseOpponentCharactersTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
+  parseCompoundYourCharactersTarget,
   parseYourCharactersTarget,
   parseYourNamedCardsTarget,
   parseYourLeaderTarget,
@@ -204,6 +205,58 @@ describe("field target parsers", () => {
         "filter:category:character",
       ],
       rest: "gains +2 cost until the end of your opponent's next End Phase.",
+    });
+  });
+
+  it("parses repeated up-to own-character branches as a reusable anyOf target", () => {
+    expect(
+      parseCompoundYourCharactersTarget(
+        {
+          text: 'of your [Monkey.D.Luffy] Characters or up to 1 of your Characters with a type including "Whitebeard Pirates", with 8000 power or more, gains [Rush]',
+        },
+        { mode: "upTo", min: 0, max: 1 },
+      ),
+    ).toEqual({
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            categories: ["character"],
+            anyOf: [
+              { names: ["Monkey.D.Luffy"] },
+              {
+                typesAny: ["Whitebeard Pirates"],
+                currentPower: { min: 8000 },
+              },
+            ],
+          },
+        },
+      },
+      evidence: [
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        "filter:name",
+        "filter:anyOf",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "filter:currentPower",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "gains [Rush]",
     });
   });
 });

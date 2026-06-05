@@ -147,6 +147,82 @@ test("runtime admission accepts opponent field-removal replacement with reusable
   );
 });
 
+test("runtime admission accepts opponent field-removal replacement with reusable owner deck-bottom body", () => {
+  const target: Target = {
+    type: "all",
+    zone: "characterArea",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      power: { max: 7000 },
+    },
+  };
+  const when: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    sourceKind: "cardEffect",
+    target,
+  };
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "replacement",
+        trigger: { type: "replacement", replacement: when },
+        optional: true,
+        sourcePresencePolicy: "resolveFromLastKnownInformation",
+        effect: {
+          type: "replacement",
+          when,
+          instead: {
+            type: "sequence",
+            effects: [
+              {
+                id: "select:owner-deck-bottom",
+                connector: "always",
+                saveResultAs: "selected:owner-deck-bottom",
+                effect: {
+                  type: "selectTargets",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "self",
+                    zone: "characterArea",
+                    min: 1,
+                    max: 1,
+                    allowFewerIfUnavailable: false,
+                    visibility: "public",
+                    filter: { categories: ["character"] },
+                  },
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "bounce",
+                  destination: "deckBottom",
+                  target: {
+                    type: "savedFieldObject",
+                    binding: {
+                      family: "selectedTargets",
+                      saveResultAs: "selected:owner-deck-bottom",
+                    },
+                    zone: "characterArea",
+                    player: "self",
+                    visibility: "publicOnly",
+                    onFailure: "failClosed",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
 test("runtime admission accepts costed main sequences with conditional draw and this-turn power reduction", () => {
   assert.deepEqual(
     evaluateEffectBlockRuntimeSupport(

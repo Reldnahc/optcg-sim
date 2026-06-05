@@ -1,5 +1,6 @@
-import type { CardFilter, Target } from "@optcg/types";
+import type { Cardinality, CardFilter, Target } from "@optcg/types";
 
+import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
@@ -301,9 +302,163 @@ export function parseYourNamedCardsTarget(
   };
 }
 
+const isSameCardinality = (left: Cardinality, right: Cardinality): boolean =>
+  left.mode === right.mode && left.min === right.min && left.max === right.max;
+
+const extractYourCharacterChooseFilter = (
+  target: Target | undefined,
+): CardFilter | undefined => {
+  if (
+    target?.type !== "choose" ||
+    target.request.player !== "self" ||
+    target.request.zone !== "characterArea"
+  ) {
+    return undefined;
+  }
+
+  return target.request.filter;
+};
+
+const withoutCharacterCategory = (filter: CardFilter): CardFilter => {
+  const { categories, ...rest } = filter;
+  void categories;
+  return rest;
+};
+
+const normalizeTargetRest = (rest: string): string =>
+  rest.replace(/^,\s*/u, "").trim();
+
+export function parseCompoundYourCharactersTarget(
+  input: ParseInput,
+  cardinality: Cardinality,
+): FieldTargetParseResult | undefined {
+  const first = parseYourCharactersTarget(input);
+  const rightMatch = /^or\s+(?<right>.+)$/i.exec(first?.rest ?? "");
+  const rightText = rightMatch?.groups?.["right"];
+  if (first === undefined || rightText === undefined) {
+    return undefined;
+  }
+
+  const secondCardinality = parseUpToCardinality({ text: rightText });
+  if (
+    secondCardinality === undefined ||
+    !isSameCardinality(cardinality, secondCardinality.cardinality)
+  ) {
+    return undefined;
+  }
+
+  const second = parseYourCharactersTarget({ text: secondCardinality.rest });
+  const firstFilter = extractYourCharacterChooseFilter(first.target);
+  const secondFilter = extractYourCharacterChooseFilter(second?.target);
+  if (
+    first.target?.type !== "choose" ||
+    firstFilter === undefined ||
+    second === undefined ||
+    secondFilter === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      ...first.target,
+      request: {
+        ...first.target.request,
+        filter: {
+          categories: ["character"],
+          anyOf: [
+            withoutCharacterCategory(firstFilter),
+            withoutCharacterCategory(secondFilter),
+          ],
+        },
+      },
+    },
+    evidence: [
+      ...first.evidence,
+      "filter:anyOf",
+      ...secondCardinality.evidence,
+      ...second.evidence,
+    ],
+    rest: normalizeTargetRest(second.rest),
+  };
+}
+
 export function parseYourCharactersTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
+  const namedCharacterMatch =
+    /^of your \[(?<name>[^\]]+)\] Characters?\b\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
+  const nameText = namedCharacterMatch?.groups?.["name"]?.trim();
+  const restText = namedCharacterMatch?.groups?.["rest"];
+  if (nameText !== undefined && nameText.length > 0) {
+    return {
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"], names: [nameText] },
+        },
+      },
+      evidence: [
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        "filter:name",
+      ],
+      rest: normalizeTargetRest(restText ?? ""),
+    };
+  }
+
+  const typedMatch =
+    /^of your\s+(?<predicates>.+?)\s+Characters?\b\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
+  if (typedMatch !== null) {
+    const predicateText = typedMatch.groups?.["predicates"]?.trim();
+    if (predicateText === undefined || predicateText.length === 0) {
+      return undefined;
+    }
+    const predicates = parseCardFilterPredicates(
+      { text: `${predicateText} Characters` },
+      { powerSemantics: "current" },
+    );
+    if (predicates === undefined || predicates.rest.length > 0) {
+      return undefined;
+    }
+    return {
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"], ...predicates.filter },
+        },
+      },
+      evidence: [
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        ...predicates.evidence,
+      ],
+      rest: normalizeTargetRest(typedMatch.groups?.["rest"] ?? ""),
+    };
+  }
+
   const match = /^of your Characters?\b\s*(?<rest>.*)$/i.exec(input.text);
   if (match === null) {
     return undefined;
@@ -338,6 +493,6 @@ export function parseYourCharactersTarget(
       "filter:category:character",
       ...(predicates?.evidence ?? []),
     ],
-    rest: predicates?.rest.trim() ?? predicateText,
+    rest: normalizeTargetRest(predicates?.rest ?? predicateText),
   };
 }

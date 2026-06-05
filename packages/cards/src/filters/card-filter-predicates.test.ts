@@ -128,6 +128,29 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses quoted type-including text and comma-separated current power predicates", () => {
+    expect(
+      parseCardFilterPredicates(
+        {
+          text: 'with a type including "Whitebeard Pirates", with 8000 power or more, gains [Rush]',
+        },
+        { powerSemantics: "current" },
+      ),
+    ).toEqual({
+      filter: {
+        typesAny: ["Whitebeard Pirates"],
+        currentPower: { min: 8000 },
+      },
+      evidence: [
+        "filter:type",
+        "filter:currentPower",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: ", gains [Rush]",
+    });
+  });
+
   it("parses base power thresholds as printed/base power predicates", () => {
     expect(
       parseCardFilterPredicates({

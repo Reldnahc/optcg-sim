@@ -54,6 +54,7 @@ import {
   createReplacementRestTargetDecision,
   createReplacementTrashFromHandDecision,
 } from "./field-removal-decisions.js";
+import { createReplacementOwnerDeckBottomDecision } from "./owner-deck-bottom-decision.js";
 
 export type {
   DetectFieldRemovalReplacementCandidateResult,
@@ -575,6 +576,65 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
   };
   const coveredTargets =
     candidate.coveredTargets ?? fieldRemovalProcessTargets(usedProcess);
+  const ownerDeckBottomDecision = createReplacementOwnerDeckBottomDecision(
+    state,
+    process,
+    candidate,
+  );
+  if (ownerDeckBottomDecision !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: ownerDeckBottomDecision.id,
+        decisionType: ownerDeckBottomDecision.type,
+        playerId: ownerDeckBottomDecision.playerId,
+      },
+      ownerDeckBottomDecision.visibility,
+    );
+    const created = events[events.length - 1];
+    if (created !== undefined) {
+      created.causedBy = ownerDeckBottomDecision.causedBy;
+    }
+    return {
+      state: {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        pendingDecision: ownerDeckBottomDecision,
+        replacementState: [
+          ...state.replacementState.filter(
+            (candidateState) => candidateState.processId !== process.id,
+          ),
+          {
+            processId: process.id,
+            type: process.type,
+            usedReplacementIds: usedProcess.usedReplacementIds,
+            payload: {
+              ...(typeof process.payload === "object" &&
+              process.payload !== null
+                ? process.payload
+                : {}),
+              pendingReplacementOwnerDeckBottomInstead: {
+                decisionId: ownerDeckBottomDecision.id,
+                effectBlockId: candidate.effectBlockId,
+                replacementId: candidate.id,
+                source: candidate.source,
+                ...(process.target === undefined
+                  ? {}
+                  : { target: process.target }),
+                coveredTargets: [...coveredTargets],
+                causedBy: process.causedBy,
+                controllerId: candidate.controllerId,
+              },
+            },
+          },
+        ],
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      process: usedProcess,
+    };
+  }
   const restDecision = createReplacementRestTargetDecision(
     state,
     process,

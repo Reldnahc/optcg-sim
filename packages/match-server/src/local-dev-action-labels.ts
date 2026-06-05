@@ -120,6 +120,8 @@ const paymentOptionLabel = (
       return `Return ${countLabel(selectedDonCount || option.count, "DON!!", "DON!!")}`;
     case "trashFromHand":
       return `Trash ${countLabel(selectedCardsCount || option.count, "card", "cards")} from hand`;
+    case "revealFromHand":
+      return `Reveal ${countLabel(selectedCardsCount || option.count, "card", "cards")} from hand`;
     case "trashFromField":
       return `Trash ${countLabel(selectedCardsCount || option.count, "card", "cards")} from field`;
     case "modifyPower":

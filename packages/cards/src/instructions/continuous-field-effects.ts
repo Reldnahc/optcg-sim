@@ -7,10 +7,12 @@ import {
   parseThisTurnDuration,
 } from "../durations/index.js";
 import { parseUpToCardinality } from "../cardinality/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseKeyword } from "../keywords/index.js";
 import { parsePositivePowerModifier } from "../modifiers/index.js";
 import {
   parseAllFieldTarget,
+  parseCompoundYourCharactersTarget,
   parseThisCharacterTarget,
   parseYourCharactersTarget,
   parseYourLeaderTarget,
@@ -79,18 +81,12 @@ type BasePowerTargetSubject = {
 const setBasePowerEffect = (
   target: Target,
   value: number,
-  condition: Condition | undefined,
+  duration: Extract<Effect, { type: "setBasePower" }>["duration"],
 ): Extract<Effect, { type: "setBasePower" }> => ({
   type: "setBasePower",
   target,
   value,
-  duration:
-    condition === undefined
-      ? { type: "whileSourceOnField" }
-      : {
-          type: "whileConditionTrue",
-          condition,
-        },
+  duration,
 });
 
 const continuousDuration = (
@@ -119,8 +115,16 @@ const parseExplicitFieldEffectDuration = (input: ParseInput) =>
 const parseBasePowerSubject = (
   text: string,
 ): BasePowerTargetSubject | undefined => {
+  const normalizedText = text.trim();
+  if (/^your Leader(?:'s base power)?$/i.test(normalizedText)) {
+    return {
+      target: { type: "myLeader" },
+      evidence: ["target:yourLeader"],
+    };
+  }
+
   const namedCardsMatch =
-    /^All of your \[(?<name>[^\]]+)\] cards' base power$/i.exec(text.trim());
+    /^All of your \[(?<name>[^\]]+)\] cards' base power$/i.exec(normalizedText);
   const name = namedCardsMatch?.groups?.["name"]?.trim();
   if (name !== undefined && name.length > 0) {
     return {
@@ -140,7 +144,7 @@ const parseBasePowerSubject = (
     };
   }
 
-  if (/^this Character's base power$/i.test(text.trim())) {
+  if (/^this Character(?:'s base power)?$/i.test(normalizedText)) {
     return {
       target: { type: "self" },
       evidence: ["target:thisCharacter"],
@@ -154,11 +158,13 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
-  const match = /^(?<targets>.+?) become (?<value>[1-9]\d*)\.?$/i.exec(
-    input.text,
-  );
+  const match =
+    /^(?<targets>.+?) becomes? (?<value>[1-9]\d*)(?<durationText>.*)$/i.exec(
+      input.text,
+    );
   const targetsText = match?.groups?.["targets"];
   const valueText = match?.groups?.["value"];
+  const durationText = match?.groups?.["durationText"]?.trim() ?? "";
   if (targetsText === undefined || valueText === undefined) {
     return undefined;
   }
@@ -174,9 +180,24 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
+  const explicitDuration =
+    durationText.length === 0 || durationText === "."
+      ? undefined
+      : parseExplicitFieldEffectDuration({ text: durationText });
+  if (durationText.length > 0 && durationText !== ".") {
+    if (explicitDuration === undefined || explicitDuration.rest.length > 0) {
+      return undefined;
+    }
+  }
+  const duration =
+    explicitDuration?.duration ?? continuousDuration(context.condition);
+  const durationEvidence = explicitDuration?.evidence ?? [
+    continuousDurationEvidence(context.condition),
+  ];
+
   const parsedSubjects = subjects as BasePowerTargetSubject[];
   const effects = parsedSubjects.map((subject) =>
-    setBasePowerEffect(subject.target, value, context.condition),
+    setBasePowerEffect(subject.target, value, duration),
   );
   const singleEffect = effects[0];
   if (singleEffect === undefined) {
@@ -199,7 +220,7 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),
       "value:basePower:positiveInteger",
-      "duration:whileConditionTrue",
+      ...durationEvidence,
     ],
     rest: "",
   };
@@ -236,6 +257,47 @@ export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
       ...target.evidence,
       "value:basePower:positiveInteger",
       "duration:whileConditionTrue",
+    ],
+    rest: "",
+  };
+};
+
+export const parseHandCounterSetInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const match =
+    /^The counter of all of your (?<filter>.+?) in your hand becomes \+(?<value>[1-9]\d*)\.?$/i.exec(
+      input.text,
+    );
+  const filterText = match?.groups?.["filter"];
+  const valueText = match?.groups?.["value"];
+  if (filterText === undefined || valueText === undefined) {
+    return undefined;
+  }
+  const parsedFilter = parseCardFilterPredicates({
+    text: filterText.replace(/\s+cards?$/i, ""),
+  });
+  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyCounter",
+      player: "self",
+      sourceZone: "hand",
+      filter: parsedFilter.filter,
+      value: Number.parseInt(valueText, 10),
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:modifyCounter",
+      "player:self",
+      "zone:hand",
+      ...parsedFilter.evidence,
+      "modifier:positiveCounter",
+      continuousDurationEvidence(context.condition),
     ],
     rest: "",
   };
@@ -528,7 +590,11 @@ export const parseTargetedKeywordGrantInstruction: InstructionParser = (
     return undefined;
   }
 
-  const target = parseYourCharactersTarget({ text: cardinality.rest });
+  const target =
+    parseCompoundYourCharactersTarget(
+      { text: cardinality.rest },
+      cardinality.cardinality,
+    ) ?? parseYourCharactersTarget({ text: cardinality.rest });
   if (target?.target === undefined) {
     return undefined;
   }

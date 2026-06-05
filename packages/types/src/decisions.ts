@@ -49,6 +49,7 @@ export type PaymentOption =
     }
   | { id: string; type: "returnDon"; count: number }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
+  | { id: string; type: "revealFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
   | {
       id: string;

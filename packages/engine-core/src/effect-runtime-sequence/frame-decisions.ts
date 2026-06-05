@@ -1,5 +1,6 @@
 import type {
   CardFilter,
+  ChooseEffectOptionDecision,
   CardInstance,
   ChooseQuantityDecision,
   ChooseOptionalActivationDecision,
@@ -417,6 +418,53 @@ export const createChooseQuantityDecisionForSequenceSegment = (
   };
 };
 
+export const createChooseEffectOptionDecisionForSequenceSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Extract<Effect, { type: "choice" }>,
+  index: number,
+): { events: EngineEvent[]; ok: true; state: GameState } => {
+  const causedBy = decisionCauseForEntry(entry);
+  const visibility = { type: "private", playerId: entry.controllerId } as const;
+  const pendingDecision: ChooseEffectOptionDecision = {
+    id: toDecisionId(
+      `decision:chooseEffectOption:sequence:${String(entry.id)}:${String(index)}`,
+    ),
+    type: "chooseEffectOption",
+    playerId: entry.controllerId,
+    prompt: "Choose one effect.",
+    causedBy,
+    visibility,
+    options: effect.options,
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    visibility,
+  );
+  const created = events[0];
+  if (created !== undefined) {
+    created.causedBy = causedBy;
+  }
+  return {
+    events,
+    ok: true,
+    state: {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+  };
+};
+
 const chooseCombos = <T>(values: readonly T[], count: number): T[][] => {
   if (count === 0) {
     return [[]];
@@ -577,7 +625,7 @@ export const getSequencePayCostLegalActions = (
       });
       continue;
     }
-    if (option.type === "trashFromHand") {
+    if (option.type === "trashFromHand" || option.type === "revealFromHand") {
       if (!supportsChooseOneTrashFilter(option.filter)) {
         continue;
       }
@@ -736,6 +784,7 @@ export const getSequenceOptionalPayCostOptions = (
         | "attachDon"
         | "returnDon"
         | "trashFromHand"
+        | "revealFromHand"
         | "trashFromField"
         | "moveCards"
         | "turnLifeFaceUp"
@@ -754,6 +803,7 @@ export const getSequenceOptionalPayCostOptions = (
           | "attachDon"
           | "returnDon"
           | "trashFromHand"
+          | "revealFromHand"
           | "trashFromField"
           | "moveCards"
           | "turnLifeFaceUp"
@@ -764,7 +814,6 @@ export const getSequenceOptionalPayCostOptions = (
   const currentPlayer = state.players[entry.controllerId];
   const returnDonEligibleCount =
     currentPlayer === undefined ? 0 : getReturnDonEligibleCount(currentPlayer);
-  const handEligibleCount = currentPlayer?.hand.length ?? 0;
 
   if (cost.type === "restSelf") {
     if (findRestableSource(state, entry) !== undefined) {
@@ -820,12 +869,22 @@ export const getSequenceOptionalPayCostOptions = (
     }
     return paymentOptions;
   }
-  if (cost.type === "trashFromHand") {
-    if (handEligibleCount >= cost.count) {
+  if (cost.type === "trashFromHand" || cost.type === "revealFromHand") {
+    const matchingHandCount =
+      currentPlayer?.hand.filter((card) =>
+        cardMatchesHandSelectionFilter(
+          state,
+          entry.controllerId,
+          card,
+          cost.filter,
+        ),
+      ).length ?? 0;
+    if (matchingHandCount >= cost.count) {
       paymentOptions.push({
-        id: "trashFromHand",
-        type: "trashFromHand",
+        id: cost.type,
+        type: cost.type,
         count: cost.count,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       });
     }
     return paymentOptions;

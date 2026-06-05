@@ -399,6 +399,106 @@ describe("resolvePublicTargetCandidates", () => {
     expect(targetCards(result)).toEqual([refs[0]]);
   });
 
+  test("applies branch-local filters in reusable anyOf character targets", () => {
+    const state = createActiveState();
+    const lowPowerLuffy = toCardId("low-power-luffy");
+    const lowPowerWhitebeard = toCardId("low-power-whitebeard");
+    const highPowerWhitebeard = toCardId("high-power-whitebeard");
+    const unrelatedHighPower = toCardId("unrelated-high-power");
+    addManifestCard(state, {
+      cardId: lowPowerLuffy,
+      category: "character",
+      cost: 3,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: lowPowerWhitebeard,
+      category: "character",
+      cost: 4,
+      power: 7000,
+    });
+    addManifestCard(state, {
+      cardId: highPowerWhitebeard,
+      category: "character",
+      cost: 7,
+      power: 8000,
+    });
+    addManifestCard(state, {
+      cardId: unrelatedHighPower,
+      category: "character",
+      cost: 8,
+      power: 9000,
+    });
+    state.cardManifest.cards[lowPowerLuffy] = {
+      ...must(state.cardManifest.cards[lowPowerLuffy], "luffy metadata"),
+      name: "Monkey.D.Luffy",
+      types: ["Straw Hat Crew"],
+    };
+    state.cardManifest.cards[lowPowerWhitebeard] = {
+      ...must(
+        state.cardManifest.cards[lowPowerWhitebeard],
+        "low whitebeard metadata",
+      ),
+      name: "Marco",
+      types: ["Whitebeard Pirates"],
+    };
+    state.cardManifest.cards[highPowerWhitebeard] = {
+      ...must(
+        state.cardManifest.cards[highPowerWhitebeard],
+        "high whitebeard metadata",
+      ),
+      name: "Edward.Newgate",
+      types: ["Whitebeard Pirates"],
+    };
+    state.cardManifest.cards[unrelatedHighPower] = {
+      ...must(
+        state.cardManifest.cards[unrelatedHighPower],
+        "unrelated metadata",
+      ),
+      name: "Kaido",
+      types: ["Animal Kingdom Pirates"],
+    };
+    const player = must(state.players[p1], "p1");
+    const opponent = must(state.players[p2], "p2");
+    addManifestCard(state, {
+      cardId: player.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: opponent.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p1, [
+      lowPowerLuffy,
+      lowPowerWhitebeard,
+      highPowerWhitebeard,
+      unrelatedHighPower,
+    ]);
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: {
+          categories: ["character"],
+          anyOf: [
+            { names: ["Monkey.D.Luffy"] },
+            {
+              typesAny: ["Whitebeard Pirates"],
+              currentPower: { min: 8000 },
+            },
+          ],
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([refs[0], refs[2]]);
+  });
+
   test("supports leaderArea and opponent/nonTurnPlayer references with cost equality", () => {
     const state = createActiveState();
     state.turn.turnPlayerId = p1;

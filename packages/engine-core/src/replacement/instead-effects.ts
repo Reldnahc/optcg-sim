@@ -80,6 +80,46 @@ export const isSupportedTrashSelfInsteadEffect = (
   >;
 } => effect.type === "trash" && effect.target.type === "self";
 
+export const isSupportedOwnerDeckBottomInsteadEffect = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "sequence" }> => {
+  if (effect.type !== "sequence" || effect.effects.length !== 2) {
+    return false;
+  }
+  const select = effect.effects[0];
+  const bounce = effect.effects[1];
+  if (
+    select?.connector !== "always" ||
+    select.saveResultAs === undefined ||
+    select.effect.type !== "selectTargets" ||
+    bounce?.connector !== "then" ||
+    bounce.effect.type !== "bounce" ||
+    bounce.effect.destination !== "deckBottom" ||
+    bounce.effect.target.type !== "savedFieldObject"
+  ) {
+    return false;
+  }
+  const request = select.effect.request;
+  if (!("zone" in request)) {
+    return false;
+  }
+  return (
+    request.timing === "onResolution" &&
+    request.chooser === "self" &&
+    request.player === "self" &&
+    request.zone === "characterArea" &&
+    request.min === request.max &&
+    request.min > 0 &&
+    !request.allowFewerIfUnavailable &&
+    request.filter?.categories?.length === 1 &&
+    request.filter.categories[0] === "character" &&
+    bounce.effect.target.binding.family === "selectedTargets" &&
+    bounce.effect.target.binding.saveResultAs === select.saveResultAs &&
+    bounce.effect.target.zone === "characterArea" &&
+    bounce.effect.target.player === "self"
+  );
+};
+
 export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
 ): boolean =>
@@ -89,7 +129,8 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedTrashFromHandInsteadEffect(effect) ||
   isSupportedReturnDonInsteadEffect(effect) ||
   isSupportedModifyLeaderPowerInsteadEffect(effect) ||
-  isSupportedTrashSelfInsteadEffect(effect);
+  isSupportedTrashSelfInsteadEffect(effect) ||
+  isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 export const replacementOptionLabel = (
   candidate: SelectedTargetKoReplacementCandidate,
@@ -138,6 +179,16 @@ export const replacementOptionLabel = (
   }
   if (isSupportedTrashSelfInsteadEffect(instead)) {
     return "Trash this Character instead";
+  }
+  if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
+    const selectEffect = instead.effects[0]?.effect;
+    const count =
+      selectEffect?.type === "selectTargets" ? selectEffect.request.min : 1;
+    return `Place ${String(count)} Character ${plural(
+      count,
+      "",
+      "cards ",
+    )}at the bottom of the owner's deck instead`;
   }
   return "Use replacement effect";
 };

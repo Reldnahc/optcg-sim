@@ -13,13 +13,9 @@ import type {
 
 import { saveReference } from "./segments.js";
 import { toSupportedSequenceBlock } from "./support.js";
+import { resolveSequenceForPath, segmentKeyForPath } from "./paths.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
-
-const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
-  type: "sequence",
-  effects: [{ connector: "always", effect }],
-});
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -57,69 +53,6 @@ type SequenceRuntimeError = (
     | "unsupported-sequence-shape"
     | "segment-execution-failed",
 ) => EngineError;
-
-const rootSequenceEffectPath = ["effect", "sequence"] as const;
-
-const isRootSequencePath = (effectPath: readonly string[]): boolean =>
-  effectPath.length === rootSequenceEffectPath.length &&
-  effectPath.every((part, index) => part === rootSequenceEffectPath[index]);
-
-const resolveSequenceForPath = (
-  effect: SequenceEffect,
-  effectPath: readonly string[],
-): SequenceEffect | undefined => {
-  if (!isRootSequencePath(effectPath)) {
-    if (
-      effectPath.length < rootSequenceEffectPath.length ||
-      !isRootSequencePath(effectPath.slice(0, rootSequenceEffectPath.length))
-    ) {
-      return undefined;
-    }
-  }
-  let current: SequenceEffect = effect;
-  let index = rootSequenceEffectPath.length;
-  while (index < effectPath.length) {
-    const segmentIndex = Number(effectPath[index]);
-    const thenToken = effectPath[index + 1];
-    const sequenceToken = effectPath[index + 2];
-    if (!Number.isSafeInteger(segmentIndex) || thenToken !== "then") {
-      return undefined;
-    }
-    const segment = current.effects[segmentIndex];
-    if (segment === undefined || segment.effect.type !== "conditional") {
-      return undefined;
-    }
-    if (sequenceToken === "sequence") {
-      if (segment.effect.then.type !== "sequence") {
-        return undefined;
-      }
-      current = segment.effect.then;
-    } else if (sequenceToken === "single") {
-      if (segment.effect.then.type === "sequence") {
-        return undefined;
-      }
-      current = toSingleEffectSequence(segment.effect.then);
-    } else {
-      return undefined;
-    }
-    index += 3;
-  }
-  return current;
-};
-
-const segmentKeyForPath = (
-  effectPath: readonly string[],
-  segment: SequenceEffect["effects"][number],
-  index: number,
-): string =>
-  isRootSequencePath(effectPath)
-    ? paramsSegmentKey(segment, index)
-    : `${effectPath.join(".")}:${paramsSegmentKey(segment, index)}`;
-
-const paramsSegmentKey = (
-  _segment: SequenceEffect["effects"][number],
-  index: number,
-): string => String(index);
 
 export const resumeSequenceFrameAfterTrashFromHand = (params: {
   createUnsupportedTrashDecision: unknown;

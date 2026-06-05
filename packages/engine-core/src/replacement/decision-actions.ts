@@ -1,6 +1,10 @@
 import type { GameState, LegalAction, PlayerId } from "@optcg/types";
 
 import {
+  getReplacementOwnerDeckBottomLegalActions,
+  isReplacementOwnerDeckBottomDecision,
+} from "./owner-deck-bottom-decision.js";
+import {
   getReplacementRestTargetLegalActions,
   isReplacementRestTargetsDecision,
 } from "./rest-target-decision.js";
@@ -14,6 +18,7 @@ export const isReplacementContinuationDecision = (
   decision: NonNullable<GameState["pendingDecision"]> | undefined,
 ): boolean =>
   isReplacementRestTargetsDecision(state, decision) ||
+  isReplacementOwnerDeckBottomDecision(state, decision) ||
   isReplacementTrashFromHandDecision(state, decision);
 
 export const getReplacementDecisionLegalActions = (
@@ -21,5 +26,6 @@ export const getReplacementDecisionLegalActions = (
   playerId: PlayerId,
 ): LegalAction[] => [
   ...getReplacementRestTargetLegalActions(state, playerId),
+  ...getReplacementOwnerDeckBottomLegalActions(state, playerId),
   ...getReplacementTrashFromHandLegalActions(state, playerId),
 ];

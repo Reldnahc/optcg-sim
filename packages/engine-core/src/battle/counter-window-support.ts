@@ -5,6 +5,7 @@ import {
   getSupportedCounterEventPowerTargets,
 } from "./counter-event-support.js";
 import { getActiveDonCount } from "../play-card/support.js";
+import { getEffectiveCharacterCounterValue } from "./effective-counter.js";
 
 const unsupportedCounterEventReason =
   "Counter Events are unsupported in the Counter Step.";
@@ -101,8 +102,7 @@ export const hasPotentialCharacterCounterActions = (
     );
     return (
       (metadata?.category === "character" &&
-        metadata.counter !== undefined &&
-        metadata.counter > 0) ||
+        (getEffectiveCharacterCounterValue(state, card) ?? 0) > 0) ||
       supportedEvents.some(
         (supportedEvent) =>
           getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,

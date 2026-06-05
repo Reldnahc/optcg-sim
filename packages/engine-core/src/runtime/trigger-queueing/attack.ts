@@ -338,7 +338,11 @@ export const createAttackTriggerQueueing = (
         [onOpponentAttackTriggerQueueingError("source-presence-failed")],
       );
     }
-    const defenderSources = [defender.leader, ...defender.characters].filter(
+    const defenderSources = [
+      defender.leader,
+      ...defender.characters,
+      ...(defender.stage === undefined ? [] : [defender.stage]),
+    ].filter(
       (card) =>
         card.controller === defenderId && card.zone.playerId === defenderId,
     );
@@ -419,7 +423,8 @@ export const createAttackTriggerQueueing = (
           source.zone.playerId !== defenderId ||
           source.controller !== defenderId ||
           (source.zone.zone !== "leaderArea" &&
-            source.zone.zone !== "characterArea")
+            source.zone.zone !== "characterArea" &&
+            source.zone.zone !== "stageArea")
         ) {
           return toEngineResult(
             state,

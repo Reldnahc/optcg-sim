@@ -86,6 +86,29 @@ export function parseSearchSelectionToHand(
     return undefined;
   }
 
+  const repeatedUpToOne = parseRepeatedUpToOneSearchSelection({
+    text: cardinality.rest,
+  });
+  if (
+    repeatedUpToOne !== undefined &&
+    cardinality.cardinality.min === 0 &&
+    cardinality.cardinality.max === 1
+  ) {
+    return {
+      filter: repeatedUpToOne.filter,
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      revealTo: verb.revealTo,
+      rest: repeatedUpToOne.rest,
+      evidence: [
+        ...verb.evidence,
+        ...cardinality.evidence,
+        ...repeatedUpToOne.evidence,
+        "destination:hand",
+      ],
+    };
+  }
+
   const filter = parseSearchCardFilter({ text: cardinality.rest });
   if (filter === undefined) {
     return undefined;
@@ -114,3 +137,37 @@ export function parseSearchSelectionToHand(
     ],
   };
 }
+
+const parseRepeatedUpToOneSearchSelection = (
+  input: ParseInput,
+): SearchFilterParseResult | undefined => {
+  const match =
+    /^(?<left>.+?)\s+or\s+up to 1\s+(?<right>.+?)\s+and add it to your hand\.\s+(?<rest>.+)$/i.exec(
+      input.text,
+    );
+  const leftText = match?.groups?.["left"];
+  const rightText = match?.groups?.["right"];
+  const rest = match?.groups?.["rest"];
+  if (leftText === undefined || rightText === undefined || rest === undefined) {
+    return undefined;
+  }
+
+  const parseBranch = (text: string) =>
+    parseCardFilterPredicates({ text: text.replace(/^card\s+/i, "") });
+  const left = parseBranch(leftText);
+  const right = parseBranch(rightText);
+  if (
+    left === undefined ||
+    right === undefined ||
+    left.rest.length > 0 ||
+    right.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    filter: { anyOf: [left.filter, right.filter] },
+    rest,
+    evidence: ["filter:anyOf", ...left.evidence, ...right.evidence],
+  };
+};

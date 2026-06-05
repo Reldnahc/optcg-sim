@@ -39,6 +39,18 @@ export const nestedSequencePath = (
   index: number,
 ): string[] => [...effectPath, String(index), "nested", "sequence"];
 
+export const choiceOptionPath = (
+  effectPath: readonly string[],
+  index: number,
+  optionIndex: number,
+): string[] => [
+  ...effectPath,
+  String(index),
+  "choice",
+  String(optionIndex),
+  "sequence",
+];
+
 export const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
   type: "sequence",
   effects: [{ connector: "always", effect }],
@@ -74,6 +86,27 @@ export const resolveSequenceForPath = (
         return undefined;
       }
       current = segment.effect;
+    } else if (branchToken === "choice") {
+      if (segment.effect.type !== "choice") {
+        return undefined;
+      }
+      const optionIndex = Number(sequenceToken);
+      const optionSequenceToken = effectPath[index + 3];
+      if (!Number.isSafeInteger(optionIndex)) {
+        return undefined;
+      }
+      if (optionSequenceToken !== "sequence") {
+        return undefined;
+      }
+      const option = segment.effect.options[optionIndex];
+      if (option === undefined) {
+        return undefined;
+      }
+      current =
+        option.effect.type === "sequence"
+          ? option.effect
+          : toSingleEffectSequence(option.effect);
+      index += 1;
     } else if (branchToken === "then" && sequenceToken === "sequence") {
       if (segment.effect.type !== "conditional") {
         return undefined;
@@ -111,13 +144,21 @@ export const conditionalParentForPath = (
   }
   const branchToken = effectPath[effectPath.length - 1];
   const parentToken = effectPath[effectPath.length - 2];
-  const parentIndexToken = effectPath[effectPath.length - 3];
+  const maybeChoiceToken = effectPath[effectPath.length - 3];
+  const isChoicePath =
+    branchToken === "sequence" &&
+    maybeChoiceToken === "choice" &&
+    Number.isSafeInteger(Number(parentToken));
+  const parentIndexToken = isChoicePath
+    ? effectPath[effectPath.length - 4]
+    : effectPath[effectPath.length - 3];
   const parentIndex = Number(parentIndexToken);
   if (
     !(
       (parentToken === "then" &&
         (branchToken === "sequence" || branchToken === "single")) ||
-      (parentToken === "nested" && branchToken === "sequence")
+      (parentToken === "nested" && branchToken === "sequence") ||
+      isChoicePath
     ) ||
     !Number.isSafeInteger(parentIndex)
   ) {
@@ -125,6 +166,6 @@ export const conditionalParentForPath = (
   }
   return {
     parentIndex,
-    parentPath: effectPath.slice(0, -3),
+    parentPath: effectPath.slice(0, isChoicePath ? -4 : -3),
   };
 };

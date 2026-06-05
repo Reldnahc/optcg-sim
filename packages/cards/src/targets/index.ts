@@ -5,6 +5,7 @@ export {
   parseOpponentLeaderOrCharacterCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,
+  parseCompoundYourCharactersTarget,
   parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,

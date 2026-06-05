@@ -121,7 +121,7 @@ export const defaultDevDonCounts: DevDonCounts = {
   secondPlayer: 10,
 };
 
-export const defaultDevEffectDefinitionsVersion = "generated-dev-v4";
+export const defaultDevEffectDefinitionsVersion = "generated-dev-v6";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v1";
 
 const assertValidDevDonCount = (value: number, label: string): number => {

@@ -49,6 +49,7 @@ import {
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseBasePowerBecomeInstruction,
+  parseHandCounterSetInstruction,
   parseSelfCannotAttackInstruction,
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
@@ -89,6 +90,7 @@ import {
 import {
   conditionalContinuousExpressionParser,
   entryConditionContinuousExpressionParser,
+  chooseOneExpressionParser,
   conditionalBlockExpressionParser,
   conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
@@ -131,6 +133,25 @@ const isExplicitActionModifierSequence = (effect: Effect): boolean =>
     );
   });
 
+const isExplicitActionBasePowerEffect = (effect: Effect): boolean => {
+  if (effect.type === "setBasePower") {
+    return (
+      effect.duration.type !== "whileSourceOnField" &&
+      effect.duration.type !== "whileConditionTrue"
+    );
+  }
+  return (
+    effect.type === "sequence" &&
+    effect.effects.every((segment) => {
+      const child = segment.effect;
+      return (
+        (child.type === "setBasePower" || child.type === "sequence") &&
+        isExplicitActionBasePowerEffect(child)
+      );
+    })
+  );
+};
+
 const parseExplicitActionKeywordGrantInstruction = (input: ParseInput) => {
   const parsed = parseThisCharacterKeywordGrantInstruction(input, {
     condition: undefined,
@@ -140,6 +161,16 @@ const parseExplicitActionKeywordGrantInstruction = (input: ParseInput) => {
     (!isExplicitActionKeywordDuration(parsed.effect) &&
       !isExplicitActionModifierSequence(parsed.effect))
   ) {
+    return undefined;
+  }
+  return parsed;
+};
+
+const parseExplicitActionBasePowerInstruction = (input: ParseInput) => {
+  const parsed = parseBasePowerBecomeInstruction(input, {
+    condition: undefined,
+  });
+  if (parsed === undefined || !isExplicitActionBasePowerEffect(parsed.effect)) {
     return undefined;
   }
   return parsed;
@@ -184,6 +215,7 @@ const instructionParsers = [
   parsePreventThatCharacterRefreshInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   parseExplicitActionKeywordGrantInstruction,
+  parseExplicitActionBasePowerInstruction,
 ] as const;
 
 const conditionParsers = [
@@ -208,6 +240,7 @@ const continuousInstructionParsers = [
   parseYourLeaderConditionalPowerInstruction,
   parseSetBasePowerInstruction,
   parseBasePowerBecomeInstruction,
+  parseHandCounterSetInstruction,
   parseSelfHandModifyCostInstruction,
 ] as const;
 
@@ -275,6 +308,14 @@ const defaultRegistry = {
   ],
   markers: [parseAttachedDonMarker, parseOncePerTurnMarker],
   expressions: [
+    chooseOneExpressionParser({
+      conditions: conditionParsers,
+      expressions: [
+        revealTopPlayRestedExpressionParser,
+        searchRevealExpressionParser,
+        generalExpressionParser,
+      ],
+    }),
     conditionalCostedBlockExpressionParser({
       conditions: conditionParsers,
       expressions: [

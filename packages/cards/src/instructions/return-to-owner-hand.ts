@@ -2,6 +2,7 @@ import type { Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { parseOpponentFieldTarget } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
 const returnSelectionId = "selected:return-to-owner-hand";
@@ -20,6 +21,31 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
+  const opponentTarget = parseOpponentFieldTarget({ text: cardinality.rest });
+  if (
+    opponentTarget !== undefined &&
+    (opponentTarget.rest.length === 0 || opponentTarget.rest === ".")
+  ) {
+    const category = opponentTarget.filter?.categories?.[0];
+    return {
+      effect: selectThenReturnToOwnerHand(
+        "opponent",
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+        opponentTarget.filter ?? { categories: ["character"] },
+        category === "stage" ? "stageArea" : "characterArea",
+      ),
+      evidence: [
+        "instruction:returnToOwnerHand",
+        ...cardinality.evidence,
+        ...opponentTarget.evidence,
+        "destination:ownerHand",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const predicates = parseCardFilterPredicates(
     { text: cardinality.rest },
     { powerSemantics: "current" },
@@ -34,6 +60,9 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
       cardinality.cardinality.min,
       cardinality.cardinality.max,
       predicates.filter,
+      predicates.filter.categories?.[0] === "stage"
+        ? "stageArea"
+        : "characterArea",
     ),
     evidence: [
       "instruction:returnToOwnerHand",
@@ -52,6 +81,7 @@ export function selectThenReturnToOwnerHand(
   min: number,
   max: number,
   filter: NonNullable<Extract<Target, { type: "choose" }>["request"]["filter"]>,
+  zone: "characterArea" | "stageArea" = "characterArea",
 ): Effect {
   return {
     type: "sequence",
@@ -66,7 +96,7 @@ export function selectThenReturnToOwnerHand(
             timing: "onResolution",
             chooser: "self",
             player,
-            zone: "characterArea",
+            zone,
             min,
             max,
             allowFewerIfUnavailable: true,
@@ -86,7 +116,7 @@ export function selectThenReturnToOwnerHand(
               family: "selectedTargets",
               saveResultAs: returnSelectionId,
             },
-            zone: "characterArea",
+            zone,
             player,
             visibility: "publicOnly",
             onFailure: "failClosed",

@@ -23,6 +23,10 @@ export type ConditionEvaluationResult =
   | ConditionEvaluationSuccess
   | ConditionEvaluationFailure;
 
+type NumericFilter =
+  | { op: Comparator; value: number }
+  | { min?: number; max?: number };
+
 const compare = (op: Comparator, left: number, right: number): boolean => {
   switch (op) {
     case "eq":
@@ -69,6 +73,43 @@ const isFieldZone = (zone: CardInstance["zone"]["zone"]): boolean =>
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
+const hasSupportedNumericFilter = (
+  filter: NumericFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if ("op" in filter) {
+    return isComparator(filter.op) && Number.isFinite(filter.value);
+  }
+  return (
+    (filter.min === undefined || Number.isFinite(filter.min)) &&
+    (filter.max === undefined || Number.isFinite(filter.max)) &&
+    (filter.min === undefined ||
+      filter.max === undefined ||
+      filter.min <= filter.max)
+  );
+};
+
+const numericFilterMatches = (
+  value: number | undefined,
+  filter: NumericFilter,
+): boolean => {
+  if (value === undefined) {
+    return false;
+  }
+  if ("op" in filter) {
+    return compare(filter.op, value, filter.value);
+  }
+  if (filter.min !== undefined && value < filter.min) {
+    return false;
+  }
+  if (filter.max !== undefined && value > filter.max) {
+    return false;
+  }
+  return true;
+};
 
 const findLiveSourceFieldCard = (
   state: GameState,
@@ -168,14 +209,15 @@ const readLeaderMetadata = (
 const isSupportedLeaderZoneFilter = (
   filter: CardFilter,
 ): filter is Required<Pick<CardFilter, "categories">> &
-  Pick<CardFilter, "typesAny" | "attributesAny" | "names"> => {
+  Pick<CardFilter, "typesAny" | "attributesAny" | "names" | "nameContains"> => {
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   for (const key of keys) {
     if (
       key !== "categories" &&
       key !== "typesAny" &&
       key !== "attributesAny" &&
-      key !== "names"
+      key !== "names" &&
+      key !== "nameContains"
     ) {
       return false;
     }
@@ -199,7 +241,9 @@ const isSupportedLeaderZoneFilter = (
     Array.isArray(filter.names) &&
     filter.names.length > 0 &&
     filter.names.every((value) => typeof value === "string");
-  return hasTypes || hasAttributes || hasNames;
+  const hasNameContains =
+    typeof filter.nameContains === "string" && filter.nameContains.length > 0;
+  return hasTypes || hasAttributes || hasNames || hasNameContains;
 };
 
 const isSupportedDonFieldCountFilter = (
@@ -241,6 +285,7 @@ const isSupportedCharacterFieldCountFilter = (
   state?: "active" | "rested";
   names?: string[];
   typesAny?: string[];
+  currentPower?: NumericFilter;
   excludeSelf?: boolean;
 } => {
   if (filter === undefined) {
@@ -253,6 +298,7 @@ const isSupportedCharacterFieldCountFilter = (
       key !== "state" &&
       key !== "names" &&
       key !== "typesAny" &&
+      key !== "currentPower" &&
       key !== "excludeSelf"
     ) {
       return false;
@@ -268,6 +314,7 @@ const isSupportedCharacterFieldCountFilter = (
   const stateValue = filter.state as unknown;
   const namesValue = filter.names as unknown;
   const typesValue = filter.typesAny as unknown;
+  const currentPowerValue = filter.currentPower;
   const excludeSelfValue = filter.excludeSelf as unknown;
   return (
     (stateValue === undefined ||
@@ -281,6 +328,7 @@ const isSupportedCharacterFieldCountFilter = (
       (Array.isArray(typesValue) &&
         typesValue.length > 0 &&
         typesValue.every((value) => typeof value === "string"))) &&
+    hasSupportedNumericFilter(currentPowerValue) &&
     (excludeSelfValue === undefined || excludeSelfValue === true)
   );
 };
@@ -374,7 +422,11 @@ const countPublicCharactersOnField = (
     if (filter.state !== undefined && card.state !== filter.state) {
       return false;
     }
-    if (filter.names === undefined && filter.typesAny === undefined) {
+    if (
+      filter.names === undefined &&
+      filter.typesAny === undefined &&
+      filter.currentPower === undefined
+    ) {
       return true;
     }
     return cardMatchesFilter(state, card, filter);
@@ -427,6 +479,23 @@ const cardMatchesFilter = (
   if (
     filter.names !== undefined &&
     !filter.names.some((name) => metadata.name === name)
+  ) {
+    return false;
+  }
+  if (
+    filter.nameContains !== undefined &&
+    !metadata.name.includes(filter.nameContains)
+  ) {
+    return false;
+  }
+  if (
+    filter.currentPower !== undefined &&
+    !numericFilterMatches(
+      metadata.power === undefined
+        ? undefined
+        : metadata.power + card.attachedDon.length * 1000,
+      filter.currentPower,
+    )
   ) {
     return false;
   }
@@ -661,9 +730,13 @@ const evaluateHasCardInZone = (
     condition.filter.names === undefined
       ? true
       : condition.filter.names.some((name) => leader.name === name);
+  const nameContainsMatch =
+    condition.filter.nameContains === undefined
+      ? true
+      : leader.name.includes(condition.filter.nameContains);
   return {
     supported: true,
-    passed: typesMatch && attributesMatch && namesMatch,
+    passed: typesMatch && attributesMatch && namesMatch && nameContainsMatch,
   };
 };
 

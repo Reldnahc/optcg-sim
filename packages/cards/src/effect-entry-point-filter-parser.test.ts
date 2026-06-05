@@ -117,3 +117,56 @@ it("parses rest-self cost, power debuff, and filtered temporary keyword grant as
     },
   });
 });
+
+it("parses branch-specific character filters for temporary keyword grants", () => {
+  const parsed = parseCardEffectLine(
+    '[Activate: Main] [Once Per Turn] Up to 1 of your [Monkey.D.Luffy] Characters or up to 1 of your Characters with a type including "Whitebeard Pirates", with 8000 power or more, gains [Rush] during this turn.',
+  );
+
+  expect(parsed).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "giveKeyword",
+        keyword: "rush",
+        duration: { type: "thisTurn" },
+        target: {
+          type: "choose",
+          request: {
+            player: "self",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              anyOf: [
+                { names: ["Monkey.D.Luffy"] },
+                {
+                  typesAny: ["Whitebeard Pirates"],
+                  currentPower: { min: 8000 },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "cardinality:upTo",
+      "target:yourCharacters",
+      "filter:anyOf",
+      "filter:name",
+      "filter:type",
+      "filter:currentPower",
+      "instruction:giveKeyword",
+      "keyword:anySupported",
+      "duration:thisTurn",
+    ]),
+  );
+});

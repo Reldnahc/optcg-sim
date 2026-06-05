@@ -15,7 +15,9 @@ import type {
 
 import { computeView } from "../../view/compute-view.js";
 import {
+  deriveImplementedDslPlayCostContinuousEffects,
   deriveImplementedDslPermanentContinuousEffects,
+  isSupportedPermanentContinuousEffectBlock,
   isSupportedContinuousQueueEffect,
 } from "./continuous.js";
 import { createInitialState } from "../../setup/initial-state.js";
@@ -953,6 +955,42 @@ test("fails closed for unsupported condition on permanent block", () => {
     () => deriveImplementedDslPermanentContinuousEffects(state),
     /unsupported condition/i,
   );
+});
+
+test("play-cost derivation ignores unsupported conditioned non-cost permanent hand blocks", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source: CardInstance = {
+    instanceId: "p1:hand:0:char-vanilla" as CardInstance["instanceId"],
+    cardId: toCardId("char-vanilla"),
+    owner: p1,
+    controller: p1,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+    state: "active",
+    attachedDon: [],
+  };
+  p1State.hand = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  const block = must(definition.effects[0], "permanent block");
+  block.condition = { type: "custom", check: "unsupported" };
+  block.effect = {
+    type: "giveKeyword",
+    target: { type: "self" },
+    keyword: "blocker",
+    duration: { type: "permanent" },
+  };
+  installPermanentDslCandidate(state, source, definition);
+
+  assert.deepEqual(deriveImplementedDslPlayCostContinuousEffects(state), []);
+});
+
+test("permanent support admission rejects unsupported conditions before materialization", () => {
+  const sourceCardId = toCardId("char-vanilla");
+  const definition = reviewedPermanentDefinition(sourceCardId);
+  const block = must(definition.effects[0], "permanent block");
+  block.condition = { type: "custom", check: "unsupported" };
+
+  assert.equal(isSupportedPermanentContinuousEffectBlock(block), false);
 });
 
 test("fails closed for unsupported permanent shape", () => {

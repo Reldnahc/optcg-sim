@@ -20,7 +20,7 @@ export function parseReturnDonCost(
   input: ParseInput,
 ): CostParseResult | undefined {
   const match =
-    /^DON!!\s*[-\u2212](?<count>[1-9]\d*)(?:\s*\([^)]*\))?:\s*(?<rest>.*)$/iu.exec(
+    /^DON!!\s*[-\u2212](?<count>[1-9]\d*)(?:\s*\([^)]*\))?:\s*(?<rest>[\s\S]*)$/iu.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];

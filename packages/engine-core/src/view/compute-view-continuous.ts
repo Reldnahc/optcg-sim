@@ -130,6 +130,19 @@ const isSupportedContinuousCostModifier = (
       (effect.modifier.target.player === "self" ||
         effect.modifier.target.player === "opponent")));
 
+const isSupportedContinuousCounterModifier = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.layer === "counterSet" &&
+  effect.modifier.operation.type === "setCounter" &&
+  Number.isSafeInteger(effect.modifier.operation.value) &&
+  effect.modifier.operation.value >= 0 &&
+  effect.modifier.target.type === "allMatching" &&
+  effect.modifier.target.zone === "hand" &&
+  (effect.modifier.target.player === "self" ||
+    effect.modifier.target.player === "opponent");
+
 export const isSupportedContinuousKeywordModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
@@ -304,6 +317,11 @@ export const assertSupportedContinuousEffects = (state: GameState): void => {
       throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
     }
     if (isSupportedContinuousCostModifier(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
+    }
+    if (isSupportedContinuousCounterModifier(effect)) {
       if (!durationIsActive(state, effect)) continue;
       recordConditionPasses(state, effect);
       continue;

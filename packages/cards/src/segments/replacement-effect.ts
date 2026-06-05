@@ -1,5 +1,6 @@
 import type { Effect } from "@optcg/types";
 
+import { parseExactCardinality } from "../cardinality/index.js";
 import { parseThisTurnDuration } from "../durations/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import {
@@ -8,6 +9,9 @@ import {
 } from "../modifiers/index.js";
 import { parseYourFieldReplacementTarget } from "../targets/replacement-targets.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
+
+const replacementOwnerDeckBottomSelectionId =
+  "selected:owner-deck-bottom" as const;
 
 export function replacementInsteadExpressionParser(
   input: ParseInput,
@@ -143,6 +147,7 @@ function parseOpponentFieldRemovalReplacement(text: string):
       type: "wouldMoveZone",
       from: target.target.zone,
       ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
+      sourceControllerRelation: "opponentControlled",
       target: target.target,
     },
     instead: instead.effect,
@@ -180,6 +185,7 @@ function parseInsteadEffect(text: string):
   return (
     parseTopLifeToHandInstead(text) ??
     parseReturnDonInstead(text) ??
+    parseOwnerDeckBottomInstead(text) ??
     parseTrashFromHandInstead(text) ??
     parseTrashSelfInstead(text) ??
     parseModifyLeaderPowerInstead(text) ??
@@ -249,6 +255,102 @@ function parseReturnDonInstead(text: string):
       "count:positiveInteger",
       "player:self",
       "zone:donDeck",
+    ],
+  };
+}
+
+function parseOwnerDeckBottomInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  const match =
+    /^you may place (?<selection>.+?) at the bottom of the owner's deck instead\.?$/iu.exec(
+      text.trim(),
+    );
+  const selectionText = match?.groups?.["selection"];
+  if (selectionText === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseExactCardinality({ text: selectionText });
+  const targetText = cardinality?.rest;
+  if (cardinality === undefined || targetText === undefined) {
+    return undefined;
+  }
+  const targetMatch = /^of your (?<filter>.+)$/iu.exec(targetText);
+  const filterText = targetMatch?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates(
+    { text: filterText },
+    { powerSemantics: "current" },
+  );
+  if (
+    predicates === undefined ||
+    predicates.rest.length > 0 ||
+    predicates.filter.categories?.[0] !== "character"
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:owner-deck-bottom",
+          connector: "always",
+          saveResultAs: replacementOwnerDeckBottomSelectionId,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zone: "characterArea",
+              min: cardinality.count,
+              max: cardinality.count,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+              filter: predicates.filter,
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "bounce",
+            destination: "deckBottom",
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: replacementOwnerDeckBottomSelectionId,
+              },
+              zone: "characterArea",
+              player: "self",
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:moveSelected",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      "player:self",
+      "target:yourCharacters",
+      "zone:characterArea",
+      ...predicates.evidence,
+      "destination:deck",
+      "position:bottom",
+      "composition:selectThenApply",
     ],
   };
 }

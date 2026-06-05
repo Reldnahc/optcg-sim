@@ -25,3 +25,35 @@ it("parses self field-count thresholds with reusable card filters", () => {
     rest: "",
   });
 });
+
+it("parses singular matching Character presence as a reusable field-count threshold", () => {
+  expect(
+    parseSelfFieldCountCondition({
+      text: 'you have a Character with 8000 power or more and a type including "Whitebeard Pirates"',
+    }),
+  ).toEqual({
+    condition: {
+      type: "fieldCount",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        currentPower: { min: 8000 },
+        typesAny: ["Whitebeard Pirates"],
+      },
+      op: "gte",
+      value: 1,
+    },
+    evidence: [
+      "condition:fieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "player:self",
+      "filter:category:character",
+      "filter:currentPower",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "filter:type",
+    ],
+    rest: "",
+  });
+});

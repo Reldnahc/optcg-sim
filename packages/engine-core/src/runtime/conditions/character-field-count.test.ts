@@ -214,3 +214,81 @@ test("fieldCount condition supports named self characters while excluding the so
     { supported: true, passed: true },
   );
 });
+
+test("fieldCount condition supports current-power and type filters for self characters", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  const lowPowerLuffy = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(self.hand[0], "low power luffy"),
+      cardId: toCardId("low-power-luffy"),
+    },
+    zone: "characterArea",
+    index: 0,
+  });
+  const matchingWhitebeard = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(self.hand[1], "matching whitebeard"),
+      cardId: toCardId("matching-whitebeard"),
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  state.cardManifest.cards[lowPowerLuffy.cardId] = {
+    ...resolvedCard({
+      cardId: lowPowerLuffy.cardId,
+      category: "character",
+      power: 7000,
+    }),
+    types: ["Whitebeard Pirates"],
+  };
+  state.cardManifest.cards[matchingWhitebeard.cardId] = {
+    ...resolvedCard({
+      cardId: matchingWhitebeard.cardId,
+      category: "character",
+      power: 8000,
+    }),
+    types: ["Whitebeard Pirates"],
+  };
+
+  const condition: Extract<Condition, { type: "fieldCount" }> = {
+    type: "fieldCount",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      typesAny: ["Whitebeard Pirates"],
+      currentPower: { min: 8000 },
+    },
+    op: "gte",
+    value: 1,
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+  state.cardManifest.cards[matchingWhitebeard.cardId] = {
+    ...must(
+      state.cardManifest.cards[matchingWhitebeard.cardId],
+      "matching metadata",
+    ),
+    power: 7000,
+  };
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});

@@ -236,6 +236,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "modifyPower" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "modifyCost" &&
+    effect.type !== "modifyCounter" &&
     effect.type !== "preventDraw" &&
     effect.type !== "preventDonActivation" &&
     effect.type !== "preventPlay" &&
@@ -257,6 +258,14 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (effect.type === "modifyCost") {
     return isSupportedCostModifierEffect(effect);
+  }
+  if (effect.type === "modifyCounter") {
+    return (
+      effect.player === "self" &&
+      effect.sourceZone === "hand" &&
+      Number.isSafeInteger(effect.value) &&
+      effect.value >= 0
+    );
   }
   if (effect.type === "preventDraw") {
     return effect.player === "self";

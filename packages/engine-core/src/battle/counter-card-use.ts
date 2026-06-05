@@ -53,6 +53,7 @@ import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-pro
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
+import { getEffectiveCharacterCounterValue } from "./effective-counter.js";
 
 type CreateCounterStepPassDecision = (
   state: GameState,
@@ -130,8 +131,7 @@ export const getLegalCharacterCounterActions = (
     if (
       !(
         (metadata?.category === "character" &&
-          metadata.counter !== undefined &&
-          metadata.counter > 0) ||
+          (getEffectiveCharacterCounterValue(state, card) ?? 0) > 0) ||
         supportedEvents.some(
           (supportedEvent) =>
             getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,
@@ -273,10 +273,14 @@ export const applyUseCounter = (
   let usesBattleCounterPower = true;
   let trailingSequence: CounterEventTrailingSequence | undefined;
   let effectCost: Extract<OptionalCost, { type: "trashFromHand" }> | undefined;
+  const effectiveCharacterCounter = getEffectiveCharacterCounterValue(
+    state,
+    handCard,
+  );
   if (
     metadata?.category === "character" &&
-    metadata.counter !== undefined &&
-    metadata.counter > 0
+    effectiveCharacterCounter !== undefined &&
+    effectiveCharacterCounter > 0
   ) {
     if (!sameCardRef(action.target, battle.currentTarget)) {
       return illegalAction(
@@ -284,7 +288,7 @@ export const applyUseCounter = (
         "Character Counter target must be current battle target.",
       );
     }
-    counterValue = metadata.counter;
+    counterValue = effectiveCharacterCounter;
   } else {
     const supportedCounterEvent = getSupportedCounterEventPower(
       state,

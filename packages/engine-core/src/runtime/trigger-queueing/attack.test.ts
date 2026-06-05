@@ -9,7 +9,13 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { must, p1 } from "../../action-test-fixtures.js";
+import {
+  must,
+  p1,
+  p2,
+  resolvedCard,
+  toCardId,
+} from "../../action-test-fixtures.js";
 import {
   processDefenderOpponentAttackTiming,
   processEffectRuntime,
@@ -17,6 +23,8 @@ import {
 import {
   attackQueueingState,
   opponentAttackQueueingState,
+  setupOnOpponentAttackDefinition,
+  withCardInZone,
 } from "./test-support.js";
 
 test("attackDeclared source presence failure rejects When Attacking queueing without mutation or events", () => {
@@ -335,6 +343,122 @@ test("queues On Your Opponent's Attack optional rest-DON target-rest sequence th
   assert.equal(result.errors, undefined);
   assert.equal(
     result.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
+});
+
+test("queues supported On Your Opponent's Attack effect from defender Stage source", () => {
+  const { state } = opponentAttackQueueingState();
+  const p2State = must(state.players[p2], "p2");
+  const stage = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(p2State.hand[0], "stage source"),
+      cardId: toCardId("opponent-attack-stage-source"),
+    },
+    zone: "stageArea",
+  });
+  p2State.hand = p2State.hand.filter(
+    (card) => card.instanceId !== stage.instanceId,
+  );
+  const existingDefinitions = state.cardManifest.effectDefinitions;
+  const definition = setupOnOpponentAttackDefinition(
+    state,
+    stage,
+    "def-on-opponent-attack-stage",
+  );
+  const effect = must(definition.effects[0], "stage opponent attack effect");
+  state.cardManifest.effectDefinitions = {
+    ...existingDefinitions,
+    "def-on-opponent-attack-stage": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                saveResultAs: "paidCost",
+                effect: {
+                  type: "payCost",
+                  cost: {
+                    type: "sequence",
+                    optional: true,
+                    costs: [
+                      { type: "restSelf" },
+                      {
+                        type: "trashFromHand",
+                        count: 1,
+                        chooser: "self",
+                        filter: {
+                          anyOf: [
+                            { categories: ["event"] },
+                            { categories: ["stage"] },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                connector: "ifYouDo",
+                effect: {
+                  type: "modifyPower",
+                  target: {
+                    type: "chooseFromZones",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      player: "self",
+                      zones: ["leaderArea", "characterArea"],
+                      min: 0,
+                      max: 1,
+                      allowFewerIfUnavailable: true,
+                      visibility: "public",
+                      filter: { categories: ["leader", "character"] },
+                    },
+                  },
+                  value: 2000,
+                  duration: { type: "thisBattle" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.cards[stage.cardId] = {
+    ...resolvedCard({
+      cardId: stage.cardId,
+      category: "stage",
+      support: must(state.cardManifest.cards[stage.cardId], "stage support")
+        .support,
+    }),
+  };
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+  });
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "payCost");
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        String(
+          (event.payload as { queueEntryId?: unknown }).queueEntryId,
+        ).includes(String(stage.instanceId)) &&
+        (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+          effect.id,
+    ),
     true,
   );
 });

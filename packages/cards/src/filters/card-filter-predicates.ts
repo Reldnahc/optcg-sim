@@ -39,6 +39,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseTypeLeaderOrCharacterPredicate,
   parseTypeCharacterPredicate,
   parseGenericTypeCardPredicate,
+  parseQuotedTypeIncludingPredicate,
   parseTypeOnlyPredicate,
   parseAttributeCardPredicate,
   parseAttributeCategoryPredicate,
@@ -51,6 +52,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseEffectEntryPointPredicate,
   parseDynamicDonFieldCostPredicate,
   parseCostPredicate,
+  parseCardNameContainsPredicate,
   parseSelfExclusionPredicate,
   parseNameExclusionPredicate,
   parseNamePredicate,
@@ -151,7 +153,7 @@ function parseNextPredicate(
 }
 
 function stripLeadingConnector(text: string): string {
-  return text.replace(/^(?:with|and)\s+/i, "").trim();
+  return text.replace(/^,?\s*(?:with|and)\s+/i, "").trim();
 }
 
 function parseBraceName(text: string): string | undefined {
@@ -307,6 +309,26 @@ function parseGenericTypeCardPredicate(
 
   return {
     filter: { ...current, typesAny: [typeName.trim()] },
+    evidence: ["filter:type"],
+    rest: restText ?? "",
+  };
+}
+
+function parseQuotedTypeIncludingPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^a type including\s+"(?<type>[^"]+)"\s*(?<rest>.*)$/i.exec(
+    text,
+  );
+  const typeText = match?.groups?.["type"]?.trim();
+  const restText = match?.groups?.["rest"];
+  if (typeText === undefined || typeText.length === 0) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, typesAny: [typeText] },
     evidence: ["filter:type"],
     rest: restText ?? "",
   };
@@ -779,6 +801,26 @@ function parseCostPredicate(
       op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
       "condition:threshold:positiveInteger",
     ],
+    rest: restText ?? "",
+  };
+}
+
+function parseCardNameContainsPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^card name includes\s+"(?<name>[^"]+)"\s*(?<rest>.*)$/i.exec(
+    text,
+  );
+  const nameText = match?.groups?.["name"]?.trim();
+  const restText = match?.groups?.["rest"];
+  if (nameText === undefined || nameText.length === 0) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, nameContains: nameText },
+    evidence: ["filter:name"],
     rest: restText ?? "",
   };
 }

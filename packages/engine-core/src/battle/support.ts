@@ -150,19 +150,14 @@ const battleEffectBodyIssue = (value: unknown): string | undefined => {
   if (type === "protectFromKO" && value["sourceKind"] !== "cardEffect") {
     return "unsupported protectFromKO sourceKind";
   }
-  if (
-    type === "cannotBeBlockedBy" ||
-    type === "cannotBeAttacked" ||
-    type === "cannotBlock"
-  ) {
+  if (type === "cannotBeBlockedBy" || type === "cannotBeAttacked") {
     return `unsupported restriction body ${type}`;
   }
-  if (type === "giveKeyword" && value["keyword"] === "unblockable") {
-    return "unsupported keyword body giveKeyword:unblockable";
-  }
-
   const operation = value["operation"];
   if (isRecord(operation)) {
+    if (operation["type"] === "setCounter") {
+      return undefined;
+    }
     if (operation["type"] === "restriction") {
       return "unsupported continuous restriction operation";
     }

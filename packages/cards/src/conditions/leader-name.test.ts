@@ -74,4 +74,27 @@ describe("leader name condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses leader card-name includes as a reusable name filter", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: 'your Leader\'s card name includes "Ace"',
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], nameContains: "Ace" },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:name",
+      ],
+      rest: "",
+    });
+  });
 });

@@ -40,7 +40,7 @@ const parseFilteredTrashFromHandCost = (
   input: Parameters<typeof parsePrimitivePattern<CostParseResult>>[0],
 ): CostParseResult | undefined => {
   const match =
-    /^trash (?<count>[1-9]\d*) (?<filter>.+?) cards? from your hand$/i.exec(
+    /^trash (?<count>[1-9]\d*) (?<filter>.+?) from your hand$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
@@ -49,7 +49,16 @@ const parseFilteredTrashFromHandCost = (
     return undefined;
   }
 
-  const parsedFilter = parseCardFilterPredicates({ text: filterText });
+  const parsedFilter = [
+    filterText,
+    filterText.replace(/\s+cards?$/i, ""),
+  ].reduce<ReturnType<typeof parseCardFilterPredicates> | undefined>(
+    (parsed, candidate) =>
+      parsed?.rest.length === 0
+        ? parsed
+        : parseCardFilterPredicates({ text: candidate }),
+    undefined,
+  );
   if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
     return undefined;
   }

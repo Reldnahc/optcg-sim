@@ -26,6 +26,7 @@ import {
   toSupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./support.js";
+import { resolveSequenceForPath as resolveSharedSequenceForPath } from "./paths.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -71,38 +72,6 @@ const segmentKeyForPath = (
   }
   return (segment, index): string =>
     `${effectPath.join(".")}:${segmentKey(segment, index)}`;
-};
-
-const resolveSequenceForPath = (
-  effect: SequenceEffect,
-  effectPath: readonly string[],
-): SequenceEffect | undefined => {
-  if (!isRootSequencePath(effectPath.slice(0, rootSequenceEffectPath.length))) {
-    return undefined;
-  }
-  let current: SequenceEffect = effect;
-  let index = rootSequenceEffectPath.length;
-  while (index < effectPath.length) {
-    const segmentIndex = Number(effectPath[index]);
-    if (
-      !Number.isSafeInteger(segmentIndex) ||
-      effectPath[index + 1] !== "then" ||
-      effectPath[index + 2] !== "sequence"
-    ) {
-      return undefined;
-    }
-    const segment = current.effects[segmentIndex];
-    if (
-      segment === undefined ||
-      segment.effect.type !== "conditional" ||
-      segment.effect.then.type !== "sequence"
-    ) {
-      return undefined;
-    }
-    current = segment.effect.then;
-    index += 3;
-  }
-  return current;
 };
 
 type SegmentLedgers = {
@@ -427,7 +396,10 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       ok: false,
     };
   }
-  const sequence = resolveSequenceForPath(effectBlock.effect, frame.effectPath);
+  const sequence = resolveSharedSequenceForPath(
+    effectBlock.effect,
+    frame.effectPath,
+  );
   const pausedSegment =
     sequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (pausedSegment === undefined) {
