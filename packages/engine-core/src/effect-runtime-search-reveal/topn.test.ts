@@ -363,6 +363,74 @@ test("top-N filter supports exact-name and disjunctive category search predicate
   );
 });
 
+test("top-N filter supports disjunctive attribute-card and color-event predicates", () => {
+  const state = createActiveState();
+  const looked = setDeck(state, [
+    "topn-or-slash-character",
+    "topn-or-green-event",
+    "topn-or-blue-event",
+    "topn-or-other-character",
+  ]);
+  state.cardManifest.cards[must(looked[0], "slash card").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[0], "slash card").cardId],
+      "slash manifest",
+    ),
+    attributes: ["slash"],
+    category: "character",
+    colors: ["blue"],
+  };
+  state.cardManifest.cards[must(looked[1], "green event").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[1], "green event").cardId],
+      "green event manifest",
+    ),
+    attributes: [],
+    category: "event",
+    colors: ["green"],
+  };
+  state.cardManifest.cards[must(looked[2], "blue event").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[2], "blue event").cardId],
+      "blue event manifest",
+    ),
+    attributes: [],
+    category: "event",
+    colors: ["blue"],
+  };
+  state.cardManifest.cards[must(looked[3], "other character").cardId] = {
+    ...must(
+      state.cardManifest.cards[must(looked[3], "other character").cardId],
+      "other character manifest",
+    ),
+    attributes: ["special"],
+    category: "character",
+    colors: ["green"],
+  };
+
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 4,
+      filter: {
+        anyOf: [
+          { attributesAny: ["slash"] },
+          { colorsAny: ["green"], categories: ["event"] },
+        ],
+      },
+    }),
+  );
+
+  assert.deepEqual(
+    selectDecision(opened).candidates.map(
+      (candidate) => candidate.card.instanceId,
+    ),
+    [must(looked[0], "slash match"), must(looked[1], "event match")].map(
+      (card) => card.instanceId,
+    ),
+  );
+});
+
 test("top-N disjunctive search selections resolve for each matching filter branch", () => {
   const state = createActiveState();
   const looked = setDeck(state, [

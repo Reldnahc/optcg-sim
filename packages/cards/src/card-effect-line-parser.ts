@@ -307,6 +307,7 @@ const defaultRegistry = {
       conditions: conditionParsers,
       connectors: [parseThenConnector, parseAndConnector],
       instructions: instructionParsers,
+      expressions: [searchRevealExpressionParser],
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,

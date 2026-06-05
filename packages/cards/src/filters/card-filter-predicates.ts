@@ -40,7 +40,9 @@ const predicateParsers: readonly PredicateParser[] = [
   parseTypeCharacterPredicate,
   parseGenericTypeCardPredicate,
   parseTypeOnlyPredicate,
+  parseAttributeCardPredicate,
   parseAttributeCategoryPredicate,
+  parseAttributeOnlyPredicate,
   parseRestedCharacterPredicate,
   parseEventCategoryPredicate,
   parseStageCategoryPredicate,
@@ -360,6 +362,60 @@ function parseAttributeCategoryPredicate(
       categories: [categoryText.toLowerCase() as CardCategory],
     },
     evidence: ["filter:attribute", categoryEvidence(categoryText)],
+    rest: restText ?? "",
+  };
+}
+
+function parseAttributeCardPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^(?<attribute><[^>]+>) attribute card\b\s*(?<rest>.*)$/i.exec(
+    text,
+  );
+  const attributeText = match?.groups?.["attribute"];
+  const restText = match?.groups?.["rest"];
+  if (attributeText === undefined) {
+    return undefined;
+  }
+
+  const attribute = parseAngleAttribute(attributeText);
+  if (attribute === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      attributesAny: [attribute],
+    },
+    evidence: ["filter:attribute"],
+    rest: restText ?? "",
+  };
+}
+
+function parseAttributeOnlyPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^(?<attribute><[^>]+>) attribute\b\s*(?<rest>.*)$/i.exec(text);
+  const attributeText = match?.groups?.["attribute"];
+  const restText = match?.groups?.["rest"];
+  if (attributeText === undefined) {
+    return undefined;
+  }
+
+  const attribute = parseAngleAttribute(attributeText);
+  if (attribute === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      attributesAny: [attribute],
+    },
+    evidence: ["filter:attribute"],
     rest: restText ?? "",
   };
 }

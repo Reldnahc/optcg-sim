@@ -244,4 +244,38 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses attribute-only predicates separately from category predicates", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "<Slash> attribute",
+      }),
+    ).toEqual({
+      filter: { attributesAny: ["slash"] },
+      evidence: ["filter:attribute"],
+      rest: "",
+    });
+  });
+
+  it("parses attribute-card or color-event alternatives as reusable filters", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "<Slash> attribute card or green Event",
+      }),
+    ).toEqual({
+      filter: {
+        anyOf: [
+          { attributesAny: ["slash"] },
+          { colorsAny: ["green"], categories: ["event"] },
+        ],
+      },
+      evidence: [
+        "filter:anyOf",
+        "filter:attribute",
+        "filter:color",
+        "filter:category:event",
+      ],
+      rest: "",
+    });
+  });
 });

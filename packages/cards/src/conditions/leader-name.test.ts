@@ -51,4 +51,27 @@ describe("leader name condition parser", () => {
     });
     expect(basePower?.evidence).toContain("filter:power");
   });
+
+  it("parses leader attribute predicates through reusable card filters", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your Leader has the <Slash> attribute",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], attributesAny: ["slash"] },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:attribute",
+      ],
+      rest: "",
+    });
+  });
 });

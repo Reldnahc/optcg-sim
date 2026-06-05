@@ -135,6 +135,9 @@ export function conditionalBlockExpressionParser(options: {
   readonly conditions: readonly ConditionParser[];
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly InstructionParser[];
+  readonly expressions?: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
     const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
@@ -149,9 +152,39 @@ export function conditionalBlockExpressionParser(options: {
       options.conditions,
     );
     if (condition !== undefined) {
+      for (const parser of options.expressions ?? []) {
+        const parsed = parser({ text: thenText });
+        if (parsed !== undefined && parsed.rest.length === 0) {
+          return {
+            effect: parsed.effect,
+            evidence: [
+              "expression:conditional",
+              ...condition.evidence,
+              ...parsed.evidence,
+            ],
+            rest: "",
+            blockPatch: {
+              condition: condition.condition,
+            },
+          };
+        }
+      }
+      const expressionSegments: SegmentParser[] = (
+        options.expressions ?? []
+      ).map(
+        (parser): SegmentParser =>
+          (segmentInput) => {
+            const parsed = parser(segmentInput);
+            if (parsed === undefined || parsed.rest.length > 0) {
+              return undefined;
+            }
+            return { effect: parsed.effect, evidence: parsed.evidence };
+          },
+      );
       const then = parseExpression(thenText, {
         connectors: options.connectors,
         segments: [
+          ...expressionSegments,
           instructionExpressionSegmentParser({
             connectors: options.connectors,
             instructions: options.instructions,
