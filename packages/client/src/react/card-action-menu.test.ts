@@ -377,6 +377,34 @@ describe("card action menu", () => {
     );
   });
 
+  test("control rail hides empty global action chrome", () => {
+    const emptyMarkup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+
+    assert.equal(emptyMarkup.includes("Global actions"), false);
+    assert.equal(emptyMarkup.includes("No actions"), false);
+
+    const actionMarkup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [{ index: 12, type: "endMainPhase", label: "End turn" }],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+
+    assert.equal(actionMarkup.includes("Global actions"), true);
+    assert.equal(actionMarkup.includes("End turn"), true);
+  });
+
   test("concede icon uses dedicated red hover styles", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),

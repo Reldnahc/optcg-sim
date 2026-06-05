@@ -12,12 +12,10 @@ export const ActionMenu = ({
   actions,
   disabled,
   onAction,
-}: ActionMenuProps): React.JSX.Element => (
-  <section className="action-menu-panel">
-    <h2>{title}</h2>
-    {actions.length === 0 ? (
-      <p className="muted">No actions</p>
-    ) : (
+}: ActionMenuProps): React.JSX.Element | null =>
+  actions.length === 0 ? null : (
+    <section className="action-menu-panel">
+      <h2>{title}</h2>
       <div className="action-list">
         {actions.map((action) => (
           <button
@@ -33,6 +31,5 @@ export const ActionMenu = ({
           </button>
         ))}
       </div>
-    )}
-  </section>
-);
+    </section>
+  );
