@@ -9,7 +9,11 @@ import type { LobbyClientState } from "../controller.js";
 import type { AccountLoadout } from "../account-client.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 
-const lobbyState = (): LobbyClientState => ({
+const lobbyState = ({
+  selfDeckStatus = "missing",
+}: {
+  readonly selfDeckStatus?: "missing" | "ready" | "invalid";
+} = {}): LobbyClientState => ({
   lobbyId: "lobby-1",
   seat: {
     lobbyId: "lobby-1",
@@ -22,7 +26,7 @@ const lobbyState = (): LobbyClientState => ({
       p1: {
         playerId: "p1" as PlayerId,
         claimed: true,
-        deck: { status: "missing" },
+        deck: { status: selfDeckStatus },
       },
       p2: {
         playerId: "p2" as PlayerId,
@@ -184,21 +188,34 @@ describe("lobby deck panel", () => {
     );
   });
 
-  test("submit locks the selected deck loadout picker", async () => {
+  test("server ready deck status locks the selected deck loadout picker", () => {
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState({ selfDeckStatus: "ready" }),
+        loadouts,
+        loadoutsStatus: "ready",
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(html, /Your deck<\/dt><dd>ready/u);
+    assert.match(html, /class="deck-loadout-selected" type="button" disabled/u);
+    assert.match(
+      html,
+      /class="deck-loadout-menu is-closed" aria-hidden="true"/u,
+    );
+    assert.match(html, /<button type="submit" disabled="">Submit loadout/u);
+  });
+
+  test("deck submit lock is derived from server lobby state", async () => {
     const source = await readFile(
       new URL("LobbyDeckPanel.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.match(
-      source,
-      /const \[submittedLoadoutId,\s*setSubmittedLoadoutId\]/u,
-    );
-    assert.match(source, /setSubmittedLoadoutId\(selectedLoadoutId\);/u);
-    assert.match(
-      source,
-      /const pickerLocked = submittedLoadoutId !== undefined;/u,
-    );
+    assert.doesNotMatch(source, /submittedLoadoutId/u);
+    assert.doesNotMatch(source, /setSubmittedLoadoutId/u);
+    assert.match(source, /const pickerLocked = selfDeckStatus === "ready";/u);
     assert.match(source, /locked=\{pickerLocked\}/u);
     assert.match(
       source,
