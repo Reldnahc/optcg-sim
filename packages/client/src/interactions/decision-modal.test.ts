@@ -407,19 +407,25 @@ describe("headless decision modal models", () => {
     const decision = {
       ...quantityDecision(),
       presentation: {
-        title: "Choose quantity",
-        instruction: "Choose a quantity.",
+        title: "Move card",
+        instruction: "Do you want to move 1 card from deck to Life?",
       },
-      prompt: "Choose quantity.",
+      prompt: "Choose how many cards to move from deck to Life.",
       max: 1,
     } satisfies PublicChooseQuantityDecision;
     let draft = createDecisionDraft(decision);
     let model = createDecisionModalModel(decision, draft);
 
     assert.equal(model.kind, "binaryQuantity");
-    assert.equal(model.title, "Choose option");
-    assert.equal(model.instruction, "Choose yes or no.");
-    assert.equal(model.prompt, "Choose yes or no.");
+    assert.equal(model.title, "Move card");
+    assert.equal(
+      model.instruction,
+      "Do you want to move 1 card from deck to Life?",
+    );
+    assert.equal(
+      model.prompt,
+      "Choose how many cards to move from deck to Life.",
+    );
     assert.equal(model.selectedQuantity, 1);
     assert.deepEqual(model.options, [
       { quantity: 0, label: "No" },
@@ -435,7 +441,7 @@ describe("headless decision modal models", () => {
     assert.deepEqual(response, { type: "chooseQuantity", quantity: 0 });
   });
 
-  test("zero-to-one chooseQuantity decisions keep non-quantity prompts as yes-no copy", () => {
+  test("zero-to-one chooseQuantity decisions preserve public presentation copy", () => {
     const decision = {
       ...quantityDecision(),
       presentation: {

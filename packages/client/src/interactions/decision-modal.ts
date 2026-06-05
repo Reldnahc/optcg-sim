@@ -399,26 +399,6 @@ const modalPresentation = (
     : { source: decision.presentation.source }),
 });
 
-const genericQuantityCopyPattern = /\b(?:quantity|number|amount)\b/iu;
-
-const binaryQuantityPresentation = (
-  decision: PublicChooseQuantityDecision,
-): DecisionModalPresentationModel => {
-  const presentation = modalPresentation(decision);
-  return {
-    ...presentation,
-    title: genericQuantityCopyPattern.test(presentation.title)
-      ? "Choose option"
-      : presentation.title,
-    instruction: genericQuantityCopyPattern.test(presentation.instruction)
-      ? "Choose yes or no."
-      : presentation.instruction,
-    prompt: genericQuantityCopyPattern.test(presentation.prompt)
-      ? "Choose yes or no."
-      : presentation.prompt,
-  };
-};
-
 export const createDecisionDraft = (
   decision: PublicPendingDecision,
   responseActions: readonly ClientActionModel[] = [],
@@ -748,7 +728,7 @@ export const createDecisionModalModel = (
     if (decision.min === 0 && decision.max === 1) {
       const selectedQuantity = draft.quantity === 0 ? 0 : 1;
       return {
-        ...binaryQuantityPresentation(decision),
+        ...modalPresentation(decision),
         kind: "binaryQuantity",
         decisionId: decision.id,
         selectedQuantity,

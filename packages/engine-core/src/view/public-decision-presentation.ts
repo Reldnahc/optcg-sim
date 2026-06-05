@@ -32,6 +32,12 @@ const zoneLabel = (zone: Zone): string => {
 
 const stripPeriod = (value: string): string => value.replace(/\.$/u, "");
 
+const drawQuantityPromptPattern = /^Choose how many cards to draw\.?$/u;
+const moveQuantityPromptPattern =
+  /^Choose how many cards to move from (?<from>.+) to (?<to>.+)\.?$/u;
+const revealQuantityPromptPattern =
+  /^Choose how many cards to reveal from (?<zone>.+)\.?$/u;
+
 const withSource = (
   source: CardRef | undefined,
 ): Pick<PublicDecisionPresentation, "source"> =>
@@ -45,6 +51,43 @@ const fallbackPresentation = (
   instruction: stripPeriod(pending.prompt),
   ...withSource(source),
 });
+
+const binaryQuantityPresentation = (
+  pending: Extract<PendingDecision, { type: "chooseQuantity" }>,
+  source: CardRef | undefined,
+): PublicDecisionPresentation | undefined => {
+  if (pending.min !== 0 || pending.max !== 1) {
+    return undefined;
+  }
+  const prompt = stripPeriod(pending.prompt);
+  if (drawQuantityPromptPattern.test(prompt)) {
+    return {
+      title: "Draw card",
+      instruction: "Do you want to draw 1 card?",
+      ...withSource(source),
+    };
+  }
+  const moveMatch = moveQuantityPromptPattern.exec(prompt);
+  const fromZone = moveMatch?.groups?.["from"];
+  const toZone = moveMatch?.groups?.["to"];
+  if (fromZone !== undefined && toZone !== undefined) {
+    return {
+      title: "Move card",
+      instruction: `Do you want to move 1 card from ${fromZone} to ${toZone}?`,
+      ...withSource(source),
+    };
+  }
+  const revealMatch = revealQuantityPromptPattern.exec(prompt);
+  const revealZone = revealMatch?.groups?.["zone"];
+  if (revealZone !== undefined) {
+    return {
+      title: "Reveal card",
+      instruction: `Do you want to reveal 1 card from ${revealZone}?`,
+      ...withSource(source),
+    };
+  }
+  return undefined;
+};
 
 export const publicDecisionPresentation = ({
   pending,
@@ -109,6 +152,10 @@ export const publicDecisionPresentation = ({
     };
   }
   if (pending.type === "chooseQuantity") {
+    const binaryPresentation = binaryQuantityPresentation(pending, source);
+    if (binaryPresentation !== undefined) {
+      return binaryPresentation;
+    }
     return {
       title: "Choose quantity",
       instruction: stripPeriod(pending.prompt),
