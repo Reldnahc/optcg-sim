@@ -263,11 +263,11 @@ describe("text-only support probe parser backend", () => {
     });
 
     expect(report.exitCode).toBe(0);
-    expect(report.lines).toContain(
+    expect(report.lines).toContain("Failures: none");
+    expect(report.lines).not.toContain("Card ID: OP01-004 x1");
+    expect(report.lines).not.toContain(
       "OP01-004 line 1 text: [Trigger] Draw 1 card.",
     );
-    expect(report.lines).toContain("OP01-004 line 1 parse: passed");
-    expect(report.lines).toContain("OP01-004 line 1 engine runtime: passed");
   });
 
   it("reports Poneglyph API fetch failures in card probe mode", async () => {
@@ -328,9 +328,57 @@ describe("text-only support probe parser backend", () => {
     ]);
     expect(report.lines).toContain("Deck hash: hash-with-card-list");
     expect(report.lines).toContain("Cards: 2 unique / 6 total");
-    expect(report.lines).toContain("Card ID: OP01-001 x5 variants: 2, 3");
+    expect(report.lines).toContain("Failures: none");
+    expect(report.lines).not.toContain("Card ID: OP01-001 x5 variants: 2, 3");
+    expect(report.lines).not.toContain("Card ID: OP01-002 x1");
+    expect(report.lines).not.toContain("OP01-001 line 1 parse: passed");
+    expect(report.lines).not.toContain(
+      "OP01-002 line 1 engine runtime: passed",
+    );
+  });
+
+  it("prints only failing cards in deck-hash probe mode", async () => {
+    const report = await createSupportProbeReport({
+      deckHash: "hash-with-one-failure",
+      deckHashCodec: {
+        decode: () =>
+          Promise.resolve({
+            leader: null,
+            main: [
+              { card_number: "OP01-001", count: 4 },
+              { card_number: "OP01-002", count: 1 },
+            ],
+            don: null,
+          }),
+      },
+      fetchCard: (url) => {
+        const cardId = url.endsWith("OP01-001") ? "OP01-001" : "OP01-002";
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: cardId,
+                effect:
+                  cardId === "OP01-001"
+                    ? "[On Play] Draw 1 card."
+                    : "[On Block] Draw 1 card.",
+              },
+            }),
+        });
+      },
+    });
+
+    expect(report.exitCode).toBe(1);
+    expect(report.lines).toContain("Failures: 1 card");
+    expect(report.lines).not.toContain("Card ID: OP01-001 x4");
+    expect(report.lines).not.toContain("OP01-001 line 1 parse: passed");
     expect(report.lines).toContain("Card ID: OP01-002 x1");
-    expect(report.lines).toContain("OP01-001 line 1 parse: passed");
-    expect(report.lines).toContain("OP01-002 line 1 engine runtime: passed");
+    expect(report.lines).toContain(
+      "OP01-002 line 1 text: [On Block] Draw 1 card.",
+    );
+    expect(report.lines).toContain("OP01-002 line 1 parse: passed");
+    expect(report.lines).toContain("OP01-002 line 1 engine runtime: failed");
   });
 });

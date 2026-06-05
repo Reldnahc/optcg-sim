@@ -119,19 +119,19 @@ const createDeckHashSupportProbeReport = async (
 
   const cards = aggregateDeckHashEntries(decoded.entries);
   const totalCount = cards.reduce((sum, entry) => sum + entry.count, 0);
-  const lines = [
-    `Deck hash: ${deckHash}`,
-    `Cards: ${String(cards.length)} unique / ${String(totalCount)} total`,
-  ];
+  const failureLines: string[] = [];
+  let failedCardCount = 0;
   let exitCode = 0;
 
   for (const card of cards) {
-    lines.push(deckHashEntryLine(card));
+    const cardFailureLines: string[] = [];
     const fetched = await fetchPoneglyphCardPayload(card.cardId, options);
     if (!fetched.ok) {
       exitCode = 1;
-      lines.push(`${card.cardId} fetch: failed`);
-      lines.push(`${card.cardId} fetch reason: ${fetched.error}`);
+      cardFailureLines.push(`${card.cardId} fetch: failed`);
+      cardFailureLines.push(`${card.cardId} fetch reason: ${fetched.error}`);
+      failedCardCount += 1;
+      failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
       continue;
     }
 
@@ -145,33 +145,56 @@ const createDeckHashSupportProbeReport = async (
         text,
         `${card.cardId}:line:${String(lineNumber)}`,
       );
-      lines.push(`${card.cardId} line ${String(lineNumber)} text: ${text}`);
       if (!lineReport.parseOk) {
         exitCode = 1;
-        lines.push(`${card.cardId} line ${String(lineNumber)} parse: failed`);
-        lines.push(
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} parse: failed`,
+        );
+        cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} stage: ${lineReport.stage}`,
         );
-        lines.push(
+        cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} reason: ${lineReport.reason}`,
         );
         continue;
       }
 
-      lines.push(`${card.cardId} line ${String(lineNumber)} parse: passed`);
-      lines.push(
-        `${card.cardId} line ${String(lineNumber)} engine runtime: ${
-          lineReport.runtimeSupported ? "passed" : "failed"
-        }`,
-      );
       if (!lineReport.runtimeSupported) {
         exitCode = 1;
-        lines.push(
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} parse: passed`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} engine runtime: failed`,
+        );
+        cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
         );
       }
     }
+
+    if (cardFailureLines.length > 0) {
+      failedCardCount += 1;
+      failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
+    }
   }
+
+  const lines = [
+    `Deck hash: ${deckHash}`,
+    `Cards: ${String(cards.length)} unique / ${String(totalCount)} total`,
+    failedCardCount === 0
+      ? "Failures: none"
+      : `Failures: ${String(failedCardCount)} card${
+          failedCardCount === 1 ? "" : "s"
+        }`,
+    ...failureLines,
+  ];
 
   return { exitCode, lines, errors: [] };
 };
