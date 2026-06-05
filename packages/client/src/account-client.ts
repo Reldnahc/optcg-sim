@@ -1,11 +1,15 @@
 import { createAuthClient } from "optcg-auth-client";
-import type { Loadout } from "optcg-auth-client";
+import type {
+  DeckCollection,
+  DeckLibraryFolder,
+  Loadout,
+} from "optcg-auth-client";
 
 export interface AccountLoadout {
   readonly id: string;
   readonly name: string;
-  readonly mainDeckId: string;
-  readonly donDeckId: string | null;
+  readonly folderId: string | null;
+  readonly folderName: string | null;
   readonly updatedAt: string;
 }
 
@@ -26,15 +30,39 @@ export interface CreatePoneglyphAccountClientOptions {
   readonly fetch?: typeof fetch;
 }
 
-const normalizeLoadout = (value: Loadout): AccountLoadout => {
+const normalizeImportedLoadout = (value: Loadout): AccountLoadout => {
   return {
     id: value.id,
     name: value.name,
-    mainDeckId: value.main_deck_id,
-    donDeckId: value.don_deck_id,
+    folderId: null,
+    folderName: null,
     updatedAt: value.updated_at,
   };
 };
+
+const folderById = (
+  folders: readonly DeckLibraryFolder[],
+): ReadonlyMap<string, DeckLibraryFolder> =>
+  new Map(folders.map((folder) => [folder.id, folder]));
+
+const normalizeLibraryDeck = (
+  value: DeckCollection,
+  foldersById: ReadonlyMap<string, DeckLibraryFolder>,
+): AccountLoadout => {
+  const folder =
+    value.folder_id === null ? undefined : foldersById.get(value.folder_id);
+  return {
+    id: value.id,
+    name: value.name,
+    folderId: value.folder_id,
+    folderName: folder?.name ?? null,
+    updatedAt: value.updated_at,
+  };
+};
+
+const playableDeckCollections = (
+  decks: readonly DeckCollection[],
+): DeckCollection[] => decks.filter((deck) => deck.kind === "deck");
 
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
@@ -46,15 +74,18 @@ export const createPoneglyphAccountClient = ({
   });
   return {
     async listLoadouts() {
-      const response = await authClient.listLoadouts();
-      return response.data.map(normalizeLoadout);
+      const response = await authClient.getDeckLibrary();
+      const foldersById = folderById(response.data.folders);
+      return playableDeckCollections(response.data.decks).map((deck) =>
+        normalizeLibraryDeck(deck, foldersById),
+      );
     },
     async createLoadoutFromDeckHash(input) {
       const response = await authClient.createLoadoutFromDeckHash({
         name: input.name,
         deck_hash: input.deckHash,
       });
-      return normalizeLoadout(response.data);
+      return normalizeImportedLoadout(response.data);
     },
     async createSimHandoff(input) {
       const response = await authClient.createSimHandoff({

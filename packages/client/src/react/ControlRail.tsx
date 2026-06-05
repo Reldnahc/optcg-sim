@@ -1,13 +1,10 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 
-import type { AccountLoadout } from "../account-client.js";
-import type { LobbyClientState } from "../controller.js";
 import type {
   ClientActionModel,
   PlayerSummaryTimerModel,
 } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
-import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import {
@@ -74,12 +71,6 @@ export interface ControlRailProps {
   previewControl?: ReactNode | undefined;
   actionLogControl?: ReactNode | undefined;
   settingsControl?: ReactNode | undefined;
-  lobbyDeckState?: LobbyClientState | undefined;
-  accountLoadouts?: readonly AccountLoadout[] | undefined;
-  accountLoadoutsStatus?: "idle" | "loading" | "ready" | "error" | undefined;
-  accountLoadoutsError?: string | undefined;
-  deckSubmissionDisabled?: boolean | undefined;
-  onSubmitLoadout?: ((loadoutId: string) => Promise<void>) | undefined;
 }
 
 export const ControlRail = ({
@@ -118,12 +109,6 @@ export const ControlRail = ({
   previewControl,
   actionLogControl,
   settingsControl,
-  lobbyDeckState,
-  accountLoadouts = [],
-  accountLoadoutsStatus = "idle",
-  accountLoadoutsError,
-  deckSubmissionDisabled = false,
-  onSubmitLoadout,
 }: ControlRailProps): React.JSX.Element => {
   const tabDragStart = useRef<
     | {
@@ -259,19 +244,6 @@ export const ControlRail = ({
               </button>
             ) : null}
           </section>
-        )}
-        {lobbyDeckState === undefined ||
-        onSubmitLoadout === undefined ? null : (
-          <div className="control-session-content">
-            <LobbyDeckPanel
-              disabled={deckSubmissionDisabled}
-              lobbyState={lobbyDeckState}
-              loadouts={accountLoadouts}
-              loadoutsStatus={accountLoadoutsStatus}
-              loadoutsError={accountLoadoutsError}
-              onSubmitLoadout={onSubmitLoadout}
-            />
-          </div>
         )}
         <ActionMenu
           title="Global actions"

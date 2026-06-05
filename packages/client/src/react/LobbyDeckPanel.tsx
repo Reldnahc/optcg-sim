@@ -13,6 +13,44 @@ export interface LobbyDeckPanelProps {
   onSubmitLoadout: (loadoutId: string) => Promise<void>;
 }
 
+interface LoadoutGroup {
+  readonly key: string;
+  readonly label: string;
+  readonly loadouts: readonly AccountLoadout[];
+}
+
+const unfiledLoadoutGroupKey = "__unfiled__";
+const unfiledLoadoutGroupLabel = "Unfiled";
+
+const groupLoadoutsByFolder = (
+  loadouts: readonly AccountLoadout[],
+): readonly LoadoutGroup[] => {
+  const groups: LoadoutGroup[] = [];
+  const groupIndexes = new Map<string, number>();
+  for (const loadout of loadouts) {
+    const key = loadout.folderId ?? unfiledLoadoutGroupKey;
+    const index = groupIndexes.get(key);
+    if (index === undefined) {
+      groupIndexes.set(key, groups.length);
+      groups.push({
+        key,
+        label: loadout.folderName ?? unfiledLoadoutGroupLabel,
+        loadouts: [loadout],
+      });
+      continue;
+    }
+    const group = groups[index];
+    if (group === undefined) {
+      continue;
+    }
+    groups[index] = {
+      ...group,
+      loadouts: [...group.loadouts, loadout],
+    };
+  }
+  return groups;
+};
+
 export const LobbyDeckPanel = ({
   disabled = false,
   lobbyState,
@@ -25,6 +63,7 @@ export const LobbyDeckPanel = ({
     loadouts[0]?.id ?? "",
   );
   const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
+  const loadoutGroups = groupLoadoutsByFolder(loadouts);
   const selectedLoadoutExists = loadouts.some(
     (loadout) => loadout.id === selectedLoadoutId,
   );
@@ -58,10 +97,14 @@ export const LobbyDeckPanel = ({
               setSelectedLoadoutId(event.target.value);
             }}
           >
-            {loadouts.map((loadout) => (
-              <option key={loadout.id} value={loadout.id}>
-                {loadout.name}
-              </option>
+            {loadoutGroups.map((group) => (
+              <optgroup key={group.key} label={group.label}>
+                {group.loadouts.map((loadout) => (
+                  <option key={loadout.id} value={loadout.id}>
+                    {loadout.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>

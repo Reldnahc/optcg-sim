@@ -13,6 +13,7 @@ import {
 } from "./info-window-model.js";
 import { createInfoWindowToolbarControls } from "./info-window-toolbar-controls.js";
 import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
+import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
 import { SettingsToggle } from "./SettingsToggle.js";
@@ -369,6 +370,18 @@ export const MatchApp = ({
         onPreviewCard={previewHoveredCard}
         onMoveHandCard={moveHandCard}
         onViewCollection={onViewCollection}
+        lobbyDeckPanel={
+          lobbyState === undefined ? undefined : (
+            <LobbyDeckPanel
+              disabled={client.state.actionInFlight}
+              lobbyState={lobbyState}
+              loadouts={client.state.accountLoadouts}
+              loadoutsStatus={client.state.accountLoadoutsStatus}
+              loadoutsError={client.state.accountLoadoutsError}
+              onSubmitLoadout={client.submitLobbyLoadout}
+            />
+          )
+        }
         onBackgroundClick={() => {
           client.selectCard(undefined);
         }}
@@ -430,12 +443,6 @@ export const MatchApp = ({
         }
         concedeDisabled={concedeDisabled}
         concedeConfirming={concedeConfirming}
-        lobbyDeckState={lobbyState}
-        accountLoadouts={client.state.accountLoadouts}
-        accountLoadoutsStatus={client.state.accountLoadoutsStatus}
-        accountLoadoutsError={client.state.accountLoadoutsError}
-        deckSubmissionDisabled={client.state.actionInFlight}
-        onSubmitLoadout={client.submitLobbyLoadout}
         onConcede={() => {
           if (concedeAction === undefined || !requestConcedeConfirmation()) {
             return;

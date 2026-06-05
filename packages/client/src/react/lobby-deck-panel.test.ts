@@ -36,15 +36,15 @@ const loadouts: readonly AccountLoadout[] = [
   {
     id: "loadout-1",
     name: "Enel Yellow",
-    mainDeckId: "deck-1",
-    donDeckId: "don-1",
+    folderId: "folder-1",
+    folderName: "Ranked",
     updatedAt: "2026-06-02T00:00:00.000Z",
   },
   {
     id: "loadout-2",
     name: "Luffy Life",
-    mainDeckId: "deck-2",
-    donDeckId: null,
+    folderId: null,
+    folderName: null,
     updatedAt: "2026-06-01T00:00:00.000Z",
   },
 ];
@@ -61,7 +61,9 @@ describe("lobby deck panel", () => {
     );
 
     assert.match(html, /Account loadout/u);
+    assert.match(html, /<optgroup label="Ranked">/u);
     assert.match(html, /Enel Yellow/u);
+    assert.match(html, /<optgroup label="Unfiled">/u);
     assert.match(html, /Luffy Life/u);
     assert.match(html, /Submit loadout/u);
     assert.doesNotMatch(html, /Deck hash/u);

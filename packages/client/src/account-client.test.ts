@@ -72,13 +72,13 @@ describe("Poneglyph account client", () => {
     assert.deepEqual(loadout, {
       id: "loadout-1",
       name: "Imported deck",
-      mainDeckId: "deck-1",
-      donDeckId: null,
+      folderId: null,
+      folderName: null,
       updatedAt: "2026-06-02T00:00:00.000Z",
     });
   });
 
-  test("lists account loadouts through cookie-backed auth", async () => {
+  test("lists account deck loadouts through foldered deck library", async () => {
     const requests: RecordedRequest[] = [];
     const client = createPoneglyphAccountClient({
       baseUrl: "https://auth.example/",
@@ -89,20 +89,77 @@ describe("Poneglyph account client", () => {
         });
         return Promise.resolve(
           responseJson({
-            data: [
-              {
-                id: "loadout-1",
-                user_id: "user-1",
-                name: "Enel",
-                main_deck_id: "deck-1",
-                don_deck_id: "don-1",
-                playmat_cosmetic_id: null,
-                don_sleeve_cosmetic_id: null,
-                deck_sleeve_cosmetic_id: null,
-                created_at: "2026-06-01T00:00:00.000Z",
-                updated_at: "2026-06-02T00:00:00.000Z",
-              },
-            ],
+            data: {
+              folders: [
+                {
+                  id: "folder-1",
+                  user_id: "user-1",
+                  name: "Ranked",
+                  sort_order: 0,
+                  created_at: "2026-06-01T00:00:00.000Z",
+                  updated_at: "2026-06-01T00:00:00.000Z",
+                },
+              ],
+              decks: [
+                {
+                  id: "loadout-1",
+                  user_id: "user-1",
+                  name: "Enel",
+                  deck_hash: "deck-hash",
+                  deck: null,
+                  folder_id: "folder-1",
+                  kind: "deck",
+                  leader_card_number: "OP05-098",
+                  leader_variant_index: null,
+                  leader_copy_count: 1,
+                  preview_card_number: null,
+                  preview_variant_index: null,
+                  max_copies_of_single_card: 4,
+                  main_count: 50,
+                  favorite: false,
+                  created_at: "2026-06-01T00:00:00.000Z",
+                  updated_at: "2026-06-02T00:00:00.000Z",
+                },
+                {
+                  id: "list-1",
+                  user_id: "user-1",
+                  name: "Maybe board",
+                  deck_hash: "list-hash",
+                  deck: null,
+                  folder_id: "folder-1",
+                  kind: "list",
+                  leader_card_number: null,
+                  leader_variant_index: null,
+                  leader_copy_count: 0,
+                  preview_card_number: null,
+                  preview_variant_index: null,
+                  max_copies_of_single_card: 4,
+                  main_count: 8,
+                  favorite: false,
+                  created_at: "2026-06-01T00:00:00.000Z",
+                  updated_at: "2026-06-02T00:00:00.000Z",
+                },
+                {
+                  id: "loadout-2",
+                  user_id: "user-1",
+                  name: "Unfiled Luffy",
+                  deck_hash: "deck-hash-2",
+                  deck: null,
+                  folder_id: null,
+                  kind: "deck",
+                  leader_card_number: "OP05-060",
+                  leader_variant_index: null,
+                  leader_copy_count: 1,
+                  preview_card_number: null,
+                  preview_variant_index: null,
+                  max_copies_of_single_card: 4,
+                  main_count: 50,
+                  favorite: false,
+                  created_at: "2026-06-01T00:00:00.000Z",
+                  updated_at: "2026-06-03T00:00:00.000Z",
+                },
+              ],
+            },
           }),
         );
       },
@@ -114,15 +171,22 @@ describe("Poneglyph account client", () => {
     if (request === undefined) {
       throw new Error("Expected a loadout list request.");
     }
-    assert.equal(request.url, "https://auth.example/v1/loadouts");
+    assert.equal(request.url, "https://auth.example/v1/deck-library");
     assert.equal(request.init?.credentials, "include");
     assert.deepEqual(loadouts, [
       {
         id: "loadout-1",
         name: "Enel",
-        mainDeckId: "deck-1",
-        donDeckId: "don-1",
+        folderId: "folder-1",
+        folderName: "Ranked",
         updatedAt: "2026-06-02T00:00:00.000Z",
+      },
+      {
+        id: "loadout-2",
+        name: "Unfiled Luffy",
+        folderId: null,
+        folderName: null,
+        updatedAt: "2026-06-03T00:00:00.000Z",
       },
     ]);
   });
