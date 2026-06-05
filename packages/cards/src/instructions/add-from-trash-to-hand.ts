@@ -9,6 +9,11 @@ const trashToHandSelection = "trashSelection:addToHand" as SelectionId;
 export const parseAddFromTrashToHandInstruction: InstructionParser = (
   input,
 ) => {
+  const sourceCharacter = parseAddThisCharacterFromTrashToHand(input.text);
+  if (sourceCharacter !== undefined) {
+    return sourceCharacter;
+  }
+
   const addMatch = /^add\s+(?<rest>.+)$/i.exec(input.text);
   const afterAdd = addMatch?.groups?.["rest"];
   if (afterAdd === undefined) {
@@ -65,6 +70,41 @@ export const parseAddFromTrashToHandInstruction: InstructionParser = (
       "player:self",
       "chooser:self:upTo",
       ...source.evidence,
+    ],
+    rest: "",
+  };
+};
+
+const parseAddThisCharacterFromTrashToHand = (
+  text: string,
+): ReturnType<InstructionParser> => {
+  if (
+    !/^add this Character card from your trash to your hand\.?$/i.test(
+      text.trim(),
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "moveCards",
+      count: 1,
+      from: {
+        player: "self",
+        zone: "trash",
+        source: "effectSource",
+      },
+      to: { player: "self", zone: "hand" },
+      order: "original",
+    },
+    evidence: [
+      "instruction:moveCards",
+      "target:thisCharacter",
+      "zone:trash",
+      "destination:hand",
+      "player:self",
+      "count:positiveInteger",
     ],
     rest: "",
   };

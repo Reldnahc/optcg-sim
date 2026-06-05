@@ -122,6 +122,21 @@ export const isSupportedDeckTopToLifeTopEffect = (
   effect.to.zone === "life" &&
   effect.to.position === "top";
 
+export const isSupportedEffectSourceTrashToHandEffect = (
+  effect: Effect,
+): effect is MoveCardsEffect =>
+  effect.type === "moveCards" &&
+  effect.count === 1 &&
+  effect.min === undefined &&
+  effect.from.player === "self" &&
+  effect.from.zone === "trash" &&
+  effect.from.position === undefined &&
+  effect.from.source === "effectSource" &&
+  effect.to.player === "self" &&
+  effect.to.zone === "hand" &&
+  effect.to.position === undefined &&
+  effect.destinationState === undefined;
+
 export const isSupportedMoveCardsEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
@@ -130,7 +145,8 @@ export const isSupportedMoveCardsEffect = (
   isSupportedLifeTopToHandEffect(effect) ||
   isSupportedLifeBottomToHandEffect(effect) ||
   isSupportedLifeTopToTrashEffect(effect) ||
-  isSupportedDeckTopToLifeTopEffect(effect);
+  isSupportedDeckTopToLifeTopEffect(effect) ||
+  isSupportedEffectSourceTrashToHandEffect(effect);
 
 export const isSupportedMoveCardsEffectBlock = (
   effect: EffectDefinition["effects"][number],
@@ -253,11 +269,103 @@ export const executeMoveCardsPrimitive = (
       options,
     );
   }
+  if (isSupportedEffectSourceTrashToHandEffect(effect)) {
+    return executeEffectSourceTrashToHandMove(
+      state,
+      entry,
+      fromPlayerId,
+      options,
+    );
+  }
 
   return toEngineResult(
     state,
     [],
     [moveCardsExecutionError(entry.effectBlockId, "unsupported-effect-shape")],
+  );
+};
+
+const executeEffectSourceTrashToHandMove = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
+  options: { incrementStateSeq?: boolean },
+): EngineResult => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [moveCardsExecutionError(entry.effectBlockId, "unsupported-player-ref")],
+    );
+  }
+
+  const trashIndex = player.trash.findIndex(
+    (card) => card.instanceId === entry.source.instanceId,
+  );
+  const moved = player.trash[trashIndex];
+  if (trashIndex < 0 || moved === undefined) {
+    return toEngineResult(state, []);
+  }
+
+  const from = moved.zone;
+  const to = {
+    zone: "hand" as const,
+    playerId,
+    slot: "hand" as const,
+    index: player.hand.length,
+  };
+  const movedCard: CardInstance = {
+    ...moved,
+    zone: to,
+    state: "active",
+    attachedDon: [],
+  };
+  const nextTrash = reindexZoneCards(
+    player.trash.filter((card) => card.instanceId !== moved.instanceId),
+    "trash",
+    playerId,
+    "trash",
+  );
+  const nextHand = addCardsToHand(player.hand, [movedCard], playerId);
+  const events: EngineEvent[] = [
+    {
+      id: `event:${String(state.seq)}:1:cardMoved` as EngineEvent["id"],
+      seq: state.eventJournal.length + 1,
+      type: "cardMoved",
+      payload: {
+        instanceId: moved.instanceId,
+        cardId: moved.cardId,
+        from,
+        to,
+        reason: "moveCards",
+      },
+      visibility: { type: "public" },
+      causedBy: {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    },
+  ];
+  const shouldIncrementStateSeq = options.incrementStateSeq ?? true;
+
+  return toEngineResult(
+    {
+      ...state,
+      ...(shouldIncrementStateSeq ? { seq: toStateSeq(state.seq + 1) } : {}),
+      players: {
+        ...state.players,
+        [playerId]: {
+          ...player,
+          hand: nextHand,
+          trash: nextTrash,
+        },
+      },
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    events,
   );
 };
 

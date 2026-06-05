@@ -627,7 +627,8 @@
               "properties": {
                 "player": { "$ref": "#/$defs/playerRef" },
                 "zone": { "$ref": "#/$defs/zone" },
-                "position": { "type": "string", "enum": ["top", "bottom"] }
+                "position": { "type": "string", "enum": ["top", "bottom"] },
+                "source": { "const": "effectSource" }
               }
             },
             "to": {

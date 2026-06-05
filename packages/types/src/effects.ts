@@ -706,7 +706,12 @@ export type Effect =
       type: "moveCards";
       count: number;
       min?: number;
-      from: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+      from: {
+        player: PlayerRef;
+        zone: Zone;
+        position?: "top" | "bottom";
+        source?: "effectSource";
+      };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "original";
       destinationState?: "active" | "rested";
