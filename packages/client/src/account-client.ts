@@ -51,8 +51,11 @@ const normalizeLibraryDeck = (
 ): AccountLoadout => {
   const folder =
     value.folder_id === null ? undefined : foldersById.get(value.folder_id);
+  if (value.loadout_id === null) {
+    throw new TypeError("Deck collection is missing a sim loadout id.");
+  }
   return {
-    id: value.id,
+    id: value.loadout_id,
     name: value.name,
     folderId: value.folder_id,
     folderName: folder?.name ?? null,
@@ -62,7 +65,8 @@ const normalizeLibraryDeck = (
 
 const playableDeckCollections = (
   decks: readonly DeckCollection[],
-): DeckCollection[] => decks.filter((deck) => deck.kind === "deck");
+): DeckCollection[] =>
+  decks.filter((deck) => deck.kind === "deck" && deck.loadout_id !== null);
 
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
