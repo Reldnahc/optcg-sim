@@ -194,7 +194,8 @@ export const cardCostGroupRequiresManualConfirm = (
   group: Pick<OptionalCardCostGroup, "operation" | "source">,
 ): boolean => group.operation === "moveCards" && group.source?.zone === "trash";
 
-const donPaymentLabelPattern = /^Pay cost with (?<count>[1-9]\d*) DON!!$/u;
+const donPaymentLabelPattern =
+  /^(?:Pay(?: cost with)?|Rest) (?<count>[1-9]\d*) DON!!$/u;
 const donPaymentResponseKeyPattern = /^payment:don:(?<count>[1-9]\d*)$/u;
 
 const donPaymentCanonicalKey = (
@@ -309,6 +310,40 @@ export const autoPayCostActionIndex = (
     return undefined;
   }
 
+  return paymentAction.index;
+};
+
+export const quickPayActivateMainCostActionIndex = (
+  decision: PublicPendingDecision | undefined,
+  actions: readonly ClientActionModel[],
+): number | undefined => {
+  if (decision?.type !== "payCost") {
+    return undefined;
+  }
+  const paymentActions = actions.filter(
+    (action) => action.decisionPayment?.kind !== "paymentDeclined",
+  );
+  if (paymentActions.length === 0) {
+    return undefined;
+  }
+
+  const canonicalDonActions =
+    createCanonicalDonPaymentModalActions(paymentActions);
+  if (canonicalDonActions?.length === 1) {
+    return canonicalDonActions[0]?.index;
+  }
+
+  if (paymentActions.length !== 1) {
+    return undefined;
+  }
+  const [paymentAction] = paymentActions;
+  if (
+    paymentAction === undefined ||
+    paymentAction.type !== "respondToDecision" ||
+    paymentAction.decisionPayment !== undefined
+  ) {
+    return undefined;
+  }
   return paymentAction.index;
 };
 

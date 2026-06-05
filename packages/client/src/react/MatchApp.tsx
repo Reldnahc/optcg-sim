@@ -38,7 +38,11 @@ export interface MatchAppProps {
 export const MatchApp = ({
   accountSessionToken,
 }: MatchAppProps): React.JSX.Element => {
-  const client = useMatchClient({ accountSessionToken });
+  const visualSettings = usePersistedMatchVisualSettings();
+  const client = useMatchClient({
+    accountSessionToken,
+    quickPayActivateMainCosts: visualSettings.quickPayActivateMainCosts,
+  });
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMinimized, setPreviewMinimized] = useState(false);
@@ -46,7 +50,6 @@ export const MatchApp = ({
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const visualSettings = usePersistedMatchVisualSettings();
   const [controlDockActiveTabId, setControlDockActiveTabId] =
     useState<string>();
   const {

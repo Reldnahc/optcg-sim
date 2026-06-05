@@ -38,6 +38,8 @@ describe("settings window", () => {
     assert.match(markup, /type="file"/u);
     assert.match(markup, /accept="image\/\*,\.gif"/u);
     assert.match(markup, /Clear background/u);
+    assert.match(markup, /Quick pay Activate: Main costs/u);
+    assert.match(markup, /type="checkbox"/u);
   });
 
   test("match app wires the settings icon to the settings window", async () => {
@@ -148,6 +150,10 @@ describe("settings window", () => {
     assert.match(matchApp, /<MatchVisualSettingsProvider/u);
     assert.match(matchApp, /style=\{matchAppStyle\}/u);
     assert.match(persistedSettingsHook, /optcg:client:background-image-url/u);
+    assert.match(
+      persistedSettingsHook,
+      /optcg:client:quick-pay-activate-main-costs/u,
+    );
     assert.match(persistedSettingsHook, /createBrowserPersistentStorage/u);
     assert.match(persistedSettingsHook, /\.getItem/u);
     assert.match(persistedSettingsHook, /\.setItem/u);

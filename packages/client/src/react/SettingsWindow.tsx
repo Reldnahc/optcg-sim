@@ -5,12 +5,16 @@ import type { WindowRect } from "./FloatingWindow.js";
 
 export interface MatchVisualSettings {
   readonly backgroundImageUrl: string;
+  readonly quickPayActivateMainCosts: boolean;
   readonly setBackgroundImageUrl: (url: string) => void;
+  readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
 }
 
 const noopVisualSettings: MatchVisualSettings = {
   backgroundImageUrl: "",
+  quickPayActivateMainCosts: false,
   setBackgroundImageUrl: () => undefined,
+  setQuickPayActivateMainCosts: () => undefined,
 };
 
 const MatchVisualSettingsContext =
@@ -39,8 +43,12 @@ export const defaultSettingsWindowRect: WindowRect = {
 };
 
 export const SettingsContent = (): React.JSX.Element => {
-  const { backgroundImageUrl, setBackgroundImageUrl } =
-    useMatchVisualSettings();
+  const {
+    backgroundImageUrl,
+    quickPayActivateMainCosts,
+    setBackgroundImageUrl,
+    setQuickPayActivateMainCosts,
+  } = useMatchVisualSettings();
 
   const selectBackgroundFile = (file: File | undefined): void => {
     if (file === undefined) {
@@ -78,6 +86,16 @@ export const SettingsContent = (): React.JSX.Element => {
       >
         Clear background
       </button>
+      <label className="settings-checkbox-field">
+        <input
+          type="checkbox"
+          checked={quickPayActivateMainCosts}
+          onChange={(event) => {
+            setQuickPayActivateMainCosts(event.currentTarget.checked);
+          }}
+        />
+        <span>Quick pay Activate: Main costs</span>
+      </label>
     </div>
   );
 };

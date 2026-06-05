@@ -27,6 +27,7 @@ import type {
   MatchClientSessionState,
   OptionalCardCostChoice,
   OptionalCardCostGroup,
+  ClientActionModel,
 } from "../index.js";
 import {
   CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
@@ -47,6 +48,8 @@ export interface UseMatchClientActionsInput {
   selectedCardInstanceId: string | undefined;
   selectedDonInstanceIds: readonly string[];
   autoSubmittedPayCostDecisionId: RefObject<string | undefined>;
+  legalActions: readonly ClientActionModel[];
+  onVisibleActionSubmitted: (actionType: ClientActionModel["type"]) => void;
   resetInteractionState: () => void;
   setActionInFlight: (value: boolean) => void;
   setActiveAttackTargetChoice: (value: AttackTargetChoice | undefined) => void;
@@ -82,6 +85,8 @@ export const useMatchClientActions = ({
   selectedCardCostActionIndex,
   selectedCardInstanceId,
   selectedDonInstanceIds,
+  legalActions,
+  onVisibleActionSubmitted,
   resetInteractionState,
   setActionInFlight,
   setActiveAttackTargetChoice,
@@ -280,6 +285,12 @@ export const useMatchClientActions = ({
       }
       setActionInFlight(true);
       try {
+        const visibleAction = legalActions.find(
+          (action) => action.index === actionIndex,
+        );
+        if (visibleAction !== undefined) {
+          onVisibleActionSubmitted(visibleAction.type);
+        }
         const result = await controller.submitVisibleAction({ actionIndex });
         setClientState(result);
         resetInteractionState();
@@ -295,7 +306,9 @@ export const useMatchClientActions = ({
       attachSelectedDonToTarget,
       board,
       controller,
+      legalActions,
       modalResponseActions,
+      onVisibleActionSubmitted,
       pendingDecision,
       resetInteractionState,
       selectedCardInstanceId,

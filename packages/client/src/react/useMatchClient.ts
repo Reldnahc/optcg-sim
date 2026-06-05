@@ -7,6 +7,7 @@ import {
   optionalCardCostInstanceIds,
   chooseDecisionTrigger,
   moveOrderedCardNear,
+  quickPayActivateMainCostActionIndex,
   setOrderedCardsPlacementDestination,
   setDecisionActionOption,
   setDecisionQuantity,
@@ -46,10 +47,12 @@ import { useMatchSessionActions } from "./use-match-session-actions.js";
 
 export interface UseMatchClientOptions {
   readonly accountSessionToken: string;
+  readonly quickPayActivateMainCosts?: boolean | undefined;
 }
 
 export const useMatchClient = ({
   accountSessionToken,
+  quickPayActivateMainCosts = false,
 }: UseMatchClientOptions): MatchClientUi => {
   const controller = useMemo(
     () => createController({ accountSessionToken }),
@@ -83,6 +86,9 @@ export const useMatchClient = ({
   const [activeCounterTargetChoice, setActiveCounterTargetChoice] =
     useState<CounterTargetChoice>();
   const autoSubmittedPayCostDecisionId = useRef<string | undefined>(undefined);
+  const lastSubmittedVisibleActionType = useRef<
+    ClientActionModel["type"] | undefined
+  >(undefined);
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -123,6 +129,7 @@ export const useMatchClient = ({
     explicitCardCostChoiceActive,
     modalResponseActions,
     optionalCardCostChoice,
+    pendingDecisionResponseActions,
     pendingChoiceInstanceIds,
     pendingDecisionInteractionMode,
     selectedCardCostActionIndex,
@@ -259,6 +266,10 @@ export const useMatchClient = ({
       selectedCardInstanceId,
       selectedDonInstanceIds,
       autoSubmittedPayCostDecisionId,
+      legalActions: playerSnapshot?.actions ?? [],
+      onVisibleActionSubmitted: (actionType) => {
+        lastSubmittedVisibleActionType.current = actionType;
+      },
       resetInteractionState,
       setActionInFlight,
       setActiveAttackTargetChoice,
@@ -286,6 +297,36 @@ export const useMatchClient = ({
     actionInFlight,
     automaticPayCostActionIndex,
     pendingDecision,
+    submitAction,
+  ]);
+  useEffect(() => {
+    if (pendingDecision?.type !== "payCost") {
+      lastSubmittedVisibleActionType.current = undefined;
+      return;
+    }
+    if (
+      !quickPayActivateMainCosts ||
+      actionInFlight ||
+      lastSubmittedVisibleActionType.current !== "activateEffect" ||
+      autoSubmittedPayCostDecisionId.current === String(pendingDecision.id)
+    ) {
+      return;
+    }
+    const actionIndex = quickPayActivateMainCostActionIndex(
+      pendingDecision,
+      pendingDecisionResponseActions,
+    );
+    if (actionIndex === undefined) {
+      return;
+    }
+    autoSubmittedPayCostDecisionId.current = String(pendingDecision.id);
+    lastSubmittedVisibleActionType.current = undefined;
+    void submitAction(actionIndex);
+  }, [
+    actionInFlight,
+    pendingDecision,
+    pendingDecisionResponseActions,
+    quickPayActivateMainCosts,
     submitAction,
   ]);
   const selectCard = useMatchClientCardSelection({
