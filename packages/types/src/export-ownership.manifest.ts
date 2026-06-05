@@ -155,6 +155,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   Condition: "TYP-001D",
   Cost: "TYP-001D",
   OptionalTrashFromHandCost: "SUP-003A",
+  OptionalRevealFromHandCost: "TYP-001D",
   OptionalMoveCardsCost: "TYP-001D",
   ScopedOptionalFieldTrashCost: "SUP-003A",
   OptionalChooseOneTrashCostAlternative: "SUP-003A",

@@ -39,6 +39,7 @@ export interface ConcreteTrashMovementOptions {
   cardMovedPayloadShape: CardMovedPayloadShape;
   cardMovedPayloadExtra?: Record<string, unknown>;
   cardMovedVisibility?: EventVisibility;
+  cardTrashedPayloadExtra?: Record<string, unknown>;
   cardTrashedVisibility?: EventVisibility;
   causedBy?: CausalityRef;
   clearAttachedDon?: boolean;
@@ -234,6 +235,7 @@ export const moveConcreteCardsToTrash = (
           instanceId: moved.instanceId,
           cardId: moved.cardId,
           reason: options.reason,
+          ...options.cardTrashedPayloadExtra,
         },
         options.cardTrashedVisibility,
       );

@@ -44,6 +44,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
         {
           id: "opponent-trashes-n-cards-from-their-hand",
         },
+        {
+          id: "trash-from-hand-until-count",
+        },
       ],
     });
     expect(trashFromDeckTopPrimitive).toMatchObject({

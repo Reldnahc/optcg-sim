@@ -55,10 +55,8 @@ import {
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-runtime-top-deck-placement.js";
 import { createSupportedSearchRevealChoiceDecision } from "../effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
-import {
-  createSupportedTrashFromHandChoiceDecision,
-  isSupportedQueuedTrashFromHandEffect,
-} from "../runtime/primitives/trash-from-hand.js";
+import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
+import { resolveQueuedTrashFromHandDecision } from "./trash-from-hand.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -263,21 +261,6 @@ export const createEffectRuntimeQueueResults = (
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
       (match.sourcePresencePolicy !== "mustRemainInSameZone" &&
         match.sourcePresencePolicy !== "resolveFromDestinationZone")
-    ) {
-      return undefined;
-    }
-    return match.effect;
-  };
-
-  const resolveTrashHand = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "trashFromHand" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !isSupportedQueuedTrashFromHandEffect(match)
     ) {
       return undefined;
     }
@@ -523,12 +506,19 @@ export const createEffectRuntimeQueueResults = (
       }
       const placement = placeTopDeck(nextState, queuedEffect, selected);
       if (placement !== undefined) return placement;
-      const trashFromHandEffect = resolveTrashHand(nextState, selected);
-      if (trashFromHandEffect !== undefined) {
+      const trashFromHandDecision = resolveQueuedTrashFromHandDecision(
+        nextState,
+        selected,
+        resolveQueuedEffectDefinition,
+      );
+      if (trashFromHandDecision?.kind === "unsupported") {
+        return unsupportedEffectQueueResult(originalState);
+      }
+      if (trashFromHandDecision?.kind === "decision") {
         const trashDecision = createSupportedTrashFromHandChoiceDecision(
           nextState,
           selected,
-          trashFromHandEffect,
+          trashFromHandDecision.effect,
         );
         return trashDecision.ok
           ? toEngineResult(trashDecision.state, [
@@ -554,6 +544,7 @@ export const createEffectRuntimeQueueResults = (
         selected,
       );
       let resolvedMoveCardsAsNoop = false;
+      const resolvedTrashUntilAsNoop = trashFromHandDecision?.kind === "noop";
       if (
         moveCardsEffect !== undefined &&
         (moveCardsEffect.min ?? moveCardsEffect.count) < moveCardsEffect.count
@@ -635,6 +626,7 @@ export const createEffectRuntimeQueueResults = (
           drawEffect === undefined &&
           moveCardsEffect === undefined &&
           !resolvedMoveCardsAsNoop &&
+          !resolvedTrashUntilAsNoop &&
           playSourceEffect === undefined &&
           winGameEffect === undefined &&
           queuedContinuousEffect === undefined

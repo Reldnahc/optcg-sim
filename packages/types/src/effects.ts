@@ -42,6 +42,7 @@ export type Trigger =
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
   | { type: "lifeRemoved"; players: PlayerRef[] }
+  | { type: "handTrashedByEffect"; player: PlayerRef }
   | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }
   | { type: "activateMain" }
@@ -777,6 +778,12 @@ export type Effect =
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
+    }
+  | {
+      type: "trashFromHandUntilCount";
+      player: PlayerRef;
+      chooser: PlayerRef;
+      handCount: number;
     }
   | {
       type: "modifyPower";

@@ -1,0 +1,51 @@
+import type {
+  Effect,
+  EffectDefinition,
+  EffectQueueEntry,
+  GameState,
+} from "@optcg/types";
+
+import { isSupportedQueuedTrashFromHandEffect } from "../runtime/primitives/trash-from-hand.js";
+import {
+  isSupportedQueuedTrashFromHandUntilCountEffect,
+  resolveTrashFromHandUntilCount,
+} from "../runtime/primitives/trash-from-hand-until.js";
+
+type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
+
+export type QueuedTrashFromHandDecisionResolution =
+  | { kind: "decision"; effect: TrashFromHandEffect }
+  | { kind: "noop" }
+  | { kind: "unsupported" };
+
+export type ResolveQueuedEffectDefinition = (
+  state: GameState,
+  entry: EffectQueueEntry,
+) => EffectDefinition["effects"][number] | undefined;
+
+export const resolveQueuedTrashFromHandDecision = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  resolveQueuedEffectDefinition: ResolveQueuedEffectDefinition,
+): QueuedTrashFromHandDecisionResolution | undefined => {
+  const match = resolveQueuedEffectDefinition(state, entry);
+  if (
+    match === undefined ||
+    match.sourcePresencePolicy !== entry.sourcePresencePolicy
+  ) {
+    return undefined;
+  }
+  if (isSupportedQueuedTrashFromHandEffect(match)) {
+    return { kind: "decision", effect: match.effect };
+  }
+  if (isSupportedQueuedTrashFromHandUntilCountEffect(match)) {
+    const resolved = resolveTrashFromHandUntilCount(state, entry, match.effect);
+    if (resolved.kind === "effect") {
+      return { kind: "decision", effect: resolved.effect };
+    }
+    return resolved;
+  }
+  return match.effect.type === "trashFromHandUntilCount"
+    ? { kind: "unsupported" }
+    : undefined;
+};

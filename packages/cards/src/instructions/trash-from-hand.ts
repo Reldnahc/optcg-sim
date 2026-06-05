@@ -67,6 +67,28 @@ export const trashFromHandPrimitive: PrimitivePatternDefinition<InstructionParse
           rest: "",
         }),
       },
+      {
+        id: "trash-from-hand-until-count",
+        pattern:
+          /^trash cards from your hand until you have (?<count>\d+) cards in your hand\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "trashFromHandUntilCount",
+            player: "self",
+            chooser: "self",
+            handCount: Number.parseInt(groups["count"] ?? "", 10),
+          },
+          evidence: [
+            "instruction:trashFromHandUntilCount",
+            "condition:handCount",
+            "condition:comparator:eq",
+            "condition:threshold:nonNegativeInteger",
+            "player:self",
+            "chooser:self",
+          ],
+          rest: "",
+        }),
+      },
     ],
   };
 

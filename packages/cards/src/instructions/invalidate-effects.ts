@@ -18,6 +18,26 @@ export const invalidateEffectsInstructionPrimitive = {
 } as const;
 
 export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
+  if (
+    /^this Character's effect is negated during this turn\.?$/iu.test(
+      input.text,
+    )
+  ) {
+    return {
+      effect: {
+        type: "invalidateEffects",
+        target: { type: "self" },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:invalidateEffects",
+        "target:thisCharacter",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    };
+  }
+
   const actionMatch = /^Negate the effect of\s+(?<rest>.*)$/i.exec(input.text);
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {

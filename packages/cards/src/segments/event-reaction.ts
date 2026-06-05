@@ -7,6 +7,11 @@ const lifeRemovedTrigger = (players: PlayerRef[]): Trigger => ({
   players,
 });
 
+const handTrashedByEffectTrigger = (): Trigger => ({
+  type: "handTrashedByEffect",
+  player: "self",
+});
+
 const opponentEventOrBlockerActivatedTrigger = (): Trigger => ({
   type: "opponentActivated",
   activations: ["event", "blocker"],
@@ -94,6 +99,48 @@ export function opponentEventOrBlockerActivatedExpressionParser(options: {
           trigger: isBlockerOnly
             ? opponentBlockerActivatedTrigger()
             : opponentEventOrBlockerActivatedTrigger(),
+        },
+      };
+    }
+
+    return undefined;
+  };
+}
+
+export function handTrashedByEffectReactionExpressionParser(options: {
+  readonly expressions: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input: ParseInput) => {
+    const match =
+      /^When a card is trashed from your hand by an effect,\s*(?<body>.+)$/iu.exec(
+        input.text,
+      );
+    const body = match?.groups?.["body"];
+    if (body === undefined) {
+      return undefined;
+    }
+
+    for (const expressionParser of options.expressions) {
+      const parsed = expressionParser({ ...input, text: body });
+      if (parsed === undefined || parsed.rest.length > 0) {
+        continue;
+      }
+      return {
+        effect: parsed.effect,
+        evidence: [
+          "trigger:handTrashedByEffect",
+          "zone:hand",
+          "destination:trash",
+          "player:self",
+          ...parsed.evidence,
+        ],
+        rest: "",
+        blockPatch: {
+          ...parsed.blockPatch,
+          category: "auto",
+          trigger: handTrashedByEffectTrigger(),
         },
       };
     }

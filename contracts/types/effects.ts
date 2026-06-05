@@ -42,6 +42,7 @@ export type Trigger =
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
   | { type: "lifeRemoved"; players: PlayerRef[] }
+  | { type: "handTrashedByEffect"; player: PlayerRef }
   | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }
   | { type: "activateMain" }
@@ -142,6 +143,12 @@ export type Cost =
       chooser: PlayerRef;
     }
   | {
+      type: "revealFromHand";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+    }
+  | {
       type: "moveCards";
       count: number;
       chooser: PlayerRef;
@@ -174,6 +181,14 @@ export type Cost =
 
 export type OptionalTrashFromHandCost = {
   type: "trashFromHand";
+  count: number;
+  filter?: CardFilter;
+  chooser: PlayerRef;
+  optional: true;
+};
+
+export type OptionalRevealFromHandCost = {
+  type: "revealFromHand";
   count: number;
   filter?: CardFilter;
   chooser: PlayerRef;
@@ -243,6 +258,7 @@ export type OptionalCost =
       optional: true;
     }
   | OptionalTrashFromHandCost
+  | OptionalRevealFromHandCost
   | OptionalMoveCardsCost
   | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
@@ -405,6 +421,7 @@ export type ReplacementTrigger =
       from?: Zone;
       to?: Zone;
       sourceKind?: "battle" | "cardEffect";
+      sourceControllerRelation?: "any" | "opponentControlled";
       target: Target;
     }
   | { type: "custom"; event: string };
@@ -763,6 +780,12 @@ export type Effect =
       chooser: PlayerRef;
     }
   | {
+      type: "trashFromHandUntilCount";
+      player: PlayerRef;
+      chooser: PlayerRef;
+      handCount: number;
+    }
+  | {
       type: "modifyPower";
       target: Target;
       value: number | DynamicNumberValue;
@@ -774,6 +797,14 @@ export type Effect =
       type: "modifyCost";
       filter?: CardFilter;
       target?: Target;
+      value: number;
+      duration: Duration;
+      player: PlayerRef;
+      sourceZone?: Zone;
+    }
+  | {
+      type: "modifyCounter";
+      filter?: CardFilter;
       value: number;
       duration: Duration;
       player: PlayerRef;
@@ -804,6 +835,7 @@ export type Effect =
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
   | { type: "attachSelectedDon"; selection: SelectionId; target: Target }
   | { type: "returnDon"; count: number; player: PlayerRef }
+  | { type: "winGame"; player: PlayerRef }
   | {
       type: "addLife";
       count: number;

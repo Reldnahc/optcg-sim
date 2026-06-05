@@ -100,6 +100,7 @@ import {
   trailingConditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
+  handTrashedByEffectReactionExpressionParser,
   lifeRemovedReactionExpressionParser,
   optionalCostedEffectExpressionParser,
   opponentEventOrBlockerActivatedExpressionParser,
@@ -355,6 +356,9 @@ const defaultRegistry = {
     }),
     replacementInsteadExpressionParser,
     lifeRemovedReactionExpressionParser({
+      expressions: [generalExpressionParser],
+    }),
+    handTrashedByEffectReactionExpressionParser({
       expressions: [generalExpressionParser],
     }),
     opponentEventOrBlockerActivatedExpressionParser({

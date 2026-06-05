@@ -15,6 +15,7 @@ import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence/support.js";
+import { isSupportedTrashFromHandUntilCountBody } from "./runtime/primitives/trash-from-hand-until.js";
 
 type EffectBlock = EffectDefinition["effects"][number];
 
@@ -94,6 +95,7 @@ const isQueuedAutoSequenceTriggerType = (
   | "trigger"
   | "counter"
   | "lifeRemoved"
+  | "handTrashedByEffect"
   | "opponentActivated" =>
   triggerType === "onPlay" ||
   triggerType === "whenAttacking" ||
@@ -104,6 +106,7 @@ const isQueuedAutoSequenceTriggerType = (
   triggerType === "trigger" ||
   triggerType === "counter" ||
   triggerType === "lifeRemoved" ||
+  triggerType === "handTrashedByEffect" ||
   triggerType === "opponentActivated";
 
 const isSupportedSequenceBody = (
@@ -164,6 +167,7 @@ const isSupportedNonOptionalBody = (
   isSupportedDrawBody(block.effect) ||
   isSupportedDrawUpToBody(block.effect) ||
   isSupportedTrashFromHandBody(block.effect) ||
+  isSupportedTrashFromHandUntilCountBody(block.effect) ||
   isSupportedMoveCardsBody(block.effect) ||
   isSupportedPlaceTopDeckCardsBody(block.effect) ||
   isSupportedWinGameBody(block.effect) ||

@@ -171,6 +171,9 @@ export interface SelectCardsDecision extends BaseDecision {
       source: CardRef;
       enterRested: boolean;
     };
+    trashFromHand?: {
+      triggerSource: "effect" | "cost";
+    };
   };
 }
 

@@ -34,6 +34,7 @@ export interface CardFilterPredicateParseOptions {
 const predicateParsers: readonly PredicateParser[] = [
   parseColorPredicate,
   parseMultiTypeCategoryPredicate,
+  parseMultiTypeLeaderOrCharacterPredicate,
   parseMultiTypeCardPredicate,
   parseTypeOrAttributeCategoryPredicate,
   parseTypeLeaderOrCharacterPredicate,
@@ -206,6 +207,43 @@ function parseTypeLeaderOrCharacterPredicate(
     },
     evidence: [
       "filter:type",
+      "filter:category:leader",
+      "filter:category:character",
+    ],
+    rest: restText ?? "",
+  };
+}
+
+function parseMultiTypeLeaderOrCharacterPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeTexts = match?.groups?.["types"];
+  const restText = match?.groups?.["rest"];
+  if (typeTexts === undefined) {
+    return undefined;
+  }
+
+  const typeNames = typeTexts
+    .split(/\s+or\s+/i)
+    .map(parseBraceName)
+    .filter((name): name is string => name !== undefined);
+  if (typeNames.length < 2) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      categories: ["leader", "character"],
+      typesAny: typeNames,
+    },
+    evidence: [
+      ...typeNames.map(() => "filter:type" as const),
       "filter:category:leader",
       "filter:category:character",
     ],

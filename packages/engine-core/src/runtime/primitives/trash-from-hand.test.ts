@@ -258,6 +258,62 @@ test("valid trashFromHand response moves selected hand cards to public trash and
   );
 });
 
+test("trashFromHandUntilCount delegates excess hand cards to the hand-trash decision", () => {
+  const { state } = trashFromHandQueueState({
+    type: "trashFromHandUntilCount",
+    player: "self",
+    chooser: "self",
+    handCount: 3,
+  });
+  const beforeP1 = must(state.players[p1], "p1 before");
+  assert.ok(beforeP1.hand.length > 3);
+
+  const decisionResult = processEffectRuntime(state);
+  const decision = must(
+    decisionResult.state.pendingDecision,
+    "pending decision",
+  );
+  assert.equal(decisionResult.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.request.zone, "hand");
+  assert.equal(decision.request.min, beforeP1.hand.length - 3);
+  assert.equal(decision.request.max, beforeP1.hand.length - 3);
+
+  const selected = beforeP1.hand
+    .slice(0, decision.request.min)
+    .map((card) => handRef(card));
+  const result = respondWithCards(decisionResult.state, selected);
+  const afterP1 = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP1.hand.length, 3);
+  assert.deepEqual(
+    afterP1.trash.slice(0, selected.length).map((card) => card.instanceId),
+    selected.map((card) => card.instanceId),
+  );
+});
+
+test("trashFromHandUntilCount resolves as no-op when hand is already at or below count", () => {
+  const { state } = trashFromHandQueueState({
+    type: "trashFromHandUntilCount",
+    player: "self",
+    chooser: "self",
+    handCount: 99,
+  });
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved", "ruleProcessingChecked"],
+  );
+});
+
 test("trashFromHand rejects malformed, wrong-count, duplicate, stale, and opponent responses without mutation", () => {
   const { result: decisionResult } = createTrashDecision();
   const state = decisionResult.state;

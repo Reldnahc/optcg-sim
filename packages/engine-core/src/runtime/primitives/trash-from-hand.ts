@@ -25,6 +25,7 @@ import { resolvePlayerId } from "./draw.js";
 import { resumeSequenceFrameAfterTrashFromHand } from "../../effect-runtime-sequence/frames.js";
 
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
+type TrashFromHandTriggerSource = "effect" | "cost";
 
 type TrashFromHandFailureReason =
   | "unsupported-effect-shape"
@@ -202,6 +203,7 @@ export const createSupportedTrashFromHandChoiceDecision = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: TrashFromHandEffect,
+  options: { triggerSource?: TrashFromHandTriggerSource } = {},
 ): TrashFromHandDecisionResult => {
   const supported = validateSupportedTrashFromHandEffect(state, entry, effect);
   if (!supported.ok) {
@@ -242,6 +244,9 @@ export const createSupportedTrashFromHandChoiceDecision = (
       card: toCardRef(card, supported.playerId),
       visibility,
     })),
+    runtime: {
+      trashFromHand: { triggerSource: options.triggerSource ?? "effect" },
+    },
   };
 
   const events: EngineEvent[] = [];
@@ -430,6 +435,9 @@ export const applySupportedTrashFromHandChoiceResponse = (
   const movedResult = moveConcreteCardsToTrash(state, events, selectedCards, {
     cardMovedPayloadShape: "publicZoneNames",
     cardMovedVisibility: { type: "public" },
+    ...(decision.runtime?.trashFromHand?.triggerSource === "effect"
+      ? { cardTrashedPayloadExtra: { triggerSource: "effect" } }
+      : {}),
     cardTrashedVisibility: { type: "public" },
     causedBy: { type: "decision", decisionId: decision.id },
     clearAttachedDon: true,

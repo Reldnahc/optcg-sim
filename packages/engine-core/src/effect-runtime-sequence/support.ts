@@ -876,6 +876,7 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
     | "trigger"
     | "counter"
     | "lifeRemoved"
+    | "handTrashedByEffect"
     | "opponentActivated",
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions = {},
