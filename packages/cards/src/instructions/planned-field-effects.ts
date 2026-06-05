@@ -87,6 +87,7 @@ export const preventOpponentCharactersRefreshPrimitive = {
     "cardinality:all",
     "cardinality:upTo",
     "target:opponentCharacters",
+    "target:opponentRestedCards",
     "duration:opponentNextRefreshPhase",
   ],
 } as const;
@@ -559,6 +560,22 @@ const parseOpponentRefreshLockTarget = (
   | undefined => {
   const cardinality = parseUpToCardinality({ text });
   if (cardinality !== undefined) {
+    const restedCards = parseOpponentRestedCardsRefreshLockTarget(
+      cardinality.rest,
+      cardinality.cardinality.min,
+      cardinality.cardinality.max,
+    );
+    if (restedCards !== undefined) {
+      return {
+        target: restedCards.target,
+        evidence: [
+          ...cardinality.evidence,
+          "chooser:self:upTo",
+          ...restedCards.evidence,
+        ],
+        rest: restedCards.rest,
+      };
+    }
     const target = parseOpponentCharactersTarget({ text: cardinality.rest });
     if (target === undefined) {
       return undefined;
@@ -617,6 +634,58 @@ const parseOpponentRefreshLockTarget = (
       ),
     ],
     rest: allTarget.rest.trim(),
+  };
+};
+
+const parseOpponentRestedCardsRefreshLockTarget = (
+  text: string,
+  min: number,
+  max: number,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+      readonly target: Target;
+    }
+  | undefined => {
+  const match = /^of your opponent's rested cards?\b\s*(?<rest>.*)$/iu.exec(
+    text,
+  );
+  if (match === null) {
+    return undefined;
+  }
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+        filter: {
+          categories: ["leader", "character", "stage", "don"],
+          state: "rested",
+        },
+        min,
+        max,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+      },
+    },
+    evidence: [
+      "target:opponentRestedCards",
+      "player:opponent",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "zone:stageArea",
+      "zone:costArea",
+      "filter:category:leader",
+      "filter:category:character",
+      "filter:category:stage",
+      "filter:category:don",
+      "filter:state:rested",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
   };
 };
 

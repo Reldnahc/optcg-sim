@@ -1,29 +1,52 @@
 import type { SelectionId } from "@optcg/types";
 
-import type { InstructionParser } from "../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const opponentHandToDeckBottomSelection =
   "handSelection:opponent-hand-to-deck-bottom" as SelectionId;
+const selfHandToDeckPlacementSelection =
+  "handSelection:self-hand-to-deck-placement" as SelectionId;
+
+type DeckPlacement = "top" | "bottom" | "topOrBottom";
+
+const parseDeckPlacement = (text: string): DeckPlacement | undefined => {
+  if (text === "top") return "top";
+  if (text === "bottom") return "bottom";
+  if (text === "top or bottom") return "topOrBottom";
+  return undefined;
+};
+
+const deckPlacementEvidence = (
+  placement: DeckPlacement,
+): readonly PrimitiveEvidence[] =>
+  placement === "topOrBottom"
+    ? ["position:top", "position:bottom"]
+    : [`position:${placement}`];
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const match =
-    /^(?<player>your opponent|you) places? (?<count>\d+) cards? from (?<possessive>their|your) hand at the bottom of (?<deckPossessive>their|your) deck\.?$/i.exec(
+    /^(?:(?<player>your opponent|you) places?|place) (?<count>\d+) cards? from (?<possessive>their|your) hand at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
-  const playerText = match?.groups?.["player"]?.toLowerCase();
+  const playerText = match?.groups?.["player"]?.toLowerCase() ?? "you";
   const possessive = match?.groups?.["possessive"]?.toLowerCase();
   const deckPossessive = match?.groups?.["deckPossessive"]?.toLowerCase();
+  const placementText = match?.groups?.["placement"]?.toLowerCase();
   if (
     countText === undefined ||
-    playerText === undefined ||
     possessive === undefined ||
-    deckPossessive === undefined
+    deckPossessive === undefined ||
+    placementText === undefined
   ) {
     return undefined;
   }
   const count = Number.parseInt(countText, 10);
   if (!Number.isSafeInteger(count) || count <= 0) {
+    return undefined;
+  }
+  const placement = parseDeckPlacement(placementText);
+  if (placement === undefined) {
     return undefined;
   }
   const player = playerText === "your opponent" ? "opponent" : "self";
@@ -34,11 +57,10 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   ) {
     return undefined;
   }
-  const selection = (
+  const selection =
     player === "opponent"
       ? opponentHandToDeckBottomSelection
-      : "handSelection:self-hand-to-deck-bottom"
-  ) as SelectionId;
+      : selfHandToDeckPlacementSelection;
 
   return {
     effect: {
@@ -65,7 +87,7 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
             selection,
             from: "hand",
             to: "deck",
-            position: "bottom",
+            position: placement,
           },
         },
       ],
@@ -78,7 +100,7 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
       player === "opponent" ? "player:opponent" : "player:self",
       player === "opponent" ? "chooser:opponent" : "chooser:self",
       "zone:deck",
-      "position:bottom",
+      ...deckPlacementEvidence(placement),
       "composition:selectThenMove",
     ],
     rest: "",

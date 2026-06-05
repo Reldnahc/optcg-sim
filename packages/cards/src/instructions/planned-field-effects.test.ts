@@ -39,6 +39,7 @@ describe("planned field-effect instruction parsers", () => {
         "cardinality:all",
         "cardinality:upTo",
         "target:opponentCharacters",
+        "target:opponentRestedCards",
         "duration:opponentNextRefreshPhase",
       ],
     });
@@ -279,6 +280,55 @@ describe("planned field-effect instruction parsers", () => {
         "filter:currentPower",
         "condition:comparator:lte",
         "condition:threshold:positiveInteger",
+        "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses opponent rested cards refresh locks as a mixed public-zone selection", () => {
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "Up to 2 of your opponent's rested cards will not become active in your opponent's next Refresh Phase.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+            filter: {
+              categories: ["leader", "character", "stage", "don"],
+              state: "rested",
+            },
+            min: 0,
+            max: 2,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+          },
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:opponentRestedCards",
+        "player:opponent",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "zone:stageArea",
+        "zone:costArea",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:category:stage",
+        "filter:category:don",
+        "filter:state:rested",
         "duration:opponentNextRefreshPhase",
       ],
       rest: "",

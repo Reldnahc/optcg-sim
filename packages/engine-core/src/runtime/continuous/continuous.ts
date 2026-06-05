@@ -200,10 +200,33 @@ const isPublicResolvableFieldObject = (
   state: GameState,
   card: CardRef,
 ): boolean => {
-  if (card.zone?.zone !== "leaderArea" && card.zone?.zone !== "characterArea") {
+  const zone = card.zone?.zone;
+  if (
+    zone !== "leaderArea" &&
+    zone !== "characterArea" &&
+    zone !== "stageArea" &&
+    zone !== "costArea"
+  ) {
     return false;
   }
-  return reifyCardRef(state, card) !== null;
+  const player = state.players[card.playerId];
+  if (player === undefined) {
+    return false;
+  }
+  if (zone === "leaderArea" || zone === "characterArea") {
+    return reifyCardRef(state, card) !== null;
+  }
+  const candidate =
+    zone === "stageArea"
+      ? player.stage
+      : player.costArea.find(
+          (costCard) => costCard.instanceId === card.instanceId,
+        );
+  return (
+    candidate !== undefined &&
+    candidate.instanceId === card.instanceId &&
+    candidate.cardId === card.cardId
+  );
 };
 
 export const createContinuousRecordsForResolvedEffect = (

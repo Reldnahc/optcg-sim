@@ -724,7 +724,7 @@ export type Effect =
       selection: SelectionId;
       from: Zone | SelectionSetId;
       to: Zone;
-      position?: "top" | "bottom";
+      position?: "top" | "bottom" | "topOrBottom";
     }
   | {
       type: "moveCards";

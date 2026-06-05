@@ -109,6 +109,28 @@ export const applyFieldMutationSequenceSegment = (params: {
     if (!moved.ok) {
       return { handled: true, ok: false };
     }
+    if (moved.paused === true) {
+      const decision = moved.state.pendingDecision;
+      if (decision === undefined) {
+        return { handled: true, ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        effectPath: [...effectPath],
+        index,
+        savedReferences: moved.ledgers.savedReferences,
+        segmentResults: moved.ledgers.segmentResults,
+        state: moved.state,
+      });
+      return {
+        events: [...events, ...moved.events],
+        handled: true,
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(moved.state, entry, frame),
+      };
+    }
     return {
       events: [...events, ...moved.events],
       handled: true,

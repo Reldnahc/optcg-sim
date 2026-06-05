@@ -94,7 +94,12 @@ export const cardMatchesContinuousModifierTarget = (
     const cardZone = card.zone.zone;
     const targetZone = target.card.zone?.zone;
     if (target.binding.family !== "selectedTargets") return false;
-    if (targetZone !== "leaderArea" && targetZone !== "characterArea") {
+    if (
+      targetZone !== "leaderArea" &&
+      targetZone !== "characterArea" &&
+      targetZone !== "stageArea" &&
+      targetZone !== "costArea"
+    ) {
       return false;
     }
     if (cardZone !== targetZone) return false;

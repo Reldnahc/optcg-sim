@@ -73,6 +73,7 @@ type SegmentLedgers = {
 };
 
 export { retargetSequenceFrameAfterSearchRevealOrder };
+export { resumeSequenceFrameAfterSelectedHandDeckPlacement } from "./selected-hand-deck-placement.js";
 
 type TrashDecisionResult =
   | {

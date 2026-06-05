@@ -205,10 +205,14 @@ const isSupportedChooseFromZonesTarget = (
 ): boolean =>
   target.request.timing === "onResolution" &&
   target.request.chooser === "self" &&
-  target.request.player === "self" &&
+  (target.request.player === "self" || target.request.player === "opponent") &&
   target.request.zones.length > 0 &&
   target.request.zones.every(
-    (zone) => zone === "leaderArea" || zone === "characterArea",
+    (zone) =>
+      zone === "leaderArea" ||
+      zone === "characterArea" ||
+      zone === "stageArea" ||
+      zone === "costArea",
   ) &&
   target.request.min >= 0 &&
   target.request.max >= target.request.min &&

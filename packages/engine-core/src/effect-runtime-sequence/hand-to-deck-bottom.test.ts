@@ -185,3 +185,99 @@ test("opponent hand selection moves chosen card to the bottom of opponent deck",
     [...originalDeckIds, selected.instanceId],
   );
 });
+
+test("self hand selection can be ordered onto the top of deck through an order decision", () => {
+  const selection = "handSelection:self-hand-to-deck-placement" as SelectionId;
+  const state = queueSequence({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        saveResultAs: selection,
+        effect: {
+          type: "selectCards",
+          zone: "hand",
+          player: "self",
+          chooser: "self",
+          min: 2,
+          max: 2,
+          saveAs: selection,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: "hand",
+          to: "deck",
+          position: "topOrBottom",
+        },
+      },
+    ],
+  });
+  const player = must(state.players[p1], "p1");
+  const selected = [
+    must(player.hand[0], "first selected hand card"),
+    must(player.hand[1], "second selected hand card"),
+  ];
+  const originalDeckIds = player.deck.map((card) => card.instanceId);
+
+  const paused = processEffectRuntime(state);
+  const selectDecision = must(paused.state.pendingDecision, "select decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(selectDecision.type, "selectCards");
+
+  const selectedCards = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: selected.map((card) => ({
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        playerId: p1,
+        zone: card.zone,
+      })),
+    },
+  });
+  const orderDecision = must(
+    selectedCards.state.pendingDecision,
+    "order selected cards",
+  );
+  assert.equal(selectedCards.errors, undefined);
+  assert.equal(orderDecision.type, "orderCards");
+  assert.deepEqual(
+    orderDecision.cards.map((card) => card.instanceId),
+    selected.map((card) => card.instanceId),
+  );
+
+  const ordered = applyAction(selectedCards.state, {
+    type: "respondToDecision",
+    decisionId: orderDecision.id,
+    response: {
+      type: "topBottomPlacement",
+      topIds: [
+        String(selected[1]?.instanceId),
+        String(selected[0]?.instanceId),
+      ],
+      bottomIds: [],
+    },
+  });
+  const resolvedPlayer = must(ordered.state.players[p1], "resolved p1");
+
+  assert.equal(ordered.errors, undefined);
+  assert.equal(ordered.state.pendingDecision, undefined);
+  assert.equal(ordered.state.effectQueue.length, 0);
+  assert.deepEqual(
+    resolvedPlayer.deck.map((card) => card.instanceId),
+    [selected[1]?.instanceId, selected[0]?.instanceId, ...originalDeckIds],
+  );
+  assert.ok(
+    !resolvedPlayer.hand.some((card) =>
+      selected.some((chosen) => chosen.instanceId === card.instanceId),
+    ),
+  );
+});

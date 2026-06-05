@@ -5,12 +5,14 @@ import {
   retargetSequenceFrameAfterSearchRevealOrder,
   resumeSequenceFrameAfterHandSelection,
   resumeSequenceFrameAfterSearchReveal,
+  resumeSequenceFrameAfterSelectedHandDeckPlacement,
   resumeSequenceFrameAfterTopDeckPlacement,
 } from "./effect-runtime-sequence/frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence/frame-decisions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
+import { applySelectedHandDeckPlacementDecisionResponse } from "./effect-runtime-sequence/selected-segments.js";
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -193,4 +195,38 @@ export const applyTopDeckPlacementSequenceAwareResponse = (
     return null;
   }
   return resumeSequenceAfterTopDeckPlacementResponse(state, result) ?? result;
+};
+
+export const applySelectedHandDeckPlacementSequenceAwareResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  const result = applySelectedHandDeckPlacementDecisionResponse(state, action);
+  if (result === null) {
+    return null;
+  }
+  if (!result.ok) {
+    return toEngineResult(state, [], result.errors);
+  }
+  if (
+    decision === undefined ||
+    decision.type !== "orderCards" ||
+    !hasSequenceFrameForDecision(state, decision.id) ||
+    result.state.pendingDecision !== undefined
+  ) {
+    return toEngineResult(result.state, result.events);
+  }
+  const resumed = resumeSequenceFrameAfterSelectedHandDeckPlacement(
+    result.state,
+    decision.id,
+    createSupportedTrashFromHandChoiceDecision,
+  );
+  if (resumed === undefined) {
+    return toEngineResult(result.state, result.events);
+  }
+  if (!resumed.ok) {
+    return toEngineResult(state, [], [resumed.error]);
+  }
+  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
 };

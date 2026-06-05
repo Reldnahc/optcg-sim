@@ -367,7 +367,9 @@ const isSupportedTrashToHandMoveSelectedSegment = (
     String(effect.selection).startsWith("trashSelection:")) ||
     (effect.from === "hand" &&
       effect.to === "deck" &&
-      effect.position === "bottom" &&
+      (effect.position === "top" ||
+        effect.position === "bottom" ||
+        effect.position === "topOrBottom") &&
       String(effect.selection).startsWith("handSelection:")));
 
 const isSupportedAttachSelectedDonSegment = (

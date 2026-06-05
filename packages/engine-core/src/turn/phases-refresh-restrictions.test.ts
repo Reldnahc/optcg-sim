@@ -204,6 +204,79 @@ test("refresh keeps exact-card cannotBecomeActive targets rested for that refres
   assert.equal(refreshed.state.continuousEffects.length, 0);
 });
 
+test("refresh keeps exact-card cannotBecomeActive DON targets rested", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "refresh";
+  const p2State = must(state.players[p2], "p2");
+  const target = must(p2State.donDeck[0], "p2 DON");
+  p2State.donDeck = p2State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p2, slot: "donDeck", index },
+  }));
+  p2State.costArea = [
+    {
+      ...target,
+      state: "rested",
+      zone: { zone: "costArea", playerId: p2, slot: "cost", index: 0 },
+    },
+  ];
+  const restedTarget = must(p2State.costArea[0], "p2 rested DON");
+  const source = {
+    instanceId: restedTarget.instanceId,
+    cardId: restedTarget.cardId,
+    playerId: p2,
+    zone: restedTarget.zone,
+  } as const;
+  state.continuousEffects = [
+    {
+      id: "cannot-become-active-don-refresh-lock",
+      source,
+      sourceSnapshot: {
+        instanceId: restedTarget.instanceId,
+        cardId: restedTarget.cardId,
+        ownerId: p2,
+        controllerId: p2,
+        zone: restedTarget.zone,
+        category: "don",
+        colors: [],
+        keywords: [],
+      },
+      controller: p1,
+      modifier: {
+        layer: "restriction",
+        target: {
+          type: "exactCard",
+          card: source,
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected:restedDon",
+            objectIndex: 0,
+          },
+          createdAtStateSeq: state.seq,
+        },
+        operation: {
+          type: "restriction",
+          restriction: "cannotBecomeActive",
+        },
+      },
+      duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      createdBy: { type: "ruleProcess", name: "refresh-lock-test" },
+      createdAtStateSeq: state.seq,
+    },
+  ];
+
+  const refreshed = advanceRefreshPhase(state);
+  const refreshedTarget = must(
+    refreshed.state.players[p2],
+    "p2 refreshed",
+  ).costArea.find((card) => card.instanceId === restedTarget.instanceId);
+
+  assert.equal(refreshed.errors, undefined);
+  assert.equal(refreshedTarget?.state, "rested");
+  assert.equal(refreshed.state.continuousEffects.length, 0);
+});
+
 test("refresh keeps filtered all-target cannotBecomeActive characters rested", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p2;

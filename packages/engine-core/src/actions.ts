@@ -55,6 +55,7 @@ import {
 import {
   applySearchRevealSequenceChoiceResponse,
   applySequenceSelectCardsChoiceResponse,
+  applySelectedHandDeckPlacementSequenceAwareResponse,
   applyTopDeckPlacementSequenceAwareResponse,
   resumeSequenceAfterSearchRevealOrderResponse,
 } from "./search-reveal-sequence-actions.js";
@@ -428,6 +429,14 @@ const applyRespondToDecision = (
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       searchRevealOrderResult,
+    );
+  }
+  const selectedHandDeckPlacementResult =
+    applySelectedHandDeckPlacementSequenceAwareResponse(state, action);
+  if (selectedHandDeckPlacementResult !== null) {
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      selectedHandDeckPlacementResult,
     );
   }
   const topDeckPlacementResult = applyTopDeckPlacementSequenceAwareResponse(

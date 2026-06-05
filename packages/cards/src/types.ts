@@ -205,6 +205,7 @@ export type PrimitiveEvidence =
   | "target:opponentCharacters"
   | "target:opponentCharactersOrDonCards"
   | "target:opponentLeaderOrCharacters"
+  | "target:opponentRestedCards"
   | "target:thatCharacter"
   | "target:triggerCard"
   | "target:player"
