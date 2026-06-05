@@ -188,6 +188,31 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses generic card filters with cost predicates", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 card with a cost of 3 or more and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        cost: { min: 3 },
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses add up-to any-card selection as private search to hand", () => {
     expect(
       parseSearchSelectionToHand({

@@ -6,6 +6,7 @@ export type ContinuousQueueEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "setBasePower"
       | "modifyCost"
       | "modifyCounter"
       | "preventDraw"

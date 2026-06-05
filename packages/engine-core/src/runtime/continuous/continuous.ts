@@ -108,6 +108,13 @@ const mapEffectToModifier = (
       operation: { type: "addCost", value: effect.value },
     };
   }
+  if (effect.type === "setBasePower") {
+    return {
+      layer: "basePowerSet",
+      target,
+      operation: { type: "setBasePower", value: effect.value },
+    };
+  }
   if (effect.type === "preventDraw") {
     return {
       layer: "restriction",
@@ -443,7 +450,7 @@ const effectToDerivedModifier = (
     };
   }
   if (effect.type === "giveKeyword") {
-    if (effect.target.type !== "self") {
+    if (effect.target.type !== "self" && effect.target.type !== "myLeader") {
       if (!(effect.target.type === "all" && isSupportedTarget(effect.target))) {
         throw new TypeError(
           unsupportedDerivedMessage("unsupported keyword target"),

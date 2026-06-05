@@ -97,4 +97,37 @@ describe("leader name condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses OR leader identity as reusable name filter alternatives", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your Leader is [Sabo], [Portgas.D.Ace] or [Monkey.D.Luffy]",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          anyOf: [
+            { names: ["Sabo"] },
+            { names: ["Portgas.D.Ace"] },
+            { names: ["Monkey.D.Luffy"] },
+          ],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:anyOf",
+        "filter:name",
+        "filter:name",
+        "filter:name",
+      ],
+      rest: "",
+    });
+  });
 });

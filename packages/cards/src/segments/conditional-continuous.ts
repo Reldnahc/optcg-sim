@@ -8,6 +8,7 @@ import type {
   SegmentParser,
 } from "../types.js";
 import type { ContinuousInstructionParser } from "../instructions/continuous-field-effects.js";
+import { parseLeadingConditionalExpression } from "./composed-expression.js";
 
 export function conditionalContinuousExpressionParser(options: {
   readonly conditions: readonly ConditionParser[];
@@ -15,54 +16,61 @@ export function conditionalContinuousExpressionParser(options: {
   readonly instructions: readonly ContinuousInstructionParser[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const match = /^If (?<condition>.+), (?<body>.+)$/i.exec(input.text);
-    const conditionText = match?.groups?.["condition"];
-    const bodyText = match?.groups?.["body"];
-    if (conditionText === undefined || bodyText === undefined) {
+    const parsed = parseLeadingConditionalExpression(
+      input.text,
+      options.conditions,
+    );
+    if (parsed === undefined) {
+      return undefined;
+    }
+    const { condition, thenText: bodyText } = parsed;
+
+    const isPermanentEntry =
+      input.entryPoint?.category === undefined ||
+      input.entryPoint.category === "permanent";
+    const combinedCondition = combineConditions(
+      input.entryPoint?.condition,
+      condition.condition,
+    );
+    const continuousCondition = isPermanentEntry
+      ? combinedCondition
+      : undefined;
+    const actionBlockPatch =
+      combinedCondition === undefined
+        ? {}
+        : {
+            condition: combinedCondition,
+          };
+    const body = parseExpression(bodyText, {
+      connectors: options.connectors,
+      segments: [
+        continuousInstructionSegmentParser({
+          condition: continuousCondition,
+          instructions: options.instructions,
+        }),
+      ],
+    });
+    if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
 
-    for (const conditionParser of options.conditions) {
-      const condition = conditionParser({ text: conditionText });
-      if (condition === undefined || condition.rest.length > 0) {
-        continue;
-      }
-
-      const continuousCondition = combineConditions(
-        input.entryPoint?.condition,
-        condition.condition,
-      );
-      const body = parseExpression(bodyText, {
-        connectors: options.connectors,
-        segments: [
-          continuousInstructionSegmentParser({
-            condition: continuousCondition,
-            instructions: options.instructions,
-          }),
-        ],
-      });
-      if (body === undefined || body.rest.length > 0) {
-        continue;
-      }
-
-      return {
-        effect: normalizeContinuousEffect(body.effect),
-        evidence: [
-          "expression:conditionalContinuous",
-          ...condition.evidence,
-          ...(input.entryPoint?.condition === undefined
-            ? []
-            : (["composition:conditionAnd"] as const)),
-          ...body.evidence,
-        ],
-        rest: "",
-        blockPatch: {
-          category: "permanent",
-        },
-      };
-    }
-
-    return undefined;
+    return {
+      effect: normalizeContinuousEffect(body.effect),
+      evidence: [
+        "expression:conditionalContinuous",
+        ...condition.evidence,
+        ...(input.entryPoint?.condition === undefined
+          ? []
+          : (["composition:conditionAnd"] as const)),
+        ...body.evidence,
+      ],
+      rest: "",
+      blockPatch: isPermanentEntry
+        ? {
+            category: "permanent",
+          }
+        : actionBlockPatch,
+    };
   };
 }
 

@@ -40,6 +40,7 @@ import {
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 import {
   isSupportedModifyLeaderPowerInsteadEffect,
+  isSupportedKoSelfInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
@@ -55,6 +56,7 @@ import {
   createReplacementTrashFromHandDecision,
 } from "./field-removal-decisions.js";
 import { createReplacementOwnerDeckBottomDecision } from "./owner-deck-bottom-decision.js";
+import { executeKoSelfInsteadEffect } from "./ko-self-instead.js";
 
 export type {
   DetectFieldRemovalReplacementCandidateResult,
@@ -995,6 +997,10 @@ const executeReplacementInsteadEffect = (
       sourceZone: "characterArea",
     });
     return toEngineResult(moved.state, events);
+  }
+  if (isSupportedKoSelfInsteadEffect(effect)) {
+    const source = currentPublicFieldRefForInstance(state, entry.source);
+    return executeKoSelfInsteadEffect(state, entry, source);
   }
   return executeNoChoiceEffectPrimitive(state, entry, effect, {
     incrementStateSeq: false,

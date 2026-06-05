@@ -48,7 +48,12 @@ function parseSupportedKeyword(
     return undefined;
   }
 
-  switch (printed.trim().toLowerCase()) {
+  switch (
+    printed
+      .trim()
+      .toLowerCase()
+      .replace(/\s*:\s*/gu, ":")
+  ) {
     case "blocker":
       return "blocker";
     case "banish":

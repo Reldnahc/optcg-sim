@@ -292,3 +292,113 @@ test("fieldCount condition supports current-power and type filters for self char
     { supported: true, passed: false },
   );
 });
+
+test("fieldCount condition supports opponent current-power character presence", () => {
+  const state = createActiveState();
+  const opponent = must(state.players[p2], "p2");
+  const bigCharacter = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(opponent.hand[0], "big character"),
+      cardId: toCardId("big-opponent-character"),
+    },
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[bigCharacter.cardId] = resolvedCard({
+    cardId: bigCharacter.cardId,
+    category: "character",
+    power: 8000,
+  });
+
+  const condition: Extract<Condition, { type: "fieldCount" }> = {
+    type: "fieldCount",
+    player: "opponent",
+    filter: {
+      categories: ["character"],
+      currentPower: { min: 8000 },
+    },
+    op: "gte",
+    value: 1,
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+  state.cardManifest.cards[bigCharacter.cardId] = resolvedCard({
+    cardId: bigCharacter.cardId,
+    category: "character",
+    power: 7000,
+  });
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});
+
+test("fieldCount condition supports no matching self characters by type and cost", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  const matching = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(self.hand[0], "matching character"),
+      cardId: toCardId("matching-whitebeard-cost"),
+    },
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[matching.cardId] = {
+    ...resolvedCard({
+      cardId: matching.cardId,
+      category: "character",
+      cost: 8,
+      power: 8000,
+    }),
+    types: ["Whitebeard Pirates"],
+  };
+
+  const condition: Extract<Condition, { type: "fieldCount" }> = {
+    type: "fieldCount",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      typesAny: ["Whitebeard Pirates"],
+      cost: { min: 8 },
+    },
+    op: "eq",
+    value: 0,
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+  state.cardManifest.cards[matching.cardId] = {
+    ...must(state.cardManifest.cards[matching.cardId], "matching metadata"),
+    cost: 7,
+  };
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+});

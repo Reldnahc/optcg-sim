@@ -7,6 +7,7 @@ import {
 } from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
+  parseFieldCardCountCondition,
   parseHandCountCondition,
   parseLeaderColorCountCondition,
   parseLeaderNameCondition,
@@ -228,6 +229,7 @@ const conditionParsers = [
   parseLifeCountCondition,
   parseLeaderColorCountCondition,
   parseLeaderNameCondition,
+  parseFieldCardCountCondition,
   parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseTurnCountCondition,

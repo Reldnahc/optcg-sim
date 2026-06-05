@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAndConnector } from "../connectors/index.js";
-import { parseTrashCountCondition } from "../conditions/index.js";
+import {
+  parseFieldCardCountCondition,
+  parseTrashCountCondition,
+} from "../conditions/index.js";
 import {
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
@@ -9,7 +12,7 @@ import {
 import { conditionalContinuousExpressionParser } from "./conditional-continuous.js";
 
 const parser = conditionalContinuousExpressionParser({
-  conditions: [parseTrashCountCondition],
+  conditions: [parseTrashCountCondition, parseFieldCardCountCondition],
   connectors: [parseAndConnector],
   instructions: [
     parseOpponentEffectFieldRemovalProtectionInstruction,
@@ -79,6 +82,26 @@ describe("conditional continuous expression parser", () => {
             effect: { type: "giveProtection" },
           },
         ],
+      },
+    });
+  });
+
+  it("does not force explicit action continuous bodies into permanent category", () => {
+    const result = parser({
+      text: "If your opponent has a Character with 8000 power or more, this Character gains [Rush: Character] during this turn.",
+      entryPoint: {
+        type: "entryPoint",
+        category: "activate",
+        trigger: { type: "activateMain" },
+      },
+    });
+
+    expect(result).toMatchObject({
+      blockPatch: {},
+      effect: {
+        type: "giveKeyword",
+        keyword: "rushCharacter",
+        duration: { type: "thisTurn" },
       },
     });
   });

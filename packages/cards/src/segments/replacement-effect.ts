@@ -173,6 +173,11 @@ function normalizeFieldRemovalTargetText(text: string): string {
   if (predicate !== undefined) {
     return `your ${predicate}`;
   }
+  const oneOfYourSubject = /^one of your\s+(?<predicate>.+)$/i.exec(trimmed);
+  const oneOfYourPredicate = oneOfYourSubject?.groups?.["predicate"];
+  if (oneOfYourPredicate !== undefined) {
+    return `your ${oneOfYourPredicate}`;
+  }
   return trimmed;
 }
 
@@ -187,6 +192,7 @@ function parseInsteadEffect(text: string):
     parseReturnDonInstead(text) ??
     parseOwnerDeckBottomInstead(text) ??
     parseTrashFromHandInstead(text) ??
+    parseKoSelfInstead(text) ??
     parseTrashSelfInstead(text) ??
     parseModifyLeaderPowerInstead(text) ??
     parseRestSelfInstead(text) ??
@@ -435,6 +441,25 @@ function parseTrashSelfInstead(text: string):
       target: { type: "self" },
     },
     evidence: ["instruction:trash", "target:thisCharacter"],
+  };
+}
+
+function parseKoSelfInstead(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined {
+  if (!/^you may K\.O\. this Character instead\.?$/i.test(text.trim())) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "ko",
+      target: { type: "self" },
+    },
+    evidence: ["instruction:ko", "target:thisCharacter"],
   };
 }
 

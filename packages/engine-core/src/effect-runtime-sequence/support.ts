@@ -56,6 +56,7 @@ type DirectContinuousEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "setBasePower"
       | "modifyCost"
       | "modifyCounter"
       | "preventDraw"
@@ -549,6 +550,7 @@ const isSourceDependentContinuousSegment = (
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "cannotAttack" &&
+    effect.type !== "setBasePower" &&
     effect.type !== "cannotBlock" &&
     effect.type !== "preventBlockerActivation"
   ) {

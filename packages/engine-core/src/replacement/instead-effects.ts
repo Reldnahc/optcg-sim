@@ -80,6 +80,17 @@ export const isSupportedTrashSelfInsteadEffect = (
   >;
 } => effect.type === "trash" && effect.target.type === "self";
 
+export const isSupportedKoSelfInsteadEffect = (
+  effect: ReplacementInstead,
+): effect is Extract<ReplacementInstead, { type: "ko" }> & {
+  target: Extract<
+    Extract<ReplacementInstead, { type: "ko" }>["target"],
+    {
+      type: "self";
+    }
+  >;
+} => effect.type === "ko" && effect.target.type === "self";
+
 export const isSupportedOwnerDeckBottomInsteadEffect = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "sequence" }> => {
@@ -130,6 +141,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedReturnDonInsteadEffect(effect) ||
   isSupportedModifyLeaderPowerInsteadEffect(effect) ||
   isSupportedTrashSelfInsteadEffect(effect) ||
+  isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 export const replacementOptionLabel = (
@@ -179,6 +191,9 @@ export const replacementOptionLabel = (
   }
   if (isSupportedTrashSelfInsteadEffect(instead)) {
     return "Trash this Character instead";
+  }
+  if (isSupportedKoSelfInsteadEffect(instead)) {
+    return "K.O. this Character instead";
   }
   if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
     const selectEffect = instead.effects[0]?.effect;

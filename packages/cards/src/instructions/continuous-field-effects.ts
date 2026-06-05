@@ -9,7 +9,10 @@ import {
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseKeyword } from "../keywords/index.js";
-import { parsePositivePowerModifier } from "../modifiers/index.js";
+import {
+  parseNegativePowerModifier,
+  parsePositivePowerModifier,
+} from "../modifiers/index.js";
 import {
   parseAllFieldTarget,
   parseCompoundYourCharactersTarget,
@@ -506,7 +509,11 @@ const parseKeywordAndPositivePowerGrant = ({
     modifier.rest.length === 0
       ? undefined
       : parseExplicitFieldEffectDuration({ text: modifier.rest });
-  if (modifier.rest.length > 0 && explicitDuration === undefined) {
+  if (
+    modifier.rest.length > 0 &&
+    modifier.rest !== "." &&
+    explicitDuration === undefined
+  ) {
     return undefined;
   }
   if (explicitDuration !== undefined && explicitDuration.rest.length > 0) {
@@ -686,8 +693,12 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const text = input.text.replace(
+    /^give this Character\b/i,
+    "this Character gains",
+  );
   const target = parseThisCharacterTarget({
-    text: input.text,
+    text,
     allowImplicit: true,
   });
   if (target === undefined) {
@@ -715,7 +726,9 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   const modifierEvidence: PrimitiveEvidence[] = [];
 
   for (const part of parts) {
-    const power = parsePositivePowerModifier({ text: part });
+    const power =
+      parsePositivePowerModifier({ text: part }) ??
+      parseNegativePowerModifier({ text: part });
     if (power !== undefined && power.rest.length === 0) {
       effects.push({
         type: "modifyPower",

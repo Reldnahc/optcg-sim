@@ -37,18 +37,12 @@ export function conditionalExpressionSegmentParser(options: {
   readonly instructions: readonly InstructionParser[];
 }): SegmentParser {
   return (input: ParseInput) => {
-    const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
-    const conditionText = match?.groups?.["condition"];
-    const thenText = match?.groups?.["then"];
-    if (conditionText === undefined || thenText === undefined) {
-      return undefined;
-    }
-
-    const condition = parseConditionExpression(
-      conditionText.replace(/\.$/u, "").trim(),
+    const parsed = parseLeadingConditionalExpression(
+      input.text,
       options.conditions,
     );
-    if (condition !== undefined) {
+    if (parsed !== undefined) {
+      const { condition, thenText } = parsed;
       const then = parseExpression(thenText, {
         connectors: options.connectors,
         segments: [
@@ -140,18 +134,12 @@ export function conditionalBlockExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
-    const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
-    const conditionText = match?.groups?.["condition"];
-    const thenText = match?.groups?.["then"];
-    if (conditionText === undefined || thenText === undefined) {
-      return undefined;
-    }
-
-    const condition = parseConditionExpression(
-      conditionText,
+    const parsed = parseLeadingConditionalExpression(
+      input.text,
       options.conditions,
     );
-    if (condition !== undefined) {
+    if (parsed !== undefined) {
+      const { condition, thenText } = parsed;
       for (const parser of options.expressions ?? []) {
         const parsed = parser({ text: thenText });
         if (parsed !== undefined && parsed.rest.length === 0) {
@@ -221,18 +209,12 @@ export function conditionalCostedBlockExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
-    const match = /^if (?<condition>.+?), (?<then>.+)$/i.exec(input.text);
-    const conditionText = match?.groups?.["condition"];
-    const thenText = match?.groups?.["then"];
-    if (conditionText === undefined || thenText === undefined) {
-      return undefined;
-    }
-
-    const condition = parseConditionExpression(
-      conditionText,
+    const parsed = parseLeadingConditionalExpression(
+      input.text,
       options.conditions,
     );
-    if (condition !== undefined) {
+    if (parsed !== undefined) {
+      const { condition, thenText } = parsed;
       for (const expressionParser of options.expressions) {
         const then = expressionParser({ text: thenText });
         if (then === undefined || then.rest.length > 0) {
@@ -259,7 +241,7 @@ export function conditionalCostedBlockExpressionParser(options: {
   };
 }
 
-function parseConditionExpression(
+export function parseConditionExpression(
   text: string,
   conditionParsers: readonly ConditionParser[],
 ): ConditionParseResult | undefined {
@@ -296,6 +278,37 @@ function parseConditionExpression(
     ],
     rest: "",
   };
+}
+
+export function parseLeadingConditionalExpression(
+  text: string,
+  conditionParsers: readonly ConditionParser[],
+):
+  | {
+      readonly condition: ConditionParseResult;
+      readonly thenText: string;
+    }
+  | undefined {
+  const ifMatch = /^if\s+(?<rest>.+)$/iu.exec(text.trim());
+  const rest = ifMatch?.groups?.["rest"];
+  if (rest === undefined) {
+    return undefined;
+  }
+
+  const commaIndexes = [...rest.matchAll(/,/gu)].map((match) => match.index);
+  for (const commaIndex of commaIndexes.reverse()) {
+    const conditionText = rest.slice(0, commaIndex).replace(/\.$/u, "").trim();
+    const thenText = rest.slice(commaIndex + 1).trim();
+    if (conditionText.length === 0 || thenText.length === 0) {
+      continue;
+    }
+    const condition = parseConditionExpression(conditionText, conditionParsers);
+    if (condition !== undefined) {
+      return { condition, thenText };
+    }
+  }
+
+  return undefined;
 }
 
 function parseSingleCondition(

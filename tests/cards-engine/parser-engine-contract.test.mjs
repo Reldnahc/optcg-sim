@@ -346,6 +346,68 @@ test("cards parser emits supported Event Main and Counter primitive blocks for r
   }
 });
 
+test("cards parser emits expanded leader, field-count, and replacement primitives accepted by engine admission", () => {
+  const cases = [
+    {
+      text: "[Activate: Main] [Once Per Turn] If your opponent has a Character with 8000 power or more, this Character gains [Rush: Character] during this turn.",
+      expected: ["entry:activateMain", "condition:opponentFieldCount"],
+    },
+    {
+      text: "[On Play] If your Leader is [Sabo], [Portgas.D.Ace] or [Monkey.D.Luffy], look at 4 cards from the top of your deck; reveal up to 1 card with a cost of 3 or more and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      expected: [
+        "entry:onPlay",
+        "condition:leaderIdentity",
+        "filter:anyOf",
+        "filter:cost",
+      ],
+    },
+    {
+      text: "[Your Turn] Your Leader gains [Double Attack] and +2000 power.",
+      expected: ["entry:yourTurn", "modifier:positivePower"],
+    },
+    {
+      text: "If one of your Characters would be removed from the field by your opponent's effect, you may K.O. this Character instead.",
+      expected: ["entry:replacement", "instruction:ko", "target:thisCharacter"],
+    },
+    {
+      text: 'If your Leader\'s card name includes "Ace" and you have 6 or more DON!! cards on your field, give this card in your hand −2 cost.',
+      expected: [
+        "condition:leaderIdentity",
+        "condition:donFieldCount",
+        "instruction:modifyCost",
+        "modifier:costReduction",
+      ],
+    },
+    {
+      text: "[On Your Opponent's Attack] You may trash 1 Character card with 8000 power from your hand: Your Leader and this Character's base power becomes 7000 during this turn.",
+      expected: [
+        "entry:onOpponentAttack",
+        "cost:trashFromHand",
+        "instruction:setBasePower",
+      ],
+    },
+    {
+      text: 'If you have no Characters with a type including "Whitebeard Pirates" and a cost of 8 or more, give this Character −4000 power.',
+      expected: [
+        "condition:fieldCount",
+        "filter:type",
+        "filter:cost",
+        "modifier:negativePower",
+      ],
+    },
+  ];
+
+  for (const { text, expected } of cases) {
+    const effectBlock = parseSupportedEffectBlock(text, expected);
+
+    assert.deepEqual(
+      evaluateEffectBlockRuntimeSupport(effectBlock),
+      { supported: true },
+      text,
+    );
+  }
+});
+
 test("cards parser emits field-control primitives accepted by engine sequence support", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[On Play] Rest up to 1 of your opponent's Characters and that Character will not become active in your opponent's next Refresh Phase. Then, if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",

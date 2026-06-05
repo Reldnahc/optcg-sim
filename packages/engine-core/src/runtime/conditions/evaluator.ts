@@ -10,6 +10,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import {
+  evaluateHasCardInZone,
+  isSupportedLeaderZoneFilter,
+} from "./leader-zone.js";
+
 interface ConditionEvaluationSuccess {
   supported: true;
   passed: boolean;
@@ -206,46 +211,6 @@ const readLeaderMetadata = (
   return card;
 };
 
-const isSupportedLeaderZoneFilter = (
-  filter: CardFilter,
-): filter is Required<Pick<CardFilter, "categories">> &
-  Pick<CardFilter, "typesAny" | "attributesAny" | "names" | "nameContains"> => {
-  const keys = Object.keys(filter) as (keyof CardFilter)[];
-  for (const key of keys) {
-    if (
-      key !== "categories" &&
-      key !== "typesAny" &&
-      key !== "attributesAny" &&
-      key !== "names" &&
-      key !== "nameContains"
-    ) {
-      return false;
-    }
-  }
-  if (
-    !Array.isArray(filter.categories) ||
-    filter.categories.length !== 1 ||
-    filter.categories[0] !== "leader"
-  ) {
-    return false;
-  }
-  const hasTypes =
-    Array.isArray(filter.typesAny) &&
-    filter.typesAny.length > 0 &&
-    filter.typesAny.every((value) => typeof value === "string");
-  const hasAttributes =
-    Array.isArray(filter.attributesAny) &&
-    filter.attributesAny.length > 0 &&
-    filter.attributesAny.every((value) => typeof value === "string");
-  const hasNames =
-    Array.isArray(filter.names) &&
-    filter.names.length > 0 &&
-    filter.names.every((value) => typeof value === "string");
-  const hasNameContains =
-    typeof filter.nameContains === "string" && filter.nameContains.length > 0;
-  return hasTypes || hasAttributes || hasNames || hasNameContains;
-};
-
 const isSupportedDonFieldCountFilter = (
   filter: CardFilter | undefined,
 ): filter is Required<Pick<CardFilter, "categories">> & {
@@ -285,6 +250,7 @@ const isSupportedCharacterFieldCountFilter = (
   state?: "active" | "rested";
   names?: string[];
   typesAny?: string[];
+  cost?: NumericFilter;
   currentPower?: NumericFilter;
   excludeSelf?: boolean;
 } => {
@@ -298,6 +264,7 @@ const isSupportedCharacterFieldCountFilter = (
       key !== "state" &&
       key !== "names" &&
       key !== "typesAny" &&
+      key !== "cost" &&
       key !== "currentPower" &&
       key !== "excludeSelf"
     ) {
@@ -314,6 +281,7 @@ const isSupportedCharacterFieldCountFilter = (
   const stateValue = filter.state as unknown;
   const namesValue = filter.names as unknown;
   const typesValue = filter.typesAny as unknown;
+  const costValue = filter.cost;
   const currentPowerValue = filter.currentPower;
   const excludeSelfValue = filter.excludeSelf as unknown;
   return (
@@ -328,6 +296,7 @@ const isSupportedCharacterFieldCountFilter = (
       (Array.isArray(typesValue) &&
         typesValue.length > 0 &&
         typesValue.every((value) => typeof value === "string"))) &&
+    hasSupportedNumericFilter(costValue) &&
     hasSupportedNumericFilter(currentPowerValue) &&
     (excludeSelfValue === undefined || excludeSelfValue === true)
   );
@@ -425,6 +394,7 @@ const countPublicCharactersOnField = (
     if (
       filter.names === undefined &&
       filter.typesAny === undefined &&
+      filter.cost === undefined &&
       filter.currentPower === undefined
     ) {
       return true;
@@ -485,6 +455,12 @@ const cardMatchesFilter = (
   if (
     filter.nameContains !== undefined &&
     !metadata.name.includes(filter.nameContains)
+  ) {
+    return false;
+  }
+  if (
+    filter.cost !== undefined &&
+    !numericFilterMatches(metadata.cost, filter.cost)
   ) {
     return false;
   }
@@ -586,6 +562,10 @@ const evaluateLeaderColorCount = (
   }
   const playerId = resolveConditionPlayer(state, entry, condition.player);
   if (playerId === undefined) {
+    return { supported: false };
+  }
+  const player = state.players[playerId];
+  if (player === undefined) {
     return { supported: false };
   }
   const leader = readLeaderMetadata(state, playerId);
@@ -694,49 +674,6 @@ const evaluateFieldCountDifference = (
       minuend.count - subtrahend.count,
       condition.value,
     ),
-  };
-};
-
-const evaluateHasCardInZone = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  condition: Extract<Condition, { type: "hasCardInZone" }>,
-): ConditionEvaluationResult => {
-  if (
-    condition.zone !== "leaderArea" ||
-    !isSupportedLeaderZoneFilter(condition.filter)
-  ) {
-    return { supported: false };
-  }
-  const playerId = resolveConditionPlayer(state, entry, condition.player);
-  if (playerId === undefined) {
-    return { supported: false };
-  }
-  const leader = readLeaderMetadata(state, playerId);
-  if (leader === undefined) {
-    return { supported: false };
-  }
-  const typesMatch =
-    condition.filter.typesAny === undefined
-      ? true
-      : condition.filter.typesAny.some((type) => leader.types.includes(type));
-  const attributesMatch =
-    condition.filter.attributesAny === undefined
-      ? true
-      : condition.filter.attributesAny.some((attribute) =>
-          leader.attributes.includes(attribute),
-        );
-  const namesMatch =
-    condition.filter.names === undefined
-      ? true
-      : condition.filter.names.some((name) => leader.name === name);
-  const nameContainsMatch =
-    condition.filter.nameContains === undefined
-      ? true
-      : leader.name.includes(condition.filter.nameContains);
-  return {
-    supported: true,
-    passed: typesMatch && attributesMatch && namesMatch && nameContainsMatch,
   };
 };
 

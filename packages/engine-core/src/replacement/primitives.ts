@@ -416,6 +416,12 @@ const isSupportedTrashSelfInsteadEffect = (
   target: Extract<Effect, { type: "trash" }>["target"] & { type: "self" };
 } => effect.type === "trash" && isSelfTarget(effect.target);
 
+const isSupportedKoSelfInsteadEffect = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "ko" }> & {
+  target: Extract<Effect, { type: "ko" }>["target"] & { type: "self" };
+} => effect.type === "ko" && isSelfTarget(effect.target);
+
 const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
 ): boolean =>
@@ -426,6 +432,7 @@ const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedReturnDonInsteadEffect(effect) ||
   isSupportedModifyLeaderPowerInsteadEffect(effect) ||
   isSupportedTrashSelfInsteadEffect(effect) ||
+  isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
@@ -965,6 +972,12 @@ const canPayOpponentFieldRemovalReplacementCost = (
     return state.players[source.card.controller] !== undefined;
   }
   if (isSupportedTrashSelfInsteadEffect(instead)) {
+    return (
+      source.resolved.category === "character" &&
+      source.ref.zone?.zone === "characterArea"
+    );
+  }
+  if (isSupportedKoSelfInsteadEffect(instead)) {
     return (
       source.resolved.category === "character" &&
       source.ref.zone?.zone === "characterArea"

@@ -212,6 +212,7 @@ export const createEffectRuntimeQueueResults = (
   ):
     | Extract<Effect, { type: "modifyPower" }>
     | Extract<Effect, { type: "giveKeyword" }>
+    | Extract<Effect, { type: "setBasePower" }>
     | Extract<Effect, { type: "modifyCost" }>
     | Extract<Effect, { type: "modifyCounter" }>
     | Extract<Effect, { type: "preventDraw" }>

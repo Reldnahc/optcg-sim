@@ -496,6 +496,45 @@ describe("replacement effect parser", () => {
     }
   });
 
+  it("parses opponent effect field-removal replacement into reusable K.O.-self instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If one of your Characters would be removed from the field by your opponent's effect, you may K.O. this Character instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block.effect, {
+      type: "replacement",
+      when: {
+        type: "wouldMoveZone",
+        from: "characterArea",
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: { categories: ["character"] },
+        },
+      },
+      instead: {
+        type: "ko",
+        target: { type: "self" },
+      },
+    });
+    for (const evidence of [
+      "replacement:wouldMoveZone",
+      "replacementSource:cardEffect",
+      "target:yourCharacters",
+      "filter:category:character",
+      "instruction:ko",
+      "target:thisCharacter",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses opponent effect field-removal replacement into reusable leader power modifier instead primitives", () => {
     const result = parseCardEffectLine(
       "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may give your Leader −2000 power during this turn instead.",

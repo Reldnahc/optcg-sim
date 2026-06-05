@@ -4,6 +4,41 @@ import type { ConditionParseResult, ConditionParser } from "../types.js";
 export const parseLeaderNameCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const nameListMatch = /^your Leader is\s+(?<names>.+)$/i.exec(input.text);
+  const nameListText = nameListMatch?.groups?.["names"];
+  if (
+    nameListText !== undefined &&
+    /^\[[^\]]+\](?:,\s*\[[^\]]+\])*(?:\s+or\s+\[[^\]]+\])$/i.test(
+      nameListText.trim(),
+    )
+  ) {
+    const names = [...nameListText.matchAll(/\[([^\]]+)\]/g)]
+      .map((match) => match[1]?.trim())
+      .filter((name): name is string => name !== undefined && name.length > 0);
+    if (names.length > 1) {
+      return {
+        condition: {
+          type: "hasCardInZone",
+          zone: "leaderArea",
+          player: "self",
+          filter: {
+            categories: ["leader"],
+            anyOf: names.map((name) => ({ names: [name] })),
+          },
+        },
+        evidence: [
+          "condition:leaderIdentity",
+          "player:self",
+          "zone:leaderArea",
+          "filter:category:leader",
+          "filter:anyOf",
+          ...names.map(() => "filter:name" as const),
+        ],
+        rest: "",
+      };
+    }
+  }
+
   const nameContainsMatch =
     /^your Leader's card name includes\s+"(?<name>[^"]+)"$/i.exec(input.text);
   const includedName = nameContainsMatch?.groups?.["name"]?.trim();

@@ -54,6 +54,15 @@ export function parseSearchSelectionVerb(
 export function parseSearchAnyCardFilter(
   input: ParseInput,
 ): SearchFilterParseResult | undefined {
+  const predicateMatch = /^card\s+with\s+(?<predicate>.+)$/i.exec(input.text);
+  const predicateText = predicateMatch?.groups?.["predicate"];
+  if (predicateText !== undefined) {
+    const predicates = parseCardFilterPredicates({ text: predicateText });
+    if (predicates !== undefined) {
+      return predicates;
+    }
+  }
+
   const match = /^card(?<rest>.*)$/i.exec(input.text);
   const rest = match?.groups?.["rest"];
   if (rest === undefined) {

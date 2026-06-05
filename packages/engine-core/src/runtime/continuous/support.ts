@@ -235,6 +235,7 @@ export const isSupportedContinuousQueueEffect = (
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "giveKeyword" &&
+    effect.type !== "setBasePower" &&
     effect.type !== "modifyCost" &&
     effect.type !== "modifyCounter" &&
     effect.type !== "preventDraw" &&
@@ -255,6 +256,27 @@ export const isSupportedContinuousQueueEffect = (
       (effect.target.type !== "myLeader" && !isSupportedTarget(effect.target)))
   ) {
     return false;
+  }
+  if (
+    effect.type === "giveKeyword" &&
+    effect.target.type !== "myLeader" &&
+    !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (effect.type === "setBasePower") {
+    return (
+      Number.isSafeInteger(effect.value) &&
+      effect.value > 0 &&
+      isSupportedDuration(effect.duration) &&
+      (effect.target.type === "self" ||
+        effect.target.type === "myLeader" ||
+        (effect.target.type === "all" &&
+          effect.target.zone === "characterArea" &&
+          (effect.target.player === "self" ||
+            effect.target.player === "opponent") &&
+          isSupportedBasePowerSetFilter(effect.target.filter)))
+    );
   }
   if (effect.type === "modifyCost") {
     return isSupportedCostModifierEffect(effect);

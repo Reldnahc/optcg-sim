@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vitest";
+
+import { parseFieldCardCountCondition } from "./field-card-count.js";
+
+describe("field card count condition parser", () => {
+  it("parses opponent matching Character presence through reusable filters", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "your opponent has a Character with 8000 power or more",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: {
+          categories: ["character"],
+          currentPower: { min: 8000 },
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:opponentFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+        "filter:category:character",
+        "filter:currentPower",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses no matching Characters as a reusable zero field-count condition", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: 'you have no Characters with a type including "Whitebeard Pirates" and a cost of 8 or more',
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Whitebeard Pirates"],
+          cost: { min: 8 },
+        },
+        op: "eq",
+        value: 0,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+});
