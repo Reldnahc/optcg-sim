@@ -4,6 +4,7 @@ import type { AccountLoadout } from "../account-client.js";
 
 export interface DeckLoadoutPickerProps {
   readonly disabled?: boolean | undefined;
+  readonly locked?: boolean | undefined;
   readonly loadouts: readonly AccountLoadout[];
   readonly selectedLoadoutId: string;
   readonly onChange: (loadoutId: string) => void;
@@ -91,6 +92,7 @@ const LeaderCrop = ({
 
 export const DeckLoadoutPicker = ({
   disabled = false,
+  locked = false,
   loadouts,
   selectedLoadoutId,
   onChange,
@@ -128,7 +130,7 @@ export const DeckLoadoutPicker = ({
       <button
         className="deck-loadout-selected"
         type="button"
-        disabled={disabled || loadouts.length === 0}
+        disabled={disabled || locked || loadouts.length === 0}
         aria-expanded={open}
         onClick={() => {
           setOpen((value) => !value);
@@ -149,7 +151,7 @@ export const DeckLoadoutPicker = ({
           </span>
         </span>
       </button>
-      {open ? (
+      {open && !locked ? (
         <div className="deck-loadout-menu">
           <input
             className="deck-loadout-search"

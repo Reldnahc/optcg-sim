@@ -127,5 +127,47 @@ describe("lobby deck panel", () => {
       /\.deck-loadout-folder-list\s*\{[^}]*overflow:\s*auto;/u,
     );
     assert.match(styles, /\.deck-loadout-search\s*\{[^}]*resize:\s*none;/u);
+    assert.match(
+      styles,
+      /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*padding:\s*0;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*86px minmax\(0,\s*1fr\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-selected:hover:not\(:disabled\),\s*\.deck-loadout-option:hover:not\(:disabled\),\s*\.deck-loadout-option\.is-selected\s*\{[^}]*border-color:\s*rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-hash-form button\s*\{[^}]*background:\s*#3f3d3c;/u,
+    );
+  });
+
+  test("submit locks the selected deck loadout picker", async () => {
+    const source = await readFile(
+      new URL("LobbyDeckPanel.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(
+      source,
+      /const \[submittedLoadoutId,\s*setSubmittedLoadoutId\]/u,
+    );
+    assert.match(source, /setSubmittedLoadoutId\(selectedLoadoutId\);/u);
+    assert.match(
+      source,
+      /const pickerLocked = submittedLoadoutId !== undefined;/u,
+    );
+    assert.match(source, /locked=\{pickerLocked\}/u);
+    assert.match(
+      source,
+      /const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;/u,
+    );
   });
 });

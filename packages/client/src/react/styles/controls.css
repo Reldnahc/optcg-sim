@@ -203,28 +203,29 @@
 .deck-loadout-selected,
 .deck-loadout-option {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: stretch;
   gap: 10px;
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 5px;
   color: #fff;
   background: rgba(0, 0, 0, 0.24);
-  padding: 8px;
+  padding: 0;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .deck-loadout-selected {
-  min-height: 92px;
+  min-height: 74px;
 }
 
 .deck-loadout-selected:hover:not(:disabled),
 .deck-loadout-option:hover:not(:disabled),
 .deck-loadout-option.is-selected {
-  border-color: rgba(89, 255, 143, 0.82);
-  background: rgba(39, 95, 62, 0.36);
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .deck-loadout-selected:disabled,
@@ -235,16 +236,16 @@
 
 .deck-loadout-leader-crop {
   display: grid;
-  width: 74px;
-  height: 74px;
+  width: 100%;
+  height: 100%;
+  min-height: 54px;
   place-items: center;
-  border-radius: 5px;
   color: rgba(255, 255, 255, 0.74);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 44%), #585351;
-  background-position: center 18%;
-  background-size: 190%;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  background-position: center 20%;
+  background-size: 180%;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.14);
   font-size: 11px;
   font-weight: 700;
   overflow: hidden;
@@ -255,7 +256,9 @@
 .deck-loadout-option-copy {
   display: grid;
   gap: 5px;
+  align-content: center;
   min-width: 0;
+  padding: 8px 10px 8px 0;
 }
 
 .deck-loadout-selected-label,
@@ -343,12 +346,12 @@
 }
 
 .deck-loadout-option {
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: 86px minmax(0, 1fr);
+  min-height: 56px;
 }
 
 .deck-loadout-option .deck-loadout-leader-crop {
-  width: 56px;
-  height: 56px;
+  min-height: 56px;
 }
 
 .deck-loadout-option.is-favorite {
@@ -360,7 +363,7 @@
   border: 0;
   border-radius: 5px;
   color: #fff;
-  background: #275f3e;
+  background: #3f3d3c;
   cursor: pointer;
 }
 

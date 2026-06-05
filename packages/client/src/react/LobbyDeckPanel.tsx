@@ -26,11 +26,13 @@ export const LobbyDeckPanel = ({
   const [selectedLoadoutId, setSelectedLoadoutId] = useState(
     loadouts[0]?.id ?? "",
   );
+  const [submittedLoadoutId, setSubmittedLoadoutId] = useState<string>();
   const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
   const selectedLoadoutExists = loadouts.some(
     (loadout) => loadout.id === selectedLoadoutId,
   );
-  const canSubmit = selectedLoadoutExists && !disabled;
+  const pickerLocked = submittedLoadoutId !== undefined;
+  const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;
 
   useEffect(() => {
     if (!selectedLoadoutExists) {
@@ -48,6 +50,7 @@ export const LobbyDeckPanel = ({
             if (!selectedLoadoutExists) {
               return;
             }
+            setSubmittedLoadoutId(selectedLoadoutId);
             void onSubmitLoadout(selectedLoadoutId);
           }}
         >
@@ -56,6 +59,7 @@ export const LobbyDeckPanel = ({
             <DeckLoadoutPicker
               selectedLoadoutId={selectedLoadoutId}
               disabled={disabled || loadoutsStatus !== "ready"}
+              locked={pickerLocked}
               loadouts={loadouts}
               onChange={setSelectedLoadoutId}
             />
