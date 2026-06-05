@@ -18,6 +18,10 @@
   grid-template-columns: 1fr;
   gap: 8px;
   height: 100vh;
+  background-color: #282322;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   padding: var(--match-app-padding);
   overflow: visible;
 }

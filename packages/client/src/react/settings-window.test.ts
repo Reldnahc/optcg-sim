@@ -27,6 +27,19 @@ describe("settings window", () => {
     assert.match(markup, /aria-label="Close Settings"/u);
   });
 
+  test("settings exposes a local background image file picker", () => {
+    const markup = renderToStaticMarkup(
+      createElement(SettingsWindow, {
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /Background image/u);
+    assert.match(markup, /type="file"/u);
+    assert.match(markup, /accept="image\/\*,\.gif"/u);
+    assert.match(markup, /Clear background/u);
+  });
+
   test("match app wires the settings icon to the settings window", async () => {
     const [controlRail, matchApp, matchInfoWindows, toolbarControls] =
       await Promise.all([
@@ -111,6 +124,40 @@ describe("settings window", () => {
     assert.match(matchApp, /useInfoWindowConfig/u);
     assert.match(infoConfigHook, /loadInfoWindowConfig\(\)/u);
     assert.match(infoConfigHook, /saveInfoWindowConfig/u);
+  });
+
+  test("match app applies locally persisted custom background images", async () => {
+    const [
+      matchApp,
+      settingsWindow,
+      persistedSettingsHook,
+      appShellStyles,
+      mainSource,
+    ] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "SettingsWindow.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "use-persisted-match-visual-settings.ts"),
+        "utf8",
+      ),
+      readFile(join(sourceDirectory, "styles/app-shell.css"), "utf8"),
+      readFile(join(sourceDirectory, "main.tsx"), "utf8"),
+    ]);
+
+    assert.match(matchApp, /usePersistedMatchVisualSettings/u);
+    assert.match(matchApp, /<MatchVisualSettingsProvider/u);
+    assert.match(matchApp, /style=\{matchAppStyle\}/u);
+    assert.match(persistedSettingsHook, /optcg:client:background-image-url/u);
+    assert.match(persistedSettingsHook, /createBrowserPersistentStorage/u);
+    assert.match(persistedSettingsHook, /\.getItem/u);
+    assert.match(persistedSettingsHook, /\.setItem/u);
+    assert.match(persistedSettingsHook, /\.removeItem/u);
+    assert.match(settingsWindow, /new FileReader\(\)/u);
+    assert.match(settingsWindow, /reader\.readAsDataURL\(file\)/u);
+    assert.match(settingsWindow, /type="file"/u);
+    assert.match(mainSource, /styles\/settings-window\.css/u);
+    assert.match(appShellStyles, /background-size:\s*cover;/u);
+    assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
   });
 
   test("tool strip toggles activate resurfaced info tabs", async () => {

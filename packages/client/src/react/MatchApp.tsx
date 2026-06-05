@@ -16,6 +16,7 @@ import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
+import { MatchVisualSettingsProvider } from "./SettingsWindow.js";
 import { SettingsToggle } from "./SettingsToggle.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
@@ -28,6 +29,7 @@ import { useMatchRevealWindowStateStore } from "./use-match-reveal-window-state-
 import { useMatchAppSession } from "./use-match-app-session.js";
 import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
+import { usePersistedMatchVisualSettings } from "./use-persisted-match-visual-settings.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
 export interface MatchAppProps {
   readonly accountSessionToken: string;
@@ -44,6 +46,7 @@ export const MatchApp = ({
   const [actionLogMinimized, setActionLogMinimized] = useState(false);
   const [infoWindowMinimized, setInfoWindowMinimized] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const visualSettings = usePersistedMatchVisualSettings();
   const [controlDockActiveTabId, setControlDockActiveTabId] =
     useState<string>();
   const {
@@ -350,195 +353,210 @@ export const MatchApp = ({
     currentControlDockSlotRect,
     updateDockedWindowRects,
   ]);
+
+  const matchAppStyle =
+    visualSettings.backgroundImageUrl.length === 0
+      ? undefined
+      : {
+          backgroundImage: `url(${JSON.stringify(
+            visualSettings.backgroundImageUrl,
+          )})`,
+        };
+
   return (
-    <main className="match-app">
-      <MatchBoardSurface
-        board={displayBoard}
-        clientState={clientState}
-        presentationEvents={playerSnapshot?.view.events ?? []}
-        decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
-        selectedCardInstanceId={selectedCardInstanceId}
-        pendingChoiceInstanceIds={pendingChoiceInstanceIds}
-        decisionSelectedInstanceIds={decisionSelectedInstanceIds}
-        selectedDonInstanceIds={selectedDonInstanceIds}
-        cardActions={client.cardActions}
-        actionDisabled={client.state.actionInFlight}
-        onCardClick={client.selectCard}
-        onCardAction={(actionIndex) => {
-          void client.submitAction(actionIndex);
-        }}
-        onPreviewCard={previewHoveredCard}
-        onMoveHandCard={moveHandCard}
-        onViewCollection={onViewCollection}
-        onBackgroundClick={() => {
-          client.selectCard(undefined);
-        }}
-      />
-      {lobbyState === undefined ? null : (
-        <LobbyDeckPanel
-          disabled={client.state.actionInFlight}
-          lobbyState={lobbyState}
-          loadouts={client.state.accountLoadouts}
-          loadoutsStatus={client.state.accountLoadoutsStatus}
-          loadoutsError={client.state.accountLoadoutsError}
-          onSubmitLoadout={client.submitLobbyLoadout}
+    <MatchVisualSettingsProvider value={visualSettings}>
+      <main className="match-app" style={matchAppStyle}>
+        <MatchBoardSurface
+          board={displayBoard}
+          clientState={clientState}
+          presentationEvents={playerSnapshot?.view.events ?? []}
+          decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
+          selectedCardInstanceId={selectedCardInstanceId}
+          pendingChoiceInstanceIds={pendingChoiceInstanceIds}
+          decisionSelectedInstanceIds={decisionSelectedInstanceIds}
+          selectedDonInstanceIds={selectedDonInstanceIds}
+          cardActions={client.cardActions}
+          actionDisabled={client.state.actionInFlight}
+          onCardClick={client.selectCard}
+          onCardAction={(actionIndex) => {
+            void client.submitAction(actionIndex);
+          }}
+          onPreviewCard={previewHoveredCard}
+          onMoveHandCard={moveHandCard}
+          onViewCollection={onViewCollection}
+          onBackgroundClick={() => {
+            client.selectCard(undefined);
+          }}
         />
-      )}
-      <MatchControlPanel
-        errors={client.state.errors}
-        globalActions={visibleGlobalActions}
-        disabled={client.state.actionInFlight}
-        selfLabel={displayBoard?.selfLabel}
-        opponentLabel={displayBoard?.opponentLabel}
-        selfTimer={displayBoard?.selfTimer}
-        opponentTimer={displayBoard?.opponentTimer}
-        selfIsTurnPlayer={displayBoard?.selfIsTurnPlayer}
-        opponentIsTurnPlayer={displayBoard?.opponentIsTurnPlayer}
-        selfConnectionStatus={displayBoard?.selfConnectionStatus}
-        opponentConnectionStatus={displayBoard?.opponentConnectionStatus}
-        matchStatus={matchState?.snapshot.status}
-        width={controlRailWidth}
-        dockHeight={controlDockHeight}
-        dockActive={controlDockActive}
-        dockTabs={controlDockTabs}
-        activeDockTabId={controlDockActiveTabId}
-        onResizePointerDown={startControlRailResize}
-        onDockResizePointerDown={startControlDockResize}
-        onDockTabChange={setControlDockActiveTabId}
-        onDockTabClose={closeDockWindow}
-        onDockTabDragOut={dragOutDockWindow}
-        onDockTabReorder={reorderDockTab}
-        onDockGroupDragOut={
-          dockedInfoTabIds.length >= 2 ? dragOutDockGroup : undefined
-        }
-        onAction={(actionIndex) => {
-          resetConcedeConfirmation();
-          void client.submitAction(actionIndex);
-        }}
-        onNewMatch={() => {
-          resetConcedeConfirmation();
-          void client.createNewMatch();
-        }}
-        onRematch={() => {
-          resetConcedeConfirmation();
-          void client.requestRematch();
-        }}
-        rollbackStatus={rollbackStatus}
-        onCancelRollback={() => {
-          void client.cancelRollback();
-        }}
-        previewControl={
-          <CardPreviewToggle open={previewOpen} onToggle={togglePreviewOpen} />
-        }
-        actionLogControl={
-          <ActionLogToggle
-            open={actionLogOpen}
-            onToggle={toggleActionLogOpen}
+        {lobbyState === undefined ? null : (
+          <LobbyDeckPanel
+            disabled={client.state.actionInFlight}
+            lobbyState={lobbyState}
+            loadouts={client.state.accountLoadouts}
+            loadoutsStatus={client.state.accountLoadoutsStatus}
+            loadoutsError={client.state.accountLoadoutsError}
+            onSubmitLoadout={client.submitLobbyLoadout}
           />
-        }
-        settingsControl={
-          <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
-        }
-        concedeDisabled={concedeDisabled}
-        concedeConfirming={concedeConfirming}
-        onConcede={() => {
-          if (concedeAction === undefined || !requestConcedeConfirmation()) {
-            return;
+        )}
+        <MatchControlPanel
+          errors={client.state.errors}
+          globalActions={visibleGlobalActions}
+          disabled={client.state.actionInFlight}
+          selfLabel={displayBoard?.selfLabel}
+          opponentLabel={displayBoard?.opponentLabel}
+          selfTimer={displayBoard?.selfTimer}
+          opponentTimer={displayBoard?.opponentTimer}
+          selfIsTurnPlayer={displayBoard?.selfIsTurnPlayer}
+          opponentIsTurnPlayer={displayBoard?.opponentIsTurnPlayer}
+          selfConnectionStatus={displayBoard?.selfConnectionStatus}
+          opponentConnectionStatus={displayBoard?.opponentConnectionStatus}
+          matchStatus={matchState?.snapshot.status}
+          width={controlRailWidth}
+          dockHeight={controlDockHeight}
+          dockActive={controlDockActive}
+          dockTabs={controlDockTabs}
+          activeDockTabId={controlDockActiveTabId}
+          onResizePointerDown={startControlRailResize}
+          onDockResizePointerDown={startControlDockResize}
+          onDockTabChange={setControlDockActiveTabId}
+          onDockTabClose={closeDockWindow}
+          onDockTabDragOut={dragOutDockWindow}
+          onDockTabReorder={reorderDockTab}
+          onDockGroupDragOut={
+            dockedInfoTabIds.length >= 2 ? dragOutDockGroup : undefined
           }
-          void client.submitAction(concedeAction.index);
-        }}
-      />
-      <MatchInteractionModals
-        actionInFlight={client.state.actionInFlight}
-        cardDisplay={cardDisplay}
-        cardModel={cardModel}
-        collectionModalHostProps={collectionModalHostProps}
-        decisionModal={visibleDecisionModal}
-        decisionModalCoveredByCollection={decisionModalCoveredByCollection}
-        opponentRevealWindowLayerProps={{
-          windows: opponentRevealWindows,
-          activeDockedWindowIds,
-          activeFloatingWindowRects,
-          minimizedRevealIds: activeRevealWindowState.minimized,
-          onToggleMinimized: (revealId) => {
-            updateRevealWindowState((state) => {
-              if (state.minimized.has(revealId)) {
+          onAction={(actionIndex) => {
+            resetConcedeConfirmation();
+            void client.submitAction(actionIndex);
+          }}
+          onNewMatch={() => {
+            resetConcedeConfirmation();
+            void client.createNewMatch();
+          }}
+          onRematch={() => {
+            resetConcedeConfirmation();
+            void client.requestRematch();
+          }}
+          rollbackStatus={rollbackStatus}
+          onCancelRollback={() => {
+            void client.cancelRollback();
+          }}
+          previewControl={
+            <CardPreviewToggle
+              open={previewOpen}
+              onToggle={togglePreviewOpen}
+            />
+          }
+          actionLogControl={
+            <ActionLogToggle
+              open={actionLogOpen}
+              onToggle={toggleActionLogOpen}
+            />
+          }
+          settingsControl={
+            <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
+          }
+          concedeDisabled={concedeDisabled}
+          concedeConfirming={concedeConfirming}
+          onConcede={() => {
+            if (concedeAction === undefined || !requestConcedeConfirmation()) {
+              return;
+            }
+            void client.submitAction(concedeAction.index);
+          }}
+        />
+        <MatchInteractionModals
+          actionInFlight={client.state.actionInFlight}
+          cardDisplay={cardDisplay}
+          cardModel={cardModel}
+          collectionModalHostProps={collectionModalHostProps}
+          decisionModal={visibleDecisionModal}
+          decisionModalCoveredByCollection={decisionModalCoveredByCollection}
+          opponentRevealWindowLayerProps={{
+            windows: opponentRevealWindows,
+            activeDockedWindowIds,
+            activeFloatingWindowRects,
+            minimizedRevealIds: activeRevealWindowState.minimized,
+            onToggleMinimized: (revealId) => {
+              updateRevealWindowState((state) => {
+                if (state.minimized.has(revealId)) {
+                  state.minimized.delete(revealId);
+                } else {
+                  state.minimized.add(revealId);
+                }
+                return state;
+              });
+            },
+            onPreviewCard: previewHoveredCard,
+            onClose: (revealId) => {
+              updateRevealWindowState((state) => {
+                state.dismissed.add(revealId);
                 state.minimized.delete(revealId);
-              } else {
-                state.minimized.add(revealId);
-              }
-              return state;
-            });
-          },
-          onPreviewCard: previewHoveredCard,
-          onClose: (revealId) => {
-            updateRevealWindowState((state) => {
-              state.dismissed.add(revealId);
-              state.minimized.delete(revealId);
-              return state;
-            });
-          },
-          onRectChange: (windowKey, rect) => {
-            updateFloatingWindowRect(windowKey, rect);
-          },
-          onDragMove: updateControlDockTarget,
-          onDragEnd: (windowKey, rect) =>
-            completeDockableWindowDrag(windowKey, rect),
-        }}
-        onToggleCard={client.toggleDecisionCard}
-        onChooseTrigger={client.chooseDecisionTriggerValue}
-        onQuantity={client.setDecisionQuantityValue}
-        onOption={setVisibleDecisionOption}
-        onActionOption={client.setDecisionActionOptionValue}
-        onSubmitQuantity={submitVisibleDecisionQuantity}
-        onSubmitOption={submitVisibleDecisionOption}
-        onSubmitActionOption={submitVisibleDecisionActionOption}
-        onPreviewCard={previewHoveredCard}
-        onMoveOrderedCard={client.moveDecisionCard}
-        onPlacementDestination={client.setDecisionPlacementDestination}
-        onConfirm={confirmVisibleDecision}
-      />
-      <MatchInfoWindows
-        actionLogEntries={actionLogEntries}
-        actionLogMinimized={actionLogMinimized}
-        activeDockedWindowIds={activeDockedWindowIds}
-        activeFloatingWindowRects={activeFloatingWindowRects}
-        closeActionLogWindow={closeActionLogWindow}
-        closeCardPreview={closeCardPreview}
-        closeSettingsWindow={closeSettingsWindow}
-        combineDropTarget={combineDropTarget}
-        completeInfoGroupDrag={completeInfoGroupDrag}
-        completeInfoWindowDrag={completeInfoWindowDrag}
-        dockedInfoTabIds={dockedInfoTabIds}
-        groupedInfoWindowIds={groupedInfoWindowIds}
-        infoWindowActiveTab={infoWindowActiveTab}
-        infoWindowMinimized={infoWindowMinimized}
-        onPreviewActionLogCard={(card) => {
-          showCardPreview(actionLogCardModel(card));
-        }}
-        onRequestRollback={(rollbackPointId) => {
-          void client.requestRollback(rollbackPointId);
-        }}
-        previewCard={previewCard}
-        previewMinimized={previewMinimized}
-        reorderInfoWindowTabs={reorderInfoWindowTabs}
-        setActionLogMinimized={setActionLogMinimized}
-        setActionLogOpen={setActionLogOpen}
-        setGroupedInfoWindowIds={setGroupedInfoWindowIds}
-        setInfoWindowActiveTab={setInfoWindowActiveTab}
-        setInfoWindowMinimized={setInfoWindowMinimized}
-        setPreviewMinimized={setPreviewMinimized}
-        setSettingsOpen={setSettingsOpen}
-        showActionLogWindow={showActionLogWindow}
-        showSettingsWindow={showSettingsWindow}
-        showTabbedInfoWindow={showTabbedInfoWindow}
-        splitInfoWindowTab={splitInfoWindowTab}
-        standaloneInfoWindowIds={standaloneInfoWindowIds}
-        updateControlDockTarget={updateControlDockTarget}
-        updateFloatingWindowOpen={updateFloatingWindowOpen}
-        updateFloatingWindowRect={updateFloatingWindowRect}
-        updateInfoWindowDragTargets={updateInfoWindowDragTargets}
-      />
-    </main>
+                return state;
+              });
+            },
+            onRectChange: (windowKey, rect) => {
+              updateFloatingWindowRect(windowKey, rect);
+            },
+            onDragMove: updateControlDockTarget,
+            onDragEnd: (windowKey, rect) =>
+              completeDockableWindowDrag(windowKey, rect),
+          }}
+          onToggleCard={client.toggleDecisionCard}
+          onChooseTrigger={client.chooseDecisionTriggerValue}
+          onQuantity={client.setDecisionQuantityValue}
+          onOption={setVisibleDecisionOption}
+          onActionOption={client.setDecisionActionOptionValue}
+          onSubmitQuantity={submitVisibleDecisionQuantity}
+          onSubmitOption={submitVisibleDecisionOption}
+          onSubmitActionOption={submitVisibleDecisionActionOption}
+          onPreviewCard={previewHoveredCard}
+          onMoveOrderedCard={client.moveDecisionCard}
+          onPlacementDestination={client.setDecisionPlacementDestination}
+          onConfirm={confirmVisibleDecision}
+        />
+        <MatchInfoWindows
+          actionLogEntries={actionLogEntries}
+          actionLogMinimized={actionLogMinimized}
+          activeDockedWindowIds={activeDockedWindowIds}
+          activeFloatingWindowRects={activeFloatingWindowRects}
+          closeActionLogWindow={closeActionLogWindow}
+          closeCardPreview={closeCardPreview}
+          closeSettingsWindow={closeSettingsWindow}
+          combineDropTarget={combineDropTarget}
+          completeInfoGroupDrag={completeInfoGroupDrag}
+          completeInfoWindowDrag={completeInfoWindowDrag}
+          dockedInfoTabIds={dockedInfoTabIds}
+          groupedInfoWindowIds={groupedInfoWindowIds}
+          infoWindowActiveTab={infoWindowActiveTab}
+          infoWindowMinimized={infoWindowMinimized}
+          onPreviewActionLogCard={(card) => {
+            showCardPreview(actionLogCardModel(card));
+          }}
+          onRequestRollback={(rollbackPointId) => {
+            void client.requestRollback(rollbackPointId);
+          }}
+          previewCard={previewCard}
+          previewMinimized={previewMinimized}
+          reorderInfoWindowTabs={reorderInfoWindowTabs}
+          setActionLogMinimized={setActionLogMinimized}
+          setActionLogOpen={setActionLogOpen}
+          setGroupedInfoWindowIds={setGroupedInfoWindowIds}
+          setInfoWindowActiveTab={setInfoWindowActiveTab}
+          setInfoWindowMinimized={setInfoWindowMinimized}
+          setPreviewMinimized={setPreviewMinimized}
+          setSettingsOpen={setSettingsOpen}
+          showActionLogWindow={showActionLogWindow}
+          showSettingsWindow={showSettingsWindow}
+          showTabbedInfoWindow={showTabbedInfoWindow}
+          splitInfoWindowTab={splitInfoWindowTab}
+          standaloneInfoWindowIds={standaloneInfoWindowIds}
+          updateControlDockTarget={updateControlDockTarget}
+          updateFloatingWindowOpen={updateFloatingWindowOpen}
+          updateFloatingWindowRect={updateFloatingWindowRect}
+          updateInfoWindowDragTargets={updateInfoWindowDragTargets}
+        />
+      </main>
+    </MatchVisualSettingsProvider>
   );
 };

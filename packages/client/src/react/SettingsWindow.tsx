@@ -1,5 +1,25 @@
+import { createContext, useContext } from "react";
+
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+
+export interface MatchVisualSettings {
+  readonly backgroundImageUrl: string;
+  readonly setBackgroundImageUrl: (url: string) => void;
+}
+
+const noopVisualSettings: MatchVisualSettings = {
+  backgroundImageUrl: "",
+  setBackgroundImageUrl: () => undefined,
+};
+
+const MatchVisualSettingsContext =
+  createContext<MatchVisualSettings>(noopVisualSettings);
+
+export const MatchVisualSettingsProvider = MatchVisualSettingsContext.Provider;
+
+export const useMatchVisualSettings = (): MatchVisualSettings =>
+  useContext(MatchVisualSettingsContext);
 
 export interface SettingsWindowProps {
   className?: string | undefined;
@@ -18,9 +38,49 @@ export const defaultSettingsWindowRect: WindowRect = {
   height: 220,
 };
 
-export const SettingsContent = (): React.JSX.Element => (
-  <div className="settings-window-content" />
-);
+export const SettingsContent = (): React.JSX.Element => {
+  const { backgroundImageUrl, setBackgroundImageUrl } =
+    useMatchVisualSettings();
+
+  const selectBackgroundFile = (file: File | undefined): void => {
+    if (file === undefined) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") {
+        setBackgroundImageUrl(reader.result);
+      }
+    });
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="settings-window-content">
+      <label className="settings-field">
+        <span>Background image</span>
+        <input
+          type="file"
+          accept="image/*,.gif"
+          onChange={(event) => {
+            selectBackgroundFile(event.target.files?.[0]);
+            event.currentTarget.value = "";
+          }}
+        />
+      </label>
+      <button
+        className="settings-secondary-button"
+        type="button"
+        disabled={backgroundImageUrl.length === 0}
+        onClick={() => {
+          setBackgroundImageUrl("");
+        }}
+      >
+        Clear background
+      </button>
+    </div>
+  );
+};
 
 export const SettingsWindow = ({
   className,
