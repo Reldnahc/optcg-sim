@@ -1,5 +1,5 @@
 export interface ModalFrameProps {
-  title: string;
+  title?: string | undefined;
   className: string;
   onClose?: (() => void) | undefined;
   children: React.ReactNode;
@@ -17,14 +17,16 @@ export const ModalFrame = ({
       event.stopPropagation();
     }}
   >
-    <div className="modal-frame-header">
-      <h2>{title}</h2>
-      {onClose === undefined ? null : (
-        <button className="modal-frame-close" type="button" onClick={onClose}>
-          Close
-        </button>
-      )}
-    </div>
+    {title === undefined && onClose === undefined ? null : (
+      <div className="modal-frame-header">
+        {title === undefined ? null : <h2>{title}</h2>}
+        {onClose === undefined ? null : (
+          <button className="modal-frame-close" type="button" onClick={onClose}>
+            Close
+          </button>
+        )}
+      </div>
+    )}
     {children}
   </section>
 );

@@ -41,7 +41,7 @@ export const LobbyDeckPanel = ({
   }, [loadouts, selectedLoadoutExists]);
 
   return (
-    <ModalFrame title="Deck" className="lobby-deck-modal">
+    <ModalFrame className="lobby-deck-modal">
       <div className="lobby-deck-panel">
         <form
           className="deck-hash-form"
@@ -55,7 +55,6 @@ export const LobbyDeckPanel = ({
           }}
         >
           <div className="deck-hash-field">
-            <span>Deck Loadout</span>
             <DeckLoadoutPicker
               selectedLoadoutId={selectedLoadoutId}
               disabled={disabled || loadoutsStatus !== "ready"}

@@ -141,8 +141,8 @@
 
 .lobby-deck-modal {
   width: min(620px, calc(100vw - 32px));
-  height: min(720px, calc(100vh - 32px));
-  max-height: calc(100vh - 32px);
+  height: min(850px, calc(100vh - 24px));
+  max-height: calc(100vh - 24px);
   overflow: hidden;
 }
 
@@ -164,8 +164,7 @@
 
 .deck-hash-field {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 4px;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   font-size: 13px;
 }
@@ -196,7 +195,7 @@
 .deck-loadout-picker {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
 }
 
@@ -218,7 +217,7 @@
 }
 
 .deck-loadout-selected {
-  min-height: 74px;
+  min-height: 68px;
 }
 
 .deck-loadout-selected:hover:not(:disabled),
@@ -296,6 +295,8 @@
   display: grid;
   min-height: 0;
   gap: 8px;
+  padding: 2px;
+  overflow: hidden;
 }
 
 .deck-loadout-search {
@@ -307,6 +308,13 @@
   background: rgba(0, 0, 0, 0.28);
   padding: 8px;
   resize: none;
+}
+
+.deck-loadout-search:focus {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(255, 255, 255, 0.72);
+  outline-offset: 2px;
 }
 
 .deck-loadout-folder-list {
@@ -347,11 +355,11 @@
 
 .deck-loadout-option {
   grid-template-columns: 86px minmax(0, 1fr);
-  min-height: 56px;
+  min-height: 52px;
 }
 
 .deck-loadout-option .deck-loadout-leader-crop {
-  min-height: 56px;
+  min-height: 52px;
 }
 
 .deck-loadout-option.is-favorite {
@@ -374,6 +382,7 @@
 
 .deck-status-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
 }

@@ -71,8 +71,8 @@ describe("lobby deck panel", () => {
       }),
     );
 
-    assert.match(html, /Deck Loadout/u);
     assert.match(html, /modal-frame lobby-deck-modal/u);
+    assert.doesNotMatch(html, /modal-frame-header/u);
     assert.doesNotMatch(html, />Close</u);
     assert.match(html, /deck-loadout-picker/u);
     assert.match(html, /Search deck loadouts/u);
@@ -87,6 +87,7 @@ describe("lobby deck panel", () => {
     assert.match(html, /Unfiled/u);
     assert.match(html, /Luffy Life/u);
     assert.match(html, /Submit loadout/u);
+    assert.doesNotMatch(html, /Deck Loadout/u);
     assert.doesNotMatch(html, /Account loadout/u);
     assert.doesNotMatch(html, /<select/u);
     assert.doesNotMatch(html, /<option/u);
@@ -119,7 +120,7 @@ describe("lobby deck panel", () => {
 
     assert.match(
       styles,
-      /\.lobby-deck-modal\s*\{[^}]*height:\s*min\(720px,\s*calc\(100vh - 32px\)\);/u,
+      /\.lobby-deck-modal\s*\{[^}]*height:\s*min\(850px,\s*calc\(100vh - 24px\)\);/u,
     );
     assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(
@@ -127,6 +128,14 @@ describe("lobby deck panel", () => {
       /\.deck-loadout-folder-list\s*\{[^}]*overflow:\s*auto;/u,
     );
     assert.match(styles, /\.deck-loadout-search\s*\{[^}]*resize:\s*none;/u);
+    assert.match(
+      styles,
+      /\.deck-loadout-search:focus\s*\{[^}]*outline:\s*2px solid rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-status-list\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/u,
+    );
     assert.match(
       styles,
       /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
