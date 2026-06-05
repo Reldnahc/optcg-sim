@@ -4,43 +4,6 @@
   color: rgba(255, 255, 255, 0.88);
 }
 
-.client-shell-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 14px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(20, 22, 21, 0.96);
-}
-
-.client-shell-brand {
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.client-shell-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.client-shell-nav a {
-  padding: 8px 10px;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
-  text-decoration: none;
-}
-
-.client-shell-nav a:hover,
-.client-shell-nav a.is-active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-}
-
 .client-shell-main {
   width: min(1120px, calc(100vw - 48px));
   margin: 0 auto;

@@ -44,7 +44,7 @@ export const AppRootContent = ({
       <NotFoundPage path={route.path} />
     );
 
-  return <AppShell activeRouteId={route.id}>{page}</AppShell>;
+  return <AppShell>{page}</AppShell>;
 };
 
 export const AppRoot = (props: AppRootProps): React.JSX.Element => {

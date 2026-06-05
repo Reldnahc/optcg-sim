@@ -13,11 +13,12 @@ describe("client app shell pages", () => {
   test("dashboard exposes the primary navigation entries", () => {
     const html = renderToStaticMarkup(
       createElement(AppShell, {
-        activeRouteId: "dashboard",
         children: createElement(DashboardPage),
       }),
     );
 
+    assert.doesNotMatch(html, /Poneglyph Sim/u);
+    assert.doesNotMatch(html, /aria-label="Primary"/u);
     assert.match(html, /Play/u);
     assert.match(html, /Custom Lobbies/u);
     assert.doesNotMatch(html, /Decks/u);
@@ -27,7 +28,6 @@ describe("client app shell pages", () => {
   test("play page keeps future-service queue states separate from dev play", () => {
     const html = renderToStaticMarkup(
       createElement(AppShell, {
-        activeRouteId: "play",
         children: createElement(PlayPage),
       }),
     );
@@ -40,7 +40,6 @@ describe("client app shell pages", () => {
   test("lobbies page exposes current custom lobby entry", () => {
     const html = renderToStaticMarkup(
       createElement(AppShell, {
-        activeRouteId: "lobbies",
         children: createElement(LobbiesPage),
       }),
     );
@@ -54,7 +53,6 @@ describe("client app shell pages", () => {
   test("not-found page links back to the dashboard", () => {
     const html = renderToStaticMarkup(
       createElement(AppShell, {
-        activeRouteId: "notFound",
         children: createElement(NotFoundPage, { path: "/missing" }),
       }),
     );
