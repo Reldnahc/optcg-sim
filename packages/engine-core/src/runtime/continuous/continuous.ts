@@ -511,6 +511,26 @@ const effectToDerivedModifier = (
       },
     };
   }
+  if (
+    effect.type === "cannotAttack" ||
+    effect.type === "cannotBlock" ||
+    effect.type === "preventBlockerActivation" ||
+    effect.type === "cannotBecomeActive"
+  ) {
+    if (
+      !isSupportedTarget(effect.target) ||
+      !isSupportedDuration(effect.duration)
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported restriction shape"),
+      );
+    }
+    return {
+      layer: "restriction",
+      target: effect.target,
+      operation: { type: "restriction", restriction: effect.type },
+    };
+  }
   if (effect.type !== "giveProtection") {
     return null;
   }
@@ -744,6 +764,10 @@ const durationForDerivedEffect = (effect: Effect): Duration => {
     effect.type === "setBasePower" ||
     effect.type === "modifyCost" ||
     effect.type === "protectFromKO" ||
+    effect.type === "cannotAttack" ||
+    effect.type === "cannotBlock" ||
+    effect.type === "preventBlockerActivation" ||
+    effect.type === "cannotBecomeActive" ||
     effect.type === "giveProtection"
   ) {
     return effect.duration;

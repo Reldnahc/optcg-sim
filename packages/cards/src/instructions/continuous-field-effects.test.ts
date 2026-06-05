@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ContinuousInstructionContext } from "./continuous-field-effects.js";
 import {
   parseBasePowerBecomeInstruction,
+  parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,
@@ -200,6 +201,27 @@ describe("continuous field-effect instruction parsers", () => {
         "target:thisCharacter",
         "keyword:anySupported",
         "duration:opponentNextEndPhase",
+      ],
+      rest: "",
+    });
+  });
+
+  it.each([
+    ["This Leader cannot attack.", "target:thisLeader"],
+    ["This Character cannot attack.", "target:thisCharacter"],
+  ])("parses %s as a reusable self attack restriction", (text, target) => {
+    expect(
+      parseSelfCannotAttackInstruction({ text }, { condition: undefined }),
+    ).toMatchObject({
+      effect: {
+        type: "cannotAttack",
+        target: { type: "self" },
+        duration: { type: "whileSourceOnField" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        target,
+        "duration:whileSourceOnField",
       ],
       rest: "",
     });

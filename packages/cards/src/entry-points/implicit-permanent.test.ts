@@ -24,4 +24,20 @@ describe("implicit permanent entry point parser", () => {
       parseImplicitPermanentEntryPoint({ text: "[On Play] Draw 1 card." }),
     ).toBeUndefined();
   });
+
+  it("recognizes self Leader continuous text without parsing the body", () => {
+    expect(
+      parseImplicitPermanentEntryPoint({
+        text: "This Leader cannot attack.",
+      }),
+    ).toMatchObject({
+      node: {
+        type: "entryPoint",
+        trigger: { type: "permanent" },
+        category: "permanent",
+      },
+      evidence: ["entry:implicitPermanent", "sourcePresence:mustRemain"],
+      rest: "This Leader cannot attack.",
+    });
+  });
 });

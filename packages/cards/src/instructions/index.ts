@@ -2,6 +2,7 @@ export { parseAddFromTrashToHandInstruction } from "./add-from-trash-to-hand.js"
 export { parseActivateReferencedEffectInstruction } from "./activate-referenced-effect.js";
 export {
   parseBasePowerBecomeInstruction,
+  parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordGrantInstruction,
   parseThisCharacterKeywordGrantInstruction,

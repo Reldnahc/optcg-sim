@@ -48,6 +48,7 @@ import {
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseBasePowerBecomeInstruction,
+  parseSelfCannotAttackInstruction,
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -186,6 +187,7 @@ const conditionParsers = [
 const continuousInstructionParsers = [
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
+  parseSelfCannotAttackInstruction,
   parseYourLeaderConditionalPowerInstruction,
   parseSetBasePowerInstruction,
   parseBasePowerBecomeInstruction,

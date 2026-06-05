@@ -61,6 +61,16 @@ export const setBasePowerPrimitive = {
   ],
 } as const;
 
+export const selfCannotAttackPrimitive = {
+  primitiveId: "instruction:preventActivation",
+  childPrimitiveIds: [
+    "target:thisLeader",
+    "target:thisCharacter",
+    "duration:whileSourceOnField",
+    "duration:whileConditionTrue",
+  ],
+} as const;
+
 type BasePowerTargetSubject = {
   readonly target: Target;
   readonly evidence: readonly PrimitiveEvidence[];
@@ -391,6 +401,33 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
       rest: "",
     };
   };
+
+export const parseSelfCannotAttackInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const match = /^This (?<subject>Leader|Character) cannot attack\.?$/i.exec(
+    input.text,
+  );
+  const subject = match?.groups?.["subject"]?.toLowerCase();
+  if (subject !== "leader" && subject !== "character") {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "cannotAttack",
+      target: { type: "self" },
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:preventActivation",
+      subject === "leader" ? "target:thisLeader" : "target:thisCharacter",
+      continuousDurationEvidence(context.condition),
+    ],
+    rest: "",
+  };
+};
 
 export const parseTargetedKeywordGrantInstruction: InstructionParser = (
   input,

@@ -219,6 +219,33 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it.each([
+    ["This Leader cannot attack.", "target:thisLeader"],
+    ["This Character cannot attack.", "target:thisCharacter"],
+  ])("parses permanent self attack restriction: %s", (text, targetEvidence) => {
+    const result = parseCardEffectLine(text);
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "cannotAttack",
+          target: { type: "self" },
+          duration: { type: "whileSourceOnField" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "instruction:preventActivation",
+        targetEvidence,
+        "duration:whileSourceOnField",
+      ]),
+    );
+  });
+
   it("parses attached DON keyword grants without coupling to Blocker", () => {
     const result = parseCardEffectLine(
       "[DON!! x2] This Character gains [Rush].",
