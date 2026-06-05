@@ -70,8 +70,12 @@ export const LobbyDeckPanel = ({
           {loadoutsStatus === "ready" && loadouts.length === 0 ? (
             <p>No account loadouts are available.</p>
           ) : null}
-          <button type="submit" disabled={!canSubmit}>
-            Submit loadout
+          <button
+            className="deck-loadout-submit-button"
+            type="submit"
+            disabled={!canSubmit}
+          >
+            Submit
           </button>
         </form>
         <dl className="deck-status-list">

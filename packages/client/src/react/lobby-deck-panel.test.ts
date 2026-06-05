@@ -92,7 +92,8 @@ describe("lobby deck panel", () => {
     assert.match(html, /Enel Yellow/u);
     assert.match(html, /Unfiled/u);
     assert.match(html, /Luffy Life/u);
-    assert.match(html, /Submit loadout/u);
+    assert.match(html, /class="deck-loadout-submit-button"/u);
+    assert.match(html, />Submit</u);
     assert.doesNotMatch(html, /Deck Loadout/u);
     assert.doesNotMatch(html, /Account loadout/u);
     assert.doesNotMatch(html, /<select/u);
@@ -157,10 +158,17 @@ describe("lobby deck panel", () => {
       styles,
       /\.deck-loadout-options\s*\{[^}]*padding-left:\s*12px;/u,
     );
-    assert.match(styles, /\.deck-loadout-search\s*\{[^}]*resize:\s*none;/u);
     assert.match(
       styles,
-      /\.deck-loadout-search:focus\s*\{[^}]*outline:\s*2px solid rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+      /\.deck-loadout-search\s*\{[^}]*min-height:\s*42px;[^}]*font-size:\s*15px;[^}]*resize:\s*none;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-search:focus\s*\{[^}]*outline:\s*0;[^}]*box-shadow:\s*0 0 0 1px rgba\(0,\s*0,\s*0,\s*0\.72\),\s*0 0 0 3px rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-folder-header\s*\{[^}]*min-height:\s*38px;[^}]*font-size:\s*14px;/u,
     );
     assert.match(
       styles,
@@ -182,9 +190,13 @@ describe("lobby deck panel", () => {
       styles,
       /\.deck-loadout-selected:hover:not\(:disabled\),\s*\.deck-loadout-option:hover:not\(:disabled\),\s*\.deck-loadout-option\.is-selected\s*\{[^}]*border-color:\s*rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
     );
+    assert.doesNotMatch(
+      styles,
+      /\.deck-hash-form button\s*\{[^}]*background:/u,
+    );
     assert.match(
       styles,
-      /\.deck-hash-form button\s*\{[^}]*background:\s*#3f3d3c;/u,
+      /\.deck-hash-form > \.deck-loadout-submit-button\s*\{[^}]*background:\s*#275f3e;/u,
     );
   });
 
@@ -204,7 +216,10 @@ describe("lobby deck panel", () => {
       html,
       /class="deck-loadout-menu is-closed" aria-hidden="true"/u,
     );
-    assert.match(html, /<button type="submit" disabled="">Submit loadout/u);
+    assert.match(
+      html,
+      /<button class="deck-loadout-submit-button" type="submit" disabled="">Submit/u,
+    );
   });
 
   test("deck submit lock is derived from server lobby state", async () => {
