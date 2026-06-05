@@ -216,8 +216,8 @@ test("shows pending decision only to the recipient with public shape", () => {
     playerId: decision.playerId,
     prompt: decision.prompt,
     presentation: {
-      title: "Choose whether to keep your hand or mulligan",
-      instruction: "Choose whether to keep your hand or mulligan",
+      title: "Would you like to mulligan?",
+      instruction: "Would you like to mulligan?",
     },
     causedBy: decision.causedBy,
     ...(decision.timeoutMs === undefined

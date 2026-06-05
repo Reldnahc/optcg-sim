@@ -58,7 +58,7 @@ const createMulliganDecision = (
   id: toDecisionId(`mulligan:${String(state.seq)}:${playerId}`),
   type: "mulligan",
   playerId,
-  prompt: "Choose whether to keep your hand or mulligan.",
+  prompt: "Would you like to mulligan?",
   causedBy: { type: "ruleProcess", name: "officialMulligan" },
   visibility: { type: "private", playerId },
   options: ["keep", "mulligan"],

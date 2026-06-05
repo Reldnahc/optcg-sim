@@ -55,7 +55,7 @@ State seq: 1
 Status: setup
 Phase: refresh
 Turn: p1 (global 1)
-Pending decision: mulligan mulligan:0:p1 for p1 - Choose whether to keep your hand or mulligan.
+Pending decision: mulligan mulligan:0:p1 for p1 - Would you like to mulligan?
 Legal actions for p1:
   none
 State hash: ${stateHash}
