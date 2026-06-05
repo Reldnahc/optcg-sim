@@ -697,6 +697,17 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "selection", "trigger", "ignoreCost"],
+          "properties": {
+            "type": { "const": "activateSelectedEvent" },
+            "selection": { "$ref": "#/$defs/handSelectionId" },
+            "trigger": { "$ref": "#/$defs/trigger" },
+            "ignoreCost": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "request"],
           "properties": {
             "type": { "const": "selectTargets" },

@@ -30,6 +30,7 @@ import {
 import { parseExpression } from "./expression-parser.js";
 import {
   parseActivateReferencedEffectInstruction,
+  parseActivateSelectedEventInstruction,
   parseAddActiveDonFromDonDeckInstruction,
   parseAddFromTrashToHandInstruction,
   parseAddRestedDonFromDonDeckInstruction,
@@ -132,6 +133,7 @@ const parseExplicitActionKeywordGrantInstruction = (input: ParseInput) => {
 const instructionParsers = [
   parseDrawInstruction,
   parseActivateReferencedEffectInstruction,
+  parseActivateSelectedEventInstruction,
   parseAddFromTrashToHandInstruction,
   parseAddActiveDonFromDonDeckInstruction,
   parseAddRestedDonFromDonDeckInstruction,

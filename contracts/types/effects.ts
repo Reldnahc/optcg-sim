@@ -575,6 +575,13 @@ export interface PlaySelectedEffect {
   ignoreCost?: boolean;
 }
 
+export interface ActivateSelectedEventEffect {
+  type: "activateSelectedEvent";
+  selection: SelectionId;
+  trigger: Trigger;
+  ignoreCost: boolean;
+}
+
 export interface PlaySourceEffect {
   type: "playSource";
   source: Target;
@@ -738,6 +745,7 @@ export type Effect =
       costModifier?: number;
     }
   | PlaySelectedEffect
+  | ActivateSelectedEventEffect
   | PlaySourceEffect
   | {
       type: "returnUnselectedToDeck";

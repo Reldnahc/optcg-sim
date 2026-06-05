@@ -25,6 +25,7 @@ import {
   stateWithPausedSequenceFrame,
 } from "./frame-decisions.js";
 import { applyPlaySelectedSequenceSegment } from "../runtime/primitives/play-selected.js";
+import { applyActivateSelectedEventSequenceSegment } from "../runtime/primitives/activate-selected-event.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import { applySelectTargetsSequenceSegment } from "./select-targets.js";
@@ -602,6 +603,26 @@ export const continueNoDecisionSegments = (
       }
       nextState = played.state;
       nextLedgers = played.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "activateSelectedEvent") {
+      const activated = applyActivateSelectedEventSequenceSegment({
+        emptySegmentResult,
+        entry,
+        events,
+        index,
+        ledgers: nextLedgers,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<
+            SequenceSegmentEffect,
+            { type: "activateSelectedEvent" }
+          >;
+        },
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      nextState = activated.state;
+      nextLedgers = activated.ledgers;
       continue;
     }
     if (segment.effect.type === "playSource") {

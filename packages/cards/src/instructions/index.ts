@@ -1,5 +1,6 @@
 export { parseAddFromTrashToHandInstruction } from "./add-from-trash-to-hand.js";
 export { parseActivateReferencedEffectInstruction } from "./activate-referenced-effect.js";
+export { parseActivateSelectedEventInstruction } from "./activate-selected-event.js";
 export {
   parseBasePowerBecomeInstruction,
   parseSelfCannotAttackInstruction,

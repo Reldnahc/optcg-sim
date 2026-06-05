@@ -14,8 +14,10 @@ import type {
 
 import {
   appendEvent,
+  createEvent,
   illegalAction,
   toEngineResult,
+  toStateSeq,
 } from "../action-results.js";
 import {
   isMatchActive,
@@ -48,6 +50,8 @@ import {
   type SupportedPlayMetadata,
 } from "./support.js";
 import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
+import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
+import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { findRuntimePlaySelectedOverflowEnterRested } from "../runtime-play-selected-overflow-entry-state.js";
 import { placePlayedCardResult } from "./placement.js";
 
@@ -400,6 +404,111 @@ export const applyRuntimePlaySelected = (params: {
         }
       : {}),
   });
+};
+
+export const applyRuntimeActivateSelectedEvent = (params: {
+  state: GameState;
+  playerId: PlayerId;
+  cardInstanceId: CardInstance["instanceId"];
+  ignoreCost: boolean;
+  causedBy?: CausalityRef;
+}): EngineResult => {
+  const { state, playerId, cardInstanceId, ignoreCost, causedBy } = params;
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return illegalAction(
+      state,
+      "activateSelectedEvent requires an existing player.",
+    );
+  }
+  const handIndex = player.hand.findIndex(
+    (card) => card.instanceId === cardInstanceId,
+  );
+  if (handIndex < 0) {
+    return illegalAction(
+      state,
+      "activateSelectedEvent requires a card in hand.",
+    );
+  }
+  const handCard = player.hand[handIndex];
+  if (handCard === undefined) {
+    return illegalAction(state, "activateSelectedEvent hand card not found.");
+  }
+  const supported = getSupportedPlayMetadata(state, handCard);
+  if (supported === null || supported.category !== "event") {
+    return illegalAction(
+      state,
+      "activateSelectedEvent supports only Event cards.",
+    );
+  }
+  if (
+    !ignoreCost &&
+    getActiveDonCount(player.costArea) <
+      getEffectivePlayCost(state, playerId, handCard, supported)
+  ) {
+    return illegalAction(
+      state,
+      "activateSelectedEvent requires enough active DON!!.",
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "cardRevealed",
+    { playerId, instanceId: handCard.instanceId, cardId: handCard.cardId },
+    { type: "public" },
+  );
+  const revealed = events[events.length - 1];
+  if (revealed !== undefined && causedBy !== undefined) {
+    revealed.causedBy = causedBy;
+  }
+  const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
+    cardMovedPayloadShape: "zoneRefs",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    ...(causedBy === undefined ? {} : { causedBy }),
+    clearAttachedDon: true,
+    emitCardTrashed: true,
+    includeCardIdentityInCardMoved: true,
+    playerId,
+    reason: "playCard",
+    sourceZone: "hand",
+  });
+  appendEvent(
+    state,
+    events,
+    "cardPlayed",
+    {
+      playerId,
+      instanceId: handCard.instanceId,
+      cardId: handCard.cardId,
+      category: supported.category,
+    },
+    { type: "public" },
+  );
+  const played = events[events.length - 1];
+  if (played !== undefined && causedBy !== undefined) {
+    played.causedBy = causedBy;
+  }
+
+  const nextStateBase: GameState = {
+    ...movedResult.state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq,
+  };
+  delete nextStateBase.pendingDecision;
+  const nextState = applyRuleProcessingCheckpoint({
+    state: nextStateBase,
+    events,
+    phase: state.turn.phase,
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
 };
 
 export const applyRuntimePlaySource = (params: {

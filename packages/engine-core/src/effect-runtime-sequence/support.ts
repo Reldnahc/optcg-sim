@@ -4,6 +4,7 @@ import type {
   EffectDefinition,
   EffectQueueEntry,
   OptionalCost,
+  ActivateSelectedEventEffect,
   PlaySelectedEffect,
   SelectTargetsEffect,
   SelectCardsEffect,
@@ -129,6 +130,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | TrashEffect
     | SelectTargetsEffect
     | PlaySelectedEffect
+    | ActivateSelectedEventEffect
     | RestEffect
     | ActivateEffect
     | SavedTargetContinuousEffect
@@ -970,6 +972,13 @@ export const toSupportedSequenceBlock = (
           (String(segment.effect.selection).startsWith("handSelection:") ||
             String(segment.effect.selection).startsWith("trashSelection:") ||
             String(segment.effect.selection).startsWith("revealSelection:"))
+        );
+      }
+      if (segment.effect.type === "activateSelectedEvent") {
+        return (
+          segment.effect.ignoreCost &&
+          segment.effect.trigger.type === "main" &&
+          String(segment.effect.selection).startsWith("handSelection:")
         );
       }
       if (isSupportedPlaySourceSegment(segment.effect)) {

@@ -26,9 +26,7 @@ const groupLoadoutsByFolder = (
 ): readonly LoadoutGroup[] => {
   const groups: LoadoutGroup[] = [];
   const groupIndexes = new Map<string, number>();
-  const favoriteLoadouts = loadouts.filter(
-    (loadout) => loadout.favorite === true,
-  );
+  const favoriteLoadouts = loadouts.filter((loadout) => loadout.favorite);
   if (favoriteLoadouts.length > 0) {
     groups.push({
       key: favoriteLoadoutGroupKey,
