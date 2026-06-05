@@ -505,7 +505,7 @@ describe("collection modal", () => {
     );
     assert.match(
       styles,
-      /\.collection-modal-card-grid\.is-single-card\s*\{[^}]*--collection-card-height:\s*min\(52vh,\s*calc\(var\(--card-height\) \* 1\.75\)\);[^}]*grid-template-columns:\s*var\(--collection-card-width\);[^}]*justify-content:\s*center;/u,
+      /\.collection-modal-card-grid\.is-single-card\s*\{[^}]*--collection-card-height:\s*min\(58vh,\s*calc\(var\(--card-height\) \* 2\)\);[^}]*grid-template-columns:\s*var\(--collection-card-width\);[^}]*justify-content:\s*center;/u,
     );
     assert.match(
       styles,

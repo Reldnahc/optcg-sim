@@ -357,7 +357,7 @@ test("single-card action option previews center inside the modal", async () => {
   );
   assert.match(
     styles,
-    /\.decision-card-grid\.is-single-card\s*\{[^}]*--decision-single-card-height:\s*min\(52vh,\s*calc\(var\(--card-height\) \* 1\.75\)\);[^}]*justify-content:\s*center;/u,
+    /\.decision-card-grid\.is-single-card\s*\{[^}]*--decision-single-card-height:\s*min\(58vh,\s*calc\(var\(--card-height\) \* 2\)\);[^}]*justify-content:\s*center;/u,
   );
   assert.match(
     styles,

@@ -18,7 +18,7 @@
 }
 
 .collection-modal-card-grid.is-single-card {
-  --collection-card-height: min(52vh, calc(var(--card-height) * 1.75));
+  --collection-card-height: min(58vh, calc(var(--card-height) * 2));
   --collection-card-width: calc(var(--collection-card-height) * 5 / 7);
 
   grid-template-columns: var(--collection-card-width);

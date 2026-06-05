@@ -17,7 +17,7 @@
 }
 
 .decision-card-grid.is-single-card {
-  --decision-single-card-height: min(52vh, calc(var(--card-height) * 1.75));
+  --decision-single-card-height: min(58vh, calc(var(--card-height) * 2));
 
   min-width: min(
     calc(100vw - 96px),
