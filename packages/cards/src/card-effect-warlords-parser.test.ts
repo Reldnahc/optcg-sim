@@ -372,4 +372,99 @@ describe("warlords parser primitives", () => {
     expect(result?.evidence).toContain("filter:currentPower");
     expect(result?.evidence).toContain("condition:comparator:lte");
   });
+
+  it("parses rest-self plus filtered return-to-owner-hand cost before hand play", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] You may rest this Leader and return 1 of your {Dressrosa} type Characters to the owner's hand: Play up to 1 {Dressrosa} type Character card with a cost of 3 from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "activateMain" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: { type: "restSelf", optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              saveResultAs: "selected:return-cost-to-owner-hand",
+              effect: {
+                type: "selectTargets",
+                request: {
+                  player: "self",
+                  zone: "characterArea",
+                  min: 0,
+                  max: 1,
+                  filter: {
+                    categories: ["character"],
+                    typesAny: ["Dressrosa"],
+                  },
+                },
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: { type: "bounce", destination: "hand" },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "handSelection:play-from-hand",
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      chooser: "self",
+                      min: 0,
+                      max: 1,
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Dressrosa"],
+                        cost: { op: "eq", value: 3 },
+                      },
+                    },
+                  },
+                  {
+                    connector: "ifPossible",
+                    effect: {
+                      type: "playSelected",
+                      selection: "handSelection:play-from-hand",
+                      ignoreCost: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "composition:optionalCostedEffect",
+        "composition:costSequence",
+        "cost:restSelf",
+        "target:thisCard",
+        "cost:returnToOwnerHand",
+        "filter:type",
+        "destination:ownerHand",
+        "instruction:playSelected",
+        "zone:hand",
+        "filter:cost",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
 });

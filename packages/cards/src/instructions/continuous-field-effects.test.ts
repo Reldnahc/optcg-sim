@@ -207,7 +207,7 @@ describe("continuous field-effect instruction parsers", () => {
   });
 
   it.each([
-    ["This Leader cannot attack.", "target:thisLeader"],
+    ["This Leader cannot attack.", "target:thisCard"],
     ["This Character cannot attack.", "target:thisCharacter"],
   ])("parses %s as a reusable self attack restriction", (text, target) => {
     expect(

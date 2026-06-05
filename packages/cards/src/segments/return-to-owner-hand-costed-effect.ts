@@ -1,5 +1,9 @@
 import type { CardFilter, Effect } from "@optcg/types";
 
+import {
+  parseOptionalCostSequence,
+  type OptionalCostSequenceParseResult,
+} from "../costs/index.js";
 import { parseExpression } from "../expression-parser.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { selectThenReturnToOwnerHand } from "../instructions/index.js";
@@ -40,7 +44,8 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
       effect: {
         type: "sequence",
         effects: [
-          ...returnCostSegments(parsed.filter),
+          ...prefixCostSegments(parsed.prefixCost),
+          ...returnCostSegments(parsed.filter, parsed.prefixCost !== undefined),
           {
             id: "body:after-return-cost",
             connector: "ifPreviousSucceeded",
@@ -50,6 +55,10 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
       },
       evidence: [
         "composition:optionalCostedEffect",
+        ...(parsed.prefixCost === undefined
+          ? []
+          : ["composition:costSequence" as const]),
+        ...(parsed.prefixCost?.evidence ?? []),
         "cost:returnToOwnerHand",
         "cardinality:exact",
         "count:positiveInteger",
@@ -70,29 +79,69 @@ function parseCostAndBody(text: string):
       readonly bodyText: string;
       readonly evidence: readonly PrimitiveEvidence[];
       readonly filter: CharacterFilter;
+      readonly prefixCost?: OptionalCostSequenceParseResult;
     }
   | undefined {
-  const match =
-    /^You may return 1 of your (?<target>.+) to the owner's hand:\s*(?<body>.+)$/iu.exec(
-      text,
+  const separatorIndex = text.indexOf(":");
+  if (separatorIndex < 0) {
+    return undefined;
+  }
+
+  const costText = text.slice(0, separatorIndex).trim();
+  const bodyText = text.slice(separatorIndex + 1).trim();
+  const costMatch =
+    /^You may\s+(?:(?<prefix>.+?)\s+and\s+)?return 1 of your (?<target>.+) to the owner's hand$/iu.exec(
+      costText,
     );
-  const targetText = match?.groups?.["target"]?.trim();
-  const bodyText = match?.groups?.["body"]?.trim();
+  const targetText = costMatch?.groups?.["target"]?.trim();
+  const prefixText = costMatch?.groups?.["prefix"]?.trim();
   if (
     targetText === undefined ||
     targetText.length === 0 ||
-    bodyText === undefined ||
     bodyText.length === 0
   ) {
     return undefined;
   }
 
   const parsedTarget = parseReturnCostTarget(targetText);
-  return parsedTarget === undefined ? undefined : { bodyText, ...parsedTarget };
+  if (parsedTarget === undefined) {
+    return undefined;
+  }
+
+  const prefixCost =
+    prefixText === undefined
+      ? undefined
+      : parseOptionalCostSequence({ text: prefixText });
+  if (prefixText !== undefined && prefixCost === undefined) {
+    return undefined;
+  }
+
+  return prefixCost === undefined
+    ? { bodyText, ...parsedTarget }
+    : { bodyText, prefixCost, ...parsedTarget };
+}
+
+function prefixCostSegments(
+  prefixCost: OptionalCostSequenceParseResult | undefined,
+): Extract<Effect, { type: "sequence" }>["effects"] {
+  return prefixCost === undefined
+    ? []
+    : [
+        {
+          id: "cost:return-prefix",
+          connector: "always",
+          saveResultAs: "paidCost",
+          effect: {
+            type: "payCost",
+            cost: prefixCost.cost,
+          },
+        },
+      ];
 }
 
 function returnCostSegments(
   filter: CharacterFilter,
+  hasPrefixCost: boolean,
 ): Extract<Effect, { type: "sequence" }>["effects"] {
   const effect = selectThenReturnToOwnerHand("self", 0, 1, filter);
   if (effect.type !== "sequence") {
@@ -103,6 +152,7 @@ function returnCostSegments(
       ? {
           ...segment,
           id: "select:return-cost-to-owner-hand",
+          connector: hasPrefixCost ? "ifYouDo" : segment.connector,
           saveResultAs: costReturnSelectionId,
         }
       : {

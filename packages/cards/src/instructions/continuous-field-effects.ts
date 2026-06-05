@@ -64,7 +64,7 @@ export const setBasePowerPrimitive = {
 export const selfCannotAttackPrimitive = {
   primitiveId: "instruction:preventActivation",
   childPrimitiveIds: [
-    "target:thisLeader",
+    "target:thisCard",
     "target:thisCharacter",
     "duration:whileSourceOnField",
     "duration:whileConditionTrue",
@@ -422,7 +422,7 @@ export const parseSelfCannotAttackInstruction: ContinuousInstructionParser = (
     },
     evidence: [
       "instruction:preventActivation",
-      subject === "leader" ? "target:thisLeader" : "target:thisCharacter",
+      subject === "character" ? "target:thisCharacter" : "target:thisCard",
       continuousDurationEvidence(context.condition),
     ],
     rest: "",

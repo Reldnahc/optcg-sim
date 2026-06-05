@@ -18,4 +18,12 @@ describe("rest self cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses rest this Leader as the same reusable rest-self cost primitive", () => {
+    expect(parseRestSelfCost({ text: "rest this Leader" })).toEqual({
+      cost: { type: "restSelf", optional: true },
+      evidence: ["cost:restSelf", "target:thisCard"],
+      rest: "",
+    });
+  });
 });

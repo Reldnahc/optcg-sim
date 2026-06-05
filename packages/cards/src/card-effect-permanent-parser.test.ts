@@ -220,7 +220,7 @@ describe("permanent card effect line parser", () => {
   });
 
   it.each([
-    ["This Leader cannot attack.", "target:thisLeader"],
+    ["This Leader cannot attack.", "target:thisCard"],
     ["This Character cannot attack.", "target:thisCharacter"],
   ])("parses permanent self attack restriction: %s", (text, targetEvidence) => {
     const result = parseCardEffectLine(text);
