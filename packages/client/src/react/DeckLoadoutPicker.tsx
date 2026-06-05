@@ -114,6 +114,7 @@ export const DeckLoadoutPicker = ({
   const [closedFolderKeys, setClosedFolderKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  const [initializedFolderState, setInitializedFolderState] = useState(false);
   const selectedLoadout = loadouts.find(
     (loadout) => loadout.id === selectedLoadoutId,
   );
@@ -129,13 +130,18 @@ export const DeckLoadoutPicker = ({
   );
 
   useEffect(() => {
+    if (!initializedFolderState && groups.length > 0) {
+      setClosedFolderKeys(new Set(groups.slice(1).map((group) => group.key)));
+      setInitializedFolderState(true);
+      return;
+    }
     setClosedFolderKeys(
       (current) =>
         new Set(
           [...current].filter((key) => groups.some((g) => g.key === key)),
         ),
     );
-  }, [groups]);
+  }, [groups, initializedFolderState]);
 
   return (
     <div className="deck-loadout-picker">

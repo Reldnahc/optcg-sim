@@ -237,4 +237,21 @@ describe("lobby deck panel", () => {
       /const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;/u,
     );
   });
+
+  test("deck loadout folders initially expand only the first group", async () => {
+    const source = await readFile(
+      new URL("DeckLoadoutPicker.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(
+      source,
+      /const \[initializedFolderState,\s*setInitializedFolderState\]/u,
+    );
+    assert.match(
+      source,
+      /setClosedFolderKeys\(new Set\(groups\.slice\(1\)\.map\(\(group\) => group\.key\)\)\);/u,
+    );
+    assert.match(source, /setInitializedFolderState\(true\);/u);
+  });
 });
