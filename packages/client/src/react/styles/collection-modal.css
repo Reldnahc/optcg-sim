@@ -17,8 +17,21 @@
   overflow: visible;
 }
 
+.collection-modal-card-grid.is-single-card {
+  --collection-card-height: min(52vh, calc(var(--card-height) * 1.75));
+  --collection-card-width: calc(var(--collection-card-height) * 5 / 7);
+
+  grid-template-columns: var(--collection-card-width);
+  justify-content: center;
+}
+
 .collection-modal-card-grid .card-tile-shell {
   width: min(100%, var(--collection-card-width));
+}
+
+.collection-modal-card-grid.is-single-card .card-tile-shell {
+  width: var(--collection-card-width);
+  height: var(--collection-card-height);
 }
 
 .collection-modal-actions {

@@ -67,6 +67,14 @@ const decisionModalFrameClass = (model: DecisionModalModel): string =>
     ? "modal-frame-decision modal-frame-card-decision"
     : "modal-frame-decision";
 
+const decisionCardGridClass = (
+  cardCount: number,
+  extraClassName = "",
+): string =>
+  `decision-card-grid${extraClassName} ${
+    cardCount === 1 ? "is-single-card" : ""
+  }`.trim();
+
 export const DecisionModalHost = ({
   model,
   disabled,
@@ -116,6 +124,13 @@ export const DecisionModalHost = ({
   if (model === undefined) {
     return null;
   }
+  const actionOptionCardCount =
+    model.kind === "actionOptions"
+      ? model.options.reduce(
+          (count, option) => count + (option.cards?.length ?? 0),
+          0,
+        )
+      : 0;
   const renderConfirm =
     model.kind !== "binaryQuantity" &&
     model.kind !== "chooseOption" &&
@@ -126,7 +141,7 @@ export const DecisionModalHost = ({
         <p className="decision-modal-instruction">{model.instruction}</p>
       </div>
       {model.kind === "selectCards" ? (
-        <div className="decision-card-grid">
+        <div className={decisionCardGridClass(model.cards.length)}>
           {model.cards.map((choice) => {
             const instanceId = choice.card.instanceId;
             const selected = model.selectedInstanceIds.includes(instanceId);
@@ -230,7 +245,7 @@ export const DecisionModalHost = ({
         </>
       ) : null}
       {model.kind === "orderTriggers" ? (
-        <div className="decision-card-grid">
+        <div className={decisionCardGridClass(model.choices.length)}>
           {model.choices.map((choice) => {
             const display =
               choice.source === undefined
@@ -337,7 +352,12 @@ export const DecisionModalHost = ({
               name: String(previewCard.cardId),
             };
             return (
-              <div className="decision-card-grid decision-card-preview-grid">
+              <div
+                className={decisionCardGridClass(
+                  1,
+                  " decision-card-preview-grid",
+                )}
+              >
                 <button
                   className="decision-choice decision-card-choice"
                   type="button"
@@ -364,7 +384,7 @@ export const DecisionModalHost = ({
             );
           })()}
           {model.options.some((option) => option.cards !== undefined) ? (
-            <div className="decision-card-grid">
+            <div className={decisionCardGridClass(actionOptionCardCount)}>
               {model.options.flatMap((option) =>
                 (option.cards ?? []).map((card) => {
                   const display = cardDisplay?.(card) ?? {

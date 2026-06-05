@@ -70,6 +70,42 @@ test("selectCards modal renders card images and disables nonselectable choices",
   assert.match(markup, /disabled=""/u);
 });
 
+test("single-card selection modals enlarge the lone card", () => {
+  const model: DecisionModalModel = {
+    ...presentation,
+    kind: "selectCards",
+    decisionId: "decision-single-card" as never,
+    min: 0,
+    max: 1,
+    canConfirm: true,
+    selectedInstanceIds: [],
+    cards: [{ card: cardRef("only"), selectable: true }],
+    confirmLabel: "Confirm",
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      cardDisplay: (card: CardRef) => ({
+        name: String(card.cardId),
+        imageUrl: `https://cdn.example/${String(card.cardId)}.png`,
+      }),
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /class="decision-card-grid is-single-card"/u);
+  assert.equal(markup.includes("only-card.png"), true);
+});
+
 test("simple decision modals use compact modal sizing", () => {
   const model: DecisionModalModel = {
     ...presentation,
@@ -283,6 +319,10 @@ test("life trigger action options render one card preview and text response butt
   );
 
   assert.equal(markup.match(/class="decision-card-face"/gu)?.length, 1);
+  assert.match(
+    markup,
+    /class="decision-card-grid decision-card-preview-grid is-single-card"/u,
+  );
   assert.equal(markup.includes("life-trigger-card.png"), true);
   assert.match(markup, />Activate trigger<\/button>/u);
   assert.match(markup, />Add to hand<\/button>/u);
@@ -314,6 +354,14 @@ test("single-card action option previews center inside the modal", async () => {
   assert.match(
     styles,
     /\.decision-card-preview-grid\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*justify-content:\s*center;/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-card-grid\.is-single-card\s*\{[^}]*--decision-single-card-height:\s*min\(52vh,\s*calc\(var\(--card-height\) \* 1\.75\)\);[^}]*justify-content:\s*center;/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-card-grid\.is-single-card\s+\.decision-choice\.decision-card-choice\s*\{[^}]*height:\s*var\(--decision-single-card-height\);/u,
   );
 });
 

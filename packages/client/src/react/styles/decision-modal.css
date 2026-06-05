@@ -16,10 +16,24 @@
   gap: 8px;
 }
 
+.decision-card-grid.is-single-card {
+  --decision-single-card-height: min(52vh, calc(var(--card-height) * 1.75));
+
+  min-width: min(
+    calc(100vw - 96px),
+    calc((var(--decision-single-card-height) * 5 / 7) + 32px)
+  );
+  justify-content: center;
+}
+
 .decision-card-preview-grid {
   width: 100%;
   min-width: 0;
   justify-content: center;
+}
+
+.decision-card-preview-grid.is-single-card {
+  min-width: 0;
 }
 
 .decision-option-list {
@@ -70,6 +84,10 @@
   padding: 0;
   overflow: visible;
   background: transparent;
+}
+
+.decision-card-grid.is-single-card .decision-choice.decision-card-choice {
+  height: var(--decision-single-card-height);
 }
 
 .decision-choice.decision-card-choice:not(:disabled) {

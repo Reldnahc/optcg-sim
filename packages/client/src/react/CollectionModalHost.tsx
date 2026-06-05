@@ -38,6 +38,7 @@ export interface CollectionModalHostProps {
 export interface CollectionModalContentProps {
   model: CollectionModalModel;
   disabled?: boolean | undefined;
+  largeSingleCard?: boolean | undefined;
   onToggleCard?: ((instanceId: string) => void) | undefined;
   onConfirm?: (() => void) | undefined;
   onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
@@ -46,6 +47,7 @@ export interface CollectionModalContentProps {
 export const CollectionModalContent = ({
   model,
   disabled = false,
+  largeSingleCard = false,
   onToggleCard,
   onConfirm,
   onPreviewCard,
@@ -56,7 +58,11 @@ export const CollectionModalContent = ({
 
   return (
     <>
-      <div className="collection-modal-card-grid">
+      <div
+        className={`collection-modal-card-grid ${
+          largeSingleCard && model.cards.length === 1 ? "is-single-card" : ""
+        }`.trim()}
+      >
         {model.cards.map((card) => {
           const instanceId = String(card.instanceId);
           const hasSelection = model.selection !== undefined;
@@ -130,6 +136,7 @@ export const CollectionModalHost = ({
     <CollectionModalContent
       model={model}
       disabled={disabled}
+      largeSingleCard={presentation === "modal"}
       onToggleCard={onToggleCard}
       onConfirm={onConfirm}
       onPreviewCard={onPreviewCard}

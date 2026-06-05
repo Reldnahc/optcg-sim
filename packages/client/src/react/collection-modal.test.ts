@@ -248,7 +248,40 @@ describe("collection modal", () => {
 
     assert.match(markup, /modal-frame/u);
     assert.match(markup, /collection-modal/u);
+    assert.match(markup, /collection-modal-card-grid is-single-card/u);
     assert.doesNotMatch(markup, /floating-window/u);
+  });
+
+  test("single-card collection viewers only enlarge when presented as decision modals", () => {
+    const windowMarkup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Player trash",
+          cards: [card("one", "One")],
+        },
+        onClose: () => undefined,
+      }),
+    );
+    const modalMarkup = renderToStaticMarkup(
+      createElement(CollectionModalHost, {
+        model: {
+          title: "Choose from trash",
+          cards: [card("one", "One")],
+          selection: {
+            selectedInstanceIds: [],
+            selectableInstanceIds: ["one"],
+            canConfirm: true,
+            confirmLabel: "Confirm",
+          },
+        },
+        presentation: "modal",
+        onToggleCard: () => undefined,
+        onConfirm: () => undefined,
+      }),
+    );
+
+    assert.doesNotMatch(windowMarkup, /is-single-card/u);
+    assert.match(modalMarkup, /collection-modal-card-grid is-single-card/u);
   });
 
   test("collection viewer has close and minimize controls", async () => {
@@ -469,6 +502,14 @@ describe("collection modal", () => {
     assert.match(
       styles,
       /\.collection-modal-card-grid\s+\.card-tile-shell\s*\{[^}]*width:\s*min\(100%,\s*var\(--collection-card-width\)\);/u,
+    );
+    assert.match(
+      styles,
+      /\.collection-modal-card-grid\.is-single-card\s*\{[^}]*--collection-card-height:\s*min\(52vh,\s*calc\(var\(--card-height\) \* 1\.75\)\);[^}]*grid-template-columns:\s*var\(--collection-card-width\);[^}]*justify-content:\s*center;/u,
+    );
+    assert.match(
+      styles,
+      /\.collection-modal-card-grid\.is-single-card\s+\.card-tile-shell\s*\{[^}]*width:\s*var\(--collection-card-width\);[^}]*height:\s*var\(--collection-card-height\);/u,
     );
   });
 });
