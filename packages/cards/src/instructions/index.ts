@@ -62,3 +62,4 @@ export {
 } from "./trash-all-characters.js";
 export { parseTrashFromDeckTopInstruction } from "./trash-from-deck-top.js";
 export { parseTrashFromHandInstruction } from "./trash-from-hand.js";
+export { parseWinGameInstruction } from "./win-game.js";

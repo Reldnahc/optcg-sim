@@ -12,6 +12,11 @@ const opponentEventOrBlockerActivatedTrigger = (): Trigger => ({
   activations: ["event", "blocker"],
 });
 
+const opponentBlockerActivatedTrigger = (): Trigger => ({
+  type: "opponentActivated",
+  activations: ["blocker"],
+});
+
 export function lifeRemovedReactionExpressionParser(options: {
   readonly expressions: readonly ((
     input: ParseInput,
@@ -59,13 +64,15 @@ export function opponentEventOrBlockerActivatedExpressionParser(options: {
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
     const match =
-      /^When your opponent activates an Event or \[Blocker\],\s*(?<body>.+)$/iu.exec(
+      /^When your opponent activates (?<activation>an Event or \[Blocker\]|\[Blocker\]),\s*(?<body>.+)$/iu.exec(
         input.text,
       );
+    const activation = match?.groups?.["activation"];
     const body = match?.groups?.["body"];
-    if (body === undefined) {
+    if (activation === undefined || body === undefined) {
       return undefined;
     }
+    const isBlockerOnly = activation.toLowerCase() === "[blocker]";
 
     for (const expressionParser of options.expressions) {
       const parsed = expressionParser({ ...input, text: body });
@@ -76,14 +83,17 @@ export function opponentEventOrBlockerActivatedExpressionParser(options: {
         effect: parsed.effect,
         evidence: [
           "trigger:opponentActivated",
-          "activation:event",
+          ...(isBlockerOnly ? [] : (["activation:event"] as const)),
           "activation:blocker",
           ...parsed.evidence,
         ],
         rest: "",
         blockPatch: {
+          ...parsed.blockPatch,
           category: "auto",
-          trigger: opponentEventOrBlockerActivatedTrigger(),
+          trigger: isBlockerOnly
+            ? opponentBlockerActivatedTrigger()
+            : opponentEventOrBlockerActivatedTrigger(),
         },
       };
     }

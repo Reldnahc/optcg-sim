@@ -3,7 +3,10 @@ export { parseFieldCardCountCondition } from "./field-card-count.js";
 export { parseHandCountCondition } from "./hand-count.js";
 export { parseLeaderColorCountCondition } from "./leader-color-count.js";
 export { parseLeaderNameCondition } from "./leader-name.js";
-export { parseLifeCountCondition } from "./life-count.js";
+export {
+  parseEitherPlayerLifeCountCondition,
+  parseLifeCountCondition,
+} from "./life-count.js";
 export { parseNoOtherNamedCharactersCondition } from "./no-other-named-characters.js";
 export { parseOnlyMatchingFieldCardsCondition } from "./only-matching-field-cards.js";
 export { parseOpponentRestedCharactersCondition } from "./opponent-rested-characters.js";

@@ -630,6 +630,173 @@ test("opponent activation reaction may choose zero revealed Life cards", () => {
   );
 });
 
+test("blocker-only opponent activation reaction can win through composed Life-zero condition", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.eventJournal = [];
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  p2State.life = [];
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-blocker-activation-win",
+      rulesVersion: "opponent-blocker-win-rules",
+      sourceTextHash: "opponent-blocker-win-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...must(baseDefinition.effects[0], "base draw effect"),
+        id: toEffectId("blocker-activation-win"),
+        trigger: {
+          type: "opponentActivated",
+          activations: ["blocker"],
+        },
+        condition: {
+          type: "or",
+          conditions: [
+            { type: "lifeCount", player: "self", op: "eq", value: 0 },
+            { type: "lifeCount", player: "opponent", op: "eq", value: 0 },
+          ],
+        },
+        effect: { type: "winGame", player: "self" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-blocker-activation-win": definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.eventJournal.push({
+    id: toEngineEventId("event:opponent-blocker-activated"),
+    seq: 1,
+    type: "blockerActivated",
+    payload: { blocker: { playerId: p2 } },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:opponent-blocker" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+
+  const resolved = processEffectRuntime(queued.state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(resolved.state.status, { type: "completed", winner: p1 });
+  assert.equal(
+    resolved.events.some(
+      (event) =>
+        event.type === "gameEnded" &&
+        (event.payload as { winner?: unknown }).winner === p1,
+    ),
+    true,
+  );
+});
+
+test("blocker-only opponent activation win reaction skips when neither player has zero Life", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.eventJournal = [];
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-blocker-activation-win-skip",
+      rulesVersion: "opponent-blocker-win-rules",
+      sourceTextHash: "opponent-blocker-win-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...must(baseDefinition.effects[0], "base draw effect"),
+        id: toEffectId("blocker-activation-win-skip"),
+        trigger: {
+          type: "opponentActivated",
+          activations: ["blocker"],
+        },
+        condition: {
+          type: "or",
+          conditions: [
+            { type: "lifeCount", player: "self", op: "eq", value: 0 },
+            { type: "lifeCount", player: "opponent", op: "eq", value: 0 },
+          ],
+        },
+        effect: { type: "winGame", player: "self" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-blocker-activation-win-skip": definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.eventJournal.push({
+    id: toEngineEventId("event:opponent-blocker-activated-skip"),
+    seq: 1,
+    type: "blockerActivated",
+    payload: { blocker: { playerId: p2 } },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:opponent-blocker" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+
+  const resolved = processEffectRuntime(queued.state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(resolved.state.status, { type: "active" });
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(
+    resolved.events.some((event) => event.type === "gameEnded"),
+    false,
+  );
+});
+
 test("opponent activation reaction ignores activations before the source entered field", () => {
   const { source, state } = setupOpponentActivationRevealPowerState();
   state.eventJournal.push({

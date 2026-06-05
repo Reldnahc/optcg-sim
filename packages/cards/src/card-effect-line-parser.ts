@@ -12,6 +12,7 @@ import {
   parseLeaderColorCountCondition,
   parseLeaderNameCondition,
   parseLifeCountCondition,
+  parseEitherPlayerLifeCountCondition,
   parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseOpponentRestedCharactersCondition,
@@ -70,6 +71,7 @@ import {
   parseTrashInstruction,
   parseTrashFromDeckTopInstruction,
   parseTrashFromHandInstruction,
+  parseWinGameInstruction,
   parseYourLeaderConditionalPowerInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   parsePlayFromHandInstruction,
@@ -214,6 +216,7 @@ const instructionParsers = [
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parseWinGameInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   parseExplicitActionKeywordGrantInstruction,
   parseExplicitActionBasePowerInstruction,
@@ -226,6 +229,7 @@ const conditionParsers = [
   parseRestedCardCountCondition,
   parseSelfFieldCountCondition,
   parseTrashCountCondition,
+  parseEitherPlayerLifeCountCondition,
   parseLifeCountCondition,
   parseLeaderColorCountCondition,
   parseLeaderNameCondition,
@@ -354,7 +358,14 @@ const defaultRegistry = {
       expressions: [generalExpressionParser],
     }),
     opponentEventOrBlockerActivatedExpressionParser({
-      expressions: [generalExpressionParser],
+      expressions: [
+        conditionalBlockExpressionParser({
+          conditions: conditionParsers,
+          connectors: [parseThenConnector, parseAndConnector],
+          instructions: instructionParsers,
+        }),
+        generalExpressionParser,
+      ],
     }),
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,

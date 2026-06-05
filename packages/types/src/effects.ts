@@ -828,6 +828,7 @@ export type Effect =
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
   | { type: "attachSelectedDon"; selection: SelectionId; target: Target }
   | { type: "returnDon"; count: number; player: PlayerRef }
+  | { type: "winGame"; player: PlayerRef }
   | {
       type: "addLife";
       count: number;

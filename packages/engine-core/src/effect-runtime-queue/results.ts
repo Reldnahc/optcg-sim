@@ -33,8 +33,10 @@ import type {
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
+  executeWinGamePrimitive,
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
+  isSupportedQueuedWinGameEffect,
 } from "../runtime/primitives/execute.js";
 import {
   isScopedActivateMainQueueEntry,
@@ -541,6 +543,12 @@ export const createEffectRuntimeQueueResults = (
         selected,
       );
       const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
+      const winGameEffect =
+        queuedEffect !== undefined &&
+        queuedEffect.sourcePresencePolicy === selected.sourcePresencePolicy &&
+        isSupportedQueuedWinGameEffect(queuedEffect)
+          ? queuedEffect.effect
+          : undefined;
       const queuedContinuousEffect = resolveQueuedContinuousEffect(
         nextState,
         selected,
@@ -628,6 +636,7 @@ export const createEffectRuntimeQueueResults = (
           moveCardsEffect === undefined &&
           !resolvedMoveCardsAsNoop &&
           playSourceEffect === undefined &&
+          winGameEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
           return unsupportedEffectQueueResult(originalState);
@@ -714,6 +723,19 @@ export const createEffectRuntimeQueueResults = (
             ...allEvents,
             ...resolution.events,
           ]);
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (winGameEffect !== undefined) {
+        const resolution = executeWinGamePrimitive(
+          nextState,
+          resolvingEntry,
+          winGameEffect,
+        );
+        if (resolution.errors !== undefined) {
+          return unsupportedEffectQueueResult(originalState);
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);

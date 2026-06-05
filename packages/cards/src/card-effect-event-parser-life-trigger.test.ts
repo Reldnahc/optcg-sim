@@ -443,4 +443,48 @@ describe("card effect event parser life trigger and reaction cases", () => {
       ]),
     );
   });
+
+  it("parses blocker-only opponent activation reactions with composed Life-zero win condition", () => {
+    const result = parseCardEffectLine(
+      "When your opponent activates [Blocker], if either you or your opponent has 0 Life cards, you win the game.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "opponentActivated",
+          activations: ["blocker"],
+        },
+        condition: {
+          type: "or",
+          conditions: [
+            { type: "lifeCount", player: "self", op: "eq", value: 0 },
+            { type: "lifeCount", player: "opponent", op: "eq", value: 0 },
+          ],
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "winGame",
+          player: "self",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitReaction",
+        "trigger:opponentActivated",
+        "activation:blocker",
+        "expression:conditional",
+        "composition:conditionOr",
+        "condition:lifeCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "instruction:winGame",
+        "player:self",
+        "player:opponent",
+      ]),
+    );
+    expect(result?.evidence).not.toContain("activation:event");
+  });
 });

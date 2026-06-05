@@ -7,7 +7,10 @@ import type {
 
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedContinuousQueueEffect } from "./runtime/continuous/continuous.js";
-import { isSupportedMainEventTargetKoEffectAllowingOncePerTurn } from "./runtime/primitives/execute.js";
+import {
+  isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
+  isSupportedWinGameBody,
+} from "./runtime/primitives/execute.js";
 import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
@@ -163,6 +166,7 @@ const isSupportedNonOptionalBody = (
   isSupportedTrashFromHandBody(block.effect) ||
   isSupportedMoveCardsBody(block.effect) ||
   isSupportedPlaceTopDeckCardsBody(block.effect) ||
+  isSupportedWinGameBody(block.effect) ||
   isSupportedSearchBody(block) ||
   isSupportedContinuousBody(block) ||
   isSupportedActivateReferencedEffectBody(block.effect) ||

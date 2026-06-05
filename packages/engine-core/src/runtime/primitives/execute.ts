@@ -52,3 +52,9 @@ export {
   isSupportedMainEventTargetKoEffect,
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
 } from "./target-ko.js";
+export {
+  executeNoChoiceWinGamePrimitive,
+  executeWinGamePrimitive,
+  isSupportedQueuedWinGameEffect,
+  isSupportedWinGameBody,
+} from "./win-game.js";
