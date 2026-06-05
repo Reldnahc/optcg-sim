@@ -39,6 +39,7 @@ describe("settings window", () => {
     assert.match(markup, /accept="image\/\*,\.gif"/u);
     assert.match(markup, /Clear background/u);
     assert.match(markup, /Quick pay Activate: Main costs/u);
+    assert.match(markup, /Confirm end turn/u);
     assert.match(markup, /type="checkbox"/u);
   });
 
@@ -150,6 +151,7 @@ describe("settings window", () => {
     assert.match(matchApp, /<MatchVisualSettingsProvider/u);
     assert.match(matchApp, /style=\{matchAppStyle\}/u);
     assert.match(persistedSettingsHook, /optcg:client:background-image-url/u);
+    assert.match(persistedSettingsHook, /optcg:client:confirm-end-turn/u);
     assert.match(
       persistedSettingsHook,
       /optcg:client:quick-pay-activate-main-costs/u,

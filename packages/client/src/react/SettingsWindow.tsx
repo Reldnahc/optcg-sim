@@ -5,15 +5,19 @@ import type { WindowRect } from "./FloatingWindow.js";
 
 export interface MatchVisualSettings {
   readonly backgroundImageUrl: string;
+  readonly confirmEndTurn: boolean;
   readonly quickPayActivateMainCosts: boolean;
   readonly setBackgroundImageUrl: (url: string) => void;
+  readonly setConfirmEndTurn: (enabled: boolean) => void;
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
 }
 
 const noopVisualSettings: MatchVisualSettings = {
   backgroundImageUrl: "",
+  confirmEndTurn: false,
   quickPayActivateMainCosts: false,
   setBackgroundImageUrl: () => undefined,
+  setConfirmEndTurn: () => undefined,
   setQuickPayActivateMainCosts: () => undefined,
 };
 
@@ -45,8 +49,10 @@ export const defaultSettingsWindowRect: WindowRect = {
 export const SettingsContent = (): React.JSX.Element => {
   const {
     backgroundImageUrl,
+    confirmEndTurn,
     quickPayActivateMainCosts,
     setBackgroundImageUrl,
+    setConfirmEndTurn,
     setQuickPayActivateMainCosts,
   } = useMatchVisualSettings();
 
@@ -95,6 +101,16 @@ export const SettingsContent = (): React.JSX.Element => {
           }}
         />
         <span>Quick pay Activate: Main costs</span>
+      </label>
+      <label className="settings-checkbox-field">
+        <input
+          type="checkbox"
+          checked={confirmEndTurn}
+          onChange={(event) => {
+            setConfirmEndTurn(event.currentTarget.checked);
+          }}
+        />
+        <span>Confirm end turn</span>
       </label>
     </div>
   );

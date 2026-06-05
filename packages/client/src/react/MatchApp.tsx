@@ -18,6 +18,11 @@ import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
 import { MatchVisualSettingsProvider } from "./SettingsWindow.js";
 import { SettingsToggle } from "./SettingsToggle.js";
+import {
+  endTurnConfirmationActions,
+  isEndTurnAction,
+  useEndTurnConfirmation,
+} from "./use-end-turn-confirmation.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
@@ -151,6 +156,19 @@ export const MatchApp = ({
     actionInFlight: client.state.actionInFlight,
     matchActive: matchState?.snapshot.status === "active",
   });
+  const {
+    endTurnConfirming,
+    requestEndTurnConfirmation,
+    resetEndTurnConfirmation,
+  } = useEndTurnConfirmation({
+    enabled: visualSettings.confirmEndTurn,
+    actionAvailable: visibleGlobalActions.some(isEndTurnAction),
+    actionInFlight: client.state.actionInFlight,
+  });
+  const controlGlobalActions = endTurnConfirmationActions(
+    visibleGlobalActions,
+    visualSettings.confirmEndTurn && endTurnConfirming,
+  );
   const {
     previewHoveredCard,
     showCardPreview,
@@ -403,7 +421,7 @@ export const MatchApp = ({
         )}
         <MatchControlPanel
           errors={client.state.errors}
-          globalActions={visibleGlobalActions}
+          globalActions={controlGlobalActions}
           disabled={client.state.actionInFlight}
           selfLabel={displayBoard?.selfLabel}
           opponentLabel={displayBoard?.opponentLabel}
@@ -430,6 +448,17 @@ export const MatchApp = ({
           }
           onAction={(actionIndex) => {
             resetConcedeConfirmation();
+            const action = visibleGlobalActions.find(
+              (candidate) => candidate.index === actionIndex,
+            );
+            if (
+              visualSettings.confirmEndTurn &&
+              isEndTurnAction(action) &&
+              !requestEndTurnConfirmation()
+            ) {
+              return;
+            }
+            resetEndTurnConfirmation();
             void client.submitAction(actionIndex);
           }}
           onNewMatch={() => {
