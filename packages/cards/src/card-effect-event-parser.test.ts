@@ -42,6 +42,85 @@ describe("card effect event parser", () => {
     );
   });
 
+  it("parses Main Event draw into named Leader keyword and power modifier sequence", () => {
+    const result = parseCardEffectLine(
+      "[Main] Draw 2 cards. Then, your [Lucy] Leader gains [Double Attack] and +3000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "draw", player: "self", count: 2 },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "giveKeyword",
+                      target: {
+                        type: "all",
+                        zone: "leaderArea",
+                        player: "self",
+                        filter: {
+                          categories: ["leader"],
+                          names: ["Lucy"],
+                        },
+                      },
+                      keyword: "doubleAttack",
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "modifyPower",
+                      target: {
+                        type: "all",
+                        zone: "leaderArea",
+                        player: "self",
+                        filter: {
+                          categories: ["leader"],
+                          names: ["Lucy"],
+                        },
+                      },
+                      value: 3000,
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "instruction:draw",
+        "instruction:giveKeyword",
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "filter:name",
+        "filter:category:leader",
+        "keyword:anySupported",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses optional hand-trash cost into conditional Life setup and self power sequence", () => {
     const result = parseCardEffectLine(
       "[When Attacking] You may trash 1 card from your hand: If you have 1 or less Life cards, add up to 1 card from the top of your deck to the top of your Life cards. Then, this Character gains +1000 power during this turn.",

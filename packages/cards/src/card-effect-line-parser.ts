@@ -120,11 +120,26 @@ const isExplicitActionKeywordDuration = (
   effect.duration.type !== "whileSourceOnField" &&
   effect.duration.type !== "whileConditionTrue";
 
+const isExplicitActionModifierSequence = (effect: Effect): boolean =>
+  effect.type === "sequence" &&
+  effect.effects.every((segment) => {
+    const child = segment.effect;
+    return (
+      (child.type === "giveKeyword" || child.type === "modifyPower") &&
+      child.duration.type !== "whileSourceOnField" &&
+      child.duration.type !== "whileConditionTrue"
+    );
+  });
+
 const parseExplicitActionKeywordGrantInstruction = (input: ParseInput) => {
   const parsed = parseThisCharacterKeywordGrantInstruction(input, {
     condition: undefined,
   });
-  if (parsed === undefined || !isExplicitActionKeywordDuration(parsed.effect)) {
+  if (
+    parsed === undefined ||
+    (!isExplicitActionKeywordDuration(parsed.effect) &&
+      !isExplicitActionModifierSequence(parsed.effect))
+  ) {
     return undefined;
   }
   return parsed;

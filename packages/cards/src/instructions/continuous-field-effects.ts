@@ -252,6 +252,15 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
       if (leaderKeywordText === undefined) {
         return undefined;
       }
+      const keywordAndPower = parseKeywordAndPositivePowerGrant({
+        target: leaderTarget.target,
+        targetEvidence: leaderTarget.evidence,
+        text: leaderKeywordText,
+        context,
+      });
+      if (keywordAndPower !== undefined) {
+        return keywordAndPower;
+      }
       const keyword = parseKeyword({ text: leaderKeywordText });
       if (keyword !== undefined) {
         const explicitDuration =
@@ -401,6 +410,88 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
       rest: "",
     };
   };
+
+const parseKeywordAndPositivePowerGrant = ({
+  target,
+  targetEvidence,
+  text,
+  context,
+}: {
+  readonly target: Target;
+  readonly targetEvidence: readonly PrimitiveEvidence[];
+  readonly text: string;
+  readonly context: ContinuousInstructionContext;
+}): InstructionParseResult | undefined => {
+  const match =
+    /^(?<keyword>\[[^\]]+\])\s+and\s+(?<power>\+\d+\s+power\b.*)$/iu.exec(text);
+  const keywordText = match?.groups?.["keyword"];
+  const powerText = match?.groups?.["power"];
+  if (keywordText === undefined || powerText === undefined) {
+    return undefined;
+  }
+
+  const keyword = parseKeyword({ text: keywordText });
+  const modifier = parsePositivePowerModifier({ text: powerText });
+  if (
+    keyword === undefined ||
+    keyword.rest.length > 0 ||
+    modifier === undefined
+  ) {
+    return undefined;
+  }
+
+  const explicitDuration =
+    modifier.rest.length === 0
+      ? undefined
+      : parseExplicitFieldEffectDuration({ text: modifier.rest });
+  if (modifier.rest.length > 0 && explicitDuration === undefined) {
+    return undefined;
+  }
+  if (explicitDuration !== undefined && explicitDuration.rest.length > 0) {
+    return undefined;
+  }
+
+  const duration =
+    explicitDuration?.duration ?? continuousDuration(context.condition);
+  const durationEvidence = explicitDuration?.evidence ?? [
+    continuousDurationEvidence(context.condition),
+  ];
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "giveKeyword",
+            target,
+            keyword: keyword.keyword,
+            duration,
+          },
+        },
+        {
+          connector: "always",
+          effect: {
+            type: "modifyPower",
+            target,
+            value: modifier.value,
+            duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:giveKeyword",
+      "instruction:modifyPower",
+      ...targetEvidence,
+      ...keyword.evidence,
+      ...modifier.evidence,
+      ...durationEvidence,
+    ],
+    rest: "",
+  };
+};
 
 export const parseSelfCannotAttackInstruction: ContinuousInstructionParser = (
   input,
