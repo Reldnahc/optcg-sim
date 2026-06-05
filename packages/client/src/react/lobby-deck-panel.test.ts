@@ -122,11 +122,19 @@ describe("lobby deck panel", () => {
       styles,
       /\.lobby-deck-modal\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(850px,\s*calc\(100vh - 24px\)\);/u,
     );
+    assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(
       styles,
-      /\.lobby-deck-modal\s*\{[^}]*transition:\s*height 120ms ease,\s*max-height 120ms ease;/u,
+      /\.deck-loadout-menu\s*\{[^}]*grid-template-rows:\s*0fr;[^}]*transition:\s*grid-template-rows 130ms ease,\s*opacity 90ms ease;/u,
     );
-    assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
+    assert.match(
+      styles,
+      /\.deck-loadout-menu\.is-open\s*\{[^}]*grid-template-rows:\s*1fr;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-menu-inner\s*\{[^}]*overflow:\s*hidden;/u,
+    );
     assert.match(
       styles,
       /\.deck-loadout-folder-list\s*\{[^}]*overflow:\s*auto;/u,

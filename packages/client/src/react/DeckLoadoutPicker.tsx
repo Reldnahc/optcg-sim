@@ -151,14 +151,19 @@ export const DeckLoadoutPicker = ({
           </span>
         </span>
       </button>
-      {open && !locked ? (
-        <div className="deck-loadout-menu">
+      <div
+        className={`deck-loadout-menu ${
+          open && !locked ? "is-open" : "is-closed"
+        }`}
+        aria-hidden={open && !locked ? undefined : true}
+      >
+        <div className="deck-loadout-menu-inner">
           <input
             className="deck-loadout-search"
             type="search"
             value={search}
             placeholder="Search deck loadouts"
-            disabled={disabled}
+            disabled={disabled || !open || locked}
             onChange={(event) => {
               setSearch(event.target.value);
             }}
@@ -235,7 +240,7 @@ export const DeckLoadoutPicker = ({
             })}
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 };

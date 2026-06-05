@@ -144,9 +144,6 @@
   height: auto;
   max-height: min(850px, calc(100vh - 24px));
   overflow: hidden;
-  transition:
-    height 120ms ease,
-    max-height 120ms ease;
 }
 
 .lobby-deck-panel {
@@ -296,10 +293,27 @@
 
 .deck-loadout-menu {
   display: grid;
+  grid-template-rows: 0fr;
   min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    grid-template-rows 130ms ease,
+    opacity 90ms ease;
+}
+
+.deck-loadout-menu.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.deck-loadout-menu-inner {
+  display: grid;
   gap: 8px;
   padding: 2px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .deck-loadout-search {
