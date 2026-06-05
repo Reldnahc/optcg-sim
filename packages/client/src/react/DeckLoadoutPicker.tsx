@@ -18,12 +18,24 @@ interface LoadoutGroup {
 
 const unfiledLoadoutGroupKey = "__unfiled__";
 const unfiledLoadoutGroupLabel = "Unfiled";
+const favoriteLoadoutGroupKey = "__favorites__";
+const favoriteLoadoutGroupLabel = "Favorites";
 
 const groupLoadoutsByFolder = (
   loadouts: readonly AccountLoadout[],
 ): readonly LoadoutGroup[] => {
   const groups: LoadoutGroup[] = [];
   const groupIndexes = new Map<string, number>();
+  const favoriteLoadouts = loadouts.filter(
+    (loadout) => loadout.favorite === true,
+  );
+  if (favoriteLoadouts.length > 0) {
+    groups.push({
+      key: favoriteLoadoutGroupKey,
+      label: favoriteLoadoutGroupLabel,
+      loadouts: favoriteLoadouts,
+    });
+  }
   for (const loadout of loadouts) {
     const key = loadout.folderId ?? unfiledLoadoutGroupKey;
     const index = groupIndexes.get(key);
@@ -197,7 +209,12 @@ export const DeckLoadoutPicker = ({
                     <span>{group.label}</span>
                     <span>{String(group.loadouts.length)}</span>
                   </button>
-                  {closed ? null : (
+                  <div
+                    className={`deck-loadout-folder-body ${
+                      closed ? "is-closed" : "is-open"
+                    }`}
+                    aria-hidden={closed ? true : undefined}
+                  >
                     <div className="deck-loadout-options">
                       {group.loadouts.map((loadout) => (
                         <button
@@ -208,7 +225,7 @@ export const DeckLoadoutPicker = ({
                               : ""
                           } ${loadout.favorite ? "is-favorite" : ""}`}
                           type="button"
-                          disabled={disabled}
+                          disabled={disabled || closed}
                           onClick={() => {
                             onChange(loadout.id);
                             setOpen(false);
@@ -234,7 +251,7 @@ export const DeckLoadoutPicker = ({
                         </button>
                       ))}
                     </div>
-                  )}
+                  </div>
                 </section>
               );
             })}

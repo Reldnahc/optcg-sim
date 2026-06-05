@@ -76,8 +76,10 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(html, />Close</u);
     assert.match(html, /deck-loadout-picker/u);
     assert.match(html, /Search deck loadouts/u);
+    assert.match(html, /Favorites/u);
     assert.match(html, /Ranked/u);
     assert.match(html, /Favorite/u);
+    assert.equal(html.match(/Enel Yellow/gu)?.length ?? 0, 3);
     assert.match(html, /OP05-098 \/ Ranked/u);
     assert.match(
       html,
@@ -137,7 +139,19 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
+      /\.deck-loadout-folder-body\s*\{[^}]*grid-template-rows:\s*0fr;[^}]*transition:\s*grid-template-rows 130ms ease,\s*opacity 90ms ease;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-folder-body\.is-open\s*\{[^}]*grid-template-rows:\s*1fr;/u,
+    );
+    assert.match(
+      styles,
       /\.deck-loadout-folder-list\s*\{[^}]*overflow:\s*auto;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-options\s*\{[^}]*padding-left:\s*12px;/u,
     );
     assert.match(styles, /\.deck-loadout-search\s*\{[^}]*resize:\s*none;/u);
     assert.match(
