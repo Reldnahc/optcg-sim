@@ -139,20 +139,38 @@
   gap: 8px;
 }
 
+.lobby-deck-modal {
+  width: min(620px, calc(100vw - 32px));
+  height: min(720px, calc(100vh - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+}
+
 .lobby-deck-panel {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 10px;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.lobby-deck-modal .deck-hash-form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .deck-hash-field {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 4px;
+  min-height: 0;
   font-size: 13px;
 }
 
-.deck-hash-field textarea,
-.deck-hash-field input,
-.deck-hash-field select {
+.deck-hash-field textarea {
   min-height: 78px;
   max-height: 150px;
   border: 1px solid rgba(255, 255, 255, 0.36);
@@ -164,15 +182,177 @@
   word-break: break-all;
 }
 
-.deck-hash-field input,
-.deck-hash-field select {
+.deck-hash-field input {
   min-height: 34px;
   max-height: none;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.26);
+  padding: 8px;
+  resize: none;
 }
 
-.deck-hash-field option.is-favorite-loadout {
+.deck-loadout-picker {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+
+.deck-loadout-selected,
+.deck-loadout-option {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 5px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.deck-loadout-selected {
+  min-height: 92px;
+}
+
+.deck-loadout-selected:hover:not(:disabled),
+.deck-loadout-option:hover:not(:disabled),
+.deck-loadout-option.is-selected {
+  border-color: rgba(89, 255, 143, 0.82);
+  background: rgba(39, 95, 62, 0.36);
+}
+
+.deck-loadout-selected:disabled,
+.deck-loadout-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.deck-loadout-leader-crop {
+  display: grid;
+  width: 74px;
+  height: 74px;
+  place-items: center;
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.74);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 44%), #585351;
+  background-position: center 18%;
+  background-size: 190%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+  text-align: center;
+}
+
+.deck-loadout-selected-copy,
+.deck-loadout-option-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.deck-loadout-selected-label,
+.deck-loadout-option-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-loadout-selected-meta,
+.deck-loadout-option-meta {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 12px;
+}
+
+.deck-loadout-favorite {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 216, 77, 0.8);
+  border-radius: 3px;
   color: #ffd84d;
-  background: #3f3720;
+  background: rgba(63, 55, 32, 0.86);
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.deck-loadout-menu {
+  display: grid;
+  min-height: 0;
+  gap: 8px;
+}
+
+.deck-loadout-search {
+  box-sizing: border-box;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 8px;
+  resize: none;
+}
+
+.deck-loadout-folder-list {
+  display: grid;
+  min-height: 0;
+  gap: 8px;
+  overflow: auto;
+}
+
+.deck-loadout-folder {
+  display: grid;
+  gap: 5px;
+}
+
+.deck-loadout-folder-header {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 30px;
+  border: 0;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.deck-loadout-folder-header:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.deck-loadout-options {
+  display: grid;
+  gap: 5px;
+}
+
+.deck-loadout-option {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
+.deck-loadout-option .deck-loadout-leader-crop {
+  width: 56px;
+  height: 56px;
+}
+
+.deck-loadout-option.is-favorite {
+  border-color: rgba(255, 216, 77, 0.45);
 }
 
 .deck-hash-form button {

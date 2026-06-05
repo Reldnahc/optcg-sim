@@ -7,6 +7,9 @@ export interface AccountLoadout {
   readonly folderId: string | null;
   readonly folderName: string | null;
   readonly favorite: boolean;
+  readonly leaderCardId: string | null;
+  readonly leaderVariantIndex: number | null;
+  readonly leaderImageUrl: string | null;
   readonly updatedAt: string;
 }
 
@@ -43,9 +46,24 @@ const normalizeLibraryDeck = (
     folderId: value.folder_id,
     folderName: folder?.name ?? null,
     favorite: value.favorite,
+    leaderCardId: value.leader_card_number,
+    leaderVariantIndex: value.leader_variant_index,
+    leaderImageUrl:
+      value.leader_card_number === null
+        ? null
+        : poneglyphCardStockImageUrl(
+            value.leader_card_number,
+            value.leader_variant_index,
+          ),
     updatedAt: value.updated_at,
   };
 };
+
+const poneglyphCardStockImageUrl = (
+  cardId: string,
+  variantIndex: number | null,
+): string =>
+  `https://cdn.poneglyph.one/images/${encodeURIComponent(cardId)}/en/stock/${String(variantIndex ?? 0)}/full.png`;
 
 const playableDeckCollections = (
   decks: readonly DeckCollection[],

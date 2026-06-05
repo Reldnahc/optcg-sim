@@ -156,6 +156,10 @@ describe("Poneglyph account client", () => {
         folderId: "folder-1",
         folderName: "Ranked",
         favorite: true,
+        leaderCardId: "OP05-098",
+        leaderVariantIndex: null,
+        leaderImageUrl:
+          "https://cdn.poneglyph.one/images/OP05-098/en/stock/0/full.png",
         updatedAt: "2026-06-02T00:00:00.000Z",
       },
       {
@@ -164,6 +168,10 @@ describe("Poneglyph account client", () => {
         folderId: null,
         folderName: null,
         favorite: false,
+        leaderCardId: "OP05-060",
+        leaderVariantIndex: null,
+        leaderImageUrl:
+          "https://cdn.poneglyph.one/images/OP05-060/en/stock/0/full.png",
         updatedAt: "2026-06-03T00:00:00.000Z",
       },
     ]);

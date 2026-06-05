@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
@@ -39,6 +40,10 @@ const loadouts: readonly AccountLoadout[] = [
     folderId: "folder-1",
     folderName: "Ranked",
     favorite: true,
+    leaderCardId: "OP05-098",
+    leaderVariantIndex: 2,
+    leaderImageUrl:
+      "https://cdn.poneglyph.one/images/OP05-098/en/stock/2/full.png",
     updatedAt: "2026-06-02T00:00:00.000Z",
   },
   {
@@ -47,6 +52,10 @@ const loadouts: readonly AccountLoadout[] = [
     folderId: null,
     folderName: null,
     favorite: false,
+    leaderCardId: "OP05-060",
+    leaderVariantIndex: null,
+    leaderImageUrl:
+      "https://cdn.poneglyph.one/images/OP05-060/en/stock/0/full.png",
     updatedAt: "2026-06-01T00:00:00.000Z",
   },
 ];
@@ -62,18 +71,25 @@ describe("lobby deck panel", () => {
       }),
     );
 
-    assert.match(html, /Account loadout/u);
+    assert.match(html, /Deck Loadout/u);
     assert.match(html, /modal-frame lobby-deck-modal/u);
     assert.doesNotMatch(html, />Close</u);
-    assert.match(html, /<optgroup label="Ranked">/u);
+    assert.match(html, /deck-loadout-picker/u);
+    assert.match(html, /Search deck loadouts/u);
+    assert.match(html, /Ranked/u);
+    assert.match(html, /Favorite/u);
+    assert.match(html, /OP05-098 \/ Ranked/u);
     assert.match(
       html,
-      /<option class="is-favorite-loadout" value="loadout-1"[^>]*>Enel Yellow<\/option>/u,
+      /background-image:url\(&quot;https:\/\/cdn\.poneglyph\.one\/images\/OP05-098\/en\/stock\/2\/full\.png&quot;\)/u,
     );
     assert.match(html, /Enel Yellow/u);
-    assert.match(html, /<optgroup label="Unfiled">/u);
+    assert.match(html, /Unfiled/u);
     assert.match(html, /Luffy Life/u);
     assert.match(html, /Submit loadout/u);
+    assert.doesNotMatch(html, /Account loadout/u);
+    assert.doesNotMatch(html, /<select/u);
+    assert.doesNotMatch(html, /<option/u);
     assert.doesNotMatch(html, /Deck hash/u);
     assert.doesNotMatch(html, /DON deck size/u);
     assert.doesNotMatch(html, /textarea/u);
@@ -93,5 +109,23 @@ describe("lobby deck panel", () => {
     assert.match(html, /Sign in to Poneglyph/u);
     assert.doesNotMatch(html, /Deck hash/u);
     assert.doesNotMatch(html, /textarea/u);
+  });
+
+  test("custom deck loadout picker scrolls internally inside a taller modal", async () => {
+    const styles = await readFile(
+      new URL("styles/controls.css", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.lobby-deck-modal\s*\{[^}]*height:\s*min\(720px,\s*calc\(100vh - 32px\)\);/u,
+    );
+    assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
+    assert.match(
+      styles,
+      /\.deck-loadout-folder-list\s*\{[^}]*overflow:\s*auto;/u,
+    );
+    assert.match(styles, /\.deck-loadout-search\s*\{[^}]*resize:\s*none;/u);
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { AccountLoadout } from "../account-client.js";
 import type { LobbyClientState } from "../controller.js";
+import { DeckLoadoutPicker } from "./DeckLoadoutPicker.js";
 import { ModalFrame } from "./ModalFrame.js";
 import { lobbyDeckStatuses } from "./useMatchClient-support.js";
 
@@ -13,44 +14,6 @@ export interface LobbyDeckPanelProps {
   loadoutsError?: string | undefined;
   onSubmitLoadout: (loadoutId: string) => Promise<void>;
 }
-
-interface LoadoutGroup {
-  readonly key: string;
-  readonly label: string;
-  readonly loadouts: readonly AccountLoadout[];
-}
-
-const unfiledLoadoutGroupKey = "__unfiled__";
-const unfiledLoadoutGroupLabel = "Unfiled";
-
-const groupLoadoutsByFolder = (
-  loadouts: readonly AccountLoadout[],
-): readonly LoadoutGroup[] => {
-  const groups: LoadoutGroup[] = [];
-  const groupIndexes = new Map<string, number>();
-  for (const loadout of loadouts) {
-    const key = loadout.folderId ?? unfiledLoadoutGroupKey;
-    const index = groupIndexes.get(key);
-    if (index === undefined) {
-      groupIndexes.set(key, groups.length);
-      groups.push({
-        key,
-        label: loadout.folderName ?? unfiledLoadoutGroupLabel,
-        loadouts: [loadout],
-      });
-      continue;
-    }
-    const group = groups[index];
-    if (group === undefined) {
-      continue;
-    }
-    groups[index] = {
-      ...group,
-      loadouts: [...group.loadouts, loadout],
-    };
-  }
-  return groups;
-};
 
 export const LobbyDeckPanel = ({
   disabled = false,
@@ -64,7 +27,6 @@ export const LobbyDeckPanel = ({
     loadouts[0]?.id ?? "",
   );
   const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
-  const loadoutGroups = groupLoadoutsByFolder(loadouts);
   const selectedLoadoutExists = loadouts.some(
     (loadout) => loadout.id === selectedLoadoutId,
   );
@@ -89,30 +51,15 @@ export const LobbyDeckPanel = ({
             void onSubmitLoadout(selectedLoadoutId);
           }}
         >
-          <label className="deck-hash-field">
-            <span>Account loadout</span>
-            <select
-              value={selectedLoadoutId}
+          <div className="deck-hash-field">
+            <span>Deck Loadout</span>
+            <DeckLoadoutPicker
+              selectedLoadoutId={selectedLoadoutId}
               disabled={disabled || loadoutsStatus !== "ready"}
-              onChange={(event) => {
-                setSelectedLoadoutId(event.target.value);
-              }}
-            >
-              {loadoutGroups.map((group) => (
-                <optgroup key={group.key} label={group.label}>
-                  {group.loadouts.map((loadout) => (
-                    <option
-                      key={loadout.id}
-                      className={loadout.favorite ? "is-favorite-loadout" : ""}
-                      value={loadout.id}
-                    >
-                      {loadout.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
+              loadouts={loadouts}
+              onChange={setSelectedLoadoutId}
+            />
+          </div>
           {loadoutsStatus === "loading" ? <p>Loading loadouts...</p> : null}
           {loadoutsStatus === "error" ? (
             <p className="error-text">
