@@ -145,4 +145,87 @@ describe("opponent attack effect line parser", () => {
       ]),
     );
   });
+
+  it("parses opponent-attack rest-stage plus filtered hand-trash cost into battle power primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Your Opponent's Attack] You may rest this Stage and trash 1 Event or Stage card from your hand: Up to 1 of your Leader or Character cards gains +2000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onOpponentAttack" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "sequence",
+                  optional: true,
+                  costs: [
+                    { type: "restSelf" },
+                    {
+                      type: "trashFromHand",
+                      count: 1,
+                      chooser: "self",
+                      filter: {
+                        anyOf: [
+                          { categories: ["event"] },
+                          { categories: ["stage"] },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "self",
+                    zones: ["leaderArea", "characterArea"],
+                    min: 0,
+                    max: 1,
+                    allowFewerIfUnavailable: true,
+                    visibility: "public",
+                    filter: {
+                      categories: ["leader", "character"],
+                    },
+                  },
+                },
+                value: 2000,
+                duration: { type: "thisBattle" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onOpponentAttack",
+        "composition:optionalCostedEffect",
+        "composition:costSequence",
+        "cost:restSelf",
+        "cost:trashFromHand",
+        "filter:anyOf",
+        "filter:category:event",
+        "filter:category:stage",
+        "instruction:modifyPower",
+        "target:yourLeaderOrCharacters",
+        "duration:thisBattle",
+      ]),
+    );
+  });
 });

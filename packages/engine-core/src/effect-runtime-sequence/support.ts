@@ -423,7 +423,8 @@ const isSupportedPayCostSegment = (
       cost.type === "trashFromHand" ||
       cost.type === "moveCards") &&
     (cost.chooser === undefined || cost.chooser === "self") &&
-    (cost.type !== "trashFromHand" || cost.filter === undefined) &&
+    (cost.type !== "trashFromHand" ||
+      isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "moveCards" || isSupportedMoveCardsCostRoute(cost)) &&
     Number.isInteger(cost.count) &&
     cost.count > 0

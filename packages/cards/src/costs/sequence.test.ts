@@ -103,4 +103,40 @@ describe("optional cost sequence parser", () => {
       rest: "",
     });
   });
+
+  it("parses rest-self and filtered hand-trash as one optional cost sequence", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "rest this Stage and trash 1 Event or Stage card from your hand",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "restSelf" },
+          {
+            type: "trashFromHand",
+            count: 1,
+            chooser: "self",
+            filter: {
+              anyOf: [{ categories: ["event"] }, { categories: ["stage"] }],
+            },
+          },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:restSelf",
+        "target:thisCard",
+        "cost:trashFromHand",
+        "count:positiveInteger",
+        "chooser:self",
+        "filter:anyOf",
+        "filter:category:event",
+        "filter:category:stage",
+      ],
+      rest: "",
+    });
+  });
 });

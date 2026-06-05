@@ -10,4 +10,12 @@ describe("rest self cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses rest this Stage as the same reusable rest-self cost primitive", () => {
+    expect(parseRestSelfCost({ text: "rest this Stage" })).toEqual({
+      cost: { type: "restSelf", optional: true },
+      evidence: ["cost:restSelf", "target:thisCard"],
+      rest: "",
+    });
+  });
 });
