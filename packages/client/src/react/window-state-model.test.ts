@@ -3,6 +3,7 @@ import { describe, test } from "vitest";
 
 import {
   floatingWindowStateAfterDockedWindowReorder,
+  floatingWindowStateAfterFloatingGroupOpen,
   floatingWindowStateAfterActivation,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
@@ -140,5 +141,42 @@ describe("floating window state model", () => {
 
     assert.deepEqual(closed.floatingWindowZOrder, ["action-log"]);
     assert.deepEqual(docked.floatingWindowZOrder, ["action-log"]);
+  });
+
+  test("opening a floating group clears stale member docking and persists the group host", () => {
+    const current: FloatingWindowRectState = {
+      scope: "match-1",
+      rects: {
+        "action-log": { x: 760, y: 120, width: 280, height: 340 },
+        "info-window": { x: 440, y: 180, width: 320, height: 340 },
+      },
+      openWindowIds: new Set(["card-preview", "action-log", "settings"]),
+      dockedWindowIds: new Set(["action-log", "settings"]),
+      floatingWindowZOrder: ["card-preview"],
+    };
+
+    const next = floatingWindowStateAfterFloatingGroupOpen({
+      current,
+      scope: "match-1",
+      windowKey: "info-window",
+      rect: { x: 500, y: 140, width: 360, height: 380 },
+      replacedWindowKeys: ["card-preview", "action-log"],
+    });
+
+    assert.deepEqual(
+      [...next.openWindowIds],
+      ["card-preview", "action-log", "settings", "info-window"],
+    );
+    assert.deepEqual([...next.dockedWindowIds], ["settings"]);
+    assert.deepEqual(next.rects["info-window"], {
+      x: 500,
+      y: 140,
+      width: 360,
+      height: 380,
+    });
+    assert.deepEqual(next.floatingWindowZOrder, [
+      "card-preview",
+      "info-window",
+    ]);
   });
 });

@@ -7,6 +7,7 @@ import {
   emptyFloatingWindowRectState,
   floatingWindowStateAfterActivation,
   floatingWindowStateAfterDockedWindowReorder,
+  floatingWindowStateAfterFloatingGroupOpen,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
   type FloatingWindowRectState,
@@ -23,6 +24,11 @@ export interface FloatingWindowStateController {
   resetFloatingWindowState: () => void;
   activateFloatingWindow: (key: string) => void;
   updateFloatingWindowRect: (key: string, rect: WindowRect) => void;
+  openFloatingWindowGroup: (input: {
+    windowKey: string;
+    rect: WindowRect;
+    replacedWindowKeys: readonly string[];
+  }) => void;
   updateFloatingWindowOpen: (key: string, open: boolean) => void;
   updateCollectionWindowOpen: (key: string, open: boolean) => void;
   dockFloatingWindow: (key: string, rect: WindowRect) => void;
@@ -172,6 +178,36 @@ export const useFloatingWindowState = ({
           windowKey: key,
           open,
         });
+        revealWindowStateStore?.saveOpenWindowIds(next.openWindowIds);
+        revealWindowStateStore?.saveDockedWindowIds(next.dockedWindowIds);
+        return next;
+      });
+    },
+    [matchScope, revealWindowStateStore],
+  );
+
+  const openFloatingWindowGroup = useCallback(
+    ({
+      windowKey,
+      rect,
+      replacedWindowKeys,
+    }: {
+      windowKey: string;
+      rect: WindowRect;
+      replacedWindowKeys: readonly string[];
+    }): void => {
+      if (matchScope === undefined) {
+        return;
+      }
+      setFloatingWindowRects((current) => {
+        const next = floatingWindowStateAfterFloatingGroupOpen({
+          current,
+          scope: matchScope,
+          windowKey,
+          rect,
+          replacedWindowKeys,
+        });
+        revealWindowStateStore?.saveWindowRects(next.rects);
         revealWindowStateStore?.saveOpenWindowIds(next.openWindowIds);
         revealWindowStateStore?.saveDockedWindowIds(next.dockedWindowIds);
         return next;
@@ -399,6 +435,7 @@ export const useFloatingWindowState = ({
     resetFloatingWindowState,
     activateFloatingWindow,
     updateFloatingWindowRect,
+    openFloatingWindowGroup,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
     dockFloatingWindow,

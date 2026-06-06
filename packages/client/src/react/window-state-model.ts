@@ -136,6 +136,44 @@ export const floatingWindowStateAfterCollectionOpenChange = ({
   };
 };
 
+export const floatingWindowStateAfterFloatingGroupOpen = ({
+  current,
+  scope,
+  windowKey,
+  rect,
+  replacedWindowKeys,
+}: {
+  current: FloatingWindowRectState;
+  scope: string;
+  windowKey: string;
+  rect: WindowRect;
+  replacedWindowKeys: readonly string[];
+}): FloatingWindowRectState => {
+  const base = scopedFloatingWindowState({ current, scope });
+  const openWindowIds = new Set(base.openWindowIds);
+  openWindowIds.add(windowKey);
+  const dockedWindowIds = new Set(base.dockedWindowIds);
+  dockedWindowIds.delete(windowKey);
+  for (const replacedWindowKey of replacedWindowKeys) {
+    dockedWindowIds.delete(replacedWindowKey);
+  }
+  return {
+    scope,
+    rects: { ...base.rects, [windowKey]: rect },
+    openWindowIds,
+    dockedWindowIds,
+    floatingWindowZOrder: [
+      ...base.floatingWindowZOrder.filter(
+        (key) =>
+          key !== windowKey &&
+          openWindowIds.has(key) &&
+          !dockedWindowIds.has(key),
+      ),
+      windowKey,
+    ],
+  };
+};
+
 export const floatingWindowStateAfterDockedWindowReorder = ({
   current,
   scope,

@@ -50,6 +50,7 @@ export const useInfoWindowOrchestration = ({
   configuredGroupedInfoWindowIds,
   dockFloatingWindows,
   completeControlDockDrop,
+  openFloatingWindowGroup,
   setActionLogMinimized,
   setControlDockActiveTabId,
   setGroupedInfoWindowIds,
@@ -60,7 +61,6 @@ export const useInfoWindowOrchestration = ({
   showPreviewWindow,
   showSettingsWindow,
   updateControlDockTarget,
-  updateFloatingWindowRect,
 }: {
   activeDockedWindowIds: ReadonlySet<string>;
   activeFloatingWindowRects: Readonly<Record<string, WindowRect>>;
@@ -71,6 +71,11 @@ export const useInfoWindowOrchestration = ({
     replacedWindowKeys?: readonly string[] | undefined;
   }) => void;
   completeControlDockDrop: (rect: WindowRect) => WindowRect | undefined;
+  openFloatingWindowGroup: (input: {
+    windowKey: string;
+    rect: WindowRect;
+    replacedWindowKeys: readonly string[];
+  }) => void;
   setActionLogMinimized: (minimized: boolean) => void;
   setControlDockActiveTabId: (windowKey: string | undefined) => void;
   setGroupedInfoWindowIds: (windowIds: readonly InfoWindowTabId[]) => void;
@@ -81,7 +86,6 @@ export const useInfoWindowOrchestration = ({
   showPreviewWindow: boolean;
   showSettingsWindow: boolean;
   updateControlDockTarget: (rect: WindowRect) => void;
-  updateFloatingWindowRect: (windowKey: string, rect: WindowRect) => void;
 }): InfoWindowOrchestration => {
   const [combineDropTarget, setCombineDropTarget] = useState<InfoWindowTabId>();
   const visibleInfoWindowIds = visibleInfoWindowIdsFromState({
@@ -162,19 +166,22 @@ export const useInfoWindowOrchestration = ({
       groupedInfoWindowRect !== undefined
         ? groupedInfoWindowRect
         : infoWindowRect(targetWindowId, activeFloatingWindowRects);
-    updateFloatingWindowRect(infoWindowKey, targetRect);
+    const nextGroupedInfoWindowIds = groupedInfoWindowIdsAfterDrop({
+      visibleInfoWindowIds,
+      currentGroupedInfoWindowIds: groupedInfoWindowIds,
+      draggedWindowId,
+      targetWindowId,
+    });
+    openFloatingWindowGroup({
+      windowKey: infoWindowKey,
+      rect: targetRect,
+      replacedWindowKeys: nextGroupedInfoWindowIds.map(infoWindowKeyForTab),
+    });
     setInfoWindowActiveTab(draggedWindowId);
     setInfoWindowMinimized(false);
     setPreviewMinimized(false);
     setActionLogMinimized(false);
-    setGroupedInfoWindowIds(
-      groupedInfoWindowIdsAfterDrop({
-        visibleInfoWindowIds,
-        currentGroupedInfoWindowIds: groupedInfoWindowIds,
-        draggedWindowId,
-        targetWindowId,
-      }),
-    );
+    setGroupedInfoWindowIds(nextGroupedInfoWindowIds);
   };
   const dockInfoWindowTabs = (
     draggedWindowIds: readonly InfoWindowTabId[],

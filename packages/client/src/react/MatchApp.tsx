@@ -121,6 +121,7 @@ export const MatchApp = ({
     resetFloatingWindowState,
     activateFloatingWindow,
     updateFloatingWindowRect,
+    openFloatingWindowGroup,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
     dockFloatingWindows,
@@ -268,6 +269,7 @@ export const MatchApp = ({
     completeControlDockDrop,
     configuredGroupedInfoWindowIds,
     dockFloatingWindows,
+    openFloatingWindowGroup,
     setActionLogMinimized,
     setControlDockActiveTabId,
     setGroupedInfoWindowIds,
@@ -278,7 +280,6 @@ export const MatchApp = ({
     showPreviewWindow,
     showSettingsWindow,
     updateControlDockTarget,
-    updateFloatingWindowRect,
   });
   const {
     controlDockTabs,
