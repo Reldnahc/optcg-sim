@@ -8,7 +8,6 @@ export { composeWrapperAndBody } from "./composition.js";
 export { parseExpression } from "./expression-parser.js";
 export { parseEffectLine, parseEffectLinesDetailed } from "./orchestrator.js";
 export { parseOncePerTurnMarker } from "./markers/index.js";
-export { evaluatePrimitiveSupport } from "./support-evaluator.js";
 export {
   createCardCacheKey,
   createCardRepository,
@@ -68,7 +67,6 @@ export type {
   PrimitiveMetadata,
   PrimitiveNode,
   PrimitiveParseResult,
-  PrimitiveSupportResult,
   ParsedEffectBlock,
   ParsedEffectLine,
   ParsedRuntimeEffectLine,

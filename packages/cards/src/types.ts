@@ -400,8 +400,3 @@ export interface ParseFailureDiagnostic {
 export type ParseCardEffectLineResult =
   | { readonly ok: true; readonly value: ParsedEffectLine }
   | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic };
-
-export interface PrimitiveSupportResult {
-  readonly supported: boolean;
-  readonly missingEvidence: readonly PrimitiveEvidence[];
-}
