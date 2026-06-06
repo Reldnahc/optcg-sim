@@ -189,6 +189,20 @@
   --card-pending-glow: 0 0 0 3px rgba(68, 216, 255, 0.75);
 }
 
+.card-tile.is-pending-choice::after {
+  position: absolute;
+  inset: -3px;
+  z-index: 6;
+  border: 2px solid rgba(68, 216, 255, 0.98);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(6, 15, 19, 0.95),
+    0 0 16px rgba(68, 216, 255, 0.9),
+    inset 0 0 10px rgba(68, 216, 255, 0.35);
+  content: "";
+  pointer-events: none;
+}
+
 .card-tile.is-pending-choice.is-selected .card-face {
   outline: 3px solid #ffdc62;
   --card-pending-glow: 0 0 0 5px rgba(68, 216, 255, 0.55);

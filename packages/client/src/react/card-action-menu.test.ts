@@ -660,6 +660,18 @@ describe("card action menu", () => {
     );
   });
 
+  test("pending choice cards use the same outer emphasis treatment as active cards", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card.css"),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.card-tile\.is-pending-choice::after\s*\{[^}]*inset:\s*-3px;[^}]*border:\s*2px solid rgba\(68,\s*216,\s*255,\s*0\.98\);[^}]*box-shadow:[^}]*0 0 0 1px rgba\(6,\s*15,\s*19,\s*0\.95\),[^}]*0 0 16px rgba\(68,\s*216,\s*255,\s*0\.9\),[^}]*inset 0 0 10px rgba\(68,\s*216,\s*255,\s*0\.35\);/u,
+    );
+  });
+
   test("active card state is rendered independently from selection", () => {
     const markup = renderToStaticMarkup(
       createElement(CardTile, {
