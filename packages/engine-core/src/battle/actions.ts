@@ -24,17 +24,10 @@ import {
   toCardRef,
 } from "../actions/state.js";
 import {
-  withAllAttackTimingCombatMetadataHidden,
-  withAllSupportedAttackTimingCombatMetadataHidden,
-} from "./attack-timing.js";
-import {
   finalizeBattleAfterReplacementResolution,
   resolveSupportedVanillaBattle,
 } from "./resolution.js";
-import {
-  expireBattleDurationStateForCleanup,
-  withSupportedBattleRuntimeMetadataHidden,
-} from "./support.js";
+import { expireBattleDurationStateForCleanup } from "./support.js";
 import {
   applyBlockStepDecisionResponse,
   createBlockStepDeclineDecision,
@@ -107,11 +100,8 @@ export const getDeclareAttackLegalActions = (
   ) {
     return [];
   }
-  const legalActionState = withSupportedBattleRuntimeMetadataHidden(
-    withAllSupportedAttackTimingCombatMetadataHidden(state),
-  );
   try {
-    const view = computeView(legalActionState);
+    const view = computeView(state);
     return collectDeclareAttackLegalActions(state, playerId, view);
   } catch {
     // Fail closed when computed combat metadata is unsupported or invalid.
@@ -164,13 +154,10 @@ export const applyDeclareAttack = (
     );
   }
 
-  const combatMetadataState = withSupportedBattleRuntimeMetadataHidden(
-    withAllAttackTimingCombatMetadataHidden(state),
-  );
   let legalTargets: readonly CardInstance["instanceId"][];
   let attackerHasDoubleAttack = false;
   try {
-    const computed = computeView(combatMetadataState);
+    const computed = computeView(state);
     attackerHasDoubleAttack =
       computed.cards[attacker.card.instanceId]?.keywords.includes(
         "doubleAttack",
@@ -276,9 +263,7 @@ export const applyDeclareAttack = (
   }
 
   const blockDecision = createBlockStepDeclineDecision(
-    withSupportedBattleRuntimeMetadataHidden(
-      withAllAttackTimingCombatMetadataHidden(attackTimingResult.state),
-    ),
+    attackTimingResult.state,
   );
   if (blockDecision !== null) {
     const blockEvents = [...attackTimingResult.events];
@@ -472,11 +457,6 @@ const withOriginalManifestResult = (
       );
 };
 
-const hideCurrentAttackTimingCombatMetadata = (state: GameState): GameState =>
-  withSupportedBattleRuntimeMetadataHidden(
-    withAllAttackTimingCombatMetadataHidden(state),
-  );
-
 const resolveSupportedBattleWithAttackTimingMetadata = (
   state: GameState,
 ): EngineResult =>
@@ -494,10 +474,9 @@ export const getBattleDecisionLegalActions = (
   state: GameState,
   playerId: PlayerId,
 ): LegalAction[] => {
-  const actionState = hideCurrentAttackTimingCombatMetadata(state);
   return [
-    ...getCounterStepDecisionLegalActions(actionState, playerId),
-    ...getBlockStepDecisionLegalActions(actionState, playerId),
+    ...getCounterStepDecisionLegalActions(state, playerId),
+    ...getBlockStepDecisionLegalActions(state, playerId),
   ];
 };
 
@@ -505,7 +484,6 @@ export const applyBattleDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
 ): EngineResult | null => {
-  const actionState = hideCurrentAttackTimingCombatMetadata(state);
   const resolveWithOriginalManifest = (
     resolverState: GameState,
   ): EngineResult => {
@@ -539,7 +517,7 @@ export const applyBattleDecisionResponse = (
         );
   };
   const counterResponse = applyCounterStepDecisionResponse(
-    actionState,
+    state,
     action,
     resolveWithOriginalManifest,
   );
@@ -547,7 +525,7 @@ export const applyBattleDecisionResponse = (
     return withOriginalManifestResult(counterResponse, state);
   }
   const blockResponse = applyBlockStepDecisionResponse(
-    actionState,
+    state,
     action,
     resolveWithOriginalManifest,
   );
@@ -613,11 +591,7 @@ export const continueAttackTimingBattleIfReady = (
     return cleanupBattleAfterAttackTiming(state, toEngineResult(state, []));
   }
 
-  const blockDecision = createBlockStepDeclineDecision(
-    withSupportedBattleRuntimeMetadataHidden(
-      withAllAttackTimingCombatMetadataHidden(state),
-    ),
-  );
+  const blockDecision = createBlockStepDeclineDecision(state);
   if (blockDecision !== null) {
     const events: EngineEvent[] = [];
     appendEvent(

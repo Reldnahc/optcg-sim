@@ -18,7 +18,7 @@ import {
   toEngineResult,
 } from "../action-results.js";
 import { reifyCardRef, toCardRef } from "../actions/state.js";
-import { hasUnsupportedBattleEffectMetadata, sameCardRef } from "./support.js";
+import { sameCardRef } from "./support.js";
 import { hasUnsupportedCounterWindow } from "./counter-actions.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
@@ -183,18 +183,12 @@ const hasUnsupportedBlockDecisionState = (
   if (attacker === null || target === null) {
     return true;
   }
-  if (hasUnsupportedBattleEffectMetadata(state)) {
-    return true;
-  }
   const attackerView = view.cards[attacker.card.instanceId];
   const targetView = view.cards[target.card.instanceId];
   if (
     attackerView?.currentPower === undefined ||
     targetView?.currentPower === undefined
   ) {
-    return true;
-  }
-  if (Object.keys(view.restrictions).length > 0) {
     return true;
   }
   if (

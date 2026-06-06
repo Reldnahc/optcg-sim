@@ -24,8 +24,6 @@ import {
   toStateSeq,
 } from "../action-results.js";
 import { reifyCardRef } from "../actions/state.js";
-import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
-import { getUnsupportedCombatViewMetadataReason } from "./combat-view-support.js";
 import {
   counterPayCostDecisionId,
   counterTargetDecisionId,
@@ -40,12 +38,7 @@ import {
   getSupportedCounterEventPowerTargets,
   type SupportedCounterEventPower,
 } from "./counter-event-support.js";
-import {
-  getUnsupportedBattleEffectMetadataReason,
-  hasUnsupportedBattleEffectMetadata,
-  isSupportedBattleResolutionEnvelope,
-  sameCardRef,
-} from "./support.js";
+import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
 import { computeView } from "../view/compute-view.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
@@ -73,12 +66,10 @@ export const getLegalCharacterCounterActions = (
   ) {
     return [];
   }
-  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
   const target = reifyCardRef(state, battle.currentTarget);
   if (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
-    hasUnsupportedBattleEffectMetadata(combatMetadataState) ||
     !isSupportedBattleResolutionEnvelope(battle) ||
     target === null ||
     target.playerId !== defenderId ||
@@ -102,11 +93,8 @@ export const getLegalCharacterCounterActions = (
   }
   let view: ReturnType<typeof computeView>;
   try {
-    view = computeView(combatMetadataState);
+    view = computeView(state);
   } catch {
-    return [];
-  }
-  if (Object.keys(view.restrictions).length > 0) {
     return [];
   }
   const attackerView = view.cards[attacker.card.instanceId];
@@ -232,16 +220,10 @@ export const applyUseCounter = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
-  const unsupportedEffectMetadataReason =
-    getUnsupportedBattleEffectMetadataReason(combatMetadataState);
-  if (unsupportedEffectMetadataReason !== undefined) {
-    return illegalAction(state, unsupportedEffectMetadataReason);
-  }
-  const unsupportedCombatViewReason =
-    getUnsupportedCombatViewMetadataReason(combatMetadataState);
-  if (unsupportedCombatViewReason !== undefined) {
-    return illegalAction(state, unsupportedCombatViewReason);
+  try {
+    computeView(state);
+  } catch {
+    return illegalAction(state, "Battle requires unsupported combat metadata.");
   }
   if (!target.isLeader && target.card.state !== "rested") {
     return illegalAction(

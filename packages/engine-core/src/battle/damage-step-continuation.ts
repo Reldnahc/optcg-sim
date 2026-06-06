@@ -1,12 +1,7 @@
 import type { GameState } from "@optcg/types";
 
 import { reifyCardRef } from "../actions/state.js";
-import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
-import {
-  getUnsupportedBattleEffectMetadataReason,
-  isSupportedBattleResolutionEnvelope,
-  sameCardRef,
-} from "./support.js";
+import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
@@ -32,14 +27,6 @@ export const getUnsupportedDamageStepContinuationReason = (
   ) {
     return "Battle requires unsupported trigger or replacement processing.";
   }
-  const baseCombatMetadataState =
-    withAllAttackTimingCombatMetadataHidden(state);
-  const combatMetadataState = baseCombatMetadataState;
-  const unsupportedEffectMetadataReason =
-    getUnsupportedBattleEffectMetadataReason(combatMetadataState);
-  if (unsupportedEffectMetadataReason !== undefined) {
-    return unsupportedEffectMetadataReason;
-  }
   const attacker = reifyCardRef(state, battle.attacker);
   const target = reifyCardRef(state, battle.currentTarget);
   if (attacker === null || target === null) {
@@ -58,12 +45,9 @@ export const getUnsupportedDamageStepContinuationReason = (
 
   let view: ReturnType<typeof computeView>;
   try {
-    view = computeView(combatMetadataState);
+    view = computeView(state);
   } catch {
     return "Battle requires unsupported combat metadata.";
-  }
-  if (Object.keys(view.restrictions).length > 0) {
-    return "Battle requires unsupported restriction handling.";
   }
 
   const attackerView = view.cards[attacker.card.instanceId];

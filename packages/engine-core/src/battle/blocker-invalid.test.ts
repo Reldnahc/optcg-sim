@@ -486,125 +486,12 @@ test("unsupported blocker activation states reject without mutation or events", 
     ];
   });
   run((context) => {
-    const p2State = must(context.openedState.players[p2], "p2");
-    const counterEvent = must(p2State.hand[0], "counter event");
-    context.openedState.cardManifest.cards[counterEvent.cardId] = resolvedCard({
-      cardId: counterEvent.cardId,
-      category: "event",
-      effectText: "[Counter] Draw 1 card.",
-    });
-  });
-  run((context) => {
-    const p2State = must(context.openedState.players[p2], "p2");
-    const counterEvent = must(p2State.hand[0], "counter event");
-    context.openedState.cardManifest.cards[counterEvent.cardId] = resolvedCard({
-      cardId: counterEvent.cardId,
-      category: "event",
-    });
-    context.openedState.cardManifest.effectDefinitions = {
-      counterEvent: effectDefinition(counterEvent.cardId, { type: "counter" }),
-    };
-  });
-  run((context) => {
     context.openedState.replacementState.push({
       processId: "replacement-process-1",
       type: "damage",
       usedReplacementIds: [],
       payload: { hidden: "contents" },
     });
-  });
-  run((context) => {
-    context.openedState.cardManifest.cards[toCardId("leader-red")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-red"),
-        category: "leader",
-        power: 5000,
-      }),
-      printedKeywords: ["unblockable"],
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.cards[context.defenderBlocker.cardId] = {
-      ...resolvedCard({
-        cardId: context.defenderBlocker.cardId,
-        category: "character",
-        power: 3000,
-        effectText: "[On Block] Draw 1 card.",
-      }),
-      printedKeywords: ["blocker"],
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      onBlock: effectDefinition(context.defenderBlocker.cardId, {
-        type: "onBlock",
-      }),
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      onKo: effectDefinition(context.defenderBlocker.cardId, {
-        type: "onKO",
-      }),
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      endOfBattle: effectDefinition(context.defenderBlocker.cardId, {
-        type: "endOfBattle",
-      }),
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      protectFromKo: effectDefinition(
-        context.defenderBlocker.cardId,
-        { type: "onPlay" },
-        {
-          type: "protectFromKO",
-          target: { type: "self" },
-          duration: { type: "thisTurn" },
-        },
-      ),
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      cannotBeBlockedBy: effectDefinition(
-        toCardId("leader-red"),
-        { type: "onPlay" },
-        {
-          type: "cannotBeBlockedBy",
-          target: { type: "self" },
-          filter: { categories: ["character"] },
-          duration: { type: "thisTurn" },
-        },
-      ),
-    };
-  });
-  run((context) => {
-    context.openedState.cardManifest.effectDefinitions = {
-      nestedProtection: effectDefinition(
-        context.defenderBlocker.cardId,
-        { type: "onPlay" },
-        {
-          type: "sequence",
-          effects: [
-            {
-              connector: "always",
-              effect: {
-                type: "custom",
-                handler: "noop",
-                operation: {
-                  type: "protection",
-                  protection: { process: "ko" },
-                },
-              } as never,
-            },
-          ],
-        },
-      ),
-    };
   });
   run((context) => {
     const battle = must(context.openedState.battle, "battle");
@@ -616,38 +503,6 @@ test("unsupported blocker activation states reject without mutation or events", 
         playerId: p2,
       },
     };
-  });
-  run((context) => {
-    context.openedState.cardManifest.cards[context.defenderBlocker.cardId] = {
-      ...resolvedCard({
-        cardId: context.defenderBlocker.cardId,
-        category: "character",
-        power: 3000,
-      }),
-      printedKeywords: ["blocker"],
-      support: {
-        cardId: context.defenderBlocker.cardId,
-        status: "unsupported",
-        tested: false,
-        rulesVersion: "r1",
-        cardDataVersion: "fixture",
-        sourceTextHash: "source-hash",
-        behaviorHash: "behavior-hash",
-      },
-    };
-  });
-  run((context) => {
-    const metadata = {
-      ...resolvedCard({
-        cardId: context.defenderBlocker.cardId,
-        category: "character",
-        power: 3000,
-      }),
-      printedKeywords: ["blocker"],
-    };
-    delete (metadata as Partial<typeof metadata>).support;
-    context.openedState.cardManifest.cards[context.defenderBlocker.cardId] =
-      metadata as never;
   });
 });
 
@@ -703,15 +558,6 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
   };
 
   run((state) => {
-    const p2State = must(state.players[p2], "p2");
-    const counterEvent = must(p2State.hand[0], "counter event");
-    state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
-      cardId: counterEvent.cardId,
-      category: "event",
-      effectText: "[Counter] Draw 1 card.",
-    });
-  });
-  run((state) => {
     state.effectQueue = [{ id: "queued-effect" } as never];
   });
   run((state) => {
@@ -724,30 +570,6 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
       usedReplacementIds: [],
       payload: { hidden: "contents" },
     });
-  });
-  run((state) => {
-    state.cardManifest.cards[toCardId("leader-red")] = resolvedCard({
-      cardId: toCardId("leader-red"),
-      category: "leader",
-      power: 5000,
-      printedKeywords: [],
-    });
-    state.cardManifest.cards[toCardId("leader-blue")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-blue"),
-        category: "leader",
-        power: 5000,
-      }),
-      support: {
-        cardId: toCardId("leader-blue"),
-        status: "unsupported",
-        tested: false,
-        rulesVersion: "r1",
-        cardDataVersion: "fixture",
-        sourceTextHash: "source-hash",
-        behaviorHash: "behavior-hash",
-      },
-    };
   });
   run((state) => {
     const p2State = must(state.players[p2], "p2");

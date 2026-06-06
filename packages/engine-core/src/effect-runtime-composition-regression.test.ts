@@ -666,15 +666,26 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
       playerId: p2,
     },
   });
-  const unsupportedError = must(
-    unsupportedOpened.errors?.[0],
-    "unsupported counter error",
-  );
-  assert.equal(unsupportedError.type, "illegalAction");
+  assert.equal(unsupportedOpened.errors, undefined);
   assert.equal(
-    unsupportedError.reason,
-    "Counter Events are unsupported in the Counter Step.",
+    getLegalActions(unsupportedOpened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === unsupportedCard.instanceId,
+    ),
+    false,
   );
+  const directCounter = applyAction(unsupportedOpened.state, {
+    type: "useCounter",
+    cardInstanceId: unsupportedCard.instanceId,
+    target: must(unsupportedOpened.state.battle, "battle").currentTarget,
+  });
+  assert.deepEqual(directCounter.errors, [
+    {
+      type: "illegalAction",
+      reason: "Counter Events are unsupported in the Counter Step.",
+    },
+  ]);
 });
 
 test("activateMain adapter matrix supports reusable body only with activate-main evidence", () => {
@@ -734,7 +745,6 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     "packages/engine-core/src/runtime/trigger-queueing/main-event.ts",
     "packages/engine-core/src/runtime/optional-activation/activate-main.ts",
     "packages/engine-core/src/effect-runtime-sequence/support.ts",
-    "packages/engine-core/src/battle/attack-timing.ts",
     "packages/engine-core/src/battle/actions.ts",
     "packages/engine-core/src/battle/support.ts",
     "packages/engine-core/src/play-card/support.ts",

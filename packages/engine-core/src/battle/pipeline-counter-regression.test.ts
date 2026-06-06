@@ -636,44 +636,4 @@ test("ENG-020: battle/counter pipeline regressions preserve expected behavior an
 
   runRushLegalityScript();
   runPlayerViewCounterPrivacyScript();
-
-  const unsupportedCounterEventState = setupAttackState();
-  const counterEvent = must(
-    must(unsupportedCounterEventState.players[p2], "p2").hand[0],
-    "counter event",
-  );
-  unsupportedCounterEventState.cardManifest.cards[counterEvent.cardId] =
-    resolvedCard({
-      cardId: counterEvent.cardId,
-      category: "event",
-      effectText: "[Counter] Draw 1 card.",
-    });
-  const unsupported = applyAction(unsupportedCounterEventState, {
-    type: "declareAttack",
-    attacker: {
-      instanceId: must(unsupportedCounterEventState.players[p1], "p1").leader
-        .instanceId,
-      cardId: must(unsupportedCounterEventState.players[p1], "p1").leader
-        .cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: must(unsupportedCounterEventState.players[p2], "p2").leader
-        .instanceId,
-      cardId: must(unsupportedCounterEventState.players[p2], "p2").leader
-        .cardId,
-      playerId: p2,
-    },
-  });
-  const unsupportedError = must(unsupported.errors?.[0], "unsupported error");
-  assert.equal(unsupportedError.type, "illegalAction");
-  assert.equal(
-    unsupportedError.reason,
-    "Counter Events are unsupported in the Counter Step.",
-  );
-  assert.equal(
-    unsupported.state.battle,
-    undefined,
-    "unsupported continuation should fail closed before battle starts",
-  );
 });

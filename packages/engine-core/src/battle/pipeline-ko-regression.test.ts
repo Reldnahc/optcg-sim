@@ -376,11 +376,7 @@ const assertEng027dUnsupportedOnKOMetadataFailsClosed = () => {
   const result = resolveSupportedVanillaBattle(state);
 
   const error = must(result.errors?.[0], "unsupported On K.O. metadata error");
-  assert.equal(error.type, "illegalAction");
-  assert.match(
-    error.reason,
-    /^Battle requires unsupported effect metadata; card=p2-a; reason=unsupported support-gate text$/u,
-  );
+  assert.equal(error.type, "effectRuntimeError");
   assert.deepEqual(result.events, []);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);

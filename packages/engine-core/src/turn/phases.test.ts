@@ -573,23 +573,6 @@ test("enterMainPhase rejects when deferredTriggers is non-empty without mutation
   assert.equal(JSON.stringify(state), before);
 });
 
-test("enterMainPhase rejects when on-board manifest card has effectText", () => {
-  const state = createActiveState();
-  seedKnownTriggerFreeBoardManifest(state);
-  state.turn.phase = "don";
-  const leader = must(state.players[p1], "p1").leader;
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    effectText: "[Start of Main Phase] draw 1",
-  };
-  const before = JSON.stringify(state);
-
-  const result = enterMainPhase(state);
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
-  assert.equal(result.events.length, 0);
-  assert.equal(JSON.stringify(state), before);
-});
-
 test("enterMainPhase accepts parenthetical explanatory notes for supported Banish-only board cards", () => {
   const state = createActiveState();
   seedKnownTriggerFreeBoardManifest(state);
@@ -640,42 +623,6 @@ test("enterMainPhase accepts OP04-014 parenthetical explanatory notes from the c
   const result = enterMainPhase(state);
   assert.equal(result.errors, undefined);
   assert.equal(result.state.turn.phase, "main");
-});
-
-test("enterMainPhase rejects supported keyword text without matching printed keyword metadata", () => {
-  const state = createActiveState();
-  seedKnownTriggerFreeBoardManifest(state);
-  state.turn.phase = "don";
-  const leader = must(state.players[p1], "p1").leader;
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    effectText:
-      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
-    printedKeywords: [],
-  };
-  const before = JSON.stringify(state);
-
-  const result = enterMainPhase(state);
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
-  assert.equal(result.events.length, 0);
-  assert.equal(JSON.stringify(state), before);
-});
-
-test("enterMainPhase rejects when on-board manifest card has triggerText", () => {
-  const state = createActiveState();
-  seedKnownTriggerFreeBoardManifest(state);
-  state.turn.phase = "don";
-  const leader = must(state.players[p1], "p1").leader;
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    triggerText: "[Trigger] something",
-  };
-  const before = JSON.stringify(state);
-
-  const result = enterMainPhase(state);
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
-  assert.equal(result.events.length, 0);
-  assert.equal(JSON.stringify(state), before);
 });
 
 test("enterMainPhase accepts reviewed implemented-dsl permanent continuous board card", () => {
@@ -779,79 +726,6 @@ test("enterMainPhase rejects stale implemented-dsl permanent continuous definiti
   assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
   assert.equal(result.events.length, 0);
   assert.equal(JSON.stringify(state), before);
-});
-
-test("enterMainPhase rejects missing or unsupported manifest metadata", () => {
-  const state = createActiveState();
-  seedKnownTriggerFreeBoardManifest(state);
-  state.turn.phase = "don";
-  const leader = must(state.players[p1], "p1").leader;
-  const leaderCardId = leader.cardId;
-  const nextCards = { ...state.cardManifest.cards };
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { [leaderCardId]: _removed, ...withoutLeader } = nextCards;
-  state.cardManifest.cards = withoutLeader;
-
-  const missing = enterMainPhase(state);
-  assert.equal(missing.errors?.[0]?.type, "effectRuntimeError");
-  assert.equal(missing.events.length, 0);
-  assert.equal(missing.state.turn.phase, "don");
-
-  seedKnownTriggerFreeBoardManifest(state);
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    support: {
-      ...must(
-        state.cardManifest.cards[leader.cardId],
-        "leader manifest support",
-      ).support,
-      status: "implemented-dsl",
-    },
-  };
-  const nonVanilla = enterMainPhase(state);
-  assert.equal(nonVanilla.errors?.[0]?.type, "effectRuntimeError");
-
-  seedKnownTriggerFreeBoardManifest(state);
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    support: {
-      ...must(
-        state.cardManifest.cards[leader.cardId],
-        "leader manifest support",
-      ).support,
-      effectDefinitionId: "effect-1",
-    },
-  };
-  const effectDefinition = enterMainPhase(state);
-  assert.equal(effectDefinition.errors?.[0]?.type, "effectRuntimeError");
-
-  seedKnownTriggerFreeBoardManifest(state);
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    support: {
-      ...must(
-        state.cardManifest.cards[leader.cardId],
-        "leader manifest support",
-      ).support,
-      customHandlerIds: ["handler-1"],
-    },
-  };
-  const customHandler = enterMainPhase(state);
-  assert.equal(customHandler.errors?.[0]?.type, "effectRuntimeError");
-
-  seedKnownTriggerFreeBoardManifest(state);
-  state.cardManifest.cards[leader.cardId] = {
-    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
-    support: {
-      ...must(
-        state.cardManifest.cards[leader.cardId],
-        "leader manifest support",
-      ).support,
-      customHandlerIds: [],
-    },
-  };
-  const emptyCustomHandlers = enterMainPhase(state);
-  assert.equal(emptyCustomHandlers.errors?.[0]?.type, "effectRuntimeError");
 });
 
 test("enterMainPhase is deterministic for accepted known trigger-free progression", () => {

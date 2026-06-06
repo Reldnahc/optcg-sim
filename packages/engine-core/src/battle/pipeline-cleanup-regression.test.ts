@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type {
-  CardId,
-  EffectDefinition,
-  EngineEvent,
-  EngineResult,
-  GameState,
-} from "@optcg/types";
+import type { EngineEvent, EngineResult, GameState } from "@optcg/types";
 
 import { applyAction } from "../actions.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
@@ -155,36 +149,6 @@ const assertRepeatedScriptStable = (
     `${name} repeated script state hashes and event ordering should be stable`,
   );
 };
-
-const effectDefinition = (
-  cardId: CardId,
-  trigger: EffectDefinition["effects"][number]["trigger"],
-): EffectDefinition => ({
-  cardId,
-  implementationStatus: "implemented-dsl",
-  effects: [
-    {
-      id: `${String(cardId)}:effect:1` as EffectDefinition["effects"][number]["id"],
-      category: "auto",
-      trigger,
-      optional: false,
-      oncePerTurn: false,
-      sourcePresencePolicy: "mustRemainInSameZone",
-      effect: {
-        type: "draw",
-        count: 1,
-        player: "self",
-      },
-    },
-  ],
-  metadata: {
-    sourceTextHash: "source-hash",
-    rulesVersion: "r1",
-    effectDefinitionsVersion: "fixture",
-    tested: true,
-    reviewer: "qa-reviewer",
-  },
-});
 
 const runEng021cBlockerCleanupScript = () => {
   const state = setupAttackState();
@@ -749,43 +713,6 @@ const runEng021dBanishLeaderDamageCleanupScript = () => {
   return [opened, damaged] as const;
 };
 
-const assertEng021dEndOfBattleTriggerMetadataFailsClosed = () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "ENG-021D eob p1");
-  const p2State = must(state.players[p2], "ENG-021D eob p2");
-  state.cardManifest.effectDefinitions = {
-    endOfBattle: effectDefinition(p2State.leader.cardId, {
-      type: "endOfBattle",
-    }),
-  };
-  const before = JSON.stringify(state);
-
-  const result = applyAction(state, {
-    type: "declareAttack",
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-  });
-
-  const error = must(result.errors?.[0], "ENG-021D end of battle error");
-  assert.equal(error.type, "illegalAction");
-  assert.match(
-    error.reason,
-    /^Battle requires unsupported effect metadata; card=leader-blue; effect=leader-blue:effect:1; trigger=endOfBattle; category=auto; reason=unsupported battle timing effect$/u,
-  );
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.equal(result.state.battle, undefined);
-};
-
 test("ENG-021D: supported battle cleanup composes across accepted mechanics", () => {
   const scripts = [
     [
@@ -807,6 +734,4 @@ test("ENG-021D: supported battle cleanup composes across accepted mechanics", ()
   for (const [name, script] of scripts) {
     assertRepeatedScriptStable(name, script);
   }
-
-  assertEng021dEndOfBattleTriggerMetadataFailsClosed();
 });

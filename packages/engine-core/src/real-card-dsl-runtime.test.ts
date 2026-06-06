@@ -20,7 +20,6 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { targetSelectionQueueState } from "./effect-runtime-queue/test-support.js";
-import { enterMainPhase } from "./turn/phases.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
@@ -683,51 +682,5 @@ test("unsupported CARD-005 real fixture families fail closed through play-card a
       reason: "unsupported-support-status",
       supportStatus: "unsupported",
     });
-  }
-});
-
-test("unsupported CARD-005 real board fixtures fail closed at start-of-main and combat action gates", async () => {
-  const plainManifest = await loadPlainRealCardManifest();
-  const boardCases = unsupportedRealCardFailClosedCases.filter((entry) => {
-    const card = plainManifest.cards[toCardId(entry.cardId)];
-
-    return card?.category === "character" || card?.category === "leader";
-  });
-
-  assert.ok(boardCases.length >= 8);
-
-  for (const entry of boardCases) {
-    const cardId = toCardId(entry.cardId);
-    const manifestCard = must(
-      plainManifest.cards[cardId],
-      `${entry.cardId} manifest card`,
-    );
-    const state = setupAttackState();
-    const p1State = must(state.players[p1], "p1");
-    const attacker = must(p1State.characters[0], "attacker");
-
-    attacker.cardId = cardId;
-    state.cardManifest.cards = {
-      ...state.cardManifest.cards,
-      [cardId]: manifestCard,
-    };
-    state.turn.phase = "don";
-    const beforeMain = JSON.stringify(state);
-
-    const main = enterMainPhase(state);
-    assert.equal(main.errors?.[0]?.type, "effectRuntimeError");
-    assert.deepEqual(main.events, []);
-    assert.equal(JSON.stringify(state), beforeMain);
-
-    state.turn.phase = "main";
-    assert.equal(
-      getLegalActions(state, p1).some(
-        (action) =>
-          action.type === "declareAttack" &&
-          action.attacker.instanceId === attacker.instanceId,
-      ),
-      false,
-      `${entry.cardId} ${entry.effectFamily} must not expose declareAttack`,
-    );
   }
 });

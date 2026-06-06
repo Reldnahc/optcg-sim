@@ -32,13 +32,10 @@ import {
   reifyCardRef,
   reindexZoneCards,
 } from "../actions/state.js";
-import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   expireBattleDurationStateForCleanup,
-  getUnsupportedBattleEffectMetadataReason,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
-  withSupportedBattleRuntimeMetadataHidden,
 } from "./support.js";
 import {
   createCounterStepPassDecision,
@@ -177,18 +174,6 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  const unsupportedEffectMetadataReason =
-    getUnsupportedBattleEffectMetadataReason(
-      withDamageDeferredEffectQueueMetadataHidden(
-        withSupportedBattleRuntimeMetadataHidden(
-          withAllAttackTimingCombatMetadataHidden(state),
-        ),
-      ),
-    );
-  if (unsupportedEffectMetadataReason !== undefined) {
-    return unsupportedBattleResolution(state, unsupportedEffectMetadataReason);
-  }
-
   const initialBattle = resolutionState.battle;
   const initialAttacker = reifyCardRef(resolutionState, initialBattle.attacker);
   const initialTarget = reifyCardRef(
@@ -254,11 +239,8 @@ export const resolveSupportedVanillaBattle = (
   const attackerHasPrintedDoubleAttack =
     hasPrintedDoubleAttackDamageSource(attackerManifestCard);
   const combatMetadataState = baseCombatMetadataState;
-  const combatState = withSupportedBattleRuntimeMetadataHidden(
-    withDamageDeferredEffectQueueMetadataHidden(
-      withAllAttackTimingCombatMetadataHidden(combatMetadataState),
-    ),
-  );
+  const combatState =
+    withDamageDeferredEffectQueueMetadataHidden(combatMetadataState);
   let view: ReturnType<typeof computeView>;
   try {
     view = computeView(combatState);
@@ -266,12 +248,6 @@ export const resolveSupportedVanillaBattle = (
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported combat metadata.",
-    );
-  }
-  if (Object.keys(view.restrictions).length > 0) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported restriction handling.",
     );
   }
 
@@ -743,10 +719,9 @@ const enterCounterStep = (
     };
   }
 
-  const decision = createCounterStepPassDecision(
-    withAllAttackTimingCombatMetadataHidden(counterState),
-    { requirePotentialCounterActions: false },
-  );
+  const decision = createCounterStepPassDecision(counterState, {
+    requirePotentialCounterActions: false,
+  });
   if (decision === null) {
     return { state: counterState, events: [] };
   }

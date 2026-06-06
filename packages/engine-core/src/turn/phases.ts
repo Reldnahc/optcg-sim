@@ -1,6 +1,5 @@
 import type {
   CardInstance,
-  CardSupportStatus,
   EngineError,
   EngineEvent,
   EngineEventId,
@@ -8,7 +7,6 @@ import type {
   GameState,
   PlayerId,
   PlayerState,
-  ResolvedCard,
   StateSeq,
 } from "@optcg/types";
 
@@ -18,12 +16,10 @@ import {
   detectPendingRuntimeWork,
   processEffectRuntime,
 } from "../effect-runtime.js";
-import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
 import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
-import { hasUnsupportedSupportGateText } from "../battle/support.js";
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toEngineEventId = (value: string): EngineEventId =>
@@ -198,51 +194,7 @@ const withIndexedZone = (
   zone: { zone, playerId: card.owner, slot, index },
 });
 
-const hasUnsupportedBoardCardSupport = (status: CardSupportStatus): boolean =>
-  status !== "vanilla-confirmed";
-
-const isImplementedDslBoardZone = (card: CardInstance): boolean =>
-  card.zone.zone === "leaderArea" ||
-  card.zone.zone === "characterArea" ||
-  card.zone.zone === "stageArea";
-
-const isSupportedImplementedDslBoardCard = (
-  state: GameState,
-  card: CardInstance,
-  resolved: ResolvedCard,
-): boolean => {
-  if (resolved.support.status !== "implemented-dsl") return false;
-  if (!isImplementedDslBoardZone(card)) {
-    return false;
-  }
-  const effectDefinitionId = resolved.support.effectDefinitionId;
-  if (
-    effectDefinitionId === undefined ||
-    resolved.support.customHandlerIds !== undefined
-  ) {
-    return false;
-  }
-  const definition = state.cardManifest.effectDefinitions?.[effectDefinitionId];
-  return (
-    definition !== undefined &&
-    definition.effects.length > 0 &&
-    definition.effects.every(
-      (block) => evaluateEffectBlockRuntimeSupport(block).supported,
-    )
-  );
-};
-
-const unsupportedStartOfMain = (
-  state: GameState,
-  details: unknown,
-): EngineResult =>
-  toEngineResult(
-    state,
-    [],
-    [{ type: "effectRuntimeError", effectId: "start-of-main-gate", details }],
-  );
-
-const findUnsupportedBoardCard = (
+const materializeBoardContinuousEffects = (
   state: GameState,
 ): { cardId: CardInstance["cardId"]; reason: string } | undefined => {
   const cards: CardInstance[] = [];
@@ -256,33 +208,8 @@ const findUnsupportedBoardCard = (
 
   for (const card of cards) {
     const resolved = state.cardManifest.cards[card.cardId];
-    if (resolved === undefined) {
-      return { cardId: card.cardId, reason: "missing-manifest" };
-    }
-    if (resolved.support.status === "implemented-dsl") {
-      if (!isSupportedImplementedDslBoardCard(state, card, resolved)) {
-        return {
-          cardId: card.cardId,
-          reason: "unsupported-implemented-dsl-support",
-        };
-      }
+    if (resolved?.support.status === "implemented-dsl") {
       firstImplementedDslCard ??= card;
-      continue;
-    }
-    if (hasUnsupportedBoardCardSupport(resolved.support.status)) {
-      return { cardId: card.cardId, reason: "non-vanilla-support-status" };
-    }
-    if (resolved.support.effectDefinitionId !== undefined) {
-      return { cardId: card.cardId, reason: "effect-definition-present" };
-    }
-    if (resolved.support.customHandlerIds !== undefined) {
-      return { cardId: card.cardId, reason: "custom-handlers-present" };
-    }
-    if (hasUnsupportedSupportGateText(resolved.effectText, resolved)) {
-      return { cardId: card.cardId, reason: "effect-text-present" };
-    }
-    if (hasUnsupportedSupportGateText(resolved.triggerText, resolved)) {
-      return { cardId: card.cardId, reason: "trigger-text-present" };
     }
   }
   if (firstImplementedDslCard !== undefined) {
@@ -621,9 +548,20 @@ export const enterMainPhase = (state: GameState): EngineResult => {
   if (detectPendingRuntimeWork(state) !== undefined) {
     return processEffectRuntime(state);
   }
-  const unsupportedBoardCard = findUnsupportedBoardCard(state);
-  if (unsupportedBoardCard !== undefined) {
-    return unsupportedStartOfMain(state, unsupportedBoardCard);
+  const unsupportedContinuousMaterialization =
+    materializeBoardContinuousEffects(state);
+  if (unsupportedContinuousMaterialization !== undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        {
+          type: "effectRuntimeError",
+          effectId: "start-of-main-continuous-materialization",
+          details: unsupportedContinuousMaterialization,
+        },
+      ],
+    );
   }
   const turnPlayerId = state.turn.turnPlayerId;
   const events: EngineEvent[] = [];
