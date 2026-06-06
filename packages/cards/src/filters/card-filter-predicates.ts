@@ -57,6 +57,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseCardNameContainsPredicate,
   parseSelfExclusionPredicate,
   parseNameExclusionPredicate,
+  parseNameCardPredicate,
   parseNamePredicate,
   parseDifferentNamesPredicate,
 ];
@@ -1016,6 +1017,24 @@ function parseNamePredicate(
   current: CardFilter,
 ): ReturnType<PredicateParser> {
   const match = /^\[(?<name>[^\]]+)\]\s*(?<rest>.*)$/i.exec(text);
+  const nameText = match?.groups?.["name"];
+  const restText = match?.groups?.["rest"];
+  if (nameText === undefined || nameText.trim().length === 0) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, names: [nameText.trim()] },
+    evidence: ["filter:name"],
+    rest: restText ?? "",
+  };
+}
+
+function parseNameCardPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^\[(?<name>[^\]]+)\]\s+cards?\b\s*(?<rest>.*)$/i.exec(text);
   const nameText = match?.groups?.["name"];
   const restText = match?.groups?.["rest"];
   if (nameText === undefined || nameText.trim().length === 0) {

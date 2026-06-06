@@ -291,11 +291,20 @@ const parseRestedDonAttachmentTarget = (
     return undefined;
   }
   const categories = parsed.filter.categories ?? [];
-  const supportsCharacters = categories.includes("character");
-  const supportsLeaders = categories.includes("leader");
+  const nameOnlyCardsTarget =
+    categories.length === 0 && (parsed.filter.names?.length ?? 0) > 0;
+  const supportsCharacters =
+    nameOnlyCardsTarget || categories.includes("character");
+  const supportsLeaders = nameOnlyCardsTarget || categories.includes("leader");
   if (!supportsCharacters) {
     return undefined;
   }
+  const filter = nameOnlyCardsTarget
+    ? ({
+        ...parsed.filter,
+        categories: ["leader", "character"],
+      } satisfies CardFilter)
+    : parsed.filter;
   const requestZone = supportsLeaders
     ? {
         zones: ["leaderArea", "characterArea"] as [
@@ -307,10 +316,18 @@ const parseRestedDonAttachmentTarget = (
   const leaderEvidence: PrimitiveEvidence[] = supportsLeaders
     ? ["zone:leaderArea"]
     : [];
+  const inferredCategoryEvidence: PrimitiveEvidence[] = nameOnlyCardsTarget
+    ? ["filter:category:leader", "filter:category:character"]
+    : [];
 
   return {
-    evidence: [...leaderEvidence, "zone:characterArea", ...parsed.evidence],
-    filter: parsed.filter,
+    evidence: [
+      ...leaderEvidence,
+      "zone:characterArea",
+      ...inferredCategoryEvidence,
+      ...parsed.evidence,
+    ],
+    filter,
     requestZone,
     savedTargetZone: requestZone,
   };

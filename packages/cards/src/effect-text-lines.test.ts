@@ -21,4 +21,20 @@ Then, if you have a {Celestial Dragons} type Character, draw 1 card.`,
       "[On Play] Draw 1 card.",
     ]);
   });
+
+  it("joins detached entry and marker lines to their following effect bodies", () => {
+    const lines = gameplayLinesFromTextParts([
+      `[On Play]
+ Draw 1 card and trash 1 card from your hand.
+[Activate: Main]
+
+[Once Per Turn]
+ Give up to 1 rested DON!! card to 1 of your [Nami] cards.`,
+    ]);
+
+    assert.deepEqual(lines, [
+      "[On Play] Draw 1 card and trash 1 card from your hand.",
+      "[Activate: Main] [Once Per Turn] Give up to 1 rested DON!! card to 1 of your [Nami] cards.",
+    ]);
+  });
 });

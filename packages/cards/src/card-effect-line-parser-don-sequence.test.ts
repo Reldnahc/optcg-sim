@@ -318,6 +318,55 @@ it("parses activate-main hand-to-deck-top cost into rested-DON leader-or-charact
   );
 });
 
+it("parses rested DON attachment to generic bracket-name card targets", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] Give up to 1 rested DON!! card to 1 of your [Nami] cards.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "costArea",
+              filter: { categories: ["don"], state: "rested" },
+            },
+          },
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                zones: ["leaderArea", "characterArea"],
+                filter: {
+                  categories: ["leader", "character"],
+                  names: ["Nami"],
+                },
+              },
+            },
+          },
+          {
+            effect: { type: "attachSelectedDon" },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "filter:name",
+      "filter:category:leader",
+      "filter:category:character",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses activate-main DON activation followed by character-effect DON activation restriction", () => {
   const result = parseCardEffectLine(
     "[Activate: Main] Set up to 1 of your DON!! cards as active. Then, you cannot set DON!! cards as active using Character effects during this turn.",

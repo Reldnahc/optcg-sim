@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardFilter,
   Effect,
   EffectDefinition,
   ReplacementTrigger,
@@ -225,6 +226,88 @@ test("runtime admission accepts selected trash cards moving to face-up Life", ()
         effect,
         sourcePresencePolicy: "mustRemainInSameZone",
         trigger: { type: "onPlay" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
+test("runtime admission accepts Activate Main rested DON attachment to named field cards", () => {
+  const donSelectionId = "donSelection:attach" as SelectionId;
+  const targetSelectionId = "targetSelection:attach-don" as SelectionId;
+  const namedFieldCardFilter: CardFilter = {
+    categories: ["leader", "character"],
+    names: ["Example Name"],
+  };
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "select:rested-don",
+        connector: "always",
+        saveResultAs: donSelectionId,
+        effect: {
+          type: "selectCards",
+          zone: "costArea",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          saveAs: donSelectionId,
+          visibility: "bothPlayers",
+          filter: { categories: ["don"], state: "rested" },
+        },
+      },
+      {
+        id: "select:don-attach-target",
+        connector: "ifYouDo",
+        saveResultAs: targetSelectionId,
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            filter: namedFieldCardFilter,
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+          },
+        },
+      },
+      {
+        id: "attach:selected-don",
+        connector: "then",
+        effect: {
+          type: "attachSelectedDon",
+          selection: donSelectionId,
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "selectedTargets",
+              saveResultAs: targetSelectionId,
+            },
+            zones: ["leaderArea", "characterArea"],
+            player: "self",
+            filter: namedFieldCardFilter,
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+        },
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "activate",
+        effect,
+        oncePerTurn: true,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "activateMain" },
       }),
     ),
     { supported: true },

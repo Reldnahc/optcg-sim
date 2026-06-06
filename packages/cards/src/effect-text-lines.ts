@@ -1,15 +1,46 @@
+import { supportedEntryPoints } from "./entry-point-definitions.js";
+
 export const gameplayLinesFromTextParts = (
   parts: readonly (string | null | undefined)[],
 ): string[] =>
   groupChooseOneBlocks(
-    parts
-      .flatMap((text) => (text ?? "").split(/\r?\n/u))
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !isParentheticalReminderLine(line)),
+    joinDetachedEffectHeaders(
+      parts
+        .flatMap((text) => (text ?? "").split(/\r?\n/u))
+        .map((line) => line.trim())
+        .filter(
+          (line) => line.length > 0 && !isParentheticalReminderLine(line),
+        ),
+    ),
   );
 
 const isParentheticalReminderLine = (line: string): boolean =>
   line.startsWith("(") && line.endsWith(")");
+
+const joinDetachedEffectHeaders = (lines: readonly string[]): string[] => {
+  const joined: string[] = [];
+  let pendingHeader = "";
+
+  for (const line of lines) {
+    if (isDetachedEffectHeader(line)) {
+      pendingHeader =
+        pendingHeader.length === 0 ? line : `${pendingHeader} ${line}`;
+      continue;
+    }
+    joined.push(pendingHeader.length === 0 ? line : `${pendingHeader} ${line}`);
+    pendingHeader = "";
+  }
+
+  if (pendingHeader.length > 0) {
+    joined.push(pendingHeader);
+  }
+
+  return joined;
+};
+
+const isDetachedEffectHeader = (line: string): boolean =>
+  supportedEntryPoints.some((entryPoint) => entryPoint.text === line) ||
+  line === "[Once Per Turn]";
 
 const groupChooseOneBlocks = (lines: readonly string[]): string[] => {
   const grouped: string[] = [];
