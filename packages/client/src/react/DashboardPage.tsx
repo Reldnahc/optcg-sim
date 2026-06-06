@@ -20,6 +20,14 @@ export const DashboardPage = (): React.JSX.Element => (
         href={appRoutePath("lobbies")}
         label="Open Lobbies"
       />
+      <ShellPageCard
+        title="Deck editor"
+        description="Build and manage Poneglyph deck loadouts in a new tab."
+        href="https://poneglyph.one/decks"
+        label="Open Deck Editor"
+        target="_blank"
+        rel="noreferrer"
+      />
     </div>
   </section>
 );

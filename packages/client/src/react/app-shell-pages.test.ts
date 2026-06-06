@@ -21,7 +21,11 @@ describe("client app shell pages", () => {
     assert.doesNotMatch(html, /aria-label="Primary"/u);
     assert.match(html, /Play/u);
     assert.match(html, /Custom Lobbies/u);
-    assert.doesNotMatch(html, /Decks/u);
+    assert.match(html, /Deck editor/u);
+    assert.match(
+      html,
+      /<a class="shell-card-action" href="https:\/\/poneglyph\.one\/decks" target="_blank" rel="noreferrer">Open Deck Editor<\/a>/u,
+    );
     assert.doesNotMatch(html, /Profile/u);
   });
 
