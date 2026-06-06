@@ -34,8 +34,10 @@ export interface FloatingWindowProps {
   minHeight?: number | undefined;
   docked?: boolean | undefined;
   minimized?: boolean | undefined;
+  zIndex?: number | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
@@ -136,8 +138,10 @@ export const FloatingWindow = ({
   minHeight = 180,
   docked = false,
   minimized = false,
+  zIndex,
   onToggleMinimized,
   onClose,
+  onActivate,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -303,7 +307,13 @@ export const FloatingWindow = ({
       style={{
         transform: `translate(${String(rect.x)}px, ${String(rect.y)}px)`,
         width: `${String(rect.width)}px`,
+        ...(zIndex === undefined ? {} : { zIndex }),
         ...(minimized ? {} : { height: `${String(rect.height)}px` }),
+      }}
+      onPointerDownCapture={() => {
+        if (!docked) {
+          onActivate?.();
+        }
       }}
       onClick={(event) => {
         event.stopPropagation();

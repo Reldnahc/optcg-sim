@@ -8,8 +8,10 @@ export interface CardPreviewWindowProps {
   docked?: boolean | undefined;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
+  zIndex?: number | undefined;
   onToggleMinimized: () => void;
   onClose: () => void;
+  onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
@@ -68,8 +70,10 @@ export const CardPreviewWindow = ({
   docked = false,
   minimized,
   initialRect = defaultCardPreviewWindowRect,
+  zIndex,
   onToggleMinimized,
   onClose,
+  onActivate,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -85,8 +89,10 @@ export const CardPreviewWindow = ({
       minHeight={180}
       docked={docked}
       minimized={minimized}
+      zIndex={zIndex}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
+      onActivate={onActivate}
       onRectChange={onRectChange}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}

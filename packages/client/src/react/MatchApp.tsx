@@ -116,8 +116,10 @@ export const MatchApp = ({
     activeFloatingWindowRects,
     activeOpenWindowIds,
     activeDockedWindowIds,
+    activeFloatingWindowZIndexes,
     loadFloatingWindowState,
     resetFloatingWindowState,
+    activateFloatingWindow,
     updateFloatingWindowRect,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
@@ -215,6 +217,7 @@ export const MatchApp = ({
   } = useMatchCollectionModal({
     activeDockedWindowIds,
     activeFloatingWindowRects,
+    activeFloatingWindowZIndexes,
     activeOpenWindowIds,
     board,
     cardCostSelection,
@@ -230,6 +233,7 @@ export const MatchApp = ({
     onPreviewCard: previewHoveredCard,
     onToggleDecisionCard: client.toggleDecisionCard,
     updateCollectionWindowOpen,
+    activateFloatingWindow,
     updateControlDockTarget,
     updateFloatingWindowRect,
   });
@@ -508,7 +512,9 @@ export const MatchApp = ({
             windows: opponentRevealWindows,
             activeDockedWindowIds,
             activeFloatingWindowRects,
+            activeFloatingWindowZIndexes,
             minimizedRevealIds: activeRevealWindowState.minimized,
+            onActivateWindow: activateFloatingWindow,
             onToggleMinimized: (revealId) => {
               updateRevealWindowState((state) => {
                 if (state.minimized.has(revealId)) {
@@ -552,6 +558,8 @@ export const MatchApp = ({
           actionLogMinimized={actionLogMinimized}
           activeDockedWindowIds={activeDockedWindowIds}
           activeFloatingWindowRects={activeFloatingWindowRects}
+          activeFloatingWindowZIndexes={activeFloatingWindowZIndexes}
+          activateFloatingWindow={activateFloatingWindow}
           closeActionLogWindow={closeActionLogWindow}
           closeCardPreview={closeCardPreview}
           closeSettingsWindow={closeSettingsWindow}

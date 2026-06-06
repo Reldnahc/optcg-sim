@@ -132,4 +132,20 @@ describe("floating window", () => {
     assert.match(markup, /height:160px/u);
     assert.doesNotMatch(markup, /floating-window-resize-handle/u);
   });
+
+  test("renders z-index style for active window ordering", () => {
+    const markup = renderToStaticMarkup(
+      createElement(
+        FloatingWindow,
+        {
+          title: "Ordered",
+          zIndex: 14,
+          onActivate: () => undefined,
+        },
+        createElement("p", undefined, "Ordered body"),
+      ),
+    );
+
+    assert.match(markup, /z-index:14/u);
+  });
 });

@@ -25,8 +25,10 @@ export interface CollectionModalHostProps {
   minimized?: boolean | undefined;
   docked?: boolean | undefined;
   initialRect?: WindowRect | undefined;
+  zIndex?: number | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
@@ -120,8 +122,10 @@ export const CollectionModalHost = ({
   minimized = false,
   docked = false,
   initialRect,
+  zIndex,
   onToggleMinimized,
   onClose,
+  onActivate,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -158,8 +162,10 @@ export const CollectionModalHost = ({
       initialRect={initialRect}
       docked={docked}
       minimized={minimized}
+      zIndex={zIndex}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
+      onActivate={onActivate}
       onRectChange={onRectChange}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}

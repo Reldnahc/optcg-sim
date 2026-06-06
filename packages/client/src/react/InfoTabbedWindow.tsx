@@ -24,9 +24,11 @@ export interface InfoTabbedWindowProps {
   activeTabId: InfoWindowTabId;
   minimized: boolean;
   initialRect?: WindowRect | undefined;
+  zIndex?: number | undefined;
   onActiveTabChange: (tabId: InfoWindowTabId) => void;
   onToggleMinimized: () => void;
   onCloseActiveTab: (tabId: InfoWindowTabId) => void;
+  onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
@@ -58,9 +60,11 @@ export const InfoTabbedWindow = ({
   activeTabId,
   minimized,
   initialRect,
+  zIndex,
   onActiveTabChange,
   onToggleMinimized,
   onCloseActiveTab,
+  onActivate,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -127,6 +131,7 @@ export const InfoTabbedWindow = ({
       minHeight={180}
       docked={docked}
       minimized={minimized}
+      zIndex={zIndex}
       onActiveTabChange={(tabId) => {
         if (isInfoWindowTabId(tabId)) {
           onActiveTabChange(tabId);
@@ -136,6 +141,7 @@ export const InfoTabbedWindow = ({
       onClose={() => {
         onCloseActiveTab(activeTab);
       }}
+      onActivate={onActivate}
       onRectChange={onRectChange}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}

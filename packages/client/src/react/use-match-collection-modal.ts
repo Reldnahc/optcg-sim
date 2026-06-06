@@ -23,6 +23,7 @@ import { sourceZoneCards } from "./source-zone-cards.js";
 interface UseMatchCollectionModalInput {
   activeDockedWindowIds: ReadonlySet<string>;
   activeFloatingWindowRects: Readonly<Record<string, WindowRect>>;
+  activeFloatingWindowZIndexes: Readonly<Record<string, number>>;
   activeOpenWindowIds: ReadonlySet<string>;
   board?: BoardViewModel | undefined;
   cardCostSelection?: MatchClientUiState["cardCostSelection"];
@@ -39,6 +40,7 @@ interface UseMatchCollectionModalInput {
   onPreviewCard: (card: ClientCardModel) => void;
   onToggleDecisionCard: (instanceId: InstanceId) => void;
   updateCollectionWindowOpen: (windowKey: string, open: boolean) => void;
+  activateFloatingWindow: (windowKey: string) => void;
   updateControlDockTarget: (rect: WindowRect) => void;
   updateFloatingWindowRect: (windowKey: string, rect: WindowRect) => void;
 }
@@ -55,6 +57,7 @@ export interface MatchCollectionModalState {
 export const useMatchCollectionModal = ({
   activeDockedWindowIds,
   activeFloatingWindowRects,
+  activeFloatingWindowZIndexes,
   activeOpenWindowIds,
   board,
   cardCostSelection,
@@ -68,6 +71,7 @@ export const useMatchCollectionModal = ({
   onPreviewCard,
   onToggleDecisionCard,
   updateCollectionWindowOpen,
+  activateFloatingWindow,
   updateControlDockTarget,
   updateFloatingWindowRect,
 }: UseMatchCollectionModalInput): MatchCollectionModalState => {
@@ -168,9 +172,19 @@ export const useMatchCollectionModal = ({
           ? undefined
           : (activeFloatingWindowRects[collectionViewerWindowKey] ??
             defaultCollectionWindowRect()),
+      zIndex:
+        collectionViewerWindowKey === undefined
+          ? undefined
+          : activeFloatingWindowZIndexes[collectionViewerWindowKey],
       onToggleMinimized: () => {
         setCollectionMinimized((current) => !current);
       },
+      onActivate:
+        collectionViewerWindowKey === undefined
+          ? undefined
+          : () => {
+              activateFloatingWindow(collectionViewerWindowKey);
+            },
       onRectChange:
         collectionViewerWindowKey === undefined
           ? undefined

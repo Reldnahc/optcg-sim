@@ -33,7 +33,9 @@ export interface SettingsWindowProps {
   className?: string | undefined;
   docked?: boolean | undefined;
   initialRect?: WindowRect | undefined;
+  zIndex?: number | undefined;
   onClose: () => void;
+  onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
@@ -120,7 +122,9 @@ export const SettingsWindow = ({
   className,
   docked = false,
   initialRect = defaultSettingsWindowRect,
+  zIndex,
   onClose,
+  onActivate,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -132,7 +136,9 @@ export const SettingsWindow = ({
     minWidth={220}
     minHeight={120}
     docked={docked}
+    zIndex={zIndex}
     onClose={onClose}
+    onActivate={onActivate}
     onRectChange={onRectChange}
     onDragMove={onDragMove}
     onDragEnd={onDragEnd}

@@ -10,7 +10,9 @@ export interface OpponentRevealWindowLayerProps {
   windows: readonly OpponentRevealWindow[];
   activeDockedWindowIds: ReadonlySet<string>;
   activeFloatingWindowRects: Readonly<Record<string, WindowRect>>;
+  activeFloatingWindowZIndexes: Readonly<Record<string, number>>;
   minimizedRevealIds: ReadonlySet<string>;
+  onActivateWindow: (windowKey: string) => void;
   onToggleMinimized: (revealId: string) => void;
   onClose: (revealId: string) => void;
   onPreviewCard: (card: ClientCardModel) => void;
@@ -23,7 +25,9 @@ export const OpponentRevealWindowLayer = ({
   windows,
   activeDockedWindowIds,
   activeFloatingWindowRects,
+  activeFloatingWindowZIndexes,
   minimizedRevealIds,
+  onActivateWindow,
   onToggleMinimized,
   onClose,
   onPreviewCard,
@@ -46,7 +50,11 @@ export const OpponentRevealWindowLayer = ({
             initialRect={
               activeFloatingWindowRects[windowKey] ?? revealWindow.initialRect
             }
+            zIndex={activeFloatingWindowZIndexes[windowKey]}
             minimized={minimizedRevealIds.has(revealWindow.revealId)}
+            onActivate={() => {
+              onActivateWindow(windowKey);
+            }}
             onToggleMinimized={() => {
               onToggleMinimized(revealWindow.revealId);
             }}

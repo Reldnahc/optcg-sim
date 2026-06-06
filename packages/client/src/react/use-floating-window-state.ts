@@ -5,6 +5,7 @@ import { resizeDockedWindowRects } from "./control-panel-layout.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import {
   emptyFloatingWindowRectState,
+  floatingWindowStateAfterActivation,
   floatingWindowStateAfterDockedWindowReorder,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
@@ -17,8 +18,10 @@ export interface FloatingWindowStateController {
   activeFloatingWindowRects: Record<string, WindowRect>;
   activeOpenWindowIds: ReadonlySet<string>;
   activeDockedWindowIds: ReadonlySet<string>;
+  activeFloatingWindowZIndexes: Readonly<Record<string, number>>;
   loadFloatingWindowState: () => void;
   resetFloatingWindowState: () => void;
+  activateFloatingWindow: (key: string) => void;
   updateFloatingWindowRect: (key: string, rect: WindowRect) => void;
   updateFloatingWindowOpen: (key: string, open: boolean) => void;
   updateCollectionWindowOpen: (key: string, open: boolean) => void;
@@ -62,6 +65,15 @@ export const useFloatingWindowState = ({
     matchScope !== undefined && floatingWindowRects.scope === matchScope
       ? floatingWindowRects.dockedWindowIds
       : new Set<string>();
+  const activeFloatingWindowZIndexes =
+    matchScope !== undefined && floatingWindowRects.scope === matchScope
+      ? Object.fromEntries(
+          floatingWindowRects.floatingWindowZOrder.map((windowKey, index) => [
+            windowKey,
+            10 + index,
+          ]),
+        )
+      : {};
 
   const resetFloatingWindowState = useCallback((): void => {
     setFloatingWindowRects(emptyFloatingWindowRectState);
@@ -71,13 +83,34 @@ export const useFloatingWindowState = ({
     if (matchScope === undefined || revealWindowStateStore === undefined) {
       return;
     }
+    const openWindowIds = revealWindowStateStore.loadOpenWindowIds();
+    const dockedWindowIds = revealWindowStateStore.loadDockedWindowIds();
     setFloatingWindowRects({
       scope: matchScope,
       rects: revealWindowStateStore.loadWindowRects(),
-      openWindowIds: revealWindowStateStore.loadOpenWindowIds(),
-      dockedWindowIds: revealWindowStateStore.loadDockedWindowIds(),
+      openWindowIds,
+      dockedWindowIds,
+      floatingWindowZOrder: [...openWindowIds].filter(
+        (windowKey) => !dockedWindowIds.has(windowKey),
+      ),
     });
   }, [matchScope, revealWindowStateStore]);
+
+  const activateFloatingWindow = useCallback(
+    (key: string): void => {
+      if (matchScope === undefined) {
+        return;
+      }
+      setFloatingWindowRects((current) =>
+        floatingWindowStateAfterActivation({
+          current,
+          scope: matchScope,
+          windowKey: key,
+        }),
+      );
+    },
+    [matchScope],
+  );
 
   const updateFloatingWindowRect = useCallback(
     (key: string, rect: WindowRect): void => {
@@ -93,14 +126,31 @@ export const useFloatingWindowState = ({
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
+                floatingWindowZOrder: [],
               };
         const dockedWindowIds = new Set(base.dockedWindowIds);
         dockedWindowIds.delete(key);
+        const floatingWindowZOrder = base.openWindowIds.has(key)
+          ? [
+              ...base.floatingWindowZOrder.filter(
+                (windowKey) =>
+                  windowKey !== key &&
+                  base.openWindowIds.has(windowKey) &&
+                  !dockedWindowIds.has(windowKey),
+              ),
+              key,
+            ]
+          : base.floatingWindowZOrder.filter(
+              (windowKey) =>
+                base.openWindowIds.has(windowKey) &&
+                !dockedWindowIds.has(windowKey),
+            );
         const next = {
           scope: matchScope,
           rects: { ...base.rects, [key]: rect },
           openWindowIds: new Set(base.openWindowIds),
           dockedWindowIds,
+          floatingWindowZOrder,
         };
         revealWindowStateStore?.saveWindowRects(next.rects);
         revealWindowStateStore?.saveDockedWindowIds(dockedWindowIds);
@@ -164,6 +214,7 @@ export const useFloatingWindowState = ({
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
+                floatingWindowZOrder: [],
               };
         const openWindowIds = new Set(base.openWindowIds);
         const dockedWindowIds = new Set(base.dockedWindowIds);
@@ -174,6 +225,9 @@ export const useFloatingWindowState = ({
           rects: { ...base.rects, [key]: rect },
           openWindowIds,
           dockedWindowIds,
+          floatingWindowZOrder: base.floatingWindowZOrder.filter(
+            (windowKey) => windowKey !== key,
+          ),
         };
         revealWindowStateStore?.saveWindowRects(next.rects);
         revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
@@ -206,6 +260,7 @@ export const useFloatingWindowState = ({
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
+                floatingWindowZOrder: [],
               };
         const dockedWindowIds = new Set(base.dockedWindowIds);
         for (const replacedWindowKey of replacedWindowKeys) {
@@ -219,6 +274,9 @@ export const useFloatingWindowState = ({
           rects: { ...base.rects, [windowKey]: rect },
           openWindowIds,
           dockedWindowIds,
+          floatingWindowZOrder: base.floatingWindowZOrder.filter(
+            (key) => key !== windowKey,
+          ),
         };
         revealWindowStateStore?.saveWindowRects(next.rects);
         revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
@@ -251,6 +309,7 @@ export const useFloatingWindowState = ({
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
+                floatingWindowZOrder: [],
               };
         const dockedWindowIds = new Set(base.dockedWindowIds);
         const openWindowIds = new Set(base.openWindowIds);
@@ -269,6 +328,9 @@ export const useFloatingWindowState = ({
           rects,
           openWindowIds,
           dockedWindowIds,
+          floatingWindowZOrder: base.floatingWindowZOrder.filter(
+            (key) => !windowKeys.includes(key),
+          ),
         };
         revealWindowStateStore?.saveWindowRects(next.rects);
         revealWindowStateStore?.saveOpenWindowIds(openWindowIds);
@@ -332,8 +394,10 @@ export const useFloatingWindowState = ({
     activeFloatingWindowRects,
     activeOpenWindowIds,
     activeDockedWindowIds,
+    activeFloatingWindowZIndexes,
     loadFloatingWindowState,
     resetFloatingWindowState,
+    activateFloatingWindow,
     updateFloatingWindowRect,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,

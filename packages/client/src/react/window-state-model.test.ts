@@ -3,6 +3,7 @@ import { describe, test } from "vitest";
 
 import {
   floatingWindowStateAfterDockedWindowReorder,
+  floatingWindowStateAfterActivation,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
   type FloatingWindowRectState,
@@ -17,6 +18,7 @@ describe("floating window state model", () => {
       },
       openWindowIds: new Set(["action-log"]),
       dockedWindowIds: new Set(["action-log"]),
+      floatingWindowZOrder: [],
     };
 
     const closed = floatingWindowStateAfterOpenChange({
@@ -46,6 +48,7 @@ describe("floating window state model", () => {
       },
       openWindowIds: new Set(["collection:Player trash"]),
       dockedWindowIds: new Set(["collection:Player trash"]),
+      floatingWindowZOrder: [],
     };
 
     const closed = floatingWindowStateAfterCollectionOpenChange({
@@ -76,6 +79,7 @@ describe("floating window state model", () => {
       rects: {},
       openWindowIds: new Set(["action-log", "settings", "collection:Trash"]),
       dockedWindowIds: new Set(["action-log", "settings", "collection:Trash"]),
+      floatingWindowZOrder: [],
     };
 
     const next = floatingWindowStateAfterDockedWindowReorder({
@@ -94,5 +98,47 @@ describe("floating window state model", () => {
       [...next.openWindowIds],
       ["action-log", "settings", "collection:Trash"],
     );
+  });
+
+  test("activating a floating window moves it to the top of z-order", () => {
+    const current: FloatingWindowRectState = {
+      scope: "match-1",
+      rects: {},
+      openWindowIds: new Set(["action-log", "settings", "preview"]),
+      dockedWindowIds: new Set(["settings"]),
+      floatingWindowZOrder: ["preview", "action-log"],
+    };
+
+    const next = floatingWindowStateAfterActivation({
+      current,
+      scope: "match-1",
+      windowKey: "preview",
+    });
+
+    assert.deepEqual(next.floatingWindowZOrder, ["action-log", "preview"]);
+  });
+
+  test("activating closed or docked windows does not add them to floating z-order", () => {
+    const current: FloatingWindowRectState = {
+      scope: "match-1",
+      rects: {},
+      openWindowIds: new Set(["action-log", "settings"]),
+      dockedWindowIds: new Set(["settings"]),
+      floatingWindowZOrder: ["action-log"],
+    };
+
+    const closed = floatingWindowStateAfterActivation({
+      current,
+      scope: "match-1",
+      windowKey: "preview",
+    });
+    const docked = floatingWindowStateAfterActivation({
+      current,
+      scope: "match-1",
+      windowKey: "settings",
+    });
+
+    assert.deepEqual(closed.floatingWindowZOrder, ["action-log"]);
+    assert.deepEqual(docked.floatingWindowZOrder, ["action-log"]);
   });
 });

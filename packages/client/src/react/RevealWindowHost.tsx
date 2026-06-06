@@ -13,8 +13,10 @@ export interface RevealWindowHostProps {
   initialRect?: WindowRect | undefined;
   minimized?: boolean | undefined;
   docked?: boolean | undefined;
+  zIndex?: number | undefined;
   onToggleMinimized?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
@@ -46,8 +48,10 @@ export const RevealWindowHost = ({
   initialRect = { x: 380, y: 100, width: 300, height: 420 },
   minimized = false,
   docked = false,
+  zIndex,
   onToggleMinimized,
   onClose,
+  onActivate,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -66,8 +70,10 @@ export const RevealWindowHost = ({
       minHeight={420}
       docked={docked}
       minimized={minimized}
+      zIndex={zIndex}
       onToggleMinimized={onToggleMinimized}
       onClose={onClose}
+      onActivate={onActivate}
       onRectChange={onRectChange}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}

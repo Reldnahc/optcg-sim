@@ -12,6 +12,7 @@ export interface FloatingWindowRectState {
   rects: Record<string, WindowRect>;
   openWindowIds: Set<string>;
   dockedWindowIds: Set<string>;
+  floatingWindowZOrder: string[];
 }
 
 export const emptyRevealWindowState: RevealWindowState = {
@@ -23,6 +24,7 @@ export const emptyFloatingWindowRectState: FloatingWindowRectState = {
   rects: {},
   openWindowIds: new Set(),
   dockedWindowIds: new Set(),
+  floatingWindowZOrder: [],
 };
 
 const scopedFloatingWindowState = ({
@@ -39,7 +41,28 @@ const scopedFloatingWindowState = ({
         rects: {},
         openWindowIds: new Set<string>(),
         dockedWindowIds: new Set<string>(),
+        floatingWindowZOrder: [],
       };
+
+const zOrderWithout = (
+  zOrder: readonly string[] | undefined,
+  windowKey: string,
+): string[] => (zOrder ?? []).filter((id) => id !== windowKey);
+
+const floatingZOrderAfterOpenChange = ({
+  base,
+  windowKey,
+  open,
+}: {
+  base: FloatingWindowRectState;
+  windowKey: string;
+  open: boolean;
+}): string[] => {
+  const withoutWindow = zOrderWithout(base.floatingWindowZOrder, windowKey);
+  return open && !base.dockedWindowIds.has(windowKey)
+    ? [...withoutWindow, windowKey]
+    : withoutWindow;
+};
 
 export const floatingWindowStateAfterOpenChange = ({
   current,
@@ -64,6 +87,11 @@ export const floatingWindowStateAfterOpenChange = ({
     rects: base.rects,
     openWindowIds,
     dockedWindowIds: new Set(base.dockedWindowIds),
+    floatingWindowZOrder: floatingZOrderAfterOpenChange({
+      base,
+      windowKey,
+      open,
+    }),
   };
 };
 
@@ -89,6 +117,7 @@ export const floatingWindowStateAfterCollectionOpenChange = ({
       (id) => !id.startsWith("collection:") || id === windowKey,
     ),
   );
+  const baseWithCollectionDocking = { ...base, dockedWindowIds };
   if (open) {
     openWindowIds.add(windowKey);
   } else {
@@ -99,6 +128,11 @@ export const floatingWindowStateAfterCollectionOpenChange = ({
     rects: base.rects,
     openWindowIds,
     dockedWindowIds,
+    floatingWindowZOrder: floatingZOrderAfterOpenChange({
+      base: baseWithCollectionDocking,
+      windowKey,
+      open,
+    }).filter((id) => !id.startsWith("collection:") || id === windowKey),
   };
 };
 
@@ -128,5 +162,49 @@ export const floatingWindowStateAfterDockedWindowReorder = ({
         placement,
       ),
     ),
+    floatingWindowZOrder: base.floatingWindowZOrder.filter(
+      (windowKey) => !base.dockedWindowIds.has(windowKey),
+    ),
+  };
+};
+
+export const floatingWindowStateAfterActivation = ({
+  current,
+  scope,
+  windowKey,
+}: {
+  current: FloatingWindowRectState;
+  scope: string;
+  windowKey: string;
+}): FloatingWindowRectState => {
+  const base = scopedFloatingWindowState({ current, scope });
+  if (
+    !base.openWindowIds.has(windowKey) ||
+    base.dockedWindowIds.has(windowKey)
+  ) {
+    return {
+      scope,
+      rects: base.rects,
+      openWindowIds: new Set(base.openWindowIds),
+      dockedWindowIds: new Set(base.dockedWindowIds),
+      floatingWindowZOrder: base.floatingWindowZOrder.filter(
+        (id) => base.openWindowIds.has(id) && !base.dockedWindowIds.has(id),
+      ),
+    };
+  }
+  return {
+    scope,
+    rects: base.rects,
+    openWindowIds: new Set(base.openWindowIds),
+    dockedWindowIds: new Set(base.dockedWindowIds),
+    floatingWindowZOrder: [
+      ...base.floatingWindowZOrder.filter(
+        (id) =>
+          id !== windowKey &&
+          base.openWindowIds.has(id) &&
+          !base.dockedWindowIds.has(id),
+      ),
+      windowKey,
+    ],
   };
 };

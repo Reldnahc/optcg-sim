@@ -26,6 +26,7 @@ export interface MatchInfoWindowsProps {
   actionLogMinimized: boolean;
   activeDockedWindowIds: ReadonlySet<string>;
   activeFloatingWindowRects: Readonly<Record<string, WindowRect>>;
+  activeFloatingWindowZIndexes: Readonly<Record<string, number>>;
   combineDropTarget: InfoWindowTabId | undefined;
   dockedInfoTabIds: readonly InfoWindowTabId[];
   groupedInfoWindowIds: readonly InfoWindowTabId[];
@@ -37,6 +38,7 @@ export interface MatchInfoWindowsProps {
   showSettingsWindow: boolean;
   showTabbedInfoWindow: boolean;
   standaloneInfoWindowIds: readonly InfoWindowTabId[];
+  activateFloatingWindow: (windowKey: string) => void;
   closeActionLogWindow: () => void;
   closeCardPreview: () => void;
   closeSettingsWindow: () => void;
@@ -79,6 +81,8 @@ export const MatchInfoWindows = ({
   actionLogMinimized,
   activeDockedWindowIds,
   activeFloatingWindowRects,
+  activeFloatingWindowZIndexes,
+  activateFloatingWindow,
   closeActionLogWindow,
   closeCardPreview,
   closeSettingsWindow,
@@ -132,7 +136,11 @@ export const MatchInfoWindows = ({
           activeFloatingWindowRects[actionLogWindowKey] ??
           activeFloatingWindowRects[cardPreviewWindowKey]
         }
+        zIndex={activeFloatingWindowZIndexes[infoWindowKey]}
         onActiveTabChange={setInfoWindowActiveTab}
+        onActivate={() => {
+          activateFloatingWindow(infoWindowKey);
+        }}
         onToggleMinimized={() => {
           setInfoWindowMinimized((current) => !current);
         }}
@@ -184,10 +192,14 @@ export const MatchInfoWindows = ({
           activeFloatingWindowRects[actionLogWindowKey] ??
           defaultActionLogWindowRect
         }
+        zIndex={activeFloatingWindowZIndexes[actionLogWindowKey]}
         onToggleMinimized={() => {
           setActionLogMinimized((current) => !current);
         }}
         onClose={closeActionLogWindow}
+        onActivate={() => {
+          activateFloatingWindow(actionLogWindowKey);
+        }}
         onRectChange={(rect) => {
           updateFloatingWindowRect(actionLogWindowKey, rect);
         }}
@@ -211,10 +223,14 @@ export const MatchInfoWindows = ({
           activeFloatingWindowRects[cardPreviewWindowKey] ??
           defaultCardPreviewWindowRect
         }
+        zIndex={activeFloatingWindowZIndexes[cardPreviewWindowKey]}
         onToggleMinimized={() => {
           setPreviewMinimized((current) => !current);
         }}
         onClose={closeCardPreview}
+        onActivate={() => {
+          activateFloatingWindow(cardPreviewWindowKey);
+        }}
         onRectChange={(rect) => {
           updateFloatingWindowRect(cardPreviewWindowKey, rect);
         }}
@@ -237,6 +253,10 @@ export const MatchInfoWindows = ({
           defaultSettingsWindowRect
         }
         onClose={closeSettingsWindow}
+        zIndex={activeFloatingWindowZIndexes[settingsWindowKey]}
+        onActivate={() => {
+          activateFloatingWindow(settingsWindowKey);
+        }}
         onRectChange={(rect) => {
           updateFloatingWindowRect(settingsWindowKey, rect);
         }}
