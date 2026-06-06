@@ -70,6 +70,14 @@ export const LobbyDeckPanel = ({
           {loadoutsStatus === "ready" && loadouts.length === 0 ? (
             <p>No account loadouts are available.</p>
           ) : null}
+          <a
+            className="deck-editor-link"
+            href="https://poneglyph.one/decks"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open deck editor
+          </a>
           <button
             className="deck-loadout-submit-button"
             type="submit"

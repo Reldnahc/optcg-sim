@@ -119,6 +119,22 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(html, /textarea/u);
   });
 
+  test("links to the external deck editor in a new tab", () => {
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts,
+        loadoutsStatus: "ready",
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(
+      html,
+      /<a class="deck-editor-link" href="https:\/\/poneglyph\.one\/decks" target="_blank" rel="noreferrer">Open deck editor<\/a>/u,
+    );
+  });
+
   test("custom deck loadout picker scrolls internally inside a taller modal", async () => {
     const styles = await readFile(
       new URL("styles/controls.css", import.meta.url),

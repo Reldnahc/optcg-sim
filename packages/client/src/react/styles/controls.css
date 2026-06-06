@@ -423,6 +423,20 @@
   background: #275f3e;
 }
 
+.deck-editor-link {
+  justify-self: start;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.deck-editor-link:hover,
+.deck-editor-link:focus-visible {
+  color: #ffffff;
+}
+
 .deck-hash-form button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
