@@ -706,6 +706,10 @@ describe("card action menu", () => {
       styles,
       /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*background:\s*rgba\(0,\s*0,\s*0,\s*0\.42\);/u,
     );
+    assert.match(
+      styles,
+      /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*inset:\s*0;/u,
+    );
     assert.equal(
       /\.card-tile\.is-freshly-played-attack-restricted \.card-face\s*\{[^}]*filter:/u.test(
         styles,
