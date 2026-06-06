@@ -69,7 +69,7 @@ const unsupportedContinuousEffectRecord = (
   controller: source.controller,
   modifier: {
     layer: "powerAdd",
-    target: { type: "self" },
+    target: { type: "myLeader" },
     operation: { type: "addPower", value: 2000 },
   },
   duration: { type: "permanent" },

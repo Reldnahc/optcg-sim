@@ -256,7 +256,7 @@ const assertRejectsUnsupportedContinuousEffect = (
 
   assert.throws(() => computeView(state), {
     name: "TypeError",
-    message: `Unsupported continuous effect ${effect.id}: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.`,
+    message: `Unsupported continuous effect ${effect.id}: unsupported modifier target, operation, condition, or duration for computeView.`,
   });
 };
 

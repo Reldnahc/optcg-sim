@@ -301,6 +301,85 @@ describe("resolvePublicTargetCandidates", () => {
     expect(targetCards(basePowerResult)).toEqual([refs[0]]);
   });
 
+  test("uses broad permanent power modifiers when resolving current-power target filters", () => {
+    const state = createActiveState();
+    const reduced = toCardId("permanent-reduced-character");
+    const unaffected = toCardId("unaffected-character");
+    addManifestCard(state, {
+      cardId: reduced,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: unaffected,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    state.cardManifest.cards[reduced] = {
+      ...must(state.cardManifest.cards[reduced], "reduced metadata"),
+      name: "Permanent Reduced",
+    };
+    const player = must(state.players[p1], "p1");
+    addManifestCard(state, {
+      cardId: player.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    const opponent = must(state.players[p2], "p2");
+    addManifestCard(state, {
+      cardId: opponent.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p1, [reduced, unaffected]);
+    state.continuousEffects.push({
+      id: "permanent-current-power-reduction",
+      source: cardRef(player.leader, p1),
+      sourceSnapshot: {
+        instanceId: player.leader.instanceId,
+        cardId: player.leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: player.leader.zone,
+        category: "leader",
+        colors: ["yellow"],
+        power: 5000,
+        keywords: [],
+      },
+      controller: p1,
+      modifier: {
+        layer: "powerAdd",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            names: ["Permanent Reduced"],
+          },
+        },
+        operation: { type: "addPower", value: -4000 },
+      },
+      duration: { type: "permanent" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    });
+
+    const currentPowerResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: { categories: ["character"], currentPower: { max: 3000 } },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(currentPowerResult)).toEqual([refs[0]]);
+  });
+
   test("matches public target candidates through reusable metadata and state filters", () => {
     const state = createActiveState();
     const redElder = toCardId("red-elder");

@@ -57,8 +57,7 @@ const isSupportedContinuousPowerModifier = (
       effect.modifier.target.type === "all" ||
       effect.modifier.target.type === "exactCard") &&
     effect.modifier.operation.type === "addPower" &&
-    (effect.duration.type !== "permanent" ||
-      effect.modifier.operation.value === 1000)) ||
+    Number.isSafeInteger(effect.modifier.operation.value)) ||
     (effect.modifier.layer === "restriction" &&
       (effect.modifier.target.type === "self" ||
         effect.modifier.target.type === "all" ||
@@ -200,7 +199,7 @@ const isSupportedDuration = (
 const unsupportedContinuousEffectMessage = (
   effect: ContinuousEffectRecord,
 ): string =>
-  `Unsupported continuous effect ${effect.id}: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.`;
+  `Unsupported continuous effect ${effect.id}: unsupported modifier target, operation, condition, or duration for computeView.`;
 
 const toConditionQueueEntry = (
   effect: ContinuousEffectRecord,
