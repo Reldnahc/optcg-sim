@@ -185,15 +185,19 @@ test("filters hidden information and keeps public zones", () => {
   assert.equal("audit" in raw, false);
 });
 
-test("fails closed instead of projecting unsupported continuous modifier shapes", () => {
+test("omits derived board stats instead of crashing on unsupported continuous modifier shapes", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");
   state.continuousEffects = [unsupportedContinuousEffectRecord(p1State.leader)];
-  assert.throws(() => filterStateForPlayer(state, p1), {
-    name: "TypeError",
-    message:
-      "Unsupported continuous effect unsupported-player-view-continuous-power: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.",
-  });
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.self.leader.printedPower, 5000);
+  assert.equal(view.self.leader.currentPower, undefined);
+  assert.equal(
+    view.legalActions.some((action) => action.type === "declareAttack"),
+    false,
+  );
 });
 
 test("shows pending decision only to the recipient with public shape", () => {

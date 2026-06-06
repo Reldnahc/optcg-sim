@@ -92,10 +92,18 @@ export const computedBoardCardStatsByInstance = (
   if (!hasComputableBoardPowerMetadata(state)) {
     return undefined;
   }
-  const view: ComputedGameView = computeView(state, {
-    supportStatusPolicy: "ignore",
-    unsupportedCombatKeywordPolicy: "ignore",
-  });
+  let view: ComputedGameView;
+  try {
+    view = computeView(state, {
+      supportStatusPolicy: "ignore",
+      unsupportedCombatKeywordPolicy: "ignore",
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return undefined;
+    }
+    throw error;
+  }
   return new Map<InstanceId, ComputedBoardCardStats>(
     Object.values(view.cards).map((card) => [
       card.instanceId,
