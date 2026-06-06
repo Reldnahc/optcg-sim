@@ -34,7 +34,8 @@ export const LobbyDeckPanel = ({
   );
   const pickerLocked = selfDeckStatus === "ready";
   const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;
-  const refreshDisabled = disabled || pickerLocked || loadoutsStatus === "loading";
+  const refreshDisabled =
+    disabled || pickerLocked || loadoutsStatus === "loading";
 
   useEffect(() => {
     if (!selectedLoadoutExists) {
