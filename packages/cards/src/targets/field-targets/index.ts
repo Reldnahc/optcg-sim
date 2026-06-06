@@ -3,18 +3,22 @@ export {
   opponentCharactersTargetPrimitive,
   opponentLeaderOrCharactersTargetPrimitive,
   opponentStagesTargetPrimitive,
+  yourCharactersTargetPrimitive,
+  yourLeaderOrCharactersTargetPrimitive,
+  yourLeaderTargetPrimitive,
+  yourNamedCardsTargetPrimitive,
+} from "./primitives.js";
+export {
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
+} from "./opponent.js";
+export {
   parseCompoundYourCharactersTarget,
   parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
-  yourCharactersTargetPrimitive,
-  yourLeaderOrCharactersTargetPrimitive,
-  yourLeaderTargetPrimitive,
-  yourNamedCardsTargetPrimitive,
-  type FieldTargetParseResult,
-} from "./field-targets/index.js";
+} from "./self.js";
+export type { FieldTargetParseResult } from "./types.js";
