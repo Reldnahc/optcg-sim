@@ -15,6 +15,7 @@ export interface SupportProbeRequest {
   readonly text?: string;
   readonly cardId?: string;
   readonly deckHash?: string;
+  readonly deckHashOutput?: "report" | "unsupportedTextLines";
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly fetchCard?: PoneglyphFetch;
   readonly baseUrl?: string;
@@ -64,6 +65,7 @@ export const createSupportProbeReport = async (
     return createDeckHashSupportProbeReport(request.deckHash, {
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
       deckHashCodec: request.deckHashCodec ?? createPoneglyphDeckHashCodec(),
+      output: request.deckHashOutput ?? "report",
       fetchCard: request.fetchCard ?? fetchPoneglyphCard,
     });
   }
@@ -80,7 +82,7 @@ export const createSupportProbeReport = async (
       exitCode: 1,
       lines: [],
       errors: [
-        "Usage: support:probe -- --text <effect line> | --card <card id> | --deck-hash <hash>",
+        "Usage: support:probe -- --text <effect line> | --card <card id> | --deck-hash <hash> [--raw-unsupported-lines]",
       ],
     };
   }
@@ -105,6 +107,7 @@ const createDeckHashSupportProbeReport = async (
   options: {
     readonly baseUrl: string;
     readonly deckHashCodec: DeckHashCodecPort;
+    readonly output: "report" | "unsupportedTextLines";
     readonly fetchCard: PoneglyphFetch;
   },
 ): Promise<SupportProbeReport> => {
@@ -120,6 +123,7 @@ const createDeckHashSupportProbeReport = async (
   const cards = aggregateDeckHashEntries(decoded.entries);
   const totalCount = cards.reduce((sum, entry) => sum + entry.count, 0);
   const failureLines: string[] = [];
+  const unsupportedTextLines: string[] = [];
   let failedCardCount = 0;
   let exitCode = 0;
 
@@ -147,6 +151,7 @@ const createDeckHashSupportProbeReport = async (
       );
       if (!lineReport.parseOk) {
         exitCode = 1;
+        unsupportedTextLines.push(text);
         cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} text: ${text}`,
         );
@@ -164,6 +169,7 @@ const createDeckHashSupportProbeReport = async (
 
       if (!lineReport.runtimeSupported) {
         exitCode = 1;
+        unsupportedTextLines.push(text);
         cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} text: ${text}`,
         );
@@ -183,6 +189,10 @@ const createDeckHashSupportProbeReport = async (
       failedCardCount += 1;
       failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
     }
+  }
+
+  if (options.output === "unsupportedTextLines") {
+    return { exitCode, lines: unsupportedTextLines, errors: [] };
   }
 
   const lines = [

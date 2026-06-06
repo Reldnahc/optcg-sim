@@ -4,6 +4,7 @@ interface ProbeArgs {
   readonly text: string | undefined;
   readonly cardId: string | undefined;
   readonly deckHash: string | undefined;
+  readonly deckHashOutput: "report" | "unsupportedTextLines";
 }
 
 function parseArgs(argv: readonly string[]): ProbeArgs {
@@ -17,14 +18,20 @@ function parseArgs(argv: readonly string[]): ProbeArgs {
     text: textIndex >= 0 ? args[textIndex + 1] : undefined,
     cardId: cardIndex >= 0 ? args[cardIndex + 1] : undefined,
     deckHash: deckHashIndex >= 0 ? args[deckHashIndex + 1] : undefined,
+    deckHashOutput: args.includes("--raw-unsupported-lines")
+      ? "unsupportedTextLines"
+      : "report",
   };
 }
 
 async function main(): Promise<number> {
-  const { cardId, deckHash, text } = parseArgs(process.argv.slice(2));
+  const { cardId, deckHash, deckHashOutput, text } = parseArgs(
+    process.argv.slice(2),
+  );
   const report = await createSupportProbeReport({
     ...(cardId === undefined ? {} : { cardId }),
     ...(deckHash === undefined ? {} : { deckHash }),
+    deckHashOutput,
     ...(text === undefined ? {} : { text }),
   });
   for (const line of report.lines) {
