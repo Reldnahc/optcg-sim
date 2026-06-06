@@ -7,7 +7,7 @@ import type {
 } from "@optcg/types";
 
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
-import { supportedEntryPoints } from "../entry-points/supported.js";
+import { supportedEntryPoints } from "../entry-point-definitions.js";
 
 export interface CardFilterPredicateParseResult {
   readonly filter: CardFilter;
@@ -50,6 +50,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseStageCategoryPredicate,
   parseCharacterCategoryPredicate,
   parsePowerPredicate,
+  parseEffectEntryPointPresencePredicate,
   parseEffectEntryPointPredicate,
   parseDynamicDonFieldCostPredicate,
   parseCostPredicate,
@@ -786,6 +787,42 @@ function parseEffectEntryPointPredicate(
         : "filter:effectEntryPoint:without",
     ],
     rest: groups?.["rest"] ?? "",
+  };
+}
+
+function parseEffectEntryPointPresencePredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match = /^an? (?<entry>\[[^\]]+\])\s*(?<rest>.*)$/i.exec(text);
+  if (match === null) {
+    return undefined;
+  }
+  const entryText = match.groups?.["entry"];
+  if (entryText === undefined) {
+    return undefined;
+  }
+
+  const entryPoint = supportedEntryPoints.find(
+    (candidate) => candidate.text.toLowerCase() === entryText.toLowerCase(),
+  );
+  if (entryPoint === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      effectEntryPoint: {
+        mode: "with",
+        trigger: entryPoint.trigger,
+        ...(entryPoint.condition === undefined
+          ? {}
+          : { condition: entryPoint.condition }),
+      },
+    },
+    evidence: ["filter:effectEntryPoint", "filter:effectEntryPoint:with"],
+    rest: match.groups?.["rest"] ?? "",
   };
 }
 

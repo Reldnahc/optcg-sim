@@ -54,7 +54,7 @@ const isSupportedActivateReferencedEffectBody = (
 ): effect is Extract<Effect, { type: "activateReferencedEffect" }> =>
   effect.type === "activateReferencedEffect" &&
   effect.source.type === "triggerCard" &&
-  effect.trigger.type === "main";
+  (effect.trigger.type === "main" || effect.trigger.type === "onPlay");
 
 const isSupportedPlaySourceBody = (
   effect: Effect,
@@ -77,6 +77,13 @@ const isSupportedMoveCardsBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "moveCards" }> =>
   isSupportedMoveCardsEffect(effect);
+
+const isSupportedDamageBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "damage" }> =>
+  effect.type === "damage" &&
+  effect.player === "opponent" &&
+  effect.count === 1;
 
 const isSupportedPlaceTopDeckCardsBody = (
   effect: Effect,
@@ -169,6 +176,7 @@ const isSupportedNonOptionalBody = (
   isSupportedTrashFromHandBody(block.effect) ||
   isSupportedTrashFromHandUntilCountBody(block.effect) ||
   isSupportedMoveCardsBody(block.effect) ||
+  isSupportedDamageBody(block.effect) ||
   isSupportedPlaceTopDeckCardsBody(block.effect) ||
   isSupportedWinGameBody(block.effect) ||
   isSupportedSearchBody(block) ||

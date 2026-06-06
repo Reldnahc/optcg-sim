@@ -8,6 +8,7 @@ export const isSupportedAttachDonTargetFilter = (
     return false;
   }
   const categoryShape =
+    (categories.length === 1 && categories[0] === "leader") ||
     (categories.length === 1 && categories[0] === "character") ||
     (categories.length === 2 &&
       categories[0] === "leader" &&

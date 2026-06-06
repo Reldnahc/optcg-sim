@@ -151,10 +151,12 @@ const parsePowerGainInstruction: InstructionParser = (input) => {
   }
 
   const leader = parseYourLeaderTarget(input);
+  const thisLeader = parseThisLeaderTarget(input.text);
   const directTarget =
-    leader?.target === undefined
-      ? parseThisCharacterTarget({ text: input.text, allowImplicit: false })
-      : leader;
+    leader?.target !== undefined
+      ? leader
+      : (thisLeader ??
+        parseThisCharacterTarget({ text: input.text, allowImplicit: false }));
   if (directTarget?.target === undefined) {
     return undefined;
   }
@@ -213,6 +215,25 @@ const parseThisCharacterRevealedCostPower: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseThisLeaderTarget(text: string):
+  | {
+      readonly target: Target;
+      readonly rest: string;
+      readonly evidence: readonly ["target:thisCard"];
+    }
+  | undefined {
+  const match = /^This Leader\s+(?<rest>.+)$/iu.exec(text);
+  const rest = match?.groups?.["rest"];
+  if (rest === undefined) {
+    return undefined;
+  }
+  return {
+    target: { type: "self" },
+    rest,
+    evidence: ["target:thisCard"],
+  };
+}
 
 function parseGainsPositivePower(target: Target, text: string) {
   const actionMatch = /^gains\s+(?<rest>.*)$/i.exec(text);

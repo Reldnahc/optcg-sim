@@ -58,3 +58,4 @@ export {
   isSupportedQueuedWinGameEffect,
   isSupportedWinGameBody,
 } from "./win-game.js";
+export { executeDamagePrimitive, isSupportedDamageEffect } from "./damage.js";

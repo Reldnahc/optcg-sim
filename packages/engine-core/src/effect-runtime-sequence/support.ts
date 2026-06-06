@@ -313,6 +313,14 @@ const isSupportedMoveCardsCostRoute = (
   ) {
     return true;
   }
+  if (
+    cost.from.zone === "life" &&
+    cost.from.position === "top" &&
+    cost.to.zone === "trash" &&
+    cost.to.position === undefined
+  ) {
+    return true;
+  }
   return (
     cost.from.zone === "life" &&
     (cost.from.position === "top" ||
@@ -374,12 +382,18 @@ const isSupportedTrashToHandMoveSelectedSegment = (
   ((effect.from === "trash" &&
     effect.to === "hand" &&
     effect.position === undefined &&
+    effect.destinationFaceUp === undefined &&
     String(effect.selection).startsWith("trashSelection:")) ||
+    (effect.from === "trash" &&
+      effect.to === "life" &&
+      effect.position === "top" &&
+      String(effect.selection).startsWith("trashSelection:")) ||
     (effect.from === "hand" &&
       effect.to === "deck" &&
       (effect.position === "top" ||
         effect.position === "bottom" ||
         effect.position === "topOrBottom") &&
+      effect.destinationFaceUp === undefined &&
       String(effect.selection).startsWith("handSelection:")));
 
 const isSupportedAttachSelectedDonSegment = (

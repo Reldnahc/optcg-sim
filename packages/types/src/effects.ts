@@ -726,6 +726,7 @@ export type Effect =
       from: Zone | SelectionSetId;
       to: Zone;
       position?: "top" | "bottom" | "topOrBottom";
+      destinationFaceUp?: boolean;
     }
   | {
       type: "moveCards";
@@ -740,6 +741,7 @@ export type Effect =
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "original";
       destinationState?: "active" | "rested";
+      destinationFaceUp?: boolean;
     }
   | {
       type: "putRemaining";

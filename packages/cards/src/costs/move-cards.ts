@@ -18,6 +18,11 @@ export const parseMoveCardsCost = (
     return deckTopToTrash;
   }
 
+  const lifeTopToTrash = parseLifeTopToTrashCost(input);
+  if (lifeTopToTrash !== undefined) {
+    return lifeTopToTrash;
+  }
+
   const actionMatch = /^place\s+(?<rest>.+)$/i.exec(input.text);
   const afterAction = actionMatch?.groups?.["rest"];
   if (afterAction === undefined) {
@@ -111,6 +116,41 @@ const parseDeckTopToTrashCost = (
       "count:positiveInteger",
       "player:self",
       "zone:deck",
+      "position:top",
+      "destination:trash",
+      "order:original",
+    ],
+    rest: "",
+  };
+};
+
+const parseLifeTopToTrashCost = (
+  input: ParseInput,
+): CostParseResult | undefined => {
+  const match =
+    /^trash (?<count>[1-9]\d*) cards? from the top of your Life cards$/i.exec(
+      input.text,
+    );
+  const countText = match?.groups?.["count"];
+  if (countText === undefined) {
+    return undefined;
+  }
+  return {
+    cost: {
+      type: "moveCards",
+      count: Number.parseInt(countText, 10),
+      chooser: "self",
+      from: { player: "self", zone: "life", position: "top" },
+      to: { player: "self", zone: "trash" },
+      order: "chooserChoice",
+      optional: true,
+    },
+    evidence: [
+      "cost:moveCards",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:life",
       "position:top",
       "destination:trash",
       "order:original",

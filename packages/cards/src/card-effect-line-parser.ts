@@ -28,6 +28,7 @@ import {
   parseReplacementEntryPoint,
   parseRulesStartOfGameEntryPoint,
   parseSupportedEntryPoint,
+  parseTurnWindowedEntryPoint,
 } from "./entry-points/index.js";
 import { parseExpression } from "./expression-parser.js";
 import {
@@ -42,6 +43,7 @@ import {
   parseHandToDeckBottomInstruction,
   parseTopDeckPlacementInstruction,
   parseDrawInstruction,
+  parseDamageInstruction,
   parseInvalidateEffectsInstruction,
   parseKoInstruction,
   parseLifeMovementInstruction,
@@ -65,6 +67,7 @@ import {
   parsePlaceAtOwnerDeckBottomInstruction,
   parsePreventDrawInstruction,
   parseRevealTopInstruction,
+  parseSelectFromTrashChoiceInstruction,
   parseRestOpponentCharactersInstruction,
   parseReturnToOwnerHandInstruction,
   parseSetBasePowerInstruction,
@@ -187,6 +190,7 @@ const parseExplicitActionBasePowerInstruction = (input: ParseInput) => {
 
 const instructionParsers = [
   parseDrawInstruction,
+  parseDamageInstruction,
   parseActivateReferencedEffectInstruction,
   parseActivateSelectedEventInstruction,
   parseAddFromTrashToHandInstruction,
@@ -203,6 +207,7 @@ const instructionParsers = [
   parseTopDeckPlacementInstruction,
   parseTrashInstruction,
   parsePlayFromHandInstruction,
+  parseSelectFromTrashChoiceInstruction,
   parsePlayFromTrashInstruction,
   parsePlaySourceInstruction,
   parsePreventDrawInstruction,
@@ -326,6 +331,7 @@ const defaultRegistry = {
   metadataLines: [parseAnyCopiesOfThisCardRuleLine, parseDonDeckSizeRuleLine],
   entryPoints: [
     parseRulesStartOfGameEntryPoint,
+    parseTurnWindowedEntryPoint,
     parseSupportedEntryPoint,
     parseRecognizedUnsupportedEntryPoint,
     parseReplacementEntryPoint,

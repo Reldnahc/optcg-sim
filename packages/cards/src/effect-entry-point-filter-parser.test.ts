@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
-import { supportedEntryPoints } from "./entry-points/supported.js";
+import { supportedEntryPoints } from "./entry-point-definitions.js";
 
 it("parses with/without effect-entry-point filters for every supported bracket entry point", () => {
   for (const entryPoint of supportedEntryPoints) {

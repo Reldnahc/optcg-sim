@@ -11,6 +11,7 @@ export {
   parseYourLeaderConditionalPowerInstruction,
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
+export { parseDamageInstruction } from "./damage.js";
 export { parseHandToDeckBottomInstruction } from "./hand-to-deck-bottom.js";
 export { parsePlaceAtOwnerDeckBottomInstruction } from "./owner-deck-bottom.js";
 export { parseSetFieldActiveInstruction } from "./field-activation.js";
@@ -37,6 +38,7 @@ export { parsePreventDonActivationInstruction } from "./prevent-don-activation.j
 export { parsePreventDrawInstruction } from "./prevent-draw.js";
 export { parsePreventPlayInstruction } from "./prevent-play.js";
 export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
+export { parseSelectFromTrashChoiceInstruction } from "./select-from-trash-choice.js";
 export {
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,

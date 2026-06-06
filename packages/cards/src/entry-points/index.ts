@@ -4,3 +4,4 @@ export { parseRecognizedUnsupportedEntryPoint } from "./recognized-unsupported.j
 export { parseReplacementEntryPoint } from "./replacement.js";
 export { parseRulesStartOfGameEntryPoint } from "./rules-start-of-game.js";
 export { parseSupportedEntryPoint } from "./supported.js";
+export { parseTurnWindowedEntryPoint } from "./turn-windowed.js";

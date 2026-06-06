@@ -11,7 +11,7 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
       {
         id: "add-up-to-n-cards-from-deck-top-to-life-top",
         pattern:
-          /^add up to (?<count>[1-9]\d*) cards? from the top of your deck to the top of your Life cards\.?$/i,
+          /^add up to (?<count>[1-9]\d*) cards? from the top of your deck to the top of your Life cards(?<faceUp> face-up)?\.?$/i,
         build: (groups) => ({
           effect: {
             type: "moveCards",
@@ -20,6 +20,9 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
             from: { player: "self", zone: "deck", position: "top" },
             to: { player: "self", zone: "life", position: "top" },
             order: "original",
+            ...(groups["faceUp"] === undefined
+              ? {}
+              : { destinationFaceUp: true }),
           },
           evidence: [
             "instruction:moveCards",
@@ -29,6 +32,32 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
             "zone:deck",
             "position:top",
             "destination:life",
+            "order:original",
+          ],
+          rest: "",
+        }),
+      },
+      {
+        id: "add-up-to-n-cards-from-opponent-life-top-to-owner-hand",
+        pattern:
+          /^add up to (?<count>[1-9]\d*) cards? from the top of your opponent's Life cards to the owner's hand\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "moveCards",
+            min: 0,
+            count: Number.parseInt(groups["count"] ?? "", 10),
+            from: { player: "opponent", zone: "life", position: "top" },
+            to: { player: "owner", zone: "hand" },
+            order: "original",
+          },
+          evidence: [
+            "instruction:moveCards",
+            "cardinality:upTo",
+            "count:positiveInteger",
+            "player:opponent",
+            "zone:life",
+            "position:top",
+            "destination:ownerHand",
             "order:original",
           ],
           rest: "",

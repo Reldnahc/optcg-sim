@@ -47,6 +47,10 @@ export const isSupportedMoveCardsPaymentRoute = (
       option.to.zone === "trash" &&
       option.to.position === undefined) ||
     (option.from.zone === "life" &&
+      option.from.position === "top" &&
+      option.to.zone === "trash" &&
+      option.to.position === undefined) ||
+    (option.from.zone === "life" &&
       (option.from.position === "top" || option.from.position === "bottom") &&
       option.to.zone === "hand" &&
       option.to.position === undefined)
@@ -309,6 +313,97 @@ export const applyMoveCardsPayment = (params: {
         params.playerId,
         "deck",
       ),
+      trash: reindexZoneCards(
+        [...movedCards, ...params.player.trash],
+        "trash",
+        params.playerId,
+        "trash",
+      ),
+    };
+  }
+
+  if (
+    params.selectedOption.from.zone === "life" &&
+    params.selectedOption.from.position === "top" &&
+    params.selectedOption.to.zone === "trash" &&
+    params.selectedOption.to.position === undefined
+  ) {
+    const selectedLife = params.player.life.slice(0, params.selected.length);
+    if (
+      selectedLife.length !== params.selectedOption.count ||
+      selectedLife.some(
+        (lifeCard, index) =>
+          lifeCard.card.instanceId !== params.selected[index],
+      )
+    ) {
+      return null;
+    }
+    const selectedSet = new Set(params.selected);
+    const movedCards = selectedLife.map((lifeCard, index) => ({
+      ...lifeCard.card,
+      attachedDon: [],
+      zone: {
+        zone: "trash" as const,
+        playerId: params.playerId,
+        slot: "trash" as const,
+        index,
+      },
+    }));
+    for (const movedCard of movedCards) {
+      appendEvent(
+        params.state,
+        params.events,
+        "cardMoved",
+        {
+          instanceId: movedCard.instanceId,
+          cardId: movedCard.cardId,
+          from: "life",
+          to: "trash",
+          playerId: params.playerId,
+          reason: "moveCardsCost",
+        },
+        { type: "public" },
+      );
+      const moved = params.events[params.events.length - 1];
+      if (moved !== undefined) {
+        moved.causedBy = { type: "decision", decisionId: params.decisionId };
+      }
+      appendEvent(
+        params.state,
+        params.events,
+        "cardTrashed",
+        {
+          instanceId: movedCard.instanceId,
+          cardId: movedCard.cardId,
+          playerId: params.playerId,
+          reason: "moveCardsCost",
+        },
+        { type: "public" },
+      );
+      const trashed = params.events[params.events.length - 1];
+      if (trashed !== undefined) {
+        trashed.causedBy = {
+          type: "decision",
+          decisionId: params.decisionId,
+        };
+      }
+    }
+    return {
+      ...params.player,
+      life: params.player.life
+        .filter((lifeCard) => !selectedSet.has(lifeCard.card.instanceId))
+        .map((entry, index) => ({
+          ...entry,
+          card: {
+            ...entry.card,
+            zone: {
+              zone: "life" as const,
+              playerId: params.playerId,
+              slot: "life" as const,
+              index,
+            },
+          },
+        })),
       trash: reindexZoneCards(
         [...movedCards, ...params.player.trash],
         "trash",

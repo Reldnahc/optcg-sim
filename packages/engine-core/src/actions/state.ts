@@ -143,6 +143,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "colorsAny",
   "custom",
   "cost",
+  "effectEntryPoint",
   "names",
   "nameNot",
   "power",
@@ -217,6 +218,7 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
+    isSupportedEffectEntryPointFilter(filter.effectEntryPoint) &&
     (filter.state === undefined ||
       supportedHandSelectionStates.has(filter.state)) &&
     isSupportedNumericFilter(filter.cost) &&
@@ -310,6 +312,38 @@ const cardMatchesBaseFilter = (
   return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
 };
 
+const isSupportedEffectEntryPointFilter = (
+  filter: CardFilter["effectEntryPoint"],
+): boolean => filter === undefined || typeof filter.trigger.type === "string";
+
+const valuesEqual = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+const cardMatchesEffectEntryPointFilter = (
+  state: GameState,
+  card: ResolvedCard | undefined,
+  filter: CardFilter["effectEntryPoint"],
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  const effectDefinitionId =
+    card?.support.status === "implemented-dsl"
+      ? card.support.effectDefinitionId
+      : undefined;
+  const definition =
+    effectDefinitionId === undefined
+      ? undefined
+      : state.cardManifest.effectDefinitions?.[effectDefinitionId];
+  const hasEntryPoint =
+    definition?.effects.some(
+      (effect) =>
+        valuesEqual(effect.trigger, filter.trigger) &&
+        valuesEqual(effect.condition, filter.condition),
+    ) ?? false;
+  return filter.mode === "with" ? hasEntryPoint : !hasEntryPoint;
+};
+
 export const cardMatchesSearchFilter = (
   card: ResolvedCard | undefined,
   filter: CardFilter,
@@ -326,6 +360,11 @@ export const cardMatchesHandSelectionFilter = (
   }
   const resolved = state.cardManifest.cards[card.cardId];
   if (!cardMatchesBaseFilter(resolved, filter)) {
+    return false;
+  }
+  if (
+    !cardMatchesEffectEntryPointFilter(state, resolved, filter.effectEntryPoint)
+  ) {
     return false;
   }
   if (filter.state !== undefined && card.state !== filter.state) {

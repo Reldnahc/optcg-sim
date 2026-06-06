@@ -5,6 +5,7 @@ import type {
   Effect,
   EffectDefinition,
   ReplacementTrigger,
+  SelectionId,
   Target,
 } from "@optcg/types";
 
@@ -101,6 +102,129 @@ test("runtime admission accepts DON deck movement as a reusable auto body", () =
         effect,
         sourcePresencePolicy: "noSourceRequired",
         trigger: { type: "trigger" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
+test("runtime admission accepts effect damage as a reusable auto body", () => {
+  const effect = {
+    type: "damage",
+    target: "leader",
+    player: "opponent",
+    count: 1,
+  } as const;
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        trigger: { type: "onKO" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
+test("runtime admission accepts selected trash cards with trigger-presence filters", () => {
+  const selectionId = "trashSelection:play" as SelectionId;
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "select",
+        connector: "always",
+        saveResultAs: selectionId,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          saveAs: selectionId,
+          visibility: "bothPlayers",
+          filter: {
+            categories: ["character"],
+            cost: { max: 4 },
+            effectEntryPoint: {
+              mode: "with",
+              trigger: { type: "trigger" },
+            },
+          },
+        },
+      },
+      {
+        id: "play",
+        connector: "ifPossible",
+        effect: {
+          type: "playSelected",
+          selection: selectionId,
+          ignoreCost: true,
+        },
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        trigger: { type: "onKO" },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
+test("runtime admission accepts selected trash cards moving to face-up Life", () => {
+  const selectionId = "trashSelection:choose-destination" as SelectionId;
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "select",
+        connector: "always",
+        saveResultAs: selectionId,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          saveAs: selectionId,
+          visibility: "bothPlayers",
+          filter: { categories: ["character"] },
+        },
+      },
+      {
+        id: "move",
+        connector: "ifPossible",
+        effect: {
+          type: "moveSelected",
+          selection: selectionId,
+          from: "trash",
+          to: "life",
+          position: "top",
+          destinationFaceUp: true,
+        },
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
       }),
     ),
     { supported: true },

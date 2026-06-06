@@ -71,12 +71,15 @@ export const isSupportedLifeTopToHandEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
+  (effect.min === undefined ||
+    (Number.isInteger(effect.min) && effect.min >= 0)) &&
   Number.isInteger(effect.count) &&
   effect.count > 0 &&
-  effect.from.player === "self" &&
+  (effect.min ?? effect.count) <= effect.count &&
+  (effect.from.player === "self" || effect.from.player === "opponent") &&
   effect.from.zone === "life" &&
   effect.from.position === "top" &&
-  effect.to.player === "self" &&
+  (effect.to.player === effect.from.player || effect.to.player === "owner") &&
   effect.to.zone === "hand" &&
   effect.to.position === undefined;
 
@@ -198,7 +201,15 @@ export const executeMoveCardsPrimitive = (
   }
 
   const fromPlayerId = resolvePlayerId(state, entry, effect.from.player);
-  const toPlayerId = resolvePlayerId(state, entry, effect.to.player);
+  const resolvedToPlayerId = resolvePlayerId(state, entry, effect.to.player);
+  const toPlayerId =
+    effect.to.player === "owner" &&
+    (effect.from.zone === "life" ||
+      effect.from.zone === "deck" ||
+      effect.from.zone === "trash" ||
+      effect.from.zone === "hand")
+      ? fromPlayerId
+      : resolvedToPlayerId;
   if (
     fromPlayerId === undefined ||
     toPlayerId === undefined ||
@@ -647,7 +658,7 @@ const executeDeckTopToLifeTopMove = (
     [
       ...moved.map(
         (card, index): LifeCard => ({
-          faceUp: false,
+          faceUp: effect.destinationFaceUp === true,
           card: {
             ...card,
             zone: { zone: "life", playerId, slot: "life", index },

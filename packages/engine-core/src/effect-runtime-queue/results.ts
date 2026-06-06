@@ -25,15 +25,11 @@ import {
 import { hasUniqueQueueEntryIdsWithin } from "./id-matching.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 import { createChooseTriggerOrderDecision } from "../effect-runtime-trigger-order-decision.js";
-import type {
-  CreateUnsupportedPendingRuntimeWorkError,
-  EffectRuntimeQueueTargetDecisions,
-  ResolveImplementedDslEffectDefinition,
-} from "./target-decisions.js";
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   executeWinGamePrimitive,
+  isSupportedDamageEffect,
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
   isSupportedQueuedWinGameEffect,
@@ -73,35 +69,11 @@ import {
   hasExactDamageDeferredQueue,
   isActiveDoubleAttackDamageProcess,
 } from "../effect-runtime-damage-deferred-queue.js";
-export type QueueEffectResolvedCustomTriggers = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  events: readonly EngineEvent[],
-) => EngineResult | undefined;
-
-export interface EffectRuntimeQueueResultsDependencies {
-  resolveImplementedDslEffectDefinition: ResolveImplementedDslEffectDefinition;
-  createUnsupportedPendingRuntimeWorkError: CreateUnsupportedPendingRuntimeWorkError;
-  queueEffectResolvedCustomTriggers: QueueEffectResolvedCustomTriggers;
-  targetDecisions: EffectRuntimeQueueTargetDecisions;
-}
-
-export interface EffectRuntimeQueueResults {
-  processNoChoiceEffectQueue: (
-    state: GameState,
-    orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
-    acceptedOptionalQueueEntryIds?: readonly QueueEntryId[],
-  ) => EngineResult;
-  processEffectRuntimeAfterTriggerOrderChoice: (
-    state: GameState,
-    orderedIds: readonly QueueEntryId[],
-  ) => EngineResult;
-  resumePlaySourceOverflowDecision: (
-    originalState: GameState,
-    decision: SelectCardsDecision,
-    playCardResult: EngineResult,
-  ) => EngineResult | undefined;
-}
+import { resolveQueuedDamagePrimitive } from "./damage.js";
+import type {
+  EffectRuntimeQueueResults,
+  EffectRuntimeQueueResultsDependencies,
+} from "./results-types.js";
 
 export const createEffectRuntimeQueueResults = (
   dependencies: EffectRuntimeQueueResultsDependencies,
@@ -541,6 +513,12 @@ export const createEffectRuntimeQueueResults = (
         isSupportedQueuedWinGameEffect(queuedEffect)
           ? queuedEffect.effect
           : undefined;
+      const damageEffect =
+        queuedEffect !== undefined &&
+        queuedEffect.sourcePresencePolicy === selected.sourcePresencePolicy &&
+        isSupportedDamageEffect(queuedEffect.effect)
+          ? queuedEffect.effect
+          : undefined;
       const queuedContinuousEffect = resolveQueuedContinuousEffect(
         nextState,
         selected,
@@ -631,6 +609,7 @@ export const createEffectRuntimeQueueResults = (
           !resolvedTrashUntilAsNoop &&
           playSourceEffect === undefined &&
           winGameEffect === undefined &&
+          damageEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
           return unsupportedEffectQueueResult(originalState);
@@ -730,6 +709,23 @@ export const createEffectRuntimeQueueResults = (
         );
         if (resolution.errors !== undefined) {
           return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (damageEffect !== undefined) {
+        const resolution = resolveQueuedDamagePrimitive(
+          nextState,
+          resolvingEntry,
+          damageEffect,
+          allEvents,
+        );
+        if (resolution.status === "unsupported") {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        if (resolution.status === "pendingDecision") {
+          return resolution.result;
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);

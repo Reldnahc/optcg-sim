@@ -21,6 +21,7 @@ import {
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
+import { applyTrashToLifeSelectedCardMoveSegment } from "./selected-trash-to-life.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
@@ -347,6 +348,13 @@ export const applySelectedCardMoveSegment = (
     params.effect.position === undefined
   ) {
     return applyTrashToHandSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    params.effect.from === "trash" &&
+    params.effect.to === "life" &&
+    params.effect.position === "top"
+  ) {
+    return applyTrashToLifeSelectedCardMoveSegment(params, selected);
   }
   if (
     params.effect.from === "hand" &&

@@ -91,6 +91,11 @@ export const parseAddRestedDonFromDonDeckInstruction: InstructionParser = (
 };
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
+  const distribution = parseAttachRestedDonEachInstruction(input);
+  if (distribution !== undefined) {
+    return distribution;
+  }
+
   const match =
     /^give (?<quantity>up to [1-9]\d*) rested DON!! cards? to (?<target>.+)$/i.exec(
       input.text,
@@ -100,6 +105,58 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   if (quantityText === undefined || targetText === undefined) {
     return undefined;
   }
+  return parseAttachRestedDonToTarget(quantityText, targetText);
+};
+
+const parseAttachRestedDonEachInstruction: InstructionParser = (input) => {
+  const match =
+    /^give your Leader and 1 Character (?<quantity>up to [1-9]\d*) rested DON!! cards? each\.?$/iu.exec(
+      input.text,
+    );
+  const quantityText = match?.groups?.["quantity"];
+  if (quantityText === undefined) {
+    return undefined;
+  }
+
+  const leader = parseAttachRestedDonToTarget(quantityText, "your Leader");
+  const character = parseAttachRestedDonToTarget(
+    quantityText,
+    "1 of your Characters",
+  );
+  if (leader === undefined || character === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "attach:leader",
+          connector: "always",
+          effect: leader.effect,
+        },
+        {
+          id: "attach:character",
+          connector: "then",
+          effect: character.effect,
+        },
+      ],
+    },
+    evidence: [
+      "instruction:attachDon",
+      "composition:selectThenApply",
+      ...leader.evidence,
+      ...character.evidence,
+    ],
+    rest: "",
+  };
+};
+
+const parseAttachRestedDonToTarget = (
+  quantityText: string,
+  targetText: string,
+): ReturnType<InstructionParser> => {
   const quantity = parseUpToCardinality({ text: quantityText });
   if (quantity === undefined || quantity.rest.length > 0) {
     return undefined;
@@ -200,6 +257,14 @@ const parseRestedDonAttachmentTarget = (
         | { readonly zones: ["leaderArea", "characterArea"] };
     }
   | undefined => {
+  if (/^your Leader\.?$/iu.test(targetText)) {
+    return {
+      evidence: ["zone:leaderArea", "filter:category:leader"],
+      filter: { categories: ["leader"] },
+      requestZone: { zones: ["leaderArea", "characterArea"] },
+      savedTargetZone: { zones: ["leaderArea", "characterArea"] },
+    };
+  }
   if (/^your Leader or 1 of your Characters\.?$/iu.test(targetText)) {
     const zoneTarget = {
       zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
