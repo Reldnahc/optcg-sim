@@ -359,22 +359,20 @@ test("unsupported Double Attack metadata cannot bypass source gate through direc
   const state = setupLeaderBattleWithDamageCount(2, {
     unsupportedDoubleAttack: true,
   });
-  const opened = resolveSupportedVanillaBattle(state);
-  assertAcceptedHash(opened);
-  const before = JSON.stringify(opened.state);
-  const beforeHash = hashCanonicalStateValue(opened.state);
+  const before = JSON.stringify(state);
+  const beforeHash = hashCanonicalStateValue(state);
 
-  const result = passCounterStep(opened.state, p2);
+  const result = resolveSupportedVanillaBattle(state);
 
   assert.deepEqual(result.errors, [
     {
       type: "illegalAction",
-      reason: "Battle requires unsupported combat metadata.",
+      reason: "Battle requires unsupported keyword or protection handling.",
     },
   ]);
   assert.deepEqual(result.events, []);
   assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(opened.state), before);
+  assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
 });
 

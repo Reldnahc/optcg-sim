@@ -767,19 +767,29 @@ test("implemented-dsl leader with non-combat effect definition can attack normal
   ]);
 });
 
-test("fails closed when combat card has unsupported printed combat keywords", () => {
+test("supported doubleAttack printed keyword does not block combat view", () => {
   const state = createState();
-  const brokenManifest = {
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  setMainTurnAfterFirstTurn(state);
+  p1State.leader.state = "active";
+  const manifest = {
     ...state.cardManifest,
     cards: { ...state.cardManifest.cards },
   };
-  brokenManifest.cards[toCardId("leader-red")] = {
-    ...must(brokenManifest.cards[toCardId("leader-red")], "leader-red"),
+  manifest.cards[toCardId("leader-red")] = {
+    ...must(manifest.cards[toCardId("leader-red")], "leader-red"),
     printedKeywords: ["doubleAttack"],
   };
-  state.cardManifest = brokenManifest;
+  state.cardManifest = manifest;
 
-  assert.throws(() => computeView(state), /unsupported.*keyword/i);
+  const view = computeView(state);
+  assert.deepEqual(view.cards[p1State.leader.instanceId]?.keywords, [
+    "doubleAttack",
+  ]);
+  assert.deepEqual(view.legalAttackTargets[p1State.leader.instanceId], [
+    p2State.leader.instanceId,
+  ]);
 });
 
 test("active defender blocker character has canBlock true only during block step", () => {
@@ -1031,19 +1041,4 @@ test("active defender printed blocker has canBlock false for stale battle refs",
     ]?.canBlock,
     false,
   );
-});
-
-test("fails closed for unsupported Double Attack keyword while blocker metadata is supported", () => {
-  const state = createState();
-  const brokenManifest = {
-    ...state.cardManifest,
-    cards: { ...state.cardManifest.cards },
-  };
-  brokenManifest.cards[toCardId("leader-red")] = {
-    ...must(brokenManifest.cards[toCardId("leader-red")], "leader-red"),
-    printedKeywords: ["doubleAttack"],
-  };
-  state.cardManifest = brokenManifest;
-
-  assert.throws(() => computeView(state), /unsupported.*keyword/i);
 });

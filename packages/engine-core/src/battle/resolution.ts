@@ -207,6 +207,19 @@ export const resolveSupportedVanillaBattle = (
   if (initialAttacker === null || initialTarget === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
   }
+  const attackerManifestCard =
+    resolutionState.cardManifest.cards[initialBattle.attacker.cardId];
+  const attackerPrintedKeywords = attackerManifestCard?.printedKeywords ?? [];
+  if (
+    initialBattle.damageCount === 2 &&
+    attackerPrintedKeywords.includes("doubleAttack") &&
+    !isSupportedDoubleAttackDamageSource(attackerManifestCard)
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported keyword or protection handling.",
+    );
+  }
   if (!initialTarget.isLeader && initialBattle.damageCount !== 1) {
     return unsupportedBattleResolution(
       state,
@@ -236,19 +249,6 @@ export const resolveSupportedVanillaBattle = (
   const battle = resolutionState.battle;
   if (battle === undefined) {
     return illegalAction(state, "No active battle to resolve.");
-  }
-  const attackerManifestCard =
-    resolutionState.cardManifest.cards[battle.attacker.cardId];
-  const attackerPrintedKeywords = attackerManifestCard?.printedKeywords ?? [];
-  if (
-    battle.damageCount === 2 &&
-    attackerPrintedKeywords.includes("doubleAttack") &&
-    !isSupportedDoubleAttackDamageSource(attackerManifestCard)
-  ) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported keyword or protection handling.",
-    );
   }
   const attacker = reifyCardRef(resolutionState, battle.attacker);
   const target = reifyCardRef(resolutionState, battle.currentTarget);

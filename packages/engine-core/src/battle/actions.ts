@@ -112,6 +112,12 @@ const hideSupportedDoubleAttackKeywords = (
   };
 };
 
+const hasUnsupportedPrintedDoubleAttackCombatMetadata = (
+  metadata: ResolvedCard | undefined,
+): boolean =>
+  (metadata?.printedKeywords ?? []).includes("doubleAttack") &&
+  !isSupportedDoubleAttackCombatMetadata(metadata);
+
 const getCombatCardIds = (state: GameState): CardId[] => {
   const cardIds = new Set<CardId>();
   for (const player of Object.values(state.players)) {
@@ -143,6 +149,15 @@ const collectDeclareAttackLegalActions = (
     for (const targetId of targetIds) {
       const target = getCombatCardByInstanceId(state, targetId);
       if (target === null) {
+        continue;
+      }
+      if (
+        target.isLeader &&
+        attackerHasDoubleAttack(view, state, attacker.card) &&
+        hasUnsupportedPrintedDoubleAttackCombatMetadata(
+          state.cardManifest.cards[attacker.card.cardId],
+        )
+      ) {
         continue;
       }
       if (
@@ -356,6 +371,18 @@ export const applyDeclareAttack = (
         "declareAttack is unsupported for current combat metadata.",
       );
     }
+  }
+  if (
+    attackerHasDoubleAttack &&
+    target.isLeader &&
+    hasUnsupportedPrintedDoubleAttackCombatMetadata(
+      state.cardManifest.cards[attacker.card.cardId],
+    )
+  ) {
+    return illegalAction(
+      state,
+      "declareAttack is unsupported for current combat metadata.",
+    );
   }
   if (!legalTargets.includes(target.card.instanceId)) {
     return illegalAction(

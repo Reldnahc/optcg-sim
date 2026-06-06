@@ -26,7 +26,6 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;
 };
 
-const unsupportedCombatKeywords = new Set<Keyword>(["doubleAttack"]);
 interface ComputeViewOptions {
   supportStatusPolicy?: "throw" | "ignore";
   unsupportedCombatKeywordPolicy?: "throw" | "ignore";
@@ -217,16 +216,6 @@ const resolveCombatMetadata = (
     throw new TypeError(
       `Unsupported support status ${resolved.support.status} for ${String(card.cardId)}.`,
     );
-  }
-  for (const keyword of resolved.printedKeywords) {
-    if (
-      options.unsupportedCombatKeywordPolicy !== "ignore" &&
-      unsupportedCombatKeywords.has(keyword)
-    ) {
-      throw new TypeError(
-        `Unsupported combat keyword ${keyword} for ${String(card.cardId)}.`,
-      );
-    }
   }
   return resolved as ResolvedCard & { power: number };
 };
