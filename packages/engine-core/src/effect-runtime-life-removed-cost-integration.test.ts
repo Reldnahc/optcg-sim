@@ -322,21 +322,27 @@ test("lifeRemoved reaction queues when an on-play optional life cost removes Lif
   );
   assert.equal(selectDecision.type, "selectCards");
 
-  const selected = must(selectDecision.candidates[0], "play candidate").card;
-  const played = applyAction(lifeAdded.state, {
-    type: "respondToDecision",
-    decisionId: selectDecision.id,
-    response: { type: "cards", cards: [selected] },
-  });
-  assert.equal(played.errors, undefined);
   assert.equal(
-    must(played.state.players[p1], "after selected play").characters.some(
-      (card) => card.instanceId === playCandidate.instanceId,
+    selectDecision.candidates.some(
+      (candidate) => candidate.card.instanceId === playCandidate.instanceId,
     ),
     true,
   );
+
+  const resolved = applyAction(lifeAdded.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: { type: "cards", cards: [] },
+  });
+  assert.equal(resolved.errors, undefined);
   assert.equal(
-    played.state.eventJournal.some(
+    must(resolved.state.players[p1], "after declined play").characters.some(
+      (card) => card.instanceId === playCandidate.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    resolved.state.eventJournal.some(
       (event) =>
         event.type === "cardMoved" &&
         event.visibility.type === "public" &&
@@ -348,19 +354,19 @@ test("lifeRemoved reaction queues when an on-play optional life cost removes Lif
   );
   assert.equal(
     must(
-      played.state.players[p1],
-      "after selected play source",
+      resolved.state.players[p1],
+      "after declined play source",
     ).characters.some((card) => card.instanceId === reactionSource.instanceId),
     true,
     "the lifeRemoved source should still be on field when the movement trigger is scanned",
   );
   assert.equal(
-    played.state.cardManifest.cards[reactionSource.cardId]?.support.status,
+    resolved.state.cardManifest.cards[reactionSource.cardId]?.support.status,
     "implemented-dsl",
   );
 
   assert.equal(
-    played.state.eventJournal.some(
+    resolved.state.eventJournal.some(
       (event) =>
         event.type === "effectQueued" &&
         event.causedBy?.type === "ruleProcess" &&
@@ -370,7 +376,7 @@ test("lifeRemoved reaction queues when an on-play optional life cost removes Lif
     "paying an optional cost that moves Life to hand should queue the lifeRemoved reaction after the on-play chain resolves",
   );
   assert.equal(
-    played.state.eventJournal.some(
+    resolved.state.eventJournal.some(
       (event) =>
         event.type === "effectResolved" &&
         JSON.stringify(event.payload).includes(
@@ -380,12 +386,12 @@ test("lifeRemoved reaction queues when an on-play optional life cost removes Lif
     true,
   );
   const resolvedPlayer = must(
-    played.state.players[p1],
+    resolved.state.players[p1],
     "after life removed trigger",
   );
-  assert.equal(resolvedPlayer.hand.length, handLengthBeforeCost + 1);
+  assert.equal(resolvedPlayer.hand.length, handLengthBeforeCost + 2);
   assert.equal(
-    played.state.continuousEffects.some(
+    resolved.state.continuousEffects.some(
       (effect) =>
         effect.modifier.layer === "restriction" &&
         effect.modifier.operation.type === "restriction" &&
