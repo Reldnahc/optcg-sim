@@ -227,11 +227,11 @@ export const fieldRemovalProtectionsForCard = (
   ];
   for (const effect of effects) {
     if (!isProtectionModifier(effect)) continue;
+    if (!cardMatchesSelfProtection(card, effect)) continue;
     if (!isSupportedProtectionModifier(effect)) {
       return { ok: false, reason: "malformed-field-removal-protection" };
     }
     if (!durationIsActive(state, effect)) continue;
-    if (!cardMatchesSelfProtection(card, effect)) continue;
     const condition = conditionIsActive(state, effect);
     if (!condition.ok) return condition;
     if (!condition.active) continue;

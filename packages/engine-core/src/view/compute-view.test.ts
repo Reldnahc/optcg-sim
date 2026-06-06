@@ -248,18 +248,6 @@ const continuousPowerEffectRecord = (
   return record;
 };
 
-const assertRejectsUnsupportedContinuousEffect = (
-  effect: ContinuousEffectRecord,
-) => {
-  const state = createState();
-  state.continuousEffects = [effect];
-
-  assert.throws(() => computeView(state), {
-    name: "TypeError",
-    message: `Unsupported continuous effect ${effect.id}: unsupported modifier target, operation, condition, or duration for computeView.`,
-  });
-};
-
 test("computes base/current power from manifest with attached DON!! during controller turn", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
@@ -459,42 +447,11 @@ const unsupportedContinuousEffectCases: Array<{
       }),
   },
   {
-    label: "protection modifier",
-    createEffect: (state) => {
-      const base = continuousPowerEffectRecord(state, {
-        id: "unsupported-protection",
-      });
-      return {
-        ...base,
-        modifier: {
-          layer: "protection",
-          target: { type: "self" },
-          operation: {
-            type: "protection",
-            protection: { process: "ko", source: base.source },
-          },
-        },
-      };
-    },
-  },
-  {
-    label: "non-self target",
-    createEffect: (state) =>
-      continuousPowerEffectRecord(state, {
-        id: "unsupported-non-self-target",
-        modifier: {
-          layer: "powerAdd",
-          target: { type: "myLeader" },
-          operation: { type: "addPower", value: 1000 },
-        },
-      }),
-  },
-  {
     label: "conditional modifier",
     createEffect: (state) =>
       continuousPowerEffectRecord(state, {
         id: "unsupported-condition",
-        condition: { type: "yourTurn" },
+        condition: { type: "custom", check: "unsupported-view-condition" },
       }),
   },
   {
@@ -508,9 +465,20 @@ const unsupportedContinuousEffectCases: Array<{
 ];
 
 for (const { label, createEffect } of unsupportedContinuousEffectCases) {
-  test(`fails closed for unsupported continuous effect ${label}`, () => {
+  test(`ignores unsupported continuous effect ${label} without crashing`, () => {
     const state = createState();
-    assertRejectsUnsupportedContinuousEffect(createEffect(state));
+    const p1State = must(state.players[p1], "p1 state");
+    const beforeHash = hashCanonicalStateValue(state);
+    const eventJournalBefore = structuredClone(state.eventJournal);
+    state.continuousEffects = [createEffect(state)];
+    const stateWithRecordHash = hashCanonicalStateValue(state);
+
+    const view = computeView(state);
+
+    assert.equal(view.cards[p1State.leader.instanceId]?.currentPower, 5000);
+    assert.equal(hashCanonicalStateValue(state), stateWithRecordHash);
+    assert.notEqual(beforeHash, stateWithRecordHash);
+    assert.deepEqual(state.eventJournal, eventJournalBefore);
   });
 }
 

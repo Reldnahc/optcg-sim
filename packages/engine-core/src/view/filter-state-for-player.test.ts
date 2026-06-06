@@ -68,9 +68,9 @@ const unsupportedContinuousEffectRecord = (
   },
   controller: source.controller,
   modifier: {
-    layer: "powerAdd",
-    target: { type: "myLeader" },
-    operation: { type: "addPower", value: 2000 },
+    layer: "baseCostSet",
+    target: { type: "self" },
+    operation: { type: "setBaseCost", value: 1 },
   },
   duration: { type: "permanent" },
   createdBy: { type: "ruleProcess", name: "player-view-test" },
@@ -185,7 +185,7 @@ test("filters hidden information and keeps public zones", () => {
   assert.equal("audit" in raw, false);
 });
 
-test("omits derived board stats instead of crashing on unsupported continuous modifier shapes", () => {
+test("ignores unsupported continuous modifier shapes when deriving board stats", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");
   state.continuousEffects = [unsupportedContinuousEffectRecord(p1State.leader)];
@@ -193,11 +193,7 @@ test("omits derived board stats instead of crashing on unsupported continuous mo
   const view = filterStateForPlayer(state, p1);
 
   assert.equal(view.self.leader.printedPower, 5000);
-  assert.equal(view.self.leader.currentPower, undefined);
-  assert.equal(
-    view.legalActions.some((action) => action.type === "declareAttack"),
-    false,
-  );
+  assert.equal(view.self.leader.currentPower, 5000);
 });
 
 test("shows pending decision only to the recipient with public shape", () => {

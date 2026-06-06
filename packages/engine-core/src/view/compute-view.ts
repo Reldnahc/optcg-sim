@@ -12,7 +12,6 @@ import type {
 
 import {
   allContinuousEffects,
-  assertSupportedContinuousEffects,
   continuousEffectConditionPasses,
   durationIsActive,
   isCardRefLive,
@@ -44,10 +43,10 @@ const continuousPowerBonusForCard = (
   const effects = allContinuousEffects(state);
 
   for (const effect of effects) {
-    if (!durationIsActive(state, effect)) continue;
-    if (!recordConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "powerAdd") continue;
     if (effect.modifier.operation.type !== "addPower") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!recordConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
 
     powerBonus += effect.modifier.operation.value;
@@ -64,9 +63,9 @@ const continuousBasePowerForCard = (
   const effects = allContinuousEffects(state);
 
   for (const effect of effects) {
-    if (!durationIsActive(state, effect)) continue;
     if (effect.modifier.layer !== "basePowerSet") continue;
     if (effect.modifier.operation.type !== "setBasePower") continue;
+    if (!durationIsActive(state, effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
 
@@ -87,10 +86,10 @@ const continuousCostBonusForCard = (
   const effects = allContinuousEffects(state);
 
   for (const effect of effects) {
-    if (!durationIsActive(state, effect)) continue;
-    if (!recordConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "costAdd") continue;
     if (effect.modifier.operation.type !== "addCost") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!recordConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
 
     costBonus += effect.modifier.operation.value;
@@ -106,11 +105,11 @@ const hasRestriction = (
 ): boolean => {
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
-    if (!durationIsActive(state, effect)) continue;
-    if (!continuousEffectConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "restriction") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
     if (effect.modifier.operation.restriction !== restriction) continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     return true;
   }
@@ -139,9 +138,9 @@ const continuousRestrictionLabelsForCard = (
   const restrictions: string[] = [];
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
-    if (!durationIsActive(state, effect)) continue;
     if (effect.modifier.layer !== "restriction") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
+    if (!durationIsActive(state, effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     const label = restrictionLabel(effect.modifier.operation.restriction);
@@ -159,8 +158,8 @@ const continuousKeywordsForCard = (
   const keywords: Keyword[] = [];
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
-    if (!durationIsActive(state, effect)) continue;
     if (!isSupportedContinuousKeywordModifier(effect)) continue;
+    if (!durationIsActive(state, effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     const operation = effect.modifier.operation;
@@ -387,8 +386,6 @@ export const computeView = (
   state: GameState,
   options: ComputeViewOptions = {},
 ): ComputedGameView => {
-  assertSupportedContinuousEffects(state);
-
   const cards: ComputedGameView["cards"] = {};
   const legalAttackTargets: ComputedGameView["legalAttackTargets"] = {};
   const allCombatCards: CardInstance[] = [];

@@ -447,7 +447,7 @@ test("unblockable attacker suppresses computed blocker eligibility", () => {
   );
 });
 
-test("unsupported conditional keyword grant conditions fail closed without mutation or events", () => {
+test("unsupported conditional keyword grant conditions stay inactive without mutation or events", () => {
   const unsupportedCondition = createState();
   const conditionP1 = must(
     unsupportedCondition.players[p1],
@@ -466,9 +466,11 @@ test("unsupported conditional keyword grant conditions fail closed without mutat
   const unsupportedConditionHash =
     hashCanonicalStateValue(unsupportedCondition);
 
-  assert.throws(
-    () => computeView(unsupportedCondition),
-    /unsupported continuous/i,
+  const view = computeView(unsupportedCondition);
+
+  assert.equal(
+    view.cards[conditionSource.instanceId]?.keywords.includes("blocker"),
+    false,
   );
   assert.deepEqual(unsupportedCondition, unsupportedConditionBefore);
   assert.equal(

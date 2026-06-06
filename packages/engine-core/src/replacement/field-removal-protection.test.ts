@@ -655,8 +655,8 @@ test("computeView fails closed for malformed field-removal protection metadata",
 
   assert.throws(() => computeView(state), {
     name: "TypeError",
-    message: `Unsupported continuous effect field-removal-protection:${String(
+    message: `Unsupported continuous effect for ${String(
       target.instanceId,
-    )}: malformed field-removal protection metadata.`,
+    )}: malformed-field-removal-protection.`,
   });
 });

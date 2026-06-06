@@ -607,25 +607,6 @@ test("unsupported blocker activation states reject without mutation or events", 
     };
   });
   run((context) => {
-    context.openedState.continuousEffects = [
-      { duration: { type: "thisBattle" } } as never,
-    ];
-  });
-  run((context) => {
-    context.openedState.continuousEffects = [
-      {
-        duration: { type: "thisTurn" },
-        modifier: {
-          layer: "rules",
-          operation: {
-            type: "protection",
-            protection: { process: "ko" },
-          },
-        },
-      } as never,
-    ];
-  });
-  run((context) => {
     const battle = must(context.openedState.battle, "battle");
     context.openedState.battle = {
       ...battle,

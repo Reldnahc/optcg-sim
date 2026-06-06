@@ -15,7 +15,6 @@ import {
 import {
   assertRejectsWithoutMutation,
   cardRef,
-  continuousEffectRecord,
   ensureActiveDonInCostArea,
   effectDefinition,
   installSupportedCounterEvent,
@@ -172,32 +171,6 @@ test("Character Counter rejects replacement processing without clearing decision
   assert.equal(result.state.battle?.step, "counter");
 });
 
-test("Character Counter rejects unsupported continuous effects without clearing decision", () => {
-  const context = setupOpenedCounterStepPassDecision();
-  context.openedState.continuousEffects = [
-    {
-      ...continuousEffectRecord(context.openedState, "use-counter-continuous", {
-        type: "thisBattle",
-      }),
-      condition: { type: "yourTurn" },
-    },
-  ];
-  const before = JSON.stringify(context.openedState);
-
-  const result = applyAction(context.openedState, {
-    type: "useCounter",
-    cardInstanceId: context.counterCard.instanceId,
-    target: must(context.openedState.battle, "battle").currentTarget,
-  });
-
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(context.openedState), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.equal(result.state.pendingDecision?.id, context.decision.id);
-  assert.equal(result.state.battle?.step, "counter");
-});
-
 test("Character Counter rejects active Character current target without clearing decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -332,32 +305,6 @@ test("counter-step pass rejects replacement processing without clearing decision
     usedReplacementIds: [],
     payload: { hidden: "replacement" },
   });
-  const before = JSON.stringify(context.openedState);
-
-  const result = applyAction(context.openedState, {
-    type: "respondToDecision",
-    decisionId: context.decision.id,
-    response: { type: "cards", cards: [] },
-  });
-
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(context.openedState), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.equal(result.state.pendingDecision?.id, context.decision.id);
-  assert.equal(result.state.battle?.step, "counter");
-});
-
-test("counter-step pass rejects unsupported continuous effects without clearing decision", () => {
-  const context = setupOpenedCounterStepPassDecision();
-  context.openedState.continuousEffects = [
-    {
-      ...continuousEffectRecord(context.openedState, "pass-continuous", {
-        type: "thisBattle",
-      }),
-      condition: { type: "yourTurn" },
-    },
-  ];
   const before = JSON.stringify(context.openedState);
 
   const result = applyAction(context.openedState, {

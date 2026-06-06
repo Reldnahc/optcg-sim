@@ -123,10 +123,10 @@ export const playerRestrictionLabels = (
 ): string[] => {
   const restrictions: string[] = [];
   for (const effect of allContinuousEffects(state)) {
-    if (!durationIsActive(state, effect)) continue;
-    if (!continuousEffectConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "restriction") continue;
     if (effect.modifier.operation.type !== "restriction") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
     const targetPlayer = playerRestrictionTargetPlayer(effect.modifier.target);
     if (targetPlayer === undefined) continue;
     if (
