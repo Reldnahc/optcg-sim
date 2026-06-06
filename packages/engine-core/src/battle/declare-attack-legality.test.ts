@@ -4,13 +4,7 @@ import { test } from "vitest";
 import type { CardId, CardInstance, PlayerId } from "@optcg/types";
 
 import { applyDeclareAttack, getDeclareAttackLegalActions } from "./actions.js";
-import {
-  must,
-  p1,
-  p2,
-  resolvedCard,
-  toCardId,
-} from "../action-test-fixtures.js";
+import { must, p1, p2, toCardId } from "../action-test-fixtures.js";
 import { setupAttackState } from "./test-fixtures.js";
 
 test("getLegalActions includes Leader-to-Leader declareAttack for turn player", () => {
@@ -193,16 +187,6 @@ test("declareAttack rejection cases do not mutate input state", () => {
       },
     },
   );
-  run((state) => {
-    state.cardManifest.cards[toCardId("leader-red")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-red"),
-        category: "leader",
-        power: 5000,
-      }),
-      printedKeywords: ["doubleAttack"],
-    };
-  });
   run(() => {}, {
     attacker: {
       instanceId: attacker.instanceId,

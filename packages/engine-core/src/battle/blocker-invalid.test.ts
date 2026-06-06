@@ -524,16 +524,6 @@ test("unsupported blocker activation states reject without mutation or events", 
     };
   });
   run((context) => {
-    context.openedState.cardManifest.cards[toCardId("leader-red")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-red"),
-        category: "leader",
-        power: 5000,
-      }),
-      printedKeywords: ["banish", "doubleAttack"],
-    };
-  });
-  run((context) => {
     context.openedState.cardManifest.cards[context.defenderBlocker.cardId] = {
       ...resolvedCard({
         cardId: context.defenderBlocker.cardId,
@@ -753,26 +743,6 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
       usedReplacementIds: [],
       payload: { hidden: "contents" },
     });
-  });
-  run((state) => {
-    state.cardManifest.cards[toCardId("leader-red")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-red"),
-        category: "leader",
-        power: 5000,
-      }),
-      printedKeywords: ["doubleAttack"],
-    };
-  });
-  run((state) => {
-    state.cardManifest.cards[toCardId("leader-red")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-red"),
-        category: "leader",
-        power: 5000,
-      }),
-      printedKeywords: ["banish", "doubleAttack"],
-    };
   });
   run((state) => {
     state.cardManifest.cards[toCardId("leader-red")] = resolvedCard({

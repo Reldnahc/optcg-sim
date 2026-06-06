@@ -92,19 +92,10 @@ const toErrorTuple = (
   return [first, ...errors.slice(1)];
 };
 
-const isSupportedDoubleAttackDamageSource = (
+const hasPrintedDoubleAttackDamageSource = (
   card: ResolvedCard | undefined,
-): card is ResolvedCard => {
-  const printedKeywords = card?.printedKeywords ?? [];
-  return (
-    card?.support.status === "implemented-dsl" &&
-    card.support.effectDefinitionId === undefined &&
-    (card.effectText ?? "").trim().length === 0 &&
-    (card.triggerText ?? "").trim().length === 0 &&
-    printedKeywords.includes("doubleAttack") &&
-    !printedKeywords.includes("banish")
-  );
-};
+): card is ResolvedCard =>
+  (card?.printedKeywords ?? []).includes("doubleAttack");
 
 const hasOnKODefinitionMetadata = (
   state: GameState,
@@ -209,17 +200,6 @@ export const resolveSupportedVanillaBattle = (
   }
   const attackerManifestCard =
     resolutionState.cardManifest.cards[initialBattle.attacker.cardId];
-  const attackerPrintedKeywords = attackerManifestCard?.printedKeywords ?? [];
-  if (
-    initialBattle.damageCount === 2 &&
-    attackerPrintedKeywords.includes("doubleAttack") &&
-    !isSupportedDoubleAttackDamageSource(attackerManifestCard)
-  ) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported keyword or protection handling.",
-    );
-  }
   if (!initialTarget.isLeader && initialBattle.damageCount !== 1) {
     return unsupportedBattleResolution(
       state,
@@ -272,28 +252,8 @@ export const resolveSupportedVanillaBattle = (
         };
   const battleWithInternal = battle as EngineInternalBattleState;
   const attackerHasPrintedDoubleAttack =
-    isSupportedDoubleAttackDamageSource(attackerManifestCard);
-  const shouldHideDoubleAttackForCombatView =
-    (battle.damageCount === 2 ||
-      battleWithInternal.damageProcess?.sourceKeyword === "doubleAttack") &&
-    attackerHasPrintedDoubleAttack;
-  const combatMetadataState = shouldHideDoubleAttackForCombatView
-    ? {
-        ...baseCombatMetadataState,
-        cardManifest: {
-          ...baseCombatMetadataState.cardManifest,
-          cards: {
-            ...baseCombatMetadataState.cardManifest.cards,
-            [battle.attacker.cardId]: {
-              ...attackerManifestCard,
-              printedKeywords: attackerPrintedKeywords.filter(
-                (keyword) => keyword !== "doubleAttack",
-              ),
-            },
-          },
-        },
-      }
-    : baseCombatMetadataState;
+    hasPrintedDoubleAttackDamageSource(attackerManifestCard);
+  const combatMetadataState = baseCombatMetadataState;
   const combatState = withSupportedBattleRuntimeMetadataHidden(
     withDamageDeferredEffectQueueMetadataHidden(
       withAllAttackTimingCombatMetadataHidden(combatMetadataState),
@@ -363,12 +323,6 @@ export const resolveSupportedVanillaBattle = (
 
   if (attackerView.currentPower >= targetView.currentPower) {
     if (target.isLeader) {
-      if (battleDamageCount === 2 && attackerHasBanish) {
-        return unsupportedBattleResolution(
-          state,
-          "Battle requires unsupported keyword or protection handling.",
-        );
-      }
       for (let index = 0; index < battleDamageCount; index += 1) {
         const remainingDamagePoints = battleDamageCount - index - 1;
         const point = processLeaderDamagePoint({

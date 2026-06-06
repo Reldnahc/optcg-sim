@@ -1,6 +1,5 @@
 import type {
   Action,
-  CardId,
   CardInstance,
   EngineError,
   EngineEvent,
@@ -8,7 +7,6 @@ import type {
   GameState,
   LegalAction,
   PlayerId,
-  ResolvedCard,
 } from "@optcg/types";
 
 import {
@@ -64,76 +62,10 @@ export {
   resolveSupportedVanillaBattle,
 };
 
-const isSupportedDoubleAttackCombatMetadata = (
-  metadata: ResolvedCard | undefined,
-): metadata is ResolvedCard => {
-  const keywords = metadata?.printedKeywords ?? [];
-  return (
-    metadata?.support.status === "implemented-dsl" &&
-    metadata.support.effectDefinitionId === undefined &&
-    (metadata.effectText ?? "").trim().length === 0 &&
-    (metadata.triggerText ?? "").trim().length === 0 &&
-    keywords.includes("doubleAttack") &&
-    !keywords.includes("banish")
-  );
-};
-
-const hideSupportedDoubleAttackKeywords = (
-  state: GameState,
-  cardIds: readonly CardId[],
-): { state: GameState; hidden: boolean } => {
-  const nextCards = { ...state.cardManifest.cards };
-  let hidden = false;
-  for (const cardId of cardIds) {
-    const metadata = nextCards[cardId];
-    if (!isSupportedDoubleAttackCombatMetadata(metadata)) {
-      continue;
-    }
-    nextCards[cardId] = {
-      ...metadata,
-      printedKeywords: metadata.printedKeywords.filter(
-        (keyword) => keyword !== "doubleAttack",
-      ),
-    };
-    hidden = true;
-  }
-  if (!hidden) {
-    return { state, hidden };
-  }
-  return {
-    state: {
-      ...state,
-      cardManifest: {
-        ...state.cardManifest,
-        cards: nextCards,
-      },
-    },
-    hidden,
-  };
-};
-
-const hasUnsupportedPrintedDoubleAttackCombatMetadata = (
-  metadata: ResolvedCard | undefined,
-): boolean =>
-  (metadata?.printedKeywords ?? []).includes("doubleAttack") &&
-  !isSupportedDoubleAttackCombatMetadata(metadata);
-
-const getCombatCardIds = (state: GameState): CardId[] => {
-  const cardIds = new Set<CardId>();
-  for (const player of Object.values(state.players)) {
-    cardIds.add(player.leader.cardId);
-    for (const character of player.characters) {
-      cardIds.add(character.cardId);
-    }
-  }
-  return [...cardIds];
-};
-
 const collectDeclareAttackLegalActions = (
   state: GameState,
   playerId: PlayerId,
   view: ReturnType<typeof computeView>,
-  options: { filterUnsupportedDoubleAttackBlockers: boolean },
 ): LegalAction[] => {
   const actions: LegalAction[] = [];
   for (const [attackerId, targetIds] of Object.entries(
@@ -151,29 +83,6 @@ const collectDeclareAttackLegalActions = (
       if (target === null) {
         continue;
       }
-      if (
-        target.isLeader &&
-        attackerHasDoubleAttack(view, state, attacker.card) &&
-        hasUnsupportedPrintedDoubleAttackCombatMetadata(
-          state.cardManifest.cards[attacker.card.cardId],
-        )
-      ) {
-        continue;
-      }
-      if (
-        options.filterUnsupportedDoubleAttackBlockers &&
-        target.isLeader &&
-        attackerHasDoubleAttack(view, state, attacker.card) &&
-        hasComputedBlocker(state, target.playerId, {
-          attacker: toCardRef(attacker.card, attacker.playerId),
-          originalTarget: toCardRef(target.card, target.playerId),
-          currentTarget: toCardRef(target.card, target.playerId),
-          step: "block",
-          damageCount: 2,
-        })
-      ) {
-        continue;
-      }
       actions.push({
         type: "declareAttack",
         attacker: toCardRef(attacker.card, attacker.playerId),
@@ -182,65 +91,6 @@ const collectDeclareAttackLegalActions = (
     }
   }
   return actions;
-};
-
-const attackerHasDoubleAttack = (
-  view: ReturnType<typeof computeView>,
-  state: GameState,
-  attacker: CardInstance,
-): boolean => {
-  return (
-    view.cards[attacker.instanceId]?.keywords.includes("doubleAttack") ===
-      true ||
-    isSupportedDoubleAttackCombatMetadata(
-      state.cardManifest.cards[attacker.cardId],
-    )
-  );
-};
-
-const hasComputedBlocker = (
-  state: GameState,
-  defenderId: PlayerId,
-  candidateBattle?: NonNullable<GameState["battle"]>,
-): boolean => {
-  const defender = state.players[defenderId];
-  if (defender === undefined) {
-    return false;
-  }
-  try {
-    const battle = candidateBattle ?? state.battle;
-    const blockState =
-      battle === undefined
-        ? state
-        : ({
-            ...state,
-            battle: { ...battle, step: "block" },
-          } satisfies GameState);
-    const sanitizedBlockState = hideSupportedDoubleAttackKeywords(
-      blockState,
-      getCombatCardIds(blockState),
-    ).state;
-    const view = computeView(sanitizedBlockState);
-    return defender.characters.some(
-      (character) => view.cards[character.instanceId]?.canBlock === true,
-    );
-  } catch {
-    return true;
-  }
-};
-
-const hasPotentialBlockerForUnsupportedDoubleAttackWindow = (
-  state: GameState,
-): boolean => {
-  const battle = state.battle;
-  if (battle === undefined || battle.damageCount !== 2) {
-    return false;
-  }
-  const target = reifyCardRef(state, battle.currentTarget);
-  if (target === null) {
-    return false;
-  }
-  return hasComputedBlocker(state, target.playerId);
 };
 
 export const getDeclareAttackLegalActions = (
@@ -262,25 +112,9 @@ export const getDeclareAttackLegalActions = (
   );
   try {
     const view = computeView(legalActionState);
-    return collectDeclareAttackLegalActions(state, playerId, view, {
-      filterUnsupportedDoubleAttackBlockers: true,
-    });
+    return collectDeclareAttackLegalActions(state, playerId, view);
   } catch {
     // Fail closed when computed combat metadata is unsupported or invalid.
-  }
-  const fallback = hideSupportedDoubleAttackKeywords(
-    legalActionState,
-    getCombatCardIds(legalActionState),
-  );
-  if (!fallback.hidden) {
-    return [];
-  }
-  try {
-    const view = computeView(fallback.state);
-    return collectDeclareAttackLegalActions(state, playerId, view, {
-      filterUnsupportedDoubleAttackBlockers: true,
-    });
-  } catch {
     return [];
   }
 };
@@ -343,42 +177,6 @@ export const applyDeclareAttack = (
       ) ?? false;
     legalTargets = computed.legalAttackTargets[attacker.card.instanceId] ?? [];
   } catch {
-    const attackerMetadata = state.cardManifest.cards[attacker.card.cardId];
-    if (!isSupportedDoubleAttackCombatMetadata(attackerMetadata)) {
-      return illegalAction(
-        state,
-        "declareAttack is unsupported for current combat metadata.",
-      );
-    }
-
-    const fallback = hideSupportedDoubleAttackKeywords(combatMetadataState, [
-      attacker.card.cardId,
-    ]);
-    if (!fallback.hidden) {
-      return illegalAction(
-        state,
-        "declareAttack is unsupported for current combat metadata.",
-      );
-    }
-    try {
-      const computed = computeView(fallback.state);
-      legalTargets =
-        computed.legalAttackTargets[attacker.card.instanceId] ?? [];
-      attackerHasDoubleAttack = true;
-    } catch {
-      return illegalAction(
-        state,
-        "declareAttack is unsupported for current combat metadata.",
-      );
-    }
-  }
-  if (
-    attackerHasDoubleAttack &&
-    target.isLeader &&
-    hasUnsupportedPrintedDoubleAttackCombatMetadata(
-      state.cardManifest.cards[attacker.card.cardId],
-    )
-  ) {
     return illegalAction(
       state,
       "declareAttack is unsupported for current combat metadata.",
@@ -475,16 +273,6 @@ export const applyDeclareAttack = (
   }
   if (!battleParticipantsRemainLegal(attackTimingResult.state)) {
     return cleanupBattleAfterAttackTiming(state, attackTimingResult);
-  }
-  if (
-    hasPotentialBlockerForUnsupportedDoubleAttackWindow(
-      attackTimingResult.state,
-    )
-  ) {
-    return illegalAction(
-      state,
-      "declareAttack requires unsupported blocker handling for Double Attack.",
-    );
   }
 
   const blockDecision = createBlockStepDeclineDecision(
@@ -823,12 +611,6 @@ export const continueAttackTimingBattleIfReady = (
   }
   if (!battleParticipantsRemainLegal(state)) {
     return cleanupBattleAfterAttackTiming(state, toEngineResult(state, []));
-  }
-  if (hasPotentialBlockerForUnsupportedDoubleAttackWindow(state)) {
-    return illegalAction(
-      state,
-      "declareAttack requires unsupported blocker handling for Double Attack.",
-    );
   }
 
   const blockDecision = createBlockStepDeclineDecision(

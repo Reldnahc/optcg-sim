@@ -24,15 +24,12 @@ import { filterStateForPlayer } from "../view/filter-state-for-player.js";
 
 const setupLeaderBattleWithDamageCount = (
   damageCount: number,
-  options: { doubleAttack?: boolean; unsupportedDoubleAttack?: boolean } = {},
+  options: { doubleAttack?: boolean } = {},
 ) => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
-  if (
-    options.doubleAttack === true ||
-    options.unsupportedDoubleAttack === true
-  ) {
+  if (options.doubleAttack === true) {
     const attacker = p1State.leader;
     const doubleAttackCard = resolvedCard({
       cardId: attacker.cardId,
@@ -43,10 +40,7 @@ const setupLeaderBattleWithDamageCount = (
       ...doubleAttackCard,
       support: {
         ...doubleAttackCard.support,
-        status:
-          options.doubleAttack === true
-            ? "implemented-dsl"
-            : doubleAttackCard.support.status,
+        status: "implemented-dsl",
       },
       printedKeywords: ["doubleAttack"],
     };
@@ -353,27 +347,6 @@ test("two damage without Double Attack source fails closed without mutation", ()
   assert.deepEqual(result.events, []);
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
   assert.equal(JSON.stringify(opened.state), before);
-});
-
-test("unsupported Double Attack metadata cannot bypass source gate through direct resolution", () => {
-  const state = setupLeaderBattleWithDamageCount(2, {
-    unsupportedDoubleAttack: true,
-  });
-  const before = JSON.stringify(state);
-  const beforeHash = hashCanonicalStateValue(state);
-
-  const result = resolveSupportedVanillaBattle(state);
-
-  assert.deepEqual(result.errors, [
-    {
-      type: "illegalAction",
-      reason: "Battle requires unsupported keyword or protection handling.",
-    },
-  ]);
-  assert.deepEqual(result.events, []);
-  assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
 });
 
 test("two damage against Character target fails closed without mutation", () => {

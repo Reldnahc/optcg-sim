@@ -8,6 +8,7 @@ import { applyAction, getLegalActions } from "../actions.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   addTrashMarker,
+  cardRef,
   continuousKeywordEffectRecord,
   passCounterStep,
   setupAttackState,
@@ -26,24 +27,12 @@ const installSupportedDoubleAttackLeader = (
   });
   state.cardManifest.cards[attacker.cardId] = {
     ...doubleAttackCard,
-    support: {
-      ...doubleAttackCard.support,
-      status: "implemented-dsl",
-    },
     printedKeywords: ["doubleAttack"],
   };
 };
 
 const assertAcceptedHash = (result: EngineResult): void => {
   assert.equal(result.errors, undefined);
-  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
-};
-
-const assertRejectedHash = (
-  result: EngineResult,
-  beforeStateHash: string,
-): void => {
-  assert.equal(result.stateHash, beforeStateHash);
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 };
 
@@ -178,7 +167,7 @@ test("getLegalActions exposes supported doubleAttack declareAttack against leade
   );
 });
 
-test("supported doubleAttack declareAttack with available blocker fails closed without mutation", () => {
+test("supported doubleAttack attack can be redirected by blocker and resolves as character battle", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -193,37 +182,46 @@ test("supported doubleAttack declareAttack with available blocker fails closed w
     printedKeywords: ["blocker"],
   };
   installSupportedDoubleAttackLeader(state);
-  const before = JSON.stringify(state);
-  const beforeHash = hashCanonicalStateValue(state);
+  const beforeLife = p2State.life.length;
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
   });
 
-  assert.deepEqual(result.errors, [
+  assert.equal(opened.errors, undefined);
+  const decision = must(opened.state.pendingDecision, "block decision");
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(decision.candidates, [
     {
-      type: "illegalAction",
-      reason:
-        "declareAttack requires unsupported blocker handling for Double Attack.",
+      card: cardRef(blocker, p2),
+      visibility: { type: "public" },
     },
   ]);
-  assert.deepEqual(result.events, []);
-  assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+
+  const blocked = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [cardRef(blocker, p2)] },
+  });
+
+  assert.equal(blocked.errors, undefined);
+  assert.equal(
+    blocked.events.some((event) => event.type === "blockerActivated"),
+    true,
+  );
+  const result = passCounterStep(blocked.state, p2);
+  assertAcceptedHash(result);
+  const nextP2 = must(result.state.players[p2], "p2 result");
+  assert.equal(nextP2.life.length, beforeLife);
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === blocker.instanceId),
+    true,
+  );
 });
 
-test("getLegalActions omits supported doubleAttack leader attack when blocker handling is unsupported", () => {
+test("getLegalActions exposes supported doubleAttack leader attack even when blocker is available", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -248,6 +246,6 @@ test("getLegalActions omits supported doubleAttack leader attack when blocker ha
         action.attacker.instanceId === p1State.leader.instanceId &&
         action.target.instanceId === p2State.leader.instanceId,
     ),
-    false,
+    true,
   );
 });

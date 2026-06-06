@@ -114,7 +114,6 @@ export const getLegalCharacterCounterActions = (
   if (
     attackerView?.currentPower === undefined ||
     targetView?.currentPower === undefined ||
-    attackerView.keywords.includes("doubleAttack") ||
     (targetView.protectedFrom.length > 0 &&
       !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
   ) {

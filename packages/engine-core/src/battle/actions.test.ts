@@ -461,10 +461,15 @@ test("counter-step pass decision opens even when defender has no legal counters"
   );
 });
 
-test("banish combined with doubleAttack fails closed without mutation", () => {
+test("banish combined with doubleAttack trashes two leader damage life cards", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
+  const firstLife = must(p2State.life[0], "first life").card.instanceId;
+  const secondLife = must(p2State.life[1], "second life").card.instanceId;
+  const beforeLife = p2State.life.length;
+  const beforeHand = p2State.hand.length;
+  const beforeTrash = p2State.trash.length;
   state.cardManifest.cards[p1State.leader.cardId] = {
     ...resolvedCard({
       cardId: p1State.leader.cardId,
@@ -473,26 +478,28 @@ test("banish combined with doubleAttack fails closed without mutation", () => {
     }),
     printedKeywords: ["banish", "doubleAttack"],
   };
-  const before = JSON.stringify(state);
 
-  const result = applyDeclareAttack(state, {
+  const opened = applyDeclareAttack(state, {
     type: "declareAttack",
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    target: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.deepEqual(result.events, []);
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
+  assert.equal(result.errors, undefined);
+  const nextP2 = must(result.state.players[p2], "p2 result");
+  assert.equal(nextP2.life.length, beforeLife - 2);
+  assert.equal(nextP2.hand.length, beforeHand);
+  assert.equal(nextP2.trash.length, beforeTrash + 2);
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === firstLife),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === secondLife),
+    true,
+  );
 });
 
 test("When Attacking target selection resumes battle after selecting no target", () => {

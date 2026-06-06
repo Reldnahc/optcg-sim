@@ -164,7 +164,7 @@ const hasUnsupportedBlockDecisionState = (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
     battle.blocker !== undefined ||
-    battle.damageCount !== 1 ||
+    (battle.damageCount !== 1 && battle.damageCount !== 2) ||
     (battle.step !== "attack" && battle.step !== "block")
   ) {
     return true;
@@ -198,9 +198,8 @@ const hasUnsupportedBlockDecisionState = (
     return true;
   }
   if (
-    attackerView.keywords.includes("doubleAttack") ||
-    (targetView.protectedFrom.length > 0 &&
-      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
+    targetView.protectedFrom.length > 0 &&
+    !hasOnlyFieldRemovalProtections(targetView.protectedFrom)
   ) {
     return true;
   }
@@ -350,6 +349,7 @@ export const applyBlockStepDecisionResponse = (
         ...battle,
         blocker: blockerRef,
         currentTarget: blockerRef,
+        damageCount: 1,
       },
       eventJournal: [...state.eventJournal, ...events],
     };

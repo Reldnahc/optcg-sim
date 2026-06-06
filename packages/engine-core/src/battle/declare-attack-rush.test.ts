@@ -304,7 +304,7 @@ test("conditional continuous rushCharacter grant allows rested Character targets
   );
 });
 
-test("legal attack projection omits continuous Double Attack leader target when defender has computed Blocker", () => {
+test("legal attack projection exposes continuous Double Attack leader target when defender has computed Blocker", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -356,17 +356,13 @@ test("legal attack projection omits continuous Double Attack leader target when 
         action.attacker.instanceId === attacker.instanceId &&
         action.target.instanceId === p2State.leader.instanceId,
     ),
-    false,
+    true,
   );
-  const error = must(result.errors?.[0], "illegal action error");
-  assert.equal(error.type, "illegalAction");
-  assert.equal(
-    error.reason,
-    "declareAttack requires unsupported blocker handling for Double Attack.",
-  );
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "selectCards");
 });
 
-test("fallback legal attack projection omits printed Double Attack leader target when defender has computed Blocker", () => {
+test("legal attack projection exposes printed Double Attack leader target when defender has computed Blocker", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -415,14 +411,10 @@ test("fallback legal attack projection omits printed Double Attack leader target
         action.attacker.instanceId === attacker.instanceId &&
         action.target.instanceId === p2State.leader.instanceId,
     ),
-    false,
+    true,
   );
-  const error = must(result.errors?.[0], "illegal action error");
-  assert.equal(error.type, "illegalAction");
-  assert.equal(
-    error.reason,
-    "declareAttack requires unsupported blocker handling for Double Attack.",
-  );
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "selectCards");
 });
 
 test("played-this-turn rushCharacter character cannot attack leader through battle action surface", () => {
