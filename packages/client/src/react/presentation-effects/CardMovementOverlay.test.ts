@@ -98,4 +98,16 @@ describe("CardMovementOverlay", () => {
     assert.match(styles, /@keyframes card-move-fly/u);
     assert.match(styles, /prefers-reduced-motion:\s*reduce/u);
   });
+
+  test("flying card faces use the board-card rounded mask", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "..", "styles", "presentation-effects.css"),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.card-movement-face\s*\{[^}]*border-radius:\s*6px;/u,
+    );
+  });
 });

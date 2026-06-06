@@ -710,6 +710,13 @@ describe("card action menu", () => {
       styles,
       /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*inset:\s*0;/u,
     );
+    assert.match(styles, /\.card-tile\s*\{[^}]*border-radius:\s*6px;/u);
+    assert.match(styles, /\.card-face\s*\{[^}]*border-radius:\s*6px;/u);
+    assert.match(
+      styles,
+      /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*border-radius:\s*6px;/u,
+      "fresh restriction dimming must use the rounder visible card mask without clipping outer highlight rings.",
+    );
     assert.equal(
       /\.card-tile\.is-freshly-played-attack-restricted \.card-face\s*\{[^}]*filter:/u.test(
         styles,

@@ -570,6 +570,19 @@ test("decision modal selected cards use the board-card selected highlight", asyn
   );
 });
 
+test("decision modal card surfaces use the board-card rounded mask", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(styles, /\.decision-card-face\s*\{[^}]*border-radius:\s*6px;/u);
+  assert.match(
+    styles,
+    /\.decision-card-placeholder\s*\{[^}]*border-radius:\s*6px;/u,
+  );
+});
+
 test("trigger order modal presents source cards like a single-card selection", () => {
   const model: DecisionModalModel = {
     ...presentation,
