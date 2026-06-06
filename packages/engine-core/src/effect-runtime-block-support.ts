@@ -67,8 +67,8 @@ const isSupportedTrashFromHandBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "trashFromHand" }> =>
   effect.type === "trashFromHand" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  effect.chooser === effect.player &&
   effect.filter === undefined &&
   Number.isInteger(effect.count) &&
   effect.count > 0;

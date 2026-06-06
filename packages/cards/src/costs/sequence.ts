@@ -189,6 +189,7 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         from: cost.from,
         to: cost.to,
         order: cost.order,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       };
     case "modifyPower":
       return {

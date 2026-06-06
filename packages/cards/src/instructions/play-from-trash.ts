@@ -50,6 +50,7 @@ export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
             type: "playSelected",
             selection: trashPlaySelection,
             ignoreCost: true,
+            ...(source.enterRested ? { enterRested: true } : {}),
           },
         },
       ],
@@ -61,6 +62,7 @@ export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
       "player:self",
       "chooser:self:upTo",
       ...source.evidence,
+      ...(source.enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",
     ],
     rest: "",
@@ -75,9 +77,11 @@ function parsePlaySource(text: string):
       readonly evidence: NonNullable<
         ReturnType<typeof parseCardFilterPredicates>
       >["evidence"];
+      readonly enterRested: boolean;
     }
   | undefined {
-  const sourceMatch = /^(?<predicates>.+) from your trash\.?$/i.exec(text);
+  const sourceMatch =
+    /^(?<predicates>.+) from your trash(?<rested>\s+rested)?\.?$/i.exec(text);
   const predicateText = sourceMatch?.groups?.["predicates"];
   if (predicateText === undefined) {
     return undefined;
@@ -86,5 +90,9 @@ function parsePlaySource(text: string):
   const predicates = parseCardFilterPredicates({ text: predicateText });
   return predicates === undefined || predicates.rest.length > 0
     ? undefined
-    : { filter: predicates.filter, evidence: predicates.evidence };
+    : {
+        filter: predicates.filter,
+        evidence: predicates.evidence,
+        enterRested: sourceMatch?.groups?.["rested"] !== undefined,
+      };
 }

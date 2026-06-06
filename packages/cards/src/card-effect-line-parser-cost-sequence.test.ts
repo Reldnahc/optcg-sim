@@ -107,6 +107,94 @@ it("parses active leader power reduction as an optional cost before draw", () =>
   });
 });
 
+it("parses deck-top trash as a reusable move-cards cost before draw", () => {
+  expect(
+    parseCardEffectLine(
+      "[On Play] You may trash 1 card from the top of your deck: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 1,
+                from: { player: "self", zone: "deck", position: "top" },
+                to: { player: "self", zone: "trash" },
+                order: "chooserChoice",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:onPlay",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "cost:moveCards",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:deck",
+      "position:top",
+      "destination:trash",
+      "order:original",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
+it("parses filtered trash-to-bottom cost without binding the filter to one body", () => {
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] You may place 2 cards with a cost of 3 to 5 from your trash at the bottom of your deck in any order: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 2,
+                from: { player: "self", zone: "trash" },
+                to: { player: "self", zone: "deck", position: "bottom" },
+                filter: {
+                  cost: { min: 3, max: 5 },
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+  });
+});
+
 it("parses active DON attachment and trash-self as reusable optional cost sequence", () => {
   expect(
     parseCardEffectLine(

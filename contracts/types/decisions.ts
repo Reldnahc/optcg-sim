@@ -69,6 +69,7 @@ export type PaymentOption =
         position?: "top" | "bottom";
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
+      filter?: CardFilter;
     }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
   | { id: string; type: "custom"; action: string };

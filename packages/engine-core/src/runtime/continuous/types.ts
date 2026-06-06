@@ -13,6 +13,8 @@ export type ContinuousQueueEffect = Extract<
       | "preventDonActivation"
       | "preventPlay"
       | "invalidateEffects"
+      | "giveProtection"
+      | "protectFromKO"
       | "cannotBecomeActive"
       | "cannotAttack"
       | "cannotBlock"

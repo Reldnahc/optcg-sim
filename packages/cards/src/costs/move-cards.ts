@@ -1,6 +1,7 @@
 import type { OptionalCost } from "@optcg/types";
 
 import { parseExactCardinality } from "../cardinality/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 import type { CostParseResult } from "./rest-don.js";
 
@@ -10,6 +11,11 @@ export const parseMoveCardsCost = (
   const lifeToHand = parseLifeToHandCost(input);
   if (lifeToHand !== undefined) {
     return lifeToHand;
+  }
+
+  const deckTopToTrash = parseDeckTopToTrashCost(input);
+  if (deckTopToTrash !== undefined) {
+    return deckTopToTrash;
   }
 
   const actionMatch = /^place\s+(?<rest>.+)$/i.exec(input.text);
@@ -23,11 +29,8 @@ export const parseMoveCardsCost = (
     return undefined;
   }
 
-  const routeMatch =
-    /^cards from your trash at the bottom of your deck in any order$/i.exec(
-      cardinality.rest,
-    );
-  if (routeMatch !== null) {
+  const trashToBottom = parseTrashToBottomDeckCostRoute(cardinality.rest);
+  if (trashToBottom !== undefined) {
     const cost: Extract<OptionalCost, { type: "moveCards" }> = {
       type: "moveCards",
       count: cardinality.count,
@@ -35,6 +38,9 @@ export const parseMoveCardsCost = (
       from: { player: "self", zone: "trash" },
       to: { player: "self", zone: "deck", position: "bottom" },
       order: "chooserChoice",
+      ...(trashToBottom.filter === undefined
+        ? {}
+        : { filter: trashToBottom.filter }),
       optional: true,
     };
     const evidence: PrimitiveEvidence[] = [
@@ -45,6 +51,7 @@ export const parseMoveCardsCost = (
       "destination:deck",
       "position:bottom",
       "order:anyOrder",
+      ...trashToBottom.evidence,
     ];
 
     return { cost, evidence, rest: "" };
@@ -76,6 +83,73 @@ export const parseMoveCardsCost = (
 
   return { cost, evidence, rest: "" };
 };
+
+const parseDeckTopToTrashCost = (
+  input: ParseInput,
+): CostParseResult | undefined => {
+  const match =
+    /^trash (?<count>[1-9]\d*) cards? from the top of your deck$/i.exec(
+      input.text,
+    );
+  const countText = match?.groups?.["count"];
+  if (countText === undefined) {
+    return undefined;
+  }
+  return {
+    cost: {
+      type: "moveCards",
+      count: Number.parseInt(countText, 10),
+      chooser: "self",
+      from: { player: "self", zone: "deck", position: "top" },
+      to: { player: "self", zone: "trash" },
+      order: "chooserChoice",
+      optional: true,
+    },
+    evidence: [
+      "cost:moveCards",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:deck",
+      "position:top",
+      "destination:trash",
+      "order:original",
+    ],
+    rest: "",
+  };
+};
+
+function parseTrashToBottomDeckCostRoute(text: string):
+  | {
+      readonly filter?: NonNullable<
+        ReturnType<typeof parseCardFilterPredicates>
+      >["filter"];
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  if (
+    /^cards from your trash at the bottom of your deck in any order$/i.test(
+      text,
+    )
+  ) {
+    return { evidence: [] };
+  }
+
+  const filteredMatch =
+    /^cards?\s+(?<filter>.+?)\s+from your trash at the bottom of your deck in any order$/i.exec(
+      text,
+    );
+  const filterText = filteredMatch?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates({ text: filterText });
+  if (predicates === undefined || predicates.rest.length > 0) {
+    return undefined;
+  }
+  return { filter: predicates.filter, evidence: predicates.evidence };
+}
 
 const parseLifeToHandCost = (
   input: ParseInput,

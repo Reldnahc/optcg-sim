@@ -206,6 +206,7 @@ export type OptionalMoveCardsCost = {
   };
   to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
   order: "chooserChoice";
+  filter?: CardFilter;
   optional: true;
 };
 
@@ -851,6 +852,7 @@ export type Effect =
       duration: Duration;
       sourceKind?: "battle" | "cardEffect";
       sourceControllerRelation?: "eitherController" | "opponentControlled";
+      sourceCardCategories?: CardCategory[];
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }

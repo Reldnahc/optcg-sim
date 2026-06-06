@@ -38,7 +38,7 @@ export function parsePositivePowerModifier(
 export function parseNegativePowerModifier(
   input: ParseInput,
 ): PowerModifierParseResult | undefined {
-  const match = /^[−-](?<value>[1-9]\d*) power\b\s*(?<rest>.*)$/i.exec(
+  const match = /^[−-](?<value>[1-9]\d*) power\b\s*(?<rest>.*)$/iu.exec(
     input.text,
   );
   const valueText = match?.groups?.["value"];

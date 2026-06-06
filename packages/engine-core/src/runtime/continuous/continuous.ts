@@ -157,8 +157,8 @@ const mapEffectToModifier = (
 const costModifierTargetForEffect = (
   effect: Extract<Effect, { type: "modifyCost" }>,
 ): TargetSpec => {
-  if (effect.target?.type === "self") {
-    return { type: "self" };
+  if (effect.target !== undefined) {
+    return effect.target;
   }
   return {
     type: "allMatching",
@@ -560,7 +560,7 @@ const effectToDerivedModifier = (
   }
   if (effect.type === "protectFromKO") {
     if (
-      effect.target.type !== "self" ||
+      !isSupportedTarget(effect.target) ||
       !isSupportedDuration(effect.duration)
     ) {
       throw new TypeError(
@@ -569,7 +569,7 @@ const effectToDerivedModifier = (
     }
     return {
       layer: "protection",
-      target: { type: "self" },
+      target: effect.target,
       operation: {
         type: "protection",
         protection: {
@@ -580,6 +580,9 @@ const effectToDerivedModifier = (
           ...(effect.sourceControllerRelation === undefined
             ? {}
             : { sourceControllerRelation: effect.sourceControllerRelation }),
+          ...(effect.sourceCardCategories === undefined
+            ? {}
+            : { sourceCardCategories: effect.sourceCardCategories }),
         },
       },
     };
@@ -607,7 +610,10 @@ const effectToDerivedModifier = (
   if (effect.type !== "giveProtection") {
     return null;
   }
-  if (effect.target.type !== "self" || !isSupportedDuration(effect.duration)) {
+  if (
+    !isSupportedTarget(effect.target) ||
+    !isSupportedDuration(effect.duration)
+  ) {
     throw new TypeError(
       unsupportedDerivedMessage("unsupported protection shape"),
     );
@@ -622,7 +628,7 @@ const effectToDerivedModifier = (
     }
     return {
       layer: "protection",
-      target: { type: "self" },
+      target: effect.target,
       operation: { type: "protection", protection: effect.protection },
     };
   }
@@ -633,7 +639,7 @@ const effectToDerivedModifier = (
   }
   return {
     layer: "protection",
-    target: { type: "self" },
+    target: effect.target,
     operation: { type: "protection", protection: effect.protection },
   };
 };

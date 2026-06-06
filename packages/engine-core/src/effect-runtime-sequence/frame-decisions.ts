@@ -29,6 +29,10 @@ import {
   attachDonTargetCandidates,
   type AttachDonPaymentOption,
 } from "../runtime/primitives/attach-don-cost.js";
+import {
+  expandMoveCardsCostRoutes,
+  selectableMoveCardsCostIds,
+} from "./move-card-cost-options.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -37,10 +41,6 @@ const decisionCauseForEntry = (entry: EffectQueueEntry) =>
     effectId: entry.effectBlockId,
   }) as const;
 
-type MoveCardsPaymentOption = Extract<
-  OptionalPayCostDecision["paymentOptions"][number],
-  { type: "moveCards" }
->;
 type TurnLifeFaceUpPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
   { type: "turnLifeFaceUp" }
@@ -49,115 +49,6 @@ type ModifyPowerPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
   { type: "modifyPower" }
 >;
-const expandMoveCardsCostRoutes = (
-  cost: Extract<OptionalCost, { type: "moveCards" }>,
-): MoveCardsPaymentOption[] => {
-  if (
-    cost.from.player !== "self" ||
-    cost.to.player !== "self" ||
-    !Number.isInteger(cost.count) ||
-    cost.count <= 0
-  ) {
-    return [];
-  }
-  if (
-    cost.from.zone === "trash" &&
-    cost.from.position === undefined &&
-    cost.to.zone === "deck" &&
-    cost.to.position === "bottom"
-  ) {
-    return [
-      {
-        id: "moveCards",
-        type: "moveCards",
-        count: cost.count,
-        from: { player: cost.from.player, zone: cost.from.zone },
-        to: cost.to,
-      },
-    ];
-  }
-  if (
-    cost.from.zone === "hand" &&
-    cost.from.position === undefined &&
-    cost.to.zone === "deck" &&
-    cost.to.position === "top" &&
-    cost.count === 1
-  ) {
-    return [
-      {
-        id: "moveCards",
-        type: "moveCards",
-        count: cost.count,
-        from: { player: cost.from.player, zone: cost.from.zone },
-        to: cost.to,
-      },
-    ];
-  }
-  if (
-    cost.from.zone !== "life" ||
-    cost.to.zone !== "hand" ||
-    cost.to.position !== undefined
-  ) {
-    return [];
-  }
-  const positions =
-    cost.from.position === "topOrBottom"
-      ? (["top", "bottom"] as const)
-      : cost.from.position === "top" || cost.from.position === "bottom"
-        ? ([cost.from.position] as const)
-        : [];
-  return positions.map((position) => ({
-    id: `moveCards:${position}`,
-    type: "moveCards",
-    count: cost.count,
-    from: { ...cost.from, position },
-    to: cost.to,
-  }));
-};
-
-const selectableMoveCardsCostIds = (
-  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
-  option: MoveCardsPaymentOption,
-): CardInstance["instanceId"][] | undefined => {
-  if (
-    option.from.player !== "self" ||
-    option.to.player !== "self" ||
-    option.count <= 0
-  ) {
-    return undefined;
-  }
-  if (
-    option.from.zone === "trash" &&
-    option.from.position === undefined &&
-    option.to.zone === "deck" &&
-    option.to.position === "bottom"
-  ) {
-    return player.trash.map((card) => card.instanceId);
-  }
-  if (
-    option.from.zone === "hand" &&
-    option.from.position === undefined &&
-    option.to.zone === "deck" &&
-    option.to.position === "top"
-  ) {
-    return player.hand.map((card) => card.instanceId);
-  }
-  if (
-    option.from.zone === "life" &&
-    option.to.zone === "hand" &&
-    option.to.position === undefined
-  ) {
-    if (option.from.position === "top") {
-      const card = player.life[0]?.card;
-      return card === undefined ? [] : [card.instanceId];
-    }
-    if (option.from.position === "bottom") {
-      const card = player.life.at(-1)?.card;
-      return card === undefined ? [] : [card.instanceId];
-    }
-  }
-  return undefined;
-};
 
 const canTurnLifeFaceUp = (
   player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
@@ -671,7 +562,12 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "moveCards") {
-      const selectableCardIds = selectableMoveCardsCostIds(player, option);
+      const selectableCardIds = selectableMoveCardsCostIds(
+        state,
+        playerId,
+        player,
+        option,
+      );
       if (selectableCardIds === undefined) {
         continue;
       }
@@ -897,7 +793,12 @@ export const getSequenceOptionalPayCostOptions = (
       const selectable =
         currentPlayer === undefined
           ? undefined
-          : selectableMoveCardsCostIds(currentPlayer, route);
+          : selectableMoveCardsCostIds(
+              state,
+              entry.controllerId,
+              currentPlayer,
+              route,
+            );
       if (
         selectable !== undefined &&
         Number.isInteger(route.count) &&
@@ -910,6 +811,7 @@ export const getSequenceOptionalPayCostOptions = (
           count: route.count,
           from: route.from,
           to: route.to,
+          ...(route.filter === undefined ? {} : { filter: route.filter }),
         });
       }
     }

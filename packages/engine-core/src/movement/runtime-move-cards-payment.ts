@@ -8,7 +8,11 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent } from "../action-results.js";
-import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
+import {
+  addCardsToHand,
+  cardMatchesHandSelectionFilter,
+  reindexZoneCards,
+} from "../actions/state.js";
 
 export type MoveCardsPaymentOption = Extract<
   PaymentOption,
@@ -38,10 +42,14 @@ export const isSupportedMoveCardsPaymentRoute = (
     return option.count === 1;
   }
   return (
-    option.from.zone === "life" &&
-    (option.from.position === "top" || option.from.position === "bottom") &&
-    option.to.zone === "hand" &&
-    option.to.position === undefined
+    (option.from.zone === "deck" &&
+      option.from.position === "top" &&
+      option.to.zone === "trash" &&
+      option.to.position === undefined) ||
+    (option.from.zone === "life" &&
+      (option.from.position === "top" || option.from.position === "bottom") &&
+      option.to.zone === "hand" &&
+      option.to.position === undefined)
   );
 };
 
@@ -64,7 +72,15 @@ export const applyMoveCardsPayment = (params: {
       const card = params.player.trash.find(
         (candidate) => candidate.instanceId === selectedId,
       );
-      if (card === undefined) {
+      if (
+        card === undefined ||
+        !cardMatchesHandSelectionFilter(
+          params.state,
+          params.playerId,
+          card,
+          params.selectedOption.filter,
+        )
+      ) {
         return null;
       }
       selectedCards.push(card);
@@ -127,7 +143,15 @@ export const applyMoveCardsPayment = (params: {
       const card = params.player.hand.find(
         (candidate) => candidate.instanceId === selectedId,
       );
-      if (card === undefined) {
+      if (
+        card === undefined ||
+        !cardMatchesHandSelectionFilter(
+          params.state,
+          params.playerId,
+          card,
+          params.selectedOption.filter,
+        )
+      ) {
         return null;
       }
       selectedCards.push(card);
@@ -201,6 +225,95 @@ export const applyMoveCardsPayment = (params: {
         "deck",
         params.playerId,
         "deck",
+      ),
+    };
+  }
+
+  if (
+    params.selectedOption.from.zone === "deck" &&
+    params.selectedOption.from.position === "top" &&
+    params.selectedOption.to.zone === "trash" &&
+    params.selectedOption.to.position === undefined
+  ) {
+    const selectedCards = params.player.deck.slice(0, params.selected.length);
+    if (
+      selectedCards.length !== params.selectedOption.count ||
+      selectedCards.some(
+        (card, index) =>
+          card.instanceId !== params.selected[index] ||
+          !cardMatchesHandSelectionFilter(
+            params.state,
+            params.playerId,
+            card,
+            params.selectedOption.filter,
+          ),
+      )
+    ) {
+      return null;
+    }
+    const selectedSet = new Set(params.selected);
+    const movedCards = selectedCards.map((card, index) => ({
+      ...card,
+      attachedDon: [],
+      zone: {
+        zone: "trash" as const,
+        playerId: params.playerId,
+        slot: "trash" as const,
+        index,
+      },
+    }));
+    for (const movedCard of movedCards) {
+      appendEvent(
+        params.state,
+        params.events,
+        "cardMoved",
+        {
+          instanceId: movedCard.instanceId,
+          cardId: movedCard.cardId,
+          from: "deck",
+          to: "trash",
+          playerId: params.playerId,
+          reason: "moveCardsCost",
+        },
+        { type: "public" },
+      );
+      const moved = params.events[params.events.length - 1];
+      if (moved !== undefined) {
+        moved.causedBy = { type: "decision", decisionId: params.decisionId };
+      }
+      appendEvent(
+        params.state,
+        params.events,
+        "cardTrashed",
+        {
+          instanceId: movedCard.instanceId,
+          cardId: movedCard.cardId,
+          playerId: params.playerId,
+          reason: "moveCardsCost",
+        },
+        { type: "public" },
+      );
+      const trashed = params.events[params.events.length - 1];
+      if (trashed !== undefined) {
+        trashed.causedBy = {
+          type: "decision",
+          decisionId: params.decisionId,
+        };
+      }
+    }
+    return {
+      ...params.player,
+      deck: reindexZoneCards(
+        params.player.deck.filter((card) => !selectedSet.has(card.instanceId)),
+        "deck",
+        params.playerId,
+        "deck",
+      ),
+      trash: reindexZoneCards(
+        [...movedCards, ...params.player.trash],
+        "trash",
+        params.playerId,
+        "trash",
       ),
     };
   }

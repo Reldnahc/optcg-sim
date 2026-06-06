@@ -25,6 +25,7 @@ export { parseKoInstruction } from "./ko.js";
 export { parseLifeMovementInstruction } from "./life-movement.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
 export {
+  parseContinuousFieldModifyCostInstruction,
   parseModifyCostInstruction,
   parseSelfHandModifyCostInstruction,
   parseTargetedModifyCostInstruction,
@@ -51,6 +52,7 @@ export {
   selectThenReturnToOwnerHand,
 } from "./return-to-owner-hand.js";
 export {
+  parseExplicitProtectionInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseProtectionInstruction,
 } from "./protection.js";

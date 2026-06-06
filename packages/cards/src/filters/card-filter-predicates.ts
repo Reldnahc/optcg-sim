@@ -793,28 +793,63 @@ function parseCostPredicate(
   text: string,
   current: CardFilter,
 ): ReturnType<PredicateParser> {
+  const rangeMatch =
+    /^a (?:base )?cost of (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
+      text,
+    );
+  const minText = rangeMatch?.groups?.["min"];
+  const maxText = rangeMatch?.groups?.["max"];
+  if (minText !== undefined && maxText !== undefined) {
+    const min = Number.parseInt(minText, 10);
+    const max = Number.parseInt(maxText, 10);
+    if (min > max) {
+      return undefined;
+    }
+    return {
+      filter: {
+        ...current,
+        cost: { min, max },
+      },
+      evidence: [
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:comparator:lte",
+        min === 0
+          ? "condition:threshold:nonNegativeInteger"
+          : "condition:threshold:positiveInteger",
+        max === 0
+          ? "condition:threshold:nonNegativeInteger"
+          : "condition:threshold:positiveInteger",
+      ],
+      rest: rangeMatch?.groups?.["rangeRest"] ?? "",
+    };
+  }
+
   const exactMatch =
-    /^a (?:base )?cost of (?<exact>[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
+    /^a (?:base )?cost of (?<exact>0|[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
       text,
     );
   const exactValueText = exactMatch?.groups?.["exact"];
   if (exactValueText !== undefined) {
+    const exactValue = Number.parseInt(exactValueText, 10);
     return {
       filter: {
         ...current,
-        cost: { op: "eq", value: Number.parseInt(exactValueText, 10) },
+        cost: { op: "eq", value: exactValue },
       },
       evidence: [
         "filter:cost",
         "condition:comparator:eq",
-        "condition:threshold:positiveInteger",
+        exactValue === 0
+          ? "condition:threshold:nonNegativeInteger"
+          : "condition:threshold:positiveInteger",
       ],
       rest: exactMatch?.groups?.["exactRest"] ?? "",
     };
   }
 
   const match =
-    /^a (?:base )?cost of (?<value>[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
+    /^a (?:base )?cost of (?<value>0|[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const valueText = match?.groups?.["value"];
@@ -837,7 +872,9 @@ function parseCostPredicate(
     evidence: [
       "filter:cost",
       op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
-      "condition:threshold:positiveInteger",
+      valueText === "0"
+        ? "condition:threshold:nonNegativeInteger"
+        : "condition:threshold:positiveInteger",
     ],
     rest: restText ?? "",
   };

@@ -45,11 +45,13 @@ import {
   parseInvalidateEffectsInstruction,
   parseKoInstruction,
   parseLifeMovementInstruction,
+  parseContinuousFieldModifyCostInstruction,
   parseModifyCostInstruction,
   parseSelfHandModifyCostInstruction,
   parseTargetedModifyCostInstruction,
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
+  parseExplicitProtectionInstruction,
   parseBasePowerBecomeInstruction,
   parseHandCounterSetInstruction,
   parseSelfCannotAttackInstruction,
@@ -207,6 +209,7 @@ const instructionParsers = [
   parsePreventDonActivationInstruction,
   parsePreventPlayInstruction,
   parseRevealTopInstruction,
+  parseExplicitProtectionInstruction,
   parseModifyPowerInstruction,
   parseTargetedKeywordGrantInstruction,
   parseTargetedModifyCostInstruction,
@@ -225,6 +228,18 @@ const instructionParsers = [
   parseExplicitActionKeywordGrantInstruction,
   parseExplicitActionBasePowerInstruction,
 ] as const;
+
+const singleInstructionExpressionParser = (input: ParseInput) => {
+  const parsed = syntheticInstructionSegmentParser(instructionParsers)(input);
+  if (parsed === undefined) {
+    return undefined;
+  }
+  return {
+    effect: parsed.effect,
+    evidence: parsed.evidence,
+    rest: "",
+  };
+};
 
 const conditionParsers = [
   parseDonFieldCountCondition,
@@ -251,6 +266,7 @@ const continuousInstructionParsers = [
   parseSetBasePowerInstruction,
   parseBasePowerBecomeInstruction,
   parseHandCounterSetInstruction,
+  parseContinuousFieldModifyCostInstruction,
   parseSelfHandModifyCostInstruction,
 ] as const;
 
@@ -335,6 +351,7 @@ const defaultRegistry = {
           expressions: [
             revealTopPlayRestedExpressionParser,
             searchRevealExpressionParser,
+            singleInstructionExpressionParser,
             generalExpressionParser,
           ],
         }),
@@ -343,6 +360,7 @@ const defaultRegistry = {
           expressions: [
             revealTopPlayRestedExpressionParser,
             searchRevealExpressionParser,
+            singleInstructionExpressionParser,
             generalExpressionParser,
           ],
         }),
@@ -354,6 +372,7 @@ const defaultRegistry = {
       expressions: [
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
+        singleInstructionExpressionParser,
         generalExpressionParser,
       ],
     }),
@@ -371,6 +390,7 @@ const defaultRegistry = {
           connectors: [parseThenConnector, parseAndConnector],
           instructions: instructionParsers,
         }),
+        singleInstructionExpressionParser,
         generalExpressionParser,
       ],
     }),
@@ -391,13 +411,18 @@ const defaultRegistry = {
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,
-      expressions: [searchRevealExpressionParser, generalExpressionParser],
+      expressions: [
+        searchRevealExpressionParser,
+        singleInstructionExpressionParser,
+        generalExpressionParser,
+      ],
     }),
     optionalCostedEffectExpressionParser({
       instructions: instructionParsers,
       expressions: [
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
+        singleInstructionExpressionParser,
         generalExpressionParser,
       ],
     }),
@@ -405,6 +430,7 @@ const defaultRegistry = {
     selectPowerThenPreventBlockerActivationExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
+    singleInstructionExpressionParser,
     generalExpressionParser,
   ],
 } satisfies EffectLineParserRegistry;

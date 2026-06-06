@@ -246,6 +246,8 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "preventDonActivation" &&
     effect.type !== "preventPlay" &&
     effect.type !== "invalidateEffects" &&
+    effect.type !== "giveProtection" &&
+    effect.type !== "protectFromKO" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
     effect.type !== "cannotBlock" &&
@@ -313,9 +315,17 @@ export const isSupportedContinuousQueueEffect = (
     return false;
   }
   if (
+    (effect.type === "giveProtection" || effect.type === "protectFromKO") &&
+    !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (
     effect.type !== "modifyPower" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "invalidateEffects" &&
+    effect.type !== "giveProtection" &&
+    effect.type !== "protectFromKO" &&
     !isSupportedTarget(effect.target)
   ) {
     return false;

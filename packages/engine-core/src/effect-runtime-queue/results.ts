@@ -219,6 +219,8 @@ export const createEffectRuntimeQueueResults = (
     | Extract<Effect, { type: "preventDonActivation" }>
     | Extract<Effect, { type: "preventPlay" }>
     | Extract<Effect, { type: "invalidateEffects" }>
+    | Extract<Effect, { type: "giveProtection" }>
+    | Extract<Effect, { type: "protectFromKO" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "preventBlockerActivation" }>

@@ -58,41 +58,91 @@ export function parseProtectionSource(
     return categorySource;
   }
 
-  if (/^by your opponent's effects\.?$/i.test(input.text)) {
+  const opponentEffectsMatch =
+    /^by your opponent's effects\b\s*(?<rest>.*)$/i.exec(input.text);
+  if (opponentEffectsMatch !== null) {
     return {
       source: {
         kind: "cardEffect",
         controllerRelation: "opponentControlled",
       },
       evidence: ["protectionSource:opponentEffects"],
-      rest: "",
+      rest: trimTrailingPeriod(opponentEffectsMatch.groups?.["rest"] ?? ""),
     };
   }
 
-  if (/^by effects\.?$/i.test(input.text)) {
+  const effectsMatch = /^by effects\b\s*(?<rest>.*)$/i.exec(input.text);
+  if (effectsMatch !== null) {
     return {
       source: {
         kind: "cardEffect",
         controllerRelation: "eitherController",
       },
       evidence: ["protectionSource:effects"],
-      rest: "",
+      rest: trimTrailingPeriod(effectsMatch.groups?.["rest"] ?? ""),
     };
   }
 
   const battleMatch = /^in battle\b\s*(?<rest>.*)$/i.exec(input.text);
   if (battleMatch !== null) {
+    const categories = parseBattleSourceCategories(
+      trimTrailingPeriod(battleMatch.groups?.["rest"]?.trim() ?? ""),
+    );
+    if (categories === undefined) {
+      return {
+        source: {
+          kind: "battle",
+          controllerRelation: "eitherController",
+        },
+        evidence: ["protectionSource:battle"],
+        rest: trimTrailingPeriod(battleMatch.groups?.["rest"]?.trim() ?? ""),
+      };
+    }
     return {
       source: {
         kind: "battle",
         controllerRelation: "eitherController",
+        cardCategories: categories.categories,
       },
-      evidence: ["protectionSource:battle"],
-      rest: trimTrailingPeriod(battleMatch.groups?.["rest"]?.trim() ?? ""),
+      evidence: ["protectionSource:battle", ...categories.evidence],
+      rest: "",
     };
   }
 
   return undefined;
+}
+
+function parseBattleSourceCategories(text: string):
+  | {
+      readonly categories: readonly ProtectionSourceCardCategory[];
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match = /^by (?<categories>.+)$/i.exec(text);
+  const categoriesText = match?.groups?.["categories"];
+  if (categoriesText === undefined) {
+    return undefined;
+  }
+  const categories = categoriesText
+    .split(/\s*(?:,|and)\s*/iu)
+    .map((category) => categoryByText.get(category.trim().toLowerCase()))
+    .filter(
+      (category): category is ProtectionSourceCardCategory =>
+        category !== undefined && category !== "don",
+    );
+  if (
+    categories.length === 0 ||
+    new Set(categories).size !== categories.length
+  ) {
+    return undefined;
+  }
+
+  return {
+    categories,
+    evidence: categories.map(
+      (category) => categoryEvidenceByCategory[category],
+    ),
+  };
 }
 
 const categoryByText = new Map<string, CardCategory>([

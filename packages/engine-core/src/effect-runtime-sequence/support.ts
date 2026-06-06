@@ -275,7 +275,9 @@ const isSupportedPayCostSegment = (
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "revealFromHand" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
-    (cost.type !== "moveCards" || isSupportedMoveCardsCostRoute(cost)) &&
+    (cost.type !== "moveCards" ||
+      (isSupportedMoveCardsCostRoute(cost) &&
+        isSupportedHandSelectionCardFilter(cost.filter))) &&
     Number.isInteger(cost.count) &&
     cost.count > 0
   );
@@ -302,6 +304,14 @@ const isSupportedMoveCardsCostRoute = (
     cost.to.position === "top"
   ) {
     return cost.count === 1;
+  }
+  if (
+    cost.from.zone === "deck" &&
+    cost.from.position === "top" &&
+    cost.to.zone === "trash" &&
+    cost.to.position === undefined
+  ) {
+    return true;
   }
   return (
     cost.from.zone === "life" &&
@@ -573,7 +583,9 @@ const isSupportedSavedTargetContinuousSegment = (
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
     effect.type === "invalidateEffects") &&
-  (effect.type === "modifyPower" || effect.type === "preventBlockerActivation"
+  (effect.type === "modifyPower" ||
+  effect.type === "preventBlockerActivation" ||
+  effect.type === "invalidateEffects"
     ? isSupportedSavedLeaderOrCharacterTarget(effect.target)
     : isSupportedSavedFieldObjectKoTarget(effect.target)) &&
   (effect.type !== "modifyPower" ||

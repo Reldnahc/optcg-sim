@@ -31,6 +31,11 @@ export const thisBattleDurationPrimitive = {
   matches: [{ id: "during-this-battle" }],
 } as const;
 
+export const selfNextTurnStartDurationPrimitive = {
+  primitiveId: "duration:selfNextTurnStart",
+  matches: [{ id: "until-start-self-next-turn" }],
+} as const;
+
 export function parseOpponentNextRefreshPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
@@ -59,6 +64,20 @@ export function parseOpponentNextEndPhaseDuration(
   return {
     duration: { type: "untilEndOfNextTurn", player: "opponent" },
     evidence: ["duration:opponentNextEndPhase"],
+    rest: "",
+  };
+}
+
+export function parseSelfNextTurnStartDuration(
+  input: ParseInput,
+): DurationParseResult | undefined {
+  if (!/^until the start of your next turn\.?$/i.test(input.text)) {
+    return undefined;
+  }
+
+  return {
+    duration: { type: "untilStartOfNextTurn", player: "self" },
+    evidence: ["duration:selfNextTurnStart"],
     rest: "",
   };
 }

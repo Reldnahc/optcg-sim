@@ -5,7 +5,7 @@ import {
   parseAllFieldTarget,
   parseOpponentFieldTarget,
 } from "../targets/index.js";
-import type { InstructionParser } from "../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";
 
@@ -23,6 +23,11 @@ export const parseKoInstruction: InstructionParser = (input) => {
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  const composed = parseComposedKoTargets(actionRest);
+  if (composed !== undefined) {
+    return composed;
   }
 
   const allTarget = parseAllFieldTarget({ text: actionRest });
@@ -50,12 +55,13 @@ export const parseKoInstruction: InstructionParser = (input) => {
   const zone = category === "stage" ? "stageArea" : "characterArea";
 
   return {
-    effect: selectThenApplyKoEffect(
-      cardinality.cardinality.min,
-      cardinality.cardinality.max,
-      target.filter ?? { categories: ["character"] },
+    effect: selectThenApplyKoEffect({
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      filter: target.filter ?? { categories: ["character"] },
       zone,
-    ),
+      selectionId: koTargetSelectionId,
+    }),
     evidence: [
       "instruction:ko",
       ...cardinality.evidence,
@@ -67,31 +73,107 @@ export const parseKoInstruction: InstructionParser = (input) => {
   };
 };
 
-function selectThenApplyKoEffect(
-  min: number,
-  max: number,
-  filter: TargetFilter,
-  zone: "characterArea" | "stageArea",
-): Effect {
+function parseComposedKoTargets(
+  actionRest: string,
+): ReturnType<InstructionParser> {
+  const parts = actionRest
+    .split(/\s+and\s+(?=up to\b)/iu)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (parts.length < 2) {
+    return undefined;
+  }
+
+  const parsedParts = parts.map((part, index) =>
+    parseKoTargetPart(part, `${koTargetSelectionId}:${String(index)}`),
+  );
+  if (parsedParts.some((part) => part === undefined)) {
+    return undefined;
+  }
+
+  const definedParts = parsedParts.filter(
+    (part): part is NonNullable<(typeof parsedParts)[number]> =>
+      part !== undefined,
+  );
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: definedParts.map((part, index) => ({
+        connector: index === 0 ? "always" : "then",
+        effect: part.effect,
+      })),
+    },
+    evidence: [
+      "instruction:ko",
+      ...definedParts.flatMap((part) => part.evidence),
+    ],
+    rest: "",
+  };
+}
+
+function parseKoTargetPart(
+  text: string,
+  selectionId: string,
+):
+  | {
+      readonly effect: Effect;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const cardinality = parseUpToCardinality({ text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const target = parseOpponentFieldTarget({ text: cardinality.rest });
+  if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
+    return undefined;
+  }
+  const category = target.filter?.categories?.[0];
+  const zone = category === "stage" ? "stageArea" : "characterArea";
+  return {
+    effect: selectThenApplyKoEffect({
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      filter: target.filter ?? { categories: ["character"] },
+      zone,
+      selectionId,
+    }),
+    evidence: [
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      "composition:selectThenApply",
+    ],
+  };
+}
+
+function selectThenApplyKoEffect(options: {
+  readonly min: number;
+  readonly max: number;
+  readonly filter: TargetFilter;
+  readonly zone: "characterArea" | "stageArea";
+  readonly selectionId: string;
+}): Effect {
   return {
     type: "sequence",
     effects: [
       {
-        id: "select:ko-target",
+        id: `select:ko-target:${options.selectionId}`,
         connector: "always",
-        saveResultAs: koTargetSelectionId,
+        saveResultAs: options.selectionId,
         effect: {
           type: "selectTargets",
           request: {
             timing: "onResolution",
             chooser: "self",
             player: "opponent",
-            zone,
-            min,
-            max,
+            zone: options.zone,
+            min: options.min,
+            max: options.max,
             allowFewerIfUnavailable: true,
             visibility: "public",
-            filter,
+            filter: options.filter,
           },
         },
       },
@@ -99,19 +181,22 @@ function selectThenApplyKoEffect(
         connector: "then",
         effect: {
           type: "ko",
-          target: selectedKoTarget(zone),
+          target: selectedKoTarget(options.zone, options.selectionId),
         },
       },
     ],
   };
 }
 
-function selectedKoTarget(zone: "characterArea" | "stageArea"): Target {
+function selectedKoTarget(
+  zone: "characterArea" | "stageArea",
+  selectionId: string,
+): Target {
   return {
     type: "savedFieldObject",
     binding: {
       family: "selectedTargets",
-      saveResultAs: koTargetSelectionId,
+      saveResultAs: selectionId,
     },
     zone,
     player: "opponent",

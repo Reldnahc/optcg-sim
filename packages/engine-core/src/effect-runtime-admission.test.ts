@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  Effect,
   EffectDefinition,
   ReplacementTrigger,
   Target,
@@ -339,6 +340,74 @@ test("runtime admission accepts opponent-attack optional rest-DON target-rest se
             },
           ],
         },
+      }),
+    ),
+    { supported: true },
+  );
+});
+
+test("runtime admission accepts saved Leader or Character effect invalidation sequences across trigger adapters", () => {
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        saveResultAs: "selected:invalidate-effects-target",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["leader", "character"] },
+          },
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "invalidateEffects",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "selectedTargets",
+              saveResultAs: "selected:invalidate-effects-target",
+            },
+            zones: ["leaderArea", "characterArea"],
+            player: "opponent",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+          duration: { type: "thisTurn" },
+        },
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        trigger: { type: "trigger" },
+        sourcePresencePolicy: "noSourceRequired",
+        effect,
+      }),
+    ),
+    { supported: true },
+  );
+
+  assert.deepEqual(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        trigger: { type: "counter" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect,
       }),
     ),
     { supported: true },
