@@ -83,6 +83,7 @@ export interface MatchClientUi {
   requestRollback: (rollbackPointId: string) => Promise<void>;
   cancelRollback: () => Promise<void>;
   createNewMatch: () => Promise<void>;
+  refreshAccountLoadouts: () => void;
   submitLobbyLoadout: (loadoutId: string) => Promise<void>;
 }
 

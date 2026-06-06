@@ -12,6 +12,7 @@ export interface LobbyDeckPanelProps {
   loadouts: readonly AccountLoadout[];
   loadoutsStatus: "idle" | "loading" | "ready" | "error";
   loadoutsError?: string | undefined;
+  onRefreshLoadouts: () => void;
   onSubmitLoadout: (loadoutId: string) => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ export const LobbyDeckPanel = ({
   loadouts,
   loadoutsStatus,
   loadoutsError,
+  onRefreshLoadouts,
   onSubmitLoadout,
 }: LobbyDeckPanelProps): React.JSX.Element => {
   const [selectedLoadoutId, setSelectedLoadoutId] = useState(
@@ -32,6 +34,7 @@ export const LobbyDeckPanel = ({
   );
   const pickerLocked = selfDeckStatus === "ready";
   const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;
+  const refreshDisabled = disabled || pickerLocked || loadoutsStatus === "loading";
 
   useEffect(() => {
     if (!selectedLoadoutExists) {
@@ -70,14 +73,24 @@ export const LobbyDeckPanel = ({
           {loadoutsStatus === "ready" && loadouts.length === 0 ? (
             <p>No account loadouts are available.</p>
           ) : null}
-          <a
-            className="deck-editor-link"
-            href="https://poneglyph.one/decks"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open deck editor
-          </a>
+          <div className="deck-loadout-actions">
+            <a
+              className="deck-editor-link"
+              href="https://poneglyph.one/decks"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open deck editor
+            </a>
+            <button
+              className="deck-loadout-refresh-button"
+              type="button"
+              disabled={refreshDisabled}
+              onClick={onRefreshLoadouts}
+            >
+              Refresh decks
+            </button>
+          </div>
           <button
             className="deck-loadout-submit-button"
             type="submit"

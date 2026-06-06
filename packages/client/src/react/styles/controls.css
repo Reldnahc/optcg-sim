@@ -423,8 +423,14 @@
   background: #275f3e;
 }
 
+.deck-loadout-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .deck-editor-link {
-  justify-self: start;
   color: rgba(255, 255, 255, 0.84);
   font-size: 13px;
   font-weight: 700;
@@ -435,6 +441,18 @@
 .deck-editor-link:hover,
 .deck-editor-link:focus-visible {
   color: #ffffff;
+}
+
+.deck-loadout-refresh-button {
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.deck-loadout-refresh-button:hover:not(:disabled),
+.deck-loadout-refresh-button:focus-visible:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .deck-hash-form button:disabled {

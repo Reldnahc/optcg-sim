@@ -421,6 +421,7 @@ export const MatchApp = ({
             loadouts={client.state.accountLoadouts}
             loadoutsStatus={client.state.accountLoadoutsStatus}
             loadoutsError={client.state.accountLoadoutsError}
+            onRefreshLoadouts={client.refreshAccountLoadouts}
             onSubmitLoadout={client.submitLobbyLoadout}
           />
         )}

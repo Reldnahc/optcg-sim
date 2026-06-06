@@ -68,6 +68,7 @@ export const useMatchClient = ({
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const [accountLoadoutsError, setAccountLoadoutsError] = useState<string>();
+  const accountLoadoutsRequestId = useRef(0);
   const [selectedCardInstanceId, setSelectedCardInstanceId] =
     useState<string>();
   const [selectedDonInstanceIds, setSelectedDonInstanceIds] = useState<
@@ -166,27 +167,28 @@ export const useMatchClient = ({
       setSelectedDonInstanceIds,
     });
 
-  useEffect(() => {
+  const refreshAccountLoadouts = useCallback((): void => {
     if (!isLobbyClientState(clientState)) {
       setAccountLoadouts([]);
       setAccountLoadoutsStatus("idle");
       setAccountLoadoutsError(undefined);
       return;
     }
-    let cancelled = false;
+    const requestId = accountLoadoutsRequestId.current + 1;
+    accountLoadoutsRequestId.current = requestId;
     setAccountLoadoutsStatus("loading");
     setAccountLoadoutsError(undefined);
     void accountClient
       .listLoadouts()
       .then((loadouts) => {
-        if (cancelled) {
+        if (accountLoadoutsRequestId.current !== requestId) {
           return;
         }
         setAccountLoadouts(loadouts);
         setAccountLoadoutsStatus("ready");
       })
       .catch((error: unknown) => {
-        if (cancelled) {
+        if (accountLoadoutsRequestId.current !== requestId) {
           return;
         }
         setAccountLoadouts([]);
@@ -195,10 +197,21 @@ export const useMatchClient = ({
           error instanceof Error ? error.message : String(error),
         );
       });
+  }, [accountClient, clientState]);
+
+  useEffect(() => {
+    if (!isLobbyClientState(clientState)) {
+      accountLoadoutsRequestId.current += 1;
+      setAccountLoadouts([]);
+      setAccountLoadoutsStatus("idle");
+      setAccountLoadoutsError(undefined);
+      return;
+    }
+    refreshAccountLoadouts();
     return () => {
-      cancelled = true;
+      accountLoadoutsRequestId.current += 1;
     };
-  }, [accountClient, lobbyConnectionKey]);
+  }, [clientState, lobbyConnectionKey, refreshAccountLoadouts]);
 
   const submitLobbyLoadout = useCallback(
     async (loadoutId: string): Promise<void> => {
@@ -636,6 +649,7 @@ export const useMatchClient = ({
     requestRollback,
     cancelRollback,
     createNewMatch,
+    refreshAccountLoadouts,
     submitLobbyLoadout,
   };
 };

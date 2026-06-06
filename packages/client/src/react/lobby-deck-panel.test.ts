@@ -71,6 +71,7 @@ describe("lobby deck panel", () => {
         lobbyState: lobbyState(),
         loadouts,
         loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
         onSubmitLoadout: () => Promise.resolve(),
       }),
     );
@@ -110,6 +111,7 @@ describe("lobby deck panel", () => {
         loadouts: [],
         loadoutsStatus: "error",
         loadoutsError: "Sign in to Poneglyph to choose a loadout.",
+        onRefreshLoadouts: () => undefined,
         onSubmitLoadout: () => Promise.resolve(),
       }),
     );
@@ -125,6 +127,7 @@ describe("lobby deck panel", () => {
         lobbyState: lobbyState(),
         loadouts,
         loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
         onSubmitLoadout: () => Promise.resolve(),
       }),
     );
@@ -132,6 +135,68 @@ describe("lobby deck panel", () => {
     assert.match(
       html,
       /<a class="deck-editor-link" href="https:\/\/poneglyph\.one\/decks" target="_blank" rel="noreferrer">Open deck editor<\/a>/u,
+    );
+  });
+
+  test("renders a refresh decks button beside the deck editor link", () => {
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts,
+        loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(html, /<div class="deck-loadout-actions">/u);
+    assert.match(
+      html,
+      /<button class="deck-loadout-refresh-button" type="button">Refresh decks<\/button>/u,
+    );
+  });
+
+  test("disables deck refresh while loading, disabled, or locked", () => {
+    const loading = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts,
+        loadoutsStatus: "loading",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+    const disabled = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        disabled: true,
+        lobbyState: lobbyState(),
+        loadouts,
+        loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+    const locked = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState({ selfDeckStatus: "ready" }),
+        loadouts,
+        loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(
+      loading,
+      /<button class="deck-loadout-refresh-button" type="button" disabled="">Refresh decks<\/button>/u,
+    );
+    assert.match(
+      disabled,
+      /<button class="deck-loadout-refresh-button" type="button" disabled="">Refresh decks<\/button>/u,
+    );
+    assert.match(
+      locked,
+      /<button class="deck-loadout-refresh-button" type="button" disabled="">Refresh decks<\/button>/u,
     );
   });
 
@@ -226,6 +291,7 @@ describe("lobby deck panel", () => {
         lobbyState: lobbyState({ selfDeckStatus: "ready" }),
         loadouts,
         loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
         onSubmitLoadout: () => Promise.resolve(),
       }),
     );
@@ -255,6 +321,29 @@ describe("lobby deck panel", () => {
     assert.match(
       source,
       /const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;/u,
+    );
+  });
+
+  test("deck refresh is wired from match client into the lobby deck panel", async () => {
+    const matchAppSource = await readFile(
+      new URL("MatchApp.tsx", import.meta.url),
+      "utf8",
+    );
+    const clientSource = await readFile(
+      new URL("useMatchClient.ts", import.meta.url),
+      "utf8",
+    );
+    const supportSource = await readFile(
+      new URL("useMatchClient-support.ts", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(supportSource, /refreshAccountLoadouts: \(\) => void;/u);
+    assert.match(clientSource, /const refreshAccountLoadouts = useCallback/u);
+    assert.match(clientSource, /accountClient\s*\.listLoadouts\(\)/u);
+    assert.match(
+      matchAppSource,
+      /onRefreshLoadouts=\{client\.refreshAccountLoadouts\}/u,
     );
   });
 
