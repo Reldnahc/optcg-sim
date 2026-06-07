@@ -20,7 +20,7 @@ const card = (overrides: Partial<ClientCardModel> = {}): ClientCardModel => ({
   cardId: "OP00-000" as CardId,
   name: "Preview Card",
   category: "Character",
-  effectText: "Draw 1 card.",
+  effectText: "[On Play] Draw 1 card.",
   triggerText: "Add 1 card.",
   imageUrl: "https://example.test/card.png",
   attachedDonCount: 0,
@@ -47,6 +47,8 @@ describe("card preview window", () => {
     assert.match(markup, /https:\/\/example\.test\/card\.png/u);
     assert.match(markup, /Draw 1 card\./u);
     assert.match(markup, /Add 1 card\./u);
+    assert.match(markup, /effect-rules-text/u);
+    assert.match(markup, /card-rules-tag--blue/u);
   });
 
   test("renders an empty preview window before a card is hovered", () => {

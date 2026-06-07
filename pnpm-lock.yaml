@@ -86,6 +86,9 @@ importers:
       optcg-auth-client:
         specifier: 0.1.7
         version: 0.1.7
+      optcg-card-rules:
+        specifier: 0.1.0
+        version: 0.1.0(react@19.2.6)
       react:
         specifier: ^19.2.6
         version: 19.2.6
@@ -1722,6 +1725,15 @@ packages:
       }
     engines: { node: ">=20" }
 
+  optcg-card-rules@0.1.0:
+    resolution:
+      {
+        integrity: sha512-N/A5DbVlYmFzqZ+CmXl6VdQVfUVtSAJ6PbFn/9SYfNWOFK5gF36a8avrvn/CVSB7XyVsPNzlyZVDEdSGaN4z3Q==,
+      }
+    engines: { node: ">=20" }
+    peerDependencies:
+      react: ">=18"
+
   optcg-deck-hash@0.1.1:
     resolution:
       {
@@ -3189,6 +3201,10 @@ snapshots:
       mimic-function: 5.0.1
 
   optcg-auth-client@0.1.7: {}
+
+  optcg-card-rules@0.1.0(react@19.2.6):
+    dependencies:
+      react: 19.2.6
 
   optcg-deck-hash@0.1.1: {}
 

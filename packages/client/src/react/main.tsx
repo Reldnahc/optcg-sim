@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import "optcg-card-rules/styles.css";
 import { AppRoot } from "./AppRoot.js";
 import "./styles.css";
 import "./styles/auth-gate.css";
@@ -19,6 +20,7 @@ import "./styles/decision-modal.css";
 import "./styles/collection-modal.css";
 import "./styles/reveal-window.css";
 import "./styles/presentation-effects.css";
+import "./styles/effect-rules-text.css";
 
 const root = document.getElementById("root");
 if (root === null) {

@@ -1,0 +1,30 @@
+.effect-rules-text {
+  display: block;
+  color: inherit;
+}
+
+.effect-rules-span {
+  display: inline;
+  border-radius: 4px;
+}
+
+.effect-rules-span .card-rules-text {
+  display: inline;
+}
+
+.effect-rules-span .card-rules-line {
+  display: inline;
+}
+
+.effect-rules-span--active {
+  background: rgba(54, 152, 255, 0.22);
+  box-shadow: 0 0 0 2px rgba(89, 178, 255, 0.34);
+}
+
+.effect-rules-span--resolved {
+  background: rgba(94, 207, 132, 0.16);
+}
+
+.effect-rules-span--skipped {
+  opacity: 0.62;
+}

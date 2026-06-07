@@ -1,4 +1,5 @@
 import type { ClientCardModel } from "../view-model.js";
+import { EffectRulesText } from "./EffectRulesText.js";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
 
@@ -49,13 +50,19 @@ export const CardPreviewContent = ({
           {card.effectText === undefined ? null : (
             <section>
               <h3>Effect</h3>
-              <p>{card.effectText}</p>
+              <EffectRulesText
+                text={card.effectText}
+                sourceMap={card.effectTextSourceMap}
+              />
             </section>
           )}
           {card.triggerText === undefined ? null : (
             <section>
               <h3>Trigger</h3>
-              <p>{card.triggerText}</p>
+              <EffectRulesText
+                text={card.triggerText}
+                sourceMap={card.triggerTextSourceMap}
+              />
             </section>
           )}
         </div>
