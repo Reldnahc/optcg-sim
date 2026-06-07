@@ -5,6 +5,7 @@ import type {
   InstructionParser,
   ParseInput,
 } from "../types.js";
+import type { SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function costedEffectExpressionParser(options: {
@@ -19,7 +20,7 @@ export function costedEffectExpressionParser(options: {
       return undefined;
     }
 
-    const body = parseCostedBody(cost.rest, options);
+    const body = parseCostedBody(cost.rest, options, cost.restSource);
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
@@ -49,6 +50,10 @@ export function costedEffectExpressionParser(options: {
         ...body.evidence,
       ],
       rest: "",
+      presentationSpans: [
+        ...(cost.presentationSpans ?? []),
+        ...(body.presentationSpans ?? []),
+      ],
     };
   };
 }
@@ -61,16 +66,26 @@ function parseCostedBody(
       input: ParseInput,
     ) => ExpressionParseResult | undefined)[];
   },
+  source?: SourceSlice,
 ): ExpressionParseResult | undefined {
   for (const expression of options.expressions ?? []) {
-    const parsed = expression({ text });
+    const parsed = expression({
+      text,
+      ...(source === undefined ? {} : { source }),
+    });
     if (parsed !== undefined && parsed.rest.length === 0) {
       return parsed;
     }
   }
 
-  return parseExpression(text, {
-    connectors: [],
-    segments: [syntheticInstructionSegmentParser(options.instructions)],
-  });
+  return parseExpression(
+    {
+      text,
+      ...(source === undefined ? {} : { source }),
+    },
+    {
+      connectors: [],
+      segments: [syntheticInstructionSegmentParser(options.instructions)],
+    },
+  );
 }

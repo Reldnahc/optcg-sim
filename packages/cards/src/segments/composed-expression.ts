@@ -8,6 +8,7 @@ import type {
   ParseInput,
   SegmentParser,
 } from "../types.js";
+import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function instructionExpressionSegmentParser(options: {
@@ -15,7 +16,7 @@ export function instructionExpressionSegmentParser(options: {
   readonly instructions: readonly InstructionParser[];
 }): SegmentParser {
   return (input: ParseInput) => {
-    const result = parseExpression(input.text, {
+    const result = parseExpression(input, {
       connectors: options.connectors,
       segments: [syntheticInstructionSegmentParser(options.instructions)],
     });
@@ -96,16 +97,30 @@ export function trailingConditionalExpressionSegmentParser(options: {
       return undefined;
     }
 
-    const then = parseExpression(thenText, {
-      connectors: options.connectors,
-      segments: [
-        instructionExpressionSegmentParser({
-          connectors: options.connectors,
-          instructions: options.instructions,
-        }),
-        syntheticInstructionSegmentParser(options.instructions),
-      ],
-    });
+    const sourceParts = splitTrailingConditionSource(
+      input.source,
+      input.text,
+      thenText,
+      conditionText,
+    );
+    const then = parseExpression(
+      {
+        text: thenText,
+        ...(sourceParts?.thenSource === undefined
+          ? {}
+          : { source: sourceParts.thenSource }),
+      },
+      {
+        connectors: options.connectors,
+        segments: [
+          instructionExpressionSegmentParser({
+            connectors: options.connectors,
+            instructions: options.instructions,
+          }),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
+      },
+    );
     if (then === undefined || then.rest.length > 0) {
       return undefined;
     }
@@ -120,6 +135,19 @@ export function trailingConditionalExpressionSegmentParser(options: {
         "expression:conditional",
         ...condition.evidence,
         ...then.evidence,
+      ],
+      presentationSpans: [
+        ...(sourceParts?.conditionSource === undefined
+          ? []
+          : [
+              sourceSpan(
+                "span:condition:resolution",
+                "condition",
+                sourceParts.conditionSource,
+                condition.evidence,
+              ),
+            ]),
+        ...(then.presentationSpans ?? []),
       ],
     };
   };
@@ -323,4 +351,49 @@ function parseSingleCondition(
   }
 
   return undefined;
+}
+
+function splitTrailingConditionSource(
+  source: SourceSlice | undefined,
+  text: string,
+  thenText: string,
+  conditionText: string,
+):
+  | {
+      readonly thenSource: SourceSlice;
+      readonly conditionSource: SourceSlice;
+    }
+  | undefined {
+  if (source === undefined) {
+    return undefined;
+  }
+
+  const thenStart = text.indexOf(thenText);
+  const conditionStart = text.lastIndexOf(conditionText);
+  if (thenStart < 0 || conditionStart < 0) {
+    return undefined;
+  }
+
+  const cleanConditionText = conditionText.replace(/\.$/u, "").trim();
+  const conditionTrimOffset = conditionText.indexOf(cleanConditionText);
+  const conditionStartOffset = Math.max(0, conditionTrimOffset);
+
+  return {
+    thenSource: trimSource({
+      text: thenText,
+      rawText: thenText,
+      start: source.start + thenStart,
+      end: source.start + thenStart + thenText.length,
+    }),
+    conditionSource: trimSource({
+      text: cleanConditionText,
+      rawText: cleanConditionText,
+      start: source.start + conditionStart + conditionStartOffset,
+      end:
+        source.start +
+        conditionStart +
+        conditionStartOffset +
+        cleanConditionText.length,
+    }),
+  };
 }

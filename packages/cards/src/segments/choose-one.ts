@@ -3,9 +3,11 @@ import type {
   Effect,
   EffectBlockCost,
   EffectOption,
+  EffectTextSpan,
 } from "@optcg/types";
 
 import { parseReturnDonCost } from "../costs/index.js";
+import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import type {
   ConditionParser,
   ExpressionParseResult,
@@ -21,6 +23,7 @@ interface ParsedChooseOneBody {
   readonly options: EffectOption[];
   readonly trailingThen?: string;
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export function chooseOneExpressionParser(options: {
@@ -32,10 +35,14 @@ export function chooseOneExpressionParser(options: {
   return (input: ParseInput) => {
     const cost = parseReturnDonCost(input);
     const afterCost = cost?.rest ?? input.text.trim();
+    const afterCostSource =
+      cost?.restSource ??
+      (input.source === undefined ? undefined : trimSource(input.source));
     const parsed = parseChooseOneBody(
       afterCost,
       options.conditions,
       options.expressions ?? [],
+      afterCostSource,
     );
     if (parsed === undefined) {
       return undefined;
@@ -100,6 +107,10 @@ export function chooseOneExpressionParser(options: {
         ...(costPatch === undefined ? {} : { cost: costPatch }),
         ...(conditionPatch === undefined ? {} : { condition: conditionPatch }),
       },
+      presentationSpans: [
+        ...(cost?.presentationSpans ?? []),
+        ...(parsed.presentationSpans ?? []),
+      ],
     };
   };
 }
@@ -110,6 +121,7 @@ function parseChooseOneBody(
   expressionParsers: readonly ((
     input: ParseInput,
   ) => ExpressionParseResult | undefined)[],
+  source?: SourceSlice,
 ): ParsedChooseOneBody | undefined {
   const normalized = text.trim();
   const conditional =
@@ -155,6 +167,7 @@ function parseChooseOneBody(
       ? {}
       : { trailingThen: payload.trailingThen }),
     evidence: payload.labels.map(() => "choice:option"),
+    presentationSpans: choicePresentationSpans(source),
   };
 }
 
@@ -230,4 +243,45 @@ function parseChoicePayload(
   }
 
   return undefined;
+}
+
+function choicePresentationSpans(
+  source: SourceSlice | undefined,
+): readonly EffectTextSpan[] {
+  if (source === undefined) {
+    return [];
+  }
+
+  const lines = sourceLines(source);
+  const header = lines[0];
+  if (header === undefined) {
+    return [];
+  }
+
+  const optionLines = lines.filter((line) => line.text.startsWith("\u2022"));
+  return [
+    sourceSpan("span:choice", "choice", header, ["composition:chooseOne"]),
+    ...optionLines.map((line, index) =>
+      sourceSpan(`span:choice:${String(index)}:option`, "choiceOption", line, [
+        "choice:option",
+      ]),
+    ),
+  ];
+}
+
+function sourceLines(source: SourceSlice): readonly SourceSlice[] {
+  const lines: SourceSlice[] = [];
+  for (const match of source.rawText.matchAll(/[^\r\n]+/gu)) {
+    const rawText = match[0];
+    const trimmed = trimSource({
+      text: rawText,
+      rawText,
+      start: source.start + match.index,
+      end: source.start + match.index + rawText.length,
+    });
+    if (trimmed.text.length > 0) {
+      lines.push(trimmed);
+    }
+  }
+  return lines;
 }
