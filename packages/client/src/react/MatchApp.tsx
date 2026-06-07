@@ -3,7 +3,6 @@ import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
 import { actionLogCardModel } from "./card-model.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
-import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { MatchBoardSurface } from "./MatchBoardSurface.js";
 import { MatchControlPanel } from "./MatchControlPanel.js";
@@ -418,6 +417,8 @@ export const MatchApp = ({
           clientState={clientState}
           presentationEvents={playerSnapshot?.view.events ?? []}
           decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
+          effectSpotlightActive={effectSpotlight?.active}
+          effectSpotlightCard={effectSpotlightCard}
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}
@@ -446,10 +447,6 @@ export const MatchApp = ({
             onSubmitLoadout={client.submitLobbyLoadout}
           />
         )}
-        <EffectSpotlight
-          card={effectSpotlightCard}
-          active={effectSpotlight?.active}
-        />
         <MatchControlPanel
           errors={client.state.errors}
           globalActions={controlGlobalActions}

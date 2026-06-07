@@ -22,20 +22,29 @@ export const EffectSpotlight = ({
       ? card.triggerTextSourceMap
       : card.effectTextSourceMap;
   return (
-    <aside className="effect-spotlight" aria-label="Resolving effect">
-      {card.imageUrl === undefined ? null : (
-        <img className="effect-spotlight__art" src={card.imageUrl} alt="" />
-      )}
-      <div className="effect-spotlight__body">
-        <div className="effect-spotlight__title">{card.name}</div>
-        {text === undefined ? null : (
-          <EffectRulesText
-            text={text}
-            sourceMap={sourceMap}
-            activeSpanIds={active.activeSpanIds}
-            compact
+    <aside className="effect-spotlight" aria-label={`Resolving ${card.name}`}>
+      <div className="effect-spotlight-card">
+        {card.imageUrl === undefined ? (
+          <div className="effect-spotlight-card__placeholder">{card.name}</div>
+        ) : (
+          <img
+            className="effect-spotlight-card__art"
+            src={card.imageUrl}
+            alt={card.name}
           />
         )}
+        <div className="effect-spotlight-card__rules">
+          {text === undefined ? (
+            <div className="effect-spotlight-card__fallback">{card.name}</div>
+          ) : (
+            <EffectRulesText
+              text={text}
+              sourceMap={sourceMap}
+              activeSpanIds={active.activeSpanIds}
+              compact
+            />
+          )}
+        </div>
       </div>
     </aside>
   );

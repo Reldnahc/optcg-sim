@@ -3,9 +3,10 @@ import type {
   ClientActionModel,
   ClientCardModel,
 } from "../view-model.js";
-import type { EngineEvent } from "@optcg/types";
+import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
 import { useRef } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
+import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
 import { CardMovementOverlay } from "./presentation-effects/CardMovementOverlay.js";
@@ -16,6 +17,8 @@ import { Zone } from "./Zone.js";
 export interface BoardLayoutProps {
   board: BoardViewModel;
   decisionPrompt?: string | undefined;
+  effectSpotlightActive?: ActiveEffectTextPresentation | undefined;
+  effectSpotlightCard?: ClientCardModel | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
@@ -136,6 +139,8 @@ const donCount = (
 export const BoardLayout = ({
   board,
   decisionPrompt,
+  effectSpotlightActive,
+  effectSpotlightCard,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
@@ -178,6 +183,10 @@ export const BoardLayout = ({
         />
         {handCount(board.opponentLabel, "opponent", board.opponent.handCount)}
         {handCount(board.selfLabel, "player", board.self.hand.length)}
+        <EffectSpotlight
+          card={effectSpotlightCard}
+          active={effectSpotlightActive}
+        />
         {decisionPrompt === undefined ? null : (
           <div className="decision-status-prompt" role="status">
             {decisionPrompt}

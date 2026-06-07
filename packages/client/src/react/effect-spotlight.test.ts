@@ -49,6 +49,8 @@ describe("EffectSpotlight", () => {
     );
 
     expect(html).toContain("effect-spotlight");
+    expect(html).toContain("effect-spotlight-card");
+    expect(html).toContain("effect-spotlight-card__rules");
     expect(html).toContain("Resolving Card");
     expect(html).toContain("effect-rules-span--active");
   });

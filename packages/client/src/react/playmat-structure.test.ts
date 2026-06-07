@@ -200,6 +200,34 @@ describe("playmat structure", () => {
     assert.match(controlsStyles, /\.control-rail\s*\{[^}]*width:\s*260px;/u);
   });
 
+  test("effect spotlight is hosted in the empty hand rail lane", async () => {
+    const [boardLayout, matchApp, effectSpotlightStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "effect-spotlight.css"), "utf8"),
+    ]);
+
+    assert.match(
+      boardLayout,
+      /<div className="hand-rail">[\s\S]*<EffectSpotlight/u,
+    );
+    assert.match(matchApp, /effectSpotlightCard=\{effectSpotlightCard\}/u);
+    assert.match(
+      matchApp,
+      /effectSpotlightActive=\{effectSpotlight\?\.active\}/u,
+    );
+    assert.equal(matchApp.includes("<EffectSpotlight"), false);
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;/u,
+    );
+    assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
+  });
+
   test("control dock is tall and flush inside the panel", async () => {
     const controlsStyles = await readFile(controlsStylesPath, "utf8");
 

@@ -1,50 +1,82 @@
 .effect-spotlight {
-  position: fixed;
-  top: 14px;
+  position: absolute;
+  top: 50%;
   left: 50%;
-  z-index: 16;
-  display: grid;
-  grid-template-columns: 72px minmax(0, 280px);
-  gap: 10px;
-  max-width: min(460px, calc(100vw - 24px));
-  padding: 8px;
-  border: 1px solid rgba(105, 196, 255, 0.54);
-  border-radius: 8px;
-  background: rgba(17, 24, 29, 0.88);
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.42),
-    0 0 26px rgba(67, 180, 255, 0.22);
-  color: #f5fbff;
+  z-index: 13;
+  width: min(calc(var(--card-width) * 2.45), calc(100% - 18px));
   pointer-events: none;
-  transform: translateX(-50%);
+  transform: translate(-50%, -54%);
 }
 
-.effect-spotlight__art {
-  width: 72px;
+.effect-spotlight-card {
+  position: relative;
+  display: block;
+  width: 100%;
   aspect-ratio: 0.7;
-  border-radius: 6px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #615d5b;
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.48),
+    0 0 0 2px rgba(105, 196, 255, 0.62),
+    0 0 28px rgba(67, 180, 255, 0.28);
+}
+
+.effect-spotlight-card__art,
+.effect-spotlight-card__placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.effect-spotlight-card__art {
   object-fit: cover;
 }
 
-.effect-spotlight__body {
+.effect-spotlight-card__placeholder {
   display: grid;
-  align-content: center;
-  gap: 5px;
-  min-width: 0;
-}
-
-.effect-spotlight__title {
-  overflow: hidden;
+  place-items: center;
+  padding: 14px;
   color: #ffffff;
-  font-size: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 42%), #615d5b;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.1;
+  text-align: center;
+}
+
+.effect-spotlight-card__rules {
+  position: absolute;
+  right: 6.5%;
+  bottom: 7.2%;
+  left: 6.5%;
+  display: grid;
+  min-height: 28%;
+  max-height: 34%;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(42, 31, 22, 0.58);
+  border-radius: 5px;
+  padding: 4px 5px;
+  color: #1f1915;
+  background: rgba(246, 238, 224, 0.96);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
+}
+
+.effect-spotlight-card__fallback {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .effect-spotlight .effect-rules-text {
-  font-size: 12px;
+  font-size: clamp(8px, calc(var(--card-width) * 0.11), 13px);
+  font-weight: 650;
+  line-height: 1.08;
 }
 
 .effect-spotlight .card-rules-text {
