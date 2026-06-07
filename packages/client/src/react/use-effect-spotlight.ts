@@ -81,6 +81,17 @@ export const queuedResolvedSpotlightSources = ({
   return next ?? previousQueue;
 };
 
+export const consumeResolvedSpotlightSourceKeys = (
+  consumedKeys: Set<string>,
+  sources: readonly EffectSpotlightActiveSourceInput[],
+): void => {
+  for (const source of sources) {
+    if (source.mode === "resolved") {
+      consumedKeys.add(source.key);
+    }
+  }
+};
+
 export const effectSpotlightModel = ({
   active,
   activeKey,
@@ -149,6 +160,7 @@ export const useEffectSpotlight = ({
   pendingDecisionId,
 }: UseEffectSpotlightInput): EffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
+  const initializedConsumedResolvedKeys = useRef(false);
   const [resolvedQueue, setResolvedQueue] = useState<
     EffectSpotlightActiveSourceInput[]
   >([]);
@@ -172,6 +184,16 @@ export const useEffectSpotlight = ({
   const effectiveActiveMode = liveSource?.mode ?? activeMode;
   const [model, setModel] = useState<EffectSpotlightState>();
   useEffect(() => {
+    if (
+      !initializedConsumedResolvedKeys.current &&
+      activeSources !== undefined
+    ) {
+      initializedConsumedResolvedKeys.current = true;
+      consumeResolvedSpotlightSourceKeys(
+        consumedResolvedKeys.current,
+        normalizedSources,
+      );
+    }
     const currentKey = model?.activeMode === "resolved" ? model.activeKey : "";
     setResolvedQueue((previous) => {
       const next = queuedResolvedSpotlightSources({

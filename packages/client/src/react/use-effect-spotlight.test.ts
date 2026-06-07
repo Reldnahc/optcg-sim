@@ -8,6 +8,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  consumeResolvedSpotlightSourceKeys,
   effectSpotlightModel,
   queuedResolvedSpotlightSources,
 } from "./use-effect-spotlight.js";
@@ -183,5 +184,49 @@ describe("effect spotlight model", () => {
       "event:queued",
       "event:next",
     ]);
+  });
+
+  it("can seed initial resolved sources as consumed without blocking later sources", () => {
+    const baseSource = {
+      instanceId: "source-1" as InstanceId,
+      cardId: "OP00-001" as CardId,
+      playerId: "p1" as PlayerId,
+    };
+    const historical = {
+      active: {
+        source: baseSource,
+        activeSpanIds: ["span:historical" as EffectTextSpanId],
+      },
+      key: "event:historical",
+      mode: "resolved" as const,
+    };
+    const next = {
+      active: {
+        source: baseSource,
+        activeSpanIds: ["span:next" as EffectTextSpanId],
+      },
+      key: "event:next",
+      mode: "resolved" as const,
+    };
+    const consumedKeys = new Set<string>();
+
+    consumeResolvedSpotlightSourceKeys(consumedKeys, [historical]);
+
+    expect(
+      queuedResolvedSpotlightSources({
+        consumedKeys,
+        currentKey: undefined,
+        previousQueue: [],
+        sources: [historical],
+      }),
+    ).toEqual([]);
+    expect(
+      queuedResolvedSpotlightSources({
+        consumedKeys,
+        currentKey: undefined,
+        previousQueue: [],
+        sources: [historical, next],
+      }).map((source) => source.key),
+    ).toEqual(["event:next"]);
   });
 });
