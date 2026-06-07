@@ -134,6 +134,7 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);
   color: #f7f1e9;
+  cursor: pointer;
   font: inherit;
   line-height: 1;
 }

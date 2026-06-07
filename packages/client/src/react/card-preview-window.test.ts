@@ -97,6 +97,10 @@ describe("card preview window", () => {
     );
     assert.match(styles, /\.card-preview-control-bar button:active\s*\{/u);
     assert.match(styles, /\.card-preview-control-bar button:disabled\s*\{/u);
+    assert.match(
+      styles,
+      /\.card-preview-control-bar button\s*\{[^}]*cursor:\s*pointer;/u,
+    );
   });
 
   test("renders an empty preview window before a card is hovered", () => {
