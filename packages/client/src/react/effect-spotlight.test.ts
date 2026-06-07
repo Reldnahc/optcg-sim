@@ -31,6 +31,28 @@ const card = (): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const reminderCard = (): ClientCardModel => {
+  const effectText =
+    "[On Play] Up to 1 of your Characters gains [Unblockable] during this turn. (This card cannot be blocked.)";
+  return {
+    ...card(),
+    effectText,
+    effectTextSourceMap: {
+      textKind: "effect",
+      sourceText: effectText,
+      spans: [
+        {
+          id: "span:body:unblockable",
+          role: "body",
+          start: 10,
+          end: effectText.length,
+          text: effectText.slice(10),
+        },
+      ],
+    },
+  };
+};
+
 describe("EffectSpotlight", () => {
   it("renders the resolving card text with active span highlights", () => {
     const html = renderToStaticMarkup(
@@ -77,5 +99,26 @@ describe("EffectSpotlight", () => {
 
     expect(html).toContain("effect-spotlight");
     expect(html).toContain("Resolving Card");
+  });
+
+  it("omits parenthetical reminder text without losing active span highlights", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: reminderCard(),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:unblockable"],
+        },
+      }),
+    );
+
+    expect(html).toContain("Unblockable");
+    expect(html).not.toContain("This card cannot be blocked.");
+    expect(html).toContain("effect-rules-span--active");
   });
 });

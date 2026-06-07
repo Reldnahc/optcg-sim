@@ -1,4 +1,7 @@
-import type { ActiveEffectTextPresentation } from "@optcg/types";
+import type {
+  ActiveEffectTextPresentation,
+  EffectTextSourceMap,
+} from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import { EffectRulesText } from "./EffectRulesText.js";
@@ -7,6 +10,71 @@ export interface EffectSpotlightProps {
   readonly card: ClientCardModel | undefined;
   readonly active: ActiveEffectTextPresentation | undefined;
 }
+
+interface SpotlightText {
+  readonly text: string;
+  readonly sourceMap: EffectTextSourceMap | undefined;
+}
+
+const parentheticalReminderPattern = /\s*\([^)]*\)/gu;
+
+const spotlightTextWithoutReminders = (
+  text: string,
+  sourceMap: EffectTextSourceMap | undefined,
+): SpotlightText => {
+  const removedRanges = [...text.matchAll(parentheticalReminderPattern)].map(
+    (match) => ({
+      start: match.index,
+      end: match.index + match[0].length,
+    }),
+  );
+  if (removedRanges.length === 0) {
+    return { text, sourceMap };
+  }
+
+  const kept = Array.from({ length: text.length }, () => true);
+  for (const range of removedRanges) {
+    for (let index = range.start; index < range.end; index += 1) {
+      kept[index] = false;
+    }
+  }
+
+  const prefixKeptCounts: number[] = [0];
+  let displayText = "";
+  for (let index = 0; index < text.length; index += 1) {
+    if (kept[index] === true) {
+      displayText += text[index] ?? "";
+    }
+    prefixKeptCounts.push(displayText.length);
+  }
+
+  if (sourceMap?.sourceText !== text) {
+    return { text: displayText, sourceMap: undefined };
+  }
+
+  return {
+    text: displayText,
+    sourceMap: {
+      ...sourceMap,
+      sourceText: displayText,
+      spans: sourceMap.spans.flatMap((span) => {
+        const start = prefixKeptCounts[span.start] ?? displayText.length;
+        const end = prefixKeptCounts[span.end] ?? displayText.length;
+        if (end <= start) {
+          return [];
+        }
+        return [
+          {
+            ...span,
+            start,
+            end,
+            text: displayText.slice(start, end),
+          },
+        ];
+      }),
+    },
+  };
+};
 
 export const EffectSpotlight = ({
   active,
@@ -21,6 +89,10 @@ export const EffectSpotlight = ({
     textKind === "trigger"
       ? card.triggerTextSourceMap
       : card.effectTextSourceMap;
+  const spotlightText =
+    text === undefined
+      ? undefined
+      : spotlightTextWithoutReminders(text, sourceMap);
   return (
     <aside className="effect-spotlight" aria-label={`Resolving ${card.name}`}>
       <div className="effect-spotlight-card">
@@ -34,12 +106,12 @@ export const EffectSpotlight = ({
           />
         )}
         <div className="effect-spotlight-card__rules">
-          {text === undefined ? (
+          {spotlightText === undefined ? (
             <div className="effect-spotlight-card__fallback">{card.name}</div>
           ) : (
             <EffectRulesText
-              text={text}
-              sourceMap={sourceMap}
+              text={spotlightText.text}
+              sourceMap={spotlightText.sourceMap}
               activeSpanIds={active.activeSpanIds}
               compact
             />

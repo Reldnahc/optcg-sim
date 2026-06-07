@@ -223,7 +223,15 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /width:\s*min\(calc\(var\(--card-width\)\s*\*\s*3\.15\),\s*calc\(100%\s*-\s*12px\)\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /font-size:\s*clamp\(7px,\s*calc\(var\(--card-width\)\s*\*\s*0\.075\),\s*10px\);/u,
     );
     assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
   });
