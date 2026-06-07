@@ -6,7 +6,9 @@ import type {
   SequencedEffect,
   SourcePresencePolicy,
   Trigger,
+  EffectTextSpan,
 } from "@optcg/types";
+import type { SourceSlice } from "./source-slices.js";
 
 export type PrimitiveEvidence =
   | "entry:onPlay"
@@ -272,6 +274,7 @@ export interface PrimitiveParseResult {
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest?: string;
   readonly metadata?: PrimitiveMetadata;
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export interface EntryPointParseResult {
@@ -283,10 +286,12 @@ export interface EntryPointParseResult {
   };
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export interface ParseInput {
   readonly text: string;
+  readonly source?: SourceSlice;
   readonly entryPoint?: EntryPointParseResult["node"];
 }
 
@@ -294,6 +299,7 @@ export interface ExpressionParseResult {
   readonly effect: Effect;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
+  readonly presentationSpans?: readonly EffectTextSpan[];
   readonly blockPatch?: {
     readonly category?: EffectCategory;
     readonly condition?: Condition;
@@ -312,6 +318,7 @@ export interface MarkerParseResult {
   readonly patch: EffectBlockPatch;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export type MarkerParser = (input: ParseInput) => MarkerParseResult | undefined;
@@ -320,12 +327,14 @@ export interface ConditionParseResult {
   readonly condition: Condition;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export interface InstructionParseResult {
   readonly effect: Effect;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export type ConditionParser = (
@@ -340,11 +349,14 @@ export interface ConnectorParseResult {
   readonly segments: readonly string[];
   readonly connectors: readonly SequencedEffect["connector"][];
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly sourceSegments?: readonly SourceSlice[];
+  readonly connectorSpans?: readonly EffectTextSpan[];
 }
 
 export interface SegmentParseResult {
   readonly effect: Effect;
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly presentationSpans?: readonly EffectTextSpan[];
 }
 
 export type ConnectorParser = (
