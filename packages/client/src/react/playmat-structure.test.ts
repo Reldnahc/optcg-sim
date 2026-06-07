@@ -230,7 +230,7 @@ describe("playmat structure", () => {
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*2\.5%;/u);
-    assert.match(effectSpotlightStyles, /bottom:\s*9\.6%;/u);
+    assert.match(effectSpotlightStyles, /bottom:\s*12\.4%;/u);
     assert.match(effectSpotlightStyles, /left:\s*2\.5%;/u);
     assert.match(
       effectSpotlightStyles,
@@ -241,6 +241,10 @@ describe("playmat structure", () => {
         ".effect-spotlight .effect-rules-span .card-rules-line",
       ),
       false,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.effect-rules-span--active\s*\{[^}]*background:\s*rgba\(255,\s*220,\s*98,\s*0\.38\);/u,
     );
     assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
   });
