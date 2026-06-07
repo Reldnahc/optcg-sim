@@ -1,9 +1,17 @@
 .effect-spotlight {
+  --effect-spotlight-card-width: min(
+    calc(var(--card-width) * 3.15),
+    calc(100% - 12px)
+  );
+  --effect-spotlight-card-height: calc(
+    var(--effect-spotlight-card-width) / 0.7
+  );
+
   position: absolute;
   top: 50%;
   left: 50%;
   z-index: 13;
-  width: min(calc(var(--card-width) * 3.15), calc(100% - 12px));
+  width: var(--effect-spotlight-card-width);
   pointer-events: none;
   transform: translate(-50%, -54%);
 }
@@ -14,7 +22,7 @@
   width: 100%;
   aspect-ratio: 0.7;
   overflow: hidden;
-  border-radius: 7px;
+  border-radius: 6px;
   background: #615d5b;
   box-shadow:
     0 16px 34px rgba(0, 0, 0, 0.48),
@@ -36,11 +44,11 @@
 .effect-spotlight-card__placeholder {
   display: grid;
   place-items: center;
-  padding: 14px;
+  padding: calc(var(--effect-spotlight-card-width) * 0.045);
   color: #ffffff;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 42%), #615d5b;
-  font-size: 18px;
+  font-size: calc(var(--effect-spotlight-card-width) * 0.065);
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
@@ -57,8 +65,9 @@
   align-items: center;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
-  border-radius: 5px;
-  padding: 4px 5px;
+  border-radius: calc(var(--effect-spotlight-card-width) * 0.012);
+  padding: calc(var(--effect-spotlight-card-height) * 0.009)
+    calc(var(--effect-spotlight-card-width) * 0.015);
   color: #1f1915;
   background: rgba(246, 238, 224, 0.96);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
@@ -66,7 +75,7 @@
 
 .effect-spotlight-card__fallback {
   overflow: hidden;
-  font-size: 12px;
+  font-size: calc(var(--effect-spotlight-card-width) * 0.045);
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
@@ -74,7 +83,7 @@
 }
 
 .effect-spotlight .effect-rules-text {
-  font-size: clamp(1px, calc(var(--card-height) * 0.013), 3px);
+  font-size: calc(var(--effect-spotlight-card-width) * 0.019);
   font-weight: 650;
   line-height: 1.08;
 }

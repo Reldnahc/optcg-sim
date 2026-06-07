@@ -223,18 +223,26 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /width:\s*min\(calc\(var\(--card-width\)\s*\*\s*3\.15\),\s*calc\(100%\s*-\s*12px\)\);/u,
+      /--effect-spotlight-card-width:\s*min\(\s*calc\(var\(--card-width\)\s*\*\s*3\.15\),\s*calc\(100%\s*-\s*12px\)\s*\);/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;/u,
+      /--effect-spotlight-card-height:\s*calc\(\s*var\(--effect-spotlight-card-width\)\s*\/\s*0\.7\s*\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /width:\s*var\(--effect-spotlight-card-width\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*border-radius:\s*6px;/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*2\.5%;/u);
     assert.match(effectSpotlightStyles, /bottom:\s*12\.4%;/u);
     assert.match(effectSpotlightStyles, /left:\s*2\.5%;/u);
     assert.match(
       effectSpotlightStyles,
-      /font-size:\s*clamp\(1px,\s*calc\(var\(--card-height\)\s*\*\s*0\.013\),\s*3px\);/u,
+      /font-size:\s*calc\(var\(--effect-spotlight-card-width\)\s*\*\s*0\.019\);/u,
     );
     assert.equal(
       effectSpotlightStyles.includes(
