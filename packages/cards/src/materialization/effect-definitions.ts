@@ -1,5 +1,11 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
-import type { CardId, EffectBlock, EffectDefinition } from "@optcg/types";
+import type {
+  CardId,
+  EffectBlock,
+  EffectDefinition,
+  EffectTextPresentationRef,
+  EffectTextSourceMap,
+} from "@optcg/types";
 
 import { parseCardEffectLinesDetailed } from "../card-effect-line-parser.js";
 
@@ -40,6 +46,7 @@ export const materializeEffectDefinition = (
       > => value.kind !== "metadata",
     );
     for (const [blockIndex, value] of runtimeValues.entries()) {
+      const presentation = presentationRefFromSourceMap(value.sourceMap);
       const block: EffectBlock = {
         ...value.block,
         id:
@@ -48,6 +55,7 @@ export const materializeEffectDefinition = (
             : (`${String(cardId)}:generated:${String(index + 1)}:${String(
                 blockIndex + 1,
               )}` as EffectBlock["id"]),
+        ...(presentation === undefined ? {} : { presentation }),
       };
       const runtimeSupport = evaluateEffectBlockRuntimeSupport(block);
       if (!runtimeSupport.supported) {
@@ -90,4 +98,26 @@ export const materializeEffectDefinition = (
       },
     },
   };
+};
+
+const presentationRefFromSourceMap = (
+  sourceMap: EffectTextSourceMap | undefined,
+): EffectTextPresentationRef | undefined => {
+  if (sourceMap === undefined) {
+    return undefined;
+  }
+  const spanIds = sourceMap.spans
+    .filter(
+      (span) =>
+        span.role === "body" ||
+        span.role === "cost" ||
+        span.role === "choiceOption",
+    )
+    .map((span) => span.id);
+  return spanIds.length === 0
+    ? undefined
+    : {
+        textKind: sourceMap.textKind,
+        spanIds,
+      };
 };

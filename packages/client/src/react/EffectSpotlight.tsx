@@ -21,9 +21,6 @@ export const EffectSpotlight = ({
     textKind === "trigger"
       ? card.triggerTextSourceMap
       : card.effectTextSourceMap;
-  if (text === undefined) {
-    return null;
-  }
   return (
     <aside className="effect-spotlight" aria-label="Resolving effect">
       {card.imageUrl === undefined ? null : (
@@ -31,12 +28,14 @@ export const EffectSpotlight = ({
       )}
       <div className="effect-spotlight__body">
         <div className="effect-spotlight__title">{card.name}</div>
-        <EffectRulesText
-          text={text}
-          sourceMap={sourceMap}
-          activeSpanIds={active.activeSpanIds}
-          compact
-        />
+        {text === undefined ? null : (
+          <EffectRulesText
+            text={text}
+            sourceMap={sourceMap}
+            activeSpanIds={active.activeSpanIds}
+            compact
+          />
+        )}
       </div>
     </aside>
   );

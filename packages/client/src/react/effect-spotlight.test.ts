@@ -52,4 +52,28 @@ describe("EffectSpotlight", () => {
     expect(html).toContain("Resolving Card");
     expect(html).toContain("effect-rules-span--active");
   });
+
+  it("keeps a visible resolving shell when catalog text is missing", () => {
+    const model = card();
+    delete model.effectText;
+    delete model.effectTextSourceMap;
+
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: model,
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+
+    expect(html).toContain("effect-spotlight");
+    expect(html).toContain("Resolving Card");
+  });
 });

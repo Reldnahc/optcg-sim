@@ -106,6 +106,33 @@ describe("card repository", () => {
     );
   });
 
+  test("generated effect definitions include presentation refs from source maps", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
+    });
+    const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    await repository.resolveCards([cardId]);
+    const cached = (await cache.getJson(
+      createCardCacheKey({ cardId, versions }),
+    )) as CachedResolvedCard | undefined;
+    const definition = required(cached?.definition, "cached definition");
+    const effect = required(definition.effects[0], "generated effect");
+    const presentation = required(effect.presentation, "effect presentation");
+
+    assert.equal(presentation.textKind, "effect");
+    assert.equal(
+      presentation.spanIds.some((spanId) => spanId === "span:body"),
+      true,
+    );
+  });
+
   test("resolves raw keyword lines as printed keywords without generated effect blocks", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;
