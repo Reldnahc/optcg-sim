@@ -21,6 +21,7 @@ import "./styles/collection-modal.css";
 import "./styles/reveal-window.css";
 import "./styles/presentation-effects.css";
 import "./styles/effect-rules-text.css";
+import "./styles/effect-spotlight.css";
 
 const root = document.getElementById("root");
 if (root === null) {

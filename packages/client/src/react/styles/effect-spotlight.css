@@ -1,0 +1,52 @@
+.effect-spotlight {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 16;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 280px);
+  gap: 10px;
+  max-width: min(460px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid rgba(105, 196, 255, 0.54);
+  border-radius: 8px;
+  background: rgba(17, 24, 29, 0.88);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.42),
+    0 0 26px rgba(67, 180, 255, 0.22);
+  color: #f5fbff;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.effect-spotlight__art {
+  width: 72px;
+  aspect-ratio: 0.7;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.effect-spotlight__body {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.effect-spotlight__title {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.effect-spotlight .effect-rules-text {
+  font-size: 12px;
+}
+
+.effect-spotlight .card-rules-text {
+  color: inherit;
+}

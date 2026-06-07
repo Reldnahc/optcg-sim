@@ -3,6 +3,7 @@ import type { ClientCardModel } from "../view-model.js";
 import { ActionLogToggle } from "./ActionLogToggle.js";
 import { actionLogCardModel } from "./card-model.js";
 import { CardPreviewToggle } from "./CardPreviewToggle.js";
+import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { MatchBoardSurface } from "./MatchBoardSurface.js";
 import { MatchControlPanel } from "./MatchControlPanel.js";
@@ -24,6 +25,7 @@ import {
   useEndTurnConfirmation,
 } from "./use-end-turn-confirmation.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
+import { useEffectSpotlight } from "./use-effect-spotlight.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
@@ -252,6 +254,17 @@ export const MatchApp = ({
   const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
+  const activeEffectText =
+    playerSnapshot?.view.activeEffectText ??
+    playerSnapshot?.view.pendingDecision?.presentation.activeEffectText;
+  const effectSpotlight = useEffectSpotlight({
+    active: activeEffectText,
+    pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
+  });
+  const effectSpotlightCard =
+    effectSpotlight === undefined
+      ? undefined
+      : cardModel(effectSpotlight.active.source);
   const {
     combineDropTarget,
     completeInfoGroupDrag,
@@ -425,6 +438,10 @@ export const MatchApp = ({
             onSubmitLoadout={client.submitLobbyLoadout}
           />
         )}
+        <EffectSpotlight
+          card={effectSpotlightCard}
+          active={effectSpotlight?.active}
+        />
         <MatchControlPanel
           errors={client.state.errors}
           globalActions={controlGlobalActions}

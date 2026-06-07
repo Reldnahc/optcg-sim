@@ -47,6 +47,12 @@ export const cardModelFromCatalog = (
     ...(catalogEntry?.triggerText === undefined
       ? {}
       : { triggerText: catalogEntry.triggerText }),
+    ...(catalogEntry?.effectTextSourceMap === undefined
+      ? {}
+      : { effectTextSourceMap: catalogEntry.effectTextSourceMap }),
+    ...(catalogEntry?.triggerTextSourceMap === undefined
+      ? {}
+      : { triggerTextSourceMap: catalogEntry.triggerTextSourceMap }),
     ...(catalogEntry?.imageUrl === undefined
       ? {}
       : { imageUrl: catalogEntry.imageUrl }),
