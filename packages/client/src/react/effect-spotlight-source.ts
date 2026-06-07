@@ -38,26 +38,45 @@ const isActiveEffectTextPresentation = (
   );
 };
 
-const resolvedSpotlightSourceForEvent = (
+const sequenceSpanPrefix = "span:sequence:";
+
+const resolvedSpotlightSourcesForEvent = (
   event: EngineEvent,
-): EffectSpotlightActiveSource | undefined => {
+): readonly EffectSpotlightActiveSource[] => {
   if (event.type === "cardPlayed") {
-    return playedCardPresentation(event);
+    const source = playedCardPresentation(event);
+    return source === undefined ? [] : [source];
   }
   if (
     (event.type !== "effectResolved" && event.type !== "replacementApplied") ||
     !isObjectRecord(event.payload)
   ) {
-    return undefined;
+    return [];
   }
   const presentation = event.payload["presentation"];
-  return isActiveEffectTextPresentation(presentation)
-    ? {
+  if (!isActiveEffectTextPresentation(presentation)) {
+    return [];
+  }
+  const sequenceSpanIds = presentation.activeSpanIds.filter((spanId) =>
+    spanId.startsWith(sequenceSpanPrefix),
+  );
+  if (sequenceSpanIds.length <= 1) {
+    return [
+      {
         active: presentation,
         key: String(event.id),
         mode: "resolved",
-      }
-    : undefined;
+      },
+    ];
+  }
+  return sequenceSpanIds.map((spanId) => ({
+    active: {
+      ...presentation,
+      activeSpanIds: [spanId],
+    },
+    key: `${String(event.id)}:${spanId}`,
+    mode: "resolved" as const,
+  }));
 };
 
 export const resolvedEffectTextSourcesForSpotlight = (
@@ -77,10 +96,7 @@ export const resolvedEffectTextSourcesForSpotlight = (
       pendingPlayedCard = undefined;
       continue;
     }
-    const source = resolvedSpotlightSourceForEvent(event);
-    if (source !== undefined) {
-      sources.push(source);
-    }
+    sources.push(...resolvedSpotlightSourcesForEvent(event));
   }
   if (pendingPlayedCard !== undefined) {
     sources.push(pendingPlayedCard);

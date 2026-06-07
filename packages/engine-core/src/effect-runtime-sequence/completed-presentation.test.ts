@@ -68,6 +68,25 @@ const drawThenLucyLeaderBuff = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const drawThenPreventDraw = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "preventDraw",
+        player: "self",
+        source: "ownEffects",
+        duration: { type: "thisTurn" },
+      },
+    },
+  ],
+});
+
 const setupSequenceDefinition = (
   state: GameState,
   source: CardInstance,
@@ -100,7 +119,7 @@ const setupSequenceDefinition = (
   return definition;
 };
 
-test("completed no-decision sequence highlights first changed segment instead of later changed segments", () => {
+test("completed no-decision sequence preserves changed segment spans in order", () => {
   const { state, played } = queueingState();
   const p1State = must(state.players[p1], "p1");
   setupSequenceDefinition(state, played, drawThenLucyLeaderBuff());
@@ -142,6 +161,46 @@ test("completed no-decision sequence highlights first changed segment instead of
       source: queuedEntry.source,
       textKind: "effect" as const,
       activeSpanIds: ["span:sequence:0:body"],
+    },
+  );
+});
+
+test("completed draw-then-prevent-draw sequence preserves both changed segment spans", () => {
+  const { state, played } = queueingState();
+  setupSequenceDefinition(state, played, drawThenPreventDraw());
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  const queuedEntry = must(queued.state.effectQueue[0], "queued effect");
+  const queuedState = {
+    ...queued.state,
+    effectQueue: [
+      {
+        ...queuedEntry,
+        presentation: {
+          source: queuedEntry.source,
+          textKind: "effect" as const,
+          activeSpanIds: [
+            "span:sequence:0:body",
+            "span:sequence:1:body",
+          ] as EffectTextSpanId[],
+        },
+      },
+    ],
+  };
+
+  const result = processEffectRuntime(queuedState);
+  assert.equal(result.errors, undefined);
+  const effectResolved = must(
+    result.events.find((event) => event.type === "effectResolved"),
+    "effectResolved event",
+  );
+
+  assert.deepEqual(
+    (effectResolved.payload as { presentation?: unknown }).presentation,
+    {
+      source: queuedEntry.source,
+      textKind: "effect" as const,
+      activeSpanIds: ["span:sequence:0:body", "span:sequence:1:body"],
     },
   );
 });

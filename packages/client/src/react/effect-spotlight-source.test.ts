@@ -228,6 +228,32 @@ describe("activeEffectTextForSpotlight", () => {
     ).toEqual([String(first.id), String(second.id)]);
   });
 
+  it("splits resolved sequence spans into queueable spotlight sources", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:sequence:0:body", "span:sequence:1:body"],
+        },
+      },
+    });
+
+    const sources = resolvedEffectTextSourcesForSpotlight([resolved]);
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      `${String(resolved.id)}:span:sequence:0:body`,
+      `${String(resolved.id)}:span:sequence:1:body`,
+    ]);
+    expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
+      ["span:sequence:0:body"],
+      ["span:sequence:1:body"],
+    ]);
+  });
+
   it("marks resolved event presentations as one-shot sources keyed by event id", () => {
     const resolved = event({
       type: "effectResolved",

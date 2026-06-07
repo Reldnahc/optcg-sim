@@ -31,15 +31,21 @@ const rootChangedSegments = (
     })
     .sort((left, right) => left.index - right.index);
 
-const firstRootChangedSegment = (
-  segmentResults: EffectExecutionFrame["segmentResults"],
-): RootChangedSegment | undefined => rootChangedSegments(segmentResults)[0];
-
 const activeSpanIdsForRootSegment = (
   activeSpanIds: readonly EffectTextSpanId[],
   segment: RootChangedSegment,
 ): readonly EffectTextSpanId[] | undefined => {
   return activeSpanIdsForSequenceIndex(activeSpanIds, segment.key);
+};
+
+const activeSpanIdsForRootSegments = (
+  activeSpanIds: readonly EffectTextSpanId[],
+  segments: readonly RootChangedSegment[],
+): readonly EffectTextSpanId[] | undefined => {
+  const narrowed = segments.flatMap(
+    (segment) => activeSpanIdsForRootSegment(activeSpanIds, segment) ?? [],
+  );
+  return narrowed.length === 0 ? undefined : narrowed;
 };
 
 export const entryWithCompletedSequencePresentation = (
@@ -49,11 +55,14 @@ export const entryWithCompletedSequencePresentation = (
   if (entry.presentation === undefined) {
     return entry;
   }
-  const segment = firstRootChangedSegment(segmentResults);
+  const segments = rootChangedSegments(segmentResults);
   const activeSpanIds =
-    segment === undefined
+    segments.length === 0
       ? undefined
-      : activeSpanIdsForRootSegment(entry.presentation.activeSpanIds, segment);
+      : activeSpanIdsForRootSegments(
+          entry.presentation.activeSpanIds,
+          segments,
+        );
   return activeSpanIds === undefined
     ? entry
     : {
