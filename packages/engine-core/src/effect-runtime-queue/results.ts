@@ -10,7 +10,7 @@ import type {
   QueueEntryId,
 } from "@optcg/types";
 import {
-  appendEvent,
+  appendEffectResolvedEvent,
   createEvent,
   toEngineResult,
   toStateSeq,
@@ -441,31 +441,13 @@ export const createEffectRuntimeQueueResults = (
         }
 
         const resolvedEvents: EngineEvent[] = [];
-        appendEvent(
+        appendEffectResolvedEvent(
           searchDecision.state,
           resolvedEvents,
-          "effectResolved",
-          {
-            queueEntryId: selected.id,
-            timingWindowId: selected.timingWindowId,
-            generation: selected.generation,
-            effectBlockId: selected.effectBlockId,
-            ...(selected.triggerEventId !== undefined
-              ? { triggerEventId: selected.triggerEventId }
-              : {}),
-            sourcePresencePolicy: selected.sourcePresencePolicy,
-            orderingGroup: selected.orderingGroup,
-            status: "resolved" as const,
-          },
-          { type: "public" },
+          selected,
         );
         const resolvedEvent = resolvedEvents[0];
         if (resolvedEvent !== undefined) {
-          resolvedEvent.causedBy = {
-            type: "effect",
-            queueEntryId: selected.id,
-            effectId: selected.effectBlockId,
-          };
           nextState = {
             ...searchDecision.state,
             seq: toStateSeq(searchDecision.state.seq + 1),
@@ -751,32 +733,12 @@ export const createEffectRuntimeQueueResults = (
         ...nextState,
         seq: toStateSeq(nextState.seq - 1),
       };
-      appendEvent(
+      appendEffectResolvedEvent(
         resolvedEventBaseState,
         resolvedEvents,
-        "effectResolved",
-        {
-          queueEntryId: selected.id,
-          timingWindowId: selected.timingWindowId,
-          generation: selected.generation,
-          effectBlockId: selected.effectBlockId,
-          ...(selected.triggerEventId !== undefined
-            ? { triggerEventId: selected.triggerEventId }
-            : {}),
-          sourcePresencePolicy: selected.sourcePresencePolicy,
-          orderingGroup: selected.orderingGroup,
-          status: "resolved" as const,
-        },
-        { type: "public" },
+        selected,
       );
       const resolvedEvent = resolvedEvents[0];
-      if (resolvedEvent !== undefined) {
-        resolvedEvent.causedBy = {
-          type: "effect",
-          queueEntryId: selected.id,
-          effectId: selected.effectBlockId,
-        };
-      }
       if (resolvedEvent !== undefined) {
         nextState = {
           ...nextState,

@@ -17,6 +17,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  appendEffectResolvedEvent,
   appendEvent,
   createEvent,
   toDecisionId,
@@ -431,31 +432,13 @@ export const createEffectRuntimeQueueTargetDecisions = (
         ...nextState,
         seq: toStateSeq(nextState.seq - 1),
       };
-      appendEvent(
+      appendEffectResolvedEvent(
         resolvedEventBaseState,
         resolvedEvents,
-        "effectResolved",
-        {
-          queueEntryId: resolvedEntry.id,
-          timingWindowId: resolvedEntry.timingWindowId,
-          generation: resolvedEntry.generation,
-          effectBlockId: resolvedEntry.effectBlockId,
-          ...(resolvedEntry.triggerEventId !== undefined
-            ? { triggerEventId: resolvedEntry.triggerEventId }
-            : {}),
-          sourcePresencePolicy: resolvedEntry.sourcePresencePolicy,
-          orderingGroup: resolvedEntry.orderingGroup,
-          status: "resolved" as const,
-        },
-        { type: "public" },
+        resolvedEntry,
       );
       const resolvedEvent = resolvedEvents[0];
       if (resolvedEvent !== undefined) {
-        resolvedEvent.causedBy = {
-          type: "effect",
-          queueEntryId: resolvedEntry.id,
-          effectId: resolvedEntry.effectBlockId,
-        };
         nextState = {
           ...nextState,
           eventJournal: [...nextState.eventJournal, resolvedEvent],

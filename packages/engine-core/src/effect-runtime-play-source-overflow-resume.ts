@@ -5,7 +5,11 @@ import type {
   SelectCardsDecision,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEffectResolvedEvent,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import type { CreateUnsupportedPendingRuntimeWorkError } from "./effect-runtime-queue/target-decisions.js";
 import type { QueueEffectResolvedCustomTriggers } from "./effect-runtime-queue/results-types.js";
@@ -61,31 +65,9 @@ export const resumePlaySourceOverflowDecision = (params: {
     ...nextState,
     seq: toStateSeq(nextState.seq - 1),
   };
-  appendEvent(
-    resolvedEventBaseState,
-    resolvedEvents,
-    "effectResolved",
-    {
-      queueEntryId: selected.id,
-      timingWindowId: selected.timingWindowId,
-      generation: selected.generation,
-      effectBlockId: selected.effectBlockId,
-      ...(selected.triggerEventId === undefined
-        ? {}
-        : { triggerEventId: selected.triggerEventId }),
-      sourcePresencePolicy: selected.sourcePresencePolicy,
-      orderingGroup: selected.orderingGroup,
-      status: "resolved" as const,
-    },
-    { type: "public" },
-  );
+  appendEffectResolvedEvent(resolvedEventBaseState, resolvedEvents, selected);
   const resolvedEvent = resolvedEvents[0];
   if (resolvedEvent !== undefined) {
-    resolvedEvent.causedBy = {
-      type: "effect",
-      queueEntryId: selected.id,
-      effectId: selected.effectBlockId,
-    };
     nextState = {
       ...nextState,
       eventJournal: [...nextState.eventJournal, resolvedEvent],

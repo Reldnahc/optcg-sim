@@ -5,7 +5,7 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toStateSeq } from "../action-results.js";
+import { appendEffectResolvedEvent, toStateSeq } from "../action-results.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime-definition-lookup.js";
 import { findMatchingKOMoveEvent } from "../effect-runtime-trigger-source-lookup.js";
 import { createEffectRuntimeTriggerQueueing } from "../runtime/trigger-queueing/core.js";
@@ -45,33 +45,11 @@ export const appendEffectResolvedForCompletedSequence = (
     ...state,
     seq: toStateSeq(state.seq - 1),
   };
-  appendEvent(
-    resolvedEventBaseState,
-    resolvedEvents,
-    "effectResolved",
-    {
-      queueEntryId: entry.id,
-      timingWindowId: entry.timingWindowId,
-      generation: entry.generation,
-      effectBlockId: entry.effectBlockId,
-      ...(entry.triggerEventId === undefined
-        ? {}
-        : { triggerEventId: entry.triggerEventId }),
-      sourcePresencePolicy: entry.sourcePresencePolicy,
-      orderingGroup: entry.orderingGroup,
-      status: "resolved" as const,
-    },
-    { type: "public" },
-  );
+  appendEffectResolvedEvent(resolvedEventBaseState, resolvedEvents, entry);
   const resolvedEvent = resolvedEvents[0];
   if (resolvedEvent === undefined) {
     return { ok: true, state };
   }
-  resolvedEvent.causedBy = {
-    type: "effect",
-    queueEntryId: entry.id,
-    effectId: entry.effectBlockId,
-  };
   events.push(resolvedEvent);
   let nextState: GameState = {
     ...state,

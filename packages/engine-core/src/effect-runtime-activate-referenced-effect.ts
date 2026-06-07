@@ -6,7 +6,11 @@ import type {
   Trigger,
 } from "@optcg/types";
 
-import { appendEvent, toStateSeq } from "./action-results.js";
+import {
+  appendEffectResolvedEvent,
+  appendEvent,
+  toStateSeq,
+} from "./action-results.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import type { ResolveImplementedDslEffectDefinition } from "./effect-runtime-queue/target-decisions.js";
 import { effectQueueEntryPresentationForEffectBlock } from "./runtime/effect-presentation.js";
@@ -188,32 +192,7 @@ export const queueReferencedMainEffectFromTrigger = (
     }
     referencedEntries.push(referencedEntry);
   }
-  appendEvent(
-    state,
-    events,
-    "effectResolved",
-    {
-      queueEntryId: entry.id,
-      timingWindowId: entry.timingWindowId,
-      generation: entry.generation,
-      effectBlockId: entry.effectBlockId,
-      ...(entry.triggerEventId !== undefined
-        ? { triggerEventId: entry.triggerEventId }
-        : {}),
-      sourcePresencePolicy: entry.sourcePresencePolicy,
-      orderingGroup: entry.orderingGroup,
-      status: "resolved" as const,
-    },
-    { type: "public" },
-  );
-  const resolvedEvent = events[1];
-  if (resolvedEvent !== undefined) {
-    resolvedEvent.causedBy = {
-      type: "effect",
-      queueEntryId: entry.id,
-      effectId: entry.effectBlockId,
-    };
-  }
+  appendEffectResolvedEvent(state, events, entry);
   return {
     events,
     state: {
