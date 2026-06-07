@@ -133,6 +133,81 @@ describe("card effect parser source maps", () => {
     ).toBe(true);
   });
 
+  it("emits cost and body spans for return-to-owner-hand costed effects", () => {
+    const text =
+      "[Activate: Main] You may rest this Leader and return 1 of your {Dressrosa} type Characters to the owner's hand: Play up to 1 {Dressrosa} type Character card with a cost of 3 from your hand.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:cost:optional",
+          role: "cost",
+          text: "You may rest this Leader and return 1 of your {Dressrosa} type Characters to the owner's hand",
+        }),
+        expect.objectContaining({
+          id: "span:body",
+          role: "body",
+          text: "Play up to 1 {Dressrosa} type Character card with a cost of 3 from your hand.",
+        }),
+      ]),
+    );
+  });
+
+  it("emits cost and body spans for choose-one trash costed effects", () => {
+    const examples = [
+      {
+        text: "[On Play] You may trash 1 {Fish-Man} type card from your hand or 1 [The Ark Noah] from your hand or field: K.O. up to 1 of your opponent's rested Characters.",
+        cost: "You may trash 1 {Fish-Man} type card from your hand or 1 [The Ark Noah] from your hand or field",
+        body: "K.O. up to 1 of your opponent's rested Characters.",
+      },
+      {
+        text: "[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.",
+        cost: "You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand",
+        body: "Draw 1 card.",
+      },
+    ] as const;
+
+    for (const example of examples) {
+      const result = parseCardEffectLinesDetailed(example.text);
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        return;
+      }
+      const parsed = result.value[0];
+      if (parsed === undefined || !("block" in parsed)) {
+        throw new Error("Expected runtime effect line.");
+      }
+
+      const spans = parsed.sourceMap?.spans ?? [];
+      expect(spans).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "span:cost:optional",
+            role: "cost",
+            text: example.cost,
+          }),
+          expect.objectContaining({
+            id: "span:body",
+            role: "body",
+            text: example.body,
+          }),
+        ]),
+      );
+    }
+  });
+
   it("emits choice header and bullet option spans", () => {
     const text = `[Main] Choose one:
 \u2022 Draw 2 cards.

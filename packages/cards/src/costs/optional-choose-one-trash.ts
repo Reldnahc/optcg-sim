@@ -1,7 +1,8 @@
-import type { OptionalCost } from "@optcg/types";
+import type { EffectTextSpan, OptionalCost } from "@optcg/types";
 
 import { parseExactCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 type ChooseOneTrashCost = Extract<OptionalCost, { type: "chooseOne" }>;
@@ -13,7 +14,9 @@ type TrashCostOptionParseResult = {
 export interface OptionalChooseOneTrashCostParseResult {
   readonly cost: ChooseOneTrashCost;
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly presentationSpans?: readonly EffectTextSpan[];
   readonly rest: string;
+  readonly restSource?: SourceSlice;
 }
 
 const self = "self";
@@ -48,6 +51,11 @@ export function parseOptionalChooseOneTrashCost(
     parsedOptions.push(option);
   }
 
+  const evidence = [
+    "cost:chooseOne",
+    ...parsedOptions.flatMap((option) => option.evidence),
+  ] satisfies readonly PrimitiveEvidence[];
+
   return {
     cost: {
       type: "chooseOne",
@@ -56,11 +64,49 @@ export function parseOptionalChooseOneTrashCost(
         (option) => option.cost,
       ) as ChooseOneTrashCost["options"],
     },
-    evidence: [
-      "cost:chooseOne",
-      ...parsedOptions.flatMap((option) => option.evidence),
-    ],
+    evidence,
     rest: split.bodyText,
+    ...sourceMetadata(input, evidence),
+  };
+}
+
+function sourceMetadata(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+):
+  | {
+      readonly presentationSpans: readonly EffectTextSpan[];
+      readonly restSource: SourceSlice;
+    }
+  | Record<string, never> {
+  const separatorIndex = input.text.indexOf(":");
+  if (input.source === undefined || separatorIndex < 0) {
+    return {};
+  }
+
+  const rawCostText = input.text.slice(0, separatorIndex);
+  const rawBodyText = input.text.slice(separatorIndex + 1);
+
+  return {
+    presentationSpans: [
+      sourceSpan(
+        "span:cost:optional",
+        "cost",
+        trimSource({
+          text: rawCostText,
+          rawText: rawCostText,
+          start: input.source.start,
+          end: input.source.start + separatorIndex,
+        }),
+        evidence,
+      ),
+    ],
+    restSource: trimSource({
+      text: rawBodyText,
+      rawText: rawBodyText,
+      start: input.source.start + separatorIndex + 1,
+      end: input.source.end,
+    }),
   };
 }
 

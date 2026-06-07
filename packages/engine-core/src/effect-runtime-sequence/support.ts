@@ -709,7 +709,6 @@ export const toSupportedSequenceBlock = (
       flattenedBlock.trigger.type === "activateMain" &&
       isScopedActivateMainSequenceEntry(entry)) ||
     (flattenedBlock?.category === "activate" &&
-      flattenedBlock.trigger.type === "lifeRemoved" &&
       isScopedActivatedReactionQueueEntry(entry));
 
   if (

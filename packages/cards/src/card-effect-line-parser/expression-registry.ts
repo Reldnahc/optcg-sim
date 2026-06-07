@@ -5,6 +5,7 @@ import {
 } from "../connectors/index.js";
 import { parseExpression } from "../expression-parser.js";
 import {
+  parseActivatedReactionEntryPoint,
   parseImplicitPermanentEntryPoint,
   parseImplicitReactionEntryPoint,
   parseRecognizedUnsupportedEntryPoint,
@@ -24,7 +25,7 @@ import {
 import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
   chooseOneExpressionParser,
-  activatedLifeRemovedReactionExpressionParser,
+  activatedReactionExpressionParser,
   conditionalBlockExpressionParser,
   conditionalContinuousExpressionParser,
   conditionalCostedBlockExpressionParser,
@@ -104,6 +105,7 @@ export const defaultRegistry = {
     parseSupportedEntryPoint,
     parseRecognizedUnsupportedEntryPoint,
     parseReplacementEntryPoint,
+    parseActivatedReactionEntryPoint,
     parseImplicitReactionEntryPoint,
     parseImplicitPermanentEntryPoint,
   ],
@@ -137,7 +139,7 @@ export const defaultRegistry = {
       expressions: costedExpressions,
     }),
     replacementInsteadExpressionParser,
-    activatedLifeRemovedReactionExpressionParser({
+    activatedReactionExpressionParser({
       expressions: [generalExpressionParser],
     }),
     lifeRemovedReactionExpressionParser({

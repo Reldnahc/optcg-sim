@@ -196,6 +196,22 @@ const parseRestedDonAttachmentTarget = (
       savedTargetZone: zoneTarget,
     };
   }
+  if (/^1 of your Leader or Character cards?\.?$/iu.test(targetText)) {
+    const zoneTarget = {
+      zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
+    };
+    return {
+      evidence: [
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      filter: { categories: ["leader", "character"] },
+      requestZone: zoneTarget,
+      savedTargetZone: zoneTarget,
+    };
+  }
   const normalizedTargetText = targetText.replace(/^1 of your /iu, "");
   const parsed = parseCardFilterPredicates(
     { text: normalizedTargetText },

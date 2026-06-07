@@ -4,6 +4,7 @@ import { parseNegativePowerModifier } from "../../modifiers/index.js";
 import {
   parseAllFieldTarget,
   parseOpponentCharactersTarget,
+  parseOpponentLeaderOrCharacterCardsTarget,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { chooseOpponentCharactersTarget } from "./shared.js";
@@ -49,11 +50,15 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
   }
 
   const target = parseOpponentCharactersTarget({ text: cardinality.rest });
-  if (target === undefined) {
+  const leaderOrCharacterTarget = parseOpponentLeaderOrCharacterCardsTarget({
+    text: cardinality.rest,
+  });
+  if (target === undefined && leaderOrCharacterTarget === undefined) {
     return undefined;
   }
 
-  const modifier = parseNegativePowerModifier({ text: target.rest });
+  const targetRest = target?.rest ?? leaderOrCharacterTarget?.rest ?? "";
+  const modifier = parseNegativePowerModifier({ text: targetRest });
   if (modifier === undefined) {
     return undefined;
   }
@@ -66,10 +71,12 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
   return {
     effect: {
       type: "modifyPower",
-      target: chooseOpponentCharactersTarget(
-        cardinality.cardinality.max,
-        target.filter ?? { categories: ["character"] },
-      ),
+      target:
+        leaderOrCharacterTarget?.target ??
+        chooseOpponentCharactersTarget(
+          cardinality.cardinality.max,
+          target?.filter ?? { categories: ["character"] },
+        ),
       value: modifier.value,
       duration: duration.duration,
     },
@@ -77,7 +84,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
       "instruction:modifyPower",
       ...cardinality.evidence,
       "chooser:self:upTo",
-      ...target.evidence,
+      ...(target?.evidence ?? leaderOrCharacterTarget?.evidence ?? []),
       ...modifier.evidence,
       ...duration.evidence,
     ],

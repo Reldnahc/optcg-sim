@@ -68,6 +68,144 @@ describe("card effect reusable parser compositions", () => {
     expect(result?.evidence).toContain("activation:reaction");
   });
 
+  it("parses marker-led opponent attack activated reactions", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] This effect can be activated when your opponent attacks. Give up to 1 of your opponent's Leader or Character cards -1000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "onOpponentAttack" },
+        oncePerTurn: true,
+        effect: { type: "sequence" },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activatedReaction",
+        "activation:reaction",
+        "entry:onOpponentAttack",
+      ]),
+    );
+  });
+
+  it("parses opponent Character attack predicates as attack filters", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] This effect can be activated when your opponent's Character attacks. If that Character has the <Slash> attribute, this Character gains +5000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "onOpponentAttack",
+          attackerFilter: { categories: ["character"] },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "activation:reaction",
+        "filter:category:character",
+      ]),
+    );
+  });
+
+  it("parses activated field-removal reactions independently from the body", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] This effect can be activated when a Character is removed from the field by your effect. If you have 5 or less cards in your hand, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "fieldRemoved",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceController: "self",
+          sourceKind: "effect",
+        },
+        condition: { type: "yourTurn" },
+      },
+    });
+    expect(result?.evidence).toContain("trigger:fieldRemoved");
+  });
+
+  it("parses activated card-play reactions with reusable played-card filters", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] This effect can be activated when you play a Character with a [Trigger]. Give up to 2 rested DON!! cards to 1 of your Leader or Character cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "cardPlayed",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            effectEntryPoint: {
+              mode: "with",
+              trigger: { type: "trigger" },
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining(["trigger:cardPlayed", "filter:effectEntryPoint"]),
+    );
+  });
+
+  it("parses activated opponent Event or Trigger reactions", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] This effect can be activated when your opponent activates an Event or [Trigger]. If your opponent has 2 or more Life cards, trash 1 card from the top of each of your and your opponent's Life cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "opponentActivated",
+          activations: ["event", "trigger"],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining(["activation:event", "activation:trigger"]),
+    );
+  });
+
+  it("parses activation conditions under explicit opponent attack windows", () => {
+    const result = parseCardEffectLine(
+      '[On Your Opponent\'s Attack] [Once Per Turn] This effect can be activated when you only have Characters with a type including "GERMA". Up to 1 of your Leader or Character cards gains +1000 power during this battle. Then, trash 2 cards from the top of your deck.',
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "onOpponentAttack" },
+        condition: {
+          type: "onlyMatchingFieldCards",
+          zone: "characterArea",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            typesAny: ["GERMA"],
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onOpponentAttack",
+        "condition:onlyMatchingFieldCards",
+      ]),
+    );
+  });
+
   it("parses trigger-presence as a composable card filter predicate", () => {
     const result = parseCardEffectLine(
       "[On K.O.] Play up to 1 Character card with a cost of 4 or less and a [Trigger] other than [Example Name] from your trash.",

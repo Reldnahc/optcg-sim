@@ -88,6 +88,57 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
         }),
       },
       {
+        id: "trash-n-cards-from-top-of-each-players-life",
+        pattern:
+          /^trash (?<count>[1-9]\d*) cards? from the top of each of your and your opponent's Life cards\.?$/i,
+        build: (groups) => {
+          const count = Number.parseInt(groups["count"] ?? "", 10);
+          return {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "moveCards",
+                    count,
+                    from: { player: "self", zone: "life", position: "top" },
+                    to: { player: "self", zone: "trash" },
+                    order: "original",
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "moveCards",
+                    count,
+                    from: {
+                      player: "opponent",
+                      zone: "life",
+                      position: "top",
+                    },
+                    to: { player: "opponent", zone: "trash" },
+                    order: "original",
+                  },
+                },
+              ],
+            },
+            evidence: [
+              "instruction:moveCards",
+              "expression:sequence",
+              "count:positiveInteger",
+              "player:self",
+              "player:opponent",
+              "zone:life",
+              "position:top",
+              "destination:trash",
+              "order:original",
+            ],
+            rest: "",
+          };
+        },
+      },
+      {
         id: "add-n-cards-from-life-top-to-hand",
         pattern:
           /^add (?<count>[1-9]\d*) cards? from the top of your Life cards to your hand\.?$/i,

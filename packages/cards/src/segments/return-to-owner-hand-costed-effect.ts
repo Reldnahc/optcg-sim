@@ -14,6 +14,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import { conditionalExpressionSegmentParser } from "./composed-expression.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
@@ -30,15 +31,19 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const parsed = parseCostAndBody(input.text);
+    const parsed = parseCostAndBody(input);
     if (parsed === undefined) {
       return undefined;
     }
 
-    const body = parseBody(parsed.bodyText, options);
+    const body = parseBody(parsed.bodyText, options, parsed.bodySource);
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
+    const presentationSpans = [
+      ...(parsed.presentationSpans ?? []),
+      ...(body.presentationSpans ?? []),
+    ];
 
     return {
       effect: {
@@ -70,18 +75,22 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
         ...body.evidence,
       ],
       rest: "",
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
 }
 
-function parseCostAndBody(text: string):
+function parseCostAndBody(input: ParseInput):
   | {
       readonly bodyText: string;
+      readonly bodySource?: SourceSlice;
       readonly evidence: readonly PrimitiveEvidence[];
       readonly filter: CharacterFilter;
+      readonly presentationSpans?: ExpressionParseResult["presentationSpans"];
       readonly prefixCost?: OptionalCostSequenceParseResult;
     }
   | undefined {
+  const text = input.text;
   const separatorIndex = text.indexOf(":");
   if (separatorIndex < 0) {
     return undefined;
@@ -116,9 +125,44 @@ function parseCostAndBody(text: string):
     return undefined;
   }
 
+  const costEvidence = [
+    ...(prefixCost?.evidence ?? []),
+    "cost:returnToOwnerHand",
+    "cardinality:exact",
+    "count:positiveInteger",
+    "target:yourCharacters",
+    "player:self",
+    ...parsedTarget.evidence,
+    "destination:ownerHand",
+  ] satisfies readonly PrimitiveEvidence[];
+  const sourceSlices =
+    input.source === undefined
+      ? {}
+      : {
+          bodySource: trimSource({
+            text: text.slice(separatorIndex + 1),
+            rawText: text.slice(separatorIndex + 1),
+            start: input.source.start + separatorIndex + 1,
+            end: input.source.end,
+          }),
+          presentationSpans: [
+            sourceSpan(
+              "span:cost:optional",
+              "cost",
+              trimSource({
+                text: text.slice(0, separatorIndex),
+                rawText: text.slice(0, separatorIndex),
+                start: input.source.start,
+                end: input.source.start + separatorIndex,
+              }),
+              costEvidence,
+            ),
+          ],
+        };
+
   return prefixCost === undefined
-    ? { bodyText, ...parsedTarget }
-    : { bodyText, prefixCost, ...parsedTarget };
+    ? { bodyText, ...parsedTarget, ...sourceSlices }
+    : { bodyText, prefixCost, ...parsedTarget, ...sourceSlices };
 }
 
 function prefixCostSegments(
@@ -204,23 +248,33 @@ function parseBody(
       input: ParseInput,
     ) => ExpressionParseResult | undefined)[];
   },
+  source?: SourceSlice,
 ): ExpressionParseResult | undefined {
   for (const expression of options.expressions ?? []) {
-    const parsed = expression({ text });
+    const parsed = expression({
+      text,
+      ...(source === undefined ? {} : { source }),
+    });
     if (parsed !== undefined && parsed.rest.length === 0) {
       return parsed;
     }
   }
 
-  return parseExpression(text, {
-    connectors: [],
-    segments: [
-      conditionalExpressionSegmentParser({
-        conditions: options.conditions,
-        connectors: [],
-        instructions: options.instructions,
-      }),
-      syntheticInstructionSegmentParser(options.instructions),
-    ],
-  });
+  return parseExpression(
+    {
+      text,
+      ...(source === undefined ? {} : { source }),
+    },
+    {
+      connectors: [],
+      segments: [
+        conditionalExpressionSegmentParser({
+          conditions: options.conditions,
+          connectors: [],
+          instructions: options.instructions,
+        }),
+        syntheticInstructionSegmentParser(options.instructions),
+      ],
+    },
+  );
 }

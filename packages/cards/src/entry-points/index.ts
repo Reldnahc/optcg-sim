@@ -1,3 +1,4 @@
+export { parseActivatedReactionEntryPoint } from "./activated-reaction.js";
 export { parseImplicitPermanentEntryPoint } from "./implicit-permanent.js";
 export { parseImplicitReactionEntryPoint } from "./implicit-reaction.js";
 export { parseRecognizedUnsupportedEntryPoint } from "./recognized-unsupported.js";

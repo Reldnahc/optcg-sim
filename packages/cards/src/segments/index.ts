@@ -8,7 +8,7 @@ export { optionalCostedEffectExpressionParser } from "./optional-costed-effect.j
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export { replacementInsteadExpressionParser } from "./replacement-effect.js";
 export {
-  activatedLifeRemovedReactionExpressionParser,
+  activatedReactionExpressionParser,
   handTrashedByEffectReactionExpressionParser,
   lifeRemovedReactionExpressionParser,
   opponentEventOrBlockerActivatedExpressionParser,

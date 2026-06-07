@@ -52,7 +52,7 @@ export const evaluateEffectBlockRuntimeSupport = (
       : { supported: false, reason: "unsupported activate-main effect body" };
   }
 
-  if (block.category === "activate" && block.trigger.type === "lifeRemoved") {
+  if (block.category === "activate") {
     return isSupportedActivatedReactionEffect(block)
       ? { supported: true }
       : { supported: false, reason: "unsupported activated-reaction body" };
