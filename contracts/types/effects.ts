@@ -36,13 +36,39 @@ export type EffectCategory = "auto" | "activate" | "permanent" | "replacement";
 export type Trigger =
   | { type: "onPlay" }
   | { type: "whenAttacking" }
-  | { type: "onOpponentAttack" }
+  | { type: "onOpponentAttack"; attackerFilter?: CardFilter }
   | { type: "onBlock" }
   | { type: "onKO" }
   | { type: "endOfYourTurn" }
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
   | { type: "lifeRemoved"; players: PlayerRef[] }
+  | {
+      type: "fieldRemoved";
+      target?: "self" | "any";
+      player: PlayerRef;
+      filter?: CardFilter;
+      sourceController?: PlayerRef;
+      sourceKind?: "effect" | "ko" | "any";
+    }
+  | {
+      type: "cardPlayed";
+      player: PlayerRef;
+      filter?: CardFilter;
+      sourceFilter?: CardFilter;
+      anyOf?: Array<{
+        filter?: CardFilter;
+        sourceFilter?: CardFilter;
+      }>;
+    }
+  | {
+      type: "cardRested";
+      target?: "self" | "any";
+      player: PlayerRef;
+      filter?: CardFilter;
+      sourceController?: PlayerRef;
+      sourceKind?: "effect" | "any";
+    }
   | { type: "handTrashedByEffect"; player: PlayerRef }
   | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }
