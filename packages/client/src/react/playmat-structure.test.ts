@@ -248,11 +248,11 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /--effect-spotlight-rules-font-size:\s*clamp\(5px,\s*0\.82vh,\s*9px\);/u,
+      /--effect-spotlight-rules-font-size:\s*clamp\(5px,\s*0\.82vh,\s*15px\);/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /--effect-spotlight-rules-font-size:\s*clamp\(5px,\s*3\.4cqw,\s*9px\);/u,
+      /--effect-spotlight-rules-font-size:\s*clamp\(5px,\s*3\.4cqw,\s*15px\);/u,
     );
     assert.match(
       effectSpotlightStyles,

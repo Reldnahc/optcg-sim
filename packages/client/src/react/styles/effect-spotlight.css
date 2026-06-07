@@ -3,7 +3,7 @@
     calc(var(--card-width) + var(--card-width) + var(--card-width)),
     calc(100vw - 16px)
   );
-  --effect-spotlight-rules-font-size: clamp(5px, 0.82vh, 9px);
+  --effect-spotlight-rules-font-size: clamp(5px, 0.82vh, 15px);
   --effect-spotlight-rules-line-height: 1.08;
   --effect-spotlight-highlight-background: rgba(255, 186, 45, 0.72);
 
@@ -18,7 +18,7 @@
 
 @supports (font-size: 1cqw) {
   .effect-spotlight {
-    --effect-spotlight-rules-font-size: clamp(5px, 3.4cqw, 9px);
+    --effect-spotlight-rules-font-size: clamp(5px, 3.4cqw, 15px);
   }
 }
 
