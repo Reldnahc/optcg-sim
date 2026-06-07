@@ -1,5 +1,5 @@
 .effect-spotlight {
-  position: absolute;
+  position: fixed;
   top: 14px;
   left: 50%;
   z-index: 16;

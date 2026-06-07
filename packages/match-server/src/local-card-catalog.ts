@@ -181,6 +181,49 @@ const addVisibleCatalogEntriesForRevealEvents = (
   }
 };
 
+const activeEffectTextSourceFromPayload = (
+  payload: unknown,
+): CardRef | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const presentation = payload["presentation"];
+  if (!isRecord(presentation)) {
+    return undefined;
+  }
+  return revealPayloadCardRef(presentation["source"]);
+};
+
+const addVisibleCatalogEntriesForActiveEffectText = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
+  view: PlayerView,
+  variantOverrides: Record<InstanceId, VariantKey>,
+): void => {
+  const activeSources = [
+    view.activeEffectText?.source,
+    view.pendingDecision?.presentation.activeEffectText?.source,
+    ...view.events.flatMap((event) => {
+      if (event.type !== "effectResolved") {
+        return [];
+      }
+      const source = activeEffectTextSourceFromPayload(event.payload);
+      return source === undefined ? [] : [source];
+    }),
+  ];
+  for (const source of activeSources) {
+    if (source === undefined) {
+      continue;
+    }
+    addVisibleCatalogEntryForCardRef(
+      players,
+      manifest,
+      source,
+      variantOverrides,
+    );
+  }
+};
+
 const addVisibleCatalogEntriesForPendingDecision = (
   players: Record<PlayerId, DevPlayerCardCatalog>,
   manifest: MatchCardManifest,
@@ -305,6 +348,12 @@ const addVisibleCatalogEntries = (
     variantOverrides,
   );
   addVisibleCatalogEntriesForRevealEvents(
+    players,
+    manifest,
+    view,
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForActiveEffectText(
     players,
     manifest,
     view,

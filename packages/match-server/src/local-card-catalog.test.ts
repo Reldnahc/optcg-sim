@@ -8,9 +8,11 @@ import type {
 } from "@optcg/types";
 
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
+import { buildLocalDevCardCatalogForPlayer } from "./local-card-catalog.js";
 import {
   createLocalDevMatch,
   getLocalDevCardCatalogForPlayer,
+  getLocalDevSnapshot,
   type DevMatchSetup,
 } from "./local-match.js";
 
@@ -57,9 +59,124 @@ describe("local dev card catalog", () => {
 
     const catalog = getLocalDevCardCatalogForPlayer(match, p1);
     const entry = catalog.players[p1]?.instances?.[visible.instanceId];
+    const span = entry?.effectTextSourceMap?.spans[0];
+    if (span === undefined) {
+      throw new Error("Missing visible effect text source map span.");
+    }
 
     assert.equal(entry?.effectTextSourceMap?.sourceText, entry?.effectText);
-    assert.equal(entry?.effectTextSourceMap?.spans[0]?.id, "span:body:draw");
+    assert.equal(span.id, "span:body:draw");
+  });
+
+  test("includes active effect text sources for the effect spotlight", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const source = p1State.deck[0];
+    if (source === undefined) {
+      throw new Error("Missing deck source.");
+    }
+    const card = match.state.cardManifest.cards[source.cardId];
+    if (card === undefined) {
+      throw new Error("Missing active effect source card.");
+    }
+    card.effectText = "[On Play] Draw 1 card.";
+    card.effectTextSourceMap = {
+      textKind: "effect",
+      sourceText: card.effectText,
+      spans: [
+        {
+          id: "span:body:draw",
+          role: "body",
+          start: 10,
+          end: card.effectText.length,
+          text: card.effectText.slice(10),
+        },
+      ],
+    };
+    const snapshot = getLocalDevSnapshot(match);
+    const p1Snapshot = snapshot.players[p1];
+    if (p1Snapshot === undefined) {
+      throw new Error("Missing p1 snapshot.");
+    }
+    p1Snapshot.view = {
+      ...p1Snapshot.view,
+      activeEffectText: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p1,
+        },
+        textKind: "effect",
+        activeSpanIds: ["span:body:draw"],
+      },
+    };
+
+    const catalog = buildLocalDevCardCatalogForPlayer(
+      match.state,
+      snapshot,
+      p1,
+    );
+    const entry = catalog.players[p1]?.instances?.[source.instanceId];
+    if (entry === undefined) {
+      throw new Error("Missing active effect catalog entry.");
+    }
+
+    assert.equal(entry.effectText, card.effectText);
+    const span = entry.effectTextSourceMap?.spans[0];
+    if (span === undefined) {
+      throw new Error("Missing active effect text source map span.");
+    }
+    assert.equal(span.id, "span:body:draw");
+  });
+
+  test("includes resolved effect presentation sources for brief spotlight display", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const source = p1State.deck[0];
+    if (source === undefined) {
+      throw new Error("Missing deck source.");
+    }
+    const card = match.state.cardManifest.cards[source.cardId];
+    if (card === undefined) {
+      throw new Error("Missing resolved effect source card.");
+    }
+    card.effectText = "[On Play] Draw 1 card.";
+    match.state.eventJournal.push({
+      id: "event:test:effect-resolved" as EngineEventId,
+      seq: 1,
+      type: "effectResolved",
+      payload: {
+        status: "resolved",
+        presentation: {
+          source: {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: p1,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: match.state.seq,
+    });
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const p1Catalog = catalog.players[p1];
+    if (p1Catalog === undefined) {
+      throw new Error("Missing p1 catalog.");
+    }
+
+    assert.equal(
+      p1Catalog.instances?.[source.instanceId]?.effectText,
+      card.effectText,
+    );
   });
 
   test("includes cards from visible reveal events", () => {
