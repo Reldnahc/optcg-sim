@@ -8,6 +8,10 @@ import type {
 } from "@optcg/types";
 
 import { parseCardEffectLinesDetailed } from "../card-effect-line-parser.js";
+import {
+  presentationSpanScope,
+  scopePresentationSpan,
+} from "../presentation-span-ids.js";
 
 interface EffectMaterializationVersions {
   readonly effectDefinitionsVersion: string;
@@ -27,6 +31,7 @@ export const materializeEffectDefinition = (
   const blocks: EffectBlock[] = [];
   const diagnostics: string[] = [];
   let parsedLineCount = 0;
+  const shouldScopeSpanIds = lines.length > 1;
 
   for (const [index, line] of lines.entries()) {
     const parsed = parseCardEffectLinesDetailed(line);
@@ -46,7 +51,21 @@ export const materializeEffectDefinition = (
       > => value.kind !== "metadata",
     );
     for (const [blockIndex, value] of runtimeValues.entries()) {
-      const presentation = presentationRefFromSourceMap(value.sourceMap);
+      const spanScope = presentationSpanScope({
+        blockIndex,
+        lineIndex: index,
+        scoped: shouldScopeSpanIds || runtimeValues.length > 1,
+      });
+      const sourceMap =
+        value.sourceMap === undefined
+          ? undefined
+          : {
+              ...value.sourceMap,
+              spans: value.sourceMap.spans.map((span) =>
+                scopePresentationSpan(span, spanScope),
+              ),
+            };
+      const presentation = presentationRefFromSourceMap(sourceMap);
       const block: EffectBlock = {
         ...value.block,
         id:

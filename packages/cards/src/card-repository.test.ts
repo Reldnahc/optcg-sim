@@ -133,6 +133,55 @@ describe("card repository", () => {
     );
   });
 
+  test("multi-line generated effects use line-scoped presentation span ids", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const effect = [
+      "[On Play] You may trash 1 card from your hand: If your Leader is [Rebecca]\u2060, this Character gains [Rush] during this turn.",
+      "[On K.O.] Add this Character card from your trash to your hand.",
+    ].join("\n");
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", effect),
+    });
+    const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+    const cached = (await cache.getJson(
+      createCardCacheKey({ cardId, versions }),
+    )) as CachedResolvedCard | undefined;
+    const definition = required(cached?.definition, "cached definition");
+    const onPlay = required(definition.effects[0], "on play effect");
+    const onKo = required(definition.effects[1], "on ko effect");
+    const onPlayPresentation = required(
+      onPlay.presentation,
+      "on play presentation",
+    );
+    const onKoPresentation = required(onKo.presentation, "on ko presentation");
+    const sourceMap = required(
+      resolved.effectTextSourceMap,
+      "effect text source map",
+    );
+    const sourceSpanIds = sourceMap.spans.map((span) => span.id);
+
+    assert.equal(new Set(sourceSpanIds).size, sourceSpanIds.length);
+    assert.deepEqual(onPlayPresentation.spanIds, [
+      "span:cost:optional:line:1",
+      "span:body:line:1",
+    ]);
+    assert.deepEqual(onKoPresentation.spanIds, ["span:body:line:2"]);
+    for (const spanId of [
+      ...onPlayPresentation.spanIds,
+      ...onKoPresentation.spanIds,
+    ]) {
+      assert.equal(sourceSpanIds.includes(spanId), true);
+    }
+  });
+
   test("resolves raw keyword lines as printed keywords without generated effect blocks", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;

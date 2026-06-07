@@ -24,6 +24,10 @@ import {
 import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 import { materializeEffectDefinition } from "./materialization/effect-definitions.js";
+import {
+  presentationSpanScope,
+  scopePresentationSpan,
+} from "./presentation-span-ids.js";
 
 export interface CardDataCache {
   getJson(key: string): Promise<unknown>;
@@ -445,18 +449,39 @@ const effectTextSourceMapFromText = (
   }
 
   const spans: EffectTextSpan[] = [];
-  for (const slice of gameplayLineSlicesFromTextParts([text])) {
-    const parsed = parseCardEffectLinesDetailed(slice.text);
+  const parsedSlices = gameplayLineSlicesFromTextParts([text]).map((slice) => ({
+    slice,
+    parsed: parseCardEffectLinesDetailed(slice.text),
+  }));
+  const parsedSourceMapCount = parsedSlices.reduce(
+    (count, { parsed }) =>
+      parsed.ok
+        ? count + parsed.value.filter((value) => "sourceMap" in value).length
+        : count,
+    0,
+  );
+  const shouldScopeSpanIds = parsedSourceMapCount > 1;
+
+  for (const [lineIndex, { parsed, slice }] of parsedSlices.entries()) {
     if (!parsed.ok) {
       continue;
     }
+    let sourceMapIndex = 0;
     for (const value of parsed.value) {
       if (!("sourceMap" in value)) {
         continue;
       }
+      const spanScope = presentationSpanScope({
+        blockIndex: sourceMapIndex,
+        lineIndex,
+        scoped: shouldScopeSpanIds,
+      });
       spans.push(
-        ...value.sourceMap.spans.map((span) => offsetSpan(span, slice.start)),
+        ...value.sourceMap.spans.map((span) =>
+          offsetSpan(scopePresentationSpan(span, spanScope), slice.start),
+        ),
       );
+      sourceMapIndex += 1;
     }
   }
 

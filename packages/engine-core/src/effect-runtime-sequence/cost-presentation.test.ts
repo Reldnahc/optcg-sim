@@ -138,8 +138,8 @@ const createQueuedCostPresentationState = (): GameState => {
         source: entry.source,
         textKind: "effect",
         activeSpanIds: [
-          "span:cost:trashFromHand",
-          "span:body",
+          "span:cost:optional:line:1",
+          "span:body:line:1",
         ] as EffectTextSpanId[],
       },
     },
@@ -173,7 +173,7 @@ test("optional cost presentation highlights the cost while paying and the body a
   assert.deepEqual(filterStateForPlayer(paused.state, p1).activeEffectText, {
     source: entry.source,
     textKind: "effect",
-    activeSpanIds: ["span:cost:trashFromHand"],
+    activeSpanIds: ["span:cost:optional:line:1"],
   });
   assert.deepEqual(
     filterStateForPlayer(paused.state, p1).pendingDecision?.presentation
@@ -181,7 +181,7 @@ test("optional cost presentation highlights the cost while paying and the body a
     {
       source: entry.source,
       textKind: "effect",
-      activeSpanIds: ["span:cost:trashFromHand"],
+      activeSpanIds: ["span:cost:optional:line:1"],
     },
   );
 
@@ -198,7 +198,7 @@ test("optional cost presentation highlights the cost while paying and the body a
     {
       source: entry.source,
       textKind: "effect",
-      activeSpanIds: ["span:body"],
+      activeSpanIds: ["span:body:line:1"],
     },
   );
 });
