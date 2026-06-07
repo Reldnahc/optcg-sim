@@ -87,6 +87,9 @@ export const appendEffectResolvedEvent = (
         : { triggerEventId: queuedEntry.triggerEventId }),
       sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
       orderingGroup: queuedEntry.orderingGroup,
+      ...(queuedEntry.presentation === undefined
+        ? {}
+        : { presentation: queuedEntry.presentation }),
       status: "resolved" as const,
     },
     { type: "public" },
