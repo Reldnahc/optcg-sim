@@ -74,7 +74,7 @@
 }
 
 .effect-spotlight .effect-rules-text {
-  font-size: clamp(2px, calc(var(--card-width) * 0.04), 6px);
+  font-size: clamp(1px, calc(var(--card-height) * 0.013), 3px);
   font-weight: 650;
   line-height: 1.08;
 }
