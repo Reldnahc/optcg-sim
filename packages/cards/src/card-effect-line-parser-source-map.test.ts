@@ -117,6 +117,64 @@ describe("card effect parser source maps", () => {
     ).toBe(true);
   });
 
+  it.each([
+    [
+      "reveal-top play-rested",
+      "[DON!! x2] [When Attacking] ➀ (You may rest the specified number of DON!! cards in your cost area.): Reveal 1 card from the top of your deck. If that card is a {The Seven Warlords of the Sea} type Character card with a cost of 4 or less, you may play that card rested.",
+      "instruction:revealTop",
+    ],
+    [
+      "start-of-game stage play",
+      "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",
+      "instruction:playSelected",
+    ],
+    [
+      "blocker restriction sequence",
+      "[Main] Select up to 1 of your {The Seven Warlords of the Sea} type Leader or Character cards and that card gains +2000 power during this turn. Then, if the selected card attacks during this turn, your opponent cannot activate [Blocker].",
+      "instruction:preventBlockerActivation",
+    ],
+  ])(
+    "emits a body span for custom expression parser: %s",
+    (_name, text, evidence) => {
+      const result = parseCardEffectLinesDetailed(text);
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        return;
+      }
+      const parsed = result.value[0];
+      if (parsed === undefined || !("block" in parsed)) {
+        throw new Error("Expected runtime effect line.");
+      }
+
+      const spans = parsed.sourceMap?.spans ?? [];
+      expect(
+        spans.some(
+          (span) =>
+            span.role === "body" && span.primitiveEvidence?.includes(evidence),
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("emits a body span for leading conditional effect bodies", () => {
+    const text =
+      "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters −1000 power during this turn.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(spans.some((span) => span.role === "body")).toBe(true);
+  });
+
   it("emits condition spans for conditional expression text", () => {
     const text =
       "[On Play] Draw 4 cards if your opponent has 3 or less Life cards.";

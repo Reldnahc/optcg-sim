@@ -9,6 +9,7 @@ import type {
   InstructionParser,
   ParseInput,
 } from "../types.js";
+import { trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function optionalCostedEffectExpressionParser(options: {
@@ -25,10 +26,17 @@ export function optionalCostedEffectExpressionParser(options: {
       return undefined;
     }
 
-    const body = parseOptionalCostedBody(cost.rest, options);
+    const costRestSource = "restSource" in cost ? cost.restSource : undefined;
+    const costPresentationSpans =
+      "presentationSpans" in cost ? cost.presentationSpans : undefined;
+    const body = parseOptionalCostedBody(cost.rest, options, costRestSource);
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
+    const presentationSpans = [
+      ...(costPresentationSpans ?? []),
+      ...(body.presentationSpans ?? []),
+    ];
 
     return {
       effect: {
@@ -56,13 +64,19 @@ export function optionalCostedEffectExpressionParser(options: {
         ...body.evidence,
       ],
       rest: "",
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
 }
 
+type OptionalCostSequenceWithSource = OptionalCostSequenceParseResult & {
+  readonly presentationSpans?: ExpressionParseResult["presentationSpans"];
+  readonly restSource?: SourceSlice;
+};
+
 function parseOptionalCostSequenceFromOptionalText(
   input: ParseInput,
-): OptionalCostSequenceParseResult | undefined {
+): OptionalCostSequenceWithSource | undefined {
   const separatorIndex = input.text.indexOf(":");
   if (separatorIndex < 0) {
     return undefined;
@@ -79,7 +93,24 @@ function parseOptionalCostSequenceFromOptionalText(
   }
 
   const cost = parseOptionalCostSequence({ text: costText });
-  return cost === undefined ? undefined : { ...cost, rest: bodyText };
+  if (cost === undefined) {
+    return undefined;
+  }
+  const rawBodyText = input.text.slice(separatorIndex + 1);
+  return {
+    ...cost,
+    rest: bodyText,
+    ...(input.source === undefined
+      ? {}
+      : {
+          restSource: trimSource({
+            text: rawBodyText,
+            rawText: rawBodyText,
+            start: input.source.start + separatorIndex + 1,
+            end: input.source.end,
+          }),
+        }),
+  };
 }
 
 function hasOptionalCostMarker(text: string): boolean {
@@ -94,16 +125,26 @@ function parseOptionalCostedBody(
       input: ParseInput,
     ) => ExpressionParseResult | undefined)[];
   },
+  source?: SourceSlice,
 ): ExpressionParseResult | undefined {
   for (const expression of options.expressions ?? []) {
-    const parsed = expression({ text });
+    const parsed = expression({
+      text,
+      ...(source === undefined ? {} : { source }),
+    });
     if (parsed !== undefined && parsed.rest.length === 0) {
       return parsed;
     }
   }
 
-  return parseExpression(text, {
-    connectors: [],
-    segments: [syntheticInstructionSegmentParser(options.instructions)],
-  });
+  return parseExpression(
+    {
+      text,
+      ...(source === undefined ? {} : { source }),
+    },
+    {
+      connectors: [],
+      segments: [syntheticInstructionSegmentParser(options.instructions)],
+    },
+  );
 }

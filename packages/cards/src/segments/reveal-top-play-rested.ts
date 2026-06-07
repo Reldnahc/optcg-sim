@@ -1,6 +1,7 @@
 import type { CardFilter, SelectionId, SelectionSetId } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { sourceSpan } from "../source-slices.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 
 const revealedTopSet = "set:revealed-top" as SelectionSetId;
@@ -24,22 +25,30 @@ export function revealTopPlayRestedExpressionParser(
     return undefined;
   }
 
+  const evidence = [
+    "expression:sequence",
+    "instruction:revealTop",
+    "look:topDeck",
+    "zone:deck",
+    "count:positiveInteger",
+    "reveal:bothPlayers",
+    "instruction:selectFromSet",
+    ...predicates.evidence,
+    "instruction:playSelected",
+    "state:rested",
+    "composition:selectThenPlay",
+  ] as const;
   return {
     effect: revealSelectPlayRested(predicates.filter),
-    evidence: [
-      "expression:sequence",
-      "instruction:revealTop",
-      "look:topDeck",
-      "zone:deck",
-      "count:positiveInteger",
-      "reveal:bothPlayers",
-      "instruction:selectFromSet",
-      ...predicates.evidence,
-      "instruction:playSelected",
-      "state:rested",
-      "composition:selectThenPlay",
-    ],
+    evidence,
     rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
   };
 }
 

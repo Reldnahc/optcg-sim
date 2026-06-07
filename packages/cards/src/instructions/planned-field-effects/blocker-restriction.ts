@@ -3,7 +3,8 @@ import type { CardCategory, Duration, Zone } from "@optcg/types";
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseThisTurnDuration } from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
-import type { ExpressionParseResult } from "../../types.js";
+import { sourceSpan } from "../../source-slices.js";
+import type { ExpressionParseResult, ParseInput } from "../../types.js";
 import {
   selectedBlockerRestrictedAttackerId,
   selectedBlockerRestrictedTarget,
@@ -18,9 +19,9 @@ export const preventSelectedAttackerBlockerActivationPrimitive = {
   ],
 } as const;
 
-export const selectPowerThenPreventBlockerActivationExpressionParser = (input: {
-  readonly text: string;
-}): ExpressionParseResult | undefined => {
+export const selectPowerThenPreventBlockerActivationExpressionParser = (
+  input: ParseInput,
+): ExpressionParseResult | undefined => {
   const match =
     /^Select\s+(?<selection>up to [^.]+?)\s+and that card\s+(?<power>gains .+?)\.\s+Then,\s+if the selected card attacks during this turn,\s+your opponent cannot activate \[Blocker\]\.?$/iu.exec(
       input.text,
@@ -101,6 +102,21 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (input: {
     duration: parsedDuration,
   };
 
+  const evidence = [
+    "composition:selectThenApply",
+    ...cardinality.evidence,
+    "chooser:self:upTo",
+    "target:yourLeaderOrCharacters",
+    "player:self",
+    "filter:type",
+    "filter:category:leader",
+    "filter:category:character",
+    "instruction:modifyPower",
+    ...modifier.evidence,
+    ...duration.evidence,
+    "instruction:preventBlockerActivation",
+    "activation:blocker",
+  ] as const;
   return {
     effect: {
       type: "sequence",
@@ -118,21 +134,14 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (input: {
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...cardinality.evidence,
-      "chooser:self:upTo",
-      "target:yourLeaderOrCharacters",
-      "player:self",
-      "filter:type",
-      "filter:category:leader",
-      "filter:category:character",
-      "instruction:modifyPower",
-      ...modifier.evidence,
-      ...duration.evidence,
-      "instruction:preventBlockerActivation",
-      "activation:blocker",
-    ],
+    evidence,
     rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
   };
 };

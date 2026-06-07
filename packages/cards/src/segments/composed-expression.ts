@@ -43,17 +43,31 @@ export function conditionalExpressionSegmentParser(options: {
       options.conditions,
     );
     if (parsed !== undefined) {
-      const { condition, thenText } = parsed;
-      const then = parseExpression(thenText, {
-        connectors: options.connectors,
-        segments: [
-          instructionExpressionSegmentParser({
-            connectors: options.connectors,
-            instructions: options.instructions,
-          }),
-          syntheticInstructionSegmentParser(options.instructions),
-        ],
-      });
+      const { condition, conditionText, thenText } = parsed;
+      const sourceParts = splitLeadingConditionSource(
+        input.source,
+        input.text,
+        conditionText,
+        thenText,
+      );
+      const then = parseExpression(
+        {
+          text: thenText,
+          ...(sourceParts?.thenSource === undefined
+            ? {}
+            : { source: sourceParts.thenSource }),
+        },
+        {
+          connectors: options.connectors,
+          segments: [
+            instructionExpressionSegmentParser({
+              connectors: options.connectors,
+              instructions: options.instructions,
+            }),
+            syntheticInstructionSegmentParser(options.instructions),
+          ],
+        },
+      );
       if (then === undefined || then.rest.length > 0) {
         return undefined;
       }
@@ -68,6 +82,19 @@ export function conditionalExpressionSegmentParser(options: {
           "expression:conditional",
           ...condition.evidence,
           ...then.evidence,
+        ],
+        presentationSpans: [
+          ...(sourceParts?.conditionSource === undefined
+            ? []
+            : [
+                sourceSpan(
+                  "span:condition:resolution",
+                  "condition",
+                  sourceParts.conditionSource,
+                  condition.evidence,
+                ),
+              ]),
+          ...(then.presentationSpans ?? []),
         ],
       };
     }
@@ -167,9 +194,20 @@ export function conditionalBlockExpressionParser(options: {
       options.conditions,
     );
     if (parsed !== undefined) {
-      const { condition, thenText } = parsed;
+      const { condition, conditionText, thenText } = parsed;
+      const sourceParts = splitLeadingConditionSource(
+        input.source,
+        input.text,
+        conditionText,
+        thenText,
+      );
       for (const parser of options.expressions ?? []) {
-        const parsed = parser({ text: thenText });
+        const parsed = parser({
+          text: thenText,
+          ...(sourceParts?.thenSource === undefined
+            ? {}
+            : { source: sourceParts.thenSource }),
+        });
         if (parsed !== undefined && parsed.rest.length === 0) {
           return {
             effect: parsed.effect,
@@ -182,6 +220,19 @@ export function conditionalBlockExpressionParser(options: {
             blockPatch: {
               condition: condition.condition,
             },
+            presentationSpans: [
+              ...(sourceParts?.conditionSource === undefined
+                ? []
+                : [
+                    sourceSpan(
+                      "span:condition:resolution",
+                      "condition",
+                      sourceParts.conditionSource,
+                      condition.evidence,
+                    ),
+                  ]),
+              ...(parsed.presentationSpans ?? []),
+            ],
           };
         }
       }
@@ -197,17 +248,25 @@ export function conditionalBlockExpressionParser(options: {
             return { effect: parsed.effect, evidence: parsed.evidence };
           },
       );
-      const then = parseExpression(thenText, {
-        connectors: options.connectors,
-        segments: [
-          ...expressionSegments,
-          instructionExpressionSegmentParser({
-            connectors: options.connectors,
-            instructions: options.instructions,
-          }),
-          syntheticInstructionSegmentParser(options.instructions),
-        ],
-      });
+      const then = parseExpression(
+        {
+          text: thenText,
+          ...(sourceParts?.thenSource === undefined
+            ? {}
+            : { source: sourceParts.thenSource }),
+        },
+        {
+          connectors: options.connectors,
+          segments: [
+            ...expressionSegments,
+            instructionExpressionSegmentParser({
+              connectors: options.connectors,
+              instructions: options.instructions,
+            }),
+            syntheticInstructionSegmentParser(options.instructions),
+          ],
+        },
+      );
       if (then === undefined || then.rest.length > 0) {
         return undefined;
       }
@@ -223,6 +282,19 @@ export function conditionalBlockExpressionParser(options: {
         blockPatch: {
           condition: condition.condition,
         },
+        presentationSpans: [
+          ...(sourceParts?.conditionSource === undefined
+            ? []
+            : [
+                sourceSpan(
+                  "span:condition:resolution",
+                  "condition",
+                  sourceParts.conditionSource,
+                  condition.evidence,
+                ),
+              ]),
+          ...(then.presentationSpans ?? []),
+        ],
       };
     }
 
@@ -242,9 +314,20 @@ export function conditionalCostedBlockExpressionParser(options: {
       options.conditions,
     );
     if (parsed !== undefined) {
-      const { condition, thenText } = parsed;
+      const { condition, conditionText, thenText } = parsed;
+      const sourceParts = splitLeadingConditionSource(
+        input.source,
+        input.text,
+        conditionText,
+        thenText,
+      );
       for (const expressionParser of options.expressions) {
-        const then = expressionParser({ text: thenText });
+        const then = expressionParser({
+          text: thenText,
+          ...(sourceParts?.thenSource === undefined
+            ? {}
+            : { source: sourceParts.thenSource }),
+        });
         if (then === undefined || then.rest.length > 0) {
           continue;
         }
@@ -261,6 +344,19 @@ export function conditionalCostedBlockExpressionParser(options: {
           blockPatch: {
             condition: condition.condition,
           },
+          presentationSpans: [
+            ...(sourceParts?.conditionSource === undefined
+              ? []
+              : [
+                  sourceSpan(
+                    "span:condition:resolution",
+                    "condition",
+                    sourceParts.conditionSource,
+                    condition.evidence,
+                  ),
+                ]),
+            ...(then.presentationSpans ?? []),
+          ],
         };
       }
     }
@@ -314,6 +410,7 @@ export function parseLeadingConditionalExpression(
 ):
   | {
       readonly condition: ConditionParseResult;
+      readonly conditionText: string;
       readonly thenText: string;
     }
   | undefined {
@@ -332,7 +429,7 @@ export function parseLeadingConditionalExpression(
     }
     const condition = parseConditionExpression(conditionText, conditionParsers);
     if (condition !== undefined) {
-      return { condition, thenText };
+      return { condition, conditionText, thenText };
     }
   }
 
@@ -351,6 +448,41 @@ function parseSingleCondition(
   }
 
   return undefined;
+}
+
+function splitLeadingConditionSource(
+  source: SourceSlice | undefined,
+  text: string,
+  conditionText: string,
+  thenText: string,
+):
+  | {
+      readonly conditionSource: SourceSlice;
+      readonly thenSource: SourceSlice;
+    }
+  | undefined {
+  if (source === undefined) {
+    return undefined;
+  }
+  const conditionStart = text.indexOf(conditionText);
+  const thenStart = text.indexOf(thenText, Math.max(0, conditionStart));
+  if (conditionStart < 0 || thenStart < 0) {
+    return undefined;
+  }
+  return {
+    conditionSource: trimSource({
+      text: conditionText,
+      rawText: conditionText,
+      start: source.start + conditionStart,
+      end: source.start + conditionStart + conditionText.length,
+    }),
+    thenSource: trimSource({
+      text: thenText,
+      rawText: thenText,
+      start: source.start + thenStart,
+      end: source.start + thenStart + thenText.length,
+    }),
+  };
 }
 
 function splitTrailingConditionSource(

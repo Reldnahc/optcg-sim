@@ -1,5 +1,6 @@
 import { parseExpression } from "../expression-parser.js";
 import type { Condition } from "@optcg/types";
+import { sourceSpan } from "../source-slices.js";
 import type {
   ConditionParser,
   ConnectorParser,
@@ -54,6 +55,11 @@ export function conditionalContinuousExpressionParser(options: {
       return undefined;
     }
 
+    const presentationSpans =
+      body.presentationSpans ??
+      (input.source === undefined
+        ? undefined
+        : [sourceSpan("span:body", "body", input.source, body.evidence)]);
     return {
       effect: normalizeContinuousEffect(body.effect),
       evidence: [
@@ -65,6 +71,7 @@ export function conditionalContinuousExpressionParser(options: {
         ...body.evidence,
       ],
       rest: "",
+      ...(presentationSpans === undefined ? {} : { presentationSpans }),
       blockPatch: isPermanentEntry
         ? {
             category: "permanent",
@@ -93,6 +100,9 @@ export function entryConditionContinuousExpressionParser(options: {
         effect: segment.effect,
         evidence: segment.evidence,
         rest: "",
+        ...(segment.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: segment.presentationSpans }),
         blockPatch: {
           category: "permanent",
         },
@@ -112,10 +122,16 @@ export function entryConditionContinuousExpressionParser(options: {
       return undefined;
     }
 
+    const presentationSpans =
+      body.presentationSpans ??
+      (input.source === undefined
+        ? undefined
+        : [sourceSpan("span:body", "body", input.source, body.evidence)]);
     return {
       effect: normalizeContinuousEffect(body.effect),
       evidence: body.evidence,
       rest: "",
+      ...(presentationSpans === undefined ? {} : { presentationSpans }),
       blockPatch: {
         category: "permanent",
       },
@@ -165,6 +181,18 @@ function continuousInstructionSegmentParser(options: {
         return {
           effect: result.effect,
           evidence: result.evidence,
+          ...(input.source === undefined
+            ? {}
+            : {
+                presentationSpans: [
+                  sourceSpan(
+                    "span:body",
+                    "body",
+                    input.source,
+                    result.evidence,
+                  ),
+                ],
+              }),
         };
       }
     }

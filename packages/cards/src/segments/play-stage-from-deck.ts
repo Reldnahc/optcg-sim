@@ -2,6 +2,7 @@ import type { SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseStageTypeCardFilter } from "../search/index.js";
+import { sourceSpan } from "../source-slices.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 
 const startOfGameSelection = "selected:start-of-game" as SelectionId;
@@ -30,6 +31,16 @@ export function playStageFromDeckExpressionParser(
     return undefined;
   }
 
+  const evidence = [
+    "expression:sequence",
+    "instruction:search",
+    "instruction:playSelected",
+    ...cardinality.evidence,
+    ...filter.evidence,
+    "zone:deck",
+    "destination:stageArea",
+    "reveal:chooserOnly",
+  ] as const;
   return {
     effect: {
       type: "sequence",
@@ -60,16 +71,14 @@ export function playStageFromDeckExpressionParser(
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      "instruction:search",
-      "instruction:playSelected",
-      ...cardinality.evidence,
-      ...filter.evidence,
-      "zone:deck",
-      "destination:stageArea",
-      "reveal:chooserOnly",
-    ],
+    evidence,
     rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
   };
 }
