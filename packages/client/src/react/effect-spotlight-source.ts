@@ -94,6 +94,9 @@ export const activeEffectTextSourceForSpotlight = ({
       mode: "live",
     };
   }
+  if (pendingDecision !== undefined) {
+    return undefined;
+  }
   return latestResolvedEffectPresentation(events);
 };
 

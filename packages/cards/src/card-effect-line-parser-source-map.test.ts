@@ -43,6 +43,39 @@ describe("card effect parser source maps", () => {
     expect(spans.some((span) => span.id === "span:sequence:1:body")).toBe(true);
   });
 
+  it("emits connector and sequence body spans for and-separated effects", () => {
+    const text =
+      "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(
+      spans.some((span) => span.role === "connector" && span.text === "and"),
+    ).toBe(true);
+    expect(
+      spans.find((span) => span.id === "span:sequence:0:body"),
+    ).toMatchObject({
+      role: "body",
+      text: "Draw 2 cards",
+    });
+    expect(
+      spans.find((span) => span.id === "span:sequence:1:body"),
+    ).toMatchObject({
+      role: "body",
+      text: "trash 1 card from your hand.",
+    });
+    expect(spans.some((span) => span.id === "span:body")).toBe(false);
+  });
+
   it("emits separate cost and post-cost body spans", () => {
     const text = "[On Play] DON!! -1: Draw 1 card.";
     const result = parseCardEffectLinesDetailed(text);

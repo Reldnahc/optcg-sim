@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
+  DecisionId,
   EngineEvent,
   InstanceId,
   PlayerId,
@@ -127,5 +128,38 @@ describe("activeEffectTextForSpotlight", () => {
       key: String(resolved.id),
       mode: "resolved",
     });
+  });
+
+  it("does not fall back to a resolved effect while another decision is pending", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 2,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:new"],
+        },
+      },
+    });
+
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: {
+          id: "decision:counter:1" as DecisionId,
+          type: "chooseQuantity",
+          playerId: "p1" as PlayerId,
+          prompt: "Counter?",
+          causedBy: { type: "ruleProcess", name: "counterStep" },
+          presentation: { title: "Counter?", instruction: "Counter?" },
+          mode: "upTo",
+          min: 0,
+          max: 1,
+        },
+        events: [resolved],
+      }),
+    ).toBeUndefined();
   });
 });
