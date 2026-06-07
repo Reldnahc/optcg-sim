@@ -35,7 +35,8 @@ export const continueRuntimeUntilIdle = (
   for (let stepCount = 0; stepCount < 20; stepCount += 1) {
     if (
       current.errors !== undefined ||
-      current.state.pendingDecision !== undefined
+      current.state.pendingDecision !== undefined ||
+      current.state.status.type !== "active"
     ) {
       return current;
     }

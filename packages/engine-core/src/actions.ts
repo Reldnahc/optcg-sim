@@ -218,9 +218,6 @@ const shouldContinueRuntimeAfterEffectDecision = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]>,
 ): boolean => {
-  if (decision.type === "chooseQuantity") {
-    return false;
-  }
   const causedBy = decision.causedBy;
   if (causedBy.type !== "effect") {
     return false;

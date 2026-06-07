@@ -9,10 +9,6 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
-import {
-  detectPendingRuntimeWork,
-  processEffectRuntime,
-} from "../effect-runtime.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -183,12 +179,5 @@ export const applyChooseQuantityDecisionResponse = (
   };
   delete nextState.pendingDecision;
 
-  if (detectPendingRuntimeWork(nextState) === undefined) {
-    return toEngineResult(nextState, events);
-  }
-  const resumed = processEffectRuntime(nextState);
-  return {
-    ...resumed,
-    events: [...events, ...resumed.events],
-  };
+  return toEngineResult(nextState, events);
 };
