@@ -99,6 +99,71 @@ describe("runtime effect presentation refs", () => {
     });
   });
 
+  test("maps generated line-scoped presentation refs to field-local source map ids", () => {
+    expect(
+      activeEffectTextPresentationForEffectBlock({
+        effectBlock: {
+          ...effectBlock,
+          effect: {
+            type: "search",
+            request: {
+              zone: "deck",
+              player: "self",
+              lookCount: 5,
+              filter: { typesAny: ["Sky Island"] },
+              min: 0,
+              max: 1,
+              destination: "hand",
+              revealTo: "bothPlayers",
+              shuffleAfter: false,
+              remainingCards: {
+                destination: "deck",
+                position: "bottom",
+                order: "ownerChoice",
+              },
+            },
+          },
+          presentation: {
+            textKind: "effect",
+            spanIds: [
+              "span:search:selection:line:1",
+              "span:search:remaining:line:1",
+            ],
+          },
+        },
+        resolvedCard: {
+          ...resolvedCard,
+          effectTextSourceMap: {
+            textKind: "effect",
+            sourceText:
+              "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Sky Island} type card other than [Shura] and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+            spans: [
+              {
+                id: "span:search:selection",
+                role: "body",
+                start: 10,
+                end: 145,
+                text: "Look at 5 cards from the top of your deck; reveal up to 1 {Sky Island} type card other than [Shura] and add it to your hand.",
+              },
+              {
+                id: "span:search:remaining",
+                role: "body",
+                start: 146,
+                end: 206,
+                text: "Then, place the rest at the bottom of your deck in any order.",
+              },
+            ],
+          },
+        },
+        source,
+      }),
+    ).toEqual({
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:search:selection", "span:search:remaining"],
+    });
+  });
+
   test("resolves sequence effect paths to parser span ids", () => {
     const sourceMap: EffectTextSourceMap = {
       textKind: "effect",

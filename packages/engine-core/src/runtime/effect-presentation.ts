@@ -20,6 +20,27 @@ const activeSpanIdsWithPrefix = (
   return narrowed.length === 0 ? undefined : narrowed;
 };
 
+const lineScopedSpanSuffixPattern = /:line:\d+(?::block:\d+)?$/u;
+
+const fieldLocalSpanId = (spanId: EffectTextSpanId): EffectTextSpanId =>
+  spanId.replace(lineScopedSpanSuffixPattern, "") as EffectTextSpanId;
+
+const activeSpanIdsInSourceMap = (
+  spanIds: readonly EffectTextSpanId[],
+  sourceMap: EffectTextSourceMap,
+): EffectTextSpanId[] => {
+  const mappedSpanIds = new Set(sourceMap.spans.map((span) => span.id));
+  return spanIds.flatMap((spanId) => {
+    if (mappedSpanIds.has(spanId)) {
+      return [spanId];
+    }
+    const fieldLocalId = fieldLocalSpanId(spanId);
+    return fieldLocalId !== spanId && mappedSpanIds.has(fieldLocalId)
+      ? [fieldLocalId]
+      : [];
+  });
+};
+
 export const activeSpanIdsForCost = (
   activeSpanIds: readonly EffectTextSpanId[],
 ): readonly EffectTextSpanId[] | undefined =>
@@ -113,9 +134,9 @@ export const activeEffectTextPresentationForEffectBlock = ({
   if (sourceMap?.textKind !== presentation.textKind) {
     return fallbackPresentation;
   }
-  const mappedSpanIds = new Set(sourceMap.spans.map((span) => span.id));
-  const activeSpanIds = presentation.spanIds.filter((spanId) =>
-    mappedSpanIds.has(spanId),
+  const activeSpanIds = activeSpanIdsInSourceMap(
+    presentation.spanIds,
+    sourceMap,
   );
   if (activeSpanIds.length === 0) {
     return fallbackPresentation;
