@@ -234,7 +234,7 @@ describe("playmat structure", () => {
     assert.match(effectSpotlightStyles, /left:\s*2\.5%;/u);
     assert.match(
       effectSpotlightStyles,
-      /font-size:\s*clamp\(6px,\s*calc\(var\(--card-width\)\s*\*\s*0\.068\),\s*9px\);/u,
+      /font-size:\s*clamp\(2px,\s*calc\(var\(--card-width\)\s*\*\s*0\.04\),\s*6px\);/u,
     );
     assert.equal(
       effectSpotlightStyles.includes(
