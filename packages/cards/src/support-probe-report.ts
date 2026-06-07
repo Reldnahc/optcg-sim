@@ -451,6 +451,10 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   for (const evidence of uniqueEvidence(lineReport.values)) {
     lines.push(`- ${evidence}`);
   }
+  const sourceSpanLines = sourceSpanDiagnostics(lineReport.values);
+  if (sourceSpanLines.length > 0) {
+    lines.push("Source spans:", ...sourceSpanLines);
+  }
 
   return {
     exitCode: lineReport.runtimeSupported ? 0 : 1,
@@ -570,6 +574,16 @@ const uniqueEvidence = (
   }
   return [...evidence];
 };
+
+const sourceSpanDiagnostics = (
+  values: readonly Extract<ParsedEffectLine, { readonly block: unknown }>[],
+): readonly string[] =>
+  values.flatMap((value) =>
+    (value.sourceMap?.spans ?? []).map((span) => {
+      const evidence = span.primitiveEvidence?.[0] ?? span.role;
+      return `- ${span.id} [${String(span.start)}, ${String(span.end)}] ${evidence}`;
+    }),
+  );
 
 const fetchPoneglyphCard: PoneglyphFetch = async (url) => fetch(url);
 

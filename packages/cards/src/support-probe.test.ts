@@ -23,6 +23,17 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports source span diagnostics for parsed text reports", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] Draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Source spans:");
+    expect(report.lines).toContain("- span:entry [0, 9] entry:onPlay");
+    expect(report.lines).toContain("- span:body [10, 22] instruction:draw");
+  });
+
   it("reports engine runtime support for deck-top trash movement", async () => {
     const report = await createSupportProbeReport({
       text: "[On Play] Trash 1 card from the top of your deck.",

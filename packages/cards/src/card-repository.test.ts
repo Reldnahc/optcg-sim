@@ -81,6 +81,31 @@ describe("card repository", () => {
     assert.equal(cachedDefinition.cardId, cardId);
   });
 
+  test("resolved implemented DSL card includes effect text source map", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
+    });
+    const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.equal(resolved.support.status, "implemented-dsl");
+    assert.equal(resolved.effectTextSourceMap?.sourceText, resolved.effectText);
+    assert.equal(
+      resolved.effectTextSourceMap?.spans.some((span) =>
+        span.primitiveEvidence?.includes("instruction:draw"),
+      ),
+      true,
+    );
+  });
+
   test("resolves raw keyword lines as printed keywords without generated effect blocks", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;

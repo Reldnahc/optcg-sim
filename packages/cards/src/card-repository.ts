@@ -5,6 +5,9 @@ import type {
   CardId,
   CardSupportStatus,
   EffectDefinition,
+  EffectTextDocumentKind,
+  EffectTextSourceMap,
+  EffectTextSpan,
   MatchCardManifest,
   NormalizedErrata,
   PoneglyphCardDetail,
@@ -14,7 +17,11 @@ import type {
   VariantKey,
 } from "@optcg/types";
 
-import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
+import {
+  gameplayLinesFromTextParts,
+  gameplayLineSlicesFromTextParts,
+} from "./effect-text-lines.js";
+import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 import { materializeEffectDefinition } from "./materialization/effect-definitions.js";
 
@@ -350,6 +357,14 @@ const buildResolvedCard = (
     errata: detail.variants.flatMap((variant) => variant.errata),
     definition: builtDefinition.definition?.effects ?? [],
   });
+  const effectTextSourceMap = effectTextSourceMapFromText(
+    detail.effect,
+    "effect",
+  );
+  const triggerTextSourceMap = effectTextSourceMapFromText(
+    detail.trigger,
+    "trigger",
+  );
   const supportStatus: CardSupportStatus =
     lines.length === 0
       ? "vanilla-confirmed"
@@ -402,6 +417,8 @@ const buildResolvedCard = (
     ...optional("life", detail.life),
     ...optional("effectText", detail.effect),
     ...optional("triggerText", detail.trigger),
+    ...(effectTextSourceMap === undefined ? {} : { effectTextSourceMap }),
+    ...(triggerTextSourceMap === undefined ? {} : { triggerTextSourceMap }),
   };
 
   if (builtDefinition.definition === undefined) {
@@ -418,6 +435,45 @@ const buildResolvedCard = (
 
 const gameplayLines = (detail: PoneglyphCardDetail): string[] =>
   gameplayLinesFromTextParts([detail.effect, detail.trigger]);
+
+const effectTextSourceMapFromText = (
+  text: string | null | undefined,
+  textKind: EffectTextDocumentKind,
+): EffectTextSourceMap | undefined => {
+  if (text === null || text === undefined || text.length === 0) {
+    return undefined;
+  }
+
+  const spans: EffectTextSpan[] = [];
+  for (const slice of gameplayLineSlicesFromTextParts([text])) {
+    const parsed = parseCardEffectLinesDetailed(slice.text);
+    if (!parsed.ok) {
+      continue;
+    }
+    for (const value of parsed.value) {
+      if (!("sourceMap" in value)) {
+        continue;
+      }
+      spans.push(
+        ...value.sourceMap.spans.map((span) => offsetSpan(span, slice.start)),
+      );
+    }
+  }
+
+  return spans.length === 0
+    ? undefined
+    : {
+        textKind,
+        sourceText: text,
+        spans,
+      };
+};
+
+const offsetSpan = (span: EffectTextSpan, offset: number): EffectTextSpan => ({
+  ...span,
+  start: span.start + offset,
+  end: span.end + offset,
+});
 
 const rawKeywordsFromLines = (
   lines: readonly string[],
