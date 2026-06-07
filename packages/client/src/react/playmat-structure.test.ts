@@ -244,7 +244,11 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight \.effect-rules-span--active\s*\{[^}]*background:\s*rgba\(255,\s*220,\s*98,\s*0\.38\);/u,
+      /\.effect-spotlight \.effect-rules-span--active\s*\{[^}]*color:\s*#171005;[^}]*background:\s*rgba\(255,\s*186,\s*45,\s*0\.72\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /box-shadow:\s*0 0 0 1px rgba\(85,\s*49,\s*0,\s*0\.62\),\s*0 1px 4px rgba\(85,\s*49,\s*0,\s*0\.24\);/u,
     );
     assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
   });
