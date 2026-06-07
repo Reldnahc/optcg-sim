@@ -13,6 +13,7 @@ import type {
   PublicBattleState,
   PublicCardView,
   PublicDecision,
+  PublicDecisionPresentation,
   PublicLegalAction,
   PublicLifeView,
   PublicPendingDecision,
@@ -220,6 +221,24 @@ test("TYP-002A player view excludes opponent hidden identities and private inter
   expect(noPrivateDecisionCandidateCount).toBe(true);
   expect(noPrivateLegalReason).toBe(true);
   expect(noQuantityValueInLegalAction).toBe(true);
+});
+
+test("public decision presentation can expose active effect text spans", () => {
+  const playerId = "player-a" as PlayerId;
+  const presentation: PublicDecisionPresentation = {
+    title: "Choose target",
+    instruction: "Choose a target.",
+    effectText: "[On Play] K.O. up to 1 Character.",
+    activeEffectText: {
+      source: cardRef("source", playerId),
+      textKind: "effect",
+      activeSpanIds: ["span:body:ko"],
+    },
+  };
+
+  expect(presentation.activeEffectText?.activeSpanIds).toEqual([
+    "span:body:ko",
+  ]);
 });
 
 test("TYP-002A initial spectator view excludes hidden identities and player-only choices", () => {

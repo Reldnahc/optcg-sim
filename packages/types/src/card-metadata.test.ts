@@ -13,6 +13,7 @@ import type {
   CardSupportStatus,
   DeckValidationResult,
   DecklistEntry,
+  EffectTextSourceMap,
   Loadout,
   MatchCardManifest,
   MatchSource,
@@ -231,6 +232,58 @@ test("match card manifest accepts an empty effect definition registry", () => {
   };
 
   expect(manifest.effectDefinitions).toEqual({});
+});
+
+test("resolved card can carry effect and trigger source maps", () => {
+  const cardId = "OP00-001" as CardId;
+  const map: EffectTextSourceMap = {
+    textKind: "effect",
+    sourceText: "[On Play] Draw 1 card.",
+    spans: [
+      {
+        id: "span:body:draw",
+        role: "body",
+        start: 10,
+        end: 22,
+        text: "Draw 1 card.",
+      },
+    ],
+  };
+  const support: CardImplementationRecord = {
+    cardId,
+    status: "implemented-dsl",
+    tested: true,
+    rulesVersion: "rules",
+    cardDataVersion: "cards",
+    sourceTextHash: "hash",
+    behaviorHash: "behavior",
+  };
+  const card: ResolvedCard = {
+    cardId,
+    language: "en",
+    name: "Test",
+    category: "character",
+    set: "TEST",
+    setName: "Test",
+    released: true,
+    colors: ["red"],
+    attributes: [],
+    types: [],
+    effectText: map.sourceText,
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: support.sourceTextHash,
+    behaviorHash: support.behaviorHash,
+    effectTextSourceMap: map,
+    triggerTextSourceMap: { ...map, textKind: "trigger" },
+    support,
+  };
+
+  expect(card.effectTextSourceMap?.spans[0]?.id).toBe("span:body:draw");
+  expect(card.triggerTextSourceMap?.textKind).toBe("trigger");
 });
 
 test("implemented-dsl support can reference a reviewed On Play draw effect definition from manifest registry", () => {

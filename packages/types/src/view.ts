@@ -14,6 +14,10 @@ import type { CardSelectionCandidate, TargetCandidate } from "./decisions.js";
 import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
 import type { PublicTimerState } from "./runtime.js";
+import type {
+  ActiveEffectTextPresentation,
+  EffectTextSourceMap,
+} from "./effect-presentation.js";
 
 export interface SpectatorPolicy {
   mode: "disabled" | "live-filtered";
@@ -110,6 +114,8 @@ export interface PublicDecisionPresentation {
   source?: CardRef;
   sourceLabel?: string;
   effectText?: string;
+  effectTextSourceMap?: EffectTextSourceMap;
+  activeEffectText?: ActiveEffectTextPresentation;
   choices?: PublicDecisionChoicePresentation[];
 }
 
@@ -240,6 +246,7 @@ export interface PlayerView {
   battle?: PublicBattleState;
   pendingDecision?: PublicPendingDecision;
   activeEffectSources?: CardRef[];
+  activeEffectText?: ActiveEffectTextPresentation;
   legalActions: PublicLegalAction[];
   revealedCards: PublicRevealRecord[];
   events: EngineEvent[];

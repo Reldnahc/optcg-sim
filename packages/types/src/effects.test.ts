@@ -183,6 +183,35 @@ test("effect support contracts compile with canonical representative values", ()
   void invalidExactTwo;
 });
 
+test("effect blocks and sequence segments can carry presentation refs", () => {
+  const block: EffectBlock = {
+    id: "effect-1" as EffectId,
+    category: "auto",
+    trigger: { type: "onPlay" },
+    sourcePresencePolicy: "mustRemainInSameZone",
+    presentation: {
+      textKind: "effect",
+      spanIds: ["span:entry", "span:body:draw"],
+    },
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "draw",
+          connector: "always",
+          presentation: {
+            textKind: "effect",
+            spanIds: ["span:body:draw"],
+          },
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+      ],
+    },
+  };
+
+  expect(block.presentation?.spanIds).toContain("span:entry");
+});
+
 test("replacement effect contract supports reviewed would-be-KOd self draw shape", () => {
   const replacement: ReplacementTrigger = {
     type: "wouldBeKOd",
