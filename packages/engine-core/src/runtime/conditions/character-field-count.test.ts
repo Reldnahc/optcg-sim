@@ -293,6 +293,73 @@ test("fieldCount condition supports current-power and type filters for self char
   );
 });
 
+test("fieldCount condition can count distinct matching character names", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  const first = withCardInZone({
+    state,
+    playerId: p1,
+    card: { ...must(self.hand[0], "first"), cardId: toCardId("impel-a") },
+    zone: "characterArea",
+    index: 0,
+  });
+  const second = withCardInZone({
+    state,
+    playerId: p1,
+    card: { ...must(self.hand[1], "second"), cardId: toCardId("impel-b") },
+    zone: "characterArea",
+    index: 1,
+  });
+  const duplicate = withCardInZone({
+    state,
+    playerId: p1,
+    card: { ...must(self.hand[2], "duplicate"), cardId: toCardId("impel-a") },
+    zone: "characterArea",
+    index: 2,
+  });
+  for (const card of [first, second, duplicate]) {
+    state.cardManifest.cards[card.cardId] = {
+      ...resolvedCard({ cardId: card.cardId, category: "character" }),
+      name: card.cardId === first.cardId ? "Same Name" : "Other Name",
+      types: ["Impel Down"],
+    };
+  }
+
+  const condition: Extract<Condition, { type: "fieldCount" }> = {
+    type: "fieldCount",
+    player: "self",
+    filter: {
+      categories: ["character"],
+      typesAny: ["Impel Down"],
+      custom: "differentNames",
+    },
+    op: "eq",
+    value: 2,
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+  state.cardManifest.cards[second.cardId] = {
+    ...must(state.cardManifest.cards[second.cardId], "second metadata"),
+    name: "Same Name",
+  };
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});
+
 test("fieldCount condition supports opponent current-power character presence", () => {
   const state = createActiveState();
   const opponent = must(state.players[p2], "p2");

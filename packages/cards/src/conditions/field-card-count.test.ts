@@ -64,4 +64,34 @@ describe("field card count condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses exact matching Characters with different card names as field-count filter data", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you have 5 {Impel Down} type Characters with different card names",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Impel Down"],
+          custom: "differentNames",
+        },
+        op: "eq",
+        value: 5,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:type",
+        "filter:category:character",
+        "filter:differentNames",
+      ],
+      rest: "",
+    });
+  });
 });

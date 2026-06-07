@@ -346,10 +346,24 @@ export interface CardSelectionRequest {
 
 export type OpponentActivationKind = "event" | "blocker" | "trigger";
 
-export type DynamicNumberValue = {
-  type: "sumSelectedCardCosts";
-  selection: SelectionSetId;
-  multiplier: number;
+export type DynamicNumberValue =
+  | {
+      type: "sumSelectedCardCosts";
+      selection: SelectionSetId;
+      multiplier: number;
+    }
+  | {
+      type: "countDistinctMatchingFieldNames";
+      player: PlayerRef;
+      zone: "characterArea";
+      filter: CardFilter;
+      multiplier: number;
+    };
+
+export type SnapshotNumberValue = {
+  type: "snapshotCardStat";
+  target: Target;
+  stat: "currentPower";
 };
 
 export type Target =
@@ -823,7 +837,12 @@ export type Effect =
       duration: Duration;
     }
   | { type: "setPowerToZero"; target: Target; duration: Duration }
-  | { type: "setBasePower"; target: Target; value: number; duration: Duration }
+  | {
+      type: "setBasePower";
+      target: Target;
+      value: number | SnapshotNumberValue;
+      duration: Duration;
+    }
   | {
       type: "modifyCost";
       filter?: CardFilter;

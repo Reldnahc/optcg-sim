@@ -197,8 +197,20 @@ const isSupportedPowerValue = (
 ): boolean =>
   (typeof value === "number" && Number.isSafeInteger(value)) ||
   (typeof value === "object" &&
-    Number.isSafeInteger(value.multiplier) &&
-    value.multiplier > 0);
+    ((value.type === "sumSelectedCardCosts" &&
+      Number.isSafeInteger(value.multiplier) &&
+      value.multiplier > 0) ||
+      (value.type === "countDistinctMatchingFieldNames" &&
+        value.player === "self" &&
+        value.filter.custom === "differentNames" &&
+        Number.isSafeInteger(value.multiplier) &&
+        value.multiplier > 0)));
+
+const isSupportedBasePowerValue = (
+  value: Extract<Effect, { type: "setBasePower" }>["value"],
+): boolean =>
+  (typeof value === "number" && Number.isSafeInteger(value) && value > 0) ||
+  (typeof value === "object" && value.target.type === "opponentLeader");
 
 const isSupportedChooseFromZonesTarget = (
   target: Extract<Target, { type: "chooseFromZones" }>,
@@ -272,8 +284,7 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (effect.type === "setBasePower") {
     return (
-      Number.isSafeInteger(effect.value) &&
-      effect.value > 0 &&
+      isSupportedBasePowerValue(effect.value) &&
       isSupportedDuration(effect.duration) &&
       (effect.target.type === "self" ||
         effect.target.type === "myLeader" ||

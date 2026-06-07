@@ -7,6 +7,11 @@ import type { InstructionParser } from "../types.js";
 const fieldActivationTarget = "targetSelection:set-field-active" as SelectionId;
 
 export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
+  const massFieldActivation = parseSetLeaderAndCharactersActive(input.text);
+  if (massFieldActivation !== undefined) {
+    return massFieldActivation;
+  }
+
   const match = /^set (?<quantity>up to [1-9]\d* .+) as active\.?$/i.exec(
     input.text,
   );
@@ -92,6 +97,51 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseSetLeaderAndCharactersActive(
+  text: string,
+): ReturnType<InstructionParser> {
+  if (
+    !/^set your Leader and all of your Characters as active\.?$/i.test(text)
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: { type: "activate", target: { type: "myLeader" } },
+        },
+        {
+          connector: "always",
+          effect: {
+            type: "activate",
+            target: {
+              type: "all",
+              player: "self",
+              zone: "characterArea",
+              filter: { categories: ["character"] },
+            },
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:activate",
+      "target:yourLeader",
+      "cardinality:all",
+      "player:self",
+      "zone:characterArea",
+      "filter:category:character",
+      "state:active",
+      "composition:sequence",
+    ],
+    rest: "",
+  };
+}
 
 function parseSelfCharacterTargetText(text: string): string | undefined {
   const match = /^of your (?<target>.+)$/i.exec(text.trim());

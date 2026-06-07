@@ -90,9 +90,32 @@ const generalExpressionParser = (input: ParseInput) =>
     ],
   });
 
+const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
+  if (/\.\s+Then,\s+/u.test(input.text)) {
+    return undefined;
+  }
+  const parsed = conditionalExpressionSegmentParser({
+    conditions: conditionParsers,
+    connectors: [parseThenConnector, parseAndConnector],
+    instructions: instructionParsers,
+  })(input);
+  if (parsed === undefined) {
+    return undefined;
+  }
+  return {
+    effect: parsed.effect,
+    evidence: parsed.evidence,
+    rest: "",
+    ...(parsed.presentationSpans === undefined
+      ? {}
+      : { presentationSpans: parsed.presentationSpans }),
+  };
+};
+
 const costedExpressions = [
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
+  conditionalCostedBodyExpressionParser,
   singleInstructionExpressionParser,
   generalExpressionParser,
 ] as const;

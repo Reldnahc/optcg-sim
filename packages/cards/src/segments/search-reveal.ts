@@ -13,7 +13,10 @@ import {
 } from "../search/index.js";
 import { parseExpression } from "../expression-parser.js";
 import { parseThenConnector } from "../connectors/index.js";
-import { parseTrashFromHandInstruction } from "../instructions/index.js";
+import {
+  parsePlayFromHandInstruction,
+  parseTrashFromHandInstruction,
+} from "../instructions/index.js";
 import {
   sourceSpan,
   splitSourceByDelimiter,
@@ -82,6 +85,7 @@ export function searchRevealExpressionParser(
     connectors: [parseThenConnector],
     segments: [
       syntheticInstructionSegmentParser([parseTrashFromHandInstruction]),
+      syntheticInstructionSegmentParser([parsePlayFromHandInstruction]),
     ],
   });
   if (trailing === undefined || trailing.rest.length > 0) {

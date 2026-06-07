@@ -554,13 +554,18 @@ const isSupportedActivateSegment = (
   effect: SequenceSegmentEffect,
 ): effect is Extract<SequenceSegmentEffect, { type: "activate" }> =>
   effect.type === "activate" &&
-  effect.target.type === "savedFieldObject" &&
-  (effect.target.zone === "costArea" ||
-    effect.target.zone === "characterArea") &&
-  (effect.target.player === "self" || effect.target.player === "opponent") &&
-  effect.target.controller === undefined &&
-  effect.target.filter === undefined &&
-  effect.target.binding.family === "selectedTargets";
+  ((effect.target.type === "savedFieldObject" &&
+    (effect.target.zone === "costArea" ||
+      effect.target.zone === "characterArea") &&
+    (effect.target.player === "self" || effect.target.player === "opponent") &&
+    effect.target.controller === undefined &&
+    effect.target.filter === undefined &&
+    effect.target.binding.family === "selectedTargets") ||
+    effect.target.type === "myLeader" ||
+    (effect.target.type === "all" &&
+      effect.target.player === "self" &&
+      effect.target.zone === "characterArea" &&
+      isSupportedPublicFieldTargetFilter(effect.target.filter)));
 
 const isSupportedSequenceContinuousDuration = (duration: Duration): boolean =>
   duration.type === "thisBattle" ||

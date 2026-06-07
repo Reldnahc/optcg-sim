@@ -52,24 +52,35 @@ export function conditionalExpressionSegmentParser(options: {
         conditionText,
         thenText,
       );
-      const then = parseExpression(
-        {
-          text: thenText,
-          ...(sourceParts?.thenSource === undefined
-            ? {}
-            : { source: sourceParts.thenSource }),
-        },
-        {
-          connectors: options.connectors,
-          segments: [
-            instructionExpressionSegmentParser({
+      const thenInput = {
+        text: thenText,
+        ...(sourceParts?.thenSource === undefined
+          ? {}
+          : { source: sourceParts.thenSource }),
+      };
+      const directThen = syntheticInstructionSegmentParser(
+        options.instructions,
+      )(thenInput);
+      const then =
+        directThen === undefined
+          ? parseExpression(thenInput, {
               connectors: options.connectors,
-              instructions: options.instructions,
-            }),
-            syntheticInstructionSegmentParser(options.instructions),
-          ],
-        },
-      );
+              segments: [
+                instructionExpressionSegmentParser({
+                  connectors: options.connectors,
+                  instructions: options.instructions,
+                }),
+                syntheticInstructionSegmentParser(options.instructions),
+              ],
+            })
+          : {
+              effect: directThen.effect,
+              evidence: directThen.evidence,
+              rest: "",
+              ...(directThen.presentationSpans === undefined
+                ? {}
+                : { presentationSpans: directThen.presentationSpans }),
+            };
       if (then === undefined || then.rest.length > 0) {
         return undefined;
       }

@@ -27,7 +27,7 @@ type BasePowerTargetSubject = {
 
 const setBasePowerEffect = (
   target: Target,
-  value: number,
+  value: Extract<Effect, { type: "setBasePower" }>["value"],
   duration: Extract<Effect, { type: "setBasePower" }>["duration"],
 ): Extract<Effect, { type: "setBasePower" }> => ({
   type: "setBasePower",
@@ -82,6 +82,11 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const snapshot = parseBasePowerBecomeSnapshotInstruction(input, context);
+  if (snapshot !== undefined) {
+    return snapshot;
+  }
+
   const match =
     /^(?<targets>.+?) becomes? (?<value>[1-9]\d*)(?<durationText>.*)$/i.exec(
       input.text,
@@ -144,6 +149,81 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),
       "value:basePower:positiveInteger",
+      ...durationEvidence,
+    ],
+    rest: "",
+  };
+};
+
+const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const match =
+    /^(?<targets>.+?) becomes? the same as your opponent's Leader's power(?<durationText>.*)$/i.exec(
+      input.text,
+    );
+  const targetsText = match?.groups?.["targets"];
+  const durationText = match?.groups?.["durationText"]?.trim() ?? "";
+  if (targetsText === undefined) {
+    return undefined;
+  }
+
+  const subjects = targetsText
+    .split(/\s+and\s+/i)
+    .map((subject) => parseBasePowerSubject(subject));
+  if (
+    subjects.length === 0 ||
+    subjects.some((subject) => subject === undefined)
+  ) {
+    return undefined;
+  }
+
+  const explicitDuration =
+    durationText.length === 0 || durationText === "."
+      ? undefined
+      : parseExplicitFieldEffectDuration({ text: durationText });
+  if (durationText.length > 0 && durationText !== ".") {
+    if (explicitDuration === undefined || explicitDuration.rest.length > 0) {
+      return undefined;
+    }
+  }
+  const duration =
+    explicitDuration?.duration ?? continuousDuration(context.condition);
+  const durationEvidence = explicitDuration?.evidence ?? [
+    continuousDurationEvidence(context.condition),
+  ];
+
+  const value = {
+    type: "snapshotCardStat" as const,
+    target: { type: "opponentLeader" as const },
+    stat: "currentPower" as const,
+  };
+  const parsedSubjects = subjects as BasePowerTargetSubject[];
+  const effects = parsedSubjects.map((subject) =>
+    setBasePowerEffect(subject.target, value, duration),
+  );
+  const singleEffect = effects[0];
+  if (singleEffect === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect:
+      effects.length === 1
+        ? singleEffect
+        : {
+            type: "sequence",
+            effects: effects.map((sequenceEffect) => ({
+              connector: "always" as const,
+              effect: sequenceEffect,
+            })),
+          },
+    evidence: [
+      "instruction:setBasePower",
+      ...parsedSubjects.flatMap((subject) => subject.evidence),
+      "value:basePower:snapshotCurrentPower",
+      "target:opponentLeader",
       ...durationEvidence,
     ],
     rest: "",

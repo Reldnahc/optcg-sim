@@ -253,6 +253,7 @@ const isSupportedCharacterFieldCountFilter = (
   cost?: NumericFilter;
   currentPower?: NumericFilter;
   excludeSelf?: boolean;
+  custom?: "differentNames";
 } => {
   if (filter === undefined) {
     return false;
@@ -266,7 +267,8 @@ const isSupportedCharacterFieldCountFilter = (
       key !== "typesAny" &&
       key !== "cost" &&
       key !== "currentPower" &&
-      key !== "excludeSelf"
+      key !== "excludeSelf" &&
+      key !== "custom"
     ) {
       return false;
     }
@@ -284,6 +286,7 @@ const isSupportedCharacterFieldCountFilter = (
   const costValue = filter.cost;
   const currentPowerValue = filter.currentPower;
   const excludeSelfValue = filter.excludeSelf as unknown;
+  const customValue = filter.custom as unknown;
   return (
     (stateValue === undefined ||
       stateValue === "active" ||
@@ -298,7 +301,8 @@ const isSupportedCharacterFieldCountFilter = (
         typesValue.every((value) => typeof value === "string"))) &&
     hasSupportedNumericFilter(costValue) &&
     hasSupportedNumericFilter(currentPowerValue) &&
-    (excludeSelfValue === undefined || excludeSelfValue === true)
+    (excludeSelfValue === undefined || excludeSelfValue === true) &&
+    (customValue === undefined || customValue === "differentNames")
   );
 };
 
@@ -374,7 +378,7 @@ const countPublicCharactersOnField = (
   if (player === undefined) {
     return 0;
   }
-  return player.characters.filter((card) => {
+  const matchingCharacters = player.characters.filter((card) => {
     if (
       filter.excludeSelf === true &&
       card.instanceId === entry.source.instanceId
@@ -400,7 +404,19 @@ const countPublicCharactersOnField = (
       return true;
     }
     return cardMatchesFilter(state, card, filter);
-  }).length;
+  });
+  if (filter.custom === "differentNames") {
+    const distinctNames = new Set<string>();
+    for (const card of matchingCharacters) {
+      const name = state.cardManifest.cards[card.cardId]?.name;
+      if (name === undefined) {
+        continue;
+      }
+      distinctNames.add(name);
+    }
+    return distinctNames.size;
+  }
+  return matchingCharacters.length;
 };
 
 const countPublicCardsOnFieldByState = (

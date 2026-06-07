@@ -418,6 +418,59 @@ test("selectTargets saved reference can feed activate for rested Character in ch
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
+test("activate sequence can set your Leader and all Characters active directly", () => {
+  const { state, source } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: { type: "activate", target: { type: "myLeader" } },
+      },
+      {
+        connector: "always",
+        effect: {
+          type: "activate",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "characterArea",
+            filter: { categories: ["character"] },
+          },
+        },
+      },
+    ],
+  });
+  const p1State = must(state.players[p1], "p1");
+  p1State.leader = { ...p1State.leader, state: "rested" };
+  const extra = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(p1State.hand[0], "extra"),
+      cardId: toCardId("activatable-extra-character"),
+    },
+    zone: "characterArea",
+  });
+  source.state = "rested";
+  extra.state = "rested";
+  p1State.characters = [source, extra];
+  state.cardManifest.cards[extra.cardId] = resolvedCard({
+    cardId: extra.cardId,
+    category: "character",
+    power: 5000,
+  });
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  const afterP1 = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(afterP1.leader.state, "active");
+  assert.deepEqual(
+    afterP1.characters.map((card) => card.state),
+    ["active", "active"],
+  );
+});
+
 test("DON activation restriction blocks Character-source DON activation through saved target path", () => {
   const { source, state } = sequenceQueueState(
     selectRestedDonThenActivateSavedTargetSequence(),

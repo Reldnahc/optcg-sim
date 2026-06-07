@@ -171,6 +171,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   Cardinality: "TYP-007A",
   CardSelectionRequest: "TYP-001D",
   DynamicNumberValue: "TYP-001D",
+  SnapshotNumberValue: "TYP-001D",
   Target: "TYP-001D",
   CardFilter: "TYP-001D",
   Duration: "TYP-001D",

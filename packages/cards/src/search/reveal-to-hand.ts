@@ -124,10 +124,15 @@ export function parseSearchSelectionToHand(
   }
 
   const destinationMatch =
-    /^\s*(?:and add it to your hand|to your hand)\.\s+(?<rest>.+)$/i.exec(
+    /^\s*,?\s*(?:and add it to your hand|add it to your hand|to your hand)(?<separator>\.|,|\s+and)\s+(?<rest>.+)$/i.exec(
       filter.rest,
     );
-  const rest = destinationMatch?.groups?.["rest"];
+  const separator = destinationMatch?.groups?.["separator"];
+  const parsedRest = destinationMatch?.groups?.["rest"];
+  const rest =
+    separator?.trim().toLowerCase() === "and" && parsedRest !== undefined
+      ? `Then, ${parsedRest}`
+      : parsedRest;
   if (rest === undefined) {
     return undefined;
   }

@@ -107,6 +107,27 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses comma-separated hand destination before rest-bottom composition", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 {Impel Down} type card, add it to your hand and place the rest at the bottom of your deck in any order.",
+      }),
+    ).toEqual({
+      filter: { typesAny: ["Impel Down"] },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:type",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses disjunctive named-or-category search filters independently from reveal wording", () => {
     expect(
       parseSearchSelectionToHand({

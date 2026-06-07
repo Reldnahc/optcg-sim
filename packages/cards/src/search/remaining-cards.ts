@@ -22,7 +22,7 @@ export function parseRestToBottomAnyOrder(
   input: ParseInput,
 ): RestBottomParseResult | undefined {
   const match =
-    /^Then, place the rest at the bottom of your deck in any order(?:\.|,\s+and\s+(?<rest>.+))$/i.exec(
+    /^Then, place the rest at the bottom of your deck in any order(?:\.|,\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
       input.text,
     );
   if (match === null) {
@@ -36,7 +36,7 @@ export function parseRestToBottomAnyOrder(
       position: "bottom",
       order: "ownerChoice",
     },
-    rest: match.groups?.["rest"] ?? "",
+    rest: match.groups?.["rest"] ?? match.groups?.["thenRest"] ?? "",
   };
 }
 

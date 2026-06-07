@@ -2,6 +2,7 @@ import type {
   CardInstance,
   CardRef,
   ContinuousEffectRecord,
+  Effect,
   EffectExecutionFrame,
   EffectQueueEntry,
   EngineEvent,
@@ -230,6 +231,29 @@ const activateFieldObject = (
   if (isDonActivationPrevented(state, entry, target)) {
     return { changed: false, state };
   }
+  if (
+    target.zone?.zone === "leaderArea" &&
+    refsEqual(target, {
+      instanceId: player.leader.instanceId,
+      cardId: player.leader.cardId,
+      playerId: target.playerId,
+      zone: player.leader.zone,
+    })
+  ) {
+    return {
+      changed: player.leader.state !== "active",
+      state: {
+        ...state,
+        players: {
+          ...state.players,
+          [target.playerId]: {
+            ...player,
+            leader: { ...player.leader, state: "active" as const },
+          },
+        },
+      },
+    };
+  }
   if (target.zone?.zone === "costArea") {
     let changed = false;
     const costArea = player.costArea.map((card) => {
@@ -277,6 +301,58 @@ const activateFieldObject = (
     };
   }
   return { changed: false, state };
+};
+
+const resolveActivateTargets = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  target: Extract<Effect, { type: "activate" }>["target"],
+  savedReferences: EffectExecutionFrame["savedReferences"],
+): { ok: true; selectedTargets: CardRef[] } | { ok: false } => {
+  if (target.type === "savedFieldObject") {
+    const resolved = resolveSavedFieldObjectKoSelection({
+      controllerId: entry.controllerId,
+      savedReferences,
+      state,
+      target,
+    });
+    return resolved.ok
+      ? { ok: true, selectedTargets: [...resolved.selectedTargets] }
+      : { ok: false };
+  }
+  const player = state.players[entry.controllerId];
+  if (player === undefined) {
+    return { ok: false };
+  }
+  if (target.type === "myLeader") {
+    return {
+      ok: true,
+      selectedTargets: [
+        {
+          instanceId: player.leader.instanceId,
+          cardId: player.leader.cardId,
+          playerId: entry.controllerId,
+          zone: player.leader.zone,
+        },
+      ],
+    };
+  }
+  if (
+    target.type === "all" &&
+    target.player === "self" &&
+    target.zone === "characterArea"
+  ) {
+    return {
+      ok: true,
+      selectedTargets: player.characters.map((card) => ({
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        playerId: entry.controllerId,
+        zone: card.zone,
+      })),
+    };
+  }
+  return { ok: false };
 };
 
 const targetPlayerForDonActivationRestriction = (
@@ -799,12 +875,12 @@ export const applySavedFieldObjectActivateSequenceSegment = (params: {
   if (params.segment.effect.type !== "activate") {
     return { ledgers: params.ledgers, state: params.state };
   }
-  const resolvedSavedTarget = resolveSavedFieldObjectKoSelection({
-    controllerId: params.entry.controllerId,
-    savedReferences: params.ledgers.savedReferences,
-    state: params.state,
-    target: params.segment.effect.target,
-  });
+  const resolvedSavedTarget = resolveActivateTargets(
+    params.state,
+    params.entry,
+    params.segment.effect.target,
+    params.ledgers.savedReferences,
+  );
   if (!resolvedSavedTarget.ok) {
     return {
       ledgers: {

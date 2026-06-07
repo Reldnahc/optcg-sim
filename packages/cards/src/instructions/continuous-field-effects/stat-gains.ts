@@ -1,5 +1,6 @@
 import type { Effect } from "@optcg/types";
 
+import { parseCardFilterPredicates } from "../../filters/index.js";
 import {
   parseNegativePowerModifier,
   parsePositivePowerModifier,
@@ -72,6 +73,14 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const distinctNamePower = parseThisCharacterDistinctNamePowerInstruction(
+    input,
+    context,
+  );
+  if (distinctNamePower !== undefined) {
+    return distinctNamePower;
+  }
+
   const text = input.text.replace(
     /^give this Character\b/i,
     "this Character gains",
@@ -170,3 +179,50 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
     rest: "",
   };
 };
+
+const parseThisCharacterDistinctNamePowerInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^This Character gains \+(?<value>[1-9]\d*) power for each of your (?<filter>.+?) with a different card name\.?$/iu.exec(
+        input.text,
+      );
+    const valueText = match?.groups?.["value"];
+    const filterText = match?.groups?.["filter"];
+    if (valueText === undefined || filterText === undefined) {
+      return undefined;
+    }
+
+    const filter = parseCardFilterPredicates(
+      { text: filterText },
+      { powerSemantics: "printed" },
+    );
+    if (filter === undefined || filter.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: {
+          type: "countDistinctMatchingFieldNames",
+          player: "self",
+          zone: "characterArea",
+          filter: { ...filter.filter, custom: "differentNames" },
+          multiplier: Number.parseInt(valueText, 10),
+        },
+        duration: continuousDuration(context.condition),
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "value:dynamic:distinctFieldNames",
+        ...filter.evidence,
+        "filter:differentNames",
+        context.condition === undefined
+          ? "duration:whileSourceOnField"
+          : "duration:whileConditionTrue",
+      ],
+      rest: "",
+    };
+  };

@@ -7,8 +7,10 @@ export {
   yourLeaderPowerOpponentNextEndPrimitive,
 } from "./leader-power.js";
 export {
+  parsePreventOpponentCharactersRestInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  preventOpponentCharactersRestPrimitive,
   preventOpponentCharactersRefreshPrimitive,
   preventThatCharacterRefreshPrimitive,
 } from "./refresh-lock.js";

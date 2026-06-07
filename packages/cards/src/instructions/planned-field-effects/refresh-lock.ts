@@ -1,13 +1,17 @@
 import type { CardFilter, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
-import { parseOpponentNextRefreshPhaseDuration } from "../../durations/index.js";
+import {
+  parseOpponentNextEndPhaseDuration,
+  parseOpponentNextRefreshPhaseDuration,
+} from "../../durations/index.js";
 import { parseThatCharacterReference } from "../../references/index.js";
 import {
   parseAllFieldTarget,
   parseOpponentCharactersTarget,
 } from "../../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
+import { buildProtectionEffectWithTarget } from "../protection/builders.js";
 import { thatCharacterSavedTarget } from "./shared.js";
 
 export const preventThatCharacterRefreshPrimitive = {
@@ -26,6 +30,16 @@ export const preventOpponentCharactersRefreshPrimitive = {
     "target:opponentCharacters",
     "target:opponentRestedCards",
     "duration:opponentNextRefreshPhase",
+  ],
+} as const;
+
+export const preventOpponentCharactersRestPrimitive = {
+  primitiveId: "instruction:giveProtection",
+  childPrimitiveIds: [
+    "cardinality:upTo",
+    "target:opponentCharacters",
+    "protectionProcess:rest",
+    "duration:opponentNextEndPhase",
   ],
 } as const;
 
@@ -104,6 +118,50 @@ export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser
       evidence: [
         "instruction:preventActivation",
         ...parsedTarget.evidence,
+        ...duration.evidence,
+      ],
+      rest: "",
+    };
+  };
+
+export const parsePreventOpponentCharactersRestInstruction: InstructionParser =
+  (input) => {
+    const parsedTarget = parseOpponentRefreshLockTarget(input.text);
+    if (parsedTarget === undefined) {
+      return undefined;
+    }
+
+    const durationText = /^cannot be rested\s+(?<rest>.*)$/i.exec(
+      parsedTarget.rest,
+    )?.groups?.["rest"];
+    if (durationText === undefined) {
+      return undefined;
+    }
+
+    const duration = parseOpponentNextEndPhaseDuration({
+      text: durationText,
+    });
+    if (
+      duration === undefined ||
+      duration.duration === undefined ||
+      duration.rest.length > 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: buildProtectionEffectWithTarget({
+        duration: duration.duration,
+        process: "rest",
+        sourceCardCategories: undefined,
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
+        target: parsedTarget.target,
+      }),
+      evidence: [
+        "instruction:giveProtection",
+        ...parsedTarget.evidence,
+        "protectionProcess:rest",
         ...duration.evidence,
       ],
       rest: "",

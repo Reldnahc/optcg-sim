@@ -52,6 +52,33 @@ export const parseFieldCardCountCondition: ConditionParser = (
     };
   }
 
+  const exactSelfPresence =
+    /^you have (?<count>[1-9]\d*)\s+(?<predicate>.+)$/i.exec(input.text);
+  const exactSelfCountText = exactSelfPresence?.groups?.["count"];
+  const exactSelfPredicate = exactSelfPresence?.groups?.["predicate"];
+  if (exactSelfCountText !== undefined && exactSelfPredicate !== undefined) {
+    const predicates = parseFieldPredicates(exactSelfPredicate);
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: predicates.filter,
+        op: "eq",
+        value: Number.parseInt(exactSelfCountText, 10),
+      },
+      evidence: fieldCountEvidence(
+        "self",
+        ["condition:comparator:eq", "condition:threshold:positiveInteger"],
+        predicates.evidence,
+      ),
+      rest: "",
+    };
+  }
+
   const noSelfPresence =
     /^you have no\s+(?<predicate>Characters?(?: card)?s?\b.*)$/i.exec(
       input.text,

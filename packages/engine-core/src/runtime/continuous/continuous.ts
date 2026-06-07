@@ -5,9 +5,9 @@ import type {
   Duration,
   EffectDefinition,
   Effect,
-  EffectExecutionFrame,
   EffectQueueEntry,
   GameState,
+  PlayerId,
   SequencedEffect,
   TargetSpec,
 } from "@optcg/types";
@@ -33,32 +33,12 @@ import {
   isSupportedRestProtection,
   malformedFieldRemovalProtectionMessage,
 } from "../../replacement/field-removal-protection-shape.js";
+import {
+  resolveBasePowerValue,
+  resolvePowerValue,
+  type ContinuousResolutionContext,
+} from "./value-resolution.js";
 
-type ContinuousResolutionContext = {
-  savedReferences?: EffectExecutionFrame["savedReferences"];
-};
-const resolvePowerValue = (
-  state: GameState,
-  value: Extract<Effect, { type: "modifyPower" }>["value"],
-  context: ContinuousResolutionContext | undefined,
-): number | null => {
-  if (typeof value === "number") {
-    return value;
-  }
-  const reference = context?.savedReferences?.[value.selection];
-  if (reference?.kind !== "selectedCards") {
-    return null;
-  }
-  let totalCost = 0;
-  for (const card of reference.cards) {
-    const cost = state.cardManifest.cards[card.cardId]?.cost;
-    if (cost === undefined || !Number.isSafeInteger(cost)) {
-      return null;
-    }
-    totalCost += cost;
-  }
-  return totalCost * value.multiplier;
-};
 export { isSupportedContinuousQueueEffect };
 
 const toExactCardTarget = (
@@ -79,6 +59,7 @@ const toExactCardTarget = (
 
 const mapEffectToModifier = (
   state: GameState,
+  entry: EffectQueueEntry,
   effect: ContinuousQueueEffect,
   target: TargetSpec,
   context?: ContinuousResolutionContext,
@@ -109,10 +90,14 @@ const mapEffectToModifier = (
     };
   }
   if (effect.type === "setBasePower") {
+    const value = resolveBasePowerValue(state, entry, effect.value);
+    if (value === null) {
+      return null;
+    }
     return {
       layer: "basePowerSet",
       target,
-      operation: { type: "setBasePower", value: effect.value },
+      operation: { type: "setBasePower", value },
     };
   }
   if (effect.type === "preventDraw") {
@@ -176,7 +161,10 @@ const createRecord = (
   index: number,
   context?: ContinuousResolutionContext,
 ): ContinuousEffectRecord | null => {
-  const modifier = mapEffectToModifier(state, effect, target, context);
+  const modifier = mapEffectToModifier(state, entry, effect, target, {
+    ...context,
+    controllerId: entry.controllerId,
+  });
   if (modifier === null) {
     return null;
   }
@@ -372,6 +360,76 @@ const isPermanentBlock = (
 ): boolean =>
   block.category === "permanent" && block.trigger.type === "permanent";
 
+const isSupportedPowerEffectValue = (
+  value: Extract<Effect, { type: "modifyPower" }>["value"],
+): boolean => {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value);
+  }
+  if (value.type === "sumSelectedCardCosts") {
+    return Number.isSafeInteger(value.multiplier) && value.multiplier > 0;
+  }
+  return (
+    value.player === "self" &&
+    Number.isSafeInteger(value.multiplier) &&
+    value.multiplier > 0 &&
+    value.filter.custom === "differentNames"
+  );
+};
+
+const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
+  if (effect.type === "modifyPower") {
+    return (
+      isSupportedPowerEffectValue(effect.value) &&
+      (effect.target.type === "self" ||
+        effect.target.type === "myLeader" ||
+        (effect.target.type === "all" && isSupportedTarget(effect.target))) &&
+      isSupportedDuration(effect.duration)
+    );
+  }
+  if (effect.type === "setBasePower") {
+    return (
+      typeof effect.value === "number" &&
+      Number.isSafeInteger(effect.value) &&
+      effect.value > 0 &&
+      isSupportedBasePowerDuration(effect.duration) &&
+      (effect.target.type === "self" ||
+        (effect.target.type === "all" &&
+          effect.target.zone === "characterArea" &&
+          effect.target.player === "self" &&
+          isSupportedBasePowerSetFilter(effect.target.filter)))
+    );
+  }
+  try {
+    return (
+      effectToDerivedModifier(
+        {
+          players: {},
+          turn: { turnPlayerId: "p1" as PlayerId, playerTurnCounts: {} },
+          phase: "main",
+          seq: 0,
+          actionSeq: 0,
+          eventSeq: 0,
+          cardManifest: { cards: {} },
+          continuousEffects: [],
+          effectQueue: [],
+          effectExecutionFrames: [],
+          events: [],
+          match: { status: "active" },
+        } as unknown as GameState,
+        {
+          instanceId: "support-probe" as CardRef["instanceId"],
+          cardId: "support-probe" as CardRef["cardId"],
+          playerId: "p1" as PlayerId,
+        },
+        effect,
+      ) !== null
+    );
+  } catch {
+    return false;
+  }
+};
+
 export const isSupportedPermanentContinuousEffectBlock = (
   block: EffectDefinition["effects"][number],
 ): boolean => {
@@ -390,11 +448,7 @@ export const isSupportedPermanentContinuousEffectBlock = (
     ) {
       return false;
     }
-    try {
-      if (effectToDerivedModifier(part.effect) === null) {
-        return false;
-      }
-    } catch {
+    if (!isSupportedDerivedEffectShape(part.effect)) {
       return false;
     }
   }
@@ -441,10 +495,15 @@ const createDerivedRecord = (
 });
 
 const effectToDerivedModifier = (
+  state: GameState,
+  source: CardRef,
   effect: Effect,
 ): ContinuousEffectRecord["modifier"] | null => {
   if (effect.type === "modifyPower") {
-    if (typeof effect.value !== "number") {
+    const value = resolvePowerValue(state, effect.value, {
+      controllerId: source.playerId,
+    });
+    if (value === null) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported dynamic power value"),
       );
@@ -463,13 +522,13 @@ const effectToDerivedModifier = (
         unsupportedDerivedMessage("unsupported power duration"),
       );
     }
-    if (!Number.isSafeInteger(effect.value)) {
+    if (!Number.isSafeInteger(value)) {
       throw new TypeError(unsupportedDerivedMessage("unsupported power value"));
     }
     return {
       layer: "powerAdd",
       target: effect.target,
-      operation: { type: "addPower", value: effect.value },
+      operation: { type: "addPower", value },
     };
   }
   if (effect.type === "giveKeyword") {
@@ -513,7 +572,11 @@ const effectToDerivedModifier = (
         unsupportedDerivedMessage("unsupported base-power duration"),
       );
     }
-    if (!Number.isSafeInteger(effect.value) || effect.value <= 0) {
+    if (
+      typeof effect.value !== "number" ||
+      !Number.isSafeInteger(effect.value) ||
+      effect.value <= 0
+    ) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported base-power value"),
       );
@@ -822,7 +885,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
             unsupportedDerivedMessage("unsupported permanent shape"),
           );
         }
-        const modifier = effectToDerivedModifier(part.effect);
+        const modifier = effectToDerivedModifier(state, source, part.effect);
         if (modifier === null) {
           if (options.mode === "playCostHand") {
             continue;

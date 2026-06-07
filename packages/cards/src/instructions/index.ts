@@ -42,6 +42,7 @@ export { parseSelectFromTrashChoiceInstruction } from "./select-from-trash-choic
 export {
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
+  parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,

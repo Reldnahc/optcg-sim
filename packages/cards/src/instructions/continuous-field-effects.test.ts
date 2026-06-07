@@ -175,6 +175,36 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses base power from an opponent leader power snapshot value", () => {
+    expect(
+      parseBasePowerBecomeInstruction(
+        {
+          text: "This Character's base power becomes the same as your opponent's Leader's power during this turn.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "setBasePower",
+        target: { type: "self" },
+        value: {
+          type: "snapshotCardStat",
+          target: { type: "opponentLeader" },
+          stat: "currentPower",
+        },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:setBasePower",
+        "target:thisCharacter",
+        "value:basePower:snapshotCurrentPower",
+        "target:opponentLeader",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
   it("defines continuous bodies as primitive parents with match families", () => {
     expect(thisCharacterKeywordGrantPrimitive).toEqual({
       primitiveId: "instruction:giveKeyword",
@@ -400,6 +430,42 @@ describe("continuous field-effect instruction parsers", () => {
         "instruction:modifyPower",
         "target:thisCharacter",
         "modifier:positivePower",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses this Character power per distinct matching field name as a dynamic value", () => {
+    expect(
+      parseYourLeaderConditionalPowerInstruction(
+        {
+          text: "This Character gains +1000 power for each of your Characters with a different card name.",
+        },
+        { condition: { type: "yourTurn" } },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: {
+          type: "countDistinctMatchingFieldNames",
+          player: "self",
+          zone: "characterArea",
+          filter: { categories: ["character"], custom: "differentNames" },
+          multiplier: 1000,
+        },
+        duration: {
+          type: "whileConditionTrue",
+          condition: { type: "yourTurn" },
+        },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "value:dynamic:distinctFieldNames",
+        "filter:category:character",
+        "filter:differentNames",
         "duration:whileConditionTrue",
       ],
       rest: "",

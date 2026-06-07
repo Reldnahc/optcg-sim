@@ -1,6 +1,7 @@
 export {
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
+  parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
@@ -8,6 +9,7 @@ export {
   parseYourLeaderPowerOpponentNextEndInstruction,
   preventOpponentCharactersAttackPrimitive,
   preventOpponentCharactersRefreshPrimitive,
+  preventOpponentCharactersRestPrimitive,
   preventSelectedAttackerBlockerActivationPrimitive,
   preventThatCharacterRefreshPrimitive,
   restOpponentCharactersOrDonCardsPrimitive,

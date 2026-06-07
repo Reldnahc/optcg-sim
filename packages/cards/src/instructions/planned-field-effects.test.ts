@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   preventOpponentCharactersRefreshPrimitive,
+  preventOpponentCharactersRestPrimitive,
   preventThatCharacterRefreshPrimitive,
   parsePreventOpponentCharactersRefreshInstruction,
+  parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentCharactersInstruction,
@@ -41,6 +43,15 @@ describe("planned field-effect instruction parsers", () => {
         "target:opponentCharacters",
         "target:opponentRestedCards",
         "duration:opponentNextRefreshPhase",
+      ],
+    });
+    expect(preventOpponentCharactersRestPrimitive).toEqual({
+      primitiveId: "instruction:giveProtection",
+      childPrimitiveIds: [
+        "cardinality:upTo",
+        "target:opponentCharacters",
+        "protectionProcess:rest",
+        "duration:opponentNextEndPhase",
       ],
     });
     expect(yourLeaderPowerOpponentNextEndPrimitive).toEqual({
@@ -393,6 +404,52 @@ describe("planned field-effect instruction parsers", () => {
         "instruction:preventActivation",
       ]),
     );
+  });
+
+  it("parses direct opponent Character rest protection as target plus protection plus duration", () => {
+    expect(
+      parsePreventOpponentCharactersRestInstruction({
+        text: "Up to 1 of your opponent's Characters other than [Monkey.D.Luffy] cannot be rested until the end of your opponent's next End Phase.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "giveProtection",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              nameNot: ["Monkey.D.Luffy"],
+            },
+          },
+        },
+        protection: {
+          process: "rest",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+        },
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:giveProtection",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:nameNot",
+        "protectionProcess:rest",
+        "duration:opponentNextEndPhase",
+      ],
+      rest: "",
+    });
   });
 
   it("parses your Leader power through opponent next End Phase as a modifier", () => {
