@@ -2,6 +2,7 @@ import type {
   EffectDefinition,
   EffectExecutionFrame,
   EffectQueueEntry,
+  EffectTextSpanId,
   EngineEvent,
   GameState,
 } from "@optcg/types";
@@ -42,6 +43,9 @@ type SequenceFrameRunResult =
     }
   | { ok: false };
 
+const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
+const rootSequenceEffectPath = ["effect", "sequence"] as const;
+
 export const findFrameQueueEntry = (
   state: GameState,
   frame: EffectExecutionFrame,
@@ -68,6 +72,69 @@ export const findSequenceEffectBlock = (
   return state.cardManifest.effectDefinitions?.[definitionId]?.effects.find(
     (effect) => effect.id === entry.effectBlockId,
   );
+};
+
+const topLevelSequenceIndexForFrame = (
+  frame: EffectExecutionFrame,
+): number | undefined => {
+  if (
+    frame.effectPath.length < rootSequenceEffectPath.length ||
+    !rootSequenceEffectPath.every(
+      (part, index) => frame.effectPath[index] === part,
+    )
+  ) {
+    return undefined;
+  }
+  if (frame.effectPath.length === rootSequenceEffectPath.length) {
+    return frame.pendingDecision.resumeAtSegmentIndex;
+  }
+  const topLevelIndex = Number(frame.effectPath[rootSequenceEffectPath.length]);
+  return Number.isSafeInteger(topLevelIndex) && topLevelIndex >= 0
+    ? topLevelIndex
+    : undefined;
+};
+
+const narrowedActiveSpanIdsForCompletedFrame = (
+  entry: EffectQueueEntry,
+  frame: EffectExecutionFrame,
+): readonly EffectTextSpanId[] | undefined => {
+  const presentation = entry.presentation;
+  if (presentation === undefined) {
+    return undefined;
+  }
+  const searchPhasePrefix = frame.pendingDecision.decisionId.startsWith(
+    searchRevealOrderDecisionPrefix,
+  )
+    ? "span:search:remaining"
+    : undefined;
+  const topLevelIndex = topLevelSequenceIndexForFrame(frame);
+  const sequencePrefix =
+    topLevelIndex === undefined
+      ? undefined
+      : `span:sequence:${String(topLevelIndex)}:`;
+  const narrowed = presentation.activeSpanIds.filter(
+    (spanId) =>
+      (searchPhasePrefix !== undefined &&
+        spanId.startsWith(searchPhasePrefix)) ||
+      (sequencePrefix !== undefined && spanId.startsWith(sequencePrefix)),
+  );
+  return narrowed.length === 0 ? undefined : narrowed;
+};
+
+const entryWithCompletedFramePresentation = (
+  entry: EffectQueueEntry,
+  frame: EffectExecutionFrame,
+): EffectQueueEntry => {
+  const activeSpanIds = narrowedActiveSpanIdsForCompletedFrame(entry, frame);
+  return activeSpanIds === undefined || entry.presentation === undefined
+    ? entry
+    : {
+        ...entry,
+        presentation: {
+          ...entry.presentation,
+          activeSpanIds,
+        },
+      };
 };
 
 const continueParentSequencesAfterNestedCompletion = (params: {
@@ -215,7 +282,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
   if (params.finalizeCompleted) {
     const finalized = appendEffectResolvedForCompletedSequence(
       completedState,
-      params.entry,
+      entryWithCompletedFramePresentation(params.entry, params.frame),
       events,
     );
     if (!finalized.ok) {

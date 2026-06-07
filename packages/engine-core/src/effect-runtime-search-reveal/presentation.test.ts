@@ -169,6 +169,20 @@ const respondWithCards = (
   response: { type: "cards", cards },
 });
 
+const respondWithOrderedIds = (
+  decision: Extract<
+    NonNullable<ReturnType<typeof createActiveState>["pendingDecision"]>,
+    { type: "orderCards" }
+  >,
+): Extract<Action, { type: "respondToDecision" }> => ({
+  type: "respondToDecision",
+  decisionId: decision.id,
+  response: {
+    type: "orderedIds",
+    ids: decision.cards.map((card) => String(card.instanceId)),
+  },
+});
+
 test("queued search reveal presentation is visible while choosing and on resolution", () => {
   const { entry, state } = createQueuedSearchState();
   const presentation = {
@@ -246,5 +260,31 @@ test("queued search reveal presentation narrows while choosing and ordering rema
     source: entry.source,
     textKind: "effect",
     activeSpanIds: ["span:search:remaining"],
+  });
+
+  const orderDecision = must(ordered.state.pendingDecision, "order decision");
+  assert.equal(orderDecision.type, "orderCards");
+  const resolved = applyAction(
+    ordered.state,
+    respondWithOrderedIds(orderDecision),
+  );
+  const effectResolved = must(
+    resolved.events.find((event) => event.type === "effectResolved"),
+    "effectResolved event",
+  );
+
+  assert.deepEqual(effectResolved.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    orderingGroup: entry.orderingGroup,
+    presentation: {
+      source: entry.source,
+      textKind: "effect",
+      activeSpanIds: ["span:search:remaining"],
+    },
+    status: "resolved",
   });
 });

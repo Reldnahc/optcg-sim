@@ -1,5 +1,6 @@
 import type {
   Action,
+  EffectQueueEntry,
   EngineError,
   EngineEvent,
   EngineResult,
@@ -23,6 +24,7 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
 ];
 
 const searchRevealOrderPrefix = "decision:orderCards:search-reveal:";
+const searchRevealRemainingSpanPrefix = "span:search:remaining";
 
 const isSearchRevealOrderCardsDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
@@ -32,6 +34,27 @@ const isSearchRevealOrderCardsDecision = (
 
 const hasDuplicateIds = (ids: readonly string[]): boolean =>
   ids.some((id, index) => ids.slice(index + 1).includes(id));
+
+const entryWithRemainingCardsPresentation = (
+  entry: EffectQueueEntry,
+): EffectQueueEntry => {
+  const presentation = entry.presentation;
+  if (presentation === undefined) {
+    return entry;
+  }
+  const activeSpanIds = presentation.activeSpanIds.filter((spanId) =>
+    spanId.startsWith(searchRevealRemainingSpanPrefix),
+  );
+  return activeSpanIds.length === 0
+    ? entry
+    : {
+        ...entry,
+        presentation: {
+          ...presentation,
+          activeSpanIds,
+        },
+      };
+};
 
 export const getSearchRevealDecisionLegalActions = (
   state: GameState,
@@ -158,7 +181,11 @@ export const applySearchRevealOrderResponse = (
   }
   const shouldResumeSequence = hasSequenceFrameForDecision(state, decision.id);
   if (queuedEntry !== undefined && !shouldResumeSequence) {
-    appendEffectResolvedEvent(state, events, queuedEntry);
+    appendEffectResolvedEvent(
+      state,
+      events,
+      entryWithRemainingCardsPresentation(queuedEntry),
+    );
   }
   const finalDeck = reindexZoneCards(
     [...player.deck.slice(decision.cards.length), ...orderedCards],
