@@ -92,6 +92,9 @@
   font-size: var(--effect-spotlight-rules-font-size);
   font-weight: 650;
   line-height: var(--effect-spotlight-rules-line-height);
+  transform: scaleX(0.98);
+  transform-origin: left top;
+  width: 102%;
 }
 
 .effect-spotlight .card-rules-text {
