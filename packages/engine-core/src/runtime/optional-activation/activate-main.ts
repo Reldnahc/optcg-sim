@@ -31,6 +31,7 @@ import {
 } from "../../effect-runtime.js";
 import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
+import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
@@ -151,31 +152,41 @@ const createActivateMainQueueEntry = (params: {
     controllerId: PlayerId;
   };
   sourceSnapshot: EffectQueueEntry["sourceSnapshot"];
-  effectId: EffectDefinition["effects"][number]["id"];
-}): EffectQueueEntry => ({
-  id: `queue-entry:activate-main:${String(params.state.actionSeq + 1)}:${String(params.source.instanceId)}:${String(params.effectId)}` as EffectQueueEntry["id"],
-  state: "pending",
-  timingWindowId:
-    `timing-window:activate-main:${String(params.state.seq + 1)}` as EffectQueueEntry["timingWindowId"],
-  generation: 0,
-  controllerId: params.source.controllerId,
-  source: {
+  effectBlock: EffectDefinition["effects"][number];
+  resolvedCard: ResolvedCard;
+}): EffectQueueEntry => {
+  const entrySource = {
     instanceId: params.source.instanceId,
     cardId: params.source.cardId,
     playerId: params.source.playerId,
     zone: params.source.zone,
-  },
-  sourceSnapshot: params.sourceSnapshot,
-  effectBlockId: params.effectId,
-  orderingGroup:
-    params.source.controllerId === params.state.turn.turnPlayerId
-      ? "turnPlayer"
-      : "nonTurnPlayer",
-  createdAtEventSeq: params.state.eventJournal.length + 1,
-  queuedAtStateSeq: toStateSeq(params.state.seq + 1),
-  sourcePresencePolicy: "mustRemainInSameZone",
-  causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
-});
+  };
+  const presentation = activeEffectTextPresentationForEffectBlock({
+    effectBlock: params.effectBlock,
+    resolvedCard: params.resolvedCard,
+    source: entrySource,
+  });
+  return {
+    id: `queue-entry:activate-main:${String(params.state.actionSeq + 1)}:${String(params.source.instanceId)}:${String(params.effectBlock.id)}` as EffectQueueEntry["id"],
+    state: "pending",
+    timingWindowId:
+      `timing-window:activate-main:${String(params.state.seq + 1)}` as EffectQueueEntry["timingWindowId"],
+    generation: 0,
+    controllerId: params.source.controllerId,
+    source: entrySource,
+    sourceSnapshot: params.sourceSnapshot,
+    effectBlockId: params.effectBlock.id,
+    orderingGroup:
+      params.source.controllerId === params.state.turn.turnPlayerId
+        ? "turnPlayer"
+        : "nonTurnPlayer",
+    createdAtEventSeq: params.state.eventJournal.length + 1,
+    queuedAtStateSeq: toStateSeq(params.state.seq + 1),
+    sourcePresencePolicy: "mustRemainInSameZone",
+    causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
+    ...(presentation === undefined ? {} : { presentation }),
+  };
+};
 
 const findSupportedActivateMainEffects = (
   state: GameState,
@@ -205,7 +216,8 @@ const findSupportedActivateMainEffects = (
         controllerId: liveCard.controller,
       },
       sourceSnapshot: toSnapshot(liveCard, resolvedCard),
-      effectId: effect.id,
+      effectBlock: effect,
+      resolvedCard,
     });
     return (
       isSupportedActivateMainNoChoiceDrawEffect(effect) ||
@@ -289,7 +301,8 @@ export const getActivateMainLegalActions = (
           controllerId: live.card.controller,
         },
         sourceSnapshot: toSnapshot(live.card, live.resolved),
-        effectId: effect.id,
+        effectBlock: effect,
+        resolvedCard: live.resolved,
       });
       const condition = evaluateQueuedEffectCondition(
         state,
@@ -387,7 +400,8 @@ export const applyActivateMainAction = (
       controllerId: live.card.controller,
     },
     sourceSnapshot: toSnapshot(live.card, live.resolved),
-    effectId: effect.id,
+    effectBlock: effect,
+    resolvedCard: live.resolved,
   });
   const condition = evaluateQueuedEffectCondition(
     state,

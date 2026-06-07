@@ -212,6 +212,56 @@ test("preserves safe gameplay event details for player logs", () => {
   assert.equal(JSON.stringify(view.events).includes("card-1"), false);
 });
 
+test("preserves safe effectResolved presentation for effect text spotlight", () => {
+  const state = createActiveState();
+  const cardId = toCardId("OP13-089");
+  const instanceId = "resolved-effect-source" as InstanceId;
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:effect-resolved"),
+      seq: 1,
+      type: "effectResolved",
+      source: {
+        instanceId,
+        cardId,
+        playerId: p1,
+      },
+      payload: {
+        status: "resolved",
+        queueEntryId: "private-queue-entry",
+        presentation: {
+          source: {
+            instanceId,
+            cardId,
+            playerId: p1,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body"],
+          privateExecutionFrame: "hidden",
+        },
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+  ];
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(view.events[0]?.payload, {
+    status: "resolved",
+    presentation: {
+      source: {
+        instanceId,
+        cardId,
+        playerId: p1,
+      },
+      textKind: "effect",
+      activeSpanIds: ["span:body"],
+    },
+  });
+  assert.equal(JSON.stringify(view.events).includes("private"), false);
+});
+
 test("keeps historical public search reveal events after transient reveal cleanup", () => {
   const state = createActiveState();
   const cardId = toCardId("OP13-089");

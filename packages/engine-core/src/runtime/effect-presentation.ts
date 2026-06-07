@@ -1,4 +1,11 @@
-import type { EffectTextSourceMap, EffectTextSpanId } from "@optcg/types";
+import type {
+  ActiveEffectTextPresentation,
+  CardRef,
+  EffectDefinition,
+  EffectTextSourceMap,
+  EffectTextSpanId,
+  ResolvedCard,
+} from "@optcg/types";
 
 export const activeSpanIdsForEffectPath = ({
   sourceMap,
@@ -30,4 +37,38 @@ export const activeSpanIdsForEffectPath = ({
       );
     })
     .map((span) => span.id);
+};
+
+export const activeEffectTextPresentationForEffectBlock = ({
+  effectBlock,
+  resolvedCard,
+  source,
+}: {
+  readonly effectBlock: EffectDefinition["effects"][number];
+  readonly resolvedCard: ResolvedCard;
+  readonly source: CardRef;
+}): ActiveEffectTextPresentation | undefined => {
+  const presentation = effectBlock.presentation;
+  if (presentation === undefined) {
+    return undefined;
+  }
+  const sourceMap =
+    presentation.textKind === "trigger"
+      ? resolvedCard.triggerTextSourceMap
+      : resolvedCard.effectTextSourceMap;
+  if (sourceMap?.textKind !== presentation.textKind) {
+    return undefined;
+  }
+  const mappedSpanIds = new Set(sourceMap.spans.map((span) => span.id));
+  const activeSpanIds = presentation.spanIds.filter((spanId) =>
+    mappedSpanIds.has(spanId),
+  );
+  if (activeSpanIds.length === 0) {
+    return undefined;
+  }
+  return {
+    source,
+    textKind: presentation.textKind,
+    activeSpanIds,
+  };
 };

@@ -39,6 +39,68 @@ test("queues one supported no-choice On Play draw effect from an accepted cardPl
   assert.equal(result.state.eventJournal.at(-1)?.type, "effectQueued");
 });
 
+test("queued On Play effects carry active text presentation from parser spans", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    effectText: "[On Play] Draw 1 card.",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        {
+          ...onPlayEffect,
+          presentation: {
+            textKind: "effect",
+            spanIds: ["span:on-play-body"],
+          },
+        },
+      ],
+    },
+    "def-on-play-presentation",
+  );
+  state.cardManifest.cards[played.cardId] = {
+    ...must(state.cardManifest.cards[played.cardId], "resolved source card"),
+    effectText: "[On Play] Draw 1 card.",
+    effectTextSourceMap: {
+      textKind: "effect",
+      sourceText: "[On Play] Draw 1 card.",
+      spans: [
+        {
+          id: "span:on-play-body",
+          role: "body",
+          start: 10,
+          end: 22,
+          text: "Draw 1 card.",
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.effectQueue[0]?.presentation, {
+    source: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      playerId: p1,
+      zone: played.zone,
+    },
+    textKind: "effect",
+    activeSpanIds: ["span:on-play-body"],
+  });
+});
+
 test("queues supported On Play effect from a multi-effect definition with unrelated supported effects", () => {
   const { state, played } = queueingState();
   const supportCard = resolvedCard({

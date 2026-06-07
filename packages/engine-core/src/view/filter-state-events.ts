@@ -99,6 +99,33 @@ const toAllowedCardRef = (
   return { instanceId, cardId, playerId };
 };
 
+const toAllowedEffectTextPresentation = (
+  value: unknown,
+): Record<string, unknown> | undefined => {
+  const presentation = asRecord(value);
+  if (presentation === undefined) {
+    return undefined;
+  }
+  const source = toAllowedCardRef(presentation["source"]);
+  const activeSpanIds = presentation["activeSpanIds"];
+  if (source === undefined || !Array.isArray(activeSpanIds)) {
+    return undefined;
+  }
+  const safeSpanIds = activeSpanIds.filter(
+    (spanId): spanId is `span:${string}` =>
+      typeof spanId === "string" && spanId.startsWith("span:"),
+  );
+  if (safeSpanIds.length === 0) {
+    return undefined;
+  }
+  const textKind = presentation["textKind"];
+  return {
+    source,
+    ...(textKind === "effect" || textKind === "trigger" ? { textKind } : {}),
+    activeSpanIds: safeSpanIds,
+  };
+};
+
 const pickStringPayloadFields = (
   payload: Record<string, unknown>,
   fields: readonly string[],
@@ -320,7 +347,18 @@ export const toPlayerEvent = (event: EngineEvent): EngineEvent => {
     return { ...base, payload: { status: "queued" } };
   }
   if (event.type === "effectResolved") {
-    return { ...base, payload: { status: "resolved" } };
+    const payload = asRecord(event.payload);
+    const presentation =
+      payload === undefined
+        ? undefined
+        : toAllowedEffectTextPresentation(payload["presentation"]);
+    return {
+      ...base,
+      payload: {
+        status: "resolved",
+        ...(presentation === undefined ? {} : { presentation }),
+      },
+    };
   }
   return { ...base, payload: toAllowedPlayerEventPayload(event) };
 };

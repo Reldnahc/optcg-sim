@@ -23,6 +23,7 @@ import {
   findCardInstanceInTrash,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 
 const isSupportedMainEventEffect = (
   effect: EffectDefinition["effects"][number],
@@ -193,18 +194,24 @@ export const createMainEventTriggerQueueing = (
           `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
         const timingWindowId =
           `timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"];
+        const entrySource = {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.zone.playerId,
+          zone: source.zone,
+        };
+        const presentation = activeEffectTextPresentationForEffectBlock({
+          effectBlock,
+          resolvedCard: resolved,
+          source: entrySource,
+        });
         const entry: EffectQueueEntry = {
           id: queueId,
           state: "pending",
           timingWindowId,
           generation: 0,
           controllerId: source.zone.playerId,
-          source: {
-            instanceId: source.instanceId,
-            cardId: source.cardId,
-            playerId: source.zone.playerId,
-            zone: source.zone,
-          },
+          source: entrySource,
           sourceSnapshot: toSnapshot(source, resolved),
           triggerEventId: event.id,
           effectBlockId: effectBlock.id,
@@ -216,6 +223,7 @@ export const createMainEventTriggerQueueing = (
             type: "ruleProcess",
             name: "effectRuntime:mainEventTriggerQueueing",
           },
+          ...(presentation === undefined ? {} : { presentation }),
         };
         appended.push(entry);
       }

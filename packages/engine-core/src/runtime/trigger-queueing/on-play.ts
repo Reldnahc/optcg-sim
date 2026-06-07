@@ -22,6 +22,7 @@ import {
   findCardInstance,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<
@@ -177,18 +178,24 @@ export const createOnPlayTriggerQueueing = (
         const timingWindowId =
           sharedTimingWindowId ??
           (`timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"]);
+        const entrySource = {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.zone.playerId,
+          zone: source.zone,
+        };
+        const presentation = activeEffectTextPresentationForEffectBlock({
+          effectBlock,
+          resolvedCard: resolved,
+          source: entrySource,
+        });
         const entry: EffectQueueEntry = {
           id: queueId,
           state: "pending",
           timingWindowId,
           generation: 0,
           controllerId: source.zone.playerId,
-          source: {
-            instanceId: source.instanceId,
-            cardId: source.cardId,
-            playerId: source.zone.playerId,
-            zone: source.zone,
-          },
+          source: entrySource,
           sourceSnapshot: toSnapshot(source, resolved),
           triggerEventId: event.id,
           effectBlockId: effectBlock.id,
@@ -200,6 +207,7 @@ export const createOnPlayTriggerQueueing = (
             type: "ruleProcess",
             name: "effectRuntime:onPlayTriggerQueueing",
           },
+          ...(presentation === undefined ? {} : { presentation }),
         };
         appended.push(entry);
       }
