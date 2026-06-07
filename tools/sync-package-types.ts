@@ -21,6 +21,7 @@ const CANONICAL_PROJECTION_FILE_NAMES = [
   "effects.ts",
   "decisions.ts",
   "runtime.ts",
+  "effect-presentation.ts",
 ] as const;
 
 async function main(): Promise<void> {

@@ -125,6 +125,7 @@ async function makeFixtureRepo() {
     "game-state.ts",
     "effects.ts",
     "decisions.ts",
+    "effect-presentation.ts",
   ]) {
     await writeFixtureFile(tempRoot, `contracts/types/${unmappedModule}`, "");
     await writeFixtureFile(

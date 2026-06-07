@@ -32,6 +32,7 @@ import type {
   Target,
 } from "./effects.js";
 import type { PendingDecision } from "./decisions.js";
+import type { ActiveEffectTextPresentation } from "./effect-presentation.js";
 import type {
   AuditEntry,
   BattleState,
@@ -118,6 +119,7 @@ export interface EffectQueueEntry {
   queuedAtStateSeq: StateSeq;
   sourcePresencePolicy: SourcePresencePolicy;
   causedBy: CausalityRef;
+  presentation?: ActiveEffectTextPresentation;
 }
 
 export interface EffectExecutionContext {

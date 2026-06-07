@@ -1,6 +1,7 @@
 import type { PlayerRef, Trigger } from "@optcg/types";
 
 import type { ExpressionParseResult, ParseInput } from "../types.js";
+import type { SourceSlice } from "../source-slices.js";
 
 const lifeRemovedTrigger = (players: PlayerRef[]): Trigger => ({
   type: "lifeRemoved",
@@ -22,6 +23,37 @@ const opponentBlockerActivatedTrigger = (): Trigger => ({
   activations: ["blocker"],
 });
 
+const bodySource = (
+  input: ParseInput,
+  body: string,
+): SourceSlice | undefined => {
+  if (input.source === undefined) {
+    return undefined;
+  }
+  const bodyStart = input.text.indexOf(body);
+  if (bodyStart < 0) {
+    return undefined;
+  }
+  return {
+    text: body,
+    rawText: body,
+    start: input.source.start + bodyStart,
+    end: input.source.start + bodyStart + body.length,
+  };
+};
+
+const parseReactionBody = (
+  expressionParser: (input: ParseInput) => ExpressionParseResult | undefined,
+  input: ParseInput,
+  body: string,
+): ExpressionParseResult | undefined => {
+  const source = bodySource(input, body);
+  return expressionParser({
+    text: body,
+    ...(source === undefined ? {} : { source }),
+  });
+};
+
 export function lifeRemovedReactionExpressionParser(options: {
   readonly expressions: readonly ((
     input: ParseInput,
@@ -38,7 +70,7 @@ export function lifeRemovedReactionExpressionParser(options: {
     }
 
     for (const expressionParser of options.expressions) {
-      const parsed = expressionParser({ ...input, text: body });
+      const parsed = parseReactionBody(expressionParser, input, body);
       if (parsed === undefined || parsed.rest.length > 0) {
         continue;
       }
@@ -55,6 +87,9 @@ export function lifeRemovedReactionExpressionParser(options: {
           category: "auto",
           trigger: lifeRemovedTrigger(["self", "opponent"]),
         },
+        ...(parsed.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: parsed.presentationSpans }),
       };
     }
 
@@ -80,7 +115,7 @@ export function opponentEventOrBlockerActivatedExpressionParser(options: {
     const isBlockerOnly = activation.toLowerCase() === "[blocker]";
 
     for (const expressionParser of options.expressions) {
-      const parsed = expressionParser({ ...input, text: body });
+      const parsed = parseReactionBody(expressionParser, input, body);
       if (parsed === undefined || parsed.rest.length > 0) {
         continue;
       }
@@ -100,6 +135,9 @@ export function opponentEventOrBlockerActivatedExpressionParser(options: {
             ? opponentBlockerActivatedTrigger()
             : opponentEventOrBlockerActivatedTrigger(),
         },
+        ...(parsed.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: parsed.presentationSpans }),
       };
     }
 
@@ -123,7 +161,7 @@ export function handTrashedByEffectReactionExpressionParser(options: {
     }
 
     for (const expressionParser of options.expressions) {
-      const parsed = expressionParser({ ...input, text: body });
+      const parsed = parseReactionBody(expressionParser, input, body);
       if (parsed === undefined || parsed.rest.length > 0) {
         continue;
       }
@@ -142,6 +180,9 @@ export function handTrashedByEffectReactionExpressionParser(options: {
           category: "auto",
           trigger: handTrashedByEffectTrigger(),
         },
+        ...(parsed.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: parsed.presentationSpans }),
       };
     }
 

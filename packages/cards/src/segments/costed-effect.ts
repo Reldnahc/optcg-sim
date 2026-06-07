@@ -25,6 +25,10 @@ export function costedEffectExpressionParser(options: {
       return undefined;
     }
 
+    const presentationSpans = [
+      ...(cost.presentationSpans ?? []),
+      ...(body.presentationSpans ?? []),
+    ];
     return {
       effect: {
         type: "sequence",
@@ -50,10 +54,7 @@ export function costedEffectExpressionParser(options: {
         ...body.evidence,
       ],
       rest: "",
-      presentationSpans: [
-        ...(cost.presentationSpans ?? []),
-        ...(body.presentationSpans ?? []),
-      ],
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
 }

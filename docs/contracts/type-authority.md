@@ -41,6 +41,7 @@ Canonical module to package module mapping is one-to-one by filename:
 - `contracts/types/effects.ts` -> `packages/types/src/effects.ts`
 - `contracts/types/decisions.ts` -> `packages/types/src/decisions.ts`
 - `contracts/types/runtime.ts` -> `packages/types/src/runtime.ts`
+- `contracts/types/effect-presentation.ts` -> `packages/types/src/effect-presentation.ts`
 - `contracts/canonical-types.ts` -> `packages/types/src/index.ts` export surface alignment
 
 ## Generated Output Ownership And Edit Policy
@@ -55,6 +56,7 @@ Canonical module to package module mapping is one-to-one by filename:
   - `packages/types/src/effects.ts`
   - `packages/types/src/decisions.ts`
   - `packages/types/src/runtime.ts`
+  - `packages/types/src/effect-presentation.ts`
 - Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later explicit change includes them (for example `*.test.ts` and `export-ownership.manifest.ts`).
 - Manual edits to generated canonical projection files are non-authoritative.
 - Later sync verification must overwrite or reject manual-only drift in package outputs.

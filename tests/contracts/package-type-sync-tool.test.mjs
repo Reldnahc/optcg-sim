@@ -242,6 +242,11 @@ async function makeFixtureRepo() {
   );
   await writeFixtureFile(
     tempRoot,
+    "contracts/types/effect-presentation.ts",
+    'export interface EffectPresentationRow { id: "span"; }\n',
+  );
+  await writeFixtureFile(
+    tempRoot,
     "contracts/types/view.ts",
     "export interface PlayerView { activePlayer: string; }\n",
   );

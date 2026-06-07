@@ -17,6 +17,7 @@ import type {
   CardSupportStatus,
   Keyword,
 } from "./card-metadata.js";
+import type { EffectTextPresentationRef } from "./effect-presentation.js";
 
 export type FailurePolicy =
   | "doAsMuchAsPossible"
@@ -444,6 +445,7 @@ export interface SequencedEffect {
     | "ifPossible";
   saveResultAs?: string;
   optional?: boolean;
+  presentation?: EffectTextPresentationRef;
 }
 
 export interface SequenceSegmentResult {
@@ -915,6 +917,7 @@ export interface EffectBlock {
   oncePerTurn?: boolean;
   failurePolicy?: FailurePolicy;
   sourcePresencePolicy?: SourcePresencePolicy;
+  presentation?: EffectTextPresentationRef;
   effect: Effect;
 }
 

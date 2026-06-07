@@ -8,6 +8,7 @@ import type {
   Zone,
 } from "./primitives.js";
 import type { EffectDefinition } from "./effects.js";
+import type { EffectTextSourceMap } from "./effect-presentation.js";
 
 export type CardCategory = "leader" | "character" | "event" | "stage" | "don";
 export type CardColor =
@@ -280,6 +281,8 @@ export interface ResolvedCard {
   types: string[];
   effectText?: string;
   triggerText?: string;
+  effectTextSourceMap?: EffectTextSourceMap;
+  triggerTextSourceMap?: EffectTextSourceMap;
   printedKeywords: Keyword[];
   variants: ResolvedCardVariant[];
   legality: Record<string, PoneglyphLegalityRecord>;

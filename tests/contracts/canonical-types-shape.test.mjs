@@ -19,6 +19,7 @@ const canonicalModuleFiles = [
   "types/effects.ts",
   "types/decisions.ts",
   "types/runtime.ts",
+  "types/effect-presentation.ts",
 ];
 
 async function readCanonicalTypes() {
