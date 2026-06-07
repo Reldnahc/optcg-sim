@@ -1,38 +1,79 @@
 import { supportedEntryPoints } from "./entry-point-definitions.js";
+import {
+  createSourceSlice,
+  trimSource,
+  type SourceSlice,
+} from "./source-slices.js";
 
 export const gameplayLinesFromTextParts = (
   parts: readonly (string | null | undefined)[],
 ): string[] =>
-  groupChooseOneBlocks(
-    joinDetachedEffectHeaders(
-      parts
-        .flatMap((text) => (text ?? "").split(/\r?\n/u))
-        .map((line) => line.trim())
-        .filter(
-          (line) => line.length > 0 && !isParentheticalReminderLine(line),
-        ),
+  gameplayLineSlicesFromTextParts(parts).map((slice) => slice.text);
+
+export const gameplayLineSlicesFromTextParts = (
+  parts: readonly (string | null | undefined)[],
+): SourceSlice[] =>
+  groupChooseOneBlockSlices(
+    joinDetachedEffectHeaderSlices(
+      parts.flatMap((text) => rangedNonReminderLines(text ?? "")),
     ),
   );
+
+const rangedNonReminderLines = (text: string): SourceSlice[] => {
+  const root = createSourceSlice(text);
+  const lines: SourceSlice[] = [];
+  const pattern = /[^\r\n]+/gu;
+
+  for (const match of root.rawText.matchAll(pattern)) {
+    const index = match.index;
+    const rawText = match[0];
+    const trimmed = trimSource({
+      text: rawText,
+      rawText,
+      start: root.start + index,
+      end: root.start + index + rawText.length,
+    });
+    if (trimmed.text.length > 0 && !isParentheticalReminderLine(trimmed.text)) {
+      lines.push(trimmed);
+    }
+  }
+
+  return lines;
+};
 
 const isParentheticalReminderLine = (line: string): boolean =>
   line.startsWith("(") && line.endsWith(")");
 
-const joinDetachedEffectHeaders = (lines: readonly string[]): string[] => {
-  const joined: string[] = [];
-  let pendingHeader = "";
+const joinDetachedEffectHeaderSlices = (
+  lines: readonly SourceSlice[],
+): SourceSlice[] => {
+  const joined: SourceSlice[] = [];
+  let pendingHeaders: SourceSlice[] = [];
 
   for (const line of lines) {
-    if (isDetachedEffectHeader(line)) {
-      pendingHeader =
-        pendingHeader.length === 0 ? line : `${pendingHeader} ${line}`;
+    if (isDetachedEffectHeader(line.text)) {
+      pendingHeaders = [...pendingHeaders, line];
       continue;
     }
-    joined.push(pendingHeader.length === 0 ? line : `${pendingHeader} ${line}`);
-    pendingHeader = "";
+
+    if (pendingHeaders.length === 0) {
+      joined.push(line);
+    } else {
+      const slices = [...pendingHeaders, line];
+      joined.push(
+        joinSlices(slices, slices.map((slice) => slice.text).join(" ")),
+      );
+      pendingHeaders = [];
+    }
   }
 
-  if (pendingHeader.length > 0) {
-    joined.push(pendingHeader);
+  if (pendingHeaders.length > 0) {
+    joined.push(
+      joinSlices(
+        pendingHeaders,
+        pendingHeaders.map((slice) => slice.text).join(" "),
+      ),
+    );
   }
 
   return joined;
@@ -42,8 +83,10 @@ const isDetachedEffectHeader = (line: string): boolean =>
   supportedEntryPoints.some((entryPoint) => entryPoint.text === line) ||
   line === "[Once Per Turn]";
 
-const groupChooseOneBlocks = (lines: readonly string[]): string[] => {
-  const grouped: string[] = [];
+const groupChooseOneBlockSlices = (
+  lines: readonly SourceSlice[],
+): SourceSlice[] => {
+  const grouped: SourceSlice[] = [];
   let index = 0;
 
   while (index < lines.length) {
@@ -52,7 +95,7 @@ const groupChooseOneBlocks = (lines: readonly string[]): string[] => {
       break;
     }
 
-    if (!isChooseOneHeader(line)) {
+    if (!isChooseOneHeader(line.text)) {
       grouped.push(line);
       index += 1;
       continue;
@@ -62,18 +105,20 @@ const groupChooseOneBlocks = (lines: readonly string[]): string[] => {
     index += 1;
     while (index < lines.length) {
       const bulletLine = lines[index];
-      if (bulletLine === undefined || !bulletLine.startsWith("\u2022")) {
+      if (bulletLine === undefined || !bulletLine.text.startsWith("\u2022")) {
         break;
       }
       block.push(bulletLine);
       index += 1;
     }
     const trailingLine = lines[index];
-    if (trailingLine !== undefined && /^then,/iu.test(trailingLine)) {
+    if (trailingLine !== undefined && /^then,/iu.test(trailingLine.text)) {
       block.push(trailingLine);
       index += 1;
     }
-    grouped.push(block.join("\n"));
+    grouped.push(
+      joinSlices(block, block.map((slice) => slice.text).join("\n")),
+    );
   }
 
   return grouped;
@@ -81,3 +126,18 @@ const groupChooseOneBlocks = (lines: readonly string[]): string[] => {
 
 const isChooseOneHeader = (line: string): boolean =>
   /choose one:\s*$/iu.test(line);
+
+const joinSlices = (
+  slices: readonly SourceSlice[],
+  text: string,
+): SourceSlice => {
+  const first = slices[0];
+  const last = slices[slices.length - 1];
+
+  return {
+    text,
+    rawText: slices.map((slice) => slice.rawText).join("\n"),
+    start: first?.start ?? 0,
+    end: last?.end ?? 0,
+  };
+};
