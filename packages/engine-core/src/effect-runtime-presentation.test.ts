@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vitest";
-import type { EffectTextSourceMap } from "@optcg/types";
+import type {
+  CardRef,
+  EffectDefinition,
+  EffectTextSourceMap,
+  ResolvedCard,
+} from "@optcg/types";
 
 import {
+  activeEffectTextPresentationForEffectBlock,
   activeSpanIdsForCost,
   activeSpanIdsForEffectPath,
   activeSpanIdsForSearchRevealRemaining,
@@ -10,6 +16,89 @@ import {
 } from "./runtime/effect-presentation.js";
 
 describe("runtime effect presentation refs", () => {
+  const source: CardRef = {
+    instanceId: "source-instance" as CardRef["instanceId"],
+    cardId: "OP00-001" as CardRef["cardId"],
+    playerId: "p1" as CardRef["playerId"],
+  };
+  const resolvedCard = {
+    cardId: source.cardId,
+    language: "en",
+    name: "Test Card",
+    category: "character",
+    set: "TEST",
+    setName: "Test Set",
+    released: true,
+    colors: [],
+    attributes: [],
+    types: [],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "source",
+    behaviorHash: "behavior",
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      tested: true,
+      rulesVersion: "rules",
+      cardDataVersion: "cards",
+      sourceTextHash: "source",
+      behaviorHash: "behavior",
+      effectDefinitionId: "definition",
+    },
+  } satisfies ResolvedCard;
+  const effectBlock = {
+    id: "effect:on-play" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: { type: "draw", player: "self", count: 1 },
+  } satisfies EffectDefinition["effects"][number];
+
+  test("falls back to a no-highlight effect presentation when parser spans are unavailable", () => {
+    expect(
+      activeEffectTextPresentationForEffectBlock({
+        effectBlock,
+        resolvedCard,
+        source,
+      }),
+    ).toEqual({
+      source,
+      textKind: "effect",
+      activeSpanIds: [],
+    });
+  });
+
+  test("falls back to no-highlight presentation when source map ids are stale", () => {
+    expect(
+      activeEffectTextPresentationForEffectBlock({
+        effectBlock: {
+          ...effectBlock,
+          presentation: {
+            textKind: "effect",
+            spanIds: ["span:missing"],
+          },
+        },
+        resolvedCard: {
+          ...resolvedCard,
+          effectTextSourceMap: {
+            textKind: "effect",
+            sourceText: "[On Play] Draw 1 card.",
+            spans: [],
+          },
+        },
+        source,
+      }),
+    ).toEqual({
+      source,
+      textKind: "effect",
+      activeSpanIds: [],
+    });
+  });
+
   test("resolves sequence effect paths to parser span ids", () => {
     const sourceMap: EffectTextSourceMap = {
       textKind: "effect",

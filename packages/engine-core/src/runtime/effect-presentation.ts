@@ -94,23 +94,31 @@ export const activeEffectTextPresentationForEffectBlock = ({
   readonly resolvedCard: ResolvedCard;
   readonly source: CardRef;
 }): ActiveEffectTextPresentation | undefined => {
+  const fallbackTextKind =
+    effectBlock.presentation?.textKind ??
+    (effectBlock.trigger.type === "trigger" ? "trigger" : "effect");
+  const fallbackPresentation: ActiveEffectTextPresentation = {
+    source,
+    textKind: fallbackTextKind,
+    activeSpanIds: [],
+  };
   const presentation = effectBlock.presentation;
   if (presentation === undefined) {
-    return undefined;
+    return fallbackPresentation;
   }
   const sourceMap =
     presentation.textKind === "trigger"
       ? resolvedCard.triggerTextSourceMap
       : resolvedCard.effectTextSourceMap;
   if (sourceMap?.textKind !== presentation.textKind) {
-    return undefined;
+    return fallbackPresentation;
   }
   const mappedSpanIds = new Set(sourceMap.spans.map((span) => span.id));
   const activeSpanIds = presentation.spanIds.filter((spanId) =>
     mappedSpanIds.has(spanId),
   );
   if (activeSpanIds.length === 0) {
-    return undefined;
+    return fallbackPresentation;
   }
   return {
     source,
