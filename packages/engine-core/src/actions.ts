@@ -218,26 +218,14 @@ const shouldContinueRuntimeAfterEffectDecision = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]>,
 ): boolean => {
+  if (decision.type === "chooseQuantity") {
+    return false;
+  }
   const causedBy = decision.causedBy;
   if (causedBy.type !== "effect") {
     return false;
   }
-  const queueEntry = state.effectQueue.find(
-    (entry) => entry.id === causedBy.queueEntryId,
-  );
-  return (
-    queueEntry?.causedBy.type === "ruleProcess" &&
-    (queueEntry.causedBy.name === "effectRuntime:onPlayTriggerQueueing" ||
-      queueEntry.causedBy.name === "effectRuntime:mainEventTriggerQueueing" ||
-      queueEntry.causedBy.name ===
-        "effectRuntime:opponentActivationTriggerQueueing" ||
-      queueEntry.causedBy.name ===
-        "effectRuntime:whenAttackingTriggerQueueing" ||
-      queueEntry.causedBy.name ===
-        "effectRuntime:onOpponentAttackTriggerQueueing" ||
-      queueEntry.causedBy.name === "effectRuntime:onKOTriggerQueueing" ||
-      queueEntry.causedBy.name === "effectRuntime:endOfYourTurnTriggerQueueing")
-  );
+  return state.effectQueue.some((entry) => entry.id === causedBy.queueEntryId);
 };
 
 const continueAfterEffectDecision = (

@@ -18,6 +18,7 @@ import {
   queueDrawForP1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
+  setupOnKODefinition,
   toCardId,
   toEffectId,
   toQueueEntryId,
@@ -286,5 +287,97 @@ test("all-target K.O. sequence filters against current computed power", () => {
 test("optional-cost nested all-target K.O. sequence filters against current computed power", () => {
   assertZeroPowerKoAfterLifeFaceUpCost(
     optionalCostThenNestedReduceOpponentPowerThenKoZeroPowerSequence(),
+  );
+});
+
+test("generic effect decision continuation resolves nested On K.O. triggers", () => {
+  const state = sequenceQueueState(
+    optionalCostThenNestedReduceOpponentPowerThenKoZeroPowerSequence(),
+  );
+  const p2State = must(state.players[p2], "p2");
+  const koTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(p2State.hand[0], "zero after modifier target"),
+      cardId: toCardId("nested-on-ko-target"),
+    },
+    zone: "characterArea",
+    index: 0,
+  });
+  const survivor = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(p2State.hand[1], "positive after modifier target"),
+      cardId: toCardId("nested-on-ko-survivor"),
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  p2State.hand = p2State.hand
+    .filter(
+      (card) =>
+        card.instanceId !== koTarget.instanceId &&
+        card.instanceId !== survivor.instanceId,
+    )
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p2, slot: "hand", index },
+    }));
+  const onKODefinition = setupOnKODefinition(
+    state,
+    koTarget,
+    "def-on-ko-after-all-target-ko",
+  );
+  const koTargetCard = must(
+    state.cardManifest.cards[koTarget.cardId],
+    "K.O. target support card",
+  );
+  state.cardManifest.cards[koTarget.cardId] = {
+    ...koTargetCard,
+    power: 2000,
+  };
+  state.cardManifest.cards[survivor.cardId] = resolvedCard({
+    cardId: survivor.cardId,
+    category: "character",
+    power: 3000,
+  });
+  const p2HandBefore = p2State.hand.length;
+  const p2DeckBefore = p2State.deck.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "turnLifeFaceUp");
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "turnLifeFaceUp:top",
+    },
+  });
+  const nextP2 = must(result.state.players[p2], "p2 result");
+  const onKOEffect = must(onKODefinition.effects[0], "On K.O. effect");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.equal(nextP2.hand.length, p2HandBefore + 1);
+  assert.equal(nextP2.deck.length, p2DeckBefore - 1);
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === koTarget.instanceId),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => {
+      if (event.type !== "effectResolved") {
+        return false;
+      }
+      const payload = event.payload as { effectBlockId?: unknown };
+      return payload.effectBlockId === onKOEffect.id;
+    }),
+    true,
   );
 });
