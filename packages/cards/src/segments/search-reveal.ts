@@ -1,4 +1,10 @@
-import type { ExpressionParseResult, ParseInput } from "../types.js";
+import type { EffectTextSpan } from "@optcg/types";
+
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 import {
   parseRestToTrash,
   parseRestToBottomAnyOrder,
@@ -8,7 +14,12 @@ import {
 import { parseExpression } from "../expression-parser.js";
 import { parseThenConnector } from "../connectors/index.js";
 import { parseTrashFromHandInstruction } from "../instructions/index.js";
-import { sourceSpan } from "../source-slices.js";
+import {
+  sourceSpan,
+  splitSourceByDelimiter,
+  type SourceDelimiter,
+  type SourceSlice,
+} from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function searchRevealExpressionParser(
@@ -52,10 +63,11 @@ export function searchRevealExpressionParser(
     ...reveal.evidence,
     ...remaining.evidence,
   ] as const;
-  const presentationSpans =
-    input.source === undefined
-      ? []
-      : [sourceSpan("span:body", "body", input.source, searchEvidence)];
+  const presentationSpans = searchRevealPresentationSpans({
+    input,
+    remainingEvidence: remaining.evidence,
+    searchEvidence,
+  });
 
   if (remaining.rest.length === 0) {
     return {
@@ -104,3 +116,73 @@ export function searchRevealExpressionParser(
         }),
   };
 }
+
+const sourceFromDelimiterThroughSegment = (
+  inputSource: SourceSlice,
+  delimiter: SourceDelimiter,
+  segment: SourceSlice,
+): SourceSlice => {
+  const startOffset = delimiter.start - inputSource.start;
+  const endOffset = segment.end - inputSource.start;
+  const rawText = inputSource.rawText.slice(startOffset, endOffset);
+  return {
+    text: rawText.trim(),
+    rawText,
+    start: delimiter.start,
+    end: segment.end,
+  };
+};
+
+const searchRevealPresentationSpans = ({
+  input,
+  remainingEvidence,
+  searchEvidence,
+}: {
+  readonly input: ParseInput;
+  readonly remainingEvidence: readonly PrimitiveEvidence[];
+  readonly searchEvidence: readonly PrimitiveEvidence[];
+}): readonly EffectTextSpan[] => {
+  if (input.source === undefined) {
+    return [];
+  }
+
+  const split = splitSourceByDelimiter(input.source, /\s+Then,\s+/u, "then");
+  const selectionSource = split?.segments[0];
+  const remainingSegment = split?.segments[1];
+  const thenDelimiter = split?.delimiters[0];
+  if (
+    selectionSource === undefined ||
+    remainingSegment === undefined ||
+    thenDelimiter === undefined
+  ) {
+    return [
+      sourceSpan("span:search:selection", "body", input.source, searchEvidence),
+    ];
+  }
+
+  return [
+    sourceSpan(
+      "span:search:selection",
+      "body",
+      selectionSource,
+      searchEvidence,
+    ),
+    {
+      id: "span:search:then",
+      role: "connector",
+      start: thenDelimiter.start,
+      end: thenDelimiter.end,
+      text: thenDelimiter.text,
+    },
+    sourceSpan(
+      "span:search:remaining",
+      "body",
+      sourceFromDelimiterThroughSegment(
+        input.source,
+        thenDelimiter,
+        remainingSegment,
+      ),
+      remainingEvidence,
+    ),
+  ];
+};

@@ -93,7 +93,7 @@ describe("card effect parser source maps", () => {
     );
   });
 
-  it("emits a body span for search reveal effects", () => {
+  it("emits separate body spans for search reveal selection and remaining cards", () => {
     const text =
       "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.";
     const result = parseCardEffectLinesDetailed(text);
@@ -108,13 +108,20 @@ describe("card effect parser source maps", () => {
     }
 
     const spans = parsed.sourceMap?.spans ?? [];
-    expect(
-      spans.some(
-        (span) =>
-          span.role === "body" &&
-          span.primitiveEvidence?.includes("instruction:search"),
-      ),
-    ).toBe(true);
+    const selection = spans.find((span) => span.id === "span:search:selection");
+    const remaining = spans.find((span) => span.id === "span:search:remaining");
+
+    expect(selection).toMatchObject({
+      role: "body",
+      text: "Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand.",
+    });
+    expect(selection?.primitiveEvidence).toContain("instruction:search");
+    expect(remaining).toMatchObject({
+      role: "body",
+      text: "Then, place the rest at the bottom of your deck in any order.",
+    });
+    expect(remaining?.primitiveEvidence).toContain("remaining:bottomDeck");
+    expect(spans.some((span) => span.id === "span:body")).toBe(false);
   });
 
   it.each([

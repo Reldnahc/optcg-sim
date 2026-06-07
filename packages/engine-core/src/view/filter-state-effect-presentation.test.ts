@@ -4,7 +4,9 @@ import { test } from "vitest";
 import type {
   CardRef,
   DecisionId,
+  EffectExecutionFrame,
   EffectId,
+  EffectTextSpanId,
   EffectQueueEntry,
   InstanceId,
   QueueEntryId,
@@ -112,6 +114,97 @@ test("player decision projection includes active effect text for visible queued 
   const opponentView = filterStateForPlayer(state, p2);
   assert.equal(opponentView.pendingDecision, undefined);
   assert.deepEqual(opponentView.activeEffectText, entry.presentation);
+});
+
+test("player decision projection narrows active effect text to the paused sequence segment", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  sourceCard.instanceId = toInstanceId("sequence-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry: EffectQueueEntry = {
+    ...queuedEffect(source),
+    presentation: {
+      source,
+      textKind: "effect",
+      activeSpanIds: [
+        "span:sequence:0:body",
+        "span:sequence:1:body",
+      ] as EffectTextSpanId[],
+    },
+  };
+  const decisionId = toDecisionId("decision:selectTargets:sequence:test:0");
+  const decisionCausedBy = {
+    type: "effect" as const,
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  };
+  state.effectQueue = [entry];
+  state.pendingDecision = {
+    id: decisionId,
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: decisionCausedBy,
+    visibility: { type: "public" },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "opponent",
+      zone: "characterArea",
+      min: 0,
+      max: 1,
+      allowFewerIfUnavailable: true,
+      filter: { categories: ["character"] },
+    },
+    candidates: [],
+  };
+  state.effectExecutionFrames = [
+    {
+      queueEntryId: entry.id,
+      effectBlockId: entry.effectBlockId,
+      effectPath: ["effect", "sequence", "1", "nested", "sequence"],
+      nextSegmentIndex: 1,
+      segmentResults: {},
+      savedReferences: {},
+      transientSets: {},
+      pendingDecision: {
+        decisionId,
+        causedBy: decisionCausedBy,
+        createdAtStateSeq: state.seq,
+        resumeAtSegmentIndex: 0,
+      },
+    } satisfies EffectExecutionFrame,
+  ];
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(view.activeEffectText, {
+    source,
+    textKind: "effect",
+    activeSpanIds: ["span:sequence:1:body"],
+  });
+  assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
+    source,
+    textKind: "effect",
+    activeSpanIds: ["span:sequence:1:body"],
+  });
 });
 
 test("player decision projection hides active effect text when the queued source is hidden", () => {

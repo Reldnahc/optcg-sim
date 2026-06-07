@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import { parseCardEffectLinesDetailed } from "./card-effect-line-parser/index.js";
+
+const hancockEffectText =
+  "[On Play] Up to 1 of your opponent's Characters other than [Monkey.D.Luffy] cannot attack until the end of your opponent's next turn. Then, place up to 1 Character with a cost of 1 or less at the bottom of the owner's deck.";
 
 describe("card effect line parser owner deck-bottom field movement", () => {
   it("parses selected cannot-attack followed by owner deck-bottom placement", () => {
-    const result = parseCardEffectLine(
-      "[On Play] Up to 1 of your opponent's Characters other than [Monkey.D.Luffy] cannot attack until the end of your opponent's next turn. Then, place up to 1 Character with a cost of 1 or less at the bottom of the owner's deck.",
-    );
+    const result = parseCardEffectLine(hancockEffectText);
 
     expect(result).toMatchObject({
       block: {
@@ -109,6 +111,35 @@ describe("card effect line parser owner deck-bottom field movement", () => {
         "destination:deck",
         "position:bottom",
         "composition:selectThenApply",
+      ]),
+    );
+  });
+
+  it("keeps top-level Then-separated source spans for the Hancock-style sequence", () => {
+    const result = parseCardEffectLinesDetailed(hancockEffectText);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:sequence:0:body",
+          role: "body",
+          text: "Up to 1 of your opponent's Characters other than [Monkey.D.Luffy] cannot attack until the end of your opponent's next turn.",
+        }),
+        expect.objectContaining({
+          id: "span:sequence:1:body",
+          role: "body",
+          text: "place up to 1 Character with a cost of 1 or less at the bottom of the owner's deck.",
+        }),
       ]),
     );
   });

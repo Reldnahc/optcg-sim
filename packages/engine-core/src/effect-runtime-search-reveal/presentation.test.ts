@@ -39,23 +39,68 @@ const supportedSearch = (): Extract<Effect, { type: "search" }> => ({
   },
 });
 
-const createQueuedSearchState = () => {
+const supportedSearchWithRemaining = (): Extract<
+  Effect,
+  { type: "search" }
+> => ({
+  type: "search",
+  request: {
+    ...supportedSearch().request,
+    lookCount: 3,
+    remainingCards: {
+      destination: "deck",
+      position: "bottom",
+      order: "ownerChoice",
+    },
+  },
+});
+
+const createQueuedSearchState = (
+  effect: Extract<Effect, { type: "search" }> = supportedSearch(),
+) => {
   const state = createActiveState();
   const player = must(state.players[p1], "p1");
   const source = player.leader;
-  const topDeck = must(player.deck[0], "top deck");
+  const lookCount = effect.request.lookCount ?? 0;
+  const missingDeckCards = Math.max(0, lookCount - player.deck.length);
+  if (missingDeckCards > 0) {
+    const movedFromHand = player.hand
+      .slice(0, missingDeckCards)
+      .map((card, index) => ({
+        ...card,
+        zone: {
+          zone: "deck" as const,
+          playerId: p1,
+          slot: "deck" as const,
+          index: player.deck.length + index,
+        },
+      }));
+    player.deck = [...player.deck, ...movedFromHand];
+    player.hand = player.hand.slice(missingDeckCards).map((card, index) => ({
+      ...card,
+      zone: {
+        zone: "hand" as const,
+        playerId: p1,
+        slot: "hand" as const,
+        index,
+      },
+    }));
+  }
+  const topDeckCards = player.deck.slice(0, lookCount);
   player.deck = [
-    {
-      ...topDeck,
-      cardId: "search-reveal-character-top" as typeof topDeck.cardId,
-    },
-    ...player.deck.slice(1),
+    ...topDeckCards.map((card, index) => ({
+      ...card,
+      cardId:
+        `search-reveal-character-top-${String(index)}` as typeof card.cardId,
+    })),
+    ...player.deck.slice(lookCount),
   ];
-  const searched = must(player.deck[0], "search top deck");
-  state.cardManifest.cards[searched.cardId] = resolvedCard({
-    cardId: searched.cardId,
-    category: "character",
-  });
+  for (const searched of player.deck.slice(0, lookCount)) {
+    state.cardManifest.cards[searched.cardId] = resolvedCard({
+      cardId: searched.cardId,
+      category: "character",
+    });
+  }
 
   const effectBlockId = toEffectId("OP01-015:auto-search-reveal-1");
   const baseEntry = queueDrawForP1();
@@ -99,7 +144,7 @@ const createQueuedSearchState = () => {
       {
         ...must(baseDefinition.effects[0], "base effect"),
         id: effectBlockId,
-        effect: supportedSearch(),
+        effect,
         sourcePresencePolicy: "mustRemainInSameZone" as const,
       },
     ],
@@ -160,5 +205,46 @@ test("queued search reveal presentation is visible while choosing and on resolut
     orderingGroup: entry.orderingGroup,
     presentation,
     status: "resolved",
+  });
+});
+
+test("queued search reveal presentation narrows while choosing and ordering remaining cards", () => {
+  const { entry, state } = createQueuedSearchState(
+    supportedSearchWithRemaining(),
+  );
+  state.effectQueue = [
+    {
+      ...entry,
+      presentation: {
+        source: entry.source,
+        textKind: "effect",
+        activeSpanIds: [
+          "span:search:selection",
+          "span:search:remaining",
+        ] as EffectTextSpanId[],
+      },
+    },
+  ];
+
+  const created = processEffectRuntime(state);
+  const decision = must(created.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(filterStateForPlayer(created.state, p1).activeEffectText, {
+    source: entry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:search:selection"],
+  });
+
+  const candidate = must(decision.candidates[0], "candidate").card;
+  const ordered = applyAction(
+    created.state,
+    respondWithCards(decision.id, [candidate]),
+  );
+
+  assert.equal(ordered.state.pendingDecision?.type, "orderCards");
+  assert.deepEqual(filterStateForPlayer(ordered.state, p1).activeEffectText, {
+    source: entry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:search:remaining"],
   });
 });
