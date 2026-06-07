@@ -37,6 +37,10 @@ import {
   toSnapshot,
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import {
+  activeEffectTextPresentationForEffectBlock,
+  effectQueueEntryPresentationForEffectBlock,
+} from "../effect-presentation.js";
 
 export const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
@@ -179,6 +183,16 @@ export const createKOTriggerQueueing = (
         effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
           ? { ...source, zone: origin }
           : source;
+      const candidatePresentation = activeEffectTextPresentationForEffectBlock({
+        effectBlock,
+        resolvedCard: resolved,
+        source: {
+          instanceId: candidateSource.instanceId,
+          cardId: candidateSource.cardId,
+          playerId: payload.playerId,
+          zone: candidateSource.zone,
+        },
+      });
       candidates.push({
         effectBlockId: effectBlock.id,
         controllerId: candidateSource.controller,
@@ -191,6 +205,9 @@ export const createKOTriggerQueueing = (
         sourceSnapshot: toSnapshot(candidateSource, resolved),
         triggerEventId: event.id,
         sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+        ...(candidatePresentation === undefined
+          ? {}
+          : { presentation: candidatePresentation }),
         causedBy: {
           type: "ruleProcess",
           name: "effectRuntime:onKOTriggerCandidateDetection",
@@ -256,6 +273,9 @@ export const createKOTriggerQueueing = (
           type: "ruleProcess",
           name: "effectRuntime:onKOTriggerQueueing",
         },
+        ...(candidate.presentation === undefined
+          ? {}
+          : { presentation: candidate.presentation }),
       };
       appended.push(entry);
     }
@@ -348,18 +368,19 @@ export const createKOTriggerQueueing = (
             : "nonTurnPlayer";
         const queueId =
           `queue-entry:${String(effectResolved.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
+        const entrySource = {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.controller,
+          zone: source.zone,
+        };
         const entry: EffectQueueEntry = {
           id: queueId,
           state: "pending",
           timingWindowId: resolvedEntry.timingWindowId,
           generation: resolvedEntry.generation + 1,
           controllerId: source.controller,
-          source: {
-            instanceId: source.instanceId,
-            cardId: source.cardId,
-            playerId: source.controller,
-            zone: source.zone,
-          },
+          source: entrySource,
           sourceSnapshot: toSnapshot(source, resolved),
           triggerEventId: effectResolved.id,
           effectBlockId: effectBlock.id,
@@ -372,6 +393,11 @@ export const createKOTriggerQueueing = (
             queueEntryId: resolvedEntry.id,
             effectId: resolvedEntry.effectBlockId,
           },
+          ...effectQueueEntryPresentationForEffectBlock({
+            effectBlock,
+            resolvedCard: resolved,
+            source: entrySource,
+          }),
         };
         appended.push(entry);
       }

@@ -25,6 +25,7 @@ import {
   findCardInstance,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 
 const attackDeclaredPayloadMatchesBattle = (
   event: EngineEvent,
@@ -240,18 +241,19 @@ export const createAttackTriggerQueueing = (
           `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
         const timingWindowId =
           `timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"];
+        const entrySource = {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.zone.playerId,
+          zone: source.zone,
+        };
         const entry: EffectQueueEntry = {
           id: queueId,
           state: "pending",
           timingWindowId,
           generation: 0,
           controllerId: source.zone.playerId,
-          source: {
-            instanceId: source.instanceId,
-            cardId: source.cardId,
-            playerId: source.zone.playerId,
-            zone: source.zone,
-          },
+          source: entrySource,
           sourceSnapshot: toSnapshot(source, resolved),
           triggerEventId: event.id,
           effectBlockId: effectBlock.id,
@@ -263,6 +265,11 @@ export const createAttackTriggerQueueing = (
             type: "ruleProcess",
             name: "effectRuntime:whenAttackingTriggerQueueing",
           },
+          ...effectQueueEntryPresentationForEffectBlock({
+            effectBlock,
+            resolvedCard: resolved,
+            source: entrySource,
+          }),
         };
         appended.push(entry);
       }
@@ -479,18 +486,19 @@ export const createAttackTriggerQueueing = (
             `queue-entry:${String(event.id)}:onOpponentAttack:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
           const timingWindowId =
             `timing-window:${String(event.id)}:onOpponentAttack` as EffectQueueEntry["timingWindowId"];
+          const entrySource = {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: source.zone.playerId,
+            zone: source.zone,
+          };
           const entry: EffectQueueEntry = {
             id: queueId,
             state: "pending",
             timingWindowId,
             generation: 0,
             controllerId: source.zone.playerId,
-            source: {
-              instanceId: source.instanceId,
-              cardId: source.cardId,
-              playerId: source.zone.playerId,
-              zone: source.zone,
-            },
+            source: entrySource,
             sourceSnapshot: toSnapshot(source, resolved),
             triggerEventId: event.id,
             effectBlockId: effectBlock.id,
@@ -502,6 +510,11 @@ export const createAttackTriggerQueueing = (
               type: "ruleProcess",
               name: "effectRuntime:onOpponentAttackTriggerQueueing",
             },
+            ...effectQueueEntryPresentationForEffectBlock({
+              effectBlock,
+              resolvedCard: resolved,
+              source: entrySource,
+            }),
           };
           appended.push(entry);
         }

@@ -20,6 +20,7 @@ import type {
   EndOfYourTurnTriggerQueueingFailureReason,
 } from "./core.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 
 const endPhaseStartedEvents = (state: GameState): readonly EngineEvent[] => {
   const queuedTriggerEventIds = new Set(
@@ -140,6 +141,12 @@ export const createEndOfTurnTriggerQueueing = (
           );
         }
         for (const effectBlock of matching) {
+          const entrySource = {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: controllerId,
+            zone: source.zone,
+          };
           appended.push({
             id: `queue-entry:${String(event.id)}:endOfYourTurn:${String(
               effectBlock.id,
@@ -149,12 +156,7 @@ export const createEndOfTurnTriggerQueueing = (
               `timing-window:${String(event.id)}:endOfYourTurn` as EffectQueueEntry["timingWindowId"],
             generation: 0,
             controllerId,
-            source: {
-              instanceId: source.instanceId,
-              cardId: source.cardId,
-              playerId: controllerId,
-              zone: source.zone,
-            },
+            source: entrySource,
             sourceSnapshot: toSnapshot(source, resolved),
             triggerEventId: event.id,
             effectBlockId: effectBlock.id,
@@ -166,6 +168,11 @@ export const createEndOfTurnTriggerQueueing = (
               type: "ruleProcess",
               name: "effectRuntime:endOfYourTurnTriggerQueueing",
             },
+            ...effectQueueEntryPresentationForEffectBlock({
+              effectBlock,
+              resolvedCard: resolved,
+              source: entrySource,
+            }),
           });
         }
       }

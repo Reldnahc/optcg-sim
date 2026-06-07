@@ -2,6 +2,7 @@ import type {
   ActiveEffectTextPresentation,
   CardRef,
   EffectDefinition,
+  EffectQueueEntry,
   EffectTextSourceMap,
   EffectTextSpanId,
   ResolvedCard,
@@ -71,4 +72,13 @@ export const activeEffectTextPresentationForEffectBlock = ({
     textKind: presentation.textKind,
     activeSpanIds,
   };
+};
+
+export const effectQueueEntryPresentationForEffectBlock = (params: {
+  readonly effectBlock: EffectDefinition["effects"][number];
+  readonly resolvedCard: ResolvedCard;
+  readonly source: CardRef;
+}): Pick<EffectQueueEntry, "presentation"> | Record<string, never> => {
+  const presentation = activeEffectTextPresentationForEffectBlock(params);
+  return presentation === undefined ? {} : { presentation };
 };

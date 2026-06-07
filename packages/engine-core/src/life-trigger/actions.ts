@@ -36,6 +36,7 @@ import {
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "../effect-runtime-sequence/support.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -626,6 +627,11 @@ const applyActivatedTriggerResponse = (
       queuedAtStateSeq: toStateSeq(state.seq + 1),
       sourcePresencePolicy,
       causedBy: { type: "decision", decisionId: decision.id },
+      ...effectQueueEntryPresentationForEffectBlock({
+        effectBlock: effect,
+        resolvedCard: supported.resolved,
+        source,
+      }),
     };
     appendEvent(
       state,

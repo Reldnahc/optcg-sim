@@ -191,6 +191,59 @@ test("queues supported When Attacking effect from a multi-effect definition with
   );
 });
 
+test("queued When Attacking effects carry active text presentation from parser spans", () => {
+  const { state, attacker, definition } = attackQueueingState();
+  const whenAttackingEffect = must(
+    definition.effects[0],
+    "whenAttacking effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        {
+          ...whenAttackingEffect,
+          presentation: {
+            textKind: "effect",
+            spanIds: ["span:when-attacking-body"],
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.cards[attacker.cardId] = {
+    ...must(state.cardManifest.cards[attacker.cardId], "attacker card"),
+    effectText: "[When Attacking] Draw 1 card.",
+    effectTextSourceMap: {
+      textKind: "effect",
+      sourceText: "[When Attacking] Draw 1 card.",
+      spans: [
+        {
+          id: "span:when-attacking-body",
+          role: "body",
+          start: 17,
+          end: 29,
+          text: "Draw 1 card.",
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.effectQueue[0]?.presentation, {
+    source: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+      zone: attacker.zone,
+    },
+    textKind: "effect",
+    activeSpanIds: ["span:when-attacking-body"],
+  });
+});
+
 test("queues every supported same-entrypoint When Attacking effect block", () => {
   const { state, definition } = attackQueueingState();
   const whenAttackingEffect = must(

@@ -26,6 +26,7 @@ import {
   toSnapshot,
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 
 const queuedTriggerEventIds = (state: GameState): Set<string> =>
   new Set(
@@ -219,18 +220,19 @@ export const createLifeRemovedTriggerQueueing = (
             `queue-entry:${String(event.id)}:lifeRemoved:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
           const timingWindowId =
             `timing-window:${String(event.id)}:lifeRemoved` as EffectQueueEntry["timingWindowId"];
+          const entrySource = {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: source.controller,
+            zone: source.zone,
+          };
           const entry: EffectQueueEntry = {
             id: queueId,
             state: "pending",
             timingWindowId,
             generation: 0,
             controllerId: source.controller,
-            source: {
-              instanceId: source.instanceId,
-              cardId: source.cardId,
-              playerId: source.controller,
-              zone: source.zone,
-            },
+            source: entrySource,
             sourceSnapshot: toSnapshot(source, resolved),
             triggerEventId: event.id,
             effectBlockId: effectBlock.id,
@@ -245,6 +247,11 @@ export const createLifeRemovedTriggerQueueing = (
               type: "ruleProcess",
               name: "effectRuntime:lifeRemovedTriggerQueueing",
             },
+            ...effectQueueEntryPresentationForEffectBlock({
+              effectBlock,
+              resolvedCard: resolved,
+              source: entrySource,
+            }),
           };
           appended.push(entry);
         }

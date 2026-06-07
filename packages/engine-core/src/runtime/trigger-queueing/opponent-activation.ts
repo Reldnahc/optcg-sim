@@ -25,6 +25,7 @@ import {
   fieldTriggerSources,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 
 const queuedOpponentActivationTriggerEventIds = (
   state: GameState,
@@ -254,6 +255,12 @@ export const createOpponentActivationTriggerQueueing = (
           );
         }
         for (const effectBlock of matching) {
+          const entrySource = {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: source.controller,
+            zone: source.zone,
+          };
           const entry: EffectQueueEntry = {
             id: `queue-entry:${String(event.id)}:opponentActivated:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"],
             state: "pending",
@@ -261,12 +268,7 @@ export const createOpponentActivationTriggerQueueing = (
               `timing-window:${String(event.id)}:opponentActivated` as EffectQueueEntry["timingWindowId"],
             generation: 0,
             controllerId: source.controller,
-            source: {
-              instanceId: source.instanceId,
-              cardId: source.cardId,
-              playerId: source.controller,
-              zone: source.zone,
-            },
+            source: entrySource,
             sourceSnapshot: toSnapshot(source, resolved),
             triggerEventId: event.id,
             effectBlockId: effectBlock.id,
@@ -281,6 +283,11 @@ export const createOpponentActivationTriggerQueueing = (
               type: "ruleProcess",
               name: "effectRuntime:opponentActivationTriggerQueueing",
             },
+            ...effectQueueEntryPresentationForEffectBlock({
+              effectBlock,
+              resolvedCard: resolved,
+              source: entrySource,
+            }),
           };
           appended.push(entry);
         }

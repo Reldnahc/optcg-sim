@@ -21,6 +21,7 @@ import {
   fieldTriggerSources,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   HandTrashedByEffectTriggerQueueingFailureReason,
@@ -215,6 +216,12 @@ export const createHandTrashedByEffectTriggerQueueing = (
           );
         }
         for (const effectBlock of matching) {
+          const entrySource = {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: source.controller,
+            zone: source.zone,
+          };
           const entry: EffectQueueEntry = {
             id: `queue-entry:${String(event.id)}:handTrashedByEffect:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"],
             state: "pending",
@@ -222,12 +229,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
               `timing-window:${String(event.id)}:handTrashedByEffect` as EffectQueueEntry["timingWindowId"],
             generation: 0,
             controllerId: source.controller,
-            source: {
-              instanceId: source.instanceId,
-              cardId: source.cardId,
-              playerId: source.controller,
-              zone: source.zone,
-            },
+            source: entrySource,
             sourceSnapshot: toSnapshot(source, resolved),
             triggerEventId: event.id,
             effectBlockId: effectBlock.id,
@@ -242,6 +244,11 @@ export const createHandTrashedByEffectTriggerQueueing = (
               type: "ruleProcess",
               name: "effectRuntime:handTrashedByEffectTriggerQueueing",
             },
+            ...effectQueueEntryPresentationForEffectBlock({
+              effectBlock,
+              resolvedCard: resolved,
+              source: entrySource,
+            }),
           };
           appended.push(entry);
         }

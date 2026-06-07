@@ -9,6 +9,7 @@ import type {
 import { appendEvent, toStateSeq } from "./action-results.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import type { ResolveImplementedDslEffectDefinition } from "./effect-runtime-queue/target-decisions.js";
+import { effectQueueEntryPresentationForEffectBlock } from "./runtime/effect-presentation.js";
 
 type ReferencedActivationEffectBlock = EffectDefinition["effects"][number] & {
   readonly effect: Extract<
@@ -123,6 +124,10 @@ export const queueReferencedMainEffectFromTrigger = (
   if (referencedEffects === undefined) {
     return undefined;
   }
+  const resolved = state.cardManifest.cards[entry.source.cardId];
+  if (resolved === undefined) {
+    return undefined;
+  }
   const events: EngineEvent[] = [];
   const referencedEntries: EffectQueueEntry[] = [];
   for (const referencedEffect of referencedEffects) {
@@ -156,6 +161,11 @@ export const queueReferencedMainEffectFromTrigger = (
         queueEntryId: entry.id,
         effectId: entry.effectBlockId,
       },
+      ...effectQueueEntryPresentationForEffectBlock({
+        effectBlock: referencedEffect,
+        resolvedCard: resolved,
+        source: referencedSource,
+      }),
     };
     appendEvent(
       state,

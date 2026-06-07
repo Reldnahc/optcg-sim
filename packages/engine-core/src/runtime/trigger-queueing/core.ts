@@ -115,6 +115,7 @@ export interface BattleKOTriggerCandidate {
   triggerEventId: EngineEvent["id"];
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   causedBy: EffectQueueEntry["causedBy"];
+  presentation?: EffectQueueEntry["presentation"];
 }
 
 export type DetectBattleKOTriggerCandidatesResult =

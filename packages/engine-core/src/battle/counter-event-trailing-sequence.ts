@@ -9,6 +9,7 @@ import type {
 
 import { continueSupportedSequenceFrameFromSegment } from "../effect-runtime-sequence/frames.js";
 import type { getSupportedCounterEventPower } from "./counter-event-support.js";
+import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 
 export type CounterEventTrailingSequence = NonNullable<
   NonNullable<
@@ -20,9 +21,15 @@ const toCounterEventSequenceQueueEntry = (
   state: GameState,
   controllerId: PlayerId,
   source: CardInstance,
-  effectBlockId: EffectDefinition["effects"][number]["id"],
+  effectBlock: EffectDefinition["effects"][number],
 ): EffectQueueEntry => {
   const metadata = state.cardManifest.cards[source.cardId];
+  const entrySource = {
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    playerId: controllerId,
+    zone: source.zone,
+  };
   return {
     id: `queue-entry:counter-event-trailing:${String(source.instanceId)}` as EffectQueueEntry["id"],
     state: "pending",
@@ -30,12 +37,7 @@ const toCounterEventSequenceQueueEntry = (
       `timing-window:counter-event-trailing:${String(source.instanceId)}` as EffectQueueEntry["timingWindowId"],
     generation: 0,
     controllerId,
-    source: {
-      instanceId: source.instanceId,
-      cardId: source.cardId,
-      playerId: controllerId,
-      zone: source.zone,
-    },
+    source: entrySource,
     sourceSnapshot: {
       instanceId: source.instanceId,
       cardId: source.cardId,
@@ -47,12 +49,19 @@ const toCounterEventSequenceQueueEntry = (
       ...(metadata?.cost === undefined ? {} : { cost: metadata.cost }),
       keywords: metadata?.printedKeywords ?? [],
     },
-    effectBlockId,
+    effectBlockId: effectBlock.id,
     orderingGroup: "nonTurnPlayer",
     createdAtEventSeq: state.eventJournal.length,
     queuedAtStateSeq: state.seq,
     sourcePresencePolicy: "resolveFromDestinationZone",
     causedBy: { type: "ruleProcess", name: "counterStep" },
+    ...(metadata === undefined
+      ? {}
+      : effectQueueEntryPresentationForEffectBlock({
+          effectBlock,
+          resolvedCard: metadata,
+          source: entrySource,
+        })),
   };
 };
 
@@ -100,7 +109,7 @@ export const continueCounterEventTrailingSequence = (
     state,
     controllerId,
     source,
-    trailingSequence.effectBlockId,
+    effectBlock,
   );
   const continued = continueSupportedSequenceFrameFromSegment({
     completedSegmentResults: {
