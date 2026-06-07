@@ -114,6 +114,7 @@ export const EffectSpotlight = ({
               sourceMap={spotlightText.sourceMap}
               activeSpanIds={active.activeSpanIds}
               compact
+              preserveNewlines
             />
           )}
         </div>

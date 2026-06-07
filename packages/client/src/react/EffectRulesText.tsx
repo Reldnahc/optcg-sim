@@ -1,5 +1,6 @@
 import type { EffectTextSourceMap, EffectTextSpanId } from "@optcg/types";
 import { CardRulesText } from "optcg-card-rules";
+import { Fragment } from "react";
 
 import { splitTextByHighlightRanges } from "./effect-text-ranges.js";
 
@@ -8,11 +9,42 @@ export interface EffectRulesTextProps {
   readonly sourceMap?: EffectTextSourceMap | undefined;
   readonly activeSpanIds?: readonly EffectTextSpanId[] | undefined;
   readonly compact?: boolean | undefined;
+  readonly preserveNewlines?: boolean | undefined;
 }
+
+const renderedRulesText = (
+  text: string,
+  compact: boolean | undefined,
+  preserveNewlines: boolean | undefined,
+): React.JSX.Element => {
+  if (preserveNewlines !== true || !text.includes("\n")) {
+    return (
+      <CardRulesText
+        text={text}
+        {...(compact === undefined ? {} : { compact })}
+      />
+    );
+  }
+  const lines = text.split("\n");
+  return (
+    <>
+      {lines.map((line, index) => (
+        <Fragment key={`${String(index)}:${line}`}>
+          <CardRulesText
+            text={line}
+            {...(compact === undefined ? {} : { compact })}
+          />
+          {index === lines.length - 1 ? null : <br />}
+        </Fragment>
+      ))}
+    </>
+  );
+};
 
 export const EffectRulesText = ({
   activeSpanIds = [],
   compact,
+  preserveNewlines,
   sourceMap,
   text,
 }: EffectRulesTextProps): React.JSX.Element => {
@@ -39,10 +71,7 @@ export const EffectRulesText = ({
           }
           key={`${String(index)}:${chunk.text}`}
         >
-          <CardRulesText
-            text={chunk.text}
-            {...(compact === undefined ? {} : { compact })}
-          />
+          {renderedRulesText(chunk.text, compact, preserveNewlines)}
         </span>
       ))}
     </div>

@@ -53,6 +53,24 @@ const reminderCard = (): ClientCardModel => {
   };
 };
 
+const multilineCard = (effectText: string): ClientCardModel => ({
+  ...card(),
+  effectText,
+  effectTextSourceMap: {
+    textKind: "effect",
+    sourceText: effectText,
+    spans: [
+      {
+        id: "span:body:multiline",
+        role: "body",
+        start: 10,
+        end: effectText.length,
+        text: effectText.slice(10),
+      },
+    ],
+  },
+});
+
 describe("EffectSpotlight", () => {
   it("renders the resolving card text with active span highlights", () => {
     const html = renderToStaticMarkup(
@@ -120,5 +138,39 @@ describe("EffectSpotlight", () => {
     expect(html).toContain("Unblockable");
     expect(html).not.toContain("This card cannot be blocked.");
     expect(html).toContain("effect-rules-span--active");
+  });
+
+  it("preserves source newlines without breaking same-line Then text", () => {
+    const withSourceNewline = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: multilineCard("[On Play] Draw 1 card.\nThen, K.O. 1 Character."),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:multiline"],
+        },
+      }),
+    );
+    const sameLineThen = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: multilineCard("[On Play] Draw 1 card. Then, K.O. 1 Character."),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:multiline"],
+        },
+      }),
+    );
+
+    expect(withSourceNewline).toContain("<br/>");
+    expect(sameLineThen).not.toContain("<br/>");
   });
 });

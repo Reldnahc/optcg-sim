@@ -48,9 +48,9 @@
 
 .effect-spotlight-card__rules {
   position: absolute;
-  right: 6.5%;
+  right: 4%;
   bottom: 7.2%;
-  left: 6.5%;
+  left: 4%;
   display: grid;
   min-height: 28%;
   max-height: 34%;
@@ -74,7 +74,7 @@
 }
 
 .effect-spotlight .effect-rules-text {
-  font-size: clamp(7px, calc(var(--card-width) * 0.075), 10px);
+  font-size: clamp(6px, calc(var(--card-width) * 0.068), 9px);
   font-weight: 650;
   line-height: 1.08;
 }
