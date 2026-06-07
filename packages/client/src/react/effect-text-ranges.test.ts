@@ -17,7 +17,7 @@ describe("effect text ranges", () => {
   it("ignores invalid ranges instead of changing source text", () => {
     const chunks = splitTextByHighlightRanges("Draw 1 card.", [
       { start: -1, end: 4, state: "active" },
-      { start: 5, end: 99, state: "resolved" },
+      { start: 5, end: 99, state: "active" },
     ]);
 
     expect(chunks).toEqual([{ text: "Draw 1 card.", state: "normal" }]);

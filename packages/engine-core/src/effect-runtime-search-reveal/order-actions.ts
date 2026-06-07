@@ -18,13 +18,13 @@ import {
 } from "../action-results.js";
 import { reindexZoneCards, zonesEqual } from "../actions/state.js";
 import { hasSequenceFrameForDecision } from "../effect-runtime-sequence/frame-decisions.js";
+import { activeSpanIdsForSearchRevealRemaining } from "../runtime/effect-presentation.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
 
 const searchRevealOrderPrefix = "decision:orderCards:search-reveal:";
-const searchRevealRemainingSpanPrefix = "span:search:remaining";
 
 const isSearchRevealOrderCardsDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
@@ -42,10 +42,10 @@ const entryWithRemainingCardsPresentation = (
   if (presentation === undefined) {
     return entry;
   }
-  const activeSpanIds = presentation.activeSpanIds.filter((spanId) =>
-    spanId.startsWith(searchRevealRemainingSpanPrefix),
+  const activeSpanIds = activeSpanIdsForSearchRevealRemaining(
+    presentation.activeSpanIds,
   );
-  return activeSpanIds.length === 0
+  return activeSpanIds === undefined
     ? entry
     : {
         ...entry,

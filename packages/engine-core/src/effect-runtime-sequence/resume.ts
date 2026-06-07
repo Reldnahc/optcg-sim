@@ -1,8 +1,8 @@
 import type {
+  ActiveEffectTextPresentation,
   EffectDefinition,
   EffectExecutionFrame,
   EffectQueueEntry,
-  EffectTextSpanId,
   EngineEvent,
   GameState,
 } from "@optcg/types";
@@ -10,6 +10,11 @@ import type {
 import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
 import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
 import { removeFrame, replaceQueueEntry } from "./segments.js";
+import {
+  activeSpanIdsForSearchRevealRemaining,
+  activeSpanIdsForSequenceIndex,
+  activeSpanIdsWithoutCost,
+} from "../runtime/effect-presentation.js";
 import {
   conditionalParentForPath,
   isRootSequencePath,
@@ -46,7 +51,6 @@ type SequenceFrameRunResult =
 
 const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
 const payCostDecisionPrefix = "decision:payCost:sequence:";
-const costSpanPrefix = "span:cost";
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
 export const findFrameQueueEntry = (
@@ -100,33 +104,28 @@ const topLevelSequenceIndexForFrame = (
 const narrowedActiveSpanIdsForCompletedFrame = (
   entry: EffectQueueEntry,
   frame: EffectExecutionFrame,
-): readonly EffectTextSpanId[] | undefined => {
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
   const presentation = entry.presentation;
   if (presentation === undefined) {
     return undefined;
   }
   if (frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix)) {
-    const bodySpanIds = presentation.activeSpanIds.filter(
-      (spanId) => !spanId.startsWith(costSpanPrefix),
-    );
-    return bodySpanIds.length === 0 ? undefined : bodySpanIds;
+    return activeSpanIdsWithoutCost(presentation.activeSpanIds);
   }
-  const searchPhasePrefix = frame.pendingDecision.decisionId.startsWith(
+  const searchPhaseSpanIds = frame.pendingDecision.decisionId.startsWith(
     searchRevealOrderDecisionPrefix,
   )
-    ? "span:search:remaining"
+    ? activeSpanIdsForSearchRevealRemaining(presentation.activeSpanIds)
     : undefined;
   const topLevelIndex = topLevelSequenceIndexForFrame(frame);
-  const sequencePrefix =
+  const sequenceSpanIds =
     topLevelIndex === undefined
       ? undefined
-      : `span:sequence:${String(topLevelIndex)}:`;
-  const narrowed = presentation.activeSpanIds.filter(
-    (spanId) =>
-      (searchPhasePrefix !== undefined &&
-        spanId.startsWith(searchPhasePrefix)) ||
-      (sequencePrefix !== undefined && spanId.startsWith(sequencePrefix)),
-  );
+      : activeSpanIdsForSequenceIndex(
+          presentation.activeSpanIds,
+          topLevelIndex,
+        );
+  const narrowed = [...(searchPhaseSpanIds ?? []), ...(sequenceSpanIds ?? [])];
   return narrowed.length === 0 ? undefined : narrowed;
 };
 

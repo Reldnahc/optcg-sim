@@ -2,7 +2,6 @@ import type {
   ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
-  EffectTextSpanId,
   EffectQueueEntry,
   GameState,
   PendingDecision,
@@ -10,6 +9,12 @@ import type {
 } from "@optcg/types";
 
 import { toCardRef } from "../actions/state.js";
+import {
+  activeSpanIdsForCost,
+  activeSpanIdsForSearchRevealRemaining,
+  activeSpanIdsForSearchRevealSelection,
+  activeSpanIdsForSequenceIndex,
+} from "../runtime/effect-presentation.js";
 
 export interface VisibleDecisionSourceCard {
   card: CardInstance;
@@ -53,7 +58,6 @@ export const publicDecisionSourceFromEffectQueue = (params: {
 
 const searchRevealSelectSetPrefix = "set:search-reveal:";
 const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
-const costSpanPrefix = "span:cost";
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
 const topLevelSequenceIndexForDecision = (
@@ -89,52 +93,42 @@ const topLevelSequenceIndexForDecision = (
 const narrowSequenceActiveSpanIds = (
   state: GameState,
   pending: PendingDecision,
-  activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] | undefined => {
+  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
   const topLevelIndex = topLevelSequenceIndexForDecision(state, pending);
-  if (topLevelIndex === undefined) {
-    return undefined;
-  }
-  const sequenceSpanPrefix = `span:sequence:${String(topLevelIndex)}:`;
-  const narrowed = activeSpanIds.filter((spanId) =>
-    spanId.startsWith(sequenceSpanPrefix),
-  );
-  return narrowed.length === 0 ? undefined : narrowed;
+  return topLevelIndex === undefined
+    ? undefined
+    : activeSpanIdsForSequenceIndex(activeSpanIds, topLevelIndex);
 };
 
 const narrowSearchRevealActiveSpanIds = (
   pending: PendingDecision,
-  activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] | undefined => {
-  const phasePrefix =
+  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
+  if (
     pending.type === "selectCards" &&
     pending.request.set !== undefined &&
     String(pending.request.set).startsWith(searchRevealSelectSetPrefix)
-      ? "span:search:selection"
-      : pending.type === "orderCards" &&
-          pending.id.startsWith(searchRevealOrderDecisionPrefix)
-        ? "span:search:remaining"
-        : undefined;
-  if (phasePrefix === undefined) {
-    return undefined;
+  ) {
+    return activeSpanIdsForSearchRevealSelection(activeSpanIds);
   }
-  const narrowed = activeSpanIds.filter((spanId) =>
-    spanId.startsWith(phasePrefix),
-  );
-  return narrowed.length === 0 ? undefined : narrowed;
+  if (
+    pending.type === "orderCards" &&
+    pending.id.startsWith(searchRevealOrderDecisionPrefix)
+  ) {
+    return activeSpanIdsForSearchRevealRemaining(activeSpanIds);
+  }
+  return undefined;
 };
 
 const narrowPayCostActiveSpanIds = (
   pending: PendingDecision,
-  activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] | undefined => {
+  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
   if (pending.type !== "payCost") {
     return undefined;
   }
-  const narrowed = activeSpanIds.filter((spanId) =>
-    spanId.startsWith(costSpanPrefix),
-  );
-  return narrowed.length === 0 ? undefined : narrowed;
+  return activeSpanIdsForCost(activeSpanIds);
 };
 
 export const publicDecisionActiveEffectTextFromEffectQueue = (params: {

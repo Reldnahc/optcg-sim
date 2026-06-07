@@ -4,7 +4,7 @@ import type {
   PlayerView,
 } from "@optcg/types";
 
-export interface EffectSpotlightActiveSource {
+interface EffectSpotlightActiveSource {
   readonly active: ActiveEffectTextPresentation;
   readonly key: string;
   readonly mode: "live" | "resolved";
@@ -99,10 +99,3 @@ export const activeEffectTextSourceForSpotlight = ({
   }
   return latestResolvedEffectPresentation(events);
 };
-
-export const activeEffectTextForSpotlight = (input: {
-  readonly activeEffectText: PlayerView["activeEffectText"];
-  readonly pendingDecision: PlayerView["pendingDecision"];
-  readonly events: readonly EngineEvent[];
-}): ActiveEffectTextPresentation | undefined =>
-  activeEffectTextSourceForSpotlight(input)?.active;

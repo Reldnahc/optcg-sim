@@ -1,7 +1,7 @@
 export interface HighlightRange {
   readonly start: number;
   readonly end: number;
-  readonly state: "active" | "resolved" | "skipped";
+  readonly state: "active";
 }
 
 export interface TextChunk {

@@ -8,6 +8,51 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+const costSpanPrefix = "span:cost";
+const searchRevealRemainingSpanPrefix = "span:search:remaining";
+const searchRevealSelectionSpanPrefix = "span:search:selection";
+
+const activeSpanIdsWithPrefix = (
+  activeSpanIds: readonly EffectTextSpanId[],
+  prefix: string,
+): readonly EffectTextSpanId[] | undefined => {
+  const narrowed = activeSpanIds.filter((spanId) => spanId.startsWith(prefix));
+  return narrowed.length === 0 ? undefined : narrowed;
+};
+
+export const activeSpanIdsForCost = (
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined =>
+  activeSpanIdsWithPrefix(activeSpanIds, costSpanPrefix);
+
+export const activeSpanIdsWithoutCost = (
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined => {
+  const narrowed = activeSpanIds.filter(
+    (spanId) => !spanId.startsWith(costSpanPrefix),
+  );
+  return narrowed.length === 0 ? undefined : narrowed;
+};
+
+export const activeSpanIdsForSearchRevealRemaining = (
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined =>
+  activeSpanIdsWithPrefix(activeSpanIds, searchRevealRemainingSpanPrefix);
+
+export const activeSpanIdsForSearchRevealSelection = (
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined =>
+  activeSpanIdsWithPrefix(activeSpanIds, searchRevealSelectionSpanPrefix);
+
+export const activeSpanIdsForSequenceIndex = (
+  activeSpanIds: readonly EffectTextSpanId[],
+  sequenceIndex: number | string,
+): readonly EffectTextSpanId[] | undefined =>
+  activeSpanIdsWithPrefix(
+    activeSpanIds,
+    `span:sequence:${String(sequenceIndex)}:`,
+  );
+
 export const activeSpanIdsForEffectPath = ({
   sourceMap,
   effectPath,

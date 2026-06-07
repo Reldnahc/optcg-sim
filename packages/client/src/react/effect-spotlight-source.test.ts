@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type {
+  ActiveEffectTextPresentation,
   CardId,
   DecisionId,
   EngineEvent,
@@ -9,10 +10,7 @@ import type {
   PlayerView,
 } from "@optcg/types";
 
-import {
-  activeEffectTextForSpotlight,
-  activeEffectTextSourceForSpotlight,
-} from "./effect-spotlight-source.js";
+import { activeEffectTextSourceForSpotlight } from "./effect-spotlight-source.js";
 
 const source = {
   instanceId: "source-1" as InstanceId,
@@ -29,6 +27,13 @@ const event = (
   createdAtStateSeq: 1 as EngineEvent["createdAtStateSeq"],
   ...overrides,
 });
+
+const activeEffectTextForSpotlight = (input: {
+  readonly activeEffectText: PlayerView["activeEffectText"];
+  readonly pendingDecision: PlayerView["pendingDecision"];
+  readonly events: readonly EngineEvent[];
+}): ActiveEffectTextPresentation | undefined =>
+  activeEffectTextSourceForSpotlight(input)?.active;
 
 describe("activeEffectTextForSpotlight", () => {
   it("uses active view text before resolved event presentation", () => {

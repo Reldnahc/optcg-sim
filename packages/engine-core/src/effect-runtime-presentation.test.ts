@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vitest";
 import type { EffectTextSourceMap } from "@optcg/types";
 
-import { activeSpanIdsForEffectPath } from "./runtime/effect-presentation.js";
+import {
+  activeSpanIdsForCost,
+  activeSpanIdsForEffectPath,
+  activeSpanIdsForSearchRevealRemaining,
+  activeSpanIdsForSequenceIndex,
+  activeSpanIdsWithoutCost,
+} from "./runtime/effect-presentation.js";
 
 describe("runtime effect presentation refs", () => {
   test("resolves sequence effect paths to parser span ids", () => {
@@ -28,5 +34,26 @@ describe("runtime effect presentation refs", () => {
     });
 
     expect(ids).toEqual(["span:sequence:1:body"]);
+  });
+
+  test("narrows active span ids by shared presentation phases", () => {
+    const ids = [
+      "span:cost:optional",
+      "span:sequence:1:body",
+      "span:search:remaining",
+    ] as const;
+
+    expect(activeSpanIdsForCost(ids)).toEqual(["span:cost:optional"]);
+    expect(activeSpanIdsWithoutCost(ids)).toEqual([
+      "span:sequence:1:body",
+      "span:search:remaining",
+    ]);
+    expect(activeSpanIdsForSequenceIndex(ids, 1)).toEqual([
+      "span:sequence:1:body",
+    ]);
+    expect(activeSpanIdsForSearchRevealRemaining(ids)).toEqual([
+      "span:search:remaining",
+    ]);
+    expect(activeSpanIdsForSequenceIndex(ids, 0)).toBeUndefined();
   });
 });

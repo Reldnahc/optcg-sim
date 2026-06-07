@@ -4,6 +4,8 @@ import type {
   EffectTextSpanId,
 } from "@optcg/types";
 
+import { activeSpanIdsForSequenceIndex } from "../runtime/effect-presentation.js";
+
 type RootChangedSegment = {
   index: number;
   key: string;
@@ -37,11 +39,7 @@ const activeSpanIdsForRootSegment = (
   activeSpanIds: readonly EffectTextSpanId[],
   segment: RootChangedSegment,
 ): readonly EffectTextSpanId[] | undefined => {
-  const sequencePrefix = `span:sequence:${segment.key}:`;
-  const narrowed = activeSpanIds.filter((spanId) =>
-    spanId.startsWith(sequencePrefix),
-  );
-  return narrowed.length === 0 ? undefined : narrowed;
+  return activeSpanIdsForSequenceIndex(activeSpanIds, segment.key);
 };
 
 export const entryWithCompletedSequencePresentation = (
