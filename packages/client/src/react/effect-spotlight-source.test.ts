@@ -172,6 +172,86 @@ describe("activeEffectTextForSpotlight", () => {
     });
   });
 
+  it("falls back to a no-highlight spotlight for the newest played character", () => {
+    const played = event({
+      type: "cardPlayed",
+      seq: 2,
+      payload: {
+        playerId: "p1",
+        instanceId: "played-1",
+        cardId: "OP00-002",
+        category: "character",
+      },
+    });
+
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: undefined,
+        events: [played],
+      }),
+    ).toEqual({
+      active: {
+        source: {
+          playerId: "p1",
+          instanceId: "played-1",
+          cardId: "OP00-002",
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
+      key: String(played.id),
+      mode: "resolved",
+    });
+  });
+
+  it("does not use Event card plays as field-entry spotlights", () => {
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: undefined,
+        events: [
+          event({
+            type: "cardPlayed",
+            seq: 2,
+            payload: {
+              playerId: "p1",
+              instanceId: "played-event-1",
+              cardId: "OP00-003",
+              category: "event",
+            },
+          }),
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("does not show a no-highlight play spotlight when the play queued an effect", () => {
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: undefined,
+        events: [
+          event({
+            type: "cardPlayed",
+            seq: 2,
+            payload: {
+              playerId: "p1",
+              instanceId: "played-1",
+              cardId: "OP00-002",
+              category: "character",
+            },
+          }),
+          event({
+            type: "effectQueued",
+            seq: 3,
+            source,
+          }),
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
   it("does not fall back to a resolved effect while another decision is pending", () => {
     const resolved = event({
       type: "effectResolved",

@@ -1,7 +1,10 @@
 import type {
   ActiveEffectTextPresentation,
+  CardId,
   EngineEvent,
+  InstanceId,
   PlayerView,
+  PlayerId,
 } from "@optcg/types";
 
 interface EffectSpotlightActiveSource {
@@ -35,11 +38,17 @@ const isActiveEffectTextPresentation = (
   );
 };
 
-const latestResolvedEffectPresentation = (
+const latestResolvedSpotlightSource = (
   events: readonly EngineEvent[],
 ): EffectSpotlightActiveSource | undefined => {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
+    if (event?.type === "effectQueued") {
+      return undefined;
+    }
+    if (event?.type === "cardPlayed") {
+      return playedCardPresentation(event);
+    }
     if (event?.type !== "effectResolved" || !isObjectRecord(event.payload)) {
       continue;
     }
@@ -53,6 +62,39 @@ const latestResolvedEffectPresentation = (
     }
   }
   return undefined;
+};
+
+const playedCardPresentation = (
+  event: EngineEvent,
+): EffectSpotlightActiveSource | undefined => {
+  if (!isObjectRecord(event.payload)) {
+    return undefined;
+  }
+  const playerId = event.payload["playerId"];
+  const instanceId = event.payload["instanceId"];
+  const cardId = event.payload["cardId"];
+  const category = event.payload["category"];
+  if (
+    typeof playerId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    (category !== "character" && category !== "stage")
+  ) {
+    return undefined;
+  }
+  return {
+    active: {
+      source: {
+        playerId: playerId as PlayerId,
+        instanceId: instanceId as InstanceId,
+        cardId: cardId as CardId,
+      },
+      textKind: "effect",
+      activeSpanIds: [],
+    },
+    key: String(event.id),
+    mode: "resolved",
+  };
 };
 
 const liveKey = (
@@ -97,5 +139,5 @@ export const activeEffectTextSourceForSpotlight = ({
       mode: "live",
     };
   }
-  return latestResolvedEffectPresentation(events);
+  return latestResolvedSpotlightSource(events);
 };
