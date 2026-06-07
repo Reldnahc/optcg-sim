@@ -64,19 +64,28 @@ export const resolvedEffectTextSourcesForSpotlight = (
   events: readonly EngineEvent[],
 ): readonly EffectSpotlightActiveSource[] => {
   const sources: EffectSpotlightActiveSource[] = [];
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (event?.type === "effectQueued") {
-      break;
-    }
-    if (event !== undefined) {
-      const source = resolvedSpotlightSourceForEvent(event);
-      if (source !== undefined) {
-        sources.push(source);
+  let pendingPlayedCard: EffectSpotlightActiveSource | undefined;
+  for (const event of events) {
+    if (event.type === "cardPlayed") {
+      if (pendingPlayedCard !== undefined) {
+        sources.push(pendingPlayedCard);
       }
+      pendingPlayedCard = playedCardPresentation(event);
+      continue;
+    }
+    if (event.type === "effectQueued") {
+      pendingPlayedCard = undefined;
+      continue;
+    }
+    const source = resolvedSpotlightSourceForEvent(event);
+    if (source !== undefined) {
+      sources.push(source);
     }
   }
-  return sources.reverse();
+  if (pendingPlayedCard !== undefined) {
+    sources.push(pendingPlayedCard);
+  }
+  return sources;
 };
 
 const playedCardPresentation = (

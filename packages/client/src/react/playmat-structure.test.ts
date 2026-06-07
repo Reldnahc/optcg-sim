@@ -241,7 +241,9 @@ describe("playmat structure", () => {
     assert.match(effectSpotlightStyles, /left:\s*4%;/u);
     assert.match(effectSpotlightStyles, /min-height:\s*26%;/u);
     assert.match(effectSpotlightStyles, /max-height:\s*31%;/u);
+    assert.match(effectSpotlightStyles, /align-content:\s*start;/u);
     assert.match(effectSpotlightStyles, /align-items:\s*start;/u);
+    assert.match(effectSpotlightStyles, /justify-items:\s*start;/u);
     assert.match(
       effectSpotlightStyles,
       /background:\s*rgba\(246,\s*238,\s*224,\s*0\.9\);/u,
@@ -265,6 +267,21 @@ describe("playmat structure", () => {
     assert.equal(effectSpotlightStyles.includes("letter-spacing"), false);
     assert.match(effectSpotlightStyles, /transform:\s*scaleX\(0\.98\);/u);
     assert.match(effectSpotlightStyles, /transform-origin:\s*left top;/u);
+    assert.match(effectSpotlightStyles, /align-self:\s*start;/u);
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-line \+ \.card-rules-line\s*\{[^}]*margin-top:\s*0\.2em;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag\s*\{[^}]*margin-bottom:\s*0\.14em;[^}]*padding:\s*0\.01em 0\.3em;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag--trigger\s*\{[^}]*padding:\s*0\.15em 1\.4em 0\.15em 0\.3em;/u,
+    );
+    assert.equal(effectSpotlightStyles.includes("0.14rem"), false);
+    assert.equal(effectSpotlightStyles.includes("1.4rem"), false);
     assert.equal(
       effectSpotlightStyles.includes(
         ".effect-spotlight .effect-rules-span .card-rules-line",

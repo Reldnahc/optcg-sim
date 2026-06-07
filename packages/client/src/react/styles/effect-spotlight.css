@@ -69,7 +69,9 @@
   display: grid;
   min-height: 26%;
   max-height: 31%;
+  align-content: start;
   align-items: start;
+  justify-items: start;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
   border-radius: clamp(3px, 0.5vh, 5px);
@@ -89,6 +91,7 @@
 }
 
 .effect-spotlight .effect-rules-text {
+  align-self: start;
   font-size: var(--effect-spotlight-rules-font-size);
   font-weight: 650;
   line-height: var(--effect-spotlight-rules-line-height);
@@ -103,8 +106,93 @@
   line-height: var(--effect-spotlight-rules-line-height);
 }
 
+.effect-spotlight .card-rules-line + .card-rules-line {
+  margin-top: 0.2em;
+}
+
 .effect-spotlight .card-rules-line {
   line-height: inherit;
+}
+
+.effect-spotlight .card-rules-copy--tag-divider {
+  margin-inline: 0.14em;
+}
+
+.effect-spotlight .card-rules-tag {
+  margin-right: 0.02em;
+  margin-bottom: 0.14em;
+  border-radius: 0.34em;
+  min-height: 1.3em;
+  padding: 0.01em 0.3em;
+  line-height: 1;
+}
+
+.effect-spotlight .card-rules-tag--compact {
+  margin-right: 0.01em;
+  min-height: 1.2em;
+  padding: 0.01em 0.26em;
+}
+
+.effect-spotlight .card-rules-tag--blue,
+.effect-spotlight .card-rules-tag--counter {
+  border-radius: 0.24em;
+}
+
+.effect-spotlight .card-rules-tag--don {
+  padding-inline: 0.42em;
+}
+
+.effect-spotlight .card-rules-tag__counter-icon {
+  margin-right: 0.22em;
+}
+
+.effect-spotlight .card-rules-tag--trigger {
+  margin: -0.15em 0 -0.15em 0;
+  border-radius: 0.25em 0 0 0.25em;
+  padding: 0.15em 1.4em 0.15em 0.3em;
+  line-height: var(--effect-spotlight-rules-line-height);
+}
+
+.effect-spotlight .trigger-block {
+  border-radius: 0.25em;
+}
+
+.effect-spotlight .trigger-block .card-rules-line {
+  padding: 0.2em 0.5em 0.2em 0;
+  line-height: var(--effect-spotlight-rules-line-height);
+}
+
+.effect-spotlight .trigger-block .card-rules-line:first-child {
+  padding-left: 0.3em;
+}
+
+.effect-spotlight
+  .trigger-block
+  .card-rules-line:first-child
+  .card-rules-tag--trigger {
+  margin-left: -0.3em;
+}
+
+.effect-spotlight .trigger-block--wraps .card-rules-tag--trigger {
+  border-radius: 0.25em 0 0 0;
+}
+
+.effect-spotlight .card-rules-tag--ability {
+  margin-inline: 0.34em;
+  padding-inline: 0.1em;
+}
+
+.effect-spotlight .card-rules-tag--ability::before,
+.effect-spotlight .card-rules-tag--ability::after {
+  width: 0.42em;
+}
+
+.effect-spotlight .card-rules-tag--ability::before {
+  left: -0.41em;
+}
+
+.effect-spotlight .card-rules-tag--ability::after {
+  right: -0.41em;
 }
 
 .effect-spotlight .effect-rules-span--active {

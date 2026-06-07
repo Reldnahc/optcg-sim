@@ -192,6 +192,42 @@ describe("activeEffectTextForSpotlight", () => {
     ]);
   });
 
+  it("keeps earlier resolved spotlights when another effect queues before the next one resolves", () => {
+    const first = event({
+      type: "effectResolved",
+      seq: 2,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:first"],
+        },
+      },
+    });
+    const second = event({
+      type: "effectResolved",
+      seq: 4,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:second"],
+        },
+      },
+    });
+
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({ type: "effectQueued", seq: 1 }),
+        first,
+        event({ type: "effectQueued", seq: 3 }),
+        second,
+      ]).map((candidate) => candidate.key),
+    ).toEqual([String(first.id), String(second.id)]);
+  });
+
   it("marks resolved event presentations as one-shot sources keyed by event id", () => {
     const resolved = event({
       type: "effectResolved",
