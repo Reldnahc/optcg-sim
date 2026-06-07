@@ -293,6 +293,10 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /\.effect-spotlight\s+\.effect-rules-span--active\s+:where\(\.card-rules-copy,\s*\.card-rules-link\)\s*\{[^}]*text-decoration-line:\s*underline;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /\.effect-spotlight \.effect-rules-span--active \.card-rules-tag\s*\{[^}]*box-shadow:/u,
     );
     assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
