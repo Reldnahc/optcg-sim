@@ -258,6 +258,10 @@ describe("playmat structure", () => {
       effectSpotlightStyles,
       /\.effect-spotlight \.card-rules-text\s*\{[^}]*font-size:\s*var\(--effect-spotlight-rules-font-size\);[^}]*line-height:\s*var\(--effect-spotlight-rules-line-height\);/u,
     );
+    assert.match(
+      effectSpotlightStyles,
+      /--effect-spotlight-rules-line-height:\s*1\.16;/u,
+    );
     assert.equal(effectSpotlightStyles.includes("letter-spacing"), false);
     assert.match(effectSpotlightStyles, /transform:\s*scaleX\(0\.98\);/u);
     assert.match(effectSpotlightStyles, /transform-origin:\s*left top;/u);
