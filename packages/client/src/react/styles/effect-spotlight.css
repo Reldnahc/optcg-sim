@@ -1,14 +1,9 @@
 .effect-spotlight {
   --effect-spotlight-card-width: min(
-    calc(var(--card-width) * 3.15),
-    calc(100% - 12px)
+    calc(var(--card-width) + var(--card-width) + var(--card-width)),
+    calc(100vw - 16px)
   );
-  --effect-spotlight-card-height: calc(
-    var(--effect-spotlight-card-width) / 0.7
-  );
-  --effect-spotlight-rules-font-size: calc(
-    var(--effect-spotlight-card-width) * 0.019
-  );
+  --effect-spotlight-rules-font-size: clamp(5px, 0.82vh, 9px);
   --effect-spotlight-rules-line-height: 1.08;
   --effect-spotlight-highlight-background: rgba(255, 186, 45, 0.72);
 
@@ -21,7 +16,14 @@
   transform: translate(-50%, -54%);
 }
 
+@supports (font-size: 1cqw) {
+  .effect-spotlight {
+    --effect-spotlight-rules-font-size: clamp(5px, 2.1cqw, 9px);
+  }
+}
+
 .effect-spotlight-card {
+  container-type: inline-size;
   position: relative;
   display: block;
   width: 100%;
@@ -49,11 +51,11 @@
 .effect-spotlight-card__placeholder {
   display: grid;
   place-items: center;
-  padding: calc(var(--effect-spotlight-card-width) * 0.045);
+  padding: clamp(8px, 1.2vh, 14px);
   color: #ffffff;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 42%), #615d5b;
-  font-size: calc(var(--effect-spotlight-card-width) * 0.065);
+  font-size: clamp(10px, 1.6vh, 18px);
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
@@ -70,9 +72,8 @@
   align-items: center;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
-  border-radius: calc(var(--effect-spotlight-card-width) * 0.012);
-  padding: calc(var(--effect-spotlight-card-height) * 0.009)
-    calc(var(--effect-spotlight-card-width) * 0.015);
+  border-radius: clamp(3px, 0.5vh, 5px);
+  padding: clamp(2px, 0.45vh, 4px) clamp(3px, 0.55vh, 5px);
   color: #1f1915;
   background: rgba(246, 238, 224, 0.96);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
@@ -80,7 +81,7 @@
 
 .effect-spotlight-card__fallback {
   overflow: hidden;
-  font-size: calc(var(--effect-spotlight-card-width) * 0.045);
+  font-size: clamp(8px, 1.2vh, 12px);
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
@@ -112,7 +113,7 @@
 .effect-spotlight
   .effect-rules-span--active
   :where(.card-rules-copy, .card-rules-link) {
-  border-radius: calc(var(--effect-spotlight-card-width) * 0.006);
+  border-radius: 2px;
   background: var(--effect-spotlight-highlight-background);
   box-shadow:
     0 0 0 1px rgba(85, 49, 0, 0.62),
@@ -124,7 +125,6 @@
 .effect-spotlight .effect-rules-span--active .card-rules-tag {
   box-shadow:
     0 0 0 1px rgba(85, 49, 0, 0.62),
-    0 0 0 calc(var(--effect-spotlight-card-width) * 0.006)
-      rgba(255, 186, 45, 0.38),
+    0 0 0 2px rgba(255, 186, 45, 0.38),
     0 1px 4px rgba(85, 49, 0, 0.24);
 }
