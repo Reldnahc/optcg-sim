@@ -67,8 +67,8 @@
   bottom: 12.4%;
   left: 4%;
   display: grid;
-  min-height: 28%;
-  max-height: 34%;
+  min-height: 26%;
+  max-height: 31%;
   align-items: start;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
