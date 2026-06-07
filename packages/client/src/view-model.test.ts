@@ -5,6 +5,7 @@ import type {
   CardId,
   CardRef,
   EffectId,
+  EffectTextSourceMap,
   InstanceId,
   MatchId,
   PlayerId,
@@ -272,6 +273,34 @@ describe("board view model", () => {
         },
       },
     };
+    const effectTextSourceMap: EffectTextSourceMap = {
+      textKind: "effect",
+      sourceText: "[On Play] Look at cards.",
+      spans: [
+        {
+          id: "span:body:look",
+          role: "body",
+          start: 10,
+          end: 24,
+          text: "Look at cards.",
+          primitiveEvidence: ["instruction:look"],
+        },
+      ],
+    };
+    const triggerTextSourceMap: EffectTextSourceMap = {
+      textKind: "trigger",
+      sourceText: "Draw 1 card.",
+      spans: [
+        {
+          id: "span:body:draw",
+          role: "body",
+          start: 0,
+          end: 12,
+          text: "Draw 1 card.",
+          primitiveEvidence: ["instruction:draw"],
+        },
+      ],
+    };
     const catalog: MatchCardCatalog = {
       players: {
         [p1]: {
@@ -282,6 +311,8 @@ describe("board view model", () => {
               category: "Character",
               effectText: "[On Play] Look at cards.",
               triggerText: "Draw 1 card.",
+              effectTextSourceMap,
+              triggerTextSourceMap,
               imageUrl: "https://cdn.example/card.png",
             },
             ["OP13-089" as CardId]: {
@@ -303,6 +334,8 @@ describe("board view model", () => {
     assert.equal(handCard.name, "Searcher");
     assert.equal(handCard.effectText, "[On Play] Look at cards.");
     assert.equal(handCard.triggerText, "Draw 1 card.");
+    assert.deepEqual(handCard.effectTextSourceMap, effectTextSourceMap);
+    assert.deepEqual(handCard.triggerTextSourceMap, triggerTextSourceMap);
     assert.equal(handCard.imageUrl, "https://cdn.example/card.png");
     assert.deepEqual(
       model.actionsByCardInstanceId["hand-1"]?.map((action) => action.label),

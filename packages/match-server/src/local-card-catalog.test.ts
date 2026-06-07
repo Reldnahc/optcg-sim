@@ -1,6 +1,11 @@
 import { strict as assert } from "node:assert";
 import { beforeAll, describe, test } from "vitest";
-import type { DecisionId, EngineEventId, PlayerId } from "@optcg/types";
+import type {
+  DecisionId,
+  EffectTextSourceMap,
+  EngineEventId,
+  PlayerId,
+} from "@optcg/types";
 
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
 import {
@@ -22,6 +27,41 @@ const createTestMatch = () =>
   createLocalDevMatch(structuredClone(premadeSetup));
 
 describe("local dev card catalog", () => {
+  test("includes effect text source maps for visible card catalog entries", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const visible = p1State.leader;
+    const card = match.state.cardManifest.cards[visible.cardId];
+    if (card === undefined) {
+      throw new Error("Missing visible card manifest entry.");
+    }
+    card.effectText = "[On Play] Draw 1 card.";
+    const sourceMap: EffectTextSourceMap = {
+      textKind: "effect",
+      sourceText: card.effectText,
+      spans: [
+        {
+          id: "span:body:draw",
+          role: "body",
+          start: 10,
+          end: card.effectText.length,
+          text: card.effectText.slice(10),
+          primitiveEvidence: ["instruction:draw"],
+        },
+      ],
+    };
+    card.effectTextSourceMap = sourceMap;
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const entry = catalog.players[p1]?.instances?.[visible.instanceId];
+
+    assert.equal(entry?.effectTextSourceMap?.sourceText, entry?.effectText);
+    assert.equal(entry?.effectTextSourceMap?.spans[0]?.id, "span:body:draw");
+  });
+
   test("includes cards from visible reveal events", () => {
     const match = createTestMatch();
     const p1State = match.state.players[p1];

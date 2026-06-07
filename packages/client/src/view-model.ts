@@ -1,5 +1,6 @@
 import type {
   CardId,
+  EffectTextSourceMap,
   InstanceId,
   Keyword,
   PlayerId,
@@ -22,6 +23,8 @@ export interface ClientCardModel {
   category: string;
   effectText?: string;
   triggerText?: string;
+  effectTextSourceMap?: EffectTextSourceMap;
+  triggerTextSourceMap?: EffectTextSourceMap;
   imageUrl?: string;
   printedPower?: number;
   currentPower?: number;
@@ -147,6 +150,12 @@ const cardModel = (
     ...(entry.triggerText === undefined
       ? {}
       : { triggerText: entry.triggerText }),
+    ...(entry.effectTextSourceMap === undefined
+      ? {}
+      : { effectTextSourceMap: entry.effectTextSourceMap }),
+    ...(entry.triggerTextSourceMap === undefined
+      ? {}
+      : { triggerTextSourceMap: entry.triggerTextSourceMap }),
     ...(entry.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
     ...(options.includeState === false || card.state === undefined
       ? {}

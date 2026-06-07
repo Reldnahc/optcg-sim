@@ -1,6 +1,7 @@
 import type {
   CardId,
   CardInstance,
+  EffectTextSourceMap,
   GameState,
   InstanceId,
   PlayerId,
@@ -100,6 +101,8 @@ export interface DevCardCatalogEntry {
   life?: number;
   effectText?: string;
   triggerText?: string;
+  effectTextSourceMap?: EffectTextSourceMap;
+  triggerTextSourceMap?: EffectTextSourceMap;
   imageUrl?: string;
 }
 

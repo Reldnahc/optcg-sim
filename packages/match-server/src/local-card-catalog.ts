@@ -333,6 +333,12 @@ const devCardCatalogEntry = (
     ...(card.triggerText === undefined
       ? {}
       : { triggerText: card.triggerText }),
+    ...(card.effectTextSourceMap === undefined
+      ? {}
+      : { effectTextSourceMap: card.effectTextSourceMap }),
+    ...(card.triggerTextSourceMap === undefined
+      ? {}
+      : { triggerTextSourceMap: card.triggerTextSourceMap }),
     ...(imageUrl === undefined ? {} : { imageUrl }),
   };
 };

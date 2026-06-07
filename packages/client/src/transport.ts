@@ -2,6 +2,7 @@ import type {
   CardId,
   DecisionId,
   DecisionResponse,
+  EffectTextSourceMap,
   InstanceId,
   MatchId,
   PlayerId,
@@ -96,6 +97,8 @@ export interface MatchCardCatalogEntry {
   life?: number;
   effectText?: string;
   triggerText?: string;
+  effectTextSourceMap?: EffectTextSourceMap;
+  triggerTextSourceMap?: EffectTextSourceMap;
   imageUrl?: string;
 }
 
