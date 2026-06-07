@@ -350,6 +350,7 @@ export interface ConnectorParseResult {
   readonly segments: readonly string[];
   readonly connectors: readonly SequencedEffect["connector"][];
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly presentationMode?: "joined";
   readonly sourceSegments?: readonly SourceSlice[];
   readonly connectorSpans?: readonly EffectTextSpan[];
 }

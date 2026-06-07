@@ -11,6 +11,7 @@ describe("and connector parser", () => {
     expect(parseAndConnector({ text: "A and B." })).toEqual({
       segments: ["A", "B."],
       connectors: ["always", "then"],
+      presentationMode: "joined",
       evidence: ["connector:andOrdered"],
     });
   });

@@ -67,15 +67,19 @@ export function parseExpression(
         };
   }
 
-  const presentationSpans = [
-    ...(connectorParse?.connectorSpans ?? []),
-    ...parsedSegments.flatMap((segment, index) =>
-      rewriteSequenceSpanIds(
-        spansForSegment(segment, segmentSources?.[index]),
-        index,
-      ),
-    ),
-  ];
+  const presentationSpans = shouldJoinPresentationSpans(connectorParse)
+    ? parseInput.source === undefined
+      ? []
+      : [sourceSpan("span:body", "body", parseInput.source, evidence)]
+    : [
+        ...(connectorParse?.connectorSpans ?? []),
+        ...parsedSegments.flatMap((segment, index) =>
+          rewriteSequenceSpanIds(
+            spansForSegment(segment, segmentSources?.[index]),
+            index,
+          ),
+        ),
+      ];
 
   return {
     effect: {
@@ -135,6 +139,12 @@ function parseConnectors(
   }
 
   return undefined;
+}
+
+function shouldJoinPresentationSpans(
+  connectorParse: ReturnType<ConnectorParser>,
+): boolean {
+  return connectorParse?.presentationMode === "joined";
 }
 
 function rewriteSequenceSpanIds(

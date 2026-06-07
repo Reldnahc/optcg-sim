@@ -43,7 +43,7 @@ describe("card effect parser source maps", () => {
     expect(spans.some((span) => span.id === "span:sequence:1:body")).toBe(true);
   });
 
-  it("emits connector and sequence body spans for and-separated effects", () => {
+  it("keeps and-separated effects in one body presentation span", () => {
     const text =
       "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.";
     const result = parseCardEffectLinesDetailed(text);
@@ -58,22 +58,14 @@ describe("card effect parser source maps", () => {
     }
 
     const spans = parsed.sourceMap?.spans ?? [];
-    expect(
-      spans.some((span) => span.role === "connector" && span.text === "and"),
-    ).toBe(true);
-    expect(
-      spans.find((span) => span.id === "span:sequence:0:body"),
-    ).toMatchObject({
+    expect(spans.find((span) => span.id === "span:body")).toMatchObject({
       role: "body",
-      text: "Draw 2 cards",
+      text: "Draw 2 cards and trash 1 card from your hand.",
     });
-    expect(
-      spans.find((span) => span.id === "span:sequence:1:body"),
-    ).toMatchObject({
-      role: "body",
-      text: "trash 1 card from your hand.",
-    });
-    expect(spans.some((span) => span.id === "span:body")).toBe(false);
+    expect(spans.some((span) => span.role === "connector")).toBe(false);
+    expect(spans.some((span) => span.id.startsWith("span:sequence:"))).toBe(
+      false,
+    );
   });
 
   it("emits separate cost and post-cost body spans", () => {
