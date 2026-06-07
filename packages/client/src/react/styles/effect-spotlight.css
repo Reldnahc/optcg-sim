@@ -75,7 +75,7 @@
   border-radius: clamp(3px, 0.5vh, 5px);
   padding: clamp(2px, 0.45vh, 4px) clamp(3px, 0.55vh, 5px);
   color: #1f1915;
-  background: rgba(246, 238, 224, 0.82);
+  background: rgba(246, 238, 224, 0.9);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 

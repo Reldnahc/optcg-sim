@@ -244,7 +244,7 @@ describe("playmat structure", () => {
     assert.match(effectSpotlightStyles, /align-items:\s*start;/u);
     assert.match(
       effectSpotlightStyles,
-      /background:\s*rgba\(246,\s*238,\s*224,\s*0\.82\);/u,
+      /background:\s*rgba\(246,\s*238,\s*224,\s*0\.9\);/u,
     );
     assert.match(
       effectSpotlightStyles,
