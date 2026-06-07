@@ -9,7 +9,7 @@ import type {
 
 import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
 import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
-import { removeFrame } from "./segments.js";
+import { removeFrame, replaceQueueEntry } from "./segments.js";
 import {
   conditionalParentForPath,
   isRootSequencePath,
@@ -232,9 +232,17 @@ export const resumeSequenceFrameFromLedgers = (params: {
   ledgers: SegmentLedgers;
   state: GameState;
 }): SequenceFrameResumeResult => {
-  const continued = continueNoDecisionSegments(
-    params.state,
+  const resumedEntry = entryWithCompletedFramePresentation(
     params.entry,
+    params.frame,
+  );
+  const resumedState =
+    resumedEntry === params.entry
+      ? params.state
+      : replaceQueueEntry(params.state, resumedEntry);
+  const continued = continueNoDecisionSegments(
+    resumedState,
+    resumedEntry,
     resolveSequenceForPath(params.effectBlock.effect, params.frame.effectPath),
     params.frame.nextSegmentIndex,
     params.ledgers,
@@ -264,7 +272,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
   const completed = continueParentSequencesAfterNestedCompletion({
     createTrashDecision: params.createTrashDecision,
     effectBlock: params.effectBlock,
-    entry: params.entry,
+    entry: resumedEntry,
     events,
     ledgers: continued.ledgers,
     state: completedState,
@@ -290,7 +298,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
   completedState = completed.state;
   if (params.finalizeCompleted) {
     const completedEntry = entryWithCompletedSequencePresentation(
-      entryWithCompletedFramePresentation(params.entry, params.frame),
+      resumedEntry,
       completed.ledgers.segmentResults,
     );
     const finalized = appendEffectResolvedForCompletedSequence(

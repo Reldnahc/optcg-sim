@@ -54,6 +54,34 @@ const optionalTrashCostThenDraw = (): Extract<
   ],
 });
 
+const optionalTrashCostThenDrawUpTo = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "trash-hand-cost",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "trashFromHand",
+          chooser: "self",
+          count: 1,
+          optional: true,
+        },
+      },
+      saveResultAs: "paidCost",
+    },
+    {
+      id: "draw-up-to-after-cost",
+      connector: "ifYouDo",
+      effect: { type: "drawUpTo", player: "self", count: 1 },
+    },
+  ],
+});
+
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
     ...card,
@@ -99,6 +127,14 @@ const setupDefinition = (
 };
 
 const createQueuedCostPresentationState = (): GameState => {
+  return createQueuedCostPresentationStateForEffect(
+    optionalTrashCostThenDraw(),
+  );
+};
+
+const createQueuedCostPresentationStateForEffect = (
+  effect: Effect,
+): GameState => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   const player = must(state.players[p1], "p1");
@@ -109,11 +145,7 @@ const createQueuedCostPresentationState = (): GameState => {
     zone: "characterArea",
   });
   player.hand = reindexHand(player.hand.slice(1));
-  const definition = setupDefinition(
-    state,
-    source,
-    optionalTrashCostThenDraw(),
-  );
+  const definition = setupDefinition(state, source, effect);
   const definitionEffect = must(definition.effects[0], "definition effect");
   const entry = {
     ...queueDrawForP1(),
@@ -195,6 +227,34 @@ test("optional cost presentation highlights the cost while paying and the body a
   assert.equal(paid.state.pendingDecision, undefined);
   assert.deepEqual(
     (effectResolved.payload as { presentation?: unknown }).presentation,
+    {
+      source: entry.source,
+      textKind: "effect",
+      activeSpanIds: ["span:body:line:1"],
+    },
+  );
+});
+
+test("optional cost presentation drops the cost while a body decision is pending", () => {
+  const state = createQueuedCostPresentationStateForEffect(
+    optionalTrashCostThenDrawUpTo(),
+  );
+  const entry = must(state.effectQueue[0], "queued effect");
+
+  const paused = processEffectRuntime(state);
+  const paid = payTrashFromHandWithFirstHandCard(paused.state);
+
+  assert.equal(paid.errors, undefined);
+  const decision = must(paid.state.pendingDecision, "body quantity decision");
+  assert.equal(decision.type, "chooseQuantity");
+  assert.deepEqual(filterStateForPlayer(paid.state, p1).activeEffectText, {
+    source: entry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:body:line:1"],
+  });
+  assert.deepEqual(
+    filterStateForPlayer(paid.state, p1).pendingDecision?.presentation
+      .activeEffectText,
     {
       source: entry.source,
       textKind: "effect",
