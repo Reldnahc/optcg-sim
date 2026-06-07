@@ -41,6 +41,8 @@ describe("effect spotlight model", () => {
         },
         activeSpanIds: ["span:body:ko" as EffectTextSpanId],
       },
+      activeKey: "decision-1|source-1||span:body:ko",
+      activeMode: "live" as const,
       sourceInstanceId: "source-1",
       activeSpanIds: ["span:body:ko" as EffectTextSpanId],
       shownAtMs: 1_000,
@@ -57,5 +59,29 @@ describe("effect spotlight model", () => {
     });
 
     expect(model?.visibleUntilMs).toBe(3_000);
+  });
+
+  it("stores resolved event keys without pinning them", () => {
+    const model = effectSpotlightModel({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      active: {
+        source: {
+          instanceId: "source-1" as InstanceId,
+          cardId: "OP00-001" as CardId,
+          playerId: "p1" as PlayerId,
+        },
+        activeSpanIds: ["span:body:ko"],
+      },
+      activeKey: "event:resolved:1",
+      activeMode: "resolved",
+      pendingDecisionId: undefined,
+    });
+
+    expect(model?.activeKey).toBe("event:resolved:1");
+    expect(model?.activeMode).toBe("resolved");
+    expect(model?.pinned).toBe(false);
   });
 });

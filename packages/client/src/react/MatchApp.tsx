@@ -26,7 +26,7 @@ import {
 } from "./use-end-turn-confirmation.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useEffectSpotlight } from "./use-effect-spotlight.js";
-import { activeEffectTextForSpotlight } from "./effect-spotlight-source.js";
+import { activeEffectTextSourceForSpotlight } from "./effect-spotlight-source.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
@@ -255,16 +255,18 @@ export const MatchApp = ({
   const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
-  const activeEffectText =
+  const activeEffectTextSource =
     playerSnapshot === undefined
       ? undefined
-      : activeEffectTextForSpotlight({
+      : activeEffectTextSourceForSpotlight({
           activeEffectText: playerSnapshot.view.activeEffectText,
           pendingDecision: playerSnapshot.view.pendingDecision,
           events: playerSnapshot.view.events,
         });
   const effectSpotlight = useEffectSpotlight({
-    active: activeEffectText,
+    active: activeEffectTextSource?.active,
+    activeKey: activeEffectTextSource?.key,
+    activeMode: activeEffectTextSource?.mode,
     pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
   });
   const effectSpotlightCard =

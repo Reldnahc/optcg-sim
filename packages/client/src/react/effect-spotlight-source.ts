@@ -4,6 +4,12 @@ import type {
   PlayerView,
 } from "@optcg/types";
 
+export interface EffectSpotlightActiveSource {
+  readonly active: ActiveEffectTextPresentation;
+  readonly key: string;
+  readonly mode: "live" | "resolved";
+}
+
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -31,7 +37,7 @@ const isActiveEffectTextPresentation = (
 
 const latestResolvedEffectPresentation = (
   events: readonly EngineEvent[],
-): ActiveEffectTextPresentation | undefined => {
+): EffectSpotlightActiveSource | undefined => {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
     if (event?.type !== "effectResolved" || !isObjectRecord(event.payload)) {
@@ -39,13 +45,28 @@ const latestResolvedEffectPresentation = (
     }
     const presentation = event.payload["presentation"];
     if (isActiveEffectTextPresentation(presentation)) {
-      return presentation;
+      return {
+        active: presentation,
+        key: String(event.id),
+        mode: "resolved",
+      };
     }
   }
   return undefined;
 };
 
-export const activeEffectTextForSpotlight = ({
+const liveKey = (
+  active: ActiveEffectTextPresentation,
+  prefix: string,
+): string =>
+  [
+    prefix,
+    String(active.source.instanceId),
+    active.textKind ?? "",
+    active.activeSpanIds.join("\n"),
+  ].join("|");
+
+export const activeEffectTextSourceForSpotlight = ({
   activeEffectText,
   events,
   pendingDecision,
@@ -53,7 +74,32 @@ export const activeEffectTextForSpotlight = ({
   readonly activeEffectText: PlayerView["activeEffectText"];
   readonly pendingDecision: PlayerView["pendingDecision"];
   readonly events: readonly EngineEvent[];
+}): EffectSpotlightActiveSource | undefined => {
+  if (activeEffectText !== undefined) {
+    return {
+      active: activeEffectText,
+      key: liveKey(activeEffectText, "active"),
+      mode: "live",
+    };
+  }
+  if (pendingDecision?.presentation.activeEffectText !== undefined) {
+    const pendingActiveEffectText =
+      pendingDecision.presentation.activeEffectText;
+    return {
+      active: pendingActiveEffectText,
+      key: liveKey(
+        pendingActiveEffectText,
+        `decision:${String(pendingDecision.id)}`,
+      ),
+      mode: "live",
+    };
+  }
+  return latestResolvedEffectPresentation(events);
+};
+
+export const activeEffectTextForSpotlight = (input: {
+  readonly activeEffectText: PlayerView["activeEffectText"];
+  readonly pendingDecision: PlayerView["pendingDecision"];
+  readonly events: readonly EngineEvent[];
 }): ActiveEffectTextPresentation | undefined =>
-  activeEffectText ??
-  pendingDecision?.presentation.activeEffectText ??
-  latestResolvedEffectPresentation(events);
+  activeEffectTextSourceForSpotlight(input)?.active;

@@ -8,7 +8,10 @@ import type {
   PlayerView,
 } from "@optcg/types";
 
-import { activeEffectTextForSpotlight } from "./effect-spotlight-source.js";
+import {
+  activeEffectTextForSpotlight,
+  activeEffectTextSourceForSpotlight,
+} from "./effect-spotlight-source.js";
 
 const source = {
   instanceId: "source-1" as InstanceId,
@@ -92,6 +95,37 @@ describe("activeEffectTextForSpotlight", () => {
       source,
       textKind: "effect",
       activeSpanIds: ["span:new"],
+    });
+  });
+
+  it("marks resolved event presentations as one-shot sources keyed by event id", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 2,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:new"],
+        },
+      },
+    });
+
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: undefined,
+        events: [resolved],
+      }),
+    ).toEqual({
+      active: {
+        source,
+        textKind: "effect",
+        activeSpanIds: ["span:new"],
+      },
+      key: String(resolved.id),
+      mode: "resolved",
     });
   });
 });
