@@ -8,7 +8,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { toCardRef } from "../actions/state.js";
+import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
   activeSpanIdsForCost,
   activeSpanIdsForSearchRevealRemaining,
@@ -44,11 +44,34 @@ const visibleEffectQueueEntryForDecision = ({
     visibleCards.map((visible) => [visible.card.instanceId, visible]),
   );
   const visible = visibleByInstanceId.get(entry.source.instanceId);
-  if (visible === undefined) {
+  if (visible !== undefined) {
+    return { entry, source: toCardRef(visible.card, visible.playerId) };
+  }
+  if (!isRevealedSourceVisible(state, pending.playerId, entry.source)) {
     return undefined;
   }
-  return { entry, source: toCardRef(visible.card, visible.playerId) };
+  return { entry, source: entry.source };
 };
+
+const isRevealedSourceVisible = (
+  state: GameState,
+  playerId: PlayerId,
+  source: CardRef,
+): boolean =>
+  state.revealedCards.some(
+    (record) =>
+      (record.visibility.type === "public" ||
+        (record.visibility.type === "private" &&
+          record.visibility.playerId === playerId)) &&
+      record.cards.some(
+        (card) =>
+          card.instanceId === source.instanceId &&
+          card.cardId === source.cardId &&
+          card.playerId === source.playerId &&
+          (source.zone === undefined ||
+            (card.zone !== undefined && zonesEqual(card.zone, source.zone))),
+      ),
+  );
 
 export const publicDecisionSourceFromEffectQueue = (params: {
   state: GameState;
