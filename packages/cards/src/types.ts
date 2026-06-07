@@ -3,10 +3,11 @@ import type {
   Effect,
   EffectCategory,
   EffectBlockCost,
+  EffectTextSourceMap,
+  EffectTextSpan,
   SequencedEffect,
   SourcePresencePolicy,
   Trigger,
-  EffectTextSpan,
 } from "@optcg/types";
 import type { SourceSlice } from "./source-slices.js";
 
@@ -381,6 +382,7 @@ export interface ParsedRuntimeEffectLine {
   readonly kind?: "effect";
   readonly block: ParsedEffectBlock;
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly sourceMap?: EffectTextSourceMap;
 }
 
 export interface ParsedMetadataLine {

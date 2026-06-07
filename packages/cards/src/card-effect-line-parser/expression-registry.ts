@@ -60,11 +60,14 @@ const singleInstructionExpressionParser = (input: ParseInput) => {
     effect: parsed.effect,
     evidence: parsed.evidence,
     rest: "",
+    ...(parsed.presentationSpans === undefined
+      ? {}
+      : { presentationSpans: parsed.presentationSpans }),
   };
 };
 
 const generalExpressionParser = (input: ParseInput) =>
-  parseExpression(input.text, {
+  parseExpression(input, {
     connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
     segments: [
       conditionalExpressionSegmentParser({

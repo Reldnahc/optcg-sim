@@ -1,11 +1,15 @@
 import type { EntryPointParseResult, ParseInput } from "../types.js";
 import { supportedEntryPoints } from "../entry-point-definitions.js";
+import { consumeSourcePrefix, sourceSpan } from "../source-slices.js";
 
 export function parseSupportedEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
   for (const entryPoint of supportedEntryPoints) {
     if (isEntryPointPrefix(input.text, entryPoint.text)) {
+      const consumed = input.source
+        ? consumeSourcePrefix(input.source, entryPoint.text)
+        : undefined;
       return {
         node: {
           type: "entryPoint",
@@ -19,6 +23,15 @@ export function parseSupportedEntryPoint(
         },
         evidence: entryPoint.evidence,
         rest: input.text.slice(entryPoint.text.length).trimStart(),
+        ...(consumed === undefined
+          ? {}
+          : {
+              presentationSpans: [
+                sourceSpan("span:entry", "entry", consumed.consumed, [
+                  ...entryPoint.evidence,
+                ]),
+              ],
+            }),
       };
     }
   }

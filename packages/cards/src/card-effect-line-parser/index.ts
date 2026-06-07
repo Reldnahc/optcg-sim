@@ -20,9 +20,12 @@ export function parseCardEffectLine(
 export function parseCardEffectLines(text: string): ParsedRuntimeEffectLine[] {
   const result = parseEffectLinesDetailed(text, defaultRegistry);
   return result.ok
-    ? result.value.filter(
-        (value): value is ParsedRuntimeEffectLine => value.kind !== "metadata",
-      )
+    ? result.value
+        .filter(
+          (value): value is ParsedRuntimeEffectLine =>
+            value.kind !== "metadata",
+        )
+        .map(stripSourceMap)
     : [];
 }
 
@@ -39,4 +42,14 @@ export function parseCardEffectLineDetailed(
 ): ParseCardEffectLineResult {
   const result = parseEffectLineDetailed(text, defaultRegistry);
   return result.ok ? result : { ok: false, diagnostic: result.diagnostic };
+}
+
+function stripSourceMap(
+  line: ParsedRuntimeEffectLine,
+): ParsedRuntimeEffectLine {
+  return {
+    ...(line.kind === undefined ? {} : { kind: line.kind }),
+    block: line.block,
+    evidence: line.evidence,
+  };
 }

@@ -1,4 +1,4 @@
-import type { Condition } from "@optcg/types";
+import type { Condition, EffectTextSpan } from "@optcg/types";
 
 import type {
   EntryPointParseResult,
@@ -11,6 +11,7 @@ import type {
   ParseFailureDiagnostic,
   PrimitiveEvidence,
 } from "./types.js";
+import { createSourceSlice, type SourceSlice } from "./source-slices.js";
 
 export type EntryPointParser = (
   input: ParseInput,
@@ -36,7 +37,7 @@ export function parseEffectLine(
   registry: EffectLineParserRegistry,
 ): ParsedEffectLine | undefined {
   const result = parseEffectLineDetailed(text, registry);
-  return result.ok ? result.value : undefined;
+  return result.ok ? stripSourceMap(result.value) : undefined;
 }
 
 export function parseEffectLinesDetailed(
@@ -45,16 +46,24 @@ export function parseEffectLinesDetailed(
 ):
   | { readonly ok: true; readonly value: readonly ParsedEffectLine[] }
   | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic } {
+  const rootSource = createSourceSlice(text);
   const metadataLine = firstMetadataLineParse(registry.metadataLines ?? [], {
     text,
+    source: rootSource,
   });
   if (metadataLine !== undefined) {
     return { ok: true, value: [metadataLine] };
   }
 
-  const leadingMarkerParse = parseMarkers(text, registry.markers ?? []);
+  const leadingMarkerParse = parseMarkers(
+    { text, source: rootSource },
+    registry.markers ?? [],
+  );
   const entryPoints = parseEntryPointAlternatives(registry.entryPoints, {
     text: leadingMarkerParse.rest,
+    ...(leadingMarkerParse.restSource === undefined
+      ? {}
+      : { source: leadingMarkerParse.restSource }),
   });
   if (!entryPoints.ok) {
     return {
@@ -67,7 +76,15 @@ export function parseEffectLinesDetailed(
     };
   }
 
-  const markerParse = parseMarkers(entryPoints.rest, registry.markers ?? []);
+  const markerParse = parseMarkers(
+    {
+      text: entryPoints.rest,
+      ...(entryPoints.restSource === undefined
+        ? {}
+        : { source: entryPoints.restSource }),
+    },
+    registry.markers ?? [],
+  );
   const values: ParsedEffectLine[] = [];
   for (const entryPoint of entryPoints.values) {
     const entryExpressionCondition = combineConditions(
@@ -77,6 +94,9 @@ export function parseEffectLinesDetailed(
     );
     const expression = firstExpressionParse(registry.expressions, {
       text: markerParse.rest,
+      ...(markerParse.restSource === undefined
+        ? {}
+        : { source: markerParse.restSource }),
       entryPoint: {
         ...entryPoint.node,
         ...(entryExpressionCondition === undefined
@@ -97,6 +117,13 @@ export function parseEffectLinesDetailed(
         },
       };
     }
+
+    const spans = [
+      ...leadingMarkerParse.presentationSpans,
+      ...(entryPoint.presentationSpans ?? []),
+      ...markerParse.presentationSpans,
+      ...(expression.presentationSpans ?? []),
+    ];
 
     const condition = combineConditions(
       leadingMarkerParse.patch.condition,
@@ -134,6 +161,18 @@ export function parseEffectLinesDetailed(
           : []),
         "composition:entryExpression",
       ],
+      ...(spans.length === 0
+        ? {}
+        : {
+            sourceMap: {
+              textKind:
+                entryPoint.node.trigger.type === "trigger"
+                  ? "trigger"
+                  : "effect",
+              sourceText: rootSource.rawText,
+              spans,
+            },
+          }),
     });
   }
 
@@ -174,21 +213,35 @@ function parseEntryPointAlternatives(
       readonly ok: true;
       readonly values: readonly EntryPointParseResult[];
       readonly rest: string;
+      readonly restSource?: SourceSlice;
     }
   | { readonly ok: false; readonly text: string } {
   let rest = input.text;
+  let restSource = input.source;
   const values: EntryPointParseResult[] = [];
   for (;;) {
-    const entryPoint = firstEntryPointParse(parsers, { text: rest });
+    const entryPoint = firstEntryPointParse(parsers, {
+      text: rest,
+      ...(restSource === undefined ? {} : { source: restSource }),
+    });
     if (entryPoint === undefined) {
       return { ok: false, text: rest };
     }
     values.push(entryPoint);
+    const beforeEntryRest = rest;
     rest = entryPoint.rest.trimStart();
+    restSource = sourceForRest(restSource, beforeEntryRest, rest);
     if (!rest.startsWith("/")) {
-      return { ok: true, values, rest };
+      return {
+        ok: true,
+        values,
+        rest,
+        ...(restSource === undefined ? {} : { restSource }),
+      };
     }
+    const beforeSlashRest = rest;
     rest = rest.slice(1).trimStart();
+    restSource = sourceForRest(restSource, beforeSlashRest, rest);
   }
 }
 
@@ -207,23 +260,30 @@ function firstMetadataLineParse(
 }
 
 function parseMarkers(
-  text: string,
+  input: ParseInput,
   parsers: readonly MarkerParser[],
 ): {
   readonly rest: string;
+  readonly restSource?: SourceSlice;
   readonly patch: EffectBlockPatch;
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly presentationSpans: readonly EffectTextSpan[];
 } {
-  let rest = text;
+  let rest = input.text;
+  let restSource = input.source;
   let oncePerTurn: true | undefined;
   const conditions: Condition[] = [];
   const evidence: PrimitiveEvidence[] = [];
+  const presentationSpans: EffectTextSpan[] = [];
 
   let consumed = true;
   while (consumed) {
     consumed = false;
     for (const parser of parsers) {
-      const result = parser({ text: rest });
+      const result = parser({
+        text: rest,
+        ...(restSource === undefined ? {} : { source: restSource }),
+      });
       if (result === undefined) {
         continue;
       }
@@ -236,7 +296,10 @@ function parseMarkers(
       }
 
       evidence.push(...result.evidence);
+      presentationSpans.push(...(result.presentationSpans ?? []));
+      const beforeRest = rest;
       rest = result.rest;
+      restSource = sourceForRest(restSource, beforeRest, rest);
       consumed = true;
       break;
     }
@@ -245,11 +308,36 @@ function parseMarkers(
   const markerCondition = combineConditions(...conditions);
   return {
     rest,
+    ...(restSource === undefined ? {} : { restSource }),
     patch: {
       ...(oncePerTurn === true ? { oncePerTurn } : {}),
       ...(markerCondition === undefined ? {} : { condition: markerCondition }),
     },
     evidence,
+    presentationSpans,
+  };
+}
+
+function sourceForRest(
+  source: SourceSlice | undefined,
+  currentText: string,
+  restText: string,
+): SourceSlice | undefined {
+  if (source === undefined) {
+    return undefined;
+  }
+
+  const restIndex =
+    restText.length === 0
+      ? currentText.length
+      : currentText.lastIndexOf(restText);
+  const startOffset =
+    restIndex >= 0 ? restIndex : currentText.length - restText.length;
+  return {
+    text: restText,
+    rawText: restText,
+    start: source.start + Math.max(0, startOffset),
+    end: source.end,
   };
 }
 
@@ -316,4 +404,16 @@ function sourcePresencePolicy(
   }
 
   return "mustRemainInSameZone";
+}
+
+function stripSourceMap(line: ParsedEffectLine): ParsedEffectLine {
+  if (!("block" in line)) {
+    return line;
+  }
+
+  return {
+    ...(line.kind === undefined ? {} : { kind: line.kind }),
+    block: line.block,
+    evidence: line.evidence,
+  };
 }
