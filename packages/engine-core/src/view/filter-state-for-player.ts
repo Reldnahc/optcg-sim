@@ -32,7 +32,10 @@ import {
   toPublicLifeView,
 } from "./public-card-view.js";
 import type { ComputedBoardCardStats } from "./public-card-view.js";
-import { publicDecisionSourceFromEffectQueue } from "./public-decision-source.js";
+import {
+  publicDecisionActiveEffectTextFromEffectQueue,
+  publicDecisionSourceFromEffectQueue,
+} from "./public-decision-source.js";
 import { publicDecisionPresentation } from "./public-decision-presentation.js";
 import { toPublicTimerState } from "./public-timers.js";
 import { playerRestrictionLabels } from "./player-restrictions.js";
@@ -223,14 +226,21 @@ const toPublicDecision = (
   if (pending === undefined || pending.playerId !== playerId) {
     return undefined;
   }
+  const visibleCards = visibleCardsForPlayer(state, playerId);
   const source = publicDecisionSourceFromEffectQueue({
     state,
     pending,
-    visibleCards: visibleCardsForPlayer(state, playerId),
+    visibleCards,
+  });
+  const activeEffectText = publicDecisionActiveEffectTextFromEffectQueue({
+    state,
+    pending,
+    visibleCards,
   });
   const presentation = publicDecisionPresentation({
     pending,
     ...(source === undefined ? {} : { source }),
+    ...(activeEffectText === undefined ? {} : { activeEffectText }),
   });
   const base = {
     id: pending.id,
@@ -660,11 +670,19 @@ export const filterStateForPlayer = (
         };
 
   const pendingDecision = toPublicDecision(state, playerId);
+  const visibleDecisionCards = visibleCardsForPlayer(state, playerId);
   const activeEffectSource = state.pendingDecision
     ? publicDecisionSourceFromEffectQueue({
         state,
         pending: state.pendingDecision,
-        visibleCards: visibleCardsForPlayer(state, playerId),
+        visibleCards: visibleDecisionCards,
+      })
+    : undefined;
+  const activeEffectText = state.pendingDecision
+    ? publicDecisionActiveEffectTextFromEffectQueue({
+        state,
+        pending: state.pendingDecision,
+        visibleCards: visibleDecisionCards,
       })
     : undefined;
   // Keep computeView validation fail-closed for unsupported board-power metadata.
@@ -687,6 +705,7 @@ export const filterStateForPlayer = (
     ...(activeEffectSource === undefined
       ? {}
       : { activeEffectSources: [activeEffectSource] }),
+    ...(activeEffectText === undefined ? {} : { activeEffectText }),
     legalActions: dedupePublicLegalActions([
       ...getLegalActions(state, playerId)
         .map((action) => toPublicLegalAction(state, playerId, action))

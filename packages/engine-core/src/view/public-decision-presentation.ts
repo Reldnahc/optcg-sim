@@ -1,5 +1,7 @@
 import type {
+  ActiveEffectTextPresentation,
   CardRef,
+  EffectTextSourceMap,
   PendingDecision,
   PublicDecisionPresentation,
   Zone,
@@ -38,23 +40,37 @@ const moveQuantityPromptPattern =
 const revealQuantityPromptPattern =
   /^Choose how many cards to reveal from (?<zone>.+)\.?$/u;
 
-const withSource = (
-  source: CardRef | undefined,
-): Pick<PublicDecisionPresentation, "source"> =>
-  source === undefined ? {} : { source };
+interface PublicDecisionPresentationContext {
+  source?: CardRef | undefined;
+  effectTextSourceMap?: EffectTextSourceMap | undefined;
+  activeEffectText?: ActiveEffectTextPresentation | undefined;
+}
+
+const withPresentationContext = ({
+  source,
+  effectTextSourceMap,
+  activeEffectText,
+}: PublicDecisionPresentationContext): Pick<
+  PublicDecisionPresentation,
+  "source" | "effectTextSourceMap" | "activeEffectText"
+> => ({
+  ...(source === undefined ? {} : { source }),
+  ...(effectTextSourceMap === undefined ? {} : { effectTextSourceMap }),
+  ...(activeEffectText === undefined ? {} : { activeEffectText }),
+});
 
 const fallbackPresentation = (
   pending: PendingDecision,
-  source: CardRef | undefined,
+  context: PublicDecisionPresentationContext,
 ): PublicDecisionPresentation => ({
   title: stripPeriod(pending.prompt),
   instruction: stripPeriod(pending.prompt),
-  ...withSource(source),
+  ...withPresentationContext(context),
 });
 
 const binaryQuantityPresentation = (
   pending: Extract<PendingDecision, { type: "chooseQuantity" }>,
-  source: CardRef | undefined,
+  context: PublicDecisionPresentationContext,
 ): PublicDecisionPresentation | undefined => {
   if (pending.min !== 0 || pending.max !== 1) {
     return undefined;
@@ -64,7 +80,7 @@ const binaryQuantityPresentation = (
     return {
       title: "Draw card",
       instruction: "Do you want to draw 1 card?",
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
   const moveMatch = moveQuantityPromptPattern.exec(prompt);
@@ -74,7 +90,7 @@ const binaryQuantityPresentation = (
     return {
       title: "Move card",
       instruction: `Do you want to move 1 card from ${fromZone} to ${toZone}?`,
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
   const revealMatch = revealQuantityPromptPattern.exec(prompt);
@@ -83,7 +99,7 @@ const binaryQuantityPresentation = (
     return {
       title: "Reveal card",
       instruction: `Do you want to reveal 1 card from ${revealZone}?`,
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
   return undefined;
@@ -92,16 +108,25 @@ const binaryQuantityPresentation = (
 export const publicDecisionPresentation = ({
   pending,
   source,
+  effectTextSourceMap,
+  activeEffectText,
 }: {
   pending: PendingDecision;
   source?: CardRef | undefined;
+  effectTextSourceMap?: EffectTextSourceMap | undefined;
+  activeEffectText?: ActiveEffectTextPresentation | undefined;
 }): PublicDecisionPresentation => {
+  const context: PublicDecisionPresentationContext = {
+    source,
+    effectTextSourceMap,
+    activeEffectText,
+  };
   if (pending.type === "confirmLifeTrigger") {
     return {
       title: "Life trigger",
       instruction:
         "Choose whether to activate this trigger or add it to your hand.",
-      ...withSource(source),
+      ...withPresentationContext(context),
       choices: [
         {
           responseKey: "activateTrigger",
@@ -120,7 +145,7 @@ export const publicDecisionPresentation = ({
     return {
       title: "Choose replacement",
       instruction: stripPeriod(pending.prompt),
-      ...withSource(source),
+      ...withPresentationContext(context),
       choices: [
         ...(pending.replacementOptions ?? []).map((option) => ({
           responseKey: option.replacementId,
@@ -137,14 +162,14 @@ export const publicDecisionPresentation = ({
     return {
       title: "Resolve trigger",
       instruction: "Choose the next trigger to resolve.",
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
   if (pending.type === "chooseOptionalActivation") {
     return {
       title: "Optional effect",
       instruction: stripPeriod(pending.prompt),
-      source: pending.source,
+      ...withPresentationContext({ ...context, source: pending.source }),
       choices: [
         { responseKey: "activate", label: "Activate effect" },
         { responseKey: "decline", label: "Decline effect" },
@@ -152,29 +177,29 @@ export const publicDecisionPresentation = ({
     };
   }
   if (pending.type === "chooseQuantity") {
-    const binaryPresentation = binaryQuantityPresentation(pending, source);
+    const binaryPresentation = binaryQuantityPresentation(pending, context);
     if (binaryPresentation !== undefined) {
       return binaryPresentation;
     }
     return {
       title: "Choose quantity",
       instruction: stripPeriod(pending.prompt),
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
   if (pending.type === "payCost") {
     return {
       title: "Pay cost",
       instruction: stripPeriod(pending.prompt),
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
   if (pending.type === "orderCards") {
     return {
       title: `Order cards for ${zoneLabel(pending.destination)}`,
       instruction: stripPeriod(pending.prompt),
-      ...withSource(source),
+      ...withPresentationContext(context),
     };
   }
-  return fallbackPresentation(pending, source);
+  return fallbackPresentation(pending, context);
 };

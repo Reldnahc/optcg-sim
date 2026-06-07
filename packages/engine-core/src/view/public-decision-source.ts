@@ -1,6 +1,8 @@
 import type {
+  ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
+  EffectQueueEntry,
   GameState,
   PendingDecision,
   PlayerId,
@@ -13,7 +15,7 @@ export interface VisibleDecisionSourceCard {
   playerId: PlayerId;
 }
 
-export const publicDecisionSourceFromEffectQueue = ({
+const visibleEffectQueueEntryForDecision = ({
   state,
   pending,
   visibleCards,
@@ -21,7 +23,7 @@ export const publicDecisionSourceFromEffectQueue = ({
   state: GameState;
   pending: PendingDecision;
   visibleCards: readonly VisibleDecisionSourceCard[];
-}): CardRef | undefined => {
+}): { entry: EffectQueueEntry; source: CardRef } | undefined => {
   const causedBy = pending.causedBy;
   if (causedBy.type !== "effect") {
     return undefined;
@@ -36,7 +38,26 @@ export const publicDecisionSourceFromEffectQueue = ({
     visibleCards.map((visible) => [visible.card.instanceId, visible]),
   );
   const visible = visibleByInstanceId.get(entry.source.instanceId);
-  return visible === undefined
-    ? undefined
-    : toCardRef(visible.card, visible.playerId);
+  if (visible === undefined) {
+    return undefined;
+  }
+  return { entry, source: toCardRef(visible.card, visible.playerId) };
+};
+
+export const publicDecisionSourceFromEffectQueue = (params: {
+  state: GameState;
+  pending: PendingDecision;
+  visibleCards: readonly VisibleDecisionSourceCard[];
+}): CardRef | undefined => visibleEffectQueueEntryForDecision(params)?.source;
+
+export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
+  state: GameState;
+  pending: PendingDecision;
+  visibleCards: readonly VisibleDecisionSourceCard[];
+}): ActiveEffectTextPresentation | undefined => {
+  const visible = visibleEffectQueueEntryForDecision(params);
+  if (visible?.entry.presentation === undefined) {
+    return undefined;
+  }
+  return { ...visible.entry.presentation, source: visible.source };
 };
