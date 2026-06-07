@@ -84,4 +84,48 @@ describe("effect spotlight model", () => {
     expect(model?.activeMode).toBe("resolved");
     expect(model?.pinned).toBe(false);
   });
+
+  it("switches from pinned cost text to resolved body text after payment", () => {
+    const previous = {
+      active: {
+        source: {
+          instanceId: "source-1" as InstanceId,
+          cardId: "OP00-001" as CardId,
+          playerId: "p1" as PlayerId,
+        },
+        activeSpanIds: ["span:cost:optional" as EffectTextSpanId],
+      },
+      activeKey: "decision:payCost|source-1||span:cost:optional",
+      activeMode: "live" as const,
+      sourceInstanceId: "source-1",
+      activeSpanIds: ["span:cost:optional" as EffectTextSpanId],
+      shownAtMs: 1_000,
+      visibleUntilMs: 3_000,
+      pinned: true,
+    };
+
+    const model = effectSpotlightModel({
+      nowMs: 1_200,
+      previous,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      active: {
+        source: {
+          instanceId: "source-1" as InstanceId,
+          cardId: "OP00-001" as CardId,
+          playerId: "p1" as PlayerId,
+        },
+        activeSpanIds: ["span:body"],
+      },
+      activeKey: "event:resolved:body",
+      activeMode: "resolved",
+      pendingDecisionId: undefined,
+    });
+
+    expect(model?.activeSpanIds).toEqual(["span:body"]);
+    expect(model?.activeKey).toBe("event:resolved:body");
+    expect(model?.activeMode).toBe("resolved");
+    expect(model?.pinned).toBe(false);
+    expect(model?.visibleUntilMs).toBe(3_200);
+  });
 });

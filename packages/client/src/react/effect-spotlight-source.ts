@@ -75,13 +75,6 @@ export const activeEffectTextSourceForSpotlight = ({
   readonly pendingDecision: PlayerView["pendingDecision"];
   readonly events: readonly EngineEvent[];
 }): EffectSpotlightActiveSource | undefined => {
-  if (activeEffectText !== undefined) {
-    return {
-      active: activeEffectText,
-      key: liveKey(activeEffectText, "active"),
-      mode: "live",
-    };
-  }
   if (pendingDecision?.presentation.activeEffectText !== undefined) {
     const pendingActiveEffectText =
       pendingDecision.presentation.activeEffectText;
@@ -96,6 +89,13 @@ export const activeEffectTextSourceForSpotlight = ({
   }
   if (pendingDecision !== undefined) {
     return undefined;
+  }
+  if (activeEffectText !== undefined) {
+    return {
+      active: activeEffectText,
+      key: liveKey(activeEffectText, "active"),
+      mode: "live",
+    };
   }
   return latestResolvedEffectPresentation(events);
 };

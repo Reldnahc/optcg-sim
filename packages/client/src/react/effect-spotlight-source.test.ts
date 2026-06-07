@@ -60,6 +60,43 @@ describe("activeEffectTextForSpotlight", () => {
     ).toEqual(activeEffectText);
   });
 
+  it("uses pending decision active text before top-level active text", () => {
+    const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:body"],
+    };
+    const pendingActiveEffectText: NonNullable<
+      PlayerView["pendingDecision"]
+    >["presentation"]["activeEffectText"] = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:cost:optional"],
+    };
+
+    expect(
+      activeEffectTextForSpotlight({
+        activeEffectText,
+        pendingDecision: {
+          id: "decision:payCost:1" as DecisionId,
+          type: "chooseQuantity",
+          playerId: "p1" as PlayerId,
+          prompt: "Pay cost?",
+          causedBy: { type: "ruleProcess", name: "cost" },
+          presentation: {
+            title: "Pay cost",
+            instruction: "Pay cost?",
+            activeEffectText: pendingActiveEffectText,
+          },
+          mode: "upTo",
+          min: 0,
+          max: 1,
+        },
+        events: [],
+      }),
+    ).toEqual(pendingActiveEffectText);
+  });
+
   it("falls back to the newest resolved effect presentation", () => {
     expect(
       activeEffectTextForSpotlight({
