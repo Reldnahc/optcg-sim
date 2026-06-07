@@ -20,13 +20,6 @@
   position: relative;
   min-height: 0;
   overflow: auto;
-  background:
-    radial-gradient(
-      circle at 50% 18%,
-      rgba(255, 255, 255, 0.12),
-      transparent 34%
-    ),
-    #15191e;
 }
 
 .card-preview-image-frame {
@@ -150,7 +143,19 @@
   background: rgba(255, 255, 255, 0.16);
 }
 
+.card-preview-control-bar button:active {
+  transform: translateY(1px);
+  border-color: rgba(255, 210, 88, 0.86);
+  background: rgba(255, 210, 88, 0.24);
+}
+
 .card-preview-control-bar button[aria-pressed="true"] {
   border-color: rgba(255, 210, 88, 0.74);
   background: rgba(255, 210, 88, 0.18);
+}
+
+.card-preview-control-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  transform: none;
 }

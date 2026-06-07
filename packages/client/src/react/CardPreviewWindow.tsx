@@ -174,6 +174,7 @@ export const CardPreviewContent = ({
             <button
               type="button"
               aria-label="Zoom card out"
+              disabled={zoom <= minPreviewZoom}
               onClick={() => {
                 zoomBy(-previewZoomStep);
               }}
@@ -183,6 +184,7 @@ export const CardPreviewContent = ({
             <button
               type="button"
               aria-label="Reset card zoom"
+              disabled={zoom === 1}
               onClick={() => {
                 setZoom(1);
               }}
@@ -192,6 +194,7 @@ export const CardPreviewContent = ({
             <button
               type="button"
               aria-label="Zoom card in"
+              disabled={zoom >= maxPreviewZoom}
               onClick={() => {
                 zoomBy(previewZoomStep);
               }}

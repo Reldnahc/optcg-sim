@@ -28,6 +28,16 @@ const card = (overrides: Partial<ClientCardModel> = {}): ClientCardModel => ({
   ...overrides,
 });
 
+const markupForPreviewControls = (): string =>
+  renderToStaticMarkup(
+    createElement(CardPreviewWindow, {
+      card: card(),
+      minimized: false,
+      onToggleMinimized: () => undefined,
+      onClose: () => undefined,
+    }),
+  );
+
 describe("card preview window", () => {
   test("renders hovered card details in a floating window", () => {
     const markup = renderToStaticMarkup(
@@ -72,6 +82,21 @@ describe("card preview window", () => {
     assert.match(markup, /aria-label="Reset card zoom"/u);
     assert.match(markup, /aria-label="Zoom card in"/u);
     assert.match(markup, /aria-label="Hide card text"/u);
+  });
+
+  test("preview image area stays transparent and controls expose feedback states", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "card-preview-window.css"),
+      "utf8",
+    );
+
+    assert.doesNotMatch(styles, /\.card-preview-stage\s*\{[^}]*background:/u);
+    assert.match(
+      markupForPreviewControls(),
+      /aria-label="Reset card zoom" disabled=""/u,
+    );
+    assert.match(styles, /\.card-preview-control-bar button:active\s*\{/u);
+    assert.match(styles, /\.card-preview-control-bar button:disabled\s*\{/u);
   });
 
   test("renders an empty preview window before a card is hovered", () => {
