@@ -236,9 +236,14 @@ describe("playmat structure", () => {
       effectSpotlightStyles,
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*border-radius:\s*6px;/u,
     );
-    assert.match(effectSpotlightStyles, /right:\s*2\.5%;/u);
+    assert.match(effectSpotlightStyles, /right:\s*4%;/u);
     assert.match(effectSpotlightStyles, /bottom:\s*12\.4%;/u);
-    assert.match(effectSpotlightStyles, /left:\s*2\.5%;/u);
+    assert.match(effectSpotlightStyles, /left:\s*4%;/u);
+    assert.match(effectSpotlightStyles, /align-items:\s*start;/u);
+    assert.match(
+      effectSpotlightStyles,
+      /background:\s*rgba\(246,\s*238,\s*224,\s*0\.82\);/u,
+    );
     assert.match(
       effectSpotlightStyles,
       /--effect-spotlight-rules-font-size:\s*clamp\(5px,\s*0\.82vh,\s*9px\);/u,

@@ -63,19 +63,19 @@
 
 .effect-spotlight-card__rules {
   position: absolute;
-  right: 2.5%;
+  right: 4%;
   bottom: 12.4%;
-  left: 2.5%;
+  left: 4%;
   display: grid;
   min-height: 28%;
   max-height: 34%;
-  align-items: center;
+  align-items: start;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
   border-radius: clamp(3px, 0.5vh, 5px);
   padding: clamp(2px, 0.45vh, 4px) clamp(3px, 0.55vh, 5px);
   color: #1f1915;
-  background: rgba(246, 238, 224, 0.96);
+  background: rgba(246, 238, 224, 0.82);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
