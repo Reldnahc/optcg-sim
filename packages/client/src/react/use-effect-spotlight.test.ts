@@ -7,7 +7,10 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { effectSpotlightModel } from "./use-effect-spotlight.js";
+import {
+  effectSpotlightModel,
+  queuedResolvedSpotlightSources,
+} from "./use-effect-spotlight.js";
 
 describe("effect spotlight model", () => {
   it("pins while a pending decision has active effect text", () => {
@@ -127,5 +130,58 @@ describe("effect spotlight model", () => {
     expect(model?.activeMode).toBe("resolved");
     expect(model?.pinned).toBe(false);
     expect(model?.visibleUntilMs).toBe(3_200);
+  });
+
+  it("queues unseen resolved spotlights without replaying current or consumed events", () => {
+    const baseSource = {
+      instanceId: "source-1" as InstanceId,
+      cardId: "OP00-001" as CardId,
+      playerId: "p1" as PlayerId,
+    };
+    const queued = queuedResolvedSpotlightSources({
+      consumedKeys: new Set(["event:consumed"]),
+      currentKey: "event:current",
+      previousQueue: [
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:queued"],
+          },
+          key: "event:queued",
+          mode: "resolved",
+        },
+      ],
+      sources: [
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:current"],
+          },
+          key: "event:current",
+          mode: "resolved",
+        },
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:consumed"],
+          },
+          key: "event:consumed",
+          mode: "resolved",
+        },
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:next"],
+          },
+          key: "event:next",
+          mode: "resolved",
+        },
+      ],
+    });
+
+    expect(queued.map((source) => source.key)).toEqual([
+      "event:queued",
+      "event:next",
+    ]);
   });
 });

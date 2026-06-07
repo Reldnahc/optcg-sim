@@ -7,7 +7,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-interface EffectSpotlightActiveSource {
+export interface EffectSpotlightActiveSource {
   readonly active: ActiveEffectTextPresentation;
   readonly key: string;
   readonly mode: "live" | "resolved";
@@ -38,34 +38,45 @@ const isActiveEffectTextPresentation = (
   );
 };
 
-const latestResolvedSpotlightSource = (
-  events: readonly EngineEvent[],
+const resolvedSpotlightSourceForEvent = (
+  event: EngineEvent,
 ): EffectSpotlightActiveSource | undefined => {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (event?.type === "effectQueued") {
-      return undefined;
-    }
-    if (event?.type === "cardPlayed") {
-      return playedCardPresentation(event);
-    }
-    if (
-      (event?.type !== "effectResolved" &&
-        event?.type !== "replacementApplied") ||
-      !isObjectRecord(event.payload)
-    ) {
-      continue;
-    }
-    const presentation = event.payload["presentation"];
-    if (isActiveEffectTextPresentation(presentation)) {
-      return {
+  if (event.type === "cardPlayed") {
+    return playedCardPresentation(event);
+  }
+  if (
+    (event.type !== "effectResolved" && event.type !== "replacementApplied") ||
+    !isObjectRecord(event.payload)
+  ) {
+    return undefined;
+  }
+  const presentation = event.payload["presentation"];
+  return isActiveEffectTextPresentation(presentation)
+    ? {
         active: presentation,
         key: String(event.id),
         mode: "resolved",
-      };
+      }
+    : undefined;
+};
+
+export const resolvedEffectTextSourcesForSpotlight = (
+  events: readonly EngineEvent[],
+): readonly EffectSpotlightActiveSource[] => {
+  const sources: EffectSpotlightActiveSource[] = [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event?.type === "effectQueued") {
+      break;
+    }
+    if (event !== undefined) {
+      const source = resolvedSpotlightSourceForEvent(event);
+      if (source !== undefined) {
+        sources.push(source);
+      }
     }
   }
-  return undefined;
+  return sources.reverse();
 };
 
 const playedCardPresentation = (
@@ -143,5 +154,28 @@ export const activeEffectTextSourceForSpotlight = ({
       mode: "live",
     };
   }
-  return latestResolvedSpotlightSource(events);
+  return resolvedEffectTextSourcesForSpotlight(events).at(-1);
+};
+
+export const activeEffectTextSourcesForSpotlight = ({
+  activeEffectText,
+  events,
+  pendingDecision,
+}: {
+  readonly activeEffectText: PlayerView["activeEffectText"];
+  readonly pendingDecision: PlayerView["pendingDecision"];
+  readonly events: readonly EngineEvent[];
+}): readonly EffectSpotlightActiveSource[] => {
+  const activeSource = activeEffectTextSourceForSpotlight({
+    activeEffectText,
+    pendingDecision,
+    events,
+  });
+  if (activeSource?.mode === "live") {
+    return [activeSource];
+  }
+  if (pendingDecision !== undefined || activeEffectText !== undefined) {
+    return activeSource === undefined ? [] : [activeSource];
+  }
+  return resolvedEffectTextSourcesForSpotlight(events);
 };

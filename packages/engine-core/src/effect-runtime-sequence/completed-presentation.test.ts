@@ -100,7 +100,7 @@ const setupSequenceDefinition = (
   return definition;
 };
 
-test("completed no-decision sequence highlights last changed segment instead of skipped trailing segment", () => {
+test("completed no-decision sequence highlights first changed segment instead of later changed segments", () => {
   const { state, played } = queueingState();
   const p1State = must(state.players[p1], "p1");
   setupSequenceDefinition(state, played, drawThenLucyLeaderBuff());

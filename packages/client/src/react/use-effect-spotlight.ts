@@ -28,6 +28,12 @@ export interface EffectSpotlightModelInput {
   readonly pendingDecisionId: DecisionId | string | undefined;
 }
 
+export interface EffectSpotlightActiveSourceInput {
+  readonly active: ActiveEffectTextPresentation;
+  readonly key: string;
+  readonly mode: "live" | "resolved";
+}
+
 const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
   spanIds.join("\n");
 
@@ -46,6 +52,34 @@ const activePresentationKey = (active: ActiveEffectTextPresentation): string =>
     active.textKind ?? "",
     spanKey(active.activeSpanIds),
   ].join("|");
+
+export const queuedResolvedSpotlightSources = ({
+  consumedKeys,
+  currentKey,
+  previousQueue,
+  sources,
+}: {
+  readonly consumedKeys: ReadonlySet<string>;
+  readonly currentKey: string | undefined;
+  readonly previousQueue: readonly EffectSpotlightActiveSourceInput[];
+  readonly sources: readonly EffectSpotlightActiveSourceInput[];
+}): readonly EffectSpotlightActiveSourceInput[] => {
+  const queuedKeys = new Set(previousQueue.map((source) => source.key));
+  let next: EffectSpotlightActiveSourceInput[] | undefined;
+  for (const source of sources) {
+    if (
+      source.mode === "resolved" &&
+      source.key !== currentKey &&
+      !consumedKeys.has(source.key) &&
+      !queuedKeys.has(source.key)
+    ) {
+      next ??= [...previousQueue];
+      next.push(source);
+      queuedKeys.add(source.key);
+    }
+  }
+  return next ?? previousQueue;
+};
 
 export const effectSpotlightModel = ({
   active,
@@ -99,6 +133,7 @@ export interface UseEffectSpotlightInput {
   readonly active: ActiveEffectTextPresentation | undefined;
   readonly activeKey?: string | undefined;
   readonly activeMode?: "live" | "resolved" | undefined;
+  readonly activeSources?: readonly EffectSpotlightActiveSourceInput[];
   readonly pendingDecisionId: DecisionId | string | undefined;
   readonly minimumDwellMs?: number | undefined;
   readonly graceMs?: number | undefined;
@@ -108,27 +143,50 @@ export const useEffectSpotlight = ({
   active,
   activeKey,
   activeMode = "live",
+  activeSources,
   graceMs = 800,
   minimumDwellMs = 2_000,
   pendingDecisionId,
 }: UseEffectSpotlightInput): EffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
-  const resolvedActiveKey = useMemo(
-    () =>
-      active === undefined
-        ? undefined
-        : (activeKey ?? activePresentationKey(active)),
-    [active, activeKey],
+  const [resolvedQueue, setResolvedQueue] = useState<
+    EffectSpotlightActiveSourceInput[]
+  >([]);
+  const normalizedSources = useMemo(
+    (): readonly EffectSpotlightActiveSourceInput[] =>
+      activeSources ??
+      (active === undefined
+        ? []
+        : [
+            {
+              active,
+              key: activeKey ?? activePresentationKey(active),
+              mode: activeMode,
+            },
+          ]),
+    [active, activeKey, activeMode, activeSources],
   );
-  const effectiveActive =
-    active !== undefined &&
-    activeMode === "resolved" &&
-    resolvedActiveKey !== undefined &&
-    consumedResolvedKeys.current.has(resolvedActiveKey)
-      ? undefined
-      : active;
+  const liveSource = normalizedSources.find((source) => source.mode === "live");
+  const effectiveActive = liveSource?.active;
+  const effectiveActiveKey = liveSource?.key;
+  const effectiveActiveMode = liveSource?.mode ?? activeMode;
   const [model, setModel] = useState<EffectSpotlightState>();
   useEffect(() => {
+    const currentKey = model?.activeMode === "resolved" ? model.activeKey : "";
+    setResolvedQueue((previous) => {
+      const next = queuedResolvedSpotlightSources({
+        consumedKeys: consumedResolvedKeys.current,
+        currentKey,
+        previousQueue: previous,
+        sources: normalizedSources,
+      });
+      return next === previous ? previous : [...next];
+    });
+  }, [model?.activeKey, model?.activeMode, normalizedSources]);
+  useEffect(() => {
+    if (liveSource !== undefined) {
+      setResolvedQueue([]);
+    }
     setModel((previous) =>
       effectSpotlightModel({
         nowMs: Date.now(),
@@ -136,24 +194,59 @@ export const useEffectSpotlight = ({
         minimumDwellMs,
         graceMs,
         active: effectiveActive,
-        activeKey: resolvedActiveKey,
-        activeMode,
+        activeKey: effectiveActiveKey,
+        activeMode: effectiveActiveMode,
         pendingDecisionId,
       }),
     );
   }, [
-    activeMode,
     effectiveActive,
+    effectiveActiveKey,
+    effectiveActiveMode,
     graceMs,
+    liveSource,
     minimumDwellMs,
     pendingDecisionId,
-    resolvedActiveKey,
+  ]);
+  useEffect(() => {
+    if (
+      liveSource !== undefined ||
+      pendingDecisionId !== undefined ||
+      model !== undefined ||
+      resolvedQueue.length === 0
+    ) {
+      return;
+    }
+    const next = resolvedQueue[0];
+    if (next === undefined) {
+      return;
+    }
+    setResolvedQueue((previous) => previous.slice(1));
+    setModel(
+      effectSpotlightModel({
+        nowMs: Date.now(),
+        previous: undefined,
+        minimumDwellMs,
+        graceMs,
+        active: next.active,
+        activeKey: next.key,
+        activeMode: "resolved",
+        pendingDecisionId: undefined,
+      }),
+    );
+  }, [
+    graceMs,
+    liveSource,
+    minimumDwellMs,
+    model,
+    pendingDecisionId,
+    resolvedQueue,
   ]);
   useEffect(() => {
     if (
       model === undefined ||
       model.pinned ||
-      (effectiveActive !== undefined && activeMode === "live")
+      (effectiveActive !== undefined && effectiveActiveMode === "live")
     ) {
       return;
     }
@@ -163,19 +256,12 @@ export const useEffectSpotlight = ({
         consumedResolvedKeys.current.add(model.activeKey);
       }
       setModel((previous) =>
-        effectSpotlightModel({
-          nowMs: Date.now(),
-          previous,
-          minimumDwellMs,
-          graceMs,
-          active: undefined,
-          pendingDecisionId: undefined,
-        }),
+        previous?.activeKey === model.activeKey ? undefined : previous,
       );
     }, delayMs);
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [activeMode, effectiveActive, graceMs, minimumDwellMs, model]);
+  }, [effectiveActive, effectiveActiveMode, model]);
   return model;
 };

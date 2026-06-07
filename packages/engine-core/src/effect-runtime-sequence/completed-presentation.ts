@@ -31,9 +31,9 @@ const rootChangedSegments = (
     })
     .sort((left, right) => left.index - right.index);
 
-const lastRootChangedSegment = (
+const firstRootChangedSegment = (
   segmentResults: EffectExecutionFrame["segmentResults"],
-): RootChangedSegment | undefined => rootChangedSegments(segmentResults).at(-1);
+): RootChangedSegment | undefined => rootChangedSegments(segmentResults)[0];
 
 const activeSpanIdsForRootSegment = (
   activeSpanIds: readonly EffectTextSpanId[],
@@ -49,7 +49,7 @@ export const entryWithCompletedSequencePresentation = (
   if (entry.presentation === undefined) {
     return entry;
   }
-  const segment = lastRootChangedSegment(segmentResults);
+  const segment = firstRootChangedSegment(segmentResults);
   const activeSpanIds =
     segment === undefined
       ? undefined

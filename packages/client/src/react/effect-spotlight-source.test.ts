@@ -10,7 +10,10 @@ import type {
   PlayerView,
 } from "@optcg/types";
 
-import { activeEffectTextSourceForSpotlight } from "./effect-spotlight-source.js";
+import {
+  activeEffectTextSourceForSpotlight,
+  resolvedEffectTextSourcesForSpotlight,
+} from "./effect-spotlight-source.js";
 
 const source = {
   instanceId: "source-1" as InstanceId,
@@ -139,6 +142,54 @@ describe("activeEffectTextForSpotlight", () => {
       textKind: "effect",
       activeSpanIds: ["span:new"],
     });
+  });
+
+  it("returns resolved spotlight sources in event order for queueing", () => {
+    const first = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:first"],
+        },
+      },
+    });
+    const second = event({
+      type: "effectResolved",
+      seq: 2,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:second"],
+        },
+      },
+    });
+
+    expect(resolvedEffectTextSourcesForSpotlight([first, second])).toEqual([
+      {
+        active: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:first"],
+        },
+        key: String(first.id),
+        mode: "resolved",
+      },
+      {
+        active: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:second"],
+        },
+        key: String(second.id),
+        mode: "resolved",
+      },
+    ]);
   });
 
   it("marks resolved event presentations as one-shot sources keyed by event id", () => {
