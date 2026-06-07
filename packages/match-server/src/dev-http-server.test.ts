@@ -342,7 +342,7 @@ describe("dev HTTP server", () => {
     }
   });
 
-  test("seatless lobby join is idempotent for the same account session", async () => {
+  test("seatless lobby join is idempotent for the same account across sessions", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
@@ -360,7 +360,7 @@ describe("dev HTTP server", () => {
       const second = await joinDevLobby(
         server,
         lobbyId,
-        "user:user-a:session-1",
+        "user:user-a:session-2",
       );
 
       assert.equal(first.seat?.playerId, "p1");
@@ -685,6 +685,44 @@ describe("dev HTTP server", () => {
       assert.deepEqual(body.seat, {
         playerId: "p1",
         sessionToken: token,
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("allows account-owned match seat reconnect from a different session", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = await createReadyDevMatch(server);
+      const originalToken = "user:user-p1:session-original";
+      const reconnectToken = "user:user-p1:session-reconnect";
+
+      const originalClaim = await fetch(
+        `${server.url()}/api/matches/${match.matchId}/seats/p1/claim`,
+        {
+          method: "POST",
+          headers: { "x-optcg-session-token": originalToken },
+        },
+      );
+      assert.equal(originalClaim.status, 200);
+
+      const reconnect = await fetch(
+        `${server.url()}/api/matches/${match.matchId}/seat/claim`,
+        {
+          method: "POST",
+          headers: { "x-optcg-session-token": reconnectToken },
+        },
+      );
+
+      assert.equal(reconnect.status, 200);
+      const body = (await reconnect.json()) as {
+        seat?: { playerId?: string; sessionToken?: string };
+      };
+      assert.deepEqual(body.seat, {
+        playerId: "p1",
+        sessionToken: reconnectToken,
       });
     } finally {
       await server.close();

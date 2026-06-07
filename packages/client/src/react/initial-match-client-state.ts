@@ -13,9 +13,7 @@ export const loadInitialMatchClientState = async (
     urlMatchId === undefined ? undefined : controller.currentCredential();
   if (urlMatchId !== undefined) {
     if (credential === undefined || credential.matchId !== urlMatchId) {
-      throw new Error(
-        "Cannot open this match without a saved seat session. Join from its lobby instead.",
-      );
+      return await controller.joinLocalMatchByAccount({ matchId: urlMatchId });
     }
     return await controller.joinLocalMatch({
       matchId: urlMatchId,

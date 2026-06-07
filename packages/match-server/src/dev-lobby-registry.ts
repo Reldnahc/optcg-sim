@@ -12,7 +12,7 @@ import {
 } from "./deck-submission.js";
 import type { AuthContext } from "./dev-auth.js";
 import { createDevUserSessionToken } from "./dev-auth.js";
-import { subjectsMatch } from "./dev-auth.js";
+import { subjectsOwnSameAccount } from "./dev-auth.js";
 import {
   matchSeatsWithMatchId,
   type LocalDevMatchRegistry,
@@ -149,7 +149,8 @@ export const createLocalDevLobbyRegistry = (
   ): LocalDevLobbySeat | undefined =>
     Object.values(lobby.seats).find(
       (seat) =>
-        seat.subject !== undefined && subjectsMatch(seat.subject, auth.subject),
+        seat.subject !== undefined &&
+        subjectsOwnSameAccount(seat.subject, auth.subject),
     );
   const claimOpenSeat = (
     lobby: LocalDevLobby,

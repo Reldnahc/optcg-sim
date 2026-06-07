@@ -300,6 +300,10 @@ export interface MatchTransport {
     playerId: PlayerId;
     sessionToken?: string;
   }) => Promise<ClaimedSeat>;
+  claimSeatForAccount: (input: {
+    matchId: MatchId;
+    sessionToken: string;
+  }) => Promise<ClaimedSeat>;
   chooseFirstPlayer: (input: {
     matchId: MatchId;
     playerId: PlayerId;

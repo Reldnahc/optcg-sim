@@ -267,6 +267,41 @@ describe("dev HTTP match transport", () => {
     );
   });
 
+  test("claims the current account seat without a browser-selected player id", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        matchId: "match-1",
+        seat: { playerId: "p1", sessionToken: "account-token" },
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    const claimed = await transport.claimSeatForAccount({
+      matchId: "match-1" as MatchId,
+      sessionToken: "account-token",
+    });
+
+    assert.deepEqual(claimed.seat, {
+      playerId: "p1",
+      sessionToken: "account-token",
+    });
+    const request = recorder.requests[0];
+    if (request === undefined) {
+      throw new Error("Expected an account seat claim request.");
+    }
+    assert.equal(
+      request.url,
+      "http://localhost:3000/api/matches/match-1/seat/claim",
+    );
+    assert.equal(
+      new Headers(request.init?.headers).get("x-optcg-session-token"),
+      "account-token",
+    );
+  });
+
   test("does not expose HTTP gameplay action helpers", () => {
     const transport = createDevHttpMatchTransport({
       baseUrl: "http://localhost:3000",

@@ -334,6 +334,33 @@ const handleApiRequest = async (
     /^\/api\/matches\/(?<matchId>[^/]+)\/seats\/(?<playerId>[^/]+)\/claim$/u.exec(
       pathname,
     );
+  const accountSeatClaimRoute =
+    /^\/api\/matches\/(?<matchId>[^/]+)\/seat\/claim$/u.exec(pathname);
+  if (request.method === "POST" && accountSeatClaimRoute !== null) {
+    const matchId = decodeURIComponent(
+      accountSeatClaimRoute.groups?.["matchId"] ?? "",
+    ) as MatchId;
+    const result = registry.claimSeatForAuth(
+      matchId,
+      authProvider.authenticate(request),
+    );
+    if (result === "matchNotFound") {
+      matchNotFound(response, matchId);
+      return;
+    }
+    if (result === "unauthenticated") {
+      sendJson(response, 401, { errors: ["Account session is required."] });
+      return;
+    }
+    if (result === "seatNotFound") {
+      sendJson(response, 403, {
+        errors: ["Account session is not authorized for this match."],
+      });
+      return;
+    }
+    sendJson(response, 200, result);
+    return;
+  }
   if (request.method === "POST" && seatClaimRoute !== null) {
     const matchId = decodeURIComponent(
       seatClaimRoute.groups?.["matchId"] ?? "",

@@ -52,3 +52,8 @@ export const subjectsMatch = (
 ): boolean => {
   return left.userId === right.userId && left.sessionId === right.sessionId;
 };
+
+export const subjectsOwnSameAccount = (
+  left: AuthSubject,
+  right: AuthSubject,
+): boolean => left.userId === right.userId;

@@ -64,6 +64,9 @@ export interface MatchClientController {
   joinLocalMatch: (
     input: ClientSeatIdentity,
   ) => Promise<MatchClientSessionState>;
+  joinLocalMatchByAccount: (input: {
+    matchId: MatchId;
+  }) => Promise<MatchClientSessionState>;
   requestRematch: () => Promise<MatchClientSessionState>;
   chooseFirstPlayer: (input: {
     choice: FirstPlayerChoiceValue;
@@ -314,6 +317,25 @@ export const createMatchClientController = ({
     },
     joinLocalMatch(input) {
       return claimAndLoad(input);
+    },
+    async joinLocalMatchByAccount(input) {
+      const claimed = await transport.claimSeatForAccount({
+        matchId: input.matchId,
+        sessionToken: accountSessionToken,
+      });
+      sessionStore.saveClaimedSeat({
+        matchId: claimed.matchId,
+        playerId: claimed.seat.playerId,
+        sessionToken: claimed.seat.sessionToken,
+      });
+      const seat = {
+        matchId: claimed.matchId,
+        playerId: claimed.seat.playerId,
+      };
+      if (claimed.firstPlayerChoice !== undefined) {
+        return loadSetupState(seat, claimed.firstPlayerChoice);
+      }
+      return loadState(seat);
     },
     async requestRematch() {
       const credential = sessionStore.loadClaimedSeat();

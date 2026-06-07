@@ -32,6 +32,10 @@ const createFakeTransport = (): MatchTransport & {
     playerId: PlayerId;
     sessionToken?: string;
   }>;
+  accountSeatClaims: Array<{
+    matchId: MatchId;
+    sessionToken: string;
+  }>;
   joinedLobbies: Array<{
     lobbyId: string;
     sessionToken: string;
@@ -51,6 +55,10 @@ const createFakeTransport = (): MatchTransport & {
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken?: string;
+  }> = [];
+  const accountSeatClaims: Array<{
+    matchId: MatchId;
+    sessionToken: string;
   }> = [];
   const joinedLobbies: Array<{
     lobbyId: string;
@@ -86,6 +94,7 @@ const createFakeTransport = (): MatchTransport & {
   });
   return {
     claimedSeats,
+    accountSeatClaims,
     joinedLobbies,
     submittedLobbyDecks,
     submittedLoadoutHandoffs,
@@ -156,6 +165,16 @@ const createFakeTransport = (): MatchTransport & {
         seat: {
           playerId: input.playerId,
           sessionToken: input.sessionToken ?? `token-${String(input.playerId)}`,
+        },
+      });
+    },
+    claimSeatForAccount(input) {
+      accountSeatClaims.push(input);
+      return Promise.resolve({
+        matchId: input.matchId,
+        seat: {
+          playerId: "p1" as PlayerId,
+          sessionToken: input.sessionToken,
         },
       });
     },
@@ -774,6 +793,33 @@ describe("match client controller", () => {
       {
         matchId: "match-1",
         playerId: "p1",
+        sessionToken: accountSessionToken,
+      },
+    ]);
+    assert.deepEqual(controller.currentCredential(), {
+      matchId: "match-1",
+      playerId: "p1",
+      sessionToken: accountSessionToken,
+    });
+  });
+
+  test("joins a direct match URL by resolving the current account seat", async () => {
+    const transport = createFakeTransport();
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    await controller.joinLocalMatchByAccount({
+      matchId: "match-1" as MatchId,
+    });
+
+    assert.deepEqual(transport.accountSeatClaims, [
+      {
+        matchId: "match-1",
         sessionToken: accountSessionToken,
       },
     ]);

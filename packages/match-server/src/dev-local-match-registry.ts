@@ -4,7 +4,7 @@ import type { MatchId, PlayerId } from "@optcg/types";
 
 import { devSessionMetadata } from "./dev-session-metadata.js";
 import { createDevUserSessionToken, type AuthContext } from "./dev-auth.js";
-import { subjectsMatch } from "./dev-auth.js";
+import { subjectsMatch, subjectsOwnSameAccount } from "./dev-auth.js";
 import {
   createLocalDevMatch,
   getLocalDevSnapshot,
@@ -110,6 +110,14 @@ export interface LocalDevMatchRegistry {
     | "seatNotFound"
     | "unauthenticated"
     | "claimed";
+  claimSeatForAuth: (
+    matchId: MatchId,
+    auth: AuthContext | undefined,
+  ) =>
+    | ClaimedDevSeatResponse
+    | "matchNotFound"
+    | "seatNotFound"
+    | "unauthenticated";
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
   chooseFirstPlayer: (
     matchId: MatchId,
@@ -529,6 +537,44 @@ export const createLocalDevMatchRegistry = async (
       return {
         matchId,
         seat: { playerId, sessionToken },
+        ...(session.status === "active"
+          ? {}
+          : {
+              firstPlayerChoice: firstPlayerChoiceResponse(
+                session.firstPlayerChoice,
+              ),
+            }),
+      };
+    },
+    claimSeatForAuth(matchId, auth) {
+      const session = sessions.get(matchId);
+      if (session === undefined) {
+        return "matchNotFound";
+      }
+      if (auth === undefined) {
+        return "unauthenticated";
+      }
+      const seat = Object.values(session.seats).find(
+        (candidate) =>
+          candidate.subject !== undefined &&
+          subjectsOwnSameAccount(candidate.subject, auth.subject),
+      );
+      if (seat === undefined) {
+        return "seatNotFound";
+      }
+      refreshSeatSubject(seat, auth.subject);
+      const refreshedSubject = auth.subject;
+      syncActiveSessionPlayerLabels(session);
+      return {
+        matchId,
+        seat: {
+          playerId: seat.playerId,
+          sessionToken: createDevUserSessionToken(
+            refreshedSubject.userId,
+            refreshedSubject.sessionId,
+            refreshedSubject.displayName,
+          ),
+        },
         ...(session.status === "active"
           ? {}
           : {

@@ -103,6 +103,13 @@ export const createDevHttpMatchTransport = ({
       );
       return postJson<ClaimedSeat>(url, undefined, input.sessionToken);
     },
+    async claimSeatForAccount(input) {
+      return postJson<ClaimedSeat>(
+        matchPath(input.matchId, "/seat/claim"),
+        undefined,
+        input.sessionToken,
+      );
+    },
     async chooseFirstPlayer(input) {
       return postJson(matchPath(input.matchId, "/first-player-choice"), {
         playerId: input.playerId,
