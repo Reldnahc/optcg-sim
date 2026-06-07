@@ -9,7 +9,7 @@ import { describe, test } from "vitest";
 import { SettingsWindow } from "./SettingsWindow.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import { ControlRail } from "./ControlRail.js";
-import { SettingsToggle } from "./SettingsToggle.js";
+import { SettingsButton } from "./SettingsButton.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -56,13 +56,13 @@ describe("settings window", () => {
       ]);
 
     assert.match(controlRail, /settingsControl/u);
-    assert.match(matchApp, /<SettingsToggle/u);
-    assert.match(matchApp, /toggleSettingsOpen/u);
+    assert.match(matchApp, /<SettingsButton/u);
+    assert.match(matchApp, /focusSettingsWindow/u);
     assert.match(matchApp, /settingsWindowKey/u);
     assert.match(matchApp, /showSettingsWindow/u);
     assert.match(
       toolbarControls,
-      /updateFloatingWindowOpen\(settingsWindowKey/u,
+      /focusInfoWindow\(\{ tabId: "settings", windowKey: settingsWindowKey \}\)/u,
     );
     assert.match(matchInfoWindows, /<SettingsWindow/u);
     assert.match(
@@ -79,16 +79,16 @@ describe("settings window", () => {
         disabled: false,
         onAction: () => undefined,
         onNewMatch: () => undefined,
-        settingsControl: createElement(SettingsToggle, {
+        settingsControl: createElement(SettingsButton, {
           open: true,
-          onToggle: () => undefined,
+          onActivate: () => undefined,
         }),
       }),
     );
 
-    assert.match(markup, /class="settings-toggle is-open"/u);
+    assert.match(markup, /class="settings-button is-open"/u);
     assert.match(markup, /aria-pressed="true"/u);
-    assert.match(markup, /aria-label="Close settings"/u);
+    assert.match(markup, /aria-label="Show settings"/u);
   });
 
   test("settings can render as a first-class tab in the shared info window", () => {
@@ -168,7 +168,7 @@ describe("settings window", () => {
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
   });
 
-  test("tool strip toggles activate resurfaced info tabs", async () => {
+  test("tool strip buttons focus resurfaced info tabs", async () => {
     const toolbarControls = await readFile(
       join(sourceDirectory, "info-window-toolbar-controls.ts"),
       "utf8",
@@ -177,8 +177,8 @@ describe("settings window", () => {
     assert.match(toolbarControls, /const activateInfoWindowTab/u);
     assert.match(toolbarControls, /setInfoWindowActiveTab\(tabId\)/u);
     assert.match(toolbarControls, /setControlDockActiveTabId\(windowKey\)/u);
-    assert.match(toolbarControls, /activateInfoWindowTab\("preview"\)/u);
-    assert.match(toolbarControls, /activateInfoWindowTab\("log"\)/u);
-    assert.match(toolbarControls, /activateInfoWindowTab\("settings"\)/u);
+    assert.match(toolbarControls, /focusPreviewWindow/u);
+    assert.match(toolbarControls, /focusActionLogWindow/u);
+    assert.match(toolbarControls, /focusSettingsWindow/u);
   });
 });

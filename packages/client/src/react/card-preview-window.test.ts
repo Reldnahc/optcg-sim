@@ -8,7 +8,7 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId } from "@optcg/types";
 
-import { CardPreviewToggle } from "./CardPreviewToggle.js";
+import { CardPreviewButton } from "./CardPreviewButton.js";
 import { CardPreviewWindow } from "./CardPreviewWindow.js";
 import { CardTile } from "./CardTile.js";
 import type { ClientCardModel } from "../view-model.js";
@@ -148,30 +148,30 @@ describe("card preview window", () => {
     );
     assert.match(matchApp, /previewHoveredCard/u);
     assert.match(matchApp, /previewControl=/u);
-    assert.match(matchApp, /CardPreviewToggle/u);
+    assert.match(matchApp, /CardPreviewButton/u);
     assert.match(matchInfoWindows, /CardPreviewWindow/u);
     assert.match(matchInfoWindows, /InfoTabbedWindow/u);
   });
 
   test("preview toggle controls whether the preview window is open", () => {
     const openMarkup = renderToStaticMarkup(
-      createElement(CardPreviewToggle, {
+      createElement(CardPreviewButton, {
         open: true,
-        onToggle: () => undefined,
+        onActivate: () => undefined,
       }),
     );
     const closedMarkup = renderToStaticMarkup(
-      createElement(CardPreviewToggle, {
+      createElement(CardPreviewButton, {
         open: false,
-        onToggle: () => undefined,
+        onActivate: () => undefined,
       }),
     );
 
-    assert.match(openMarkup, /card-preview-toggle is-open/u);
+    assert.match(openMarkup, /card-preview-button is-open/u);
     assert.match(openMarkup, /aria-pressed="true"/u);
-    assert.match(openMarkup, /Close preview/u);
+    assert.match(openMarkup, /Show preview/u);
     assert.match(closedMarkup, /aria-pressed="false"/u);
-    assert.match(closedMarkup, /Open preview/u);
+    assert.match(closedMarkup, /Show preview/u);
   });
 
   test("match app treats preview as a normal open window", async () => {
@@ -195,7 +195,7 @@ describe("card preview window", () => {
     assert.doesNotMatch(hoverBlock, /setPreviewOpen\(true\)/u);
     assert.match(
       toolbarControls,
-      /updateFloatingWindowOpen\(cardPreviewWindowKey, true\)/u,
+      /focusInfoWindow\(\{ tabId: "preview", windowKey: cardPreviewWindowKey \}\)/u,
     );
     assert.doesNotMatch(matchApp, /lastPreviewCard/u);
     assert.doesNotMatch(matchApp, /previewEnabled/u);

@@ -13,9 +13,9 @@ export interface InfoWindowToolbarControls {
   previewHoveredCard: (card: ClientCardModel) => void;
   showCardPreview: (card: ClientCardModel) => void;
   closeCardPreview: () => void;
-  togglePreviewOpen: () => void;
-  toggleActionLogOpen: () => void;
-  toggleSettingsOpen: () => void;
+  focusPreviewWindow: () => void;
+  focusActionLogWindow: () => void;
+  focusSettingsWindow: () => void;
 }
 
 export interface InfoWindowToolbarControlsInput {
@@ -66,6 +66,42 @@ export const createInfoWindowToolbarControls = ({
     }
   };
 
+  const tabOpen = (tabId: InfoWindowTabId): boolean => {
+    if (tabId === "preview") return previewOpen;
+    if (tabId === "log") return actionLogOpen;
+    return settingsOpen;
+  };
+
+  const floatingGroupVisibleAfterFocus = (tabId: InfoWindowTabId): boolean => {
+    if (
+      activeDockedWindowIds.has(infoWindowKey) ||
+      activeDockedWindowIds.has(infoWindowKeyForTab(tabId)) ||
+      !configuredGroupedInfoWindowIds.includes(tabId)
+    ) {
+      return false;
+    }
+    return (
+      configuredGroupedInfoWindowIds.filter(
+        (candidate) => candidate === tabId || tabOpen(candidate),
+      ).length >= 2
+    );
+  };
+
+  const focusInfoWindow = ({
+    tabId,
+    windowKey,
+  }: {
+    tabId: InfoWindowTabId;
+    windowKey: string;
+  }): void => {
+    activateInfoWindowTab(tabId);
+    setInfoWindowMinimized(false);
+    updateFloatingWindowOpen(windowKey, true);
+    if (floatingGroupVisibleAfterFocus(tabId)) {
+      updateFloatingWindowOpen(infoWindowKey, true);
+    }
+  };
+
   const closeCardPreview = (): void => {
     setPreviewOpen(false);
     setPreviewMinimized(false);
@@ -82,9 +118,7 @@ export const createInfoWindowToolbarControls = ({
   const openCardPreview = (): void => {
     setPreviewOpen(true);
     setPreviewMinimized(false);
-    setInfoWindowMinimized(false);
-    activateInfoWindowTab("preview");
-    updateFloatingWindowOpen(cardPreviewWindowKey, true);
+    focusInfoWindow({ tabId: "preview", windowKey: cardPreviewWindowKey });
   };
 
   return {
@@ -96,30 +130,17 @@ export const createInfoWindowToolbarControls = ({
       openCardPreview();
     },
     closeCardPreview,
-    togglePreviewOpen() {
-      if (previewOpen) {
-        closeCardPreview();
-        return;
-      }
+    focusPreviewWindow() {
       openCardPreview();
     },
-    toggleActionLogOpen() {
-      const nextOpen = !actionLogOpen;
-      setActionLogOpen(nextOpen);
-      updateFloatingWindowOpen(actionLogWindowKey, nextOpen);
+    focusActionLogWindow() {
+      setActionLogOpen(true);
       setActionLogMinimized(false);
-      setInfoWindowMinimized(false);
-      if (nextOpen) {
-        activateInfoWindowTab("log");
-      }
+      focusInfoWindow({ tabId: "log", windowKey: actionLogWindowKey });
     },
-    toggleSettingsOpen() {
-      const nextOpen = !settingsOpen;
-      setSettingsOpen(nextOpen);
-      updateFloatingWindowOpen(settingsWindowKey, nextOpen);
-      if (nextOpen) {
-        activateInfoWindowTab("settings");
-      }
+    focusSettingsWindow() {
+      setSettingsOpen(true);
+      focusInfoWindow({ tabId: "settings", windowKey: settingsWindowKey });
     },
   };
 };

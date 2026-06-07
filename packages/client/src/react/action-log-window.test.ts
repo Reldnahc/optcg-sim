@@ -8,7 +8,7 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
-import { ActionLogToggle } from "./ActionLogToggle.js";
+import { ActionLogButton } from "./ActionLogButton.js";
 import { ActionLogWindow } from "./ActionLogWindow.js";
 import { ControlRail } from "./ControlRail.js";
 
@@ -174,14 +174,15 @@ describe("action log window", () => {
 
   test("action log toggle exposes pressed state", () => {
     const markup = renderToStaticMarkup(
-      createElement(ActionLogToggle, {
+      createElement(ActionLogButton, {
         open: true,
-        onToggle: () => undefined,
+        onActivate: () => undefined,
       }),
     );
 
-    assert.match(markup, /action-log-toggle is-open/u);
+    assert.match(markup, /action-log-button is-open/u);
     assert.match(markup, /aria-pressed="true"/u);
+    assert.match(markup, /Show action log/u);
   });
 
   test("action log window uses persisted floating window rectangle wiring", async () => {
@@ -218,7 +219,7 @@ describe("action log window", () => {
     assert.match(matchApp, /activeOpenWindowIds\.has\(actionLogWindowKey\)/u);
     assert.match(
       toolbarControls,
-      /updateFloatingWindowOpen\(actionLogWindowKey, nextOpen\)/u,
+      /focusInfoWindow\(\{ tabId: "log", windowKey: actionLogWindowKey \}\)/u,
     );
   });
 
@@ -233,7 +234,10 @@ describe("action log window", () => {
 
     assert.match(toolbarControls, /showCardPreview/u);
     assert.match(toolbarControls, /setPreviewOpen\(true\)/u);
-    assert.match(toolbarControls, /activateInfoWindowTab\("preview"\)/u);
+    assert.match(
+      toolbarControls,
+      /focusInfoWindow\(\{ tabId: "preview", windowKey: cardPreviewWindowKey \}\)/u,
+    );
     assert.match(matchApp, /showCardPreview\(actionLogCardModel\(card\)\)/u);
   });
 });

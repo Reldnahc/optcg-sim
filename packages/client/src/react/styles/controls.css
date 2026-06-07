@@ -509,9 +509,9 @@
   align-items: center;
 }
 
-.card-preview-toggle,
-.action-log-toggle,
-.settings-toggle,
+.card-preview-button,
+.action-log-button,
+.settings-button,
 .control-icon-button {
   display: grid;
   width: 32px;
@@ -524,20 +524,20 @@
   place-items: center;
 }
 
-.card-preview-toggle:hover,
-.card-preview-toggle.is-open,
-.action-log-toggle:hover,
-.action-log-toggle.is-open,
-.settings-toggle:hover,
-.settings-toggle.is-open,
+.card-preview-button:hover,
+.card-preview-button.is-open,
+.action-log-button:hover,
+.action-log-button.is-open,
+.settings-button:hover,
+.settings-button.is-open,
 .control-icon-button:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.14);
 }
 
-.card-preview-toggle svg,
-.action-log-toggle svg,
-.settings-toggle svg,
+.card-preview-button svg,
+.action-log-button svg,
+.settings-button svg,
 .control-icon-button svg {
   width: 21px;
   height: 21px;

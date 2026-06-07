@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ClientCardModel } from "../view-model.js";
-import { ActionLogToggle } from "./ActionLogToggle.js";
+import { ActionLogButton } from "./ActionLogButton.js";
 import { actionLogCardModel } from "./card-model.js";
-import { CardPreviewToggle } from "./CardPreviewToggle.js";
+import { CardPreviewButton } from "./CardPreviewButton.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { MatchBoardSurface } from "./MatchBoardSurface.js";
 import { MatchControlPanel } from "./MatchControlPanel.js";
@@ -17,7 +17,7 @@ import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
 import { MatchVisualSettingsProvider } from "./SettingsWindow.js";
-import { SettingsToggle } from "./SettingsToggle.js";
+import { SettingsButton } from "./SettingsButton.js";
 import {
   endTurnConfirmationActions,
   isEndTurnAction,
@@ -178,9 +178,9 @@ export const MatchApp = ({
     previewHoveredCard,
     showCardPreview,
     closeCardPreview,
-    togglePreviewOpen,
-    toggleActionLogOpen,
-    toggleSettingsOpen,
+    focusPreviewWindow,
+    focusActionLogWindow,
+    focusSettingsWindow,
   } = createInfoWindowToolbarControls({
     previewOpen,
     actionLogOpen,
@@ -503,19 +503,22 @@ export const MatchApp = ({
             void client.cancelRollback();
           }}
           previewControl={
-            <CardPreviewToggle
+            <CardPreviewButton
               open={previewOpen}
-              onToggle={togglePreviewOpen}
+              onActivate={focusPreviewWindow}
             />
           }
           actionLogControl={
-            <ActionLogToggle
+            <ActionLogButton
               open={actionLogOpen}
-              onToggle={toggleActionLogOpen}
+              onActivate={focusActionLogWindow}
             />
           }
           settingsControl={
-            <SettingsToggle open={settingsOpen} onToggle={toggleSettingsOpen} />
+            <SettingsButton
+              open={settingsOpen}
+              onActivate={focusSettingsWindow}
+            />
           }
           concedeDisabled={concedeDisabled}
           concedeConfirming={concedeConfirming}
