@@ -8,6 +8,7 @@ import {
 import { parseExpression } from "../expression-parser.js";
 import { parseThenConnector } from "../connectors/index.js";
 import { parseTrashFromHandInstruction } from "../instructions/index.js";
+import { sourceSpan } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function searchRevealExpressionParser(
@@ -45,17 +46,23 @@ export function searchRevealExpressionParser(
       shuffleAfter: false,
     },
   };
+  const searchEvidence = [
+    "instruction:search",
+    ...look.evidence,
+    ...reveal.evidence,
+    ...remaining.evidence,
+  ] as const;
+  const presentationSpans =
+    input.source === undefined
+      ? []
+      : [sourceSpan("span:body", "body", input.source, searchEvidence)];
 
   if (remaining.rest.length === 0) {
     return {
       effect: searchEffect,
-      evidence: [
-        "instruction:search",
-        ...look.evidence,
-        ...reveal.evidence,
-        ...remaining.evidence,
-      ],
+      evidence: searchEvidence,
       rest: "",
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   }
 
@@ -83,14 +90,17 @@ export function searchRevealExpressionParser(
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      "instruction:search",
-      ...look.evidence,
-      ...reveal.evidence,
-      ...remaining.evidence,
-      ...trailing.evidence,
-    ],
+    evidence: ["expression:sequence", ...searchEvidence, ...trailing.evidence],
     rest: "",
+    ...(presentationSpans.length === 0
+      ? trailing.presentationSpans === undefined
+        ? {}
+        : { presentationSpans: trailing.presentationSpans }
+      : {
+          presentationSpans: [
+            ...presentationSpans,
+            ...(trailing.presentationSpans ?? []),
+          ],
+        }),
   };
 }

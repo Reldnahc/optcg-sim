@@ -93,6 +93,30 @@ describe("card effect parser source maps", () => {
     );
   });
 
+  it("emits a body span for search reveal effects", () => {
+    const text =
+      "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "body" &&
+          span.primitiveEvidence?.includes("instruction:search"),
+      ),
+    ).toBe(true);
+  });
+
   it("emits condition spans for conditional expression text", () => {
     const text =
       "[On Play] Draw 4 cards if your opponent has 3 or less Life cards.";
