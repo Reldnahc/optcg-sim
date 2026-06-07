@@ -1,5 +1,5 @@
 import type { EffectTextSourceMap, EffectTextSpanId } from "@optcg/types";
-import { CardRulesText } from "optcg-card-rules";
+import { CardRulesText, type RenderSearchLinkArgs } from "optcg-card-rules";
 import { Fragment } from "react";
 
 import { splitTextByHighlightRanges } from "./effect-text-ranges.js";
@@ -22,6 +22,7 @@ const renderedRulesText = (
       <CardRulesText
         text={text}
         {...(compact === undefined ? {} : { compact })}
+        renderSearchLink={renderMainSiteSearchLink}
       />
     );
   }
@@ -33,6 +34,7 @@ const renderedRulesText = (
           <CardRulesText
             text={line}
             {...(compact === undefined ? {} : { compact })}
+            renderSearchLink={renderMainSiteSearchLink}
           />
           {index === lines.length - 1 ? null : <br />}
         </Fragment>
@@ -40,6 +42,21 @@ const renderedRulesText = (
     </>
   );
 };
+
+const renderMainSiteSearchLink = ({
+  children,
+  className,
+  href,
+}: RenderSearchLinkArgs): React.ReactNode => (
+  <a
+    className={className}
+    href={new URL(href, "https://poneglyph.one").href}
+    rel="noreferrer"
+    target="_blank"
+  >
+    {children}
+  </a>
+);
 
 export const EffectRulesText = ({
   activeSpanIds = [],

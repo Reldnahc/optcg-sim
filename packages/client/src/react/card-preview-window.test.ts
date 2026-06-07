@@ -51,6 +51,29 @@ describe("card preview window", () => {
     assert.match(markup, /card-rules-tag--blue/u);
   });
 
+  test("renders an image-first preview with zoom controls and a resizable text panel", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CardPreviewWindow, {
+        card: card(),
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /card-preview-stage/u);
+    assert.match(markup, /card-preview-card-image/u);
+    assert.match(markup, /--card-preview-zoom:1/u);
+    assert.match(markup, /card-preview-rules-panel/u);
+    assert.match(markup, /card-preview-rules-resize-handle/u);
+    assert.match(markup, /--card-preview-rules-height:42%/u);
+    assert.match(markup, /card-preview-control-bar/u);
+    assert.match(markup, /aria-label="Zoom card out"/u);
+    assert.match(markup, /aria-label="Reset card zoom"/u);
+    assert.match(markup, /aria-label="Zoom card in"/u);
+    assert.match(markup, /aria-label="Hide card text"/u);
+  });
+
   test("renders an empty preview window before a card is hovered", () => {
     const markup = renderToStaticMarkup(
       createElement(CardPreviewWindow, {

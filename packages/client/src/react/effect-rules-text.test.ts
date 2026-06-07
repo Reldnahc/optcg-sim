@@ -30,4 +30,16 @@ describe("EffectRulesText", () => {
     expect(html).toContain("effect-rules-span--active");
     expect(html).toContain("Draw 1 card.");
   });
+
+  it("renders search syntax links against the main Poneglyph site", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectRulesText, {
+        text: "Reveal up to 1 {Sky Island} type card other than [Shura].",
+      }),
+    );
+
+    expect(html).toContain("https://poneglyph.one/search?q=");
+    expect(html).not.toContain("sim.poneglyph");
+    expect(html).not.toContain('href="/search');
+  });
 });
