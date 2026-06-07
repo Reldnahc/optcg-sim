@@ -11,6 +11,8 @@ import type {
 import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
+const trailingFormatCharactersPattern = /[\u200B-\u200D\u2060\uFEFF]+$/u;
+
 export function instructionExpressionSegmentParser(options: {
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly InstructionParser[];
@@ -422,7 +424,11 @@ export function parseLeadingConditionalExpression(
 
   const commaIndexes = [...rest.matchAll(/,/gu)].map((match) => match.index);
   for (const commaIndex of commaIndexes.reverse()) {
-    const conditionText = rest.slice(0, commaIndex).replace(/\.$/u, "").trim();
+    const conditionText = rest
+      .slice(0, commaIndex)
+      .replace(trailingFormatCharactersPattern, "")
+      .replace(/\.$/u, "")
+      .trim();
     const thenText = rest.slice(commaIndex + 1).trim();
     if (conditionText.length === 0 || thenText.length === 0) {
       continue;

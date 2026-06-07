@@ -53,6 +53,7 @@ export const publicDecisionSourceFromEffectQueue = (params: {
 
 const searchRevealSelectSetPrefix = "set:search-reveal:";
 const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
+const costSpanPrefix = "span:cost";
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
 const topLevelSequenceIndexForDecision = (
@@ -123,6 +124,19 @@ const narrowSearchRevealActiveSpanIds = (
   return narrowed.length === 0 ? undefined : narrowed;
 };
 
+const narrowPayCostActiveSpanIds = (
+  pending: PendingDecision,
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined => {
+  if (pending.type !== "payCost") {
+    return undefined;
+  }
+  const narrowed = activeSpanIds.filter((spanId) =>
+    spanId.startsWith(costSpanPrefix),
+  );
+  return narrowed.length === 0 ? undefined : narrowed;
+};
+
 export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   state: GameState;
   pending: PendingDecision;
@@ -135,6 +149,10 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   return {
     ...visible.entry.presentation,
     activeSpanIds:
+      narrowPayCostActiveSpanIds(
+        params.pending,
+        visible.entry.presentation.activeSpanIds,
+      ) ??
       narrowSequenceActiveSpanIds(
         params.state,
         params.pending,

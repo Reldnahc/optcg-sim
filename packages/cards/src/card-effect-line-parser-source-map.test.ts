@@ -67,6 +67,47 @@ describe("card effect parser source maps", () => {
     ).toBe(true);
   });
 
+  it("emits separate optional trash cost and post-cost body spans", () => {
+    const text =
+      "[On Play] You may trash 1 card from your hand: If your Leader is [Rebecca]\u2060, this Character gains [Rush] during this turn.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "cost" &&
+          span.text === "You may trash 1 card from your hand" &&
+          span.primitiveEvidence?.includes("cost:trashFromHand"),
+      ),
+    ).toBe(true);
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "condition" &&
+          span.text === "your Leader is [Rebecca]" &&
+          span.primitiveEvidence?.includes("condition:leaderIdentity"),
+      ),
+    ).toBe(true);
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "body" &&
+          span.text === "this Character gains [Rush] during this turn." &&
+          span.primitiveEvidence?.includes("instruction:giveKeyword"),
+      ),
+    ).toBe(true);
+  });
+
   it("emits choice header and bullet option spans", () => {
     const text = `[Main] Choose one:
 \u2022 Draw 2 cards.

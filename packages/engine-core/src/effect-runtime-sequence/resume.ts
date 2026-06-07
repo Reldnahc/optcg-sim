@@ -44,6 +44,8 @@ type SequenceFrameRunResult =
   | { ok: false };
 
 const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
+const payCostDecisionPrefix = "decision:payCost:sequence:";
+const costSpanPrefix = "span:cost";
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
 export const findFrameQueueEntry = (
@@ -101,6 +103,12 @@ const narrowedActiveSpanIdsForCompletedFrame = (
   const presentation = entry.presentation;
   if (presentation === undefined) {
     return undefined;
+  }
+  if (frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix)) {
+    const bodySpanIds = presentation.activeSpanIds.filter(
+      (spanId) => !spanId.startsWith(costSpanPrefix),
+    );
+    return bodySpanIds.length === 0 ? undefined : bodySpanIds;
   }
   const searchPhasePrefix = frame.pendingDecision.decisionId.startsWith(
     searchRevealOrderDecisionPrefix,

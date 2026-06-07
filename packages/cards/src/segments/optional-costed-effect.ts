@@ -9,7 +9,7 @@ import type {
   InstructionParser,
   ParseInput,
 } from "../types.js";
-import { trimSource, type SourceSlice } from "../source-slices.js";
+import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function optionalCostedEffectExpressionParser(options: {
@@ -97,12 +97,26 @@ function parseOptionalCostSequenceFromOptionalText(
     return undefined;
   }
   const rawBodyText = input.text.slice(separatorIndex + 1);
+  const rawCostText = input.text.slice(0, separatorIndex);
   return {
     ...cost,
     rest: bodyText,
     ...(input.source === undefined
       ? {}
       : {
+          presentationSpans: [
+            sourceSpan(
+              "span:cost:optional",
+              "cost",
+              trimSource({
+                text: rawCostText,
+                rawText: rawCostText,
+                start: input.source.start,
+                end: input.source.start + separatorIndex,
+              }),
+              cost.evidence,
+            ),
+          ],
           restSource: trimSource({
             text: rawBodyText,
             rawText: rawBodyText,
