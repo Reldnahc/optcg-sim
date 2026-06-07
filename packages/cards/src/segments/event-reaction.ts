@@ -97,6 +97,59 @@ export function lifeRemovedReactionExpressionParser(options: {
   };
 }
 
+export function activatedLifeRemovedReactionExpressionParser(options: {
+  readonly expressions: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input: ParseInput) => {
+    const match =
+      /^This effect can be activated when a card is removed from your or your opponent's Life cards\.\s*(?<body>.+)$/i.exec(
+        input.text,
+      );
+    const body = match?.groups?.["body"];
+    if (body === undefined) {
+      return undefined;
+    }
+
+    for (const expressionParser of options.expressions) {
+      const parsed = parseReactionBody(expressionParser, input, body);
+      if (parsed === undefined || parsed.rest.length > 0) {
+        continue;
+      }
+      return {
+        effect:
+          parsed.effect.type === "sequence"
+            ? parsed.effect
+            : {
+                type: "sequence",
+                effects: [{ connector: "always", effect: parsed.effect }],
+              },
+        evidence: [
+          "activation:reaction",
+          "trigger:lifeRemoved",
+          "player:self",
+          "player:opponent",
+          ...(parsed.effect.type === "sequence"
+            ? []
+            : (["expression:sequence"] as const)),
+          ...parsed.evidence,
+        ],
+        rest: "",
+        blockPatch: {
+          category: "activate",
+          trigger: lifeRemovedTrigger(["self", "opponent"]),
+        },
+        ...(parsed.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: parsed.presentationSpans }),
+      };
+    }
+
+    return undefined;
+  };
+}
+
 export function opponentEventOrBlockerActivatedExpressionParser(options: {
   readonly expressions: readonly ((
     input: ParseInput,

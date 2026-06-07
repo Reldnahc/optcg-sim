@@ -84,6 +84,10 @@ import {
   applyActivateMainAction,
   getActivateMainLegalActions,
 } from "./runtime/optional-activation/activate-main.js";
+import {
+  applyActivatedReactionAction,
+  getActivatedReactionLegalActions,
+} from "./runtime/optional-activation/event-reaction.js";
 import { finalizeSetupFromContinuation } from "./setup/initial-state.js";
 import {
   applyStartOfGameSetupDecisionResponse,
@@ -176,6 +180,7 @@ export const getLegalActions = (
   }
 
   actions.push(...getTurnLegalActions(state, playerId));
+  actions.push(...getActivatedReactionLegalActions(state, playerId));
   actions.push(...getAttachDonLegalActions(state, playerId));
   actions.push(...getPlayCardLegalActions(state, playerId));
   actions.push(...getDeclareAttackLegalActions(state, playerId));
@@ -561,6 +566,9 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
   if (action.type === "attachDon") return applyAttachDon(state, action);
   if (action.type === "declareAttack") return applyDeclareAttack(state, action);
   if (action.type === "activateEffect")
-    return applyActivateMainAction(state, action);
+    return (
+      applyActivatedReactionAction(state, action) ??
+      applyActivateMainAction(state, action)
+    );
   return illegalAction(state, `Unsupported action type: ${action.type}`);
 };

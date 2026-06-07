@@ -24,6 +24,7 @@ import {
 import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
   chooseOneExpressionParser,
+  activatedLifeRemovedReactionExpressionParser,
   conditionalBlockExpressionParser,
   conditionalContinuousExpressionParser,
   conditionalCostedBlockExpressionParser,
@@ -136,6 +137,9 @@ export const defaultRegistry = {
       expressions: costedExpressions,
     }),
     replacementInsteadExpressionParser,
+    activatedLifeRemovedReactionExpressionParser({
+      expressions: [generalExpressionParser],
+    }),
     lifeRemovedReactionExpressionParser({
       expressions: [generalExpressionParser],
     }),

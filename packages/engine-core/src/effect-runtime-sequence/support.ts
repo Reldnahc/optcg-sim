@@ -31,6 +31,7 @@ import {
   toSingleEffectSequence,
   toSyntheticQueueEntry,
 } from "./support-normalization.js";
+import { isScopedActivatedReactionQueueEntry } from "../runtime/optional-activation/event-reaction-support.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -706,7 +707,10 @@ export const toSupportedSequenceBlock = (
     flattenedBlock?.category === "auto" ||
     (flattenedBlock?.category === "activate" &&
       flattenedBlock.trigger.type === "activateMain" &&
-      isScopedActivateMainSequenceEntry(entry));
+      isScopedActivateMainSequenceEntry(entry)) ||
+    (flattenedBlock?.category === "activate" &&
+      flattenedBlock.trigger.type === "lifeRemoved" &&
+      isScopedActivatedReactionQueueEntry(entry));
 
   if (
     flattenedBlock === undefined ||

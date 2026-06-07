@@ -5,6 +5,7 @@ import {
   isSupportedActivateMainNoChoiceDrawEffect,
   isSupportedOptionalActivateMainNoChoiceDrawEffect,
 } from "./runtime/optional-activation/activate-main.js";
+import { isSupportedActivatedReactionEffect } from "./runtime/optional-activation/event-reaction.js";
 import {
   isSupportedAutoRuntimeEffectBlock,
   type AutoRuntimeEntryAdapter,
@@ -49,6 +50,12 @@ export const evaluateEffectBlockRuntimeSupport = (
       isSupportedSequenceBlock(activateMainProbeQueueEntry, block)
       ? { supported: true }
       : { supported: false, reason: "unsupported activate-main effect body" };
+  }
+
+  if (block.category === "activate" && block.trigger.type === "lifeRemoved") {
+    return isSupportedActivatedReactionEffect(block)
+      ? { supported: true }
+      : { supported: false, reason: "unsupported activated-reaction body" };
   }
 
   if (block.category === "permanent" && block.trigger.type === "permanent") {

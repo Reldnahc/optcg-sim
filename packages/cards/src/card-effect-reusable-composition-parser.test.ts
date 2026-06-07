@@ -39,12 +39,33 @@ describe("card effect reusable parser compositions", () => {
     });
   });
 
-  it("does not parse activated life-removed wording as an automatic trigger", () => {
-    expect(
-      parseCardEffectLine(
-        "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",
-      ),
-    ).toBeUndefined();
+  it("parses activated life-removed wording as an optional event reaction", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "lifeRemoved", players: ["self", "opponent"] },
+        oncePerTurn: true,
+        condition: { type: "yourTurn" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "conditional",
+                if: { type: "handCount", player: "self", op: "lte", value: 7 },
+                then: { type: "draw", player: "self", count: 1 },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("activation:reaction");
   });
 
   it("parses trigger-presence as a composable card filter predicate", () => {

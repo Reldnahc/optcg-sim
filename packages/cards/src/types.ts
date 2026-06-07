@@ -30,6 +30,7 @@ export type PrimitiveEvidence =
   | "trigger:lifeRemoved"
   | "trigger:handTrashedByEffect"
   | "trigger:opponentActivated"
+  | "activation:reaction"
   | "activation:event"
   | "activation:blocker"
   | "entry:replacement"
