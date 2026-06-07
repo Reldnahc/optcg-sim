@@ -76,6 +76,9 @@ test("resolves one queued supported On Play draw entry and removes it from effec
     triggerEventId: queuedEntry.triggerEventId,
     sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
     orderingGroup: queuedEntry.orderingGroup,
+    ...(queuedEntry.presentation === undefined
+      ? {}
+      : { presentation: queuedEntry.presentation }),
     status: "resolved",
   });
   assert.deepEqual(resolvedEvent.causedBy, {

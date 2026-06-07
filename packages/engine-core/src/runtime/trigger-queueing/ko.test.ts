@@ -208,6 +208,16 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
       },
       triggerEventId: events[0]?.id,
       sourcePresencePolicy: "resolveFromDestinationZone",
+      presentation: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p2,
+          zone: trashedSource.zone,
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
       causedBy: {
         type: "ruleProcess",
         name: "effectRuntime:onKOTriggerCandidateDetection",
@@ -282,6 +292,16 @@ test("queues supported On K.O. candidates with deterministic queue metadata and 
       createdAtEventSeq: triggerEvent.seq,
       queuedAtStateSeq: state.seq,
       sourcePresencePolicy: "resolveFromDestinationZone",
+      presentation: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p2,
+          zone: trashedSource.zone,
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
       causedBy: {
         type: "ruleProcess",
         name: "effectRuntime:onKOTriggerQueueing",

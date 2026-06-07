@@ -10,12 +10,7 @@ import {
   toCardId,
   toEffectId,
 } from "../../action-dispatcher-test-support.js";
-import {
-  addExtraDeckCard,
-  must,
-  p1,
-  resolvedCard,
-} from "../../action-test-fixtures.js";
+import { must, p1, resolvedCard } from "../../action-test-fixtures.js";
 import { reviewedOnPlayDrawDefinition } from "../../effect-runtime-queue/test-support.js";
 
 const setupActivateMainTrashAllPlayFromTrashState = (params: {
@@ -55,7 +50,25 @@ const setupActivateMainTrashAllPlayFromTrashState = (params: {
   );
   fieldMetadata.name = "Field Character";
   fieldMetadata.types = ["Celestial Dragons"];
-  addExtraDeckCard(state, p1);
+  const extraDrawCardsNeeded = params.supportedOnPlayCount ?? 0;
+  if (extraDrawCardsNeeded > 0) {
+    const topDeck = must(p1State.deck[0], "top deck");
+    const deckStart = p1State.deck.length;
+    p1State.deck = [
+      ...p1State.deck,
+      ...Array.from({ length: extraDrawCardsNeeded }, (_, offset) => ({
+        ...topDeck,
+        instanceId:
+          `${String(topDeck.instanceId)}:extra-on-play-${String(offset)}` as typeof topDeck.instanceId,
+        zone: {
+          zone: "deck" as const,
+          playerId: p1,
+          slot: "deck" as const,
+          index: deckStart + offset,
+        },
+      })),
+    ];
+  }
   const trashCards = p1State.deck.slice(0, 2).map((card, index) => ({
     ...card,
     cardId: toCardId(`trash-five-elder-${String(index + 1)}`),
@@ -289,7 +302,7 @@ test("activate main supports leader-gated rest and hand-trash cost before trash-
   );
 });
 
-test("activate main trash playSelected rejects same-name Five Elders selections", () => {
+test("activate main trash playSelected excludes same-name Five Elders from the selectable set", () => {
   const { effectId, state } = setupActivateMainTrashAllPlayFromTrashState({
     sameTrashNames: true,
   });
@@ -299,7 +312,7 @@ test("activate main trash playSelected rejects same-name Five Elders selections"
     "trash selection",
   );
   assert.equal(trashSelection.type, "selectCards");
-  const before = JSON.stringify(paidHand.state);
+  assert.equal(trashSelection.candidates.length, 1);
 
   const selected = applyAction(paidHand.state, {
     type: "respondToDecision",
@@ -311,14 +324,14 @@ test("activate main trash playSelected rejects same-name Five Elders selections"
         .map((candidate) => candidate.card),
     },
   });
+  const afterP1 = must(selected.state.players[p1], "resolved p1");
 
-  assert.deepEqual(selected.errors, [
-    {
-      type: "invalidDecisionResponse",
-      reason: "Selected cards must have different names.",
-    },
-  ]);
-  assert.equal(JSON.stringify(selected.state), before);
+  assert.equal(selected.errors, undefined);
+  assert.equal(afterP1.characters.length, 1);
+  assert.equal(
+    afterP1.characters[0]?.cardId,
+    trashSelection.candidates[0]?.card.cardId,
+  );
 });
 
 test("activate main trash playSelected queues simultaneous On Play triggers for order choice", () => {

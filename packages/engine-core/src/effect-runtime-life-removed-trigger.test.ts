@@ -298,27 +298,26 @@ test("lifeRemoved reaction queues from canonical moveCards after the moving effe
     response: { type: "chooseQuantity", quantity: 0 },
   });
   assert.equal(movedEffectResolved.errors, undefined);
-
-  const queuedLifeRemoved =
-    movedEffectResolved.state.effectQueue.length > 0
-      ? movedEffectResolved
-      : processEffectRuntime(movedEffectResolved.state);
-  assert.equal(queuedLifeRemoved.errors, undefined);
-  assert.equal(queuedLifeRemoved.state.effectQueue.length, 1);
-  assert.deepEqual(queuedLifeRemoved.state.effectQueue[0]?.causedBy, {
-    type: "ruleProcess",
-    name: "effectRuntime:lifeRemovedTriggerQueueing",
-  });
-
-  const resolvedLifeRemoved = processEffectRuntime(queuedLifeRemoved.state);
-  assert.equal(resolvedLifeRemoved.errors, undefined);
+  assert.equal(movedEffectResolved.state.effectQueue.length, 0);
+  assert.equal(movedEffectResolved.state.pendingDecision, undefined);
   assert.equal(
-    must(resolvedLifeRemoved.state.players[p1], "p1 after life removed trigger")
+    movedEffectResolved.events.some((event) => {
+      const causedBy = event.causedBy;
+      return (
+        event.type === "effectQueued" &&
+        causedBy?.type === "ruleProcess" &&
+        causedBy.name === "effectRuntime:lifeRemovedTriggerQueueing"
+      );
+    }),
+    true,
+  );
+  assert.equal(
+    must(movedEffectResolved.state.players[p1], "p1 after life removed trigger")
       .hand.length,
     initialHandLength + 1,
   );
   assert.equal(
-    resolvedLifeRemoved.state.continuousEffects.some(
+    movedEffectResolved.state.continuousEffects.some(
       (effect) =>
         effect.modifier.layer === "restriction" &&
         effect.modifier.operation.type === "restriction" &&
@@ -876,6 +875,25 @@ test("opponent activation reaction queues after the opponent Event main effect",
   }));
   const p2State = must(state.players[p2], "p2");
   const eventCard = must(p2State.hand[0], "event");
+  const extraDeckCard = must(p2State.hand[1], "extra deck card");
+  p2State.hand = p2State.hand
+    .filter((card) => card.instanceId !== extraDeckCard.instanceId)
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p2, slot: "hand", index },
+    }));
+  p2State.deck = [
+    ...p2State.deck,
+    {
+      ...extraDeckCard,
+      zone: {
+        zone: "deck",
+        playerId: p2,
+        slot: "deck",
+        index: p2State.deck.length,
+      },
+    },
+  ];
   const eventSupport = resolvedCard({
     cardId: eventCard.cardId,
     category: "event",
@@ -945,6 +963,25 @@ test("opponent activation reaction queues after a decision-paused opponent Event
   }));
   const p2State = must(state.players[p2], "p2");
   const eventCard = must(p2State.hand[0], "event");
+  const extraDeckCard = must(p2State.hand[1], "extra deck card");
+  p2State.hand = p2State.hand
+    .filter((card) => card.instanceId !== extraDeckCard.instanceId)
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p2, slot: "hand", index },
+    }));
+  p2State.deck = [
+    ...p2State.deck,
+    {
+      ...extraDeckCard,
+      zone: {
+        zone: "deck",
+        playerId: p2,
+        slot: "deck",
+        index: p2State.deck.length,
+      },
+    },
+  ];
   const eventSupport = resolvedCard({
     cardId: eventCard.cardId,
     category: "event",

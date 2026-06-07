@@ -184,6 +184,16 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
       },
       triggerEventId: events[0].id,
       sourcePresencePolicy: "resolveFromDestinationZone",
+      presentation: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p2,
+          zone: trashedSource.zone,
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
       causedBy: {
         type: "ruleProcess",
         name: "effectRuntime:onKOTriggerCandidateDetection",
@@ -248,6 +258,16 @@ test("detects last-known On K.O. candidates with the field source snapshot", () 
       },
       triggerEventId: events[0].id,
       sourcePresencePolicy: "resolveFromLastKnownInformation",
+      presentation: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p2,
+          zone: source.zone,
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
       causedBy: {
         type: "ruleProcess",
         name: "effectRuntime:onKOTriggerCandidateDetection",

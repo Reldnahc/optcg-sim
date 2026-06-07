@@ -663,6 +663,21 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
     triggerEventId: cardKOd.id,
     sourcePresencePolicy: "resolveFromDestinationZone",
     orderingGroup: "nonTurnPlayer",
+    presentation: {
+      source: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: p2,
+        zone: {
+          zone: "trash",
+          playerId: p2,
+          slot: "trash",
+          index: 0,
+        },
+      },
+      textKind: "effect",
+      activeSpanIds: [],
+    },
     status: "resolved",
   });
   assert.equal(

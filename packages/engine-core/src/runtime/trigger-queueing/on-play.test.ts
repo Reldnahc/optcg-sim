@@ -333,6 +333,21 @@ test("effectQueued payload and queue metadata are deterministic across repeated 
       first.state.eventJournal[first.state.eventJournal.length - 2]?.seq,
     queuedAtStateSeq: toStateSeq(4),
     sourcePresencePolicy: "mustRemainInSameZone",
+    presentation: {
+      source: {
+        instanceId: first.state.effectQueue[0]?.source.instanceId,
+        cardId: first.state.effectQueue[0]?.source.cardId,
+        playerId: p1,
+        zone: {
+          zone: "characterArea",
+          playerId: p1,
+          slot: "character",
+          index: 0,
+        },
+      },
+      textKind: "effect",
+      activeSpanIds: [],
+    },
     causedBy: {
       type: "ruleProcess",
       name: "effectRuntime:onPlayTriggerQueueing",
