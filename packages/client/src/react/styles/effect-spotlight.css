@@ -6,6 +6,11 @@
   --effect-spotlight-card-height: calc(
     var(--effect-spotlight-card-width) / 0.7
   );
+  --effect-spotlight-rules-font-size: calc(
+    var(--effect-spotlight-card-width) * 0.019
+  );
+  --effect-spotlight-rules-line-height: 1.08;
+  --effect-spotlight-highlight-background: rgba(255, 186, 45, 0.72);
 
   position: absolute;
   top: 50%;
@@ -83,19 +88,43 @@
 }
 
 .effect-spotlight .effect-rules-text {
-  font-size: calc(var(--effect-spotlight-card-width) * 0.019);
+  font-size: var(--effect-spotlight-rules-font-size);
   font-weight: 650;
-  line-height: 1.08;
+  line-height: var(--effect-spotlight-rules-line-height);
 }
 
 .effect-spotlight .card-rules-text {
   color: inherit;
+  font-size: var(--effect-spotlight-rules-font-size);
+  line-height: var(--effect-spotlight-rules-line-height);
+}
+
+.effect-spotlight .card-rules-line {
+  line-height: inherit;
 }
 
 .effect-spotlight .effect-rules-span--active {
   color: #171005;
-  background: rgba(255, 186, 45, 0.72);
+  background: transparent;
+  box-shadow: none;
+}
+
+.effect-spotlight
+  .effect-rules-span--active
+  :where(.card-rules-copy, .card-rules-link) {
+  border-radius: calc(var(--effect-spotlight-card-width) * 0.006);
+  background: var(--effect-spotlight-highlight-background);
   box-shadow:
     0 0 0 1px rgba(85, 49, 0, 0.62),
+    0 1px 4px rgba(85, 49, 0, 0.24);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.effect-spotlight .effect-rules-span--active .card-rules-tag {
+  box-shadow:
+    0 0 0 1px rgba(85, 49, 0, 0.62),
+    0 0 0 calc(var(--effect-spotlight-card-width) * 0.006)
+      rgba(255, 186, 45, 0.38),
     0 1px 4px rgba(85, 49, 0, 0.24);
 }

@@ -242,7 +242,11 @@ describe("playmat structure", () => {
     assert.match(effectSpotlightStyles, /left:\s*2\.5%;/u);
     assert.match(
       effectSpotlightStyles,
-      /font-size:\s*calc\(var\(--effect-spotlight-card-width\)\s*\*\s*0\.019\);/u,
+      /--effect-spotlight-rules-font-size:\s*calc\(\s*var\(--effect-spotlight-card-width\)\s*\*\s*0\.019\s*\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-text\s*\{[^}]*font-size:\s*var\(--effect-spotlight-rules-font-size\);[^}]*line-height:\s*var\(--effect-spotlight-rules-line-height\);/u,
     );
     assert.equal(
       effectSpotlightStyles.includes(
@@ -252,7 +256,19 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight \.effect-rules-span--active\s*\{[^}]*color:\s*#171005;[^}]*background:\s*rgba\(255,\s*186,\s*45,\s*0\.72\);/u,
+      /\.effect-spotlight \.effect-rules-span--active\s*\{[^}]*color:\s*#171005;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /--effect-spotlight-highlight-background:\s*rgba\(255,\s*186,\s*45,\s*0\.72\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight\s+\.effect-rules-span--active\s+:where\(\.card-rules-copy,\s*\.card-rules-link\)\s*\{[^}]*background:\s*var\(--effect-spotlight-highlight-background\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.effect-rules-span--active \.card-rules-tag\s*\{[^}]*box-shadow:/u,
     );
     assert.match(
       effectSpotlightStyles,
