@@ -6,3 +6,4 @@ export type * from "./game-state.js";
 export type * from "./effects.js";
 export type * from "./decisions.js";
 export type * from "./runtime.js";
+export type * from "./effect-presentation.js";
