@@ -49,7 +49,11 @@ const latestResolvedSpotlightSource = (
     if (event?.type === "cardPlayed") {
       return playedCardPresentation(event);
     }
-    if (event?.type !== "effectResolved" || !isObjectRecord(event.payload)) {
+    if (
+      (event?.type !== "effectResolved" &&
+        event?.type !== "replacementApplied") ||
+      !isObjectRecord(event.payload)
+    ) {
       continue;
     }
     const presentation = event.payload["presentation"];

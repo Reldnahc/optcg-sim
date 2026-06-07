@@ -172,6 +172,37 @@ describe("activeEffectTextForSpotlight", () => {
     });
   });
 
+  it("falls back to the newest replacement applied presentation", () => {
+    const replacement = event({
+      type: "replacementApplied",
+      seq: 2,
+      payload: {
+        status: "applied",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:replacement"],
+        },
+      },
+    });
+
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: undefined,
+        events: [replacement],
+      }),
+    ).toEqual({
+      active: {
+        source,
+        textKind: "effect",
+        activeSpanIds: ["span:replacement"],
+      },
+      key: String(replacement.id),
+      mode: "resolved",
+    });
+  });
+
   it("falls back to a no-highlight spotlight for the newest played character", () => {
     const played = event({
       type: "cardPlayed",

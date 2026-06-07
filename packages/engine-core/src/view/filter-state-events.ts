@@ -360,6 +360,20 @@ export const toPlayerEvent = (event: EngineEvent): EngineEvent => {
       },
     };
   }
+  if (event.type === "replacementApplied") {
+    const payload = asRecord(event.payload);
+    const presentation =
+      payload === undefined
+        ? undefined
+        : toAllowedEffectTextPresentation(payload["presentation"]);
+    return {
+      ...base,
+      payload: {
+        status: "applied",
+        ...(presentation === undefined ? {} : { presentation }),
+      },
+    };
+  }
   return { ...base, payload: toAllowedPlayerEventPayload(event) };
 };
 

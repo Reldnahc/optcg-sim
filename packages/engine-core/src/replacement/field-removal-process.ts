@@ -1,4 +1,5 @@
 import type {
+  ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
   CardSnapshot,
@@ -57,6 +58,7 @@ import {
 } from "./field-removal-decisions.js";
 import { createReplacementOwnerDeckBottomDecision } from "./owner-deck-bottom-decision.js";
 import { executeKoSelfInsteadEffect } from "./ko-self-instead.js";
+import { replacementCandidatePresentation } from "./presentation-payload.js";
 
 export type {
   DetectFieldRemovalReplacementCandidateResult,
@@ -122,6 +124,7 @@ interface PendingReplacementRestInsteadPayload {
   coveredTargets?: CardRef[];
   causedBy: ReplacementProcess["causedBy"];
   controllerId: PlayerId;
+  presentation?: ActiveEffectTextPresentation;
 }
 
 interface PendingReplacementTrashFromHandInsteadPayload {
@@ -134,6 +137,7 @@ interface PendingReplacementTrashFromHandInsteadPayload {
   causedBy: ReplacementProcess["causedBy"];
   controllerId: PlayerId;
   count: number;
+  presentation?: ActiveEffectTextPresentation;
   oncePerTurn?: {
     cardInstanceId: CardInstance["instanceId"];
     effectId: EffectQueueEntry["effectBlockId"];
@@ -578,6 +582,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
   };
   const coveredTargets =
     candidate.coveredTargets ?? fieldRemovalProcessTargets(usedProcess);
+  const presentation = replacementCandidatePresentation(state, candidate);
   const ownerDeckBottomDecision = createReplacementOwnerDeckBottomDecision(
     state,
     process,
@@ -628,6 +633,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 coveredTargets: [...coveredTargets],
                 causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
+                ...(presentation === undefined ? {} : { presentation }),
               },
             },
           },
@@ -687,6 +693,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 coveredTargets: [...coveredTargets],
                 causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
+                ...(presentation === undefined ? {} : { presentation }),
               } satisfies PendingReplacementRestInsteadPayload,
             },
           },
@@ -761,6 +768,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
                 count: trashFromHandDecision.request.min,
+                ...(presentation === undefined ? {} : { presentation }),
                 ...(trashInstead.filter === undefined
                   ? {}
                   : { filter: trashInstead.filter }),
@@ -825,6 +833,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
                 causedBy: process.causedBy,
                 controllerId: candidate.controllerId,
                 cost: payCostDecision.cost,
+                ...(presentation === undefined ? {} : { presentation }),
               } satisfies PendingReplacementPayCostInsteadPayload,
             },
           },
@@ -844,6 +853,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
       replacementId: candidate.id,
       previousPayloadHash: hashCanonicalStateValue(process.payload),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
+      ...(presentation === undefined ? {} : { presentation }),
     } satisfies EngineInternalReplacementAppliedEventPayload,
     { type: "public" },
   );

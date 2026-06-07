@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
   CausalityRef,
@@ -21,6 +22,7 @@ import {
   isCausalityRef,
   replacementProcessFromStoredPayload,
 } from "./field-removal-targets.js";
+import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 
 interface PendingReplacementRestInsteadPayload {
@@ -32,6 +34,7 @@ interface PendingReplacementRestInsteadPayload {
   coveredTargets?: CardRef[];
   causedBy: CausalityRef;
   controllerId: PlayerId;
+  presentation?: ActiveEffectTextPresentation;
 }
 
 interface EngineInternalReplacementAppliedEventPayload {
@@ -39,6 +42,7 @@ interface EngineInternalReplacementAppliedEventPayload {
   replacementId: string;
   previousPayloadHash: string;
   transformedPayloadHash: string;
+  presentation?: ActiveEffectTextPresentation;
 }
 
 export type ReplacementDecisionResult = {
@@ -127,6 +131,12 @@ const pendingReplacementRestInsteadFromPayload = (
   ) {
     return undefined;
   }
+  const presentation = activeEffectTextPresentationFromPayloadValue(
+    candidate["presentation"],
+  );
+  if (candidate["presentation"] !== undefined && presentation === undefined) {
+    return undefined;
+  }
   return {
     decisionId: candidate["decisionId"],
     replacementId: candidate["replacementId"],
@@ -136,6 +146,7 @@ const pendingReplacementRestInsteadFromPayload = (
     causedBy: candidate["causedBy"],
     ...(target === undefined ? {} : { target }),
     ...(coveredTargets === undefined ? {} : { coveredTargets }),
+    ...(presentation === undefined ? {} : { presentation }),
   };
 };
 
@@ -353,6 +364,9 @@ export const applyReplacementRestTargetDecisionResponse = (
         replacementPayloadWithoutPending(state, pending.processId),
       ),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
+      ...(pending.payload.presentation === undefined
+        ? {}
+        : { presentation: pending.payload.presentation }),
     } satisfies EngineInternalReplacementAppliedEventPayload,
     { type: "public" },
   );

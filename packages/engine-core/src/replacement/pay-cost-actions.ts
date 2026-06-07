@@ -19,6 +19,7 @@ import {
   isCausalityRef,
   replacementProcessFromStoredPayload,
 } from "./field-removal-targets.js";
+import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 import type {
   EngineInternalReplacementAppliedEventPayload,
@@ -115,6 +116,12 @@ const pendingReplacementPayCostInsteadFromPayload = (
   ) {
     return undefined;
   }
+  const presentation = activeEffectTextPresentationFromPayloadValue(
+    candidate["presentation"],
+  );
+  if (candidate["presentation"] !== undefined && presentation === undefined) {
+    return undefined;
+  }
   return {
     decisionId: candidate["decisionId"],
     replacementId: candidate["replacementId"],
@@ -127,6 +134,7 @@ const pendingReplacementPayCostInsteadFromPayload = (
     cost,
     ...(target === undefined ? {} : { target }),
     ...(coveredTargets === undefined ? {} : { coveredTargets }),
+    ...(presentation === undefined ? {} : { presentation }),
   };
 };
 
@@ -321,6 +329,9 @@ export const applyReplacementPayCostDecisionResponse = (
         replacementPayloadWithoutPending(state, pending.processId),
       ),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
+      ...(pending.payload.presentation === undefined
+        ? {}
+        : { presentation: pending.payload.presentation }),
     } satisfies EngineInternalReplacementAppliedEventPayload,
     { type: "public" },
   );

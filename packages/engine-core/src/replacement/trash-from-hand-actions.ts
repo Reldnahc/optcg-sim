@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
   CausalityRef,
@@ -26,6 +27,7 @@ import {
   isCausalityRef,
   replacementProcessFromStoredPayload,
 } from "./field-removal-targets.js";
+import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 
 interface PendingReplacementTrashFromHandInsteadPayload {
@@ -38,6 +40,7 @@ interface PendingReplacementTrashFromHandInsteadPayload {
   causedBy: CausalityRef;
   controllerId: PlayerId;
   count: number;
+  presentation?: ActiveEffectTextPresentation;
   filter?: CardFilter;
   oncePerTurn?: {
     cardInstanceId: CardInstance["instanceId"];
@@ -51,6 +54,7 @@ interface EngineInternalReplacementAppliedEventPayload {
   replacementId: string;
   previousPayloadHash: string;
   transformedPayloadHash: string;
+  presentation?: ActiveEffectTextPresentation;
 }
 
 type ReplacementDecisionResult = {
@@ -167,6 +171,12 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
   ) {
     return undefined;
   }
+  const presentation = activeEffectTextPresentationFromPayloadValue(
+    candidate["presentation"],
+  );
+  if (candidate["presentation"] !== undefined && presentation === undefined) {
+    return undefined;
+  }
   const oncePerTurn = pendingReplacementOncePerTurnFromPayload(
     candidate["oncePerTurn"],
   );
@@ -188,6 +198,7 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
       : { filter: candidate["filter"] as CardFilter }),
     ...(target === undefined ? {} : { target }),
     ...(coveredTargets === undefined ? {} : { coveredTargets }),
+    ...(presentation === undefined ? {} : { presentation }),
     ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
   };
 };
@@ -403,6 +414,9 @@ export const applyReplacementTrashFromHandDecisionResponse = (
         replacementPayloadWithoutPending(state, pending.processId),
       ),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
+      ...(pending.payload.presentation === undefined
+        ? {}
+        : { presentation: pending.payload.presentation }),
     } satisfies EngineInternalReplacementAppliedEventPayload,
     { type: "public" },
   );

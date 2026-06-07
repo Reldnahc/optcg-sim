@@ -262,6 +262,59 @@ test("preserves safe effectResolved presentation for effect text spotlight", () 
   assert.equal(JSON.stringify(view.events).includes("private"), false);
 });
 
+test("preserves safe replacementApplied presentation for effect text spotlight", () => {
+  const state = createActiveState();
+  const cardId = toCardId("OP13-089");
+  const instanceId = "replacement-source" as InstanceId;
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:replacement-applied"),
+      seq: 1,
+      type: "replacementApplied",
+      source: {
+        instanceId,
+        cardId,
+        playerId: p1,
+      },
+      payload: {
+        processId: "process:hidden",
+        replacementId: "replacement:hidden",
+        previousPayloadHash: "previous-private-hash",
+        transformedPayloadHash: "transformed-private-hash",
+        presentation: {
+          source: {
+            instanceId,
+            cardId,
+            playerId: p1,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:replacement"],
+          privateExecutionFrame: "hidden",
+        },
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+  ];
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(view.events[0]?.payload, {
+    status: "applied",
+    presentation: {
+      source: {
+        instanceId,
+        cardId,
+        playerId: p1,
+      },
+      textKind: "effect",
+      activeSpanIds: ["span:replacement"],
+    },
+  });
+  assert.equal(JSON.stringify(view.events).includes("private"), false);
+  assert.equal(JSON.stringify(view.events).includes("hidden"), false);
+});
+
 test("keeps historical public search reveal events after transient reveal cleanup", () => {
   const state = createActiveState();
   const cardId = toCardId("OP13-089");

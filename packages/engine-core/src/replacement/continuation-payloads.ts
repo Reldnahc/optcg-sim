@@ -1,4 +1,5 @@
 import type {
+  ActiveEffectTextPresentation,
   CardRef,
   Cost,
   EffectQueueEntry,
@@ -16,6 +17,7 @@ export interface PendingReplacementPayCostInsteadPayload {
   causedBy: ReplacementProcess["causedBy"];
   controllerId: PlayerId;
   cost: Cost;
+  presentation?: ActiveEffectTextPresentation;
 }
 
 export interface EngineInternalReplacementAppliedEventPayload {
@@ -23,4 +25,5 @@ export interface EngineInternalReplacementAppliedEventPayload {
   replacementId: string;
   previousPayloadHash: string;
   transformedPayloadHash: string;
+  presentation?: ActiveEffectTextPresentation;
 }

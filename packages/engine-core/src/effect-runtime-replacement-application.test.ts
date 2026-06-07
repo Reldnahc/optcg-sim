@@ -10,6 +10,7 @@ import type {
   EffectDefinition,
   EffectId,
   EffectQueueEntry,
+  EffectTextSpanId,
   EngineEvent,
   GameState,
   LegalAction,
@@ -38,6 +39,8 @@ const toCardId = (value: string): CardId => value as CardId;
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
+const toEffectTextSpanId = (value: string): EffectTextSpanId =>
+  value as EffectTextSpanId;
 
 const publicCharacterRequest = (): TargetRequest => ({
   timing: "onResolution",
@@ -153,12 +156,30 @@ const attachReviewedReplacement = (
     behaviorHash: "replacement-behavior-hash",
     effectDefinitionId: `definition:${String(target.cardId)}`,
   };
-  state.cardManifest.cards[target.cardId] = resolvedCard({
-    cardId: target.cardId,
-    category: "character",
-    power: 3000,
-    support,
-  });
+  state.cardManifest.cards[target.cardId] = {
+    ...resolvedCard({
+      cardId: target.cardId,
+      category: "character",
+      power: 3000,
+      support,
+      effectText:
+        "If this Character would be K.O.'d, you may draw 1 card instead.",
+    }),
+    effectTextSourceMap: {
+      textKind: "effect",
+      sourceText:
+        "If this Character would be K.O.'d, you may draw 1 card instead.",
+      spans: [
+        {
+          id: toEffectTextSpanId("span:replacement"),
+          role: "body",
+          start: 0,
+          end: 64,
+          text: "If this Character would be K.O.'d, you may draw 1 card instead.",
+        },
+      ],
+    },
+  };
   const effectBlock: EffectDefinition["effects"][number] = {
     id: toEffectId("replacement:would-be-ko-draw-1"),
     category: "replacement",
@@ -168,6 +189,10 @@ const attachReviewedReplacement = (
     },
     optional: true,
     sourcePresencePolicy: "resolveFromLastKnownInformation",
+    presentation: {
+      textKind: "effect",
+      spanIds: [toEffectTextSpanId("span:replacement")],
+    },
     effect: {
       type: "replacement",
       when: { type: "wouldBeKOd", target: { type: "self" } },
@@ -401,6 +426,11 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
       replacementId: first.replacementId,
       source: first.targetRef,
     }),
+    presentation: {
+      source: first.targetRef,
+      textKind: "effect",
+      activeSpanIds: [toEffectTextSpanId("span:replacement")],
+    },
   });
   assert.deepEqual(replacementApplied.visibility, { type: "public" });
   assert.deepEqual(replacementApplied.causedBy, {
