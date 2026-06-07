@@ -227,7 +227,8 @@ const shouldContinueRuntimeAfterEffectDecision = (
   );
   return (
     queueEntry?.causedBy.type === "ruleProcess" &&
-    (queueEntry.causedBy.name === "effectRuntime:mainEventTriggerQueueing" ||
+    (queueEntry.causedBy.name === "effectRuntime:onPlayTriggerQueueing" ||
+      queueEntry.causedBy.name === "effectRuntime:mainEventTriggerQueueing" ||
       queueEntry.causedBy.name ===
         "effectRuntime:opponentActivationTriggerQueueing" ||
       queueEntry.causedBy.name ===
