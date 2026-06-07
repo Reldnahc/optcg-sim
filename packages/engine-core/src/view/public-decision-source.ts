@@ -147,12 +147,12 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??
-      narrowSequenceActiveSpanIds(
-        params.state,
+      narrowSearchRevealActiveSpanIds(
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??
-      narrowSearchRevealActiveSpanIds(
+      narrowSequenceActiveSpanIds(
+        params.state,
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??

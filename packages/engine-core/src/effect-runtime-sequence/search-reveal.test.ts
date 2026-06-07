@@ -64,6 +64,49 @@ const searchThenDrawSequence = (
   ],
 });
 
+const conditionalSearchSequence = (
+  lookCount: number,
+): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: {
+        type: "conditional",
+        if: { type: "yourTurn" },
+        then: {
+          type: "sequence",
+          effects: [
+            {
+              id: "conditional-search-top-cards",
+              connector: "always",
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  lookCount,
+                  filter: {},
+                  min: 0,
+                  max: 1,
+                  destination: "hand",
+                  revealTo: "chooserOnly",
+                  remainingCards: {
+                    destination: "deck",
+                    position: "bottom",
+                    order: "ownerChoice",
+                  },
+                  shuffleAfter: false,
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  ],
+});
+
 const revealTopPlayRestedSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -279,6 +322,23 @@ test("sequence search segment resumes into following then segment", () => {
   assert.ok(
     player.hand.some((card) => card.instanceId === drawnCard?.instanceId),
   );
+});
+
+test("conditional sequence search segment preserves its effect path while paused", () => {
+  const { state } = sequenceQueueState(conditionalSearchSequence(1), 1);
+  markTopDeckAsSearchCandidates(state, 1);
+
+  const paused = processEffectRuntime(state);
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+  assert.deepEqual(paused.state.effectExecutionFrames[0]?.effectPath, [
+    "effect",
+    "sequence",
+    "0",
+    "then",
+    "sequence",
+  ]);
 });
 
 test("sequence reveal-top segment can select and play the revealed card rested", () => {

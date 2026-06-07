@@ -370,6 +370,7 @@ export const continueNoDecisionSegments = (
         emptySegmentResult,
         entry,
         events,
+        effectPath,
         index,
         nextLedgers,
         nextState,

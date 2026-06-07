@@ -57,6 +57,7 @@ export const applySearchRevealSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
   entry: EffectQueueEntry;
   events: EngineEvent[];
+  effectPath: readonly string[];
   index: number;
   nextLedgers: SegmentLedgers;
   nextState: GameState;
@@ -83,6 +84,7 @@ export const applySearchRevealSequenceSegment = (params: {
     emptySegmentResult,
     entry,
     events,
+    effectPath,
     index,
     nextLedgers,
     nextState,
@@ -123,6 +125,7 @@ export const applySearchRevealSequenceSegment = (params: {
   const frame = frameForPausedSequenceDecision({
     decision,
     entry,
+    effectPath: [...effectPath],
     index,
     savedReferences: searchLedgers.savedReferences,
     segmentResults: searchLedgers.segmentResults,
@@ -250,7 +253,12 @@ export const retargetSequenceFrameAfterSearchRevealOrder = (
       return frame;
     }
     const pausedIndex = frame.pendingDecision.resumeAtSegmentIndex;
-    const pausedKey = String(pausedIndex);
+    const pausedKey =
+      frame.effectPath.length === 2 &&
+      frame.effectPath[0] === "effect" &&
+      frame.effectPath[1] === "sequence"
+        ? String(pausedIndex)
+        : `${frame.effectPath.join(".")}:${String(pausedIndex)}`;
     return {
       ...frame,
       pendingDecision: {

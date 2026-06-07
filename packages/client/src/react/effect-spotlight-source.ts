@@ -39,6 +39,18 @@ const isActiveEffectTextPresentation = (
 };
 
 const sequenceSpanPrefix = "span:sequence:";
+const searchSpanPrefix = "span:search:";
+
+const splitResolvedSpanIds = (
+  activeSpanIds: readonly ActiveEffectTextPresentation["activeSpanIds"][number][],
+): readonly ActiveEffectTextPresentation["activeSpanIds"][number][] => {
+  const splitSpanIds = activeSpanIds.filter(
+    (spanId) =>
+      spanId.startsWith(sequenceSpanPrefix) ||
+      spanId.startsWith(searchSpanPrefix),
+  );
+  return splitSpanIds.length > 1 ? splitSpanIds : [];
+};
 
 const resolvedSpotlightSourcesForEvent = (
   event: EngineEvent,
@@ -57,10 +69,8 @@ const resolvedSpotlightSourcesForEvent = (
   if (!isActiveEffectTextPresentation(presentation)) {
     return [];
   }
-  const sequenceSpanIds = presentation.activeSpanIds.filter((spanId) =>
-    spanId.startsWith(sequenceSpanPrefix),
-  );
-  if (sequenceSpanIds.length <= 1) {
+  const splitSpanIds = splitResolvedSpanIds(presentation.activeSpanIds);
+  if (splitSpanIds.length === 0) {
     return [
       {
         active: presentation,
@@ -69,7 +79,7 @@ const resolvedSpotlightSourcesForEvent = (
       },
     ];
   }
-  return sequenceSpanIds.map((spanId) => ({
+  return splitSpanIds.map((spanId) => ({
     active: {
       ...presentation,
       activeSpanIds: [spanId],

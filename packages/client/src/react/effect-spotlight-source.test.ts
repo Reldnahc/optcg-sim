@@ -254,6 +254,32 @@ describe("activeEffectTextForSpotlight", () => {
     ]);
   });
 
+  it("splits resolved search spans into queueable spotlight sources", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:search:selection", "span:search:remaining"],
+        },
+      },
+    });
+
+    const sources = resolvedEffectTextSourcesForSpotlight([resolved]);
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      `${String(resolved.id)}:span:search:selection`,
+      `${String(resolved.id)}:span:search:remaining`,
+    ]);
+    expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
+      ["span:search:selection"],
+      ["span:search:remaining"],
+    ]);
+  });
+
   it("marks resolved event presentations as one-shot sources keyed by event id", () => {
     const resolved = event({
       type: "effectResolved",
