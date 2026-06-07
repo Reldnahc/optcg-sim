@@ -8,6 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
+import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
 import { removeFrame } from "./segments.js";
 import {
   conditionalParentForPath,
@@ -288,9 +289,13 @@ export const resumeSequenceFrameFromLedgers = (params: {
   events.splice(0, events.length, ...completed.events);
   completedState = completed.state;
   if (params.finalizeCompleted) {
+    const completedEntry = entryWithCompletedSequencePresentation(
+      entryWithCompletedFramePresentation(params.entry, params.frame),
+      completed.ledgers.segmentResults,
+    );
     const finalized = appendEffectResolvedForCompletedSequence(
       completedState,
-      entryWithCompletedFramePresentation(params.entry, params.frame),
+      completedEntry,
       events,
     );
     if (!finalized.ok) {

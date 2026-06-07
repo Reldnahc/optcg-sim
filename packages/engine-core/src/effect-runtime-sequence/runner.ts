@@ -1,4 +1,6 @@
 import type {
+  CardInstance,
+  ContinuousEffectRecord,
   Effect,
   EffectExecutionFrame,
   EffectQueueEntry,
@@ -29,6 +31,7 @@ import { applyPlaySelectedSequenceSegment } from "../runtime/primitives/play-sel
 import { applyActivateSelectedEventSequenceSegment } from "../runtime/primitives/activate-selected-event.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
+import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 import { applySelectTargetsSequenceSegment } from "./select-targets.js";
 import { createTopDeckPlacementDecision } from "../effect-runtime-top-deck-placement.js";
 import { applySearchRevealSequenceSegment } from "./search-reveal.js";
@@ -125,6 +128,54 @@ export const sequenceRuntimeError = (
   effectId,
   details: { reason } satisfies SequenceRuntimeErrorDetails,
 });
+
+const currentCardsForContinuousMatching = (state: GameState): CardInstance[] =>
+  Object.values(state.players).flatMap((player) => [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+    ...player.costArea,
+    ...player.hand,
+    ...player.trash,
+    ...player.deck,
+    ...player.donDeck,
+    ...player.life.map((lifeCard) => lifeCard.card),
+  ]);
+
+const continuousRecordCurrentlyApplies = (
+  state: GameState,
+  record: ContinuousEffectRecord,
+): boolean => {
+  const target = record.modifier.target;
+  if (target.type === "player" || target.type === "allMatching") {
+    return true;
+  }
+  return currentCardsForContinuousMatching(state).some((card) =>
+    cardMatchesContinuousModifierTarget(state, card, record),
+  );
+};
+
+const continuousRecordsCurrentlyApply = (
+  state: GameState,
+  records: readonly ContinuousEffectRecord[],
+): boolean =>
+  records.some((record) => continuousRecordCurrentlyApplies(state, record));
+
+const sequenceSegmentResultsChanged = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  effect: SequenceEffect,
+  effectPath: readonly string[],
+): boolean =>
+  effect.effects.some((segment, index) => {
+    const result =
+      segmentResults[segmentKeyForPath(effectPath, segment, index)];
+    return (
+      result !== undefined &&
+      result.attempted &&
+      result.succeeded &&
+      result.changedState
+    );
+  });
 
 export const continueNoDecisionSegments = (
   state: GameState,
@@ -758,7 +809,7 @@ export const continueNoDecisionSegments = (
             ...emptySegmentResult(),
             attempted: true,
             succeeded: true,
-            changedState: records.length > 0,
+            changedState: continuousRecordsCurrentlyApply(nextState, records),
           },
         },
       };
@@ -788,7 +839,11 @@ export const continueNoDecisionSegments = (
         };
       }
       const changedState =
-        nested.events.length > 0 || nested.state !== nextState;
+        sequenceSegmentResultsChanged(
+          nested.ledgers.segmentResults,
+          segment.effect,
+          path,
+        ) || nested.events.length > 0;
       nextState = nested.state;
       nextLedgers = {
         ...nested.ledgers,
@@ -864,7 +919,12 @@ export const continueNoDecisionSegments = (
         nextState = nested.state;
         nextLedgers = nested.ledgers;
         events.push(...nested.events);
-        changedState = nested.events.length > 0;
+        changedState =
+          sequenceSegmentResultsChanged(
+            nested.ledgers.segmentResults,
+            thenSequence,
+            thenPath,
+          ) || nested.events.length > 0;
       } else {
         const request = continuousChooseTargetRequest(segment.effect.then);
         if (request !== undefined) {
@@ -896,7 +956,7 @@ export const continueNoDecisionSegments = (
                 ...nextState,
                 continuousEffects: [...nextState.continuousEffects, ...records],
               };
-        changedState = records.length > 0;
+        changedState = continuousRecordsCurrentlyApply(nextState, records);
       }
       nextLedgers = {
         ...nextLedgers,

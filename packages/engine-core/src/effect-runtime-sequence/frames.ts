@@ -23,6 +23,7 @@ import {
   stateWithPausedSequenceFrame,
 } from "./frame-decisions.js";
 import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
+import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
 import { resumePlaySelectedOverflowFrame } from "../runtime/primitives/play-selected.js";
 import {
   resumeSequenceFrameAfterHandSelection as resumeSequenceFrameAfterHandSelectionHelper,
@@ -178,7 +179,10 @@ export const createSupportedSequenceFrameDecision = (
   if (run.kind === "completed") {
     const completed = appendEffectResolvedForCompletedSequence(
       run.state,
-      resolvingEntry,
+      entryWithCompletedSequencePresentation(
+        resolvingEntry,
+        run.ledgers.segmentResults,
+      ),
       run.events,
     );
     if (!completed.ok) {
@@ -265,7 +269,10 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
   }
   const completed = appendEffectResolvedForCompletedSequence(
     run.state,
-    resolvingEntry,
+    entryWithCompletedSequencePresentation(
+      resolvingEntry,
+      run.ledgers.segmentResults,
+    ),
     run.events,
   );
   if (!completed.ok) {
