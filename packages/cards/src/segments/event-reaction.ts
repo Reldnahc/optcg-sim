@@ -61,7 +61,7 @@ export function lifeRemovedReactionExpressionParser(options: {
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
     const match =
-      /^(?:when a card is removed from your or your opponent's Life cards,|This effect can be activated when a card is removed from your or your opponent's Life cards\.)\s*(?<body>.+)$/i.exec(
+      /^when a card is removed from your or your opponent's Life cards,\s*(?<body>.+)$/i.exec(
         input.text,
       );
     const body = match?.groups?.["body"];
