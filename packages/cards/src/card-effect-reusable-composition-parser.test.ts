@@ -133,6 +133,33 @@ describe("card effect reusable parser compositions", () => {
     expect(result?.evidence).toContain("trigger:fieldRemoved");
   });
 
+  it("parses opponent-caused field-removal activated reactions as reusable predicates", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] [Once Per Turn] This effect can be activated when your {Example} type Character is removed from the field by your opponent's effect or K.O.'d. If you have 5 or less cards in your hand, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "fieldRemoved",
+          player: "self",
+          filter: { categories: ["character"], typesAny: ["Example"] },
+          sourceController: "opponent",
+          sourceKind: "any",
+        },
+        condition: { type: "opponentTurn" },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:fieldRemoved",
+        "player:self",
+        "filter:type",
+      ]),
+    );
+  });
+
   it("parses activated card-play reactions with reusable played-card filters", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] This effect can be activated when you play a Character with a [Trigger]. Give up to 2 rested DON!! cards to 1 of your Leader or Character cards.",
@@ -156,6 +183,37 @@ describe("card effect reusable parser compositions", () => {
     });
     expect(result?.evidence).toEqual(
       expect.arrayContaining(["trigger:cardPlayed", "filter:effectEntryPoint"]),
+    );
+  });
+
+  it("parses activated opponent played-card reactions with alternative reusable predicates", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] This effect can be activated when your opponent plays a Character with a base cost of 8 or more, or when your opponent plays a Character using a Character's effect. Your opponent adds 1 card from the top of their Life cards to their hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "cardPlayed",
+          player: "opponent",
+          anyOf: [
+            {
+              filter: {
+                categories: ["character"],
+                cost: { op: "gte", value: 8 },
+              },
+            },
+            {
+              filter: { categories: ["character"] },
+              sourceFilter: { categories: ["character"] },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining(["trigger:cardPlayed", "filter:cost"]),
     );
   });
 
@@ -202,6 +260,84 @@ describe("card effect reusable parser compositions", () => {
       expect.arrayContaining([
         "entry:onOpponentAttack",
         "condition:onlyMatchingFieldCards",
+      ]),
+    );
+  });
+
+  it("parses named-card keyword grants under activated opponent-attack reactions", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] This effect can be activated when your opponent attacks. Up to 1 of your [Example Name] cards gains [Blocker] during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "onOpponentAttack" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "giveKeyword",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    player: "self",
+                    zones: ["leaderArea", "characterArea"],
+                    filter: { names: ["Example Name"] },
+                  },
+                },
+                keyword: "blocker",
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining(["target:yourNamedCards", "keyword:anySupported"]),
+    );
+  });
+
+  it("parses rested-by-opponent activated reactions with reusable optional cost composition", () => {
+    const result = parseCardEffectLine(
+      "This effect can be activated when this Character is rested by your opponent's effect. You may trash this Character and draw 2 cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "cardRested",
+          target: "self",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceController: "opponent",
+          sourceKind: "effect",
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "trashSelf", optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: { type: "draw", player: "self", count: 2 },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:cardRested",
+        "composition:optionalCostedEffect",
+        "cost:trashSelf",
       ]),
     );
   });

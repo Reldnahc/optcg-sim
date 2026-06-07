@@ -140,7 +140,18 @@ export const defaultRegistry = {
     }),
     replacementInsteadExpressionParser,
     activatedReactionExpressionParser({
-      expressions: [generalExpressionParser],
+      expressions: [
+        returnToOwnerHandCostedEffectExpressionParser({
+          conditions: conditionParsers,
+          instructions: instructionParsers,
+          expressions: costedExpressions,
+        }),
+        optionalCostedEffectExpressionParser({
+          instructions: instructionParsers,
+          expressions: costedExpressions,
+        }),
+        generalExpressionParser,
+      ],
     }),
     lifeRemovedReactionExpressionParser({
       expressions: [generalExpressionParser],

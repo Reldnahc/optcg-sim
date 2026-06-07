@@ -3,6 +3,7 @@ import { parseKeyword } from "../../../keywords/index.js";
 import {
   parseCompoundYourCharactersTarget,
   parseYourCharactersTarget,
+  parseYourNamedCardsTarget,
 } from "../../../targets/index.js";
 import type { InstructionParser } from "../../../types.js";
 import { parseExplicitFieldEffectDuration } from "../shared.js";
@@ -19,7 +20,9 @@ export const parseTargetedKeywordGrantInstruction: InstructionParser = (
     parseCompoundYourCharactersTarget(
       { text: cardinality.rest },
       cardinality.cardinality,
-    ) ?? parseYourCharactersTarget({ text: cardinality.rest });
+    ) ??
+    parseYourCharactersTarget({ text: cardinality.rest }) ??
+    parseYourNamedCardsTarget({ text: cardinality.rest });
   if (target?.target === undefined) {
     return undefined;
   }

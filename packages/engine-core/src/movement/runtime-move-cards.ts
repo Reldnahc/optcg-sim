@@ -102,10 +102,10 @@ export const isSupportedLifeTopToTrashEffect = (
   effect.type === "moveCards" &&
   Number.isInteger(effect.count) &&
   effect.count > 0 &&
-  effect.from.player === "self" &&
+  (effect.from.player === "self" || effect.from.player === "opponent") &&
   effect.from.zone === "life" &&
   effect.from.position === "top" &&
-  effect.to.player === "self" &&
+  effect.to.player === effect.from.player &&
   effect.to.zone === "trash" &&
   effect.to.position === undefined;
 

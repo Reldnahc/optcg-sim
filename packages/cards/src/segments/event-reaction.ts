@@ -204,6 +204,25 @@ const activatedReactionPredicate = (
     };
   }
 
+  const yourTypedOpponentRemoved =
+    /^your (?<filter>.+? Character(?: card)?) is removed from the field by your opponent's effect or K\.O\.'d$/iu.exec(
+      normalized,
+    );
+  const opponentRemovedFilter = yourTypedOpponentRemoved?.groups?.["filter"];
+  if (opponentRemovedFilter !== undefined) {
+    const parsed = parseCharacterFilter(opponentRemovedFilter);
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        player: "self",
+        filter: parsed.filter,
+        sourceController: "opponent",
+        sourceKind: "any",
+      },
+      evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
+    };
+  }
+
   const yourTypedRemoved =
     /^your (?<filter>.+? Character(?: card)?) is removed from the field$/iu.exec(
       normalized,
@@ -216,25 +235,6 @@ const activatedReactionPredicate = (
         type: "fieldRemoved",
         player: "self",
         filter: parsed.filter,
-        sourceKind: "any",
-      },
-      evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
-    };
-  }
-
-  const yourTypedOpponentRemoved =
-    /^your (?<filter>.+? Character) is removed from the field by your opponent's effect or K\.O\.'d$/iu.exec(
-      normalized,
-    );
-  const opponentRemovedFilter = yourTypedOpponentRemoved?.groups?.["filter"];
-  if (opponentRemovedFilter !== undefined) {
-    const parsed = parseCharacterFilter(opponentRemovedFilter);
-    return {
-      trigger: {
-        type: "fieldRemoved",
-        player: "self",
-        filter: parsed.filter,
-        sourceController: "opponent",
         sourceKind: "any",
       },
       evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
@@ -342,6 +342,17 @@ const activatedReactionBodyPredicate = (
     return undefined;
   }
 
+  const optionalCostAndBody =
+    /^You may (?<cost>trash this Character)\s+and\s+(?<body>.+)$/iu.exec(body);
+  const optionalCost = optionalCostAndBody?.groups?.["cost"];
+  const optionalCostBody = optionalCostAndBody?.groups?.["body"];
+  if (optionalCost !== undefined && optionalCostBody !== undefined) {
+    return {
+      predicate,
+      body: `You may ${optionalCost}: ${optionalCostBody}`,
+    };
+  }
+
   const attackerAttribute =
     /^If that Character has the <(?<attribute>[^>]+)> attribute,\s*(?<body>.+)$/iu.exec(
       body,
@@ -423,57 +434,77 @@ export function activatedReactionExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
-    const match =
-      /^This effect can be activated when (?<when>.+?)\.\s*(?<body>.+)$/iu.exec(
-        input.text,
-      );
-    const when = match?.groups?.["when"];
-    const body = match?.groups?.["body"];
-    if (when === undefined || body === undefined) {
-      return undefined;
-    }
-    const refined = activatedReactionBodyPredicate(
-      activatedReactionPredicate(when, input.entryPoint),
-      when,
-      body,
-    );
-    if (refined === undefined) {
+    const prefix = "This effect can be activated when ";
+    if (!input.text.startsWith(prefix)) {
       return undefined;
     }
 
-    for (const expressionParser of options.expressions) {
-      const parsed = parseReactionBody(expressionParser, input, refined.body);
-      if (parsed === undefined || parsed.rest.length > 0) {
+    for (const split of activatedReactionSplits(
+      input.text.slice(prefix.length),
+    )) {
+      const refined = activatedReactionBodyPredicate(
+        activatedReactionPredicate(split.when, input.entryPoint),
+        split.when,
+        split.body,
+      );
+      if (refined === undefined) {
         continue;
       }
-      return {
-        effect: toSequenceExpression(parsed),
-        evidence: [
-          "activation:reaction",
-          ...refined.predicate.evidence,
-          ...(parsed.effect.type === "sequence"
-            ? []
-            : (["expression:sequence"] as const)),
-          ...parsed.evidence,
-        ],
-        rest: "",
-        blockPatch: {
-          ...parsed.blockPatch,
-          category: "activate",
-          trigger: refined.predicate.trigger,
-          ...(refined.predicate.condition === undefined
+      for (const expressionParser of options.expressions) {
+        const parsed = parseReactionBody(expressionParser, input, refined.body);
+        if (parsed === undefined || parsed.rest.length > 0) {
+          continue;
+        }
+        return {
+          effect: toSequenceExpression(parsed),
+          evidence: [
+            "activation:reaction",
+            ...refined.predicate.evidence,
+            ...(parsed.effect.type === "sequence"
+              ? []
+              : (["expression:sequence"] as const)),
+            ...parsed.evidence,
+          ],
+          rest: "",
+          blockPatch: {
+            ...parsed.blockPatch,
+            category: "activate",
+            trigger: refined.predicate.trigger,
+            ...(refined.predicate.condition === undefined
+              ? {}
+              : { condition: refined.predicate.condition }),
+          },
+          ...(parsed.presentationSpans === undefined
             ? {}
-            : { condition: refined.predicate.condition }),
-        },
-        ...(parsed.presentationSpans === undefined
-          ? {}
-          : { presentationSpans: parsed.presentationSpans }),
-      };
+            : { presentationSpans: parsed.presentationSpans }),
+        };
+      }
     }
 
     return undefined;
   };
 }
+
+const activatedReactionSplits = (
+  text: string,
+): Array<{ readonly when: string; readonly body: string }> => {
+  const splits: Array<{ readonly when: string; readonly body: string }> = [];
+  for (const match of text.matchAll(/\.\s+/gu)) {
+    const index = match.index;
+    if (isAbbreviationPeriod(text, index)) {
+      continue;
+    }
+    const when = text.slice(0, index).trim();
+    const body = text.slice(index + match[0].length).trim();
+    if (when.length > 0 && body.length > 0) {
+      splits.push({ when, body });
+    }
+  }
+  return splits;
+};
+
+const isAbbreviationPeriod = (text: string, index: number): boolean =>
+  text.slice(Math.max(0, index - 3), index + 1).toLowerCase() === "k.o.";
 
 export function opponentEventOrBlockerActivatedExpressionParser(options: {
   readonly expressions: readonly ((

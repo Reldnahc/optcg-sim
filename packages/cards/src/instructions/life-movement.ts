@@ -64,6 +64,30 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
         }),
       },
       {
+        id: "opponent-adds-n-cards-from-life-top-to-hand",
+        pattern:
+          /^your opponent adds (?<count>[1-9]\d*) cards? from the top of their Life cards to their hand\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "moveCards",
+            count: Number.parseInt(groups["count"] ?? "", 10),
+            from: { player: "opponent", zone: "life", position: "top" },
+            to: { player: "opponent", zone: "hand" },
+            order: "original",
+          },
+          evidence: [
+            "instruction:moveCards",
+            "count:positiveInteger",
+            "player:opponent",
+            "zone:life",
+            "position:top",
+            "destination:hand",
+            "order:original",
+          ],
+          rest: "",
+        }),
+      },
+      {
         id: "trash-n-cards-from-top-of-life",
         pattern:
           /^trash (?<count>[1-9]\d*) cards? from the top of your Life cards\.?$/i,
