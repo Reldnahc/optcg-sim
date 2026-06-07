@@ -4,7 +4,7 @@
     calc(100vw - 16px)
   );
   --effect-spotlight-rules-font-size: clamp(5px, 0.82vh, 15px);
-  --effect-spotlight-rules-line-height: clamp(6px, 0.98vh, 19px);
+  --effect-spotlight-rules-line-height: 1.24;
   --effect-spotlight-highlight-background: rgba(255, 186, 45, 0.72);
 
   position: absolute;
@@ -19,7 +19,6 @@
 @supports (font-size: 1cqw) {
   .effect-spotlight {
     --effect-spotlight-rules-font-size: clamp(5px, 3.4cqw, 15px);
-    --effect-spotlight-rules-line-height: clamp(6px, 3.95cqw, 19px);
   }
 }
 

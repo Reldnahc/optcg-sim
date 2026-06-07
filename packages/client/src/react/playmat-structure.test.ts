@@ -260,11 +260,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /--effect-spotlight-rules-line-height:\s*clamp\(6px,\s*0\.98vh,\s*19px\);/u,
-    );
-    assert.match(
-      effectSpotlightStyles,
-      /--effect-spotlight-rules-line-height:\s*clamp\(6px,\s*3\.95cqw,\s*19px\);/u,
+      /--effect-spotlight-rules-line-height:\s*1\.24;/u,
     );
     assert.equal(effectSpotlightStyles.includes("letter-spacing"), false);
     assert.match(effectSpotlightStyles, /transform:\s*scaleX\(0\.98\);/u);
