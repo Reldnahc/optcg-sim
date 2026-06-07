@@ -3,4 +3,4 @@ export {
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseProtectionInstruction,
   protectionInstructionPrimitive,
-} from "./protection/index.js";
+} from "./parsers.js";
