@@ -285,11 +285,15 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight \.effect-rules-span--active \.card-rules-tag\s*\{[^}]*box-shadow:/u,
+      /\.effect-spotlight\s+\.effect-rules-span--active\s+:where\(\.card-rules-copy,\s*\.card-rules-link\)\s*\{[^}]*border-radius:\s*0;/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /box-shadow:\s*0 0 0 1px rgba\(85,\s*49,\s*0,\s*0\.62\),\s*0 1px 4px rgba\(85,\s*49,\s*0,\s*0\.24\);/u,
+      /\.effect-spotlight\s+\.effect-rules-span--active\s+:where\(\.card-rules-copy,\s*\.card-rules-link\)\s*\{[^}]*box-shadow:\s*none;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.effect-rules-span--active \.card-rules-tag\s*\{[^}]*box-shadow:/u,
     );
     assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
   });
