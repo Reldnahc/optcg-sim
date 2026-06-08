@@ -1,8 +1,5 @@
 import type {
-  CardInstance,
-  ContinuousEffectRecord,
   Effect,
-  EffectExecutionFrame,
   EffectQueueEntry,
   EngineEvent,
   GameState,
@@ -30,7 +27,6 @@ import { applyPlaySelectedSequenceSegment } from "../runtime/primitives/play-sel
 import { applyActivateSelectedEventSequenceSegment } from "../runtime/primitives/activate-selected-event.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
-import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 import { applySelectTargetsSequenceSegment } from "./select-targets.js";
 import { createTopDeckPlacementDecision } from "../effect-runtime-top-deck-placement.js";
 import { applySearchRevealSequenceSegment } from "./search-reveal.js";
@@ -52,6 +48,8 @@ import {
   segmentKeyForPath,
   toSingleEffectSequence,
 } from "./paths.js";
+import { sequenceSegmentResultsChanged } from "./runner/composition-results.js";
+import { continuousRecordsCurrentlyApply } from "./runner/continuous-application.js";
 import { emptySegmentResult } from "./runner/results.js";
 import type {
   CreateTrashFromHandSequenceDecision,
@@ -77,54 +75,6 @@ export type {
   SequenceFrameResumeResult,
   SequenceFrameRunResult,
 } from "./runner/types.js";
-
-const currentCardsForContinuousMatching = (state: GameState): CardInstance[] =>
-  Object.values(state.players).flatMap((player) => [
-    player.leader,
-    ...player.characters,
-    ...(player.stage === undefined ? [] : [player.stage]),
-    ...player.costArea,
-    ...player.hand,
-    ...player.trash,
-    ...player.deck,
-    ...player.donDeck,
-    ...player.life.map((lifeCard) => lifeCard.card),
-  ]);
-
-const continuousRecordCurrentlyApplies = (
-  state: GameState,
-  record: ContinuousEffectRecord,
-): boolean => {
-  const target = record.modifier.target;
-  if (target.type === "player" || target.type === "allMatching") {
-    return true;
-  }
-  return currentCardsForContinuousMatching(state).some((card) =>
-    cardMatchesContinuousModifierTarget(state, card, record),
-  );
-};
-
-const continuousRecordsCurrentlyApply = (
-  state: GameState,
-  records: readonly ContinuousEffectRecord[],
-): boolean =>
-  records.some((record) => continuousRecordCurrentlyApplies(state, record));
-
-const sequenceSegmentResultsChanged = (
-  segmentResults: EffectExecutionFrame["segmentResults"],
-  effect: SequenceEffect,
-  effectPath: readonly string[],
-): boolean =>
-  effect.effects.some((segment, index) => {
-    const result =
-      segmentResults[segmentKeyForPath(effectPath, segment, index)];
-    return (
-      result !== undefined &&
-      result.attempted &&
-      result.succeeded &&
-      result.changedState
-    );
-  });
 
 export const continueNoDecisionSegments = (
   state: GameState,
