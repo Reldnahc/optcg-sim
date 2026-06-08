@@ -1,3 +1,5 @@
+import type { IncomingMessage } from "node:http";
+
 export type AuthSubject = {
   type: "user";
   userId: string;
@@ -7,6 +9,10 @@ export type AuthSubject = {
 
 export interface AuthContext {
   subject: AuthSubject;
+}
+
+export interface AuthProvider {
+  authenticate: (request: IncomingMessage) => AuthContext | undefined;
 }
 
 export const createDevUserSessionToken = (
@@ -45,6 +51,17 @@ export const parseDevSessionToken = (
   }
   return undefined;
 };
+
+export const createDevAuthProvider = (): AuthProvider => ({
+  authenticate: (request) => {
+    const token = request.headers["x-optcg-session-token"];
+    if (typeof token !== "string" || token.length === 0) {
+      return undefined;
+    }
+    const subject = parseDevSessionToken(token);
+    return subject === undefined ? undefined : { subject };
+  },
+});
 
 export const subjectsMatch = (
   left: AuthSubject,

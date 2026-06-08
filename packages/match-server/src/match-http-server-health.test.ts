@@ -164,4 +164,81 @@ describe("match HTTP server health", () => {
       await rm(staticDirectory, { recursive: true, force: true });
     }
   });
+
+  test("falls back to the static client for app routes", async () => {
+    const staticDirectory = await mkdtemp(join(tmpdir(), "optcg-sim-static-"));
+    await writeFile(
+      join(staticDirectory, "index.html"),
+      "<!doctype html><title>Sim client</title>",
+      "utf8",
+    );
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      staticAssetsDirectory: staticDirectory,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/lobbies/lobby-1`);
+
+      assert.equal(response.status, 200);
+      assert.equal(
+        response.headers.get("content-type"),
+        "text/html; charset=utf-8",
+      );
+      assert.equal(
+        await response.text(),
+        "<!doctype html><title>Sim client</title>",
+      );
+    } finally {
+      await server.close();
+      await rm(staticDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("does not fall back to the static client for missing assets", async () => {
+    const staticDirectory = await mkdtemp(join(tmpdir(), "optcg-sim-static-"));
+    await writeFile(
+      join(staticDirectory, "index.html"),
+      "<!doctype html><title>Sim client</title>",
+      "utf8",
+    );
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      staticAssetsDirectory: staticDirectory,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/assets/missing.js`);
+
+      assert.equal(response.status, 404);
+      assert.equal(await response.text(), "Not found");
+    } finally {
+      await server.close();
+      await rm(staticDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("can disable template dev match creation in deployed mode", async () => {
+    const server = await createMatchHttpServer({
+      allowTemplateMatches: false,
+      createDefaultMatch: false,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/api/matches`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+
+      assert.equal(response.status, 409);
+      assert.deepEqual(await response.json(), {
+        errors: [
+          "Create a lobby and submit account loadouts to start a match.",
+        ],
+      });
+    } finally {
+      await server.close();
+    }
+  });
 });

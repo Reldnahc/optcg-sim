@@ -23,8 +23,8 @@ import {
   type LocalDevMatch,
   type createLocalDevMatch,
 } from "./local-match.js";
-import type { AuthContext } from "./dev-auth.js";
-import { parseDevSessionToken } from "./dev-auth.js";
+import type { AuthContext, AuthProvider } from "./dev-auth.js";
+import { createDevAuthProvider, parseDevSessionToken } from "./dev-auth.js";
 import {
   createPoneglyphSimHandoffVerifier,
   type SimHandoffVerifier,
@@ -63,6 +63,7 @@ import {
 } from "./browser-cors.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
+import { handleCreateMatchRequest } from "./match-create-route.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 
@@ -79,10 +80,6 @@ interface RematchRequest {
   playerId?: unknown;
 }
 
-interface AuthProvider {
-  authenticate: (request: IncomingMessage) => AuthContext | undefined;
-}
-
 export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
   close: () => Promise<void>;
@@ -92,6 +89,7 @@ export interface MatchHttpServer {
 export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
   readonly createDefaultMatch?: boolean;
+  readonly allowTemplateMatches?: boolean;
   readonly allowedBrowserOrigins?: readonly string[];
   readonly staticAssetsDirectory?: string;
   readonly deckHashCodec?: DeckHashCodecPort;
@@ -129,22 +127,6 @@ const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const createDevAuthProvider = (): AuthProvider => ({
-  authenticate: (request) => {
-    const token = request.headers["x-optcg-session-token"];
-    if (typeof token !== "string" || token.length === 0) {
-      return undefined;
-    }
-    const subject = parseDevSessionToken(token);
-    if (subject === undefined) {
-      return undefined;
-    }
-    return {
-      subject,
-    };
-  },
-});
-
 const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
@@ -154,13 +136,18 @@ const handleApiRequest = async (
   lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
   simHandoffVerifier: SimHandoffVerifier,
+  allowTemplateMatches: boolean,
 ): Promise<void> => {
   const url = request.url ?? "/";
   const pathname = new URL(url, "http://localhost").pathname;
   const matchRoute =
     /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
   if (request.method === "POST" && pathname === "/api/matches") {
-    sendJson(response, 201, await registry.createMatch());
+    await handleCreateMatchRequest(
+      response,
+      registry.createMatch,
+      allowTemplateMatches,
+    );
     return;
   }
   if (request.method === "POST" && pathname === "/api/lobbies") {
@@ -904,6 +891,7 @@ export const createMatchHttpServer = async (
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
   const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
+  const allowTemplateMatches = options.allowTemplateMatches ?? true;
   const staticAssetsDirectory = options.staticAssetsDirectory;
   const simHandoffVerifier =
     options.simHandoffVerifier ??
@@ -957,6 +945,7 @@ export const createMatchHttpServer = async (
           lobbySocketConnections,
           authProvider,
           simHandoffVerifier,
+          allowTemplateMatches,
         )
       : serveStaticAssetsOrNotFound(
           request,

@@ -26,6 +26,28 @@ const isInsideDirectory = (
 const contentTypeForPath = (path: string): string =>
   contentTypes.get(extname(path)) ?? "application/octet-stream";
 
+const staticAssetPath = async (
+  root: string,
+  relativePath: string,
+): Promise<string | undefined> => {
+  const filePath = resolve(root, relativePath);
+  if (!isInsideDirectory(root, filePath)) {
+    return undefined;
+  }
+  const fileStat = await stat(filePath).catch(() => undefined);
+  if (fileStat !== undefined && fileStat.isFile()) {
+    return filePath;
+  }
+  if (extname(relativePath).length > 0) {
+    return undefined;
+  }
+  const fallbackPath = resolve(root, "index.html");
+  const fallbackStat = await stat(fallbackPath).catch(() => undefined);
+  return fallbackStat !== undefined && fallbackStat.isFile()
+    ? fallbackPath
+    : undefined;
+};
+
 export const serveStaticAssets = async (
   request: IncomingMessage,
   response: ServerResponse,
@@ -40,19 +62,15 @@ export const serveStaticAssets = async (
   const relativePath =
     requestedPath === "/" ? "index.html" : requestedPath.replace(/^\/+/u, "");
   const root = resolve(staticDirectory);
-  const filePath = resolve(root, relativePath);
-  if (!isInsideDirectory(root, filePath)) {
+  const filePath = await staticAssetPath(root, relativePath);
+  if (filePath === undefined) {
     return false;
   }
-
-  const fileStat = await stat(filePath).catch(() => undefined);
-  if (fileStat === undefined || !fileStat.isFile()) {
-    return false;
-  }
+  const fileStat = await stat(filePath);
 
   response.writeHead(200, {
     "cache-control":
-      relativePath === "index.html"
+      filePath === resolve(root, "index.html")
         ? "no-cache"
         : "public, max-age=31536000, immutable",
     "content-length": String(fileStat.size),

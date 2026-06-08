@@ -12,6 +12,7 @@ const server = await createMatchHttpServer({
   allowedBrowserOrigins: commaSeparatedEnvironmentList(
     process.env["PONEGLYPH_SIM_BROWSER_ORIGINS"],
   ),
+  allowTemplateMatches: false,
   createDefaultMatch: false,
   ...(process.env["PONEGLYPH_SIM_STATIC_DIR"] === undefined
     ? {}
