@@ -26,6 +26,11 @@ export interface EffectRuntimeQueueResultsDependencies {
   targetDecisions: EffectRuntimeQueueTargetDecisions;
 }
 
+export type QueuedEffectDefinitionResolverDependencies = Pick<
+  EffectRuntimeQueueResultsDependencies,
+  "resolveImplementedDslEffectDefinition"
+>;
+
 export interface EffectRuntimeQueueResults {
   processNoChoiceEffectQueue: (
     state: GameState,

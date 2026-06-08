@@ -1,6 +1,5 @@
 import type {
   Effect,
-  EffectDefinition,
   EffectQueueEntry,
   EngineEvent,
   EngineResult,
@@ -29,19 +28,10 @@ import {
   executeNoChoiceEffectPrimitive,
   executeWinGamePrimitive,
   isSupportedDamageEffect,
-  isSupportedQueuedDrawEffectBlock,
-  isSupportedQueuedOptionalDrawEffectBlock,
   isSupportedQueuedWinGameEffect,
 } from "../runtime/primitives/execute.js";
-import {
-  isScopedActivateMainQueueEntry,
-  isSupportedActivateMainRuntimeEffectBlock,
-} from "../runtime/optional-activation/activate-main.js";
 import { queueReferencedMainEffectFromTrigger } from "../effect-runtime-activate-referenced-effect.js";
-import {
-  createContinuousRecordsForResolvedEffect,
-  isSupportedContinuousQueueEffect,
-} from "../runtime/continuous/continuous.js";
+import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import {
   executeMoveCardsPrimitive,
   resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
@@ -68,6 +58,7 @@ import {
   isActiveDoubleAttackDamageProcess,
 } from "../effect-runtime-damage-deferred-queue.js";
 import { resolveQueuedDamagePrimitive } from "./damage.js";
+import { createQueuedEffectResolvers } from "./effect-resolution.js";
 import { resolveQueuedQuantity } from "./quantity-resolution.js";
 import type {
   EffectRuntimeQueueResults,
@@ -84,187 +75,7 @@ export const createEffectRuntimeQueueResults = (
       dependencies.createUnsupportedPendingRuntimeWorkError,
     );
 
-  const resolveQueuedEffectDefinition = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): EffectDefinition["effects"][number] | undefined => {
-    const resolved = state.cardManifest.cards[entry.source.cardId];
-    if (resolved === undefined) {
-      return undefined;
-    }
-    const lookup = dependencies.resolveImplementedDslEffectDefinition(
-      resolved,
-      state.cardManifest,
-    );
-    if (!lookup.ok) {
-      return undefined;
-    }
-    const match = lookup.definition.effects.find(
-      (effect) => effect.id === entry.effectBlockId,
-    );
-    if (match === undefined) {
-      return undefined;
-    }
-    return match;
-  };
-
-  const canResolveQueuedDrawFromActivateMainEntry = (
-    effect: EffectDefinition["effects"][number],
-    entry: EffectQueueEntry,
-  ): effect is EffectDefinition["effects"][number] & {
-    effect: Extract<Effect, { type: "draw" }>;
-    sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  } =>
-    isScopedActivateMainQueueEntry(entry) &&
-    isSupportedActivateMainRuntimeEffectBlock(effect) &&
-    effect.effect.type === "draw";
-
-  const resolveQueuedDrawEffect = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "draw" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy
-    ) {
-      return undefined;
-    }
-    const supportShape = { ...match };
-    delete (supportShape as { condition?: unknown }).condition;
-    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
-    if (
-      !isSupportedQueuedDrawEffectBlock(supportShape) &&
-      !canResolveQueuedDrawFromActivateMainEntry(supportShape, entry)
-    ) {
-      return undefined;
-    }
-    return supportShape.effect;
-  };
-
-  const resolveQueuedDrawUpToEffect = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "drawUpTo" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy
-    ) {
-      return undefined;
-    }
-    const supportShape = { ...match };
-    delete (supportShape as { condition?: unknown }).condition;
-    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
-    if (
-      supportShape.category !== "auto" ||
-      supportShape.optional === true ||
-      supportShape.oncePerTurn === true ||
-      supportShape.cost !== undefined ||
-      supportShape.failurePolicy !== undefined ||
-      supportShape.effect.type !== "drawUpTo" ||
-      !Number.isInteger(supportShape.effect.count) ||
-      supportShape.effect.count < 0
-    ) {
-      return undefined;
-    }
-    return supportShape.effect;
-  };
-
-  const withoutConditionFields = (
-    effect: EffectDefinition["effects"][number],
-  ): EffectDefinition["effects"][number] => {
-    const supportShape = { ...effect };
-    delete (supportShape as { condition?: unknown }).condition;
-    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
-    return supportShape;
-  };
-
-  const resolveQueuedContinuousEffect = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ):
-    | Extract<Effect, { type: "modifyPower" }>
-    | Extract<Effect, { type: "giveKeyword" }>
-    | Extract<Effect, { type: "setBasePower" }>
-    | Extract<Effect, { type: "modifyCost" }>
-    | Extract<Effect, { type: "modifyCounter" }>
-    | Extract<Effect, { type: "preventDraw" }>
-    | Extract<Effect, { type: "preventDonActivation" }>
-    | Extract<Effect, { type: "preventPlay" }>
-    | Extract<Effect, { type: "invalidateEffects" }>
-    | Extract<Effect, { type: "giveProtection" }>
-    | Extract<Effect, { type: "protectFromKO" }>
-    | Extract<Effect, { type: "cannotBecomeActive" }>
-    | Extract<Effect, { type: "cannotAttack" }>
-    | Extract<Effect, { type: "preventBlockerActivation" }>
-    | Extract<Effect, { type: "cannotBlock" }>
-    | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy
-    ) {
-      return undefined;
-    }
-    const supportShape = withoutConditionFields(match);
-    if (!isSupportedContinuousQueueEffect(supportShape.effect)) {
-      return undefined;
-    }
-    if (
-      "target" in supportShape.effect &&
-      supportShape.effect.target.type === "choose"
-    ) {
-      return undefined;
-    }
-    return supportShape.effect;
-  };
-
-  const resolveQueuedSearchRevealEffect = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "search" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.effect.type !== "search" ||
-      match.category !== "auto" ||
-      match.optional === true ||
-      match.oncePerTurn === true ||
-      match.conditionTiming !== undefined ||
-      match.cost !== undefined ||
-      match.failurePolicy !== undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      (match.sourcePresencePolicy !== "mustRemainInSameZone" &&
-        match.sourcePresencePolicy !== "resolveFromDestinationZone")
-    ) {
-      return undefined;
-    }
-    return match.effect;
-  };
-
-  const resolveQueuedPlaySourceEffect = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "playSource" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      match.category !== "auto" ||
-      match.optional === true ||
-      match.oncePerTurn === true ||
-      match.cost !== undefined ||
-      match.conditionTiming !== undefined ||
-      match.failurePolicy !== undefined ||
-      match.effect.type !== "playSource" ||
-      match.effect.source.type !== "triggerCard" ||
-      match.effect.ignoreCost !== true
-    ) {
-      return undefined;
-    }
-    return match.effect;
-  };
+  const queuedEffectResolvers = createQueuedEffectResolvers(dependencies);
 
   const resolveQueueEntriesInOrder = (
     state: GameState,
@@ -282,7 +93,10 @@ export const createEffectRuntimeQueueResults = (
       if (!sourcePresence.ok) {
         return unsupportedEffectQueueResult(originalState);
       }
-      const queuedEffect = resolveQueuedEffectDefinition(nextState, selected);
+      const queuedEffect = queuedEffectResolvers.resolveQueuedEffectDefinition(
+        nextState,
+        selected,
+      );
       if (queuedEffect?.conditionTiming !== undefined) {
         return unsupportedEffectQueueResult(originalState);
       }
@@ -308,11 +122,14 @@ export const createEffectRuntimeQueueResults = (
       }
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
       if (queuedEffect?.optional === true) {
-        const optionalSupportShape = withoutConditionFields(queuedEffect);
+        const optionalSupportShape =
+          queuedEffectResolvers.withoutConditionFields(queuedEffect);
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
-          (!isSupportedQueuedOptionalDrawEffectBlock(optionalSupportShape) &&
-            !canResolveQueuedDrawFromActivateMainEntry(
+          (!queuedEffectResolvers.isSupportedQueuedOptionalDrawEffectBlock(
+            optionalSupportShape,
+          ) &&
+            !queuedEffectResolvers.canResolveQueuedDrawFromActivateMainEntry(
               optionalSupportShape,
               selected,
             ))
@@ -385,7 +202,11 @@ export const createEffectRuntimeQueueResults = (
             ? toEngineResult(originalState, [], [sequenceFrame.error])
             : unsupportedEffectQueueResult(originalState);
       }
-      const searchEffect = resolveQueuedSearchRevealEffect(nextState, selected);
+      const searchEffect =
+        queuedEffectResolvers.resolveQueuedSearchRevealEffect(
+          nextState,
+          selected,
+        );
       if (searchEffect !== undefined) {
         const searchDecision = createSupportedSearchRevealChoiceDecision(
           nextState,
@@ -427,7 +248,7 @@ export const createEffectRuntimeQueueResults = (
       const trashFromHandDecision = resolveQueuedTrashFromHandDecision(
         nextState,
         selected,
-        resolveQueuedEffectDefinition,
+        queuedEffectResolvers.resolveQueuedEffectDefinition,
       );
       if (trashFromHandDecision?.kind === "unsupported") {
         return unsupportedEffectQueueResult(originalState);
@@ -446,11 +267,15 @@ export const createEffectRuntimeQueueResults = (
           : unsupportedEffectQueueResult(originalState);
       }
       let moveCardsEffect = resolveMoveCardsEffect(queuedEffect, selected);
-      const playSourceEffect = resolveQueuedPlaySourceEffect(
+      const playSourceEffect =
+        queuedEffectResolvers.resolveQueuedPlaySourceEffect(
+          nextState,
+          selected,
+        );
+      const drawUpToEffect = queuedEffectResolvers.resolveQueuedDrawUpToEffect(
         nextState,
         selected,
       );
-      const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
       const winGameEffect =
         queuedEffect !== undefined &&
         queuedEffect.sourcePresencePolicy === selected.sourcePresencePolicy &&
@@ -463,10 +288,11 @@ export const createEffectRuntimeQueueResults = (
         isSupportedDamageEffect(queuedEffect.effect)
           ? queuedEffect.effect
           : undefined;
-      const queuedContinuousEffect = resolveQueuedContinuousEffect(
-        nextState,
-        selected,
-      );
+      const queuedContinuousEffect =
+        queuedEffectResolvers.resolveQueuedContinuousEffect(
+          nextState,
+          selected,
+        );
       let resolvedMoveCardsAsNoop = false;
       const resolvedTrashUntilAsNoop = trashFromHandDecision?.kind === "noop";
       if (
@@ -545,7 +371,10 @@ export const createEffectRuntimeQueueResults = (
           };
         }
       } else {
-        drawEffect ??= resolveQueuedDrawEffect(nextState, selected);
+        drawEffect ??= queuedEffectResolvers.resolveQueuedDrawEffect(
+          nextState,
+          selected,
+        );
         if (
           drawEffect === undefined &&
           moveCardsEffect === undefined &&
@@ -778,7 +607,10 @@ export const createEffectRuntimeQueueResults = (
       state.deferredTriggers.length > 0 &&
       isActiveDoubleAttackDamageProcess(state)
     ) {
-      return hasExactDamageDeferredQueue(state, resolveQueuedEffectDefinition)
+      return hasExactDamageDeferredQueue(
+        state,
+        queuedEffectResolvers.resolveQueuedEffectDefinition,
+      )
         ? toEngineResult(state, [])
         : unsupportedEffectQueueResult(state);
     }
