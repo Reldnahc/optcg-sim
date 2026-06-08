@@ -207,6 +207,20 @@ test("production engine-core support predicates do not encode exact draw wrapper
   }
 });
 
+test("effect runtime queue results stays a small assembly module", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/effect-runtime-queue/results.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 220,
+    `effect-runtime-queue/results.ts should assemble focused modules, not own queue resolution; found ${String(lineCount)} lines`,
+  );
+});
+
 async function listProductionSourcePaths(
   directoryPath: string,
 ): Promise<readonly string[]> {
