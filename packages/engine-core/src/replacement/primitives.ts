@@ -3,7 +3,6 @@ import type {
   CardRef,
   Effect,
   EffectDefinition,
-  EffectQueueEntry,
   EngineError,
   GameState,
   MatchCardManifest,
@@ -29,107 +28,27 @@ import {
   fieldRemovalProcessTargets,
 } from "./field-removal-targets.js";
 import { isSupportedOwnerDeckBottomInsteadEffect } from "./instead-effects.js";
+import { failure } from "./primitives/errors.js";
+import type {
+  DetectSelectedTargetKoReplacementCandidateResult,
+  LocatedCard,
+  LocatedReplacementSource,
+  SelectedTargetKoReplacementCandidate,
+  SupportedReplacementEffectBlock,
+  ValidatedReplacementTarget,
+} from "./primitives/types.js";
 
-export type SelectedTargetKoReplacementDetectionFailureReason =
-  | "unsupported-replacement-process"
-  | "missing-card"
-  | "stale-target"
-  | "private-target"
-  | "non-character-target"
-  | "unsupported-support-status"
-  | "implemented-custom-status"
-  | "unexpected-vanilla-effect-definition"
-  | "missing-effect-definition-id"
-  | "missing-effect-definition"
-  | "definition-card-id-mismatch"
-  | "definition-status-mismatch"
-  | "support-card-data-version-mismatch"
-  | "rules-version-mismatch"
-  | "source-text-hash-mismatch"
-  | "definition-version-mismatch"
-  | "untested-support-metadata"
-  | "untested-definition-metadata"
-  | "unreviewed-definition-metadata"
-  | "unsupported-ko-replacement-shape"
-  | "multiple-applicable-ko-replacements";
-
-interface SelectedTargetKoReplacementDetectionErrorDetails {
-  reason: SelectedTargetKoReplacementDetectionFailureReason;
-}
-
-export interface SelectedTargetKoReplacementCandidate {
-  id: string;
-  effectBlockId: EffectQueueEntry["effectBlockId"];
-  controllerId: PlayerId;
-  oncePerTurn?: true;
-  source: CardRef;
-  coveredTargets?: readonly CardRef[];
-  replacementEffect: Extract<Effect, { type: "replacement" }>;
-}
-
-export type FieldRemovalReplacementCandidate =
-  SelectedTargetKoReplacementCandidate;
-
-export type DetectSelectedTargetKoReplacementCandidateResult =
-  | {
-      ok: true;
-      candidate?: SelectedTargetKoReplacementCandidate;
-      candidates?: readonly SelectedTargetKoReplacementCandidate[];
-    }
-  | { ok: false; error: EngineError };
-
-export type DetectFieldRemovalReplacementCandidateResult =
-  | {
-      ok: true;
-      candidate?: FieldRemovalReplacementCandidate;
-      candidates?: readonly FieldRemovalReplacementCandidate[];
-    }
-  | { ok: false; error: EngineError };
-
-type LocatedCard = {
-  playerId: PlayerId;
-  zone:
-    | "leaderArea"
-    | "characterArea"
-    | "stageArea"
-    | "hand"
-    | "deck"
-    | "trash"
-    | "costArea"
-    | "donDeck"
-    | "life";
-  card: CardInstance;
-};
+export type {
+  DetectFieldRemovalReplacementCandidateResult,
+  DetectSelectedTargetKoReplacementCandidateResult,
+  FieldRemovalReplacementCandidate,
+  SelectedTargetKoReplacementCandidate,
+  SelectedTargetKoReplacementDetectionFailureReason,
+} from "./primitives/types.js";
 
 type ReplacementLookup =
   | { ok: true; definition: EffectDefinition }
   | { ok: false; error: EngineError };
-
-type LocatedReplacementSource = {
-  card: CardInstance;
-  playerId: PlayerId;
-  ref: CardRef;
-  resolved: ResolvedCard;
-};
-
-const detectionError = (
-  effectId: string,
-  reason: SelectedTargetKoReplacementDetectionFailureReason,
-): EngineError => ({
-  type: "effectRuntimeError",
-  effectId,
-  details: {
-    reason,
-  } satisfies SelectedTargetKoReplacementDetectionErrorDetails,
-});
-
-const failure = (
-  effectId: string,
-  reason: SelectedTargetKoReplacementDetectionFailureReason,
-): { ok: false; error: EngineError } => ({
-  ok: false,
-  error: detectionError(effectId, reason),
-});
 
 const hasHumanReviewMetadata = (definition: EffectDefinition): boolean =>
   definition.metadata.reviewer !== undefined ||
@@ -296,15 +215,6 @@ const replacementSourcesForController = (
 const isSelfTarget = (
   target: Target,
 ): target is Extract<Target, { type: "self" }> => target.type === "self";
-
-type SupportedReplacementEffectBlock = EffectDefinition["effects"][number] & {
-  trigger: Extract<
-    EffectDefinition["effects"][number]["trigger"],
-    { type: "replacement" }
-  >;
-  sourcePresencePolicy: "resolveFromLastKnownInformation";
-  effect: Extract<Effect, { type: "replacement" }>;
-};
 
 const isSupportedSelfKoDrawReplacementEffect = (
   effect: EffectDefinition["effects"][number],
@@ -660,11 +570,6 @@ const validateKoReplacementTarget = (
   }
   return { ok: true, located, ref, resolved };
 };
-
-type ValidatedReplacementTarget = Extract<
-  ReturnType<typeof validateKoReplacementTarget>,
-  { ok: true }
->;
 
 const validateKoReplacementTargets = (
   state: GameState,
