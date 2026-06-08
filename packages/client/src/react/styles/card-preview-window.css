@@ -26,8 +26,8 @@
   display: grid;
   min-width: max-content;
   min-height: 100%;
-  padding: 18px 18px calc(var(--card-preview-rules-height) + 24px);
-  place-items: start center;
+  padding: 0 0 calc(var(--card-preview-rules-height) + 24px);
+  place-items: start;
 }
 
 .card-preview-card-image,

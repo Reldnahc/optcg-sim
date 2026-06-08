@@ -92,6 +92,10 @@ describe("card preview window", () => {
 
     assert.doesNotMatch(styles, /\.card-preview-stage\s*\{[^}]*background:/u);
     assert.match(
+      styles,
+      /\.card-preview-image-frame\s*\{[^}]*padding:\s*0 0 calc\(var\(--card-preview-rules-height\) \+ 24px\);[^}]*place-items:\s*start;/u,
+    );
+    assert.match(
       markupForPreviewControls(),
       /aria-label="Reset card zoom" disabled=""/u,
     );
