@@ -4,14 +4,14 @@ import type { PlayerId } from "@optcg/types";
 import type { DeckHashDeck } from "optcg-deck-hash";
 
 import { requestHash } from "./action-envelope.js";
-import { createDevHttpServer } from "./dev-http-server.js";
+import { createMatchHttpServer } from "./match-http-server.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
 
-const createFixtureDevHttpServer = async () =>
-  createDevHttpServer({
+const createFixtureMatchHttpServer = async () =>
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
     deckHashCodec: {
@@ -96,7 +96,7 @@ const requireStateSeq = (
 };
 
 const webSocketUrl = (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: string,
   token: string,
@@ -111,7 +111,7 @@ const webSocketUrl = (
 };
 
 const lobbyWebSocketUrl = (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   lobbyId: string,
   playerId: string,
 ): string => {
@@ -181,7 +181,7 @@ const nextSessionTransition = async (
 };
 
 const createDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
   const response = await fetch(`${server.url()}/api/matches`, {
     method: "POST",
@@ -193,7 +193,7 @@ const createDevMatch = async (
 };
 
 const chooseFirstPlayer = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   choice: "goFirst" | "goSecond",
@@ -212,7 +212,7 @@ const chooseFirstPlayer = async (
 };
 
 const createReadyDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<{ matchId: string }> => {
   const created = await createDevMatch(server);
   const matchId = created.matchId;
@@ -228,7 +228,7 @@ const createReadyDevMatch = async (
 };
 
 const claimDevSeat = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken?: string,
@@ -257,7 +257,7 @@ const claimDevSeat = async (
 };
 
 const createRematch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken: string,
@@ -283,7 +283,7 @@ const createRematch = async (
 };
 
 const submitDevLobbyDeck = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
   deckHash: string,
@@ -302,7 +302,7 @@ const submitDevLobbyDeck = async (
 };
 
 const loadDevState = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
 ): Promise<TestDevStateBody> => {
   const response = await fetch(`${server.url()}/api/matches/${matchId}/state`);
@@ -311,7 +311,7 @@ const loadDevState = async (
 };
 
 const concedeViaSocket = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken: string,
@@ -399,7 +399,7 @@ const concedeViaSocket = async (
 
 describe("dev rematches", () => {
   test("rejects rematch creation before the source match is completed", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -415,7 +415,7 @@ describe("dev rematches", () => {
   });
 
   test("creates rematch lobbies so both players can select decks again", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -491,7 +491,7 @@ describe("dev rematches", () => {
   });
 
   test("announces rematches on source sockets and resolves pending setup sockets", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);

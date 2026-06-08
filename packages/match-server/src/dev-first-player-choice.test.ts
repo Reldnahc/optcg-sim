@@ -1,14 +1,14 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import { createDevHttpServer } from "./dev-http-server.js";
+import { createMatchHttpServer } from "./match-http-server.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
 
-const createFixtureDevHttpServer = async () =>
-  createDevHttpServer({
+const createFixtureMatchHttpServer = async () =>
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
   });
@@ -24,7 +24,7 @@ interface CreatedDevMatchBody {
 }
 
 const createDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
   const response = await fetch(`${server.url()}/api/matches`, {
     method: "POST",
@@ -36,7 +36,7 @@ const createDevMatch = async (
 };
 
 const chooseFirstPlayer = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   choice: "goFirst" | "goSecond",
@@ -55,7 +55,7 @@ const chooseFirstPlayer = async (
 
 describe("dev first-player choice", () => {
   test("creates matches in first-player setup and resolves goFirst before engine boot", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevMatch(server);
@@ -85,7 +85,7 @@ describe("dev first-player choice", () => {
   });
 
   test("rejects first-player setup responses from the non-chooser without booting the engine", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevMatch(server);

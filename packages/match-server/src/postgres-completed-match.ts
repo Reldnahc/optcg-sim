@@ -109,9 +109,27 @@ export interface CompletedMatchRepository {
 
 export interface CreatePostgresCompletedMatchRepositoryOptions {
   readonly transaction?: CompletedMatchTransaction;
+  readonly schema?: string;
 }
 
 const jsonParam = (value: unknown): string => JSON.stringify(value);
+
+const defaultSchema = "sim";
+
+const assertValidSchemaName = (schema: string): string => {
+  if (!/^[a-z][a-z0-9_]*$/u.test(schema)) {
+    throw new TypeError(`Invalid completed match schema name: ${schema}`);
+  }
+  return schema;
+};
+
+const configuredSchema = (): string =>
+  assertValidSchemaName(
+    process.env["PONEGLYPH_SIM_DB_SCHEMA"]?.trim() || defaultSchema,
+  );
+
+const qualify = (schema: string, table: string): string =>
+  `${assertValidSchemaName(schema)}.${table}`;
 
 const matchValues = (record: CompletedMatchRecord): readonly unknown[] => [
   record.matchId,
@@ -203,8 +221,8 @@ const replayValues = (record: CompletedMatchRecord): readonly unknown[] => {
   ];
 };
 
-const saveMatchSql = `
-  INSERT INTO sim.matches (
+const createSaveMatchSql = (schema: string): string => `
+  INSERT INTO ${qualify(schema, "matches")} (
     id,
     status,
     game_type,
@@ -292,8 +310,8 @@ const saveMatchSql = `
     updated_at = now()
 `;
 
-const savePlayerSql = `
-  INSERT INTO sim.match_players (
+const createSavePlayerSql = (schema: string): string => `
+  INSERT INTO ${qualify(schema, "match_players")} (
     match_id,
     seat_id,
     user_id,
@@ -355,8 +373,8 @@ const savePlayerSql = `
     final_life_count = EXCLUDED.final_life_count
 `;
 
-const saveReplaySql = `
-  INSERT INTO sim.match_replays (
+const createSaveReplaySql = (schema: string): string => `
+  INSERT INTO ${qualify(schema, "match_replays")} (
     match_id,
     replay_format_version,
     engine_version,
@@ -450,14 +468,21 @@ export const createPostgresCompletedMatchRepository = ({
         client.query(sql, params === undefined ? undefined : [...params]),
       ),
     ),
-}: CreatePostgresCompletedMatchRepositoryOptions = {}): CompletedMatchRepository => ({
-  async saveCompletedMatch(record) {
-    await transaction(async (query) => {
-      await query(saveMatchSql, matchValues(record));
-      for (const player of record.players) {
-        await query(savePlayerSql, playerValues(record.matchId, player));
-      }
-      await query(saveReplaySql, replayValues(record));
-    });
-  },
-});
+  schema = configuredSchema(),
+}: CreatePostgresCompletedMatchRepositoryOptions = {}): CompletedMatchRepository => {
+  const matchSchema = assertValidSchemaName(schema);
+  const saveMatchSql = createSaveMatchSql(matchSchema);
+  const savePlayerSql = createSavePlayerSql(matchSchema);
+  const saveReplaySql = createSaveReplaySql(matchSchema);
+  return {
+    async saveCompletedMatch(record) {
+      await transaction(async (query) => {
+        await query(saveMatchSql, matchValues(record));
+        for (const player of record.players) {
+          await query(savePlayerSql, playerValues(record.matchId, player));
+        }
+        await query(saveReplaySql, replayValues(record));
+      });
+    },
+  };
+};

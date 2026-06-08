@@ -170,4 +170,31 @@ describe("Postgres completed match repository", () => {
     expect(calls[0]).toContain("INSERT INTO sim.matches");
     expect(calls[1]).toContain("INSERT INTO sim.match_players");
   });
+
+  test("can target the dev persistence schema", async () => {
+    const calls: string[] = [];
+    const repository = createPostgresCompletedMatchRepository({
+      schema: "sim_dev",
+      async transaction(callback) {
+        return callback((sql) => {
+          calls.push(sql);
+          return Promise.resolve({});
+        });
+      },
+    });
+
+    await repository.saveCompletedMatch(completedMatchRecord());
+
+    expect(calls[0]).toContain("INSERT INTO sim_dev.matches");
+    expect(calls[1]).toContain("INSERT INTO sim_dev.match_players");
+    expect(calls[3]).toContain("INSERT INTO sim_dev.match_replays");
+  });
+
+  test("rejects invalid schema names", () => {
+    expect(() =>
+      createPostgresCompletedMatchRepository({
+        schema: "sim; drop schema auth",
+      }),
+    ).toThrow(/Invalid completed match schema name/u);
+  });
 });

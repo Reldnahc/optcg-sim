@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type { DeckHashDeck } from "optcg-deck-hash";
 
-import { createDevHttpServer } from "./dev-http-server.js";
+import { createMatchHttpServer } from "./match-http-server.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
@@ -41,8 +41,8 @@ interface TestSocket {
   next: () => Promise<unknown>;
 }
 
-const createDeckHashDevHttpServer = async () =>
-  createDevHttpServer({
+const createDeckHashMatchHttpServer = async () =>
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
     deckHashCodec: {
@@ -104,11 +104,11 @@ const verifiedHandoff = (
   ...overrides,
 });
 
-const createHandoffDevHttpServer = async (
+const createHandoffMatchHttpServer = async (
   verifier: SimHandoffVerifier,
   decodedHashes: string[],
 ) =>
-  createDevHttpServer({
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
     simHandoffVerifier: verifier,
@@ -125,7 +125,7 @@ const createHandoffDevHttpServer = async (
   });
 
 const createDevLobby = async (
-  server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
 ): Promise<CreatedDevLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
     method: "POST",
@@ -135,7 +135,7 @@ const createDevLobby = async (
 };
 
 const joinDevLobby = async (
-  server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
 ): Promise<CreatedDevLobbyBody> => {
@@ -148,7 +148,7 @@ const joinDevLobby = async (
 };
 
 const submitDevLobbyDeck = async (
-  server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
   deckHash: string,
@@ -167,7 +167,7 @@ const submitDevLobbyDeck = async (
 };
 
 const submitDevLobbyLoadout = async (
-  server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   handoffToken: string,
 ): Promise<CreatedDevLobbyBody> => {
@@ -184,7 +184,7 @@ const submitDevLobbyLoadout = async (
 };
 
 const lobbyWebSocketUrl = (
-  server: Awaited<ReturnType<typeof createDeckHashDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   playerId: string,
 ): string => {
@@ -241,7 +241,7 @@ describe("dev HTTP lobby deck submissions", () => {
   test("verified account loadout claims a lobby seat without browser-supplied deck data", async () => {
     const verifiedTokens: string[] = [];
     const decodedHashes: string[] = [];
-    const server = await createHandoffDevHttpServer(
+    const server = await createHandoffMatchHttpServer(
       {
         verify(token) {
           verifiedTokens.push(token);
@@ -281,7 +281,7 @@ describe("dev HTTP lobby deck submissions", () => {
   });
 
   test("custom lobby waits for both claimed seats and ready deck submissions", async () => {
-    const server = await createDeckHashDevHttpServer();
+    const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -346,7 +346,7 @@ describe("dev HTTP lobby deck submissions", () => {
   });
 
   test("pushes lobby readiness to an already-waiting seat when the second deck is ready", async () => {
-    const server = await createDeckHashDevHttpServer();
+    const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -423,7 +423,7 @@ describe("dev HTTP lobby deck submissions", () => {
   });
 
   test("lobby deck status does not expose deck contents to the other player", async () => {
-    const server = await createDeckHashDevHttpServer();
+    const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -453,7 +453,7 @@ describe("dev HTTP lobby deck submissions", () => {
   });
 
   test("declines decoded deck hashes that do not resolve through the card cache", async () => {
-    const server = await createDeckHashDevHttpServer();
+    const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);

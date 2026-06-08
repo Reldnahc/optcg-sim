@@ -81,13 +81,13 @@ interface AuthProvider {
   authenticate: (request: IncomingMessage) => AuthContext | undefined;
 }
 
-export interface DevHttpServer {
+export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
   close: () => Promise<void>;
   url: () => string;
 }
 
-export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
+export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly simHandoffVerifier?: SimHandoffVerifier;
@@ -892,9 +892,9 @@ const handleWebSocketUpgrade = (
   });
 };
 
-export const createDevHttpServer = async (
-  options: CreateDevHttpServerOptions = {},
-): Promise<DevHttpServer> => {
+export const createMatchHttpServer = async (
+  options: CreateMatchHttpServerOptions = {},
+): Promise<MatchHttpServer> => {
   const createDefaultSetup = async (matchId?: MatchId) =>
     createPremadeDevMatchSetup({
       ...(matchId === undefined ? {} : { matchId }),
@@ -949,6 +949,11 @@ export const createDevHttpServer = async (
   matchTimerInterval.unref();
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
+    const pathname = new URL(url, "http://localhost").pathname;
+    if (request.method === "GET" && pathname === "/health") {
+      sendJson(response, 200, { data: { ok: true } });
+      return;
+    }
     const operation = url.startsWith("/api/")
       ? handleApiRequest(
           request,
