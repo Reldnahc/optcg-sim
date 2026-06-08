@@ -11,6 +11,7 @@ export type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 export type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 export type DrawEffect = Extract<Effect, { type: "draw" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 export type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 

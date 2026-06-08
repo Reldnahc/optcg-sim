@@ -90,7 +90,7 @@ const mapEffectToModifier = (
     };
   }
   if (effect.type === "setBasePower") {
-    const value = resolveBasePowerValue(state, entry, effect.value);
+    const value = resolveBasePowerValue(state, entry, effect.value, context);
     if (value === null) {
       return null;
     }

@@ -42,6 +42,7 @@ import {
   returnToOwnerHandCostedEffectExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
+  selectedBasePowerSnapshotExpressionParser,
   syntheticInstructionSegmentParser,
   trailingConditionalExpressionSegmentParser,
 } from "../segments/index.js";
@@ -222,6 +223,7 @@ export const defaultRegistry = {
     }),
     playStageFromDeckExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
+    selectedBasePowerSnapshotExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     singleInstructionExpressionParser,

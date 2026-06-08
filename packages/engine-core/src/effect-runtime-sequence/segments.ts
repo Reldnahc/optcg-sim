@@ -9,6 +9,7 @@ import type {
   SavedFieldObjectReference,
   SequenceSavedResultReference,
   SequenceSegmentResult,
+  PlayerId,
 } from "@optcg/types";
 
 import { toCardRef } from "../actions/state.js";
@@ -18,10 +19,15 @@ import {
   executeNoChoiceEffectPrimitive,
 } from "../runtime/primitives/execute.js";
 import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
+import {
+  applyReturnDonPayment,
+  getReturnDonEligibleInstanceIds,
+} from "../runtime/primitives/return-don.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 
 export type SegmentLedgers = {
@@ -33,6 +39,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
     | MoveCardsEffect
+    | ReturnDonEffect
     | RevealTopEffect
     | Extract<Effect, { type: "trashFromHand" }>
     | Extract<SequenceEffect["effects"][number]["effect"], { type: "payCost" }>
@@ -79,6 +86,134 @@ export const applyMoveCardsSegment = (
     },
     ok: true,
     state: resolution.state,
+  };
+};
+
+export const applyNoOpReturnDonSegment = (
+  state: GameState,
+  segment: SupportedSequenceSegment & { effect: ReturnDonEffect },
+  index: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => ({
+  events: [],
+  ledgers: {
+    ...ledgers,
+    segmentResults: {
+      ...ledgers.segmentResults,
+      [segmentKey(segment, index)]: {
+        ...emptySegmentResult(),
+        attempted: true,
+        succeeded: true,
+      },
+    },
+  },
+  ok: true,
+  state,
+});
+
+export const applySelectedReturnDonSegment = (
+  state: GameState,
+  playerId: PlayerId,
+  segment: SupportedSequenceSegment & { effect: ReturnDonEffect },
+  index: number,
+  selectedDonIds: readonly CardInstance["instanceId"][],
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  if (selectedDonIds.length === 0) {
+    return {
+      events: [],
+      ledgers: {
+        ...ledgers,
+        segmentResults: {
+          ...ledgers.segmentResults,
+          [segmentKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+          },
+        },
+      },
+      ok: true,
+      state,
+    };
+  }
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return { ok: false };
+  }
+  const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
+  if (selectedDonIds.some((donId) => !eligibleIds.has(donId))) {
+    return { ok: false };
+  }
+  const returned = applyReturnDonPayment({
+    player,
+    playerId,
+    selectedDonIds,
+  });
+  if (returned === null) {
+    return { ok: false };
+  }
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    players: {
+      ...state.players,
+      [playerId]: returned,
+    },
+  };
+  const events: EngineEvent[] = [];
+  selectedDonIds.forEach((donInstanceId) => {
+    appendEvent(
+      nextState,
+      events,
+      "donReturned",
+      { playerId, donInstanceId, state: "donDeck" },
+      { type: "public" },
+    );
+  });
+  return {
+    events,
+    ledgers: {
+      ...ledgers,
+      segmentResults: {
+        ...ledgers.segmentResults,
+        [segmentKey(segment, index)]: {
+          ...emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: true,
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...nextState,
+      eventJournal: [...state.eventJournal, ...events],
+    },
   };
 };
 

@@ -230,6 +230,7 @@ export type PrimitiveEvidence =
   | "target:yourCards"
   | "target:yourStages"
   | "target:thisCharacter"
+  | "target:selectedCharacter"
   | "reference:thatCharacter"
   | "duration:whileConditionTrue"
   | "duration:whileSourceOnField"

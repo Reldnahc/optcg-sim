@@ -38,6 +38,7 @@ type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;
@@ -124,6 +125,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | DrawEffect
     | DrawUpToEffect
     | MoveCardsEffect
+    | ReturnDonEffect
     | TrashFromHandEffect
     | SearchEffect
     | PlaceTopDeckCardsEffect
@@ -189,6 +191,14 @@ const isSupportedMoveCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" && isSupportedMoveCardsEffect(effect);
+
+const isSupportedReturnDonSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ReturnDonEffect =>
+  effect.type === "returnDon" &&
+  effect.player === "opponent" &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
 
 const isSupportedSearchSegment = (
   effect: SequenceSegmentEffect,
@@ -669,6 +679,9 @@ const isSupportedConditionalSegment = (
     if (isSupportedMoveCardsSegment(segment.effect)) {
       return true;
     }
+    if (isSupportedReturnDonSegment(segment.effect)) {
+      return true;
+    }
     if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
       return true;
     }
@@ -767,6 +780,9 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedMoveCardsSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedReturnDonSegment(segment.effect)) {
         return true;
       }
       if (isSupportedSearchSegment(segment.effect)) {

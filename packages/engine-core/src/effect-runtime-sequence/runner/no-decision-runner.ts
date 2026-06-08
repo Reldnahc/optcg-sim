@@ -19,6 +19,7 @@ import {
   createChooseEffectOptionDecisionForSequenceSegment,
   createOptionalActivationDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
+  createReturnDonDecisionForSequenceSegment,
   frameForPausedSequenceDecision,
   getSequenceOptionalPayCostOptions,
   stateWithPausedSequenceFrame,
@@ -33,6 +34,7 @@ import { applySearchRevealSequenceSegment } from "../search-reveal.js";
 import {
   applyDrawSegment,
   applyMoveCardsSegment,
+  applyNoOpReturnDonSegment,
   applyRevealTopSequenceSegment,
   shouldAttemptSegment,
 } from "../segments.js";
@@ -51,11 +53,14 @@ import {
 import { sequenceSegmentResultsChanged } from "./composition-results.js";
 import { continuousRecordsCurrentlyApply } from "./continuous-application.js";
 import { emptySegmentResult } from "./results.js";
+import { getOpponentId } from "../../actions/state.js";
+import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   DrawEffect,
   MoveCardsEffect,
   PayCostEffect,
+  ReturnDonEffect,
   SegmentLedgers,
   SequenceEffect,
   SequenceFrameRunResult,
@@ -218,6 +223,66 @@ export const continueNoDecisionSegments = (
       nextLedgers = moved.ledgers;
       events.push(...moved.events);
       continue;
+    }
+    if (segment.effect.type === "returnDon") {
+      const playerId =
+        segment.effect.player === "self"
+          ? entry.controllerId
+          : getOpponentId(nextState, entry.controllerId);
+      if (playerId === null || segment.effect.count <= 0) {
+        return { ok: false };
+      }
+      const player = nextState.players[playerId];
+      if (player === undefined) {
+        return { ok: false };
+      }
+      const returnCount = Math.min(
+        segment.effect.count,
+        getReturnDonEligibleCount(player),
+      );
+      if (returnCount === 0) {
+        const returned = applyNoOpReturnDonSegment(
+          nextState,
+          segment as SupportedSequenceSegment & { effect: ReturnDonEffect },
+          index,
+          nextLedgers,
+          emptySegmentResult,
+          ledgerKey,
+        );
+        if (!returned.ok) {
+          return { ok: false };
+        }
+        nextState = returned.state;
+        nextLedgers = returned.ledgers;
+        events.push(...returned.events);
+        continue;
+      }
+      const decisionResult = createReturnDonDecisionForSequenceSegment(
+        nextState,
+        entry,
+        playerId,
+        returnCount,
+        index,
+      );
+      const decision = decisionResult.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        effectPath: [...effectPath],
+        index,
+        savedReferences: nextLedgers.savedReferences,
+        segmentResults: nextLedgers.segmentResults,
+        state: decisionResult.state,
+      });
+      return {
+        events: [...events, ...decisionResult.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
+      };
     }
     if (segment.effect.type === "drawUpTo") {
       const quantityDecision = createChooseQuantityDecisionForSequenceSegment(

@@ -80,8 +80,10 @@ const lifeBottomToHandEffect = (count: number): Effect => ({
 const lifeTopToTrashEffect = (
   count: number,
   player: "self" | "opponent" = "self",
+  min?: number,
 ): Effect => ({
   type: "moveCards",
+  ...(min === undefined ? {} : { min }),
   count,
   from: { player, zone: "life", position: "top" },
   to: { player, zone: "trash" },

@@ -12,6 +12,8 @@ import type {
   LegalAction,
   OptionalCost,
   OptionalPayCostDecision,
+  PayCostDecision,
+  PlayerId,
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
@@ -226,6 +228,55 @@ export const createPayCostDecisionForSequenceSegment = (
     defaultResponse: { type: "paymentDeclined" },
     cost,
     paymentOptions,
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    visibility,
+  );
+  const created = events[0];
+  if (created !== undefined) {
+    created.causedBy = causedBy;
+  }
+  return {
+    events,
+    ok: true,
+    state: {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+  };
+};
+
+export const createReturnDonDecisionForSequenceSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  playerId: PlayerId,
+  count: number,
+  index: number,
+): { events: EngineEvent[]; ok: true; state: GameState } => {
+  const causedBy = decisionCauseForEntry(entry);
+  const visibility = { type: "private", playerId } as const;
+  const pendingDecision: PayCostDecision = {
+    id: toDecisionId(
+      `decision:returnDon:sequence:${String(entry.id)}:${String(index)}`,
+    ),
+    type: "payCost",
+    playerId,
+    prompt: "Choose DON!! cards to return.",
+    causedBy,
+    visibility,
+    cost: { type: "returnDon", count },
+    paymentOptions: [{ id: "returnDon", type: "returnDon", count }],
   };
   const events: EngineEvent[] = [];
   appendEvent(

@@ -209,10 +209,14 @@ const cardMatchesAllKoFilter = (
   state: GameState,
   playerId: CardRef["playerId"],
   card: CardInstance,
+  source: EffectQueueEntry["source"],
   filter: CardFilter | undefined,
 ): boolean => {
   if (filter === undefined) {
     return true;
+  }
+  if (filter.excludeSelf === true && card.instanceId === source.instanceId) {
+    return false;
   }
   if (
     !cardMatchesHandSelectionFilter(
@@ -237,6 +241,21 @@ const cardMatchesAllKoFilter = (
   );
 };
 
+const targetPlayersForAllTarget = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  player: Extract<Target, { type: "all" }>["player"],
+): readonly CardRef["playerId"][] => {
+  if (player === "self") {
+    return [entry.controllerId];
+  }
+  if (player === "opponent") {
+    const opponentId = getOpponentId(state, entry.controllerId);
+    return opponentId === null ? [] : [opponentId];
+  }
+  return [];
+};
+
 export const applyAllTargetKoSequenceSegment = (params: {
   effect: AllTargetKoEffect;
   emptySegmentResult: () => SequenceSegmentResult;
@@ -254,13 +273,12 @@ export const applyAllTargetKoSequenceSegment = (params: {
   ledgers: SegmentLedgers;
   state: GameState;
 } => {
-  const targetPlayerId =
-    params.effect.target.player === "self"
-      ? params.entry.controllerId
-      : getOpponentId(params.state, params.entry.controllerId);
-  const player =
-    targetPlayerId === null ? undefined : params.state.players[targetPlayerId];
-  if (targetPlayerId === null || player === undefined) {
+  const targetPlayerIds = targetPlayersForAllTarget(
+    params.state,
+    params.entry,
+    params.effect.target.player,
+  );
+  if (targetPlayerIds.length === 0) {
     return {
       events: [],
       ledgers: {
@@ -276,16 +294,23 @@ export const applyAllTargetKoSequenceSegment = (params: {
       state: params.state,
     };
   }
-  const selectedTargets = player.characters
-    .filter((card) =>
-      cardMatchesAllKoFilter(
-        params.state,
-        targetPlayerId,
-        card,
-        params.effect.target.filter,
-      ),
-    )
-    .map((card) => toCardRef(card, targetPlayerId));
+  const selectedTargets = targetPlayerIds.flatMap((targetPlayerId) => {
+    const player = params.state.players[targetPlayerId];
+    if (player === undefined) {
+      return [];
+    }
+    return player.characters
+      .filter((card) =>
+        cardMatchesAllKoFilter(
+          params.state,
+          targetPlayerId,
+          card,
+          params.entry.source,
+          params.effect.target.filter,
+        ),
+      )
+      .map((card) => toCardRef(card, targetPlayerId));
+  });
   const resolvedKo = executeSelectedTargetEffectPrimitive(
     params.state,
     params.entry,

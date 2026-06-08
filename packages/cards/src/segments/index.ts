@@ -15,6 +15,7 @@ export {
 } from "./event-reaction.js";
 export { returnToOwnerHandCostedEffectExpressionParser } from "./return-to-owner-hand-costed-effect.js";
 export { revealTopPlayRestedExpressionParser } from "./reveal-top-play-rested.js";
+export { selectedBasePowerSnapshotExpressionParser } from "./selected-base-power-snapshot.js";
 export { searchRevealExpressionParser } from "./search-reveal.js";
 export {
   conditionalCostedBlockExpressionParser,
