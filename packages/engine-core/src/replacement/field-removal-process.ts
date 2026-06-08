@@ -14,7 +14,6 @@ import type {
 import {
   appendEvent,
   rebaseEvents,
-  toDecisionId,
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
@@ -33,10 +32,7 @@ import {
   consumeOncePerTurn,
   toOncePerTurnKey,
 } from "../rules/once-per-turn.js";
-import {
-  fieldRemovalProcessTargets,
-  withFieldRemovalProcessTargets,
-} from "./field-removal-targets.js";
+import { fieldRemovalProcessTargets } from "./field-removal-targets.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 import {
   isSupportedModifyLeaderPowerInsteadEffect,
@@ -44,7 +40,6 @@ import {
   isSupportedRestSelfInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
-  replacementOptionLabel,
 } from "./instead-effects.js";
 import type {
   EngineInternalReplacementAppliedEventPayload,
@@ -58,8 +53,8 @@ import {
 import { createReplacementOwnerDeckBottomDecision } from "./owner-deck-bottom-decision.js";
 import { executeKoSelfInsteadEffect } from "./ko-self-instead.js";
 import { replacementCandidatePresentation } from "./presentation-payload.js";
+import { replacementCandidatesFromDetection } from "./field-removal-process/pause.js";
 import type {
-  LocatedKoTarget,
   LocatedReplacementSource,
   PendingReplacementRestInsteadPayload,
   PendingReplacementTrashFromHandInsteadPayload,
@@ -87,140 +82,14 @@ export {
   buildSelectedTargetsFieldRemovalKoReplacementProcess,
   buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess,
 } from "./field-removal-process/builders.js";
-
-const replacementCandidatesFromDetection = (detected: {
-  candidate?: SelectedTargetKoReplacementCandidate;
-  candidates?: readonly SelectedTargetKoReplacementCandidate[];
-}): readonly SelectedTargetKoReplacementCandidate[] =>
-  detected.candidates ??
-  (detected.candidate === undefined ? [] : [detected.candidate]);
-
-const isReplacementCandidateArray = (
-  value:
-    | SelectedTargetKoReplacementCandidate
-    | readonly SelectedTargetKoReplacementCandidate[],
-): value is readonly SelectedTargetKoReplacementCandidate[] =>
-  Array.isArray(value);
-
-const findKoTargetByInstanceId = (
-  state: GameState,
-  instanceId: CardInstance["instanceId"],
-): LocatedKoTarget | null => {
-  for (const [playerId, player] of Object.entries(state.players) as [
-    PlayerId,
-    GameState["players"][PlayerId],
-  ][]) {
-    const card = player.characters.find(
-      (candidate) => candidate.instanceId === instanceId,
-    );
-    if (card !== undefined) {
-      return { playerId, card };
-    }
-    if (player.stage?.instanceId === instanceId) {
-      return { playerId, card: player.stage };
-    }
-  }
-  return null;
-};
-
-export const normalizeSelectedTargetKoProcess = (
-  state: GameState,
-  process: ReplacementProcess,
-): ReplacementProcess => {
-  if (process.type !== "ko" && process.type !== "moveZone") {
-    return process;
-  }
-  const currentTargets: CardRef[] = [];
-  for (const target of fieldRemovalProcessTargets(process)) {
-    const located = findKoTargetByInstanceId(state, target.instanceId);
-    if (located === null) {
-      continue;
-    }
-    currentTargets.push({
-      instanceId: located.card.instanceId,
-      cardId: located.card.cardId,
-      playerId: located.playerId,
-      zone: located.card.zone,
-    });
-  }
-  return currentTargets.length === 0
-    ? process
-    : withFieldRemovalProcessTargets(process, currentTargets);
-};
-
-export const normalizeFieldRemovalProcess = normalizeSelectedTargetKoProcess;
-
-export const pauseSelectedTargetKoReplacementProcess = (
-  state: GameState,
-  events: EngineEvent[],
-  process: ReplacementProcess,
-  candidatesInput:
-    | SelectedTargetKoReplacementCandidate
-    | readonly SelectedTargetKoReplacementCandidate[],
-): { state: GameState; paused: true } => {
-  const candidates = isReplacementCandidateArray(candidatesInput)
-    ? candidatesInput
-    : [candidatesInput];
-  const firstCandidate = candidates[0];
-  if (firstCandidate === undefined) {
-    throw new Error("Replacement process pause requires a candidate.");
-  }
-  const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
-    id: toDecisionId(`decision:chooseReplacement:${process.id}`),
-    type: "chooseReplacement",
-    playerId: firstCandidate.controllerId,
-    prompt: "Choose replacement effect.",
-    causedBy: process.causedBy,
-    visibility: { type: "private", playerId: firstCandidate.controllerId },
-    processId: process.id,
-    replacementIds: candidates.map((candidate) => candidate.id),
-    replacementOptions: candidates.map((candidate) => ({
-      replacementId: candidate.id,
-      label: replacementOptionLabel(candidate),
-      source: candidate.source,
-    })),
-    mandatory: false,
-  };
-  appendEvent(
-    state,
-    events,
-    "decisionCreated",
-    {
-      decisionId: pendingDecision.id,
-      decisionType: pendingDecision.type,
-      playerId: pendingDecision.playerId,
-    },
-    pendingDecision.visibility,
-  );
-  const created = events[events.length - 1];
-  if (created !== undefined) {
-    created.causedBy = process.causedBy;
-  }
-
-  return {
-    state: {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      pendingDecision,
-      replacementState: [
-        ...state.replacementState.filter(
-          (candidateState) => candidateState.processId !== process.id,
-        ),
-        {
-          processId: process.id,
-          type: process.type,
-          usedReplacementIds: [...process.usedReplacementIds],
-          payload: process.payload,
-        },
-      ],
-      eventJournal: [...state.eventJournal, ...events],
-    },
-    paused: true,
-  };
-};
-
-export const pauseFieldRemovalReplacementProcess =
-  pauseSelectedTargetKoReplacementProcess;
+export {
+  normalizeFieldRemovalProcess,
+  normalizeSelectedTargetKoProcess,
+} from "./field-removal-process/normalization.js";
+export {
+  pauseFieldRemovalReplacementProcess,
+  pauseSelectedTargetKoReplacementProcess,
+} from "./field-removal-process/pause.js";
 
 const acceptedReplacementError = (
   effectId: string,
