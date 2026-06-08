@@ -14,6 +14,9 @@ const server = await createMatchHttpServer({
   ),
   allowTemplateMatches: false,
   createDefaultMatch: false,
+  ...(process.env["REDIS_URL"] === undefined
+    ? {}
+    : { redisUrl: process.env["REDIS_URL"] }),
   ...(process.env["PONEGLYPH_SIM_STATIC_DIR"] === undefined
     ? {}
     : { staticAssetsDirectory: process.env["PONEGLYPH_SIM_STATIC_DIR"] }),

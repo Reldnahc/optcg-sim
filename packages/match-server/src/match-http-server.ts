@@ -149,13 +149,13 @@ const handleApiRequest = async (
     return;
   }
   if (request.method === "POST" && pathname === "/api/lobbies") {
-    sendJson(response, 201, lobbyRegistry.createLobby());
+    sendJson(response, 201, await lobbyRegistry.createLobby());
     return;
   }
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(pathname);
   if (lobbyRoute !== null) {
     const lobbyId = decodeURIComponent(lobbyRoute.groups?.["lobbyId"] ?? "");
-    const lobby = lobbyRegistry.getLobby(lobbyId);
+    const lobby = await lobbyRegistry.getLobby(lobbyId);
     if (lobby === undefined) {
       sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
       return;
@@ -427,7 +427,7 @@ const handleApiRequest = async (
         });
         return;
       }
-      const result = lobbyRegistry.createRematchLobby(
+      const result = await lobbyRegistry.createRematchLobby(
         matchId as MatchId,
         playerId as PlayerId,
         authProvider.authenticate(request),
@@ -617,7 +617,7 @@ const broadcastSessionTransition = (
   }
 };
 
-const handleWebSocketUpgrade = (
+const handleWebSocketUpgrade = async (
   request: IncomingMessage,
   socket: Duplex,
   registry: LocalDevMatchRegistry,
@@ -626,7 +626,7 @@ const handleWebSocketUpgrade = (
   connections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
   socketIdleTimeoutMs: number,
-): void => {
+): Promise<void> => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(
     url.pathname,
@@ -635,7 +635,7 @@ const handleWebSocketUpgrade = (
     const lobbyId = decodeURIComponent(lobbyRoute.groups?.["lobbyId"] ?? "");
     const playerId = (url.searchParams.get("playerId") ?? "") as PlayerId;
     const key = request.headers["sec-websocket-key"];
-    const lobby = lobbyRegistry.getLobby(lobbyId);
+    const lobby = await lobbyRegistry.getLobby(lobbyId);
     if (
       lobby === undefined ||
       typeof key !== "string" ||
@@ -857,7 +857,7 @@ export const createMatchHttpServer = async (
       matchTimerPolicy: options.matchTimerPolicy ?? defaultMatchTimerPolicy,
     },
   );
-  const lobbyRegistry = createLocalDevLobbyRegistry(registry, options);
+  const lobbyRegistry = await createLocalDevLobbyRegistry(registry, options);
   const authProvider = createDevAuthProvider();
   const socketIdleTimeoutMs =
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
@@ -941,7 +941,9 @@ export const createMatchHttpServer = async (
       socketConnections,
       lobbySocketConnections,
       socketIdleTimeoutMs,
-    );
+    ).catch(() => {
+      socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+    });
   });
 
   return {
