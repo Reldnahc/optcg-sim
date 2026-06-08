@@ -301,13 +301,20 @@ const submitDevLobbyDeck = async (
   return (await response.json()) as CreatedDevLobbyBody;
 };
 
-const loadDevState = async (
-  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
-  matchId: string,
-): Promise<TestDevStateBody> => {
-  const response = await fetch(`${server.url()}/api/matches/${matchId}/state`);
-  assert.equal(response.status, 200);
-  return (await response.json()) as TestDevStateBody;
+const nextStateSync = async (socket: TestSocket): Promise<TestDevStateBody> => {
+  for (;;) {
+    const message = (await socket.next()) as {
+      type?: string;
+      snapshot?: TestDevStateBody;
+    };
+    if (message.type === "stateSync" && message.snapshot !== undefined) {
+      return message.snapshot;
+    }
+    if (message.type === "heartbeat" || message.type === "actionResult") {
+      continue;
+    }
+    throw new Error(`Unexpected WebSocket message ${String(message.type)}.`);
+  }
 };
 
 const concedeViaSocket = async (
@@ -327,6 +334,10 @@ const concedeViaSocket = async (
   const sockets = {
     p1: await openSocket(webSocketUrl(server, matchId, "p1", p1Token)),
     p2: await openSocket(webSocketUrl(server, matchId, "p2", p2Token)),
+  };
+  let states = {
+    p1: await nextStateSync(sockets.p1),
+    p2: await nextStateSync(sockets.p2),
   };
   const submitAction = async (
     actingPlayerId: "p1" | "p2",
@@ -367,28 +378,48 @@ const concedeViaSocket = async (
       }
     }
   };
+  const submitAndRefreshState = async (
+    actingPlayerId: "p1" | "p2",
+    actionIndex: number,
+    expectedStateSeq: number,
+  ): Promise<void> => {
+    await submitAction(actingPlayerId, actionIndex, expectedStateSeq);
+    states = {
+      p1: await nextStateSync(sockets.p1),
+      p2: await nextStateSync(sockets.p2),
+    };
+  };
   try {
     for (let attempt = 0; attempt < 12; attempt += 1) {
-      const state = await loadDevState(server, matchId);
+      const state = states[playerId];
       const expectedStateSeq = requireStateSeq(state);
       const concedeAction = state.players?.[playerId]?.actions?.find(
         (action) => action.type === "concede",
       );
       if (concedeAction?.index !== undefined) {
-        await submitAction(playerId, concedeAction.index, expectedStateSeq);
+        await submitAndRefreshState(
+          playerId,
+          concedeAction.index,
+          expectedStateSeq,
+        );
         return { p1Token, p2Token };
       }
       const pendingPlayerId =
-        state.players?.["p1"]?.view?.pendingDecision?.playerId ??
-        state.players?.["p2"]?.view?.pendingDecision?.playerId;
+        states.p1.players?.["p1"]?.view?.pendingDecision?.playerId ??
+        states.p2.players?.["p2"]?.view?.pendingDecision?.playerId;
       if (pendingPlayerId !== "p1" && pendingPlayerId !== "p2") {
         throw new Error("Expected pending setup before concede action.");
       }
-      const setupAction = state.players?.[pendingPlayerId]?.actions?.[0];
+      const setupState = states[pendingPlayerId];
+      const setupAction = setupState.players?.[pendingPlayerId]?.actions?.[0];
       if (setupAction?.index === undefined) {
         throw new Error("Expected visible setup action.");
       }
-      await submitAction(pendingPlayerId, setupAction.index, expectedStateSeq);
+      await submitAndRefreshState(
+        pendingPlayerId,
+        setupAction.index,
+        requireStateSeq(setupState),
+      );
     }
     throw new Error("Timed out advancing setup to concession.");
   } finally {

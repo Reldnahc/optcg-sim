@@ -312,6 +312,4 @@ export interface MatchTransport {
     playerId: PlayerId;
     choice: FirstPlayerChoiceValue;
   }) => Promise<FirstPlayerChoiceResult>;
-  loadState: (matchId: MatchId) => Promise<MatchSnapshot>;
-  loadCards: (matchId: MatchId) => Promise<MatchCardCatalog>;
 }

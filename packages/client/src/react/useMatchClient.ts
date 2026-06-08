@@ -28,6 +28,7 @@ import {
   buildGlobalActions,
   cardActionsForInstance,
   isFirstPlayerSetupClientState,
+  isHydratingMatchClientState,
   isLobbyClientState,
   isMatchClientState,
   quickPayActivateMainArmSurvivesDecision,
@@ -100,6 +101,7 @@ export const useMatchClient = ({
   const pendingDecision = playerSnapshot?.view.pendingDecision;
   const liveConnectionKey =
     isMatchClientState(clientState) ||
+    isHydratingMatchClientState(clientState) ||
     isFirstPlayerSetupClientState(clientState)
       ? `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`
       : undefined;

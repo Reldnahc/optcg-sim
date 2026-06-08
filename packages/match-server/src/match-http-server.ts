@@ -15,9 +15,7 @@ import {
 import {
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
-  getLocalDevCardCatalog,
   getLocalDevSnapshotForPlayer,
-  getLocalDevSnapshot,
   isDevMatchSetup,
   type CreatePremadeDevMatchSetupOptions,
   type LocalDevMatch,
@@ -474,33 +472,7 @@ const handleApiRequest = async (
       sendMatchNotFound(response, matchId);
       return;
     }
-    if (request.method === "GET" && resource === "state") {
-      sendJson(response, 200, getLocalDevSnapshot(match));
-      return;
-    }
-    if (request.method === "GET" && resource === "cards") {
-      sendJson(response, 200, getLocalDevCardCatalog(match));
-      return;
-    }
     sendJson(response, 404, { errors: ["API route not found."] });
-    return;
-  }
-  if (request.method === "GET" && pathname === "/api/state") {
-    const defaultMatch = registry.getMatch(registry.defaultMatchId);
-    if (defaultMatch === undefined) {
-      sendMatchNotFound(response, registry.defaultMatchId);
-      return;
-    }
-    sendJson(response, 200, getLocalDevSnapshot(defaultMatch));
-    return;
-  }
-  if (request.method === "GET" && pathname === "/api/cards") {
-    const defaultMatch = registry.getMatch(registry.defaultMatchId);
-    if (defaultMatch === undefined) {
-      sendMatchNotFound(response, registry.defaultMatchId);
-      return;
-    }
-    sendJson(response, 200, getLocalDevCardCatalog(defaultMatch));
     return;
   }
   if (request.method === "POST" && pathname === "/api/reset") {

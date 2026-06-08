@@ -464,23 +464,12 @@ describe("match HTTP server", () => {
       };
       assert.equal(actionResult.type, "actionResult");
       assert.equal(actionResult.accepted, true);
-
-      const firstStateResponse = await fetch(
-        `${server.url()}/api/matches/${first.matchId}/state`,
-      );
-      const secondStateResponse = await fetch(
-        `${server.url()}/api/matches/${second.matchId}/state`,
-      );
-      assert.equal(firstStateResponse.status, 200);
-      assert.equal(secondStateResponse.status, 200);
-      const firstState = (await firstStateResponse.json()) as {
-        stateSeq?: number;
+      const firstUpdate = (await firstP1Socket.next()) as {
+        type?: string;
+        snapshot?: { stateSeq?: number };
       };
-      const secondState = (await secondStateResponse.json()) as {
-        stateSeq?: number;
-      };
-      assert.notEqual(firstState.stateSeq, secondState.stateSeq);
-      assert.equal(secondState.stateSeq, second.stateSeq);
+      assert.equal(firstUpdate.type, "stateSync");
+      assert.notEqual(firstUpdate.snapshot?.stateSeq, second.stateSeq);
     } finally {
       for (const socket of sockets) {
         socket.close();
@@ -772,49 +761,49 @@ describe("match HTTP server", () => {
     }
   });
 
-  test("serves filtered match state without exposing the engine state", async () => {
+  test("does not expose legacy default match state over REST", async () => {
     const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/api/state`);
-      assert.equal(response.status, 200);
-      const body = (await response.json()) as unknown;
-      const serialized = JSON.stringify(body);
-
-      assert.ok(serialized.includes('"players"'));
-      assert.equal(serialized.includes("cardManifest"), false);
-      assert.equal(serialized.includes('"opponent":{"playerId":"p2"'), true);
-      assert.equal(serialized.includes('"handCount"'), true);
+      assert.equal(response.status, 404);
+      const body = (await response.json()) as { errors?: string[] };
+      assert.deepEqual(body.errors, ["API route not found."]);
     } finally {
       await server.close();
     }
   });
 
-  test("serves public card metadata for browser board images", async () => {
+  test("does not expose legacy default card metadata over REST", async () => {
     const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/api/cards`);
-      assert.equal(response.status, 200);
-      const body = (await response.json()) as {
-        players?: Record<
-          string,
-          { cards?: Record<string, { name?: string; imageUrl?: string }> }
-        >;
-      };
-      const p1Catalog = body.players?.["p1"]?.cards;
-      const p2Catalog = body.players?.["p2"]?.cards;
-      const imu = p1Catalog?.["OP13-079"];
-      if (imu === undefined) {
-        throw new Error("Missing OP13-079 card metadata.");
-      }
+      assert.equal(response.status, 404);
+      const body = (await response.json()) as { errors?: string[] };
+      assert.deepEqual(body.errors, ["API route not found."]);
+    } finally {
+      await server.close();
+    }
+  });
 
-      assert.equal(imu.name, "Imu");
-      assert.equal(imu.imageUrl?.startsWith("https://"), true);
-      assert.equal(p1Catalog?.["OP13-080"], undefined);
-      assert.equal(p2Catalog?.["OP13-080"], undefined);
-      assert.equal(JSON.stringify(body).includes("effectDefinitions"), false);
-      assert.equal(JSON.stringify(body).includes("cardManifest"), false);
+  test("does not expose match-specific state or card metadata over REST", async () => {
+    const server = await createFixtureMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const stateResponse = await fetch(
+        `${server.url()}/api/matches/dev-local-match/state`,
+      );
+      assert.equal(stateResponse.status, 404);
+      const stateBody = (await stateResponse.json()) as { errors?: string[] };
+      assert.deepEqual(stateBody.errors, ["API route not found."]);
+
+      const cardsResponse = await fetch(
+        `${server.url()}/api/matches/dev-local-match/cards`,
+      );
+      assert.equal(cardsResponse.status, 404);
+      const cardsBody = (await cardsResponse.json()) as { errors?: string[] };
+      assert.deepEqual(cardsBody.errors, ["API route not found."]);
     } finally {
       await server.close();
     }
@@ -1062,10 +1051,9 @@ describe("match HTTP server", () => {
       const body = (await response.json()) as { stateHash?: string };
       assert.equal(typeof body.stateHash, "string");
 
-      const stateResponse = await fetch(`${server.url()}/api/state`);
-      const stateBody = await stateResponse.text();
-      assert.equal(stateBody.includes("dev-http-custom-manifest"), false);
-      assert.equal(stateBody.includes("cardManifest"), false);
+      const serialized = JSON.stringify(body);
+      assert.equal(serialized.includes("dev-http-custom-manifest"), false);
+      assert.equal(serialized.includes("cardManifest"), false);
     } finally {
       await server.close();
     }

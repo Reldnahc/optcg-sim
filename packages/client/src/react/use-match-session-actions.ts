@@ -11,6 +11,7 @@ import type {
 } from "../controller.js";
 import {
   isFirstPlayerSetupClientState,
+  isHydratingMatchClientState,
   isLobbyClientState,
   isMatchClientState,
   setLobbyLocation,
@@ -78,7 +79,11 @@ export const useMatchSessionActions = ({
 
   const createNewMatch = useCallback(async (): Promise<void> => {
     const created = await controller.startNewLocalLobby();
-    if (isMatchClientState(created) || isFirstPlayerSetupClientState(created)) {
+    if (
+      isMatchClientState(created) ||
+      isHydratingMatchClientState(created) ||
+      isFirstPlayerSetupClientState(created)
+    ) {
       setMatchLocation(created.matchId);
     } else if (isLobbyClientState(created)) {
       setLobbyLocation(created.lobbyId);
@@ -93,7 +98,13 @@ export const useMatchSessionActions = ({
       setActionInFlight(true);
       try {
         const result = await controller.chooseFirstPlayer({ choice });
-        setMatchLocation(result.matchId);
+        if (
+          isMatchClientState(result) ||
+          isHydratingMatchClientState(result) ||
+          isFirstPlayerSetupClientState(result)
+        ) {
+          setMatchLocation(result.matchId);
+        }
         setClientState(result);
         setErrors([]);
       } catch (error) {
@@ -109,7 +120,11 @@ export const useMatchSessionActions = ({
     setActionInFlight(true);
     try {
       const result = await controller.requestRematch();
-      if (isMatchClientState(result) || isFirstPlayerSetupClientState(result)) {
+      if (
+        isMatchClientState(result) ||
+        isHydratingMatchClientState(result) ||
+        isFirstPlayerSetupClientState(result)
+      ) {
         setMatchLocation(result.matchId);
       } else if (isLobbyClientState(result)) {
         setLobbyLocation(result.lobbyId);

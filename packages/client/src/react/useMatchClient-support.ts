@@ -121,6 +121,14 @@ export const isMatchClientState = (
 ): state is MatchClientState =>
   state !== undefined && "matchId" in state && "snapshot" in state;
 
+export const isHydratingMatchClientState = (
+  state: MatchClientSessionState | undefined,
+): state is Extract<MatchClientSessionState, { matchId: unknown }> =>
+  state !== undefined &&
+  "matchId" in state &&
+  !("snapshot" in state) &&
+  !("firstPlayerChoice" in state);
+
 export const isLobbyClientState = (
   state: MatchClientSessionState | undefined,
 ): state is Extract<MatchClientSessionState, { lobbyId: string }> =>

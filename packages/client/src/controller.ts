@@ -41,6 +41,11 @@ export interface MatchClientState {
   cards: MatchCardCatalog;
 }
 
+export interface HydratingMatchClientState {
+  matchId: MatchId;
+  seat: ClientSeatIdentity;
+}
+
 export interface FirstPlayerSetupClientState {
   matchId: MatchId;
   seat: ClientSeatIdentity;
@@ -49,6 +54,7 @@ export interface FirstPlayerSetupClientState {
 
 export type MatchClientSessionState =
   | LobbyClientState
+  | HydratingMatchClientState
   | FirstPlayerSetupClientState
   | MatchClientState;
 
@@ -70,7 +76,7 @@ export interface MatchClientController {
   requestRematch: () => Promise<MatchClientSessionState>;
   chooseFirstPlayer: (input: {
     choice: FirstPlayerChoiceValue;
-  }) => Promise<MatchClientState>;
+  }) => Promise<MatchClientSessionState>;
   refresh: () => Promise<MatchClientSessionState>;
   submitVisibleAction: (input: {
     actionIndex: number;
@@ -122,13 +128,13 @@ const requireLiveConnection = (
   return liveConnection;
 };
 
-const requireCurrentSnapshot = (
+const requireCurrentState = (
   currentState: MatchClientState | undefined,
-): MatchSnapshot => {
+): MatchClientState => {
   if (currentState === undefined) {
     throw new Error("Cannot submit a live action before loading match state.");
   }
-  return currentState.snapshot;
+  return currentState;
 };
 
 const isJoinedLobby = (
@@ -160,23 +166,18 @@ export const createMatchClientController = ({
     lobbyLiveConnection = undefined;
   };
 
-  const loadState = async (
+  const waitForSocketState = (
     seat: ClientSeatIdentity,
-  ): Promise<MatchClientState> => {
-    const [snapshot, cards] = await Promise.all([
-      transport.loadState(seat.matchId),
-      transport.loadCards(seat.matchId),
-    ]);
-    currentState = {
+  ): HydratingMatchClientState => {
+    const hydratingState = {
       matchId: seat.matchId,
       seat,
-      snapshot,
-      cards,
     };
+    currentState = undefined;
     currentFirstPlayerSetupState = undefined;
     currentLobbyState = undefined;
     disconnectLobbyConnection();
-    return currentState;
+    return hydratingState;
   };
 
   const loadSetupState = (
@@ -212,7 +213,7 @@ export const createMatchClientController = ({
     if (claimed.firstPlayerChoice !== undefined) {
       return loadSetupState(seat, claimed.firstPlayerChoice);
     }
-    return loadState(seat);
+    return waitForSocketState(seat);
   };
 
   const claimMatchIfReady = async (
@@ -295,7 +296,6 @@ export const createMatchClientController = ({
         playerId: claimed.seat.playerId,
         sessionToken: claimed.seat.sessionToken,
       });
-      const cards = await transport.loadCards(created.matchId);
       if (created.snapshot === undefined) {
         const firstPlayerChoice = created.firstPlayerChoice;
         if (firstPlayerChoice === undefined) {
@@ -305,15 +305,7 @@ export const createMatchClientController = ({
         }
         return loadSetupState(seat, firstPlayerChoice);
       }
-      currentState = {
-        matchId: created.matchId,
-        seat,
-        snapshot: created.snapshot,
-        cards,
-      };
-      currentFirstPlayerSetupState = undefined;
-      currentLobbyState = undefined;
-      return currentState;
+      return waitForSocketState(seat);
     },
     joinLocalMatch(input) {
       return claimAndLoad(input);
@@ -335,7 +327,7 @@ export const createMatchClientController = ({
       if (claimed.firstPlayerChoice !== undefined) {
         return loadSetupState(seat, claimed.firstPlayerChoice);
       }
-      return loadState(seat);
+      return waitForSocketState(seat);
     },
     async requestRematch() {
       const credential = sessionStore.loadClaimedSeat();
@@ -385,16 +377,7 @@ export const createMatchClientController = ({
         }
         return loadSetupState(seat, firstPlayerChoice);
       }
-      const cards = await transport.loadCards(created.matchId);
-      currentState = {
-        matchId: created.matchId,
-        seat,
-        snapshot: created.snapshot,
-        cards,
-      };
-      currentFirstPlayerSetupState = undefined;
-      currentLobbyState = undefined;
-      return currentState;
+      return waitForSocketState(seat);
     },
     async chooseFirstPlayer(input) {
       const setupState = currentFirstPlayerSetupState;
@@ -409,16 +392,7 @@ export const createMatchClientController = ({
       if (result.snapshot === undefined) {
         throw new Error("First-player choice did not start the match.");
       }
-      const cards = await transport.loadCards(setupState.matchId);
-      currentState = {
-        matchId: setupState.matchId,
-        seat: setupState.seat,
-        snapshot: result.snapshot,
-        cards,
-      };
-      currentFirstPlayerSetupState = undefined;
-      currentLobbyState = undefined;
-      return currentState;
+      return waitForSocketState(setupState.seat);
     },
     connectLive({ onState, onError }) {
       const credential = sessionStore.loadClaimedSeat();
@@ -551,11 +525,12 @@ export const createMatchClientController = ({
       if (seat === undefined) {
         throw new Error("Cannot refresh a match before selecting a seat.");
       }
-      return loadState(seat);
+      return waitForSocketState(seat);
     },
     async submitVisibleAction(input) {
       const credential = requireCredential(sessionStore);
-      const snapshot = requireCurrentSnapshot(currentState);
+      const previousState = requireCurrentState(currentState);
+      const snapshot = previousState.snapshot;
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
@@ -567,8 +542,6 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      const cards =
-        currentState?.cards ?? (await transport.loadCards(credential.matchId));
       currentState = {
         matchId: credential.matchId,
         seat: {
@@ -576,13 +549,14 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards,
+        cards: previousState.cards,
       };
       return currentState;
     },
     async respondToDecision(input) {
       const credential = requireCredential(sessionStore);
-      const snapshot = requireCurrentSnapshot(currentState);
+      const previousState = requireCurrentState(currentState);
+      const snapshot = previousState.snapshot;
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
@@ -596,8 +570,6 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      const cards =
-        currentState?.cards ?? (await transport.loadCards(credential.matchId));
       currentState = {
         matchId: credential.matchId,
         seat: {
@@ -605,13 +577,14 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards,
+        cards: previousState.cards,
       };
       return currentState;
     },
     async requestRollback(input) {
       const credential = requireCredential(sessionStore);
-      const snapshot = requireCurrentSnapshot(currentState);
+      const previousState = requireCurrentState(currentState);
+      const snapshot = previousState.snapshot;
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
@@ -623,8 +596,6 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      const cards =
-        currentState?.cards ?? (await transport.loadCards(credential.matchId));
       currentState = {
         matchId: credential.matchId,
         seat: {
@@ -632,13 +603,14 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards,
+        cards: previousState.cards,
       };
       return currentState;
     },
     async cancelRollback() {
       const credential = requireCredential(sessionStore);
-      const snapshot = requireCurrentSnapshot(currentState);
+      const previousState = requireCurrentState(currentState);
+      const snapshot = previousState.snapshot;
       const transportInput = {
         matchId: credential.matchId,
         playerId: credential.playerId,
@@ -649,8 +621,6 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      const cards =
-        currentState?.cards ?? (await transport.loadCards(credential.matchId));
       currentState = {
         matchId: credential.matchId,
         seat: {
@@ -658,7 +628,7 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards,
+        cards: previousState.cards,
       };
       return currentState;
     },

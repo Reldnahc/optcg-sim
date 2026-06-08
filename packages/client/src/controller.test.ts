@@ -8,7 +8,7 @@ import {
   createMemoryClientStorage,
 } from "./session.js";
 import type {
-  MatchClientState,
+  HydratingMatchClientState,
   MatchClientSessionState,
 } from "./controller.js";
 import type {
@@ -178,12 +178,6 @@ const createFakeTransport = (): MatchTransport & {
         },
       });
     },
-    loadState(matchId) {
-      return Promise.resolve({ matchId, stateSeq: 1, players: {} });
-    },
-    loadCards() {
-      return Promise.resolve({ players: {} });
-    },
     chooseFirstPlayer(input) {
       return Promise.resolve({
         matchId: input.matchId,
@@ -309,11 +303,11 @@ const createFakeLobbyLiveTransport = (): LobbyLiveTransport & {
   };
 };
 
-const requireMatchClientState = (
+const requireHydratingMatchClientState = (
   state: MatchClientSessionState,
-): MatchClientState => {
-  if (!("snapshot" in state)) {
-    throw new Error("Expected loaded match client state.");
+): HydratingMatchClientState => {
+  if (!("matchId" in state) || "snapshot" in state) {
+    throw new Error("Expected hydrating match client state.");
   }
   return state;
 };
@@ -324,8 +318,21 @@ const flushAsyncCallbacks = async (): Promise<void> => {
   });
 };
 
+const emitLoadedMatchState = (
+  liveTransport: ReturnType<typeof createFakeLiveTransport>,
+): void => {
+  liveTransport.emitState({
+    type: "stateSync",
+    matchId: "match-1" as MatchId,
+    serverSeq: 1,
+    stateSeq: 1,
+    snapshot: { matchId: "match-1" as MatchId, stateSeq: 1, players: {} },
+    cards: { players: {} },
+  });
+};
+
 describe("match client controller", () => {
-  test("starts a local match by creating, claiming, and loading data", async () => {
+  test("starts a local match by creating, claiming, and waiting for live data", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({
       accountSessionToken,
@@ -335,7 +342,7 @@ describe("match client controller", () => {
       }),
     });
 
-    const state = requireMatchClientState(
+    const state = requireHydratingMatchClientState(
       await controller.startNewLocalMatch("p1" as PlayerId),
     );
 
@@ -351,7 +358,7 @@ describe("match client controller", () => {
     });
   });
 
-  test("returns first-player setup state and resolves it before loading the match", async () => {
+  test("returns first-player setup state and resolves it before live loading the match", async () => {
     const transport = createFakeTransport();
     transport.createMatch = () =>
       Promise.resolve({
@@ -390,10 +397,15 @@ describe("match client controller", () => {
     const setup = await controller.startNewLocalMatch("p1" as PlayerId);
 
     assert.equal("firstPlayerChoice" in setup, true);
-    const match = await controller.chooseFirstPlayer({ choice: "goFirst" });
+    const match = requireHydratingMatchClientState(
+      await controller.chooseFirstPlayer({ choice: "goFirst" }),
+    );
 
     assert.equal(match.matchId, "match-1");
-    assert.equal(match.snapshot.stateSeq, 1);
+    assert.deepEqual(match.seat, {
+      matchId: "match-1",
+      playerId: "p1",
+    });
   });
 
   test("requests rematch and moves to a deck-selection lobby with the existing token", async () => {
@@ -540,7 +552,7 @@ describe("match client controller", () => {
       }),
     });
 
-    const state = requireMatchClientState(
+    const state = requireHydratingMatchClientState(
       await controller.joinLocalMatch({
         matchId: "match-2" as MatchId,
         playerId: "p2" as PlayerId,
@@ -711,6 +723,7 @@ describe("match client controller", () => {
 
     await controller.startNewLocalMatch("p1" as PlayerId);
     controller.connectLive({ onState() {}, onError() {} });
+    emitLoadedMatchState(liveTransport);
     await controller.submitVisibleAction({ actionIndex: 0 });
 
     assert.deepEqual(liveTransport.submittedActions, [0]);
@@ -718,11 +731,7 @@ describe("match client controller", () => {
 
   test("does not fall back to HTTP gameplay when live transport is configured but disconnected", async () => {
     const transport = createFakeTransport();
-    const liveTransport: MatchLiveTransport = {
-      connect() {
-        throw new Error("Live connection was not expected.");
-      },
-    };
+    const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
       accountSessionToken,
       transport,
@@ -733,6 +742,9 @@ describe("match client controller", () => {
     });
 
     await controller.startNewLocalMatch("p1" as PlayerId);
+    controller.connectLive({ onState() {}, onError() {} });
+    emitLoadedMatchState(liveTransport);
+    controller.disconnectLive();
 
     await assert.rejects(
       () => controller.submitVisibleAction({ actionIndex: 0 }),
@@ -742,11 +754,7 @@ describe("match client controller", () => {
 
   test("does not fall back to HTTP decisions when live transport is configured but disconnected", async () => {
     const transport = createFakeTransport();
-    const liveTransport: MatchLiveTransport = {
-      connect() {
-        throw new Error("Live connection was not expected.");
-      },
-    };
+    const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
       accountSessionToken,
       transport,
@@ -757,6 +765,9 @@ describe("match client controller", () => {
     });
 
     await controller.startNewLocalMatch("p1" as PlayerId);
+    controller.connectLive({ onState() {}, onError() {} });
+    emitLoadedMatchState(liveTransport);
+    controller.disconnectLive();
 
     await assert.rejects(
       () =>
@@ -845,6 +856,7 @@ describe("match client controller", () => {
 
     await controller.startNewLocalMatch("p1" as PlayerId);
     controller.connectLive({ onState() {}, onError() {} });
+    emitLoadedMatchState(liveTransport);
 
     await assert.rejects(
       () =>
@@ -869,6 +881,7 @@ describe("match client controller", () => {
 
     await controller.startNewLocalMatch("p1" as PlayerId);
     controller.connectLive({ onState() {}, onError() {} });
+    emitLoadedMatchState(liveTransport);
     await controller.requestRollback({ rollbackPointId: "rollback:1" });
 
     assert.deepEqual(liveTransport.requestedRollbacks, ["rollback:1"]);
@@ -887,6 +900,7 @@ describe("match client controller", () => {
 
     await controller.startNewLocalMatch("p1" as PlayerId);
     controller.connectLive({ onState() {}, onError() {} });
+    emitLoadedMatchState(liveTransport);
     await controller.cancelRollback();
 
     assert.equal(liveTransport.cancelledRollbacks, 1);

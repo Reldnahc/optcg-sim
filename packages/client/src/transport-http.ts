@@ -5,8 +5,6 @@ import type {
   CreatedMatch,
   JoinedLobby,
   LocalLobby,
-  MatchCardCatalog,
-  MatchSnapshot,
   MatchTransport,
 } from "./transport.js";
 
@@ -115,14 +113,6 @@ export const createDevHttpMatchTransport = ({
         playerId: input.playerId,
         choice: input.choice,
       });
-    },
-    async loadState(matchId) {
-      const response = await fetchImpl(matchPath(matchId, "/state"));
-      return readJson<MatchSnapshot>(response);
-    },
-    async loadCards(matchId) {
-      const response = await fetchImpl(matchPath(matchId, "/cards"));
-      return readJson<MatchCardCatalog>(response);
     },
   };
 };
