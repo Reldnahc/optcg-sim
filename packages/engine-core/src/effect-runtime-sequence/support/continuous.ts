@@ -1,0 +1,110 @@
+import type { Duration, Effect, Target } from "@optcg/types";
+
+import { isSupportedContinuousQueueEffect } from "../../runtime/continuous/continuous.js";
+import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
+import {
+  isSupportedSavedFieldObjectKoTarget,
+  isSupportedSavedLeaderOrCharacterTarget,
+} from "./field.js";
+
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
+
+export type DirectContinuousEffect = Extract<
+  Effect,
+  {
+    type:
+      | "modifyPower"
+      | "giveKeyword"
+      | "setBasePower"
+      | "modifyCost"
+      | "modifyCounter"
+      | "preventDraw"
+      | "preventDonActivation"
+      | "preventPlay"
+      | "invalidateEffects"
+      | "cannotBecomeActive"
+      | "cannotAttack"
+      | "cannotBlock"
+      | "preventBlockerActivation";
+  }
+>;
+export type ConditionalContinuousEffect = Extract<
+  Effect,
+  { type: "conditional" }
+> & {
+  then:
+    | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "preventDonActivation" }>
+    | Extract<Effect, { type: "preventPlay" }>
+    | Extract<Effect, { type: "invalidateEffects" }>
+    | Extract<Effect, { type: "cannotBecomeActive" }>
+    | Extract<Effect, { type: "cannotAttack" }>
+    | Extract<Effect, { type: "cannotBlock" }>
+    | Extract<Effect, { type: "preventBlockerActivation" }>;
+};
+export type SavedTargetContinuousEffect = (
+  | Extract<Effect, { type: "modifyPower" }>
+  | Extract<Effect, { type: "cannotBecomeActive" }>
+  | Extract<Effect, { type: "cannotAttack" }>
+  | Extract<Effect, { type: "cannotBlock" }>
+  | Extract<Effect, { type: "preventBlockerActivation" }>
+  | Extract<Effect, { type: "invalidateEffects" }>
+) & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
+
+export const isSupportedSequenceContinuousDuration = (
+  duration: Duration,
+): boolean =>
+  duration.type === "thisBattle" ||
+  duration.type === "thisTurn" ||
+  duration.type === "whileSourceOnField" ||
+  duration.type === "permanent" ||
+  duration.type === "untilEndOfNextTurn" ||
+  duration.type === "untilStartOfNextTurn" ||
+  duration.type === "untilEndOfTurn";
+
+export const isSourceDependentContinuousSegment = (
+  effect: SequenceSegmentEffect,
+): boolean => {
+  if (
+    effect.type !== "modifyPower" &&
+    effect.type !== "cannotAttack" &&
+    effect.type !== "setBasePower" &&
+    effect.type !== "cannotBlock" &&
+    effect.type !== "preventBlockerActivation"
+  ) {
+    return false;
+  }
+  return (
+    effect.target.type === "self" ||
+    effect.duration.type === "whileSourceOnField"
+  );
+};
+
+export const isSupportedSavedTargetContinuousSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SavedTargetContinuousEffect =>
+  (effect.type === "modifyPower" ||
+    effect.type === "cannotBecomeActive" ||
+    effect.type === "cannotAttack" ||
+    effect.type === "cannotBlock" ||
+    effect.type === "preventBlockerActivation" ||
+    effect.type === "invalidateEffects") &&
+  (effect.type === "modifyPower" ||
+  effect.type === "preventBlockerActivation" ||
+  effect.type === "invalidateEffects"
+    ? isSupportedSavedLeaderOrCharacterTarget(effect.target)
+    : isSupportedSavedFieldObjectKoTarget(effect.target)) &&
+  (effect.type !== "modifyPower" ||
+    (typeof effect.value === "number" && Number.isSafeInteger(effect.value))) &&
+  isSupportedSequenceContinuousDuration(effect.duration);
+
+export const isSupportedConditionalContinuousSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ConditionalContinuousEffect =>
+  effect.type === "conditional" &&
+  effect.else === undefined &&
+  isSupportedQueuedEffectConditionShape(effect.if) &&
+  isSupportedContinuousQueueEffect(effect.then);

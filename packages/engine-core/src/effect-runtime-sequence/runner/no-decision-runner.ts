@@ -20,9 +20,7 @@ import {
   createOptionalActivationDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
   createReturnDonDecisionForSequenceSegment,
-  frameForPausedSequenceDecision,
   getSequenceOptionalPayCostOptions,
-  stateWithPausedSequenceFrame,
 } from "../frame-decisions.js";
 import { applyPlaySelectedSequenceSegment } from "../../runtime/primitives/play-selected.js";
 import { applyActivateSelectedEventSequenceSegment } from "../../runtime/primitives/activate-selected-event.js";
@@ -55,6 +53,7 @@ import { continuousRecordsCurrentlyApply } from "./continuous-application.js";
 import { emptySegmentResult } from "./results.js";
 import { getOpponentId } from "../../actions/state.js";
 import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.js";
+import { pauseSequenceForPendingDecision } from "./pause.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   DrawEffect,
@@ -128,29 +127,15 @@ export const continueNoDecisionSegments = (
           entry,
           index,
         );
-      const decision = optionalDecision.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: optionalDecision.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: pausedLedgers.savedReferences,
-        segmentResults: pausedLedgers.segmentResults,
+        ledgers: pausedLedgers,
         state: optionalDecision.state,
       });
-      return {
-        events: [...events, ...optionalDecision.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(
-          optionalDecision.state,
-          entry,
-          frame,
-        ),
-      };
     }
     if (segment.effect.type === "draw") {
       const drawn = applyDrawSegment(
@@ -183,29 +168,15 @@ export const continueNoDecisionSegments = (
           segment.effect,
           segment.effect.count,
         );
-        const decision = quantityDecision.state.pendingDecision;
-        if (decision === undefined) {
-          return { ok: false };
-        }
-        const frame = frameForPausedSequenceDecision({
-          decision,
+        return pauseSequenceForPendingDecision({
+          decisionEvents: quantityDecision.events,
           entry,
           effectPath: [...effectPath],
+          events,
           index,
-          savedReferences: nextLedgers.savedReferences,
-          segmentResults: nextLedgers.segmentResults,
+          ledgers: nextLedgers,
           state: quantityDecision.state,
         });
-        return {
-          events: [...events, ...quantityDecision.events],
-          kind: "paused",
-          ok: true,
-          state: stateWithPausedSequenceFrame(
-            quantityDecision.state,
-            entry,
-            frame,
-          ),
-        };
       }
       const moved = applyMoveCardsSegment(
         nextState,
@@ -264,25 +235,15 @@ export const continueNoDecisionSegments = (
         returnCount,
         index,
       );
-      const decision = decisionResult.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: decisionResult.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: nextLedgers.savedReferences,
-        segmentResults: nextLedgers.segmentResults,
+        ledgers: nextLedgers,
         state: decisionResult.state,
       });
-      return {
-        events: [...events, ...decisionResult.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-      };
     }
     if (segment.effect.type === "drawUpTo") {
       const quantityDecision = createChooseQuantityDecisionForSequenceSegment(
@@ -292,29 +253,15 @@ export const continueNoDecisionSegments = (
         segment.effect,
         segment.effect.count,
       );
-      const decision = quantityDecision.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: quantityDecision.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: nextLedgers.savedReferences,
-        segmentResults: nextLedgers.segmentResults,
+        ledgers: nextLedgers,
         state: quantityDecision.state,
       });
-      return {
-        events: [...events, ...quantityDecision.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(
-          quantityDecision.state,
-          entry,
-          frame,
-        ),
-      };
     }
     if (segment.effect.type === "search") {
       const search = applySearchRevealSequenceSegment({
@@ -352,29 +299,15 @@ export const continueNoDecisionSegments = (
           segment.effect,
           segment.effect.count,
         );
-        const decision = quantityDecision.state.pendingDecision;
-        if (decision === undefined) {
-          return { ok: false };
-        }
-        const frame = frameForPausedSequenceDecision({
-          decision,
+        return pauseSequenceForPendingDecision({
+          decisionEvents: quantityDecision.events,
           entry,
           effectPath: [...effectPath],
+          events,
           index,
-          savedReferences: nextLedgers.savedReferences,
-          segmentResults: nextLedgers.segmentResults,
+          ledgers: nextLedgers,
           state: quantityDecision.state,
         });
-        return {
-          events: [...events, ...quantityDecision.events],
-          kind: "paused",
-          ok: true,
-          state: stateWithPausedSequenceFrame(
-            quantityDecision.state,
-            entry,
-            frame,
-          ),
-        };
       }
       const revealed = applyRevealTopSequenceSegment(
         nextState,
@@ -416,25 +349,15 @@ export const continueNoDecisionSegments = (
       if (decisionResult.errors !== undefined) {
         return { ok: false };
       }
-      const decision = decisionResult.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: decisionResult.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: pausedLedgers.savedReferences,
-        segmentResults: pausedLedgers.segmentResults,
+        ledgers: pausedLedgers,
         state: decisionResult.state,
       });
-      return {
-        events: [...events, ...decisionResult.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-      };
     }
     const partialResult: SequenceSegmentResult = {
       ...emptySegmentResult(),
@@ -477,25 +400,15 @@ export const continueNoDecisionSegments = (
         paymentOptions,
         index,
       );
-      const decision = decisionResult.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: decisionResult.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: pausedLedgers.savedReferences,
-        segmentResults: pausedLedgers.segmentResults,
+        ledgers: pausedLedgers,
         state: decisionResult.state,
       });
-      return {
-        events: [...events, ...decisionResult.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-      };
     }
     if (segment.effect.type === "choice") {
       const decisionResult = createChooseEffectOptionDecisionForSequenceSegment(
@@ -504,25 +417,15 @@ export const continueNoDecisionSegments = (
         segment.effect,
         index,
       );
-      const decision = decisionResult.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: decisionResult.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: pausedLedgers.savedReferences,
-        segmentResults: pausedLedgers.segmentResults,
+        ledgers: pausedLedgers,
         state: decisionResult.state,
       });
-      return {
-        events: [...events, ...decisionResult.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-      };
     }
     if (segment.effect.type === "selectCards") {
       const decisionResult = createSupportedHandSelectionChoiceDecision(
@@ -544,25 +447,15 @@ export const continueNoDecisionSegments = (
         };
         continue;
       }
-      const decision = decisionResult.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: decisionResult.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: pausedLedgers.savedReferences,
-        segmentResults: pausedLedgers.segmentResults,
+        ledgers: pausedLedgers,
         state: decisionResult.state,
       });
-      return {
-        events: [...events, ...decisionResult.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-      };
     }
     if (segment.effect.type === "selectFromSet") {
       const decisionResult = createSelectFromSetDecision({
@@ -575,25 +468,15 @@ export const continueNoDecisionSegments = (
       if (!decisionResult.ok) {
         return { ok: false };
       }
-      const decision = decisionResult.state.pendingDecision;
-      if (decision === undefined) {
-        return { ok: false };
-      }
-      const frame = frameForPausedSequenceDecision({
-        decision,
+      return pauseSequenceForPendingDecision({
+        decisionEvents: decisionResult.events,
         entry,
         effectPath: [...effectPath],
+        events,
         index,
-        savedReferences: pausedLedgers.savedReferences,
-        segmentResults: pausedLedgers.segmentResults,
+        ledgers: pausedLedgers,
         state: decisionResult.state,
       });
-      return {
-        events: [...events, ...decisionResult.events],
-        kind: "paused",
-        ok: true,
-        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-      };
     }
     if (segment.effect.type === "selectTargets") {
       const selectTargets = applySelectTargetsSequenceSegment({
@@ -932,25 +815,15 @@ export const continueNoDecisionSegments = (
     if (!decisionResult.ok) {
       return { ok: false };
     }
-    const decision = decisionResult.state.pendingDecision;
-    if (decision === undefined) {
-      return { ok: false };
-    }
-    const frame = frameForPausedSequenceDecision({
-      decision,
+    return pauseSequenceForPendingDecision({
+      decisionEvents: decisionResult.events,
       entry,
       effectPath: [...effectPath],
+      events,
       index,
-      savedReferences: pausedLedgers.savedReferences,
-      segmentResults: pausedLedgers.segmentResults,
+      ledgers: pausedLedgers,
       state: decisionResult.state,
     });
-    return {
-      events: [...events, ...decisionResult.events],
-      kind: "paused",
-      ok: true,
-      state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
-    };
   }
   return {
     events,
