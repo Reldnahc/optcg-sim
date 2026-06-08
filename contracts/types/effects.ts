@@ -791,6 +791,14 @@ export type Effect =
       position: "top" | "bottom";
       order: "ownerChoice" | "chooserChoice" | "random";
     }
+  | {
+      type: "placeSetRemainder";
+      set: SelectionSetId;
+      owner: PlayerRef;
+      destination: Zone;
+      position: "top" | "bottom" | "topOrBottom";
+      order: "chooser" | "owner" | "original" | "random";
+    }
   | { type: "shuffleDeck"; player: PlayerRef }
   | {
       type: "bounce";

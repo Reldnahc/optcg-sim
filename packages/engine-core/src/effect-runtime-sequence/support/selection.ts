@@ -14,6 +14,10 @@ export type AttachSelectedDonEffect = Extract<
 export type PlaySourceEffect = Extract<Effect, { type: "playSource" }>;
 export type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 export type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
+export type PlaceSetRemainderEffect = Extract<
+  Effect,
+  { type: "placeSetRemainder" }
+>;
 
 export const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
@@ -93,7 +97,8 @@ export const isSupportedRevealTopSegment = (
   (effect.zone === undefined ||
     effect.zone === "deck" ||
     effect.zone === "life") &&
-  effect.visibility === "bothPlayers" &&
+  (effect.visibility === "bothPlayers" ||
+    effect.visibility === "chooserOnly") &&
   Number.isInteger(effect.count) &&
   effect.count > 0 &&
   (effect.min === undefined ||
@@ -111,6 +116,15 @@ export const isSupportedSelectFromSetSegment = (
   effect.min >= 0 &&
   effect.max >= effect.min &&
   isSupportedHandSelectionCardFilter(effect.filter);
+
+export const isSupportedPlaceSetRemainderSegment = (
+  effect: SequenceSegmentEffect,
+): effect is PlaceSetRemainderEffect =>
+  effect.type === "placeSetRemainder" &&
+  effect.owner === "self" &&
+  effect.destination === "deck" &&
+  (effect.position === "bottom" || effect.position === "top") &&
+  (effect.order === "chooser" || effect.order === "original");
 
 export type SavedFieldObjectSelectionTarget = Extract<
   Target,

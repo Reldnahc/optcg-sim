@@ -24,6 +24,7 @@ export {
   resumeSequenceFrameAfterOptionalCost,
 } from "./frames/optional.js";
 export { resumeSequenceFrameAfterReplacement } from "./frames/replacement.js";
+export { resumeSequenceFrameAfterPlaceSetRemainder } from "./frames/remainder.js";
 export { resumeSequenceFrameAfterPlaySelectedOverflow } from "./frames/play-selected-overflow.js";
 export { resumeSequenceFrameAfterChooseQuantity } from "./frames/quantity.js";
 export { resumeSequenceFrameAfterSelectedHandDeckPlacement } from "./selected-hand-deck-placement.js";

@@ -4,6 +4,7 @@ import { toEngineResult } from "./action-results.js";
 import {
   retargetSequenceFrameAfterSearchRevealOrder,
   resumeSequenceFrameAfterHandSelection,
+  resumeSequenceFrameAfterPlaceSetRemainder,
   resumeSequenceFrameAfterSearchReveal,
   resumeSequenceFrameAfterSelectedHandDeckPlacement,
   resumeSequenceFrameAfterTopDeckPlacement,
@@ -13,6 +14,7 @@ import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-searc
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { applyTopDeckPlacementDecisionResponse } from "./effect-runtime-top-deck-placement.js";
 import { applySelectedHandDeckPlacementDecisionResponse } from "./effect-runtime-sequence/selected-segments.js";
+import { applyPlaceSetRemainderOrderResponse } from "./effect-runtime-sequence/remainder.js";
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -224,6 +226,38 @@ export const applySelectedHandDeckPlacementSequenceAwareResponse = (
   );
   if (resumed === undefined) {
     return toEngineResult(result.state, result.events);
+  }
+  if (!resumed.ok) {
+    return toEngineResult(state, [], [resumed.error]);
+  }
+  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
+};
+
+export const applyPlaceSetRemainderSequenceAwareResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  const result = applyPlaceSetRemainderOrderResponse(state, action);
+  if (result === null) {
+    return null;
+  }
+  if (
+    decision === undefined ||
+    decision.type !== "orderCards" ||
+    !hasSequenceFrameForDecision(state, decision.id) ||
+    result.errors !== undefined ||
+    result.state.pendingDecision !== undefined
+  ) {
+    return result;
+  }
+  const resumed = resumeSequenceFrameAfterPlaceSetRemainder(
+    result.state,
+    decision.id,
+    createSupportedTrashFromHandChoiceDecision,
+  );
+  if (resumed === undefined) {
+    return result;
   }
   if (!resumed.ok) {
     return toEngineResult(state, [], [resumed.error]);

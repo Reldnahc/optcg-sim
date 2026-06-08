@@ -6,6 +6,7 @@ import type {
   EffectQueueEntry,
   EngineError,
   EngineEvent,
+  EventVisibility,
   GameState,
   OrderCardsDecision,
   SelectCardsDecision,
@@ -219,6 +220,10 @@ export const createSelectFromSetDecision = (params: {
   if (set?.kind !== "selectedCards") {
     return { ok: false };
   }
+  const visibility =
+    params.state.revealedCards.find(
+      (record) => record.selectionSetId === String(params.effect.set),
+    )?.visibility ?? ({ type: "public" } satisfies EventVisibility);
   const candidates = set.cards.filter((card) => {
     const player = params.state.players[card.playerId];
     const deckCard =
@@ -249,7 +254,7 @@ export const createSelectFromSetDecision = (params: {
       queueEntryId: params.entry.id,
       effectId: params.entry.effectBlockId,
     },
-    visibility: { type: "public" },
+    visibility,
     request: {
       timing: "onResolution",
       chooser: "self",
@@ -257,14 +262,14 @@ export const createSelectFromSetDecision = (params: {
       min: params.effect.min,
       max: params.effect.max,
       allowFewerIfUnavailable: true,
-      visibility: "public",
+      visibility: visibility.type === "private" ? "privateToChooser" : "public",
       ...(params.effect.filter === undefined
         ? {}
         : { filter: params.effect.filter }),
     },
     candidates: candidates.map((card) => ({
       card,
-      visibility: { type: "public" as const },
+      visibility,
     })),
     defaultResponse: { type: "cards", cards: [] },
   };
@@ -278,7 +283,7 @@ export const createSelectFromSetDecision = (params: {
       decisionType: decision.type,
       playerId: decision.playerId,
     },
-    { type: "public" },
+    visibility,
   );
   const event = events[0];
   if (event !== undefined) {

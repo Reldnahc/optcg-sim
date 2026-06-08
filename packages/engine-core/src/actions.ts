@@ -62,6 +62,7 @@ import {
 import {
   applySearchRevealSequenceChoiceResponse,
   applySequenceSelectCardsChoiceResponse,
+  applyPlaceSetRemainderSequenceAwareResponse,
   applySelectedHandDeckPlacementSequenceAwareResponse,
   applyTopDeckPlacementSequenceAwareResponse,
   resumeSequenceAfterSearchRevealOrderResponse,
@@ -593,6 +594,16 @@ const applyRespondToDecision = (
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       searchRevealOrderResult,
+    );
+  }
+  const placeSetRemainderResult = applyPlaceSetRemainderSequenceAwareResponse(
+    state,
+    action,
+  );
+  if (placeSetRemainderResult !== null) {
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      placeSetRemainderResult,
     );
   }
   const selectedHandDeckPlacementResult =

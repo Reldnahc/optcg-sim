@@ -39,6 +39,7 @@ import {
 import { type SupportedSequenceSegment } from "../support.js";
 import { applyRuntimePlaySource } from "../../play-card/core.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
+import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
 import {
   conditionalThenSequencePath,
   conditionalThenSingleEffectPath,
@@ -477,6 +478,36 @@ export const continueNoDecisionSegments = (
         ledgers: pausedLedgers,
         state: decisionResult.state,
       });
+    }
+    if (segment.effect.type === "placeSetRemainder") {
+      const placed = applyPlaceSetRemainderSequenceSegment({
+        effect: segment.effect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      if (!placed.ok) {
+        return { ok: false };
+      }
+      if (placed.paused === true) {
+        return pauseSequenceForPendingDecision({
+          decisionEvents: placed.events,
+          entry,
+          effectPath: [...effectPath],
+          events,
+          index,
+          ledgers: placed.ledgers,
+          state: placed.state,
+        });
+      }
+      nextState = placed.state;
+      nextLedgers = placed.ledgers;
+      events.push(...placed.events);
+      continue;
     }
     if (segment.effect.type === "selectTargets") {
       const selectTargets = applySelectTargetsSequenceSegment({

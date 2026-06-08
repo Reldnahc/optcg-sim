@@ -36,6 +36,7 @@ import {
 } from "./support/basic.js";
 import {
   isSupportedAttachSelectedDonSegment,
+  isSupportedPlaceSetRemainderSegment,
   isSupportedPlaySourceSegment,
   isSupportedRevealTopSegment,
   isSupportedSelectFromSetSegment,
@@ -43,6 +44,7 @@ import {
   isSupportedTrashToHandMoveSelectedSegment,
   type AttachSelectedDonEffect,
   type MoveSelectedEffect,
+  type PlaceSetRemainderEffect,
   type PlaySourceEffect,
   type RevealTopEffect,
   type SelectFromSetEffect,
@@ -96,6 +98,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | PlaySourceEffect
     | RevealTopEffect
     | SelectFromSetEffect
+    | PlaceSetRemainderEffect
     | BounceEffect
     | DirectContinuousEffect
     | TrashEffect
@@ -234,7 +237,10 @@ export const toSupportedSequenceBlock = (
     return undefined;
   }
 
-  const supportState = { hasPendingDecisionSegment: false };
+  const supportState = {
+    hasPendingDecisionSegment: false,
+    selectFromSetSelections: new Set<string>(),
+  };
   const allSegmentsSupported = flattenedBlock.effect.effects.every(
     (segment, index) => {
       if (index === 0 && segment.connector !== "always") {
@@ -295,6 +301,17 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedSelectFromSetSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        supportState.selectFromSetSelections.add(String(segment.effect.saveAs));
+        return true;
+      }
+      if (isSupportedPlaceSetRemainderSegment(segment.effect)) {
+        if (
+          segment.effect.order === "chooser" &&
+          segment.effect.position !== "bottom"
+        ) {
+          return false;
+        }
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
@@ -371,7 +388,10 @@ export const toSupportedSequenceBlock = (
           segment.effect.ignoreCost === true &&
           (segment.effect.enterRested === undefined ||
             typeof segment.effect.enterRested === "boolean") &&
-          (String(segment.effect.selection).startsWith("handSelection:") ||
+          (supportState.selectFromSetSelections.has(
+            String(segment.effect.selection),
+          ) ||
+            String(segment.effect.selection).startsWith("handSelection:") ||
             String(segment.effect.selection).startsWith("trashSelection:") ||
             String(segment.effect.selection).startsWith("revealSelection:"))
         );

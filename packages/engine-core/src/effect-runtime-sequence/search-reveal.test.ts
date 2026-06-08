@@ -155,6 +155,106 @@ const revealTopPlayRestedSequence = (): Extract<
   };
 };
 
+const lookTopPlayTwoSequence = (): Extract<Effect, { type: "sequence" }> => {
+  const revealSet = "set:look-top" as SelectionSetId;
+  const selection = "lookSelection:play" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          count: 3,
+          saveAs: revealSet,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: revealSet,
+          chooser: "self",
+          min: 0,
+          max: 2,
+          filter: {
+            categories: ["character"],
+            power: { max: 6000 },
+          },
+          saveAs: selection,
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "playSelected",
+          selection,
+          ignoreCost: true,
+        },
+      },
+    ],
+  };
+};
+
+const lookTopPlayTwoBottomRestSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const revealSet = "set:look-top" as SelectionSetId;
+  const selection = "lookSelection:play" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          count: 4,
+          saveAs: revealSet,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: revealSet,
+          chooser: "self",
+          min: 0,
+          max: 2,
+          filter: {
+            categories: ["character"],
+            power: { max: 6000 },
+          },
+          saveAs: selection,
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "playSelected",
+          selection,
+          ignoreCost: true,
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "placeSetRemainder",
+          set: revealSet,
+          owner: "self",
+          destination: "deck",
+          position: "bottom",
+          order: "chooser",
+        },
+      },
+    ],
+  };
+};
+
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
     ...card,
@@ -430,6 +530,149 @@ test("sequence reveal-top select-from-set allows declining when the revealed car
   assert.ok(player.deck.some((card) => card.instanceId === topCard.instanceId));
   assert.ok(
     !player.characters.some((card) => card.instanceId === topCard.instanceId),
+  );
+});
+
+test("sequence chooser-only reveal-top can select and play two cards without public reveal", () => {
+  const { state } = sequenceQueueState(lookTopPlayTwoSequence(), 3);
+  const player = must(state.players[p1], "p1");
+  const [first, second, third] = player.deck.slice(0, 3);
+  assert.ok(first !== undefined);
+  assert.ok(second !== undefined);
+  assert.ok(third !== undefined);
+  for (const card of [first, second]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+  }
+  state.cardManifest.cards[third.cardId] = resolvedCard({
+    cardId: third.cardId,
+    category: "event",
+    cost: 1,
+  });
+
+  const paused = processEffectRuntime(state);
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+  assert.equal(paused.state.pendingDecision.candidates.length, 2);
+  assert.deepEqual(paused.state.pendingDecision.visibility, {
+    type: "private",
+    playerId: p1,
+  });
+  assert.ok(
+    paused.events.every(
+      (event) =>
+        event.type !== "cardRevealed" || event.visibility.type !== "public",
+    ),
+  );
+  assert.ok(
+    paused.state.revealedCards.every(
+      (record) => record.visibility.type !== "public",
+    ),
+  );
+
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: decision.candidates.map((candidate) => candidate.card),
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  const resolvedPlayer = must(resolved.state.players[p1], "resolved p1");
+  assert.ok(
+    resolvedPlayer.characters.some(
+      (card) => card.instanceId === first.instanceId,
+    ),
+  );
+  assert.ok(
+    resolvedPlayer.characters.some(
+      (card) => card.instanceId === second.instanceId,
+    ),
+  );
+  assert.ok(
+    resolvedPlayer.deck.some((card) => card.instanceId === third.instanceId),
+  );
+});
+
+test("sequence place-set-remainder bottoms unplayed looked cards in chosen order", () => {
+  const { state } = sequenceQueueState(lookTopPlayTwoBottomRestSequence(), 5);
+  const player = must(state.players[p1], "p1");
+  const [first, second, third, fourth] = player.deck.slice(0, 4);
+  assert.ok(first !== undefined);
+  assert.ok(second !== undefined);
+  assert.ok(third !== undefined);
+  assert.ok(fourth !== undefined);
+  for (const card of [first, second]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+  }
+  for (const card of [third, fourth]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "event",
+      cost: 1,
+    });
+  }
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const selectDecision = must(paused.state.pendingDecision, "select decision");
+  assert.equal(selectDecision.type, "selectCards");
+  const orderPending = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: selectDecision.candidates.map((candidate) => candidate.card),
+    },
+  });
+
+  assert.equal(orderPending.errors, undefined);
+  const orderDecision = must(orderPending.state.pendingDecision, "order");
+  assert.equal(orderDecision.type, "orderCards");
+  assert.deepEqual(
+    orderDecision.cards.map((card) => card.instanceId),
+    [third.instanceId, fourth.instanceId],
+  );
+
+  const resolved = applyAction(orderPending.state, {
+    type: "respondToDecision",
+    decisionId: orderDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [String(fourth.instanceId), String(third.instanceId)],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const resolvedPlayer = must(resolved.state.players[p1], "resolved p1");
+  assert.ok(
+    resolvedPlayer.characters.some(
+      (card) => card.instanceId === first.instanceId,
+    ),
+  );
+  assert.ok(
+    resolvedPlayer.characters.some(
+      (card) => card.instanceId === second.instanceId,
+    ),
+  );
+  assert.deepEqual(
+    resolvedPlayer.deck.slice(-2).map((card) => card.instanceId),
+    [fourth.instanceId, third.instanceId],
   );
 });
 

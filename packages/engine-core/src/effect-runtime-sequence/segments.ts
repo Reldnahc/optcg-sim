@@ -5,6 +5,7 @@ import type {
   EffectExecutionFrame,
   EffectQueueEntry,
   EngineEvent,
+  EventVisibility,
   GameState,
   SavedFieldObjectReference,
   SequenceSavedResultReference,
@@ -29,6 +30,14 @@ type DrawEffect = Extract<Effect, { type: "draw" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
+
+const revealTopVisibility = (
+  visibility: RevealTopEffect["visibility"],
+  controllerId: PlayerId,
+): EventVisibility =>
+  visibility === "chooserOnly"
+    ? { type: "private", playerId: controllerId }
+    : { type: "public" };
 
 export type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -322,6 +331,10 @@ export const applyResolvedQuantityRevealTopSegment = (
     .slice(0, quantity)
     .map((card) => toCardRef(card, entry.controllerId));
   const revealId = `reveal:sequence:${String(entry.id)}:${String(index)}`;
+  const visibility = revealTopVisibility(
+    segment.effect.visibility,
+    entry.controllerId,
+  );
   const origin =
     sourceZone === "life"
       ? ({ zone: "life", playerId: entry.controllerId } as const)
@@ -338,7 +351,7 @@ export const applyResolvedQuantityRevealTopSegment = (
         origin,
         selectionSetId: segment.effect.saveAs,
       },
-      { type: "public" },
+      visibility,
     );
     const event = events[0];
     if (event !== undefined) {
@@ -361,7 +374,7 @@ export const applyResolvedQuantityRevealTopSegment = (
             {
               id: revealId,
               cards: revealedCards,
-              visibility: { type: "public" as const },
+              visibility,
               origin,
               selectionSetId: String(segment.effect.saveAs),
               createdAtStateSeq: nextSeq,
