@@ -1,4 +1,10 @@
-import { useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import type { ClientCardModel } from "../view-model.js";
 import { EffectRulesText } from "./EffectRulesText.js";
@@ -55,6 +61,7 @@ export const CardPreviewContent = ({
   const [textPanelHeight, setTextPanelHeight] = useState(
     defaultPreviewTextPanelHeight,
   );
+  const previewRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const textPanelDrag = useRef<TextPanelDragState | undefined>(undefined);
   const previewStyle = {
@@ -65,11 +72,32 @@ export const CardPreviewContent = ({
       : "0px",
   } as CSSProperties;
 
-  const zoomBy = (delta: number): void => {
+  const zoomBy = useCallback((delta: number): void => {
     setZoom((current) =>
       Number(clamp(current + delta, minPreviewZoom, maxPreviewZoom).toFixed(2)),
     );
-  };
+  }, []);
+
+  useEffect(() => {
+    const preview = previewRef.current;
+    if (preview === null) {
+      return undefined;
+    }
+
+    const handlePreviewWheel = (event: WheelEvent): void => {
+      if (!event.ctrlKey) {
+        return;
+      }
+
+      event.preventDefault();
+      zoomBy(event.deltaY < 0 ? previewZoomStep : -previewZoomStep);
+    };
+
+    preview.addEventListener("wheel", handlePreviewWheel, { passive: false });
+    return () => {
+      preview.removeEventListener("wheel", handlePreviewWheel);
+    };
+  }, [zoomBy]);
 
   const moveTextPanelResize = (
     event: React.PointerEvent<HTMLButtonElement>,
@@ -95,7 +123,11 @@ export const CardPreviewContent = ({
   };
 
   return (
-    <article className="card-preview-content" style={previewStyle}>
+    <article
+      className="card-preview-content"
+      ref={previewRef}
+      style={previewStyle}
+    >
       {card === undefined ? (
         <div className="card-preview-empty">Hover a card to preview it</div>
       ) : (

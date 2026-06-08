@@ -125,6 +125,23 @@ describe("card preview window", () => {
     );
   });
 
+  test("preview content captures ctrl wheel for card zoom instead of page zoom", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardPreviewWindow.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /addEventListener\("wheel",\s*handlePreviewWheel/u);
+    assert.match(source, /removeEventListener\("wheel",\s*handlePreviewWheel/u);
+    assert.match(source, /\{\s*passive:\s*false\s*\}/u);
+    assert.match(source, /if\s*\(\s*!event\.ctrlKey\s*\)/u);
+    assert.match(source, /event\.preventDefault\(\);/u);
+    assert.match(
+      source,
+      /zoomBy\(event\.deltaY < 0 \? previewZoomStep : -previewZoomStep\);/u,
+    );
+  });
+
   test("renders an empty preview window before a card is hovered", () => {
     const markup = renderToStaticMarkup(
       createElement(CardPreviewWindow, {
