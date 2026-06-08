@@ -110,6 +110,10 @@ describe("card preview window", () => {
       /\.card-preview-rules-panel\s*\{[^}]*right:\s*0;[^}]*bottom:\s*0;[^}]*left:\s*0;/u,
     );
     assert.match(
+      styles,
+      /\.card-preview-window \.floating-window-body\s*\{[^}]*padding:\s*0;[^}]*overflow:\s*hidden;/u,
+    );
+    assert.match(
       markupForPreviewControls(),
       /aria-label="Reset card zoom" disabled=""/u,
     );
