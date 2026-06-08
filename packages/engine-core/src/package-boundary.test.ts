@@ -263,6 +263,20 @@ test("replacement primitives stays a small public barrel", async () => {
   );
 });
 
+test("replacement field-removal process stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/replacement/field-removal-process.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 220,
+    `replacement/field-removal-process.ts should be a public barrel over focused field-removal process modules; found ${String(lineCount)} lines`,
+  );
+});
+
 async function listProductionSourcePaths(
   directoryPath: string,
 ): Promise<readonly string[]> {
