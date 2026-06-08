@@ -221,6 +221,20 @@ test("effect runtime queue results stays a small assembly module", async () => {
   );
 });
 
+test("effect runtime sequence saved-field-object stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/effect-runtime-sequence/saved-field-object.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 160,
+    `effect-runtime-sequence/saved-field-object.ts should be a public barrel over focused saved-field-object modules; found ${String(lineCount)} lines`,
+  );
+});
+
 async function listProductionSourcePaths(
   directoryPath: string,
 ): Promise<readonly string[]> {
