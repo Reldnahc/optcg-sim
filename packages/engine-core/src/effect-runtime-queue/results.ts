@@ -1,5 +1,4 @@
 import type {
-  DecisionId,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -69,24 +68,20 @@ import {
   isActiveDoubleAttackDamageProcess,
 } from "../effect-runtime-damage-deferred-queue.js";
 import { resolveQueuedDamagePrimitive } from "./damage.js";
+import { resolveQueuedQuantity } from "./quantity-resolution.js";
 import type {
   EffectRuntimeQueueResults,
   EffectRuntimeQueueResultsDependencies,
 } from "./results-types.js";
+import { createUnsupportedEffectQueueResult } from "./unsupported.js";
 
 export const createEffectRuntimeQueueResults = (
   dependencies: EffectRuntimeQueueResultsDependencies,
 ): EffectRuntimeQueueResults => {
   const unsupportedEffectQueueResult = (state: GameState): EngineResult =>
-    toEngineResult(
+    createUnsupportedEffectQueueResult(
       state,
-      [],
-      [
-        dependencies.createUnsupportedPendingRuntimeWorkError({
-          kind: "effectQueue",
-          count: state.effectQueue.length,
-        }),
-      ],
+      dependencies.createUnsupportedPendingRuntimeWorkError,
     );
 
   const resolveQueuedEffectDefinition = (
@@ -269,45 +264,6 @@ export const createEffectRuntimeQueueResults = (
       return undefined;
     }
     return match.effect;
-  };
-
-  const resolveQueuedQuantity = (
-    state: GameState,
-    entry: EffectQueueEntry,
-    bounds: { min: number; max: number },
-  ): number | undefined => {
-    const expectedDecisionId =
-      `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
-    for (let index = state.eventJournal.length - 1; index >= 0; index -= 1) {
-      const event = state.eventJournal[index];
-      if (event?.type !== "decisionResolved") {
-        continue;
-      }
-      const payload =
-        typeof event.payload === "object" && event.payload !== null
-          ? (event.payload as Record<string, unknown>)
-          : undefined;
-      if (payload === undefined) {
-        continue;
-      }
-      const decisionId = payload["decisionId"];
-      const decisionType = payload["decisionType"];
-      const responseType = payload["responseType"];
-      const quantity = payload["quantity"];
-      if (
-        decisionId !== expectedDecisionId ||
-        decisionType !== "chooseQuantity" ||
-        responseType !== "chooseQuantity" ||
-        typeof quantity !== "number" ||
-        !Number.isInteger(quantity) ||
-        quantity < bounds.min ||
-        quantity > bounds.max
-      ) {
-        continue;
-      }
-      return quantity;
-    }
-    return undefined;
   };
 
   const resolveQueueEntriesInOrder = (
