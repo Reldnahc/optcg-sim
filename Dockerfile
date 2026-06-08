@@ -9,6 +9,7 @@ COPY packages ./packages
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm run build:match-server
+RUN pnpm --filter @optcg/client build:ui
 
 FROM node:24-bookworm-slim AS runtime
 
@@ -29,6 +30,9 @@ COPY --from=build /app/packages/engine-core/dist ./packages/engine-core/dist
 COPY --from=build /app/packages/cards/dist ./packages/cards/dist
 COPY --from=build /app/packages/card-support/dist ./packages/card-support/dist
 COPY --from=build /app/packages/match-server/dist ./packages/match-server/dist
+COPY --from=build /app/packages/client/dist ./packages/client/dist
+
+ENV PONEGLYPH_SIM_STATIC_DIR=/app/packages/client/dist
 
 EXPOSE 5177
 

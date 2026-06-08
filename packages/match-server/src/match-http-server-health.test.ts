@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, test } from "vitest";
 
 import {
@@ -104,6 +107,61 @@ describe("match HTTP server health", () => {
       );
     } finally {
       await server.close();
+    }
+  });
+
+  test("serves configured static client assets for non-API routes", async () => {
+    const staticDirectory = await mkdtemp(join(tmpdir(), "optcg-sim-static-"));
+    await writeFile(
+      join(staticDirectory, "index.html"),
+      "<!doctype html><title>Sim client</title>",
+      "utf8",
+    );
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      staticAssetsDirectory: staticDirectory,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/`);
+
+      assert.equal(response.status, 200);
+      assert.equal(
+        response.headers.get("content-type"),
+        "text/html; charset=utf-8",
+      );
+      assert.equal(
+        await response.text(),
+        "<!doctype html><title>Sim client</title>",
+      );
+    } finally {
+      await server.close();
+      await rm(staticDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps API routes out of static client fallback", async () => {
+    const staticDirectory = await mkdtemp(join(tmpdir(), "optcg-sim-static-"));
+    await writeFile(
+      join(staticDirectory, "index.html"),
+      "<!doctype html><title>Sim client</title>",
+      "utf8",
+    );
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      staticAssetsDirectory: staticDirectory,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/api/missing`);
+
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        errors: ["API route not found."],
+      });
+    } finally {
+      await server.close();
+      await rm(staticDirectory, { recursive: true, force: true });
     }
   });
 });

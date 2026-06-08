@@ -62,6 +62,7 @@ import {
   handleBrowserCorsPreflight,
 } from "./browser-cors.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
+import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 
@@ -92,6 +93,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
   readonly createDefaultMatch?: boolean;
   readonly allowedBrowserOrigins?: readonly string[];
+  readonly staticAssetsDirectory?: string;
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly authBaseUrl?: string;
@@ -902,6 +904,7 @@ export const createMatchHttpServer = async (
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
   const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
+  const staticAssetsDirectory = options.staticAssetsDirectory;
   const simHandoffVerifier =
     options.simHandoffVerifier ??
     createPoneglyphSimHandoffVerifier({
@@ -955,7 +958,12 @@ export const createMatchHttpServer = async (
           authProvider,
           simHandoffVerifier,
         )
-      : handleNotFoundRequest(response);
+      : serveStaticAssetsOrNotFound(
+          request,
+          response,
+          staticAssetsDirectory,
+          () => handleNotFoundRequest(response),
+        );
     operation.catch((error: unknown) => {
       sendJson(response, 500, {
         errors: [error instanceof Error ? error.message : String(error)],

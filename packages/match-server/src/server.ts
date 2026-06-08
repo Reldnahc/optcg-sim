@@ -13,6 +13,9 @@ const server = await createMatchHttpServer({
     process.env["PONEGLYPH_SIM_BROWSER_ORIGINS"],
   ),
   createDefaultMatch: false,
+  ...(process.env["PONEGLYPH_SIM_STATIC_DIR"] === undefined
+    ? {}
+    : { staticAssetsDirectory: process.env["PONEGLYPH_SIM_STATIC_DIR"] }),
 });
 
 await server.listen(port, host);
