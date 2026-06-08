@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - dev
       - main
       - master
     paths:
@@ -22,6 +23,8 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  ECS_CLUSTER: poneglyph-one-cluster
+  ECS_SERVICE_DEV: poneglyph-one-sim-dev
   ECR_REPOSITORY: poneglyph-one-optcg-sim
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -54,6 +57,19 @@ jobs:
             docker tag "$IMAGE_URI:sha-${GITHUB_SHA}" "$IMAGE_URI:latest"
             docker push "$IMAGE_URI:latest"
           fi
+
+          if [ "${GITHUB_REF_NAME}" = "dev" ]; then
+            docker tag "$IMAGE_URI:sha-${GITHUB_SHA}" "$IMAGE_URI:dev"
+            docker push "$IMAGE_URI:dev"
+          fi
+
+      - name: Redeploy sim dev service
+        if: github.ref_name == 'dev'
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE_DEV" \
+            --force-new-deployment
 
       - name: Summarize image tag
         env:
