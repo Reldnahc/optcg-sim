@@ -41,7 +41,7 @@ import {
   isSupportedRevealTopSegment,
   isSupportedSelectFromSetSegment,
   isSupportedSequenceSelectCardsSegment,
-  isSupportedTrashToHandMoveSelectedSegment,
+  isSupportedMoveSelectedSegment,
   type AttachSelectedDonEffect,
   type MoveSelectedEffect,
   type PlaceSetRemainderEffect,
@@ -179,7 +179,7 @@ const isSupportedConditionalSegment = (
     if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
       return true;
     }
-    if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+    if (isSupportedMoveSelectedSegment(segment.effect)) {
       return true;
     }
     if (isSupportedActivateSegment(segment.effect)) {
@@ -319,7 +319,7 @@ export const toSupportedSequenceBlock = (
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
-      if (isSupportedTrashToHandMoveSelectedSegment(segment.effect)) {
+      if (isSupportedMoveSelectedSegment(segment.effect)) {
         return true;
       }
       if (isSupportedAttachSelectedDonSegment(segment.effect)) {

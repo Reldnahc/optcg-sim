@@ -465,7 +465,10 @@ test("cards parser emits costed private search plus trash accepted by engine seq
     [
       "entry:onPlay",
       "cost:returnDon",
-      "instruction:search",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
       "look:topDeck",
       "filter:any",
       "reveal:chooserOnly",
@@ -477,20 +480,24 @@ test("cards parser emits costed private search plus trash accepted by engine seq
   assert.equal(effectBlock.effect.type, "sequence");
   const body = effectBlock.effect.effects[1]?.effect;
   assert.equal(body?.type, "sequence");
-  const searchSegment = body.effects.find(
-    (segment) => segment.effect.type === "search",
+  assert.deepEqual(
+    body.effects.map((segment) => segment.effect.type),
+    [
+      "revealTop",
+      "selectFromSet",
+      "moveSelected",
+      "placeSetRemainder",
+      "trashFromHand",
+    ],
   );
-  assert.ok(searchSegment, "expected search segment after DON cost");
-  assert.equal(searchSegment.effect.request.revealTo, "chooserOnly");
-  assert.deepEqual(searchSegment.effect.request.filter, {});
-  assert.equal(
-    createSupportedSearchRevealTransientSet(
-      createActiveState(),
-      queueDrawForP1(),
-      searchSegment.effect,
-    ).ok,
-    true,
+  const revealSegment = body.effects.find(
+    (segment) => segment.effect.type === "revealTop",
   );
+  assert.equal(revealSegment?.effect.visibility, "chooserOnly");
+  const selectSegment = body.effects.find(
+    (segment) => segment.effect.type === "selectFromSet",
+  );
+  assert.deepEqual(selectSegment?.effect.filter, {});
   assert.equal(
     isSupportedQueuedAutoSequenceForEntryPoint(
       effectBlock,

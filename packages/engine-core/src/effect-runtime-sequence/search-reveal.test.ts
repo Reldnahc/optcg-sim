@@ -255,6 +255,62 @@ const lookTopPlayTwoBottomRestSequence = (): Extract<
   };
 };
 
+const lookTopAddOneBottomRestSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const revealSet = "set:search-look" as SelectionSetId;
+  const selection = "searchSelection:hand" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          zone: "deck",
+          count: 3,
+          saveAs: revealSet,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: revealSet,
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {},
+          saveAs: selection,
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: revealSet,
+          to: "hand",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "placeSetRemainder",
+          set: revealSet,
+          owner: "self",
+          destination: "deck",
+          position: "bottom",
+          order: "chooser",
+        },
+      },
+    ],
+  };
+};
+
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
     ...card,
@@ -600,6 +656,84 @@ test("sequence chooser-only reveal-top can select and play two cards without pub
   );
   assert.ok(
     resolvedPlayer.deck.some((card) => card.instanceId === third.instanceId),
+  );
+});
+
+test("sequence chooser-only reveal-top can add selected card to hand and bottom the rest", () => {
+  const { state } = sequenceQueueState(lookTopAddOneBottomRestSequence(), 4);
+  const player = must(state.players[p1], "p1");
+  const [first, second, third] = player.deck.slice(0, 3);
+  assert.ok(first !== undefined);
+  assert.ok(second !== undefined);
+  assert.ok(third !== undefined);
+  for (const card of [first, second, third]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "event",
+      cost: 1,
+    });
+  }
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+  assert.deepEqual(paused.state.pendingDecision.visibility, {
+    type: "private",
+    playerId: p1,
+  });
+  assert.ok(
+    paused.events.every(
+      (event) =>
+        event.type !== "cardRevealed" || event.visibility.type !== "public",
+    ),
+  );
+
+  const selectDecision = must(paused.state.pendingDecision, "select decision");
+  assert.equal(selectDecision.type, "selectCards");
+  const orderPending = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(selectDecision.candidates[0], "candidate").card],
+    },
+  });
+
+  assert.equal(orderPending.errors, undefined);
+  const orderDecision = must(orderPending.state.pendingDecision, "order");
+  assert.equal(orderDecision.type, "orderCards");
+  assert.deepEqual(
+    orderDecision.cards.map((card) => card.instanceId),
+    [second.instanceId, third.instanceId],
+  );
+
+  const resolved = applyAction(orderPending.state, {
+    type: "respondToDecision",
+    decisionId: orderDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [String(third.instanceId), String(second.instanceId)],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const resolvedPlayer = must(resolved.state.players[p1], "resolved p1");
+  assert.ok(
+    resolvedPlayer.hand.some((card) => card.instanceId === first.instanceId),
+  );
+  assert.ok(
+    !resolvedPlayer.deck.some((card) => card.instanceId === first.instanceId),
+  );
+  assert.deepEqual(
+    resolvedPlayer.deck.slice(-2).map((card) => card.instanceId),
+    [third.instanceId, second.instanceId],
+  );
+  assert.ok(
+    resolved.events.every(
+      (event) =>
+        event.type !== "cardMoved" || event.visibility.type !== "public",
+    ),
   );
 });
 

@@ -1,4 +1,9 @@
-import type { EffectTextSpan } from "@optcg/types";
+import type {
+  Effect,
+  EffectTextSpan,
+  SelectionId,
+  SelectionSetId,
+} from "@optcg/types";
 
 import type {
   ExpressionParseResult,
@@ -24,6 +29,9 @@ import {
   type SourceSlice,
 } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
+
+const searchLookSet = "set:search-look" as SelectionSetId;
+const searchHandSelection = "searchSelection:hand" as SelectionId;
 
 export function searchRevealExpressionParser(
   input: ParseInput,
@@ -71,11 +79,18 @@ export function searchRevealExpressionParser(
     remainingEvidence: remaining.evidence,
     searchEvidence,
   });
+  const decomposedSearch = createPrivateBottomSearchSequence({
+    look,
+    reveal,
+    remaining,
+  });
+  const baseEffect = decomposedSearch?.effect ?? searchEffect;
+  const baseEvidence = decomposedSearch?.evidence ?? searchEvidence;
 
   if (remaining.rest.length === 0) {
     return {
-      effect: searchEffect,
-      evidence: searchEvidence,
+      effect: baseEffect,
+      evidence: baseEvidence,
       rest: "",
       ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
@@ -96,17 +111,21 @@ export function searchRevealExpressionParser(
     effect: {
       type: "sequence",
       effects: [
-        {
-          connector: "always",
-          effect: searchEffect,
-        },
+        ...(baseEffect.type === "sequence"
+          ? baseEffect.effects
+          : [
+              {
+                connector: "always" as const,
+                effect: baseEffect,
+              },
+            ]),
         {
           connector: "then",
           effect: trailing.effect,
         },
       ],
     },
-    evidence: ["expression:sequence", ...searchEvidence, ...trailing.evidence],
+    evidence: ["expression:sequence", ...baseEvidence, ...trailing.evidence],
     rest: "",
     ...(presentationSpans.length === 0
       ? trailing.presentationSpans === undefined
@@ -120,6 +139,93 @@ export function searchRevealExpressionParser(
         }),
   };
 }
+
+type ParsedSearchParts = {
+  readonly look: NonNullable<ReturnType<typeof parseTopDeckLook>>;
+  readonly reveal: NonNullable<ReturnType<typeof parseSearchSelectionToHand>>;
+  readonly remaining:
+    | NonNullable<ReturnType<typeof parseRestToBottomAnyOrder>>
+    | NonNullable<ReturnType<typeof parseRestToTrash>>;
+};
+
+const createPrivateBottomSearchSequence = ({
+  look,
+  reveal,
+  remaining,
+}: ParsedSearchParts):
+  | {
+      readonly effect: Extract<Effect, { type: "sequence" }>;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  if (
+    reveal.revealTo !== "chooserOnly" ||
+    remaining.remainingCards.destination !== "deck"
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "revealTop",
+            player: "self",
+            zone: "deck",
+            count: look.count,
+            saveAs: searchLookSet,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "selectFromSet",
+            set: searchLookSet,
+            chooser: "self",
+            min: reveal.min,
+            max: reveal.max,
+            filter: reveal.filter,
+            saveAs: searchHandSelection,
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "moveSelected",
+            selection: searchHandSelection,
+            from: searchLookSet,
+            to: "hand",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "placeSetRemainder",
+            set: searchLookSet,
+            owner: "self",
+            destination: "deck",
+            position: "bottom",
+            order: "chooser",
+          },
+        },
+      ],
+    },
+    evidence: [
+      "expression:sequence",
+      "instruction:revealTop",
+      ...look.evidence,
+      "instruction:selectFromSet",
+      ...reveal.evidence,
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
+      ...remaining.evidence,
+    ],
+  };
+};
 
 const sourceFromDelimiterThroughSegment = (
   inputSource: SourceSlice,

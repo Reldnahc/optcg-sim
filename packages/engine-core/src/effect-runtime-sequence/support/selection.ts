@@ -19,6 +19,22 @@ export type PlaceSetRemainderEffect = Extract<
   { type: "placeSetRemainder" }
 >;
 
+const zoneNames = new Set<string>([
+  "hand",
+  "deck",
+  "trash",
+  "life",
+  "costArea",
+  "characterArea",
+  "stageArea",
+  "leaderArea",
+  "donDeck",
+  "noZone",
+]);
+
+const isSelectionSetSource = (source: MoveSelectedEffect["from"]): boolean =>
+  !zoneNames.has(source);
+
 export const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SelectCardsEffect =>
@@ -44,7 +60,7 @@ export const isSupportedSequenceSelectCardsSegment = (
       effect.visibility === "bothPlayers" &&
       String(effect.saveAs).startsWith("donSelection:")));
 
-export const isSupportedTrashToHandMoveSelectedSegment = (
+export const isSupportedMoveSelectedSegment = (
   effect: SequenceSegmentEffect,
 ): effect is MoveSelectedEffect =>
   effect.type === "moveSelected" &&
@@ -63,7 +79,11 @@ export const isSupportedTrashToHandMoveSelectedSegment = (
         effect.position === "bottom" ||
         effect.position === "topOrBottom") &&
       effect.destinationFaceUp === undefined &&
-      String(effect.selection).startsWith("handSelection:")));
+      String(effect.selection).startsWith("handSelection:")) ||
+    (isSelectionSetSource(effect.from) &&
+      effect.to === "hand" &&
+      effect.position === undefined &&
+      effect.destinationFaceUp === undefined));
 
 export const isSupportedAttachSelectedDonSegment = (
   effect: SequenceSegmentEffect,
