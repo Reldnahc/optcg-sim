@@ -57,6 +57,11 @@ import {
   snapshotWithConnectionStatuses,
 } from "./dev-match-connection-state.js";
 import { advanceMatchTimersAndBroadcast } from "./dev-match-timer-broadcast.js";
+import {
+  applyBrowserCorsHeaders,
+  handleBrowserCorsPreflight,
+} from "./browser-cors.js";
+import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 
@@ -86,6 +91,7 @@ export interface MatchHttpServer {
 export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
   readonly createDefaultMatch?: boolean;
+  readonly allowedBrowserOrigins?: readonly string[];
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly authBaseUrl?: string;
@@ -96,27 +102,6 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
 
 const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
 const defaultMatchTimerTickMs = 1_000;
-
-const sendJson = (
-  response: ServerResponse,
-  statusCode: number,
-  body: unknown,
-): void => {
-  response.writeHead(statusCode, {
-    "content-type": "application/json; charset=utf-8",
-  });
-  response.end(JSON.stringify(body));
-};
-
-const sendText = (
-  response: ServerResponse,
-  statusCode: number,
-  contentType: string,
-  body: string,
-): void => {
-  response.writeHead(statusCode, { "content-type": contentType });
-  response.end(body);
-};
 
 const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
   await new Promise((resolve, reject) => {
@@ -141,10 +126,6 @@ const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const matchNotFound = (response: ServerResponse, matchId: string): void => {
-  sendJson(response, 404, { errors: [`Match ${matchId} not found.`] });
-};
 
 const createDevAuthProvider = (): AuthProvider => ({
   authenticate: (request) => {
@@ -342,7 +323,7 @@ const handleApiRequest = async (
       authProvider.authenticate(request),
     );
     if (result === "matchNotFound") {
-      matchNotFound(response, matchId);
+      sendMatchNotFound(response, matchId);
       return;
     }
     if (result === "unauthenticated") {
@@ -371,7 +352,7 @@ const handleApiRequest = async (
       authProvider.authenticate(request),
     );
     if (result === "matchNotFound") {
-      matchNotFound(response, matchId);
+      sendMatchNotFound(response, matchId);
       return;
     }
     if (result === "seatNotFound") {
@@ -424,7 +405,7 @@ const handleApiRequest = async (
         choice,
       );
       if (result === "matchNotFound") {
-        matchNotFound(response, matchId);
+        sendMatchNotFound(response, matchId);
         return;
       }
       if (result === "alreadyStarted") {
@@ -465,7 +446,7 @@ const handleApiRequest = async (
         authProvider.authenticate(request),
       );
       if (result === "matchNotFound") {
-        matchNotFound(response, matchId);
+        sendMatchNotFound(response, matchId);
         return;
       }
       if (result === "unauthenticated") {
@@ -501,7 +482,7 @@ const handleApiRequest = async (
         });
         return;
       }
-      matchNotFound(response, matchId);
+      sendMatchNotFound(response, matchId);
       return;
     }
     if (request.method === "GET" && resource === "state") {
@@ -518,7 +499,7 @@ const handleApiRequest = async (
   if (request.method === "GET" && pathname === "/api/state") {
     const defaultMatch = registry.getMatch(registry.defaultMatchId);
     if (defaultMatch === undefined) {
-      matchNotFound(response, registry.defaultMatchId);
+      sendMatchNotFound(response, registry.defaultMatchId);
       return;
     }
     sendJson(response, 200, getLocalDevSnapshot(defaultMatch));
@@ -527,7 +508,7 @@ const handleApiRequest = async (
   if (request.method === "GET" && pathname === "/api/cards") {
     const defaultMatch = registry.getMatch(registry.defaultMatchId);
     if (defaultMatch === undefined) {
-      matchNotFound(response, registry.defaultMatchId);
+      sendMatchNotFound(response, registry.defaultMatchId);
       return;
     }
     sendJson(response, 200, getLocalDevCardCatalog(defaultMatch));
@@ -546,7 +527,7 @@ const handleApiRequest = async (
       resetRequest.setup === undefined &&
       registry.getMatch(registry.defaultMatchId) === undefined
     ) {
-      matchNotFound(response, registry.defaultMatchId);
+      sendMatchNotFound(response, registry.defaultMatchId);
       return;
     }
     if (
@@ -920,6 +901,7 @@ export const createMatchHttpServer = async (
   const socketIdleTimeoutMs =
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
   const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
+  const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
   const simHandoffVerifier =
     options.simHandoffVerifier ??
     createPoneglyphSimHandoffVerifier({
@@ -945,6 +927,17 @@ export const createMatchHttpServer = async (
   }, matchTimerTickMs);
   matchTimerInterval.unref();
   const server = createServer((request, response) => {
+    applyBrowserCorsHeaders(request, response, allowedBrowserOrigins);
+    if (
+      handleBrowserCorsPreflight(
+        request,
+        response,
+        allowedBrowserOrigins,
+        sendJson,
+      )
+    ) {
+      return;
+    }
     const url = request.url ?? "/";
     const pathname = new URL(url, "http://localhost").pathname;
     if (request.method === "GET" && pathname === "/health") {
