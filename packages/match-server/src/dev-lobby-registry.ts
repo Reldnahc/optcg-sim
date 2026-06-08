@@ -7,7 +7,6 @@ import {
 import {
   decodeDeckHashSubmission,
   type DeckHashCodecPort,
-  type DeckSubmission,
   type ReadyDeckSubmission,
 } from "./deck-submission.js";
 import type { AuthContext } from "./dev-auth.js";
@@ -15,6 +14,7 @@ import { createDevUserSessionToken } from "./dev-auth.js";
 import { subjectsOwnSameAccount } from "./dev-auth.js";
 import {
   matchSeatsWithMatchId,
+  type LocalDevMatchSeat,
   type LocalDevMatchRegistry,
 } from "./dev-local-match-registry.js";
 import type { CreatePremadeDevMatchSetupOptions } from "./local-match.js";
@@ -35,10 +35,8 @@ export interface CreatedDevLobbyResponse {
   seat?: { playerId: PlayerId; sessionToken?: string };
 }
 
-interface LocalDevLobbySeat {
-  playerId: PlayerId;
-  subject?: AuthContext["subject"];
-  deckSubmission?: DeckSubmission;
+interface LocalDevLobbySeat extends Omit<LocalDevMatchSeat, "matchId"> {
+  deckSubmission?: ReadyDeckSubmission;
 }
 
 interface LocalDevLobby {
@@ -342,6 +340,7 @@ export const createLocalDevLobbyRegistry = (
         return "invalidDeck";
       }
       seat.deckSubmission = submission;
+      seat.verifiedHandoff = handoff;
       await ensureMatchWhenReady(lobby);
       return {
         ...lobbyResponse(lobby),
