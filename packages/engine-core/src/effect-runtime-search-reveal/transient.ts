@@ -1,17 +1,14 @@
 import type { EffectQueueEntry, GameState } from "@optcg/types";
 
 import { cardMatchesSearchFilter } from "../actions/state.js";
+import { createPrivateTopDeckLookSet } from "../effect-runtime-card-set/looked-set.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   failClosed,
   isLegacyTopOneSearch,
   validateSupportedSearchEffect,
 } from "./support.js";
-import type {
-  EngineInternalTransientCardSet,
-  SearchEffect,
-  SearchRevealTransientSetResult,
-} from "./types.js";
+import type { SearchEffect, SearchRevealTransientSetResult } from "./types.js";
 
 export const createSupportedSearchRevealTransientSet = (
   state: GameState,
@@ -32,8 +29,26 @@ export const createSupportedSearchRevealTransientSet = (
       state,
     };
   }
+  const lookCount = effect.request.lookCount;
+  if (typeof lookCount !== "number") {
+    return failClosed(state, entry, "unsupported-look-count");
+  }
 
-  const lookedCards = player.deck.slice(0, effect.request.lookCount);
+  const transientSet = createPrivateTopDeckLookSet({
+    count: lookCount,
+    playerId: supported.playerId,
+    setId: `set:search-reveal:${String(entry.id)}`,
+    state,
+  });
+  if (transientSet === null) {
+    return {
+      events: [],
+      kind: "noEligibleCandidate",
+      ok: true,
+      state,
+    };
+  }
+  const lookedCards = player.deck.slice(0, lookCount);
   const eligibleCards = lookedCards.filter((card) =>
     cardMatchesSearchFilter(
       state.cardManifest.cards[card.cardId],
@@ -51,21 +66,6 @@ export const createSupportedSearchRevealTransientSet = (
       state,
     };
   }
-
-  const transientSet: EngineInternalTransientCardSet = {
-    id: `set:search-reveal:${String(entry.id)}`,
-    cards: lookedCards.map((card) => ({
-      instanceId: card.instanceId,
-      cardId: card.cardId,
-      playerId: supported.playerId,
-      zone: card.zone,
-    })),
-    origin: "topOfDeck",
-    ownerId: supported.playerId,
-    controllerId: supported.playerId,
-    visibility: { type: "private", playerId: supported.playerId },
-    cleanupPolicy: "returnToOrigin",
-  };
 
   return {
     events: [],

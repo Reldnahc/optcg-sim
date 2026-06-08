@@ -10,6 +10,7 @@ import type {
 
 import { toDecisionId } from "../action-results.js";
 import { isSupportedSearchCardFilter, zonesEqual } from "../actions/state.js";
+import { isCurrentTopDeckLookSet } from "../effect-runtime-card-set/looked-set.js";
 import { toCardRefForPlayer } from "./remainder.js";
 import type { EngineInternalTransientCardSet } from "./types.js";
 
@@ -161,21 +162,14 @@ export const hasExpectedTransientSetShape = (
     return false;
   }
 
-  const player = state.players[playerId];
-  if (player === undefined) {
-    return false;
-  }
-  const lookedDeckCards = player.deck.slice(0, transientSet.cards.length);
-  return transientSet.cards.every((card, index) => {
-    const deckCard = lookedDeckCards[index];
-    return (
-      deckCard !== undefined &&
-      card.instanceId === deckCard.instanceId &&
-      card.cardId === deckCard.cardId &&
-      card.playerId === playerId &&
-      card.zone !== undefined &&
-      zonesEqual(card.zone, deckCard.zone)
-    );
+  return isCurrentTopDeckLookSet(state, playerId, {
+    id: transientSet.id,
+    cards: transientSet.cards,
+    origin: "topOfDeck",
+    ownerId: playerId,
+    controllerId: playerId,
+    visibility: { type: "private", playerId },
+    cleanupPolicy: "returnToOrigin",
   });
 };
 

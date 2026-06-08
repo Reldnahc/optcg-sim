@@ -1,12 +1,8 @@
-import type {
-  EffectQueueEntry,
-  EngineEvent,
-  GameState,
-  SelectCardsDecision,
-} from "@optcg/types";
+import type { EffectQueueEntry, EngineEvent, GameState } from "@optcg/types";
 
 import { appendEvent, toStateSeq } from "../action-results.js";
 import { cardMatchesSearchFilter } from "../actions/state.js";
+import { createPrivateLookSetSelectCardsDecision } from "../effect-runtime-card-set/looked-set.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   createSearchRevealOrderCardsDecision,
@@ -170,47 +166,23 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
     };
   }
 
-  const pendingDecision: SelectCardsDecision = {
-    id: decisionIdForEntry(entry),
-    type: "selectCards",
+  const pendingDecision = createPrivateLookSetSelectCardsDecision({
+    candidates,
+    decisionId: String(decisionIdForEntry(entry)),
+    effectId: entry.effectBlockId,
+    filter: effect.request.filter,
+    max: 1,
     playerId: supported.playerId,
     prompt:
       effect.request.revealTo === "bothPlayers"
         ? "Choose a revealed card to reveal, or decline."
         : "Choose a revealed card or decline.",
-    causedBy,
-    visibility,
-    request: {
-      timing: "onResolution",
-      chooser: "self",
-      set: transientSet.id as NonNullable<
-        SelectCardsDecision["request"]["set"]
-      >,
-      filter: effect.request.filter,
-      min: 0,
-      max: 1,
-      allowFewerIfUnavailable: true,
-      visibility:
-        effect.request.revealTo === "bothPlayers"
-          ? "public"
-          : "privateToChooser",
-      ...(effect.request.remainingCards !== undefined
-        ? { remainingCards: effect.request.remainingCards }
-        : {}),
-    },
-    candidates: cards
-      .map((card) => ({
-        card,
-        visibility,
-      }))
-      .filter((candidate) =>
-        cardMatchesSearchFilter(
-          state.cardManifest.cards[candidate.card.cardId],
-          effect.request.filter,
-        ),
-      ),
-    defaultResponse: { type: "cards", cards: [] },
-  };
+    queueEntryId: entry.id,
+    remainingCards: effect.request.remainingCards,
+    requestVisibility:
+      effect.request.revealTo === "bothPlayers" ? "public" : "privateToChooser",
+    setId: transientSet.id,
+  });
   appendEvent(
     state,
     events,
