@@ -5,7 +5,9 @@ export {
   parseCardEffectLinesDetailed,
 } from "./card-effect-line-parser.js";
 export { composeWrapperAndBody } from "./composition.js";
+export { gameplayLinesFromTextParts } from "./effect-text-lines.js";
 export { parseExpression } from "./expression-parser.js";
+export { parseRawKeywordLine } from "./keywords/index.js";
 export { parseEffectLine, parseEffectLinesDetailed } from "./orchestrator.js";
 export { parseOncePerTurnMarker } from "./markers/index.js";
 export {
@@ -22,15 +24,19 @@ export {
   buildDevMatchCardManifestFromPoneglyphIds,
   parseDevCardIdList,
 } from "./dev-manifest.js";
+export { createParserSupportCertificate } from "./materialization/support-certificate.js";
 export type {
   CachedResolvedCard,
   CardDataCache,
   CardRepository,
   CardRepositoryVersions,
+  CreateCardRepositoryInput,
   PoneglyphClient,
   PoneglyphFetch,
   PoneglyphFetchRequest,
   PoneglyphFetchResponse,
+  RuntimeSupportEvaluation,
+  RuntimeSupportEvaluator,
 } from "./card-repository.js";
 export type {
   RedisJsonClient,

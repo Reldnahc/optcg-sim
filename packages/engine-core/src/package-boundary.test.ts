@@ -189,6 +189,94 @@ test("production engine-core source files do not import card, deck hash, or cach
   }
 });
 
+test("production engine-core support predicates do not encode exact draw wrapper-body pairs", async () => {
+  const srcDirectoryPath = path.join(repoRoot, "packages/engine-core/src");
+  const productionSourcePaths =
+    await listProductionSourcePaths(srcDirectoryPath);
+  const exactWrapperDrawSupportPattern =
+    /\bisSupported(?:Optional)?(?:NoChoice)?(?:OnPlay|WhenAttacking|OnOpponentAttack|OnKO|MainEvent|ActivateMain).*DrawEffect\b/u;
+
+  assert.ok(productionSourcePaths.length > 0);
+  for (const sourcePath of productionSourcePaths) {
+    const source = await readFile(sourcePath, "utf8");
+    assert.equal(
+      exactWrapperDrawSupportPattern.test(source),
+      false,
+      `engine-core production support predicate must not encode an exact draw wrapper/body pair: ${sourcePath}`,
+    );
+  }
+});
+
+test("effect runtime queue results stays a small assembly module", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/effect-runtime-queue/results.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 220,
+    `effect-runtime-queue/results.ts should assemble focused modules, not own queue resolution; found ${String(lineCount)} lines`,
+  );
+});
+
+test("effect runtime sequence saved-field-object stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/effect-runtime-sequence/saved-field-object.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 160,
+    `effect-runtime-sequence/saved-field-object.ts should be a public barrel over focused saved-field-object modules; found ${String(lineCount)} lines`,
+  );
+});
+
+test("effect runtime sequence runner stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/effect-runtime-sequence/runner.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 160,
+    `effect-runtime-sequence/runner.ts should be a public barrel over focused runner modules; found ${String(lineCount)} lines`,
+  );
+});
+
+test("replacement primitives stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/replacement/primitives.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 180,
+    `replacement/primitives.ts should be a public barrel over focused replacement support modules; found ${String(lineCount)} lines`,
+  );
+});
+
+test("replacement field-removal process stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/replacement/field-removal-process.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 220,
+    `replacement/field-removal-process.ts should be a public barrel over focused field-removal process modules; found ${String(lineCount)} lines`,
+  );
+});
+
 async function listProductionSourcePaths(
   directoryPath: string,
 ): Promise<readonly string[]> {

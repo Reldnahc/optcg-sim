@@ -1,0 +1,24 @@
+{
+  "name": "@optcg/card-support",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "support:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/support-probe.ts",
+    "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
+    "test": "corepack pnpm exec vitest run --root ../.. packages/card-support/src"
+  },
+  "dependencies": {
+    "@optcg/cards": "workspace:*",
+    "@optcg/engine-core": "workspace:*",
+    "@optcg/types": "workspace:*",
+    "optcg-deck-hash": "^0.1.3"
+  }
+}

@@ -184,6 +184,31 @@ describe("cards package architecture boundaries", () => {
       expect(file.contents, file.path).not.toMatch(fullLineParserPattern);
     }
   });
+
+  it("keeps cards production source independent from engine runtime and deck-hash probing", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const forbiddenRuntimeImports =
+      /from\s+["'](?:@optcg\/engine-core|optcg-deck-hash)(?:\/[^"']*)?["']/;
+
+    for (const file of files) {
+      expect(file.contents, file.path).not.toMatch(forbiddenRuntimeImports);
+    }
+  });
+
+  it("keeps parser support certification primitive-evidence driven", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const certificateFile = files.find((file) =>
+      file.path.endsWith("/materialization/support-certificate.ts"),
+    );
+
+    expect(certificateFile).toBeDefined();
+    expect(certificateFile?.contents).not.toMatch(
+      /\b(?:cardId|parserRuleId|shapeId|componentEvidenceId|runtimeCapability|supportAllowlist|supportInventory)\b/u,
+    );
+    expect(certificateFile?.contents).not.toMatch(
+      /\b(?:parserRule|shape|component|capability)[A-Za-z0-9_]*To[A-Za-z0-9_]*(?:Support|Certification)\b/u,
+    );
+  });
 });
 
 function escapeRegex(value: string): string {

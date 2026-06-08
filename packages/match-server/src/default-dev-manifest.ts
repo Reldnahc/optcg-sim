@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { createRedisCardDataCache } from "@optcg/cards";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
-  createRedisCardDataCache,
   type DevPoneglyphFetch,
-} from "@optcg/cards";
+} from "@optcg/card-support";
 import type { CardId, PlayerId, VariantKey } from "@optcg/types";
 
 import {

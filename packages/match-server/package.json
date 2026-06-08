@@ -16,6 +16,7 @@
     "test": "corepack pnpm exec vitest run --root ../.. packages/match-server/src"
   },
   "dependencies": {
+    "@optcg/card-support": "workspace:*",
     "@optcg/cards": "workspace:*",
     "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*",

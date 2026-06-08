@@ -8,6 +8,10 @@ import {
   parseDevCardIdList,
 } from "./dev-manifest.js";
 
+const runtimeSupported = (): { readonly supported: true } => ({
+  supported: true,
+});
+
 const baseCard = (
   cardNumber: string,
   effect: string | null,
@@ -111,6 +115,7 @@ describe("dev Poneglyph manifest builder", () => {
         "OP01-002": baseCard("OP01-002", "unsupported text."),
       }),
       createdAt: "2026-05-25T00:00:00.000Z",
+      runtimeSupportEvaluator: runtimeSupported,
     });
 
     const supported = manifestCard(manifest.cards, op01001);

@@ -2,7 +2,6 @@ import type {
   Action,
   CardInstance,
   CardRef,
-  Effect,
   EffectDefinition,
   EffectQueueEntry,
   EngineEvent,
@@ -11,6 +10,7 @@ import type {
   LegalAction,
   PlayerId,
   ResolvedCard,
+  SourcePresencePolicy,
 } from "@optcg/types";
 
 import {
@@ -36,6 +36,7 @@ import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
+import { isSupportedDrawBody } from "../primitives/draw.js";
 
 const isFieldZoneForActivateMain = (
   zone: CardRef["zone"],
@@ -59,51 +60,42 @@ export const isScopedActivateMainQueueEntry = (
 
 type ActivateMainSource = CardRef & { zone: NonNullable<CardRef["zone"]> };
 
-const isSupportedActivateMainDrawEffectShape = (
+type ActivateMainRuntimeEffectBlock = EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: SourcePresencePolicy;
+};
+
+const hasSupportedActivateMainEnvelope = (
   effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  effect: Extract<Effect, { type: "draw" }>;
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} =>
+): effect is ActivateMainRuntimeEffectBlock =>
   effect.category === "activate" &&
   effect.trigger.type === "activateMain" &&
   effect.sourcePresencePolicy === "mustRemainInSameZone" &&
   effect.cost === undefined &&
   effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  effect.effect.type === "draw" &&
-  Number.isInteger(effect.effect.count) &&
-  effect.effect.count >= 0 &&
-  effect.effect.player === "self";
+  effect.failurePolicy === undefined;
 
-export const isSupportedActivateMainNoChoiceDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  effect: Extract<Effect, { type: "draw" }>;
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} => effect.optional !== true && isSupportedActivateMainDrawEffectShape(effect);
-
-export const isSupportedOptionalActivateMainNoChoiceDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  effect: Extract<Effect, { type: "draw" }>;
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} => effect.optional === true && isSupportedActivateMainDrawEffectShape(effect);
-
-export const isSupportedActivateMainContinuousEffect = (
+const isSupportedActivateMainContinuousBody = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
 } =>
-  effect.category === "activate" &&
-  effect.trigger.type === "activateMain" &&
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  effect.optional !== true &&
-  effect.cost === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
   isSupportedQueuedEffectConditionShape(effect.condition) &&
   isSupportedContinuousQueueEffect(effect.effect);
+
+export const isSupportedActivateMainRuntimeEffectBlock = (
+  effect: EffectDefinition["effects"][number],
+): effect is ActivateMainRuntimeEffectBlock => {
+  if (!hasSupportedActivateMainEnvelope(effect)) {
+    return false;
+  }
+  if (effect.optional === true) {
+    return isSupportedDrawBody(effect.effect);
+  }
+  return (
+    isSupportedDrawBody(effect.effect) ||
+    isSupportedActivateMainContinuousBody(effect)
+  );
+};
 
 const findLiveCardBySource = (
   state: GameState,
@@ -220,9 +212,7 @@ const findSupportedActivateMainEffects = (
       resolvedCard,
     });
     return (
-      isSupportedActivateMainNoChoiceDrawEffect(effect) ||
-      isSupportedOptionalActivateMainNoChoiceDrawEffect(effect) ||
-      isSupportedActivateMainContinuousEffect(effect) ||
+      isSupportedActivateMainRuntimeEffectBlock(effect) ||
       (effect.trigger.type === "activateMain" &&
         isSupportedSequenceBlock(sequenceSupportEntry, effect))
     );

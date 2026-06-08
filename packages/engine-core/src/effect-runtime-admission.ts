@@ -1,10 +1,12 @@
-import type { EffectBlock, EffectQueueEntry } from "@optcg/types";
+import type {
+  Effect,
+  EffectBlock,
+  EffectQueueEntry,
+  RuntimeSupportReport,
+  SupportEvidenceRecord,
+} from "@optcg/types";
 
-import {
-  isSupportedActivateMainContinuousEffect,
-  isSupportedActivateMainNoChoiceDrawEffect,
-  isSupportedOptionalActivateMainNoChoiceDrawEffect,
-} from "./runtime/optional-activation/activate-main.js";
+import { isSupportedActivateMainRuntimeEffectBlock } from "./runtime/optional-activation/activate-main.js";
 import { isSupportedActivatedReactionEffect } from "./runtime/optional-activation/event-reaction.js";
 import {
   isSupportedAutoRuntimeEffectBlock,
@@ -13,12 +15,13 @@ import {
 import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
 import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence/support.js";
+import {
+  createRuntimeSupportReport,
+  runtimeSupportRecord,
+} from "./runtime-support-report.js";
 import { isSupportedStartOfGameEffectBlock } from "./setup/start-of-game-effects.js";
 
-export interface RuntimeSupportAdmissionResult {
-  readonly supported: boolean;
-  readonly reason?: string;
-}
+export type RuntimeSupportAdmissionResult = RuntimeSupportReport;
 
 export const evaluateEffectBlockRuntimeSupport = (
   block: EffectBlock,
@@ -26,51 +29,49 @@ export const evaluateEffectBlockRuntimeSupport = (
   if (block.category === "auto") {
     if (block.trigger.type === "startOfGame") {
       return isSupportedStartOfGameEffectBlock(block)
-        ? { supported: true }
-        : {
-            supported: false,
-            reason: "unsupported start-of-game effect shape",
-          };
+        ? supportedBlockReport(block)
+        : unsupportedBodyReport(
+            block,
+            "unsupported start-of-game effect shape",
+          );
     }
 
     const adapter = autoAdapterFor(block);
     if (adapter === undefined) {
-      return unsupportedEnvelope();
+      return unsupportedEnvelope(block);
     }
 
     return isSupportedAutoRuntimeEffectBlock(block, adapter)
-      ? { supported: true }
-      : { supported: false, reason: "unsupported auto effect body" };
+      ? supportedBlockReport(block)
+      : unsupportedBodyReport(block, "unsupported auto effect body");
   }
 
   if (block.category === "activate" && block.trigger.type === "activateMain") {
-    return isSupportedActivateMainNoChoiceDrawEffect(block) ||
-      isSupportedActivateMainContinuousEffect(block) ||
-      isSupportedOptionalActivateMainNoChoiceDrawEffect(block) ||
+    return isSupportedActivateMainRuntimeEffectBlock(block) ||
       isSupportedSequenceBlock(activateMainProbeQueueEntry, block)
-      ? { supported: true }
-      : { supported: false, reason: "unsupported activate-main effect body" };
+      ? supportedBlockReport(block)
+      : unsupportedBodyReport(block, "unsupported activate-main effect body");
   }
 
   if (block.category === "activate") {
     return isSupportedActivatedReactionEffect(block)
-      ? { supported: true }
-      : { supported: false, reason: "unsupported activated-reaction body" };
+      ? supportedBlockReport(block)
+      : unsupportedBodyReport(block, "unsupported activated-reaction body");
   }
 
   if (block.category === "permanent" && block.trigger.type === "permanent") {
     return isSupportedPermanentContinuousEffectBlock(block)
-      ? { supported: true }
-      : { supported: false, reason: "unsupported permanent effect body" };
+      ? supportedBlockReport(block)
+      : unsupportedBodyReport(block, "unsupported permanent effect body");
   }
 
   if (block.category === "replacement") {
     return isSupportedReplacementEffectBlock(block)
-      ? { supported: true }
-      : { supported: false, reason: "unsupported replacement effect body" };
+      ? supportedBlockReport(block)
+      : unsupportedBodyReport(block, "unsupported replacement effect body");
   }
 
-  return unsupportedEnvelope();
+  return unsupportedEnvelope(block);
 };
 
 const autoAdapterFor = (
@@ -131,10 +132,74 @@ const autoAdapter = (
   triggerType,
 });
 
-const unsupportedEnvelope = (): RuntimeSupportAdmissionResult => ({
-  supported: false,
-  reason: "unsupported trigger/category/source-presence envelope",
-});
+const supportedBlockReport = (block: EffectBlock): RuntimeSupportReport =>
+  createRuntimeSupportReport([
+    ...entrySupportRecords(block, true),
+    runtimeSupportRecord({
+      family: "body",
+      id: effectBodyId(block.effect),
+      supported: true,
+      effectPath: ["effect"],
+    }),
+  ]);
+
+const unsupportedBodyReport = (
+  block: EffectBlock,
+  reason: string,
+): RuntimeSupportReport =>
+  createRuntimeSupportReport([
+    ...entrySupportRecords(block, true),
+    runtimeSupportRecord({
+      family: "body",
+      id: effectBodyId(block.effect),
+      supported: false,
+      reason,
+      effectPath: ["effect"],
+    }),
+  ]);
+
+const unsupportedEnvelope = (
+  block: EffectBlock,
+): RuntimeSupportAdmissionResult =>
+  createRuntimeSupportReport([
+    ...entrySupportRecords(block, false, {
+      reason: "unsupported trigger/category/source-presence envelope",
+    }),
+    runtimeSupportRecord({
+      family: "body",
+      id: effectBodyId(block.effect),
+      supported: false,
+      reason: "unsupported trigger/category/source-presence envelope",
+      effectPath: ["effect"],
+    }),
+  ]);
+
+const entrySupportRecords = (
+  block: EffectBlock,
+  supported: boolean,
+  options: { readonly reason?: string } = {},
+): readonly SupportEvidenceRecord[] => [
+  runtimeSupportRecord({
+    family: "entryPoint",
+    id: block.trigger.type,
+    supported,
+    ...(options.reason === undefined ? {} : { reason: options.reason }),
+    effectPath: ["trigger"],
+  }),
+  ...(block.sourcePresencePolicy === undefined
+    ? []
+    : [
+        runtimeSupportRecord({
+          family: "sourcePresence",
+          id: block.sourcePresencePolicy,
+          supported,
+          ...(options.reason === undefined ? {} : { reason: options.reason }),
+          effectPath: ["sourcePresencePolicy"],
+        }),
+      ]),
+];
+
+const effectBodyId = (effect: Effect): string => effect.type;
 
 const probePlayerId = "player-1" as EffectQueueEntry["controllerId"];
 

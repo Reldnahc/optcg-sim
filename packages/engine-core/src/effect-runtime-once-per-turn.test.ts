@@ -14,10 +14,7 @@ import {
 } from "./battle/test-fixtures.js";
 import {
   isSupportedEffectResolvedCustomDrawEffect,
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedNoChoiceOnPlayDrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
+  isSupportedQueuedDrawEffectBlock,
 } from "./runtime/primitives/execute.js";
 import {
   applyAction,
@@ -296,18 +293,18 @@ const oncePerTurnNoChoiceDrawEffect = (
   effect: { type: "draw", player: "self", count: 1 },
 });
 
-test("non-optional once-per-turn no-choice onPlay draw shape is queue-supported", () => {
+test("non-optional once-per-turn onPlay draw block is queue-supported", () => {
   assert.equal(
-    isSupportedNoChoiceOnPlayDrawEffect(
+    isSupportedQueuedDrawEffectBlock(
       oncePerTurnNoChoiceDrawEffect({ type: "onPlay" }, "mustRemainInSameZone"),
     ),
     true,
   );
 });
 
-test("non-optional once-per-turn no-choice whenAttacking draw shape is queue-supported", () => {
+test("non-optional once-per-turn whenAttacking draw block is queue-supported", () => {
   assert.equal(
-    isSupportedNoChoiceWhenAttackingDrawEffect(
+    isSupportedQueuedDrawEffectBlock(
       oncePerTurnNoChoiceDrawEffect(
         { type: "whenAttacking" },
         "mustRemainInSameZone",
@@ -317,9 +314,9 @@ test("non-optional once-per-turn no-choice whenAttacking draw shape is queue-sup
   );
 });
 
-test("non-optional once-per-turn no-choice onOpponentAttack draw shape is queue-supported", () => {
+test("non-optional once-per-turn onOpponentAttack draw block is queue-supported", () => {
   assert.equal(
-    isSupportedNoChoiceOnOpponentAttackDrawEffect(
+    isSupportedQueuedDrawEffectBlock(
       oncePerTurnNoChoiceDrawEffect(
         { type: "onOpponentAttack" },
         "mustRemainInSameZone",
@@ -329,9 +326,9 @@ test("non-optional once-per-turn no-choice onOpponentAttack draw shape is queue-
   );
 });
 
-test("non-optional once-per-turn no-choice onKO draw shape is queue-supported", () => {
+test("non-optional once-per-turn onKO draw block is queue-supported", () => {
   assert.equal(
-    isSupportedNoChoiceOnKODrawEffect(
+    isSupportedQueuedDrawEffectBlock(
       oncePerTurnNoChoiceDrawEffect(
         { type: "onKO" },
         "resolveFromDestinationZone",

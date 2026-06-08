@@ -16,10 +16,9 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
 } from "../../action-test-fixtures.js";
-import {
-  isSupportedNoChoiceOnPlayDrawEffect,
-  processEffectRuntime,
-} from "../../effect-runtime.js";
+import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import { processEffectRuntime } from "../../effect-runtime.js";
+import { isSupportedQueuedDrawEffectBlock } from "../primitives/execute.js";
 import {
   appendCardPlayedEvent,
   expectOnPlayQueueingFailure,
@@ -265,7 +264,7 @@ test("optional On Play draw support gate queues for optional activation", () => 
 
   const result = processEffectRuntime(state);
 
-  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(optionalEffect), false);
+  assert.equal(isSupportedQueuedDrawEffectBlock(optionalEffect), false);
   assert.equal(result.errors, undefined);
   assert.deepEqual(
     result.events.map((event) => event.type),
@@ -361,7 +360,7 @@ test("unreviewed On Play definition metadata fails closed without queue mutation
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
 });
 
-test("public no-choice draw trigger support remains limited to same-zone source presence", () => {
+test("public On Play trigger admission remains limited to same-zone source presence", () => {
   const baseCard = resolvedCard({
     cardId: toCardId("OP01-015"),
     category: "character",
@@ -376,8 +375,16 @@ test("public no-choice draw trigger support remains limited to same-zone source 
     sourcePresencePolicy: "resolveFromLastKnownInformation",
   };
 
-  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(sameZoneEffect), true);
-  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(lkiEffect), false);
+  const adapter = {
+    category: "auto" as const,
+    sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+    triggerType: "onPlay" as const,
+  };
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(sameZoneEffect, adapter),
+    true,
+  );
+  assert.equal(isSupportedAutoRuntimeEffectBlock(lkiEffect, adapter), false);
 });
 
 test("queued source snapshot preserves CardInstance owner/controller", () => {

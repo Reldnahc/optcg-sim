@@ -1,15 +1,28 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
-import type { CardId, EffectBlock } from "@optcg/types";
+import type {
+  CardId,
+  EffectBlock,
+  ParserSupportCertificate,
+  RuntimeSupportReport,
+} from "@optcg/types";
+import {
+  createParserSupportCertificate,
+  gameplayLinesFromTextParts,
+  parseCardEffectLinesDetailed,
+  parseRawKeywordLine,
+  type ParsedEffectLine,
+  type ParsedRuntimeEffectLine,
+} from "@optcg/cards";
 import {
   createApiDeckHashDictionarySource,
   createDeckHashCodec,
   type DeckHashDeck,
 } from "optcg-deck-hash";
 
-import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
-import { gameplayLinesFromTextParts } from "./effect-text-lines.js";
-import { parseRawKeywordLine } from "./keywords/index.js";
-import type { ParsedEffectLine } from "./types.js";
+import {
+  formatPrimitiveSupportSections,
+  prefixPrimitiveSupportLines,
+} from "./primitive-support-output.js";
 
 export interface SupportProbeRequest {
   readonly text?: string;
@@ -182,6 +195,15 @@ const createDeckHashSupportProbeReport = async (
         cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
         );
+        cardFailureLines.push(
+          ...prefixPrimitiveSupportLines(
+            `${card.cardId} line ${String(lineNumber)} `,
+            formatPrimitiveSupportSections({
+              parserCertificate: lineReport.parserCertificate,
+              runtimeReports: lineReport.runtimeReports,
+            }),
+          ),
+        );
       }
     }
 
@@ -336,6 +358,17 @@ const createCardSupportProbeReport = async (
         `Line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
       );
     }
+    if (lineReport.kind === "effect") {
+      lines.push(
+        ...prefixPrimitiveSupportLines(
+          `Line ${String(lineNumber)} `,
+          formatPrimitiveSupportSections({
+            parserCertificate: lineReport.parserCertificate,
+            runtimeReports: lineReport.runtimeReports,
+          }),
+        ),
+      );
+    }
   }
 
   return { exitCode, lines, errors: [] };
@@ -447,7 +480,14 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   if (!lineReport.runtimeSupported) {
     lines.push(`Engine runtime reason: ${runtimeReason(lineReport)}`);
   }
-  lines.push("Evidence:");
+  lines.push(
+    ...formatPrimitiveSupportSections({
+      parserCertificate: lineReport.parserCertificate,
+      runtimeReports: lineReport.runtimeReports,
+    }),
+  );
+  lines.push("Diagnostics:");
+  lines.push("Parser evidence diagnostics:");
   for (const evidence of uniqueEvidence(lineReport.values)) {
     lines.push(`- ${evidence}`);
   }
@@ -473,6 +513,8 @@ type ParsedLineReport =
       >[];
       readonly runtimeSupported: boolean;
       readonly runtimeReason?: string;
+      readonly parserCertificate: ParserSupportCertificate;
+      readonly runtimeReports: readonly RuntimeSupportReport[];
     }
   | {
       readonly kind: "metadata";
@@ -532,9 +574,9 @@ const evaluateParsedLine = (
   }
 
   const values = parsed.value.filter(
-    (value): value is Extract<ParsedEffectLine, { readonly block: unknown }> =>
-      value.kind !== "metadata",
+    (value): value is ParsedRuntimeEffectLine => value.kind !== "metadata",
   );
+  const parserCertificate = createParserSupportCertificate(values);
   const runtimeResults = values.map((value, index) =>
     evaluateEffectBlockRuntimeSupport({
       ...value.block,
@@ -549,10 +591,12 @@ const evaluateParsedLine = (
     kind: "effect",
     parseOk: true,
     values,
-    runtimeSupported: firstFailure === undefined,
+    runtimeSupported: parserCertificate.complete && firstFailure === undefined,
     ...(firstFailure?.reason === undefined
       ? {}
       : { runtimeReason: firstFailure.reason }),
+    parserCertificate,
+    runtimeReports: runtimeResults,
   };
 };
 
