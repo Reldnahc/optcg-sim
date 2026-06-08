@@ -200,14 +200,14 @@ const conditionalDraw = (): Extract<Effect, { type: "sequence" }> => ({
 
 test("sequence runner executes draw through root, nested, and conditional composition doors", () => {
   const cases = [
-    { effect: rootDraw(), name: "root" },
-    { effect: nestedDraw(), name: "nested" },
-    { effect: conditionalDraw(), name: "conditional", trash: true },
+    { effect: rootDraw(), name: "root", withTrash: false },
+    { effect: nestedDraw(), name: "nested", withTrash: false },
+    { effect: conditionalDraw(), name: "conditional", withTrash: true },
   ] as const;
 
   for (const testCase of cases) {
     const state = sequenceQueueState(testCase.effect);
-    if (testCase.trash === true) {
+    if (testCase.withTrash) {
       addP1BlackCharacterToTrash(state);
     }
     const beforeP1 = must(state.players[p1], `${testCase.name} before p1`);
