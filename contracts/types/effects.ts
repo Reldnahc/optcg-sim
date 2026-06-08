@@ -760,6 +760,11 @@ export type Effect =
       filter?: CardFilter;
       saveAs: SelectionId;
     }
+  | {
+      type: "revealSelected";
+      selection: SelectionId;
+      visibility: Visibility;
+    }
   | SelectCardsEffect
   | SelectTargetsEffect
   | {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect line parser search effects", () => {
-  it("parses top-of-deck type search reveal as one reusable search request", () => {
+  it("parses public top-of-deck type search reveal as decomposed looked-set primitives", () => {
     const result = parseCardEffectLine(
       "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
     );
@@ -14,29 +14,70 @@ describe("card effect line parser search effects", () => {
         trigger: { type: "onPlay" },
         sourcePresencePolicy: "mustRemainInSameZone",
         effect: {
-          type: "search",
-          request: {
-            zone: "deck",
-            player: "self",
-            lookCount: 5,
-            filter: { typesAny: ["Five Elders"] },
-            min: 0,
-            max: 1,
-            destination: "hand",
-            revealTo: "bothPlayers",
-            remainingCards: {
-              destination: "deck",
-              position: "bottom",
-              order: "ownerChoice",
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 5,
+                saveAs: "set:search-look",
+                visibility: "chooserOnly",
+              },
             },
-            shuffleAfter: false,
-          },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:search-look",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: { typesAny: ["Five Elders"] },
+                saveAs: "searchSelection:hand",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                selection: "searchSelection:hand",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "searchSelection:hand",
+                from: "set:search-look",
+                to: "hand",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:search-look",
+                owner: "self",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+          ],
         },
       },
     });
     expect(result?.evidence).toEqual(
       expect.arrayContaining([
-        "instruction:search",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:revealSelected",
+        "instruction:moveSelected",
+        "instruction:placeSetRemainder",
         "look:topDeck",
         "zone:deck",
         "count:positiveInteger",

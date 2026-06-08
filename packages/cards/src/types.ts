@@ -107,6 +107,7 @@ export type PrimitiveEvidence =
   | "instruction:moveSelected"
   | "instruction:revealTop"
   | "instruction:selectFromSet"
+  | "instruction:revealSelected"
   | "instruction:placeSetRemainder"
   | "instruction:returnToOwnerHand"
   | "instruction:trash"

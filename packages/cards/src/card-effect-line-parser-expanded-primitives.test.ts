@@ -59,22 +59,14 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
           },
         },
         effect: {
-          type: "search",
-          request: {
-            zone: "deck",
-            player: "self",
-            lookCount: 4,
-            filter: { cost: { min: 3 } },
-            min: 0,
-            max: 1,
-            destination: "hand",
-            revealTo: "bothPlayers",
-            remainingCards: {
-              destination: "deck",
-              position: "bottom",
-              order: "ownerChoice",
-            },
-          },
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 4 } },
+            { effect: { type: "selectFromSet", filter: { cost: { min: 3 } } } },
+            { effect: { type: "revealSelected" } },
+            { effect: { type: "moveSelected", to: "hand" } },
+            { effect: { type: "placeSetRemainder", position: "bottom" } },
+          ],
         },
       },
     });

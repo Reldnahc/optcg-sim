@@ -39,6 +39,7 @@ import {
 import { type SupportedSequenceSegment } from "../support.js";
 import { applyRuntimePlaySource } from "../../play-card/core.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
+import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
 import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
 import {
   conditionalThenSequencePath,
@@ -507,6 +508,25 @@ export const continueNoDecisionSegments = (
       nextState = placed.state;
       nextLedgers = placed.ledgers;
       events.push(...placed.events);
+      continue;
+    }
+    if (segment.effect.type === "revealSelected") {
+      const revealed = applyRevealSelectedSequenceSegment({
+        effect: segment.effect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      if (!revealed.ok) {
+        return { ok: false };
+      }
+      nextState = revealed.state;
+      nextLedgers = revealed.ledgers;
+      events.push(...revealed.events);
       continue;
     }
     if (segment.effect.type === "selectTargets") {

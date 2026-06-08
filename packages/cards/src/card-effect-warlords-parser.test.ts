@@ -212,22 +212,19 @@ describe("warlords parser primitives", () => {
             },
             {
               effect: {
-                type: "search",
-                request: {
-                  zone: "deck",
-                  player: "self",
-                  lookCount: 5,
-                  filter: { typesAny: ["Supernovas"] },
-                  min: 0,
-                  max: 1,
-                  destination: "hand",
-                  revealTo: "bothPlayers",
-                  remainingCards: {
-                    destination: "deck",
-                    position: "bottom",
-                    order: "ownerChoice",
+                type: "sequence",
+                effects: [
+                  { effect: { type: "revealTop", count: 5 } },
+                  {
+                    effect: {
+                      type: "selectFromSet",
+                      filter: { typesAny: ["Supernovas"] },
+                    },
                   },
-                },
+                  { effect: { type: "revealSelected" } },
+                  { effect: { type: "moveSelected", to: "hand" } },
+                  { effect: { type: "placeSetRemainder", position: "bottom" } },
+                ],
               },
             },
           ],
@@ -237,7 +234,11 @@ describe("warlords parser primitives", () => {
     expect(result?.evidence).toContain("composition:costSequence");
     expect(result?.evidence).toContain("cost:restDon");
     expect(result?.evidence).toContain("cost:restSelf");
-    expect(result?.evidence).toContain("instruction:search");
+    expect(result?.evidence).toContain("instruction:revealTop");
+    expect(result?.evidence).toContain("instruction:selectFromSet");
+    expect(result?.evidence).toContain("instruction:revealSelected");
+    expect(result?.evidence).toContain("instruction:moveSelected");
+    expect(result?.evidence).toContain("instruction:placeSetRemainder");
   });
 
   it("parses return-to-owner-hand cost into play-from-hand rested body", () => {

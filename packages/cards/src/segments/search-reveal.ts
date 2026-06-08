@@ -79,7 +79,7 @@ export function searchRevealExpressionParser(
     remainingEvidence: remaining.evidence,
     searchEvidence,
   });
-  const decomposedSearch = createPrivateBottomSearchSequence({
+  const decomposedSearch = createBottomSearchSequence({
     look,
     reveal,
     remaining,
@@ -148,7 +148,7 @@ type ParsedSearchParts = {
     | NonNullable<ReturnType<typeof parseRestToTrash>>;
 };
 
-const createPrivateBottomSearchSequence = ({
+const createBottomSearchSequence = ({
   look,
   reveal,
   remaining,
@@ -158,12 +158,23 @@ const createPrivateBottomSearchSequence = ({
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined => {
-  if (
-    reveal.revealTo !== "chooserOnly" ||
-    remaining.remainingCards.destination !== "deck"
-  ) {
+  if (remaining.remainingCards.destination !== "deck") {
     return undefined;
   }
+
+  const selectedReveal =
+    reveal.revealTo === "bothPlayers"
+      ? [
+          {
+            connector: "ifPreviousSucceeded" as const,
+            effect: {
+              type: "revealSelected" as const,
+              selection: searchHandSelection,
+              visibility: "bothPlayers" as const,
+            },
+          },
+        ]
+      : [];
 
   return {
     effect: {
@@ -192,6 +203,7 @@ const createPrivateBottomSearchSequence = ({
             saveAs: searchHandSelection,
           },
         },
+        ...selectedReveal,
         {
           connector: "ifPreviousSucceeded",
           effect: {
@@ -220,6 +232,9 @@ const createPrivateBottomSearchSequence = ({
       ...look.evidence,
       "instruction:selectFromSet",
       ...reveal.evidence,
+      ...(reveal.revealTo === "bothPlayers"
+        ? (["instruction:revealSelected"] as const)
+        : []),
       "instruction:moveSelected",
       "instruction:placeSetRemainder",
       ...remaining.evidence,

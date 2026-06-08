@@ -14,6 +14,7 @@ export type AttachSelectedDonEffect = Extract<
 export type PlaySourceEffect = Extract<Effect, { type: "playSource" }>;
 export type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 export type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
+export type RevealSelectedEffect = Extract<Effect, { type: "revealSelected" }>;
 export type PlaceSetRemainderEffect = Extract<
   Effect,
   { type: "placeSetRemainder" }
@@ -136,6 +137,12 @@ export const isSupportedSelectFromSetSegment = (
   effect.min >= 0 &&
   effect.max >= effect.min &&
   isSupportedHandSelectionCardFilter(effect.filter);
+
+export const isSupportedRevealSelectedSegment = (
+  effect: SequenceSegmentEffect,
+): effect is RevealSelectedEffect =>
+  effect.type === "revealSelected" &&
+  (effect.visibility === "bothPlayers" || effect.visibility === "chooserOnly");
 
 export const isSupportedPlaceSetRemainderSegment = (
   effect: SequenceSegmentEffect,

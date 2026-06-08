@@ -38,6 +38,7 @@ import {
   isSupportedAttachSelectedDonSegment,
   isSupportedPlaceSetRemainderSegment,
   isSupportedPlaySourceSegment,
+  isSupportedRevealSelectedSegment,
   isSupportedRevealTopSegment,
   isSupportedSelectFromSetSegment,
   isSupportedSequenceSelectCardsSegment,
@@ -46,6 +47,7 @@ import {
   type MoveSelectedEffect,
   type PlaceSetRemainderEffect,
   type PlaySourceEffect,
+  type RevealSelectedEffect,
   type RevealTopEffect,
   type SelectFromSetEffect,
 } from "./support/selection.js";
@@ -98,6 +100,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | PlaySourceEffect
     | RevealTopEffect
     | SelectFromSetEffect
+    | RevealSelectedEffect
     | PlaceSetRemainderEffect
     | BounceEffect
     | DirectContinuousEffect
@@ -303,6 +306,9 @@ export const toSupportedSequenceBlock = (
       if (isSupportedSelectFromSetSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         supportState.selectFromSetSelections.add(String(segment.effect.saveAs));
+        return true;
+      }
+      if (isSupportedRevealSelectedSegment(segment.effect)) {
         return true;
       }
       if (isSupportedPlaceSetRemainderSegment(segment.effect)) {
