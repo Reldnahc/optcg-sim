@@ -4,7 +4,6 @@ import type {
   Effect,
   EffectExecutionFrame,
   EffectQueueEntry,
-  EngineError,
   EngineEvent,
   GameState,
   SequenceSegmentResult,
@@ -53,81 +52,31 @@ import {
   segmentKeyForPath,
   toSingleEffectSequence,
 } from "./paths.js";
+import { emptySegmentResult } from "./runner/results.js";
+import type {
+  CreateTrashFromHandSequenceDecision,
+  DrawEffect,
+  MoveCardsEffect,
+  PayCostEffect,
+  SegmentLedgers,
+  SequenceEffect,
+  SequenceFrameRunResult,
+  SequenceSegmentEffect,
+  TrashFromHandEffect,
+} from "./runner/types.js";
 
 export {
   resolveSequenceForPath,
   segmentKey,
   segmentKeyForPath,
 } from "./paths.js";
-
-type SequenceEffect = Extract<Effect, { type: "sequence" }>;
-type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
-type DrawEffect = Extract<Effect, { type: "draw" }>;
-type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
-type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
-type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
-export type SegmentLedgers = {
-  savedReferences: EffectExecutionFrame["savedReferences"];
-  segmentResults: EffectExecutionFrame["segmentResults"];
-};
-type TrashDecisionResult =
-  | { events: EngineEvent[]; ok: true; state: GameState }
-  | { error: EngineError; events: EngineEvent[]; ok: false; state: GameState };
-export type CreateTrashFromHandSequenceDecision = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  effect: TrashFromHandEffect,
-) => TrashDecisionResult;
-export type SequenceFrameResumeResult =
-  | { events: EngineEvent[]; ok: true; state: GameState }
-  | { error: EngineError; ok: false }
-  | undefined;
-
-export type SequenceFrameRunResult =
-  | {
-      events: EngineEvent[];
-      kind: "completed";
-      ledgers: SegmentLedgers;
-      ok: true;
-      state: GameState;
-    }
-  | {
-      events: EngineEvent[];
-      kind: "paused";
-      ok: true;
-      state: GameState;
-    }
-  | { ok: false };
-
-type SequenceRuntimeFailureReason =
-  | "missing-frame"
-  | "missing-queue-entry"
-  | "missing-effect-block"
-  | "unsupported-sequence-shape"
-  | "segment-execution-failed";
-
-interface SequenceRuntimeErrorDetails {
-  reason: SequenceRuntimeFailureReason;
-}
-
-export const emptySegmentResult = (): SequenceSegmentResult => ({
-  attempted: false,
-  succeeded: false,
-  changedState: false,
-  selectedCards: [],
-  selectedTargets: [],
-  paidCost: false,
-  playerDeclined: false,
-});
-
-export const sequenceRuntimeError = (
-  effectId: EffectQueueEntry["effectBlockId"],
-  reason: SequenceRuntimeFailureReason,
-): EngineError => ({
-  type: "effectRuntimeError",
-  effectId,
-  details: { reason } satisfies SequenceRuntimeErrorDetails,
-});
+export { emptySegmentResult, sequenceRuntimeError } from "./runner/results.js";
+export type {
+  CreateTrashFromHandSequenceDecision,
+  SegmentLedgers,
+  SequenceFrameResumeResult,
+  SequenceFrameRunResult,
+} from "./runner/types.js";
 
 const currentCardsForContinuousMatching = (state: GameState): CardInstance[] =>
   Object.values(state.players).flatMap((player) => [
