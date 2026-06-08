@@ -16,8 +16,13 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { reindexZoneCards, zonesEqual } from "../actions/state.js";
 import { hasSequenceFrameForDecision } from "../effect-runtime-sequence/frame-decisions.js";
+import {
+  activeDeckCardsForOrder,
+  orderedDeckCardsFromIds,
+  orderedIdsFromResponse,
+  placeOrderedCardsOnDeck,
+} from "../effect-runtime-card-set/remainder-order.js";
 import { activeSpanIdsForSearchRevealRemaining } from "../runtime/effect-presentation.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
@@ -31,9 +36,6 @@ const isSearchRevealOrderCardsDecision = (
 ): decision is OrderCardsDecision =>
   decision.type === "orderCards" &&
   String(decision.id).startsWith(searchRevealOrderPrefix);
-
-const hasDuplicateIds = (ids: readonly string[]): boolean =>
-  ids.some((id, index) => ids.slice(index + 1).includes(id));
 
 const entryWithRemainingCardsPresentation = (
   entry: EffectQueueEntry,
@@ -118,40 +120,22 @@ export const applySearchRevealOrderResponse = (
   }
   const responseIds = (action.response as { ids?: unknown }).ids;
   const expectedIds = decision.cards.map((card) => String(card.instanceId));
-  if (
-    !Array.isArray(responseIds) ||
-    !responseIds.every((id) => typeof id === "string") ||
-    hasDuplicateIds(responseIds) ||
-    responseIds.length !== expectedIds.length ||
-    !responseIds.every((id) => expectedIds.includes(id))
-  ) {
+  const orderedIds = orderedIdsFromResponse(responseIds, expectedIds);
+  if (orderedIds === null) {
     return fail("Ordered ids must match the remaining search cards.");
   }
   const player = state.players[decision.playerId];
   if (player === undefined)
     return fail("Search reveal order player is missing.");
-  const activeDeckCards = player.deck.slice(0, decision.cards.length);
-  if (
-    activeDeckCards.length !== decision.cards.length ||
-    !decision.cards.every((card, index) => {
-      const deckCard = activeDeckCards[index];
-      return (
-        deckCard !== undefined &&
-        card.instanceId === deckCard.instanceId &&
-        card.cardId === deckCard.cardId &&
-        card.zone !== undefined &&
-        zonesEqual(card.zone, deckCard.zone)
-      );
-    })
-  ) {
+  const activeDeckCards = activeDeckCardsForOrder(
+    state,
+    decision.playerId,
+    decision.cards,
+  );
+  if (activeDeckCards === null) {
     return fail("Search reveal order cards are stale or unsupported.");
   }
-  const orderedCards = responseIds.flatMap((id) => {
-    const card = activeDeckCards.find(
-      (candidate) => String(candidate.instanceId) === id,
-    );
-    return card === undefined ? [] : [card];
-  });
+  const orderedCards = orderedDeckCardsFromIds(activeDeckCards, orderedIds);
   const causedBy = decision.causedBy;
   const queuedEntry =
     causedBy.type === "effect"
@@ -171,7 +155,7 @@ export const applySearchRevealOrderResponse = (
       decisionType: decision.type,
       playerId: decision.playerId,
       responseType: action.response.type,
-      orderedCount: responseIds.length,
+      orderedCount: orderedIds.length,
     },
     decision.visibility,
   );
@@ -187,23 +171,22 @@ export const applySearchRevealOrderResponse = (
       entryWithRemainingCardsPresentation(queuedEntry),
     );
   }
-  const finalDeck = reindexZoneCards(
-    [...player.deck.slice(decision.cards.length), ...orderedCards],
-    "deck",
+  const moved = placeOrderedCardsOnDeck(
+    state,
     decision.playerId,
-    "deck",
+    orderedCards,
+    "bottom",
   );
+  if (moved === null) {
+    return fail("Search reveal order player is missing.");
+  }
   const queueEntryId = String(decision.id).slice(
     searchRevealOrderPrefix.length,
   );
   const nextState: GameState = {
-    ...state,
+    ...moved,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    players: {
-      ...state.players,
-      [decision.playerId]: { ...player, deck: finalDeck },
-    },
     effectQueue:
       queuedEntry === undefined || shouldResumeSequence
         ? state.effectQueue

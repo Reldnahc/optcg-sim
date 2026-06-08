@@ -9,8 +9,8 @@ import type {
   SelectCardsDecision,
 } from "@optcg/types";
 
-import { toDecisionId } from "../action-results.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
+import { createRemainingCardsOrderDecision } from "../effect-runtime-card-set/remainder-order.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type SearchRemainingCardsPolicyCarrier = {
@@ -93,28 +93,18 @@ export const moveSearchRevealRemainderToTrash = (
   });
 
 const orderDecisionIdForQueueEntryId = (queueEntryId: string) =>
-  toDecisionId(`decision:orderCards:search-reveal:${queueEntryId}`);
+  `decision:orderCards:search-reveal:${queueEntryId}`;
 
 export const createSearchRevealOrderCardsDecision = (
   queueEntryId: string,
   effectId: EffectQueueEntry["effectBlockId"],
   playerId: EffectQueueEntry["controllerId"],
   cards: readonly SelectCardsDecision["candidates"][number]["card"][],
-): OrderCardsDecision => ({
-  id: orderDecisionIdForQueueEntryId(queueEntryId),
-  type: "orderCards",
-  playerId,
-  prompt: "Order the remaining looked cards.",
-  causedBy: {
-    type: "effect",
-    queueEntryId: queueEntryId as EffectQueueEntry["id"],
+): OrderCardsDecision =>
+  createRemainingCardsOrderDecision({
+    cards,
+    decisionId: orderDecisionIdForQueueEntryId(queueEntryId),
     effectId,
-  },
-  visibility: { type: "private", playerId },
-  cards: cards.map((card) => ({ ...card })),
-  destination: "deck",
-  defaultResponse: {
-    type: "orderedIds",
-    ids: cards.map((card) => String(card.instanceId)),
-  },
-});
+    playerId,
+    queueEntryId: queueEntryId as EffectQueueEntry["id"],
+  });

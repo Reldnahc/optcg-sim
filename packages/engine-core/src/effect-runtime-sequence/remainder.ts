@@ -1,6 +1,5 @@
 import type {
   Action,
-  CardInstance,
   Effect,
   EffectQueueEntry,
   EngineError,
@@ -11,13 +10,14 @@ import type {
   SequenceSegmentResult,
 } from "@optcg/types";
 
+import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import {
-  appendEvent,
-  toDecisionId,
-  toEngineResult,
-  toStateSeq,
-} from "../action-results.js";
-import { reindexZoneCards, zonesEqual } from "../actions/state.js";
+  activeDeckCardsForOrder,
+  createRemainingCardsOrderDecision,
+  orderedDeckCardsFromIds,
+  orderedIdsFromResponse,
+  placeOrderedCardsOnDeck,
+} from "../effect-runtime-card-set/remainder-order.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type PlaceSetRemainderEffect = Extract<Effect, { type: "placeSetRemainder" }>;
@@ -34,23 +34,11 @@ type SegmentLedgers = {
 const placeSetRemainderOrderPrefix =
   "decision:orderCards:sequence-set-remainder:";
 
-const hasDuplicateIds = (ids: readonly string[]): boolean =>
-  ids.some((id, index) => ids.slice(index + 1).includes(id));
-
 const isPlaceSetRemainderOrderDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
 ): decision is OrderCardsDecision =>
   decision.type === "orderCards" &&
   String(decision.id).startsWith(placeSetRemainderOrderPrefix);
-
-const expectedIdsForDecision = (decision: OrderCardsDecision): string[] =>
-  decision.cards.map((card) => String(card.instanceId));
-
-const exactSameIds = (
-  left: readonly string[],
-  right: readonly string[],
-): boolean =>
-  left.length === right.length && left.every((id) => right.includes(id));
 
 const currentRemainderDeckCards = (
   state: GameState,
@@ -88,39 +76,6 @@ const currentRemainderDeckCards = (
     return remainder.length === 0 ? { player, remainder, reveal } : null;
   }
   return { player, remainder, reveal };
-};
-
-const placeRemainderOnDeck = (
-  state: GameState,
-  playerId: EffectQueueEntry["controllerId"],
-  orderedCards: readonly CardInstance[],
-  position: "top" | "bottom",
-): GameState | null => {
-  const player = state.players[playerId];
-  if (player === undefined) {
-    return null;
-  }
-  const orderedIds = new Set(
-    orderedCards.map((card) => String(card.instanceId)),
-  );
-  const remainingDeck = player.deck.filter(
-    (card) => !orderedIds.has(String(card.instanceId)),
-  );
-  const nextDeck = reindexZoneCards(
-    position === "top"
-      ? [...orderedCards, ...remainingDeck]
-      : [...remainingDeck, ...orderedCards],
-    "deck",
-    playerId,
-    "deck",
-  );
-  return {
-    ...state,
-    players: {
-      ...state.players,
-      [playerId]: { ...player, deck: nextDeck },
-    },
-  };
 };
 
 export const applyPlaceSetRemainderSequenceSegment = (params: {
@@ -198,7 +153,7 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
     };
   }
   if (effect.order === "original" || current.remainder.length === 1) {
-    const moved = placeRemainderOnDeck(
+    const moved = placeOrderedCardsOnDeck(
       params.state,
       params.entry.controllerId,
       current.remainder,
@@ -219,31 +174,18 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
       },
     };
   }
-  const decision: OrderCardsDecision = {
-    id: toDecisionId(
-      `${placeSetRemainderOrderPrefix}${String(params.entry.id)}:${String(params.index)}`,
-    ),
-    type: "orderCards",
-    playerId: params.entry.controllerId,
-    prompt: "Order the remaining looked cards.",
-    causedBy: {
-      type: "effect",
-      queueEntryId: params.entry.id,
-      effectId: params.entry.effectBlockId,
-    },
-    visibility: { type: "private", playerId: params.entry.controllerId },
+  const decision = createRemainingCardsOrderDecision({
     cards: current.remainder.map((card) => ({
       instanceId: card.instanceId,
       cardId: card.cardId,
       playerId: params.entry.controllerId,
       zone: card.zone,
     })),
-    destination: "deck",
-    defaultResponse: {
-      type: "orderedIds",
-      ids: current.remainder.map((card) => String(card.instanceId)),
-    },
-  };
+    decisionId: `${placeSetRemainderOrderPrefix}${String(params.entry.id)}:${String(params.index)}`,
+    effectId: params.entry.effectBlockId,
+    playerId: params.entry.controllerId,
+    queueEntryId: params.entry.id,
+  });
   const events: EngineEvent[] = [];
   appendEvent(
     params.state,
@@ -302,42 +244,25 @@ export const applyPlaceSetRemainderOrderResponse = (
     return fail("Response type must be orderedIds for set remainder order.");
   }
   const responseIds = (action.response as { ids?: unknown }).ids;
-  const expectedIds = expectedIdsForDecision(decision);
-  if (
-    !Array.isArray(responseIds) ||
-    !responseIds.every((id) => typeof id === "string") ||
-    hasDuplicateIds(responseIds) ||
-    !exactSameIds(responseIds, expectedIds)
-  ) {
+  const expectedIds = decision.cards.map((card) => String(card.instanceId));
+  const orderedIds = orderedIdsFromResponse(responseIds, expectedIds);
+  if (orderedIds === null) {
     return fail("Ordered ids must match the remaining set cards.");
   }
   const player = state.players[decision.playerId];
   if (player === undefined) {
     return fail("Set remainder order player is missing.");
   }
-  const activeDeckCards = player.deck.slice(0, decision.cards.length);
-  if (
-    activeDeckCards.length !== decision.cards.length ||
-    !decision.cards.every((card, index) => {
-      const deckCard = activeDeckCards[index];
-      return (
-        deckCard !== undefined &&
-        card.instanceId === deckCard.instanceId &&
-        card.cardId === deckCard.cardId &&
-        card.zone !== undefined &&
-        zonesEqual(card.zone, deckCard.zone)
-      );
-    })
-  ) {
+  const activeDeckCards = activeDeckCardsForOrder(
+    state,
+    decision.playerId,
+    decision.cards,
+  );
+  if (activeDeckCards === null) {
     return fail("Set remainder order cards are stale or unsupported.");
   }
-  const orderedCards = responseIds.flatMap((id) => {
-    const card = activeDeckCards.find(
-      (candidate) => String(candidate.instanceId) === id,
-    );
-    return card === undefined ? [] : [card];
-  });
-  const moved = placeRemainderOnDeck(
+  const orderedCards = orderedDeckCardsFromIds(activeDeckCards, orderedIds);
+  const moved = placeOrderedCardsOnDeck(
     state,
     decision.playerId,
     orderedCards,
@@ -356,7 +281,7 @@ export const applyPlaceSetRemainderOrderResponse = (
       decisionType: decision.type,
       playerId: decision.playerId,
       responseType: action.response.type,
-      orderedCount: responseIds.length,
+      orderedCount: orderedIds.length,
     },
     decision.visibility,
   );
