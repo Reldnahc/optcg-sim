@@ -249,6 +249,20 @@ test("effect runtime sequence runner stays a small public barrel", async () => {
   );
 });
 
+test("replacement primitives stays a small public barrel", async () => {
+  const sourcePath = path.join(
+    repoRoot,
+    "packages/engine-core/src/replacement/primitives.ts",
+  );
+  const source = await readFile(sourcePath, "utf8");
+  const lineCount = source.trimEnd().split("\n").length;
+
+  assert.ok(
+    lineCount <= 180,
+    `replacement/primitives.ts should be a public barrel over focused replacement support modules; found ${String(lineCount)} lines`,
+  );
+});
+
 async function listProductionSourcePaths(
   directoryPath: string,
 ): Promise<readonly string[]> {
