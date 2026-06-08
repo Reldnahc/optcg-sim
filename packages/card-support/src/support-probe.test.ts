@@ -447,6 +447,18 @@ describe("text-only support probe parser backend", () => {
     );
     expect(report.lines).toContain("OP01-002 line 1 parse: passed");
     expect(report.lines).toContain("OP01-002 line 1 engine runtime: failed");
+    expect(report.lines).toContain("OP01-002 line 1 primitive parser: passed");
+    expect(report.lines).toContain("OP01-002 line 1 primitive runtime: failed");
+    expect(report.lines).toContain("OP01-002 line 1 runtime support records:");
+    expect(report.lines).toContain(
+      "OP01-002 line 1 - runtime entryPoint:onBlock failed",
+    );
+    expect(report.lines).toContain(
+      "OP01-002 line 1 missing runtime capability evidence:",
+    );
+    expect(report.lines).toContain(
+      "OP01-002 line 1 - runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
+    );
   });
 
   it("prints only raw unsupported text lines in deck-hash raw mode", async () => {

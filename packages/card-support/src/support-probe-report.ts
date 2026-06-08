@@ -195,6 +195,15 @@ const createDeckHashSupportProbeReport = async (
         cardFailureLines.push(
           `${card.cardId} line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
         );
+        cardFailureLines.push(
+          ...prefixPrimitiveSupportLines(
+            `${card.cardId} line ${String(lineNumber)} `,
+            formatPrimitiveSupportSections({
+              parserCertificate: lineReport.parserCertificate,
+              runtimeReports: lineReport.runtimeReports,
+            }),
+          ),
+        );
       }
     }
 
