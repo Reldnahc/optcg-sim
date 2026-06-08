@@ -5,16 +5,16 @@ import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 import type { CardRef, DecisionId, PlayerId } from "@optcg/types";
 
-import { createDevHttpServer } from "./dev-http-server.js";
-import { websocketTextFrame } from "./dev-http-server.js";
+import { createMatchHttpServer } from "./match-http-server.js";
+import { websocketTextFrame } from "./match-http-server.js";
 import { requestHash } from "./action-envelope.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
 
-const createFixtureDevHttpServer = async () =>
-  createDevHttpServer({
+const createFixtureMatchHttpServer = async () =>
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
   });
@@ -77,7 +77,7 @@ const requireStateSeq = (
 };
 
 const webSocketUrl = (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: string,
   token: string,
@@ -160,7 +160,7 @@ const nextActionResult = async (
 };
 
 const createDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
   const response = await fetch(`${server.url()}/api/matches`, {
     method: "POST",
@@ -172,7 +172,7 @@ const createDevMatch = async (
 };
 
 const chooseFirstPlayer = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   choice: "goFirst" | "goSecond",
@@ -213,7 +213,7 @@ const requireCreatedMatch = (
 };
 
 const createReadyDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<{ matchId: string; stateSeq: number }> => {
   const created = await createDevMatch(server);
   const matchId = created.matchId;
@@ -227,7 +227,7 @@ const createReadyDevMatch = async (
 };
 
 const claimDevSeat = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
 ): Promise<string> => {
@@ -236,7 +236,7 @@ const claimDevSeat = async (
 };
 
 const claimDevSeatWithToken = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken: string,
@@ -261,7 +261,7 @@ const claimDevSeatWithToken = async (
 };
 
 const createDevLobby = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<CreatedDevLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
     method: "POST",
@@ -271,7 +271,7 @@ const createDevLobby = async (
 };
 
 const joinDevLobby = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
 ): Promise<CreatedDevLobbyBody> => {
@@ -283,9 +283,9 @@ const joinDevLobby = async (
   return (await response.json()) as CreatedDevLobbyBody;
 };
 
-describe("dev HTTP server", () => {
+describe("match HTTP server", () => {
   test("does not serve the legacy static match UI", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/`);
@@ -310,7 +310,7 @@ describe("dev HTTP server", () => {
   });
 
   test("seatless lobby join assigns first open seat by account session", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -343,7 +343,7 @@ describe("dev HTTP server", () => {
   });
 
   test("seatless lobby join is idempotent for the same account across sessions", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -372,7 +372,7 @@ describe("dev HTTP server", () => {
   });
 
   test("seatless lobby join fails closed when the lobby is full", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -400,7 +400,7 @@ describe("dev HTTP server", () => {
   });
 
   test("lobby join responses do not expose account session tokens", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const created = await createDevLobby(server);
@@ -425,7 +425,7 @@ describe("dev HTTP server", () => {
   });
 
   test("creates independent local authenticated dev matches keyed by matchId", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -490,7 +490,7 @@ describe("dev HTTP server", () => {
   });
 
   test("does not expose HTTP gameplay action or decision routes", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -515,7 +515,7 @@ describe("dev HTTP server", () => {
   });
 
   test("websocket sends per-recipient filtered state sync and action results", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -597,7 +597,7 @@ describe("dev HTTP server", () => {
   });
 
   test("rejects websocket messages whose player id does not match the socket seat", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -645,7 +645,7 @@ describe("dev HTTP server", () => {
   });
 
   test("rejects duplicate local account claims for the same seat", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -664,7 +664,7 @@ describe("dev HTTP server", () => {
   });
 
   test("allows idempotent local account claims with the matching seat token", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -692,7 +692,7 @@ describe("dev HTTP server", () => {
   });
 
   test("allows account-owned match seat reconnect from a different session", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -730,7 +730,7 @@ describe("dev HTTP server", () => {
   });
 
   test("reuses a supplied local account token when claiming an unclaimed seat", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -758,7 +758,7 @@ describe("dev HTTP server", () => {
   });
 
   test("returns not found for unknown local dev match ids", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(
@@ -773,7 +773,7 @@ describe("dev HTTP server", () => {
   });
 
   test("serves filtered match state without exposing the engine state", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/api/state`);
@@ -791,7 +791,7 @@ describe("dev HTTP server", () => {
   });
 
   test("serves public card metadata for browser board images", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/api/cards`);
@@ -821,7 +821,7 @@ describe("dev HTTP server", () => {
   });
 
   test("accepts websocket decision responses without exposing hidden manifest data", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -898,7 +898,7 @@ describe("dev HTTP server", () => {
   });
 
   test("returns the stored decision result when a decision response is retried after resolution", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -977,7 +977,7 @@ describe("dev HTTP server", () => {
   });
 
   test("rejects websocket decision responses from the wrong player", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -1040,7 +1040,7 @@ describe("dev HTTP server", () => {
   });
 
   test("accepts an explicit premade match setup through reset", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     const setup = await createFixtureDevMatchSetup();
     const custom = {
       ...setup,
@@ -1073,7 +1073,7 @@ describe("dev HTTP server", () => {
 
   test("does not expose lobby URL-selected seat claim routes", async () => {
     const source = await readFile(
-      join(sourceDirectory, "dev-http-server.ts"),
+      join(sourceDirectory, "match-http-server.ts"),
       "utf8",
     );
 

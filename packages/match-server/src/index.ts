@@ -27,11 +27,11 @@ export type {
   DevVisibleAction,
   DevVisibleCardCatalog,
 } from "./dev-snapshot-types.js";
-export { createDevHttpServer } from "./dev-http-server.js";
+export { createMatchHttpServer } from "./match-http-server.js";
 export type {
-  CreateDevHttpServerOptions,
-  DevHttpServer,
-} from "./dev-http-server.js";
+  CreateMatchHttpServerOptions,
+  MatchHttpServer,
+} from "./match-http-server.js";
 export { canonicalJson } from "./canonical-json.js";
 export { idempotencyKey, requestHash } from "./action-envelope.js";
 export type {

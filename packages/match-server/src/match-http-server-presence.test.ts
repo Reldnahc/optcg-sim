@@ -5,7 +5,7 @@ import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
-import { createDevHttpServer } from "./dev-http-server.js";
+import { createMatchHttpServer } from "./match-http-server.js";
 
 interface CreatedDevMatchBody {
   matchId?: string;
@@ -53,7 +53,7 @@ interface TestSocket {
   next: () => Promise<unknown>;
 }
 
-const createFixtureDevHttpServer = async (
+const createFixtureMatchHttpServer = async (
   options: {
     readonly socketIdleTimeoutMs?: number;
     readonly matchTimerPolicy?: {
@@ -63,14 +63,14 @@ const createFixtureDevHttpServer = async (
     readonly matchTimerTickMs?: number;
   } = {},
 ) =>
-  createDevHttpServer({
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
     ...options,
   });
 
 const createDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
   const response = await fetch(`${server.url()}/api/matches`, {
     method: "POST",
@@ -80,7 +80,7 @@ const createDevMatch = async (
 };
 
 const chooseFirstPlayer = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
 ): Promise<CreatedDevMatchBody> => {
@@ -97,7 +97,7 @@ const chooseFirstPlayer = async (
 };
 
 const createReadyDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<{ matchId: string }> => {
   const created = await createDevMatch(server);
   const matchId = created.matchId;
@@ -113,7 +113,7 @@ const createReadyDevMatch = async (
 };
 
 const claimDevSeat = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
 ): Promise<string> => {
@@ -137,7 +137,7 @@ const claimDevSeat = async (
 };
 
 const webSocketUrl = (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: string,
   token: string,
@@ -244,7 +244,7 @@ const nextStateSyncWithStatus = async (
 
 describe("dev HTTP server websocket presence", () => {
   test("state sync reports player connection status beside public labels", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -285,7 +285,7 @@ describe("dev HTTP server websocket presence", () => {
   });
 
   test("idle match sockets close and mark that player disconnected without ending the match", async () => {
-    const server = await createFixtureDevHttpServer({
+    const server = await createFixtureMatchHttpServer({
       socketIdleTimeoutMs: 500,
     });
     await server.listen(0, "127.0.0.1");
@@ -325,7 +325,7 @@ describe("dev HTTP server websocket presence", () => {
   });
 
   test("reconnected match sockets immediately update opponent presence", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
@@ -373,7 +373,7 @@ describe("dev HTTP server websocket presence", () => {
   });
 
   test("disconnect grace timer is visible and auto-concedes after expiry", async () => {
-    const server = await createFixtureDevHttpServer({
+    const server = await createFixtureMatchHttpServer({
       matchTimerPolicy: { gameTimeMs: 1_000, disconnectGraceMs: 250 },
       matchTimerTickMs: 10,
     });

@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "dev": "corepack pnpm exec tsx src/dev-server.ts",
+    "start": "corepack pnpm exec tsx src/server.ts",
+    "dev": "corepack pnpm run start",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/match-server/src"
   },

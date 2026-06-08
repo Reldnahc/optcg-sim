@@ -1,14 +1,14 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import { createDevHttpServer } from "./dev-http-server.js";
+import { createMatchHttpServer } from "./match-http-server.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
 
-const createFixtureDevHttpServer = async () =>
-  createDevHttpServer({
+const createFixtureMatchHttpServer = async () =>
+  createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
   });
@@ -35,7 +35,7 @@ interface TestSocket {
 }
 
 const webSocketUrl = (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: string,
   token: string,
@@ -91,7 +91,7 @@ const openSocket = async (url: string): Promise<TestSocket> =>
   });
 
 const createDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<CreatedDevMatchBody> => {
   const response = await fetch(`${server.url()}/api/matches`, {
     method: "POST",
@@ -103,7 +103,7 @@ const createDevMatch = async (
 };
 
 const chooseFirstPlayer = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
 ): Promise<CreatedDevMatchBody> => {
@@ -120,7 +120,7 @@ const chooseFirstPlayer = async (
 };
 
 const createReadyDevMatch = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
 ): Promise<{ matchId: string }> => {
   const created = await createDevMatch(server);
   const matchId = created.matchId;
@@ -136,7 +136,7 @@ const createReadyDevMatch = async (
 };
 
 const claimDevSeatWithToken = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   sessionToken: string,
@@ -161,7 +161,7 @@ const claimDevSeatWithToken = async (
 };
 
 const initialPlayerLabels = async (
-  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   matchId: string,
   playerId: "p1" | "p2",
   token: string,
@@ -183,7 +183,7 @@ const initialPlayerLabels = async (
 
 describe("dev HTTP server display names", () => {
   test("websocket state sync includes public account display names", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -217,7 +217,7 @@ describe("dev HTTP server display names", () => {
   });
 
   test("matching account claims refresh stale seat display names", async () => {
-    const server = await createFixtureDevHttpServer();
+    const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
