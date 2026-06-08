@@ -42,10 +42,34 @@ const maxPreviewZoom = 1.8;
 const previewZoomStep = 0.1;
 const defaultPreviewTextPanelHeight = 42;
 const minPreviewTextPanelHeight = 22;
-const maxPreviewTextPanelHeight = 72;
+const maxPreviewTextPanelHeight = 100;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
+
+const formatAttribute = (attribute: string): string =>
+  attribute.length === 0
+    ? attribute
+    : `${attribute.charAt(0).toUpperCase()}${attribute.slice(1)}`;
+
+const cardPreviewMetadataRows = (
+  card: ClientCardModel,
+): Array<{ readonly label: string; readonly value: string }> => [
+  ...(card.types === undefined || card.types.length === 0
+    ? []
+    : [{ label: "Type", value: card.types.join(" / ") }]),
+  ...(card.attributes === undefined || card.attributes.length === 0
+    ? []
+    : [
+        {
+          label: card.attributes.length === 1 ? "Attribute" : "Attributes",
+          value: card.attributes.map(formatAttribute).join(" / "),
+        },
+      ]),
+  ...(card.counter === undefined
+    ? []
+    : [{ label: "Counter", value: `+${String(card.counter)}` }]),
+];
 
 interface TextPanelDragState {
   readonly pointerId: number;
@@ -71,6 +95,7 @@ export const CardPreviewContent = ({
       ? `calc(${String(textPanelHeight)}% + 24px)`
       : "0px",
   } as CSSProperties;
+  const metadataRows = card === undefined ? [] : cardPreviewMetadataRows(card);
 
   const zoomBy = useCallback((delta: number): void => {
     setZoom((current) =>
@@ -184,10 +209,22 @@ export const CardPreviewContent = ({
                   <header className="card-preview-text-header">
                     <h2>{card.name}</h2>
                     <p>{card.category}</p>
+                    {metadataRows.length === 0 ? null : (
+                      <dl className="card-preview-metadata">
+                        {metadataRows.map((row) => (
+                          <div
+                            className="card-preview-metadata-row"
+                            key={row.label}
+                          >
+                            <dt>{row.label}</dt>
+                            <dd>{row.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
                   </header>
                   {card.effectText === undefined ? null : (
                     <section>
-                      <h3>Effect</h3>
                       <EffectRulesText
                         text={card.effectText}
                         sourceMap={card.effectTextSourceMap}
@@ -196,7 +233,6 @@ export const CardPreviewContent = ({
                   )}
                   {card.triggerText === undefined ? null : (
                     <section>
-                      <h3>Trigger</h3>
                       <EffectRulesText
                         text={card.triggerText}
                         sourceMap={card.triggerTextSourceMap}

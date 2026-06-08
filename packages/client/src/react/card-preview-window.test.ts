@@ -23,6 +23,9 @@ const card = (overrides: Partial<ClientCardModel> = {}): ClientCardModel => ({
   effectText: "[On Play] Draw 1 card.",
   triggerText: "Add 1 card.",
   imageUrl: "https://example.test/card.png",
+  counter: 1000,
+  attributes: ["special"],
+  types: ["Dressrosa", "Navy"],
   attachedDonCount: 0,
   attachedDonCards: [],
   ...overrides,
@@ -57,6 +60,14 @@ describe("card preview window", () => {
     assert.match(markup, /https:\/\/example\.test\/card\.png/u);
     assert.match(markup, /Draw 1 card\./u);
     assert.match(markup, /Add 1 card\./u);
+    assert.doesNotMatch(markup, />Effect<\/h3>/u);
+    assert.doesNotMatch(markup, />Trigger<\/h3>/u);
+    assert.match(markup, /Type/u);
+    assert.match(markup, /Dressrosa \/ Navy/u);
+    assert.match(markup, /Attribute/u);
+    assert.match(markup, /Special/u);
+    assert.match(markup, /Counter/u);
+    assert.match(markup, /\+1000/u);
     assert.match(markup, /effect-rules-text/u);
     assert.match(markup, /card-rules-tag--blue/u);
   });
@@ -83,6 +94,7 @@ describe("card preview window", () => {
     assert.match(markup, /card-preview-rules-resize-handle/u);
     assert.match(markup, /--card-preview-rules-height:42%/u);
     assert.match(markup, /card-preview-control-bar/u);
+    assert.match(markup, /card-preview-metadata/u);
     assert.match(markup, /aria-label="Zoom card out"/u);
     assert.match(markup, /aria-label="Reset card zoom"/u);
     assert.match(markup, /aria-label="Zoom card in"/u);
@@ -118,6 +130,14 @@ describe("card preview window", () => {
       /aria-label="Reset card zoom" disabled=""/u,
     );
     assert.match(styles, /\.card-preview-control-bar button:active\s*\{/u);
+    assert.match(
+      styles,
+      /\.card-preview-control-bar\s*\{[^}]*min-height:\s*30px;/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-control-bar button\s*\{[^}]*height:\s*24px;/u,
+    );
     assert.match(styles, /\.card-preview-control-bar button:disabled\s*\{/u);
     assert.match(
       styles,
@@ -139,6 +159,22 @@ describe("card preview window", () => {
     assert.match(
       source,
       /zoomBy\(event\.deltaY < 0 \? previewZoomStep : -previewZoomStep\);/u,
+    );
+  });
+
+  test("preview text panel can be dragged to the top of the preview stage", async () => {
+    const [source, styles] = await Promise.all([
+      readFile(join(sourceDirectory, "CardPreviewWindow.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "styles", "card-preview-window.css"),
+        "utf8",
+      ),
+    ]);
+
+    assert.match(source, /const maxPreviewTextPanelHeight = 100;/u);
+    assert.doesNotMatch(
+      styles,
+      /\.card-preview-rules-panel\s*\{[^}]*max-height:/u,
     );
   });
 

@@ -98,7 +98,10 @@ export interface DevCardCatalogEntry {
   category: string;
   cost?: number;
   power?: number;
+  counter?: number;
   life?: number;
+  attributes?: string[];
+  types?: string[];
   effectText?: string;
   triggerText?: string;
   effectTextSourceMap?: EffectTextSourceMap;

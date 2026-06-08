@@ -32,6 +32,9 @@ export interface ClientCardModel {
   printedCost?: number;
   currentCost?: number;
   costDelta?: number;
+  counter?: number;
+  attributes?: string[];
+  types?: string[];
   keywords?: Keyword[];
   restrictions?: string[];
   freshlyPlayedAttackRestricted?: boolean;
@@ -170,6 +173,13 @@ const cardModel = (
       ? {}
       : { currentCost: card.currentCost }),
     ...(costDelta === undefined ? {} : { costDelta }),
+    ...(entry.counter === undefined ? {} : { counter: entry.counter }),
+    ...(entry.attributes === undefined || entry.attributes.length === 0
+      ? {}
+      : { attributes: [...entry.attributes] }),
+    ...(entry.types === undefined || entry.types.length === 0
+      ? {}
+      : { types: [...entry.types] }),
     ...(card.keywords === undefined || card.keywords.length === 0
       ? {}
       : { keywords: [...card.keywords] }),

@@ -74,7 +74,6 @@
   display: grid;
   height: var(--card-preview-rules-height);
   min-height: 104px;
-  max-height: calc(100% - 42px);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-right: 0;
@@ -111,14 +110,13 @@
 }
 
 .card-preview-text h2,
-.card-preview-text h3,
 .card-preview-text p {
   margin: 0;
 }
 
 .card-preview-text-header {
   display: grid;
-  gap: 2px;
+  gap: 3px;
 }
 
 .card-preview-text h2 {
@@ -126,26 +124,48 @@
   line-height: 1.1;
 }
 
-.card-preview-text h3 {
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 11px;
+.card-preview-metadata {
+  display: grid;
+  gap: 2px 8px;
+  margin: 3px 0 0;
+}
+
+.card-preview-metadata-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.card-preview-metadata dt,
+.card-preview-metadata dd {
+  margin: 0;
+}
+
+.card-preview-metadata dt {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
   text-transform: uppercase;
+}
+
+.card-preview-metadata dd {
+  min-width: 0;
 }
 
 .card-preview-control-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 42px;
+  gap: 6px;
+  min-height: 30px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(14, 16, 19, 0.96);
-  padding: 6px 8px;
+  padding: 2px 6px;
 }
 
 .card-preview-control-bar button {
-  min-width: 34px;
-  height: 28px;
+  min-width: 32px;
+  height: 24px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);

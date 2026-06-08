@@ -377,7 +377,12 @@ const devCardCatalogEntry = (
     category: card.category,
     ...(card.cost === undefined ? {} : { cost: card.cost }),
     ...(card.power === undefined ? {} : { power: card.power }),
+    ...(card.counter === undefined ? {} : { counter: card.counter }),
     ...(card.life === undefined ? {} : { life: card.life }),
+    ...(card.attributes.length === 0
+      ? {}
+      : { attributes: [...card.attributes] }),
+    ...(card.types.length === 0 ? {} : { types: [...card.types] }),
     ...(card.effectText === undefined ? {} : { effectText: card.effectText }),
     ...(card.triggerText === undefined
       ? {}

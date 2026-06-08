@@ -309,6 +309,9 @@ describe("board view model", () => {
               cardId: "OP13-080" as CardId,
               name: "Searcher",
               category: "Character",
+              counter: 1000,
+              attributes: ["special"],
+              types: ["Dressrosa", "Navy"],
               effectText: "[On Play] Look at cards.",
               triggerText: "Draw 1 card.",
               effectTextSourceMap,
@@ -337,6 +340,9 @@ describe("board view model", () => {
     assert.deepEqual(handCard.effectTextSourceMap, effectTextSourceMap);
     assert.deepEqual(handCard.triggerTextSourceMap, triggerTextSourceMap);
     assert.equal(handCard.imageUrl, "https://cdn.example/card.png");
+    assert.equal(handCard.counter, 1000);
+    assert.deepEqual(handCard.attributes, ["special"]);
+    assert.deepEqual(handCard.types, ["Dressrosa", "Navy"]);
     assert.deepEqual(
       model.actionsByCardInstanceId["hand-1"]?.map((action) => action.label),
       ["Play OP13-080"],

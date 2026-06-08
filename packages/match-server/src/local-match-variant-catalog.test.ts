@@ -106,18 +106,23 @@ describe("local dev match variant catalog", () => {
             },
           ]),
           [l2]: vanillaCard(l2, "Leader Two", "leader"),
-          [c1]: vanillaCard(c1, "Variant Character", "character", [
-            {
-              variantKey: "C1:v0" as VariantKey,
-              variantIndex: 0,
-              stockImageFull: "https://cdn.example/c1-v0.png",
-            },
-            {
-              variantKey: "C1:v1" as VariantKey,
-              variantIndex: 1,
-              stockImageFull: "https://cdn.example/c1-v1.png",
-            },
-          ]),
+          [c1]: {
+            ...vanillaCard(c1, "Variant Character", "character", [
+              {
+                variantKey: "C1:v0" as VariantKey,
+                variantIndex: 0,
+                stockImageFull: "https://cdn.example/c1-v0.png",
+              },
+              {
+                variantKey: "C1:v1" as VariantKey,
+                variantIndex: 1,
+                stockImageFull: "https://cdn.example/c1-v1.png",
+              },
+            ]),
+            counter: 1000,
+            attributes: ["special"],
+            types: ["Dressrosa", "Navy"],
+          },
           [c2]: vanillaCard(c2, "Filler Character", "character"),
         },
       },
@@ -145,10 +150,14 @@ describe("local dev match variant catalog", () => {
       p1Instances["p1:deck:1:C1" as InstanceId]?.imageUrl,
       "https://cdn.example/c1-v1.png",
     );
-    assert.equal(
-      p1Catalog.cards[c1]?.imageUrl,
-      "https://cdn.example/c1-v0.png",
-    );
+    const defaultCardEntry = p1Catalog.cards[c1];
+    if (defaultCardEntry === undefined) {
+      throw new Error("Missing default C1 catalog entry.");
+    }
+    assert.equal(defaultCardEntry.imageUrl, "https://cdn.example/c1-v0.png");
+    assert.equal(defaultCardEntry.counter, 1000);
+    assert.deepEqual(defaultCardEntry.attributes, ["special"]);
+    assert.deepEqual(defaultCardEntry.types, ["Dressrosa", "Navy"]);
   });
 
   test("preserves per-instance variants for public reveal cards", () => {
