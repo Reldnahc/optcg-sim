@@ -2,10 +2,8 @@ import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type {
   CardId,
   EffectBlock,
-  MissingSupportEvidence,
   ParserSupportCertificate,
   RuntimeSupportReport,
-  SupportEvidenceRecord,
 } from "@optcg/types";
 import {
   createParserSupportCertificate,
@@ -20,6 +18,11 @@ import {
   createDeckHashCodec,
   type DeckHashDeck,
 } from "optcg-deck-hash";
+
+import {
+  formatPrimitiveSupportSections,
+  prefixPrimitiveSupportLines,
+} from "./primitive-support-output.js";
 
 export interface SupportProbeRequest {
   readonly text?: string;
@@ -346,6 +349,17 @@ const createCardSupportProbeReport = async (
         `Line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
       );
     }
+    if (lineReport.kind === "effect") {
+      lines.push(
+        ...prefixPrimitiveSupportLines(
+          `Line ${String(lineNumber)} `,
+          formatPrimitiveSupportSections({
+            parserCertificate: lineReport.parserCertificate,
+            runtimeReports: lineReport.runtimeReports,
+          }),
+        ),
+      );
+    }
   }
 
   return { exitCode, lines, errors: [] };
@@ -457,9 +471,14 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   if (!lineReport.runtimeSupported) {
     lines.push(`Engine runtime reason: ${runtimeReason(lineReport)}`);
   }
-  lines.push(...parserSupportLines(lineReport.parserCertificate));
-  lines.push(...runtimeSupportLines(lineReport.runtimeReports));
-  lines.push("Evidence:");
+  lines.push(
+    ...formatPrimitiveSupportSections({
+      parserCertificate: lineReport.parserCertificate,
+      runtimeReports: lineReport.runtimeReports,
+    }),
+  );
+  lines.push("Diagnostics:");
+  lines.push("Parser evidence diagnostics:");
   for (const evidence of uniqueEvidence(lineReport.values)) {
     lines.push(`- ${evidence}`);
   }
@@ -578,56 +597,6 @@ const runtimeReason = (
     { readonly parseOk: true; readonly kind: "effect" }
   >,
 ): string => lineReport.runtimeReason ?? "unsupported runtime effect shape";
-
-const parserSupportLines = (
-  certificate: ParserSupportCertificate,
-): readonly string[] => [
-  `Parser support: ${certificate.complete ? "passed" : "failed"}`,
-  ...(certificate.records.length === 0
-    ? []
-    : [
-        "Parser support evidence:",
-        ...certificate.records.map(formatSupportEvidenceRecord),
-      ]),
-  ...(certificate.missing.length === 0
-    ? []
-    : ["Parser missing support:", ...certificate.missing.map(formatMissing)]),
-];
-
-const runtimeSupportLines = (
-  reports: readonly RuntimeSupportReport[],
-): readonly string[] => {
-  const records = reports.flatMap((report) => report.records);
-  const missing = reports.flatMap((report) => report.missing);
-  return [
-    ...(records.length === 0
-      ? []
-      : [
-          "Runtime support evidence:",
-          ...records.map(formatSupportEvidenceRecord),
-        ]),
-    ...(missing.length === 0
-      ? []
-      : ["Runtime missing support:", ...missing.map(formatMissing)]),
-  ];
-};
-
-const formatSupportEvidenceRecord = (record: SupportEvidenceRecord): string => {
-  const status =
-    record.supported === undefined
-      ? ""
-      : record.supported
-        ? " passed"
-        : " failed";
-  const spans =
-    record.sourceSpanIds === undefined || record.sourceSpanIds.length === 0
-      ? ""
-      : ` spans ${record.sourceSpanIds.join(", ")}`;
-  return `- ${record.authority} ${record.family}:${record.id}${status}${spans}`;
-};
-
-const formatMissing = (missing: MissingSupportEvidence): string =>
-  `- ${missing.authority} ${missing.family}:${missing.id} missing ${missing.reason}`;
 
 const uniqueEvidence = (
   values: readonly Extract<ParsedEffectLine, { readonly block: unknown }>[],

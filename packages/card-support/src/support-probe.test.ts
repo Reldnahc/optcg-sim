@@ -34,19 +34,23 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("- span:body [10, 22] instruction:draw");
   });
 
-  it("reports parser certificates and runtime records for parsed text", async () => {
+  it("reports primitive-first parser and runtime sections for parsed text", async () => {
     const report = await createSupportProbeReport({
       text: "[On Play] Draw 1 card.",
     });
 
     expect(report.exitCode).toBe(0);
-    expect(report.lines).toContain("Parser support: passed");
-    expect(report.lines).toContain("Parser support evidence:");
+    expect(report.lines).toContain("Primitive parser: passed");
+    expect(report.lines).toContain("Primitive runtime: passed");
+    expect(report.lines).toContain("Parser certificate records:");
     expect(report.lines).toContain(
       "- parser entryPoint:onPlay spans span:entry",
     );
-    expect(report.lines).toContain("Runtime support evidence:");
+    expect(report.lines).toContain("Runtime support records:");
     expect(report.lines).toContain("- runtime body:draw passed");
+    expect(report.lines).toContain("Diagnostics:");
+    expect(report.lines).toContain("Parser evidence diagnostics:");
+    expect(report.lines).not.toContain("Evidence:");
   });
 
   it("reports engine runtime support for deck-top trash movement", async () => {
@@ -204,7 +208,7 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain(
       "Engine runtime reason: unsupported trigger/category/source-presence envelope",
     );
-    expect(report.lines).toContain("Runtime missing support:");
+    expect(report.lines).toContain("Missing runtime capability evidence:");
     expect(report.lines).toContain(
       "- runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
     );
@@ -238,6 +242,39 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Card ID: OP10-045");
     expect(report.lines).toContain("Line 1 parse: passed");
     expect(report.lines).toContain("Line 1 engine runtime: passed");
+  });
+
+  it("includes primitive missing runtime sections in card probe failures", async () => {
+    const report = await createSupportProbeReport({
+      cardId: "OP01-002",
+      fetchCard: () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: "OP01-002",
+                effect: "[On Block] Draw 1 card.",
+                trigger: null,
+              },
+            }),
+        }),
+    });
+
+    expect(report.exitCode).toBe(1);
+    expect(report.lines).toContain("Line 1 primitive parser: passed");
+    expect(report.lines).toContain("Line 1 primitive runtime: failed");
+    expect(report.lines).toContain("Line 1 runtime support records:");
+    expect(report.lines).toContain(
+      "Line 1 - runtime entryPoint:onBlock failed",
+    );
+    expect(report.lines).toContain(
+      "Line 1 missing runtime capability evidence:",
+    );
+    expect(report.lines).toContain(
+      "Line 1 - runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
+    );
   });
 
   it("includes separately fetched trigger text in card probe mode", async () => {
