@@ -119,7 +119,7 @@ export const defaultDevDonCounts: DevDonCounts = {
   secondPlayer: 10,
 };
 
-export const defaultDevEffectDefinitionsVersion = "generated-dev-v6";
+export const defaultDevEffectDefinitionsVersion = "generated-dev-v7";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v1";
 
 const defaultDevLeader: DevDeckCardEntry = {

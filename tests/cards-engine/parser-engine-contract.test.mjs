@@ -579,7 +579,7 @@ test("cards parser emits start-of-game stage search and play-selected in engine 
       "entry:startOfGame",
       "deckRestriction:ignored",
       "deckRestriction:eventCostGte",
-      "instruction:search",
+      "instruction:selectCards",
       "instruction:playSelected",
       "filter:type",
       "filter:category:stage",
@@ -591,15 +591,16 @@ test("cards parser emits start-of-game stage search and play-selected in engine 
   assert.equal(effectBlock.trigger.type, "startOfGame");
   assert.equal(effectBlock.sourcePresencePolicy, "noSourceRequired");
   assert.equal(effectBlock.effect.type, "sequence");
-  assert.deepEqual(effectBlock.effect.effects[0]?.effect.request, {
+  assert.deepEqual(effectBlock.effect.effects[0]?.effect, {
+    type: "selectCards",
     zone: "deck",
     player: "self",
+    chooser: "self",
     filter: { categories: ["stage"], typesAny: ["Mary Geoise"] },
     min: 0,
     max: 1,
-    destination: "stageArea",
-    revealTo: "chooserOnly",
-    shuffleAfter: false,
+    saveAs: "selected:start-of-game",
+    visibility: "chooserOnly",
   });
   assert.deepEqual(effectBlock.effect.effects[1]?.effect, {
     type: "playSelected",

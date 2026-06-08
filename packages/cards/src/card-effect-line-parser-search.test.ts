@@ -306,20 +306,18 @@ describe("card effect line parser search effects", () => {
             {
               connector: "always",
               effect: {
-                type: "search",
-                request: {
-                  zone: "deck",
-                  player: "self",
-                  filter: {
-                    categories: ["stage"],
-                    typesAny: ["Mary Geoise"],
-                  },
-                  min: 0,
-                  max: 1,
-                  destination: "stageArea",
-                  revealTo: "chooserOnly",
-                  shuffleAfter: false,
+                type: "selectCards",
+                zone: "deck",
+                player: "self",
+                chooser: "self",
+                filter: {
+                  categories: ["stage"],
+                  typesAny: ["Mary Geoise"],
                 },
+                min: 0,
+                max: 1,
+                saveAs: "selected:start-of-game",
+                visibility: "chooserOnly",
               },
             },
             {
@@ -339,7 +337,7 @@ describe("card effect line parser search effects", () => {
         "deckRestriction:ignored",
         "deckRestriction:eventCostGte",
         "entry:startOfGame",
-        "instruction:search",
+        "instruction:selectCards",
         "instruction:playSelected",
         "filter:type",
         "filter:category:stage",
