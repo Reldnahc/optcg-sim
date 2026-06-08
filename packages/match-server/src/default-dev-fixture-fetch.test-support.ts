@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
   type DevPoneglyphFetch,
-} from "@optcg/cards";
+} from "@optcg/card-support";
 import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";

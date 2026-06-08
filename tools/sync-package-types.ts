@@ -22,6 +22,7 @@ const CANONICAL_PROJECTION_FILE_NAMES = [
   "decisions.ts",
   "runtime.ts",
   "effect-presentation.ts",
+  "support-certification.ts",
 ] as const;
 
 async function main(): Promise<void> {

@@ -2,19 +2,10 @@ export type { DrawExecutionFailureReason } from "./draw.js";
 export {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
+  isSupportedDrawBody,
   isSupportedEffectResolvedCustomDrawEffect,
-  isSupportedNoChoiceMainEventDrawEffect,
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedNoChoiceOnPlayDrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
-  isSupportedOptionalNoChoiceMainEventDrawEffect,
-  isSupportedOptionalNoChoiceOnKODrawEffect,
-  isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedOptionalNoChoiceOnPlayDrawEffect,
-  isSupportedOptionalNoChoiceWhenAttackingDrawEffect,
-  isSupportedQueuedNoChoiceDrawEffect,
-  isSupportedQueuedOptionalNoChoiceDrawEffect,
+  isSupportedQueuedDrawEffectBlock,
+  isSupportedQueuedOptionalDrawEffectBlock,
   resolvePlayerId,
 } from "./draw.js";
 export type {

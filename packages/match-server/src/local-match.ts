@@ -11,7 +11,7 @@ import {
   respondToMulliganDecision,
   startMulliganFlow,
 } from "@optcg/engine-core";
-import type { DevPoneglyphFetch } from "@optcg/cards";
+import type { DevPoneglyphFetch } from "@optcg/card-support";
 import type {
   CardId,
   EngineError,

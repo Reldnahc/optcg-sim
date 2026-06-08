@@ -2,12 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { parseCardEffectLine } from "../../packages/cards/src/card-effect-line-parser.ts";
-import {
-  isSupportedNoChoiceOnPlayDrawEffect,
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
-} from "../../packages/engine-core/src/effect-runtime.ts";
 import { evaluateEffectBlockRuntimeSupport } from "../../packages/engine-core/src/effect-runtime-admission.ts";
+import { isSupportedQueuedDrawEffectBlock } from "../../packages/engine-core/src/runtime/primitives/execute.ts";
 import {
   hasCombatSafeImplementedDslDefinition,
   isSupportedContinuousQueueEffect,
@@ -39,6 +35,12 @@ const parseSupportedEffectBlock = (text, evidence = []) => {
     id: `cards-engine-contract:${text}`,
     ...parsed.block,
   };
+};
+
+const assertRuntimeSupported = (effectBlock, message) => {
+  const report = evaluateEffectBlockRuntimeSupport(effectBlock);
+  assert.equal(report.supported, true, message);
+  assert.deepEqual(report.missing, [], message);
 };
 
 const activateMainSequenceEntry = {
@@ -88,7 +90,7 @@ test("cards parser emits an On Play draw primitive block accepted by engine draw
     "instruction:draw",
   ]);
 
-  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(effectBlock), true);
+  assert.equal(isSupportedQueuedDrawEffectBlock(effectBlock), true);
 });
 
 test("cards parser emits a DON-return On Play draw block accepted by engine sequence support", () => {
@@ -113,7 +115,7 @@ test("cards parser emits once-per-turn attacking draw accepted by engine draw su
     ["entry:whenAttacking", "marker:oncePerTurn", "instruction:draw"],
   );
 
-  assert.equal(isSupportedNoChoiceWhenAttackingDrawEffect(effectBlock), true);
+  assert.equal(isSupportedQueuedDrawEffectBlock(effectBlock), true);
 });
 
 test("cards parser emits draw/trash sequence child primitives accepted by engine sequence support", () => {
@@ -177,9 +179,7 @@ test("cards parser emits all-target rested refresh locks accepted by engine cont
 
   assert.equal(effectBlock.effect.type, "cannotBecomeActive");
   assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
-  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
-    supported: true,
-  });
+  assertRuntimeSupported(effectBlock);
 });
 
 test("cards parser emits conditional power reduction accepted by engine attack queueing", () => {
@@ -249,7 +249,7 @@ test("cards parser emits On K.O. draw accepted by engine On K.O. support", () =>
     "instruction:draw",
   ]);
 
-  assert.equal(isSupportedNoChoiceOnKODrawEffect(effectBlock), true);
+  assert.equal(isSupportedQueuedDrawEffectBlock(effectBlock), true);
   assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), true);
 });
 
@@ -277,7 +277,7 @@ test("cards parser keeps recognized unsupported entry points out of engine suppo
       "instruction:draw",
     ]);
 
-    assert.equal(isSupportedNoChoiceOnPlayDrawEffect(effectBlock), false);
+    assert.equal(isSupportedQueuedDrawEffectBlock(effectBlock), false);
     assert.equal(
       isSupportedQueuedAutoSequenceForEntryPoint(
         effectBlock,
@@ -295,9 +295,7 @@ test("cards parser emits end-of-your-turn draw accepted by generic auto support"
     ["entry:endOfYourTurn", "sourcePresence:mustRemain", "instruction:draw"],
   );
 
-  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
-    supported: true,
-  });
+  assertRuntimeSupported(effectBlock);
 });
 
 test("cards parser emits event entry primitives without making them On Play effects", () => {
@@ -312,7 +310,7 @@ test("cards parser emits event entry primitives without making them On Play effe
       "instruction:draw",
     ]);
 
-    assert.equal(isSupportedNoChoiceOnPlayDrawEffect(effectBlock), false);
+    assert.notEqual(effectBlock.trigger.type, "onPlay");
     assert.equal(
       isSupportedQueuedAutoSequenceForEntryPoint(
         effectBlock,
@@ -338,11 +336,7 @@ test("cards parser emits supported Event Main and Counter primitive blocks for r
   for (const text of cases) {
     const effectBlock = parseSupportedEffectBlock(text);
 
-    assert.deepEqual(
-      evaluateEffectBlockRuntimeSupport(effectBlock),
-      { supported: true },
-      text,
-    );
+    assertRuntimeSupported(effectBlock, text);
   }
 });
 
@@ -400,11 +394,7 @@ test("cards parser emits expanded leader, field-count, and replacement primitive
   for (const { text, expected } of cases) {
     const effectBlock = parseSupportedEffectBlock(text, expected);
 
-    assert.deepEqual(
-      evaluateEffectBlockRuntimeSupport(effectBlock),
-      { supported: true },
-      text,
-    );
+    assertRuntimeSupported(effectBlock, text);
   }
 });
 
@@ -731,9 +721,7 @@ test("cards parser emits any-player owner-hand return targets accepted by engine
   assert.equal(body?.type, "sequence");
   assert.equal(body.effects[0]?.effect.request.player, "anyPlayer");
   assert.equal(body.effects[1]?.effect.target.player, "anyPlayer");
-  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
-    supported: true,
-  });
+  assertRuntimeSupported(effectBlock);
 });
 
 test("cards parser emits adjacent circled DON and rest-self costs accepted before search bodies", () => {
@@ -750,9 +738,7 @@ test("cards parser emits adjacent circled DON and rest-self costs accepted befor
     ],
   );
 
-  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
-    supported: true,
-  });
+  assertRuntimeSupported(effectBlock);
 });
 
 test("cards parser emits return-cost into rested hand-play bodies accepted by engine", () => {
@@ -769,7 +755,5 @@ test("cards parser emits return-cost into rested hand-play bodies accepted by en
     ],
   );
 
-  assert.deepEqual(evaluateEffectBlockRuntimeSupport(effectBlock), {
-    supported: true,
-  });
+  assertRuntimeSupported(effectBlock);
 });

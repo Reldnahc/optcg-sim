@@ -247,6 +247,11 @@ async function makeFixtureRepo() {
   );
   await writeFixtureFile(
     tempRoot,
+    "contracts/types/support-certification.ts",
+    'export interface SupportCertificationRow { id: "support"; }\n',
+  );
+  await writeFixtureFile(
+    tempRoot,
     "contracts/types/view.ts",
     "export interface PlayerView { activePlayer: string; }\n",
   );

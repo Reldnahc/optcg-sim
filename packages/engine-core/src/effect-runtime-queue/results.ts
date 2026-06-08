@@ -30,14 +30,13 @@ import {
   executeNoChoiceEffectPrimitive,
   executeWinGamePrimitive,
   isSupportedDamageEffect,
-  isSupportedQueuedNoChoiceDrawEffect,
-  isSupportedQueuedOptionalNoChoiceDrawEffect,
+  isSupportedQueuedDrawEffectBlock,
+  isSupportedQueuedOptionalDrawEffectBlock,
   isSupportedQueuedWinGameEffect,
 } from "../runtime/primitives/execute.js";
 import {
   isScopedActivateMainQueueEntry,
-  isSupportedActivateMainNoChoiceDrawEffect,
-  isSupportedOptionalActivateMainNoChoiceDrawEffect,
+  isSupportedActivateMainRuntimeEffectBlock,
 } from "../runtime/optional-activation/activate-main.js";
 import { queueReferencedMainEffectFromTrigger } from "../effect-runtime-activate-referenced-effect.js";
 import {
@@ -114,7 +113,18 @@ export const createEffectRuntimeQueueResults = (
     return match;
   };
 
-  const resolveQueuedNoChoiceDrawEffect = (
+  const canResolveQueuedDrawFromActivateMainEntry = (
+    effect: EffectDefinition["effects"][number],
+    entry: EffectQueueEntry,
+  ): effect is EffectDefinition["effects"][number] & {
+    effect: Extract<Effect, { type: "draw" }>;
+    sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  } =>
+    isScopedActivateMainQueueEntry(entry) &&
+    isSupportedActivateMainRuntimeEffectBlock(effect) &&
+    effect.effect.type === "draw";
+
+  const resolveQueuedDrawEffect = (
     state: GameState,
     entry: EffectQueueEntry,
   ): Extract<Effect, { type: "draw" }> | undefined => {
@@ -129,11 +139,8 @@ export const createEffectRuntimeQueueResults = (
     delete (supportShape as { condition?: unknown }).condition;
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     if (
-      !isSupportedQueuedNoChoiceDrawEffect(supportShape) &&
-      !(
-        isSupportedActivateMainNoChoiceDrawEffect(supportShape) &&
-        isScopedActivateMainQueueEntry(entry)
-      )
+      !isSupportedQueuedDrawEffectBlock(supportShape) &&
+      !canResolveQueuedDrawFromActivateMainEntry(supportShape, entry)
     ) {
       return undefined;
     }
@@ -348,11 +355,10 @@ export const createEffectRuntimeQueueResults = (
         const optionalSupportShape = withoutConditionFields(queuedEffect);
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
-          (!isSupportedQueuedOptionalNoChoiceDrawEffect(optionalSupportShape) &&
-            !(
-              isSupportedOptionalActivateMainNoChoiceDrawEffect(
-                optionalSupportShape,
-              ) && isScopedActivateMainQueueEntry(selected)
+          (!isSupportedQueuedOptionalDrawEffectBlock(optionalSupportShape) &&
+            !canResolveQueuedDrawFromActivateMainEntry(
+              optionalSupportShape,
+              selected,
             ))
         ) {
           return unsupportedEffectQueueResult(originalState);
@@ -583,7 +589,7 @@ export const createEffectRuntimeQueueResults = (
           };
         }
       } else {
-        drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
+        drawEffect ??= resolveQueuedDrawEffect(nextState, selected);
         if (
           drawEffect === undefined &&
           moveCardsEffect === undefined &&

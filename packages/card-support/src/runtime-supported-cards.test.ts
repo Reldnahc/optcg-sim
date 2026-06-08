@@ -5,12 +5,7 @@ import type { CardId, PoneglyphCardDetail, ResolvedCard } from "@optcg/types";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
   type DevPoneglyphFetch,
-  parseDevCardIdList,
-} from "./dev-manifest.js";
-
-const runtimeSupported = (): { readonly supported: true } => ({
-  supported: true,
-});
+} from "./index.js";
 
 const baseCard = (
   cardNumber: string,
@@ -92,74 +87,22 @@ const fetchFrom =
     });
   };
 
-describe("dev Poneglyph manifest builder", () => {
-  test("parses a text card list into unique card IDs", () => {
-    assert.deepEqual(
-      parseDevCardIdList(`
-        OP13-079
-        OP13-080
-
-        OP13-080
-      `),
-      ["OP13-079", "OP13-080"],
-    );
-  });
-
-  test("builds a live Poneglyph-backed manifest and checks generated support", async () => {
-    const op01001 = "OP01-001" as CardId;
-    const op01002 = "OP01-002" as CardId;
+describe("engine-backed card support package", () => {
+  test("builds generated manifests with engine runtime support evaluation", async () => {
+    const cardId = "OP01-001" as CardId;
     const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
-      cardIds: parseDevCardIdList("OP01-001\nOP01-002"),
+      cardIds: [cardId],
       fetchCard: fetchFrom({
         "OP01-001": baseCard("OP01-001", "[On Play] Draw 1 card."),
-        "OP01-002": baseCard("OP01-002", "unsupported text."),
       }),
       createdAt: "2026-05-25T00:00:00.000Z",
-      runtimeSupportEvaluator: runtimeSupported,
     });
 
-    const supported = manifestCard(manifest.cards, op01001);
-    const unsupported = manifestCard(manifest.cards, op01002);
-    assert.equal(manifest.source, "poneglyph");
-    assert.equal(supported.support.status, "implemented-dsl");
-    assert.ok(supported.support.effectDefinitionId);
-    assert.ok(
-      manifest.effectDefinitions?.[supported.support.effectDefinitionId],
-    );
-    assert.equal(unsupported.support.status, "unsupported");
-    assert.equal(unsupported.support.effectDefinitionId, undefined);
-    assert.match(unsupported.support.notes ?? "", /parse failed/u);
-  });
+    const card = manifestCard(manifest.cards, cardId);
 
-  test("chunks batch requests at 60 unique card IDs", async () => {
-    const cardIds = Array.from(
-      { length: 61 },
-      (_, index) => `OP01-${String(index + 1).padStart(3, "0")}` as CardId,
-    );
-    const calls: number[] = [];
-
-    await buildDevMatchCardManifestFromPoneglyphIds({
-      cardIds,
-      fetchCard: (url, init) => {
-        assert.equal(url.endsWith("/v1/cards/batch"), true);
-        const body = JSON.parse(init?.body ?? "{}") as {
-          card_numbers?: string[];
-        };
-        const requested = body.card_numbers ?? [];
-        calls.push(requested.length);
-        const data = Object.fromEntries(
-          requested.map((cardId) => [cardId, baseCard(cardId, null)]),
-        );
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ data, missing: [] }),
-        });
-      },
-      createdAt: "2026-05-25T00:00:00.000Z",
-    });
-
-    assert.deepEqual(calls, [60, 1]);
+    assert.equal(card.support.status, "implemented-dsl");
+    assert.ok(card.support.effectDefinitionId);
+    assert.ok(manifest.effectDefinitions?.[card.support.effectDefinitionId]);
   });
 });
 

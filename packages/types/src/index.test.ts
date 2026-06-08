@@ -12,6 +12,7 @@ test("index.ts is a pure public barrel of concern modules", async () => {
   expect(source).toContain('export type * from "./decisions.js";');
   expect(source).toContain('export type * from "./runtime.js";');
   expect(source).toContain('export type * from "./game-state.js";');
+  expect(source).toContain('export type * from "./support-certification.js";');
   expect(source).not.toMatch(/\binterface\b|\btype\s+[A-Za-z0-9_]+\s*=/);
 });
 

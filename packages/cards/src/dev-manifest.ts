@@ -8,6 +8,7 @@ import {
   type PoneglyphFetch,
   type PoneglyphFetchRequest,
   type PoneglyphFetchResponse,
+  type RuntimeSupportEvaluator,
 } from "./card-repository.js";
 
 export type DevPoneglyphFetchResponse = PoneglyphFetchResponse;
@@ -22,6 +23,7 @@ export interface BuildDevMatchCardManifestFromPoneglyphIdsRequest {
   readonly createdAt?: string;
   readonly devDonCount?: number;
   readonly versions?: Partial<DevManifestVersions>;
+  readonly runtimeSupportEvaluator?: RuntimeSupportEvaluator;
 }
 
 interface DevManifestVersions {
@@ -72,6 +74,9 @@ export const buildDevMatchCardManifestFromPoneglyphIds = async (
         : { fetchCard: request.fetchCard }),
     }),
     versions,
+    ...(request.runtimeSupportEvaluator === undefined
+      ? {}
+      : { runtimeSupportEvaluator: request.runtimeSupportEvaluator }),
   }).buildMatchManifest({
     cardIds: request.cardIds,
     ...(request.createdAt === undefined

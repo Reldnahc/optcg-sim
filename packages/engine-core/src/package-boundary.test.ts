@@ -189,6 +189,24 @@ test("production engine-core source files do not import card, deck hash, or cach
   }
 });
 
+test("production engine-core support predicates do not encode exact draw wrapper-body pairs", async () => {
+  const srcDirectoryPath = path.join(repoRoot, "packages/engine-core/src");
+  const productionSourcePaths =
+    await listProductionSourcePaths(srcDirectoryPath);
+  const exactWrapperDrawSupportPattern =
+    /\bisSupported(?:Optional)?(?:NoChoice)?(?:OnPlay|WhenAttacking|OnOpponentAttack|OnKO|MainEvent|ActivateMain).*DrawEffect\b/u;
+
+  assert.ok(productionSourcePaths.length > 0);
+  for (const sourcePath of productionSourcePaths) {
+    const source = await readFile(sourcePath, "utf8");
+    assert.equal(
+      exactWrapperDrawSupportPattern.test(source),
+      false,
+      `engine-core production support predicate must not encode an exact draw wrapper/body pair: ${sourcePath}`,
+    );
+  }
+});
+
 async function listProductionSourcePaths(
   directoryPath: string,
 ): Promise<readonly string[]> {

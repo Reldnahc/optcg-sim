@@ -58,11 +58,6 @@ export type {
 export {
   executeNoChoiceEffectPrimitive,
   isSupportedMainEventTargetKoEffect,
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedNoChoiceMainEventDrawEffect,
-  isSupportedNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedNoChoiceOnPlayDrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
 } from "./runtime/primitives/execute.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";

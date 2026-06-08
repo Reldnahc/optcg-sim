@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import { parseCardEffectLine } from "@optcg/cards";
 import { createSupportProbeReport } from "./support-probe-report.js";
 
 describe("text-only support probe parser backend", () => {
@@ -32,6 +32,21 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Source spans:");
     expect(report.lines).toContain("- span:entry [0, 9] entry:onPlay");
     expect(report.lines).toContain("- span:body [10, 22] instruction:draw");
+  });
+
+  it("reports parser certificates and runtime records for parsed text", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] Draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parser support: passed");
+    expect(report.lines).toContain("Parser support evidence:");
+    expect(report.lines).toContain(
+      "- parser entryPoint:onPlay spans span:entry",
+    );
+    expect(report.lines).toContain("Runtime support evidence:");
+    expect(report.lines).toContain("- runtime body:draw passed");
   });
 
   it("reports engine runtime support for deck-top trash movement", async () => {
@@ -188,6 +203,10 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: failed");
     expect(report.lines).toContain(
       "Engine runtime reason: unsupported trigger/category/source-presence envelope",
+    );
+    expect(report.lines).toContain("Runtime missing support:");
+    expect(report.lines).toContain(
+      "- runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
     );
   });
 

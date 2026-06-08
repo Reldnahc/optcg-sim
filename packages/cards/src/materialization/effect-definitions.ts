@@ -1,10 +1,10 @@
-import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type {
   CardId,
   EffectBlock,
   EffectDefinition,
   EffectTextPresentationRef,
   EffectTextSourceMap,
+  ParserSupportCertificate,
 } from "@optcg/types";
 
 import { parseCardEffectLinesDetailed } from "../card-effect-line-parser.js";
@@ -12,24 +12,49 @@ import {
   presentationSpanScope,
   scopePresentationSpan,
 } from "../presentation-span-ids.js";
+import type { ParsedRuntimeEffectLine } from "../types.js";
+import { createParserSupportCertificate } from "./support-certificate.js";
 
 interface EffectMaterializationVersions {
   readonly effectDefinitionsVersion: string;
   readonly rulesVersion: string;
 }
 
+export interface RuntimeSupportEvaluation {
+  readonly supported: boolean;
+  readonly reason?: string;
+}
+
+export type RuntimeSupportEvaluator = (
+  block: EffectBlock,
+) => RuntimeSupportEvaluation;
+
+interface EffectMaterializationOptions {
+  readonly evaluateRuntimeSupport?: RuntimeSupportEvaluator;
+}
+
+const missingRuntimeSupportEvaluator = (): RuntimeSupportEvaluation => ({
+  supported: false,
+  reason: "runtime evaluator unavailable",
+});
+
 export const materializeEffectDefinition = (
   cardId: CardId,
   lines: readonly string[],
   sourceTextHash: string,
   versions: EffectMaterializationVersions,
+  options: EffectMaterializationOptions = {},
 ): {
   readonly definition?: EffectDefinition;
   readonly runtimeSupported: boolean;
   readonly diagnostics: readonly string[];
+  readonly parserCertificate: ParserSupportCertificate;
 } => {
+  const evaluateRuntimeSupport =
+    options.evaluateRuntimeSupport ?? missingRuntimeSupportEvaluator;
   const blocks: EffectBlock[] = [];
   const diagnostics: string[] = [];
+  const parsedRuntimeLines: ParsedRuntimeEffectLine[] = [];
   let parsedLineCount = 0;
   const shouldScopeSpanIds = lines.length > 1;
 
@@ -43,12 +68,7 @@ export const materializeEffectDefinition = (
     }
     parsedLineCount += 1;
     const runtimeValues = parsed.value.filter(
-      (
-        value,
-      ): value is Extract<
-        (typeof parsed.value)[number],
-        { readonly block: unknown }
-      > => value.kind !== "metadata",
+      (value): value is ParsedRuntimeEffectLine => value.kind !== "metadata",
     );
     for (const [blockIndex, value] of runtimeValues.entries()) {
       const spanScope = presentationSpanScope({
@@ -66,6 +86,10 @@ export const materializeEffectDefinition = (
               ),
             };
       const presentation = presentationRefFromSourceMap(sourceMap);
+      parsedRuntimeLines.push({
+        ...value,
+        ...(sourceMap === undefined ? {} : { sourceMap }),
+      });
       const block: EffectBlock = {
         ...value.block,
         id:
@@ -76,7 +100,7 @@ export const materializeEffectDefinition = (
               )}` as EffectBlock["id"]),
         ...(presentation === undefined ? {} : { presentation }),
       };
-      const runtimeSupport = evaluateEffectBlockRuntimeSupport(block);
+      const runtimeSupport = evaluateRuntimeSupport(block);
       if (!runtimeSupport.supported) {
         diagnostics.push(
           `line ${String(index + 1)} runtime unsupported: ${
@@ -88,19 +112,28 @@ export const materializeEffectDefinition = (
     }
   }
 
+  const parserCertificate = createParserSupportCertificate(parsedRuntimeLines);
+  for (const missing of parserCertificate.missing) {
+    diagnostics.push(
+      `parser unsupported: ${missing.family}:${missing.id}: ${missing.reason}`,
+    );
+  }
+
   if (lines.length === 0) {
-    return { runtimeSupported: true, diagnostics };
+    return { runtimeSupported: true, diagnostics, parserCertificate };
   }
   const runtimeSupported =
+    parserCertificate.complete &&
     parsedLineCount === lines.length &&
-    blocks.every((block) => evaluateEffectBlockRuntimeSupport(block).supported);
+    blocks.every((block) => evaluateRuntimeSupport(block).supported);
   if (!runtimeSupported) {
-    return { runtimeSupported: false, diagnostics };
+    return { runtimeSupported: false, diagnostics, parserCertificate };
   }
 
   return {
     runtimeSupported: true,
     diagnostics,
+    parserCertificate,
     definition: {
       cardId,
       implementationStatus: "implemented-dsl",

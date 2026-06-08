@@ -1,5 +1,5 @@
 {
-  "name": "@optcg/match-server",
+  "name": "@optcg/card-support",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,12 +11,11 @@
     }
   },
   "scripts": {
-    "dev": "corepack pnpm exec tsx src/dev-server.ts",
+    "support:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/support-probe.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
-    "test": "corepack pnpm exec vitest run --root ../.. packages/match-server/src"
+    "test": "corepack pnpm exec vitest run --root ../.. packages/card-support/src"
   },
   "dependencies": {
-    "@optcg/card-support": "workspace:*",
     "@optcg/cards": "workspace:*",
     "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*",

@@ -24,10 +24,16 @@ import {
 import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 import { materializeEffectDefinition } from "./materialization/effect-definitions.js";
+import type { RuntimeSupportEvaluator as RuntimeSupportEvaluatorPort } from "./materialization/effect-definitions.js";
 import {
   presentationSpanScope,
   scopePresentationSpan,
 } from "./presentation-span-ids.js";
+
+export type {
+  RuntimeSupportEvaluation,
+  RuntimeSupportEvaluator,
+} from "./materialization/effect-definitions.js";
 
 export interface CardDataCache {
   getJson(key: string): Promise<unknown>;
@@ -92,10 +98,11 @@ interface BuiltCard {
   readonly definition?: EffectDefinition;
 }
 
-interface CreateCardRepositoryInput {
+export interface CreateCardRepositoryInput {
   readonly cache: CardDataCache;
   readonly poneglyphClient: PoneglyphClient;
   readonly versions: CardRepositoryVersions;
+  readonly runtimeSupportEvaluator?: RuntimeSupportEvaluatorPort;
   readonly cacheTtlSeconds?: number;
 }
 
@@ -161,7 +168,11 @@ export const createCardRepository = (
             `Poneglyph card batch fetch failed for ${String(cardId)}: response card_number was ${detail.card_number}`,
           );
         }
-        const built = buildResolvedCard(detail, input.versions);
+        const built = buildResolvedCard(
+          detail,
+          input.versions,
+          input.runtimeSupportEvaluator,
+        );
         byId.set(cardId, built);
         await input.cache.setJson(
           createCardCacheKey({ cardId, versions: input.versions }),
@@ -336,6 +347,7 @@ const fetchPoneglyphCardDetailBatch = async (
 const buildResolvedCard = (
   detail: PoneglyphCardDetail,
   versions: CardRepositoryVersions,
+  runtimeSupportEvaluator: RuntimeSupportEvaluatorPort | undefined,
 ): BuiltCard => {
   const cardId = detail.card_number as CardId;
   const lines = gameplayLines(detail);
@@ -353,6 +365,9 @@ const buildResolvedCard = (
     effectLines,
     sourceTextHash,
     versions,
+    runtimeSupportEvaluator === undefined
+      ? {}
+      : { evaluateRuntimeSupport: runtimeSupportEvaluator },
   );
   const behaviorHash = sha256({
     effect: detail.effect,

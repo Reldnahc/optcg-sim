@@ -20,6 +20,7 @@ const canonicalModuleFiles = [
   "types/decisions.ts",
   "types/runtime.ts",
   "types/effect-presentation.ts",
+  "types/support-certification.ts",
 ];
 
 const exportNamePattern = /export\s+(?:type|interface)\s+([A-Za-z0-9_]+)/g;

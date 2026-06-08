@@ -30,6 +30,63 @@ const block = (
   ...params,
 });
 
+const assertRuntimeSupported = (
+  report: ReturnType<typeof evaluateEffectBlockRuntimeSupport>,
+): void => {
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+};
+
+test("runtime admission reports reusable primitive records", () => {
+  const report = evaluateEffectBlockRuntimeSupport(
+    block({
+      category: "auto",
+      effect: { type: "draw", count: 1, player: "self" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    }),
+  );
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(
+    report.records.map((record) => [
+      record.authority,
+      record.family,
+      record.id,
+      record.supported,
+    ]),
+    [
+      ["runtime", "entryPoint", "onPlay", true],
+      ["runtime", "sourcePresence", "mustRemainInSameZone", true],
+      ["runtime", "body", "draw", true],
+    ],
+  );
+  assert.deepEqual(report.missing, []);
+});
+
+test("runtime admission reports missing evidence for unsupported bodies", () => {
+  const report = evaluateEffectBlockRuntimeSupport(
+    block({
+      category: "auto",
+      effect: { type: "lookAtTop", player: "self", count: 1 },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    }),
+  );
+
+  assert.equal(report.supported, false);
+  assert.equal(report.reason, "unsupported auto effect body");
+  assert.deepEqual(report.missing, [
+    {
+      authority: "runtime",
+      family: "body",
+      id: "lookAtTop",
+      reason: "unsupported auto effect body",
+      effectPath: ["effect"],
+    },
+  ]);
+});
+
 test("runtime admission accepts reusable auto bodies through supported entry adapters", () => {
   const effect = {
     type: "trashFromHand",
@@ -38,7 +95,7 @@ test("runtime admission accepts reusable auto bodies through supported entry ada
     count: 1,
   } as const;
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -47,10 +104,9 @@ test("runtime admission accepts reusable auto bodies through supported entry ada
         trigger: { type: "onPlay" },
       }),
     ),
-    { supported: true },
   );
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -59,7 +115,6 @@ test("runtime admission accepts reusable auto bodies through supported entry ada
         trigger: { type: "onKO" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -72,7 +127,7 @@ test("runtime admission accepts deck-top card movement as a reusable auto body",
     order: "original",
   } as const;
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -81,7 +136,6 @@ test("runtime admission accepts deck-top card movement as a reusable auto body",
         trigger: { type: "onPlay" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -96,7 +150,7 @@ test("runtime admission accepts DON deck movement as a reusable auto body", () =
     destinationState: "active",
   } as const;
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -105,7 +159,6 @@ test("runtime admission accepts DON deck movement as a reusable auto body", () =
         trigger: { type: "trigger" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -117,7 +170,7 @@ test("runtime admission accepts effect damage as a reusable auto body", () => {
     count: 1,
   } as const;
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -126,7 +179,6 @@ test("runtime admission accepts effect damage as a reusable auto body", () => {
         trigger: { type: "onKO" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -170,7 +222,7 @@ test("runtime admission accepts selected trash cards with trigger-presence filte
     ],
   };
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -179,7 +231,6 @@ test("runtime admission accepts selected trash cards with trigger-presence filte
         trigger: { type: "onKO" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -219,7 +270,7 @@ test("runtime admission accepts selected trash cards moving to face-up Life", ()
     ],
   };
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -228,7 +279,6 @@ test("runtime admission accepts selected trash cards moving to face-up Life", ()
         trigger: { type: "onPlay" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -300,7 +350,7 @@ test("runtime admission accepts Activate Main rested DON attachment to named fie
     ],
   };
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "activate",
@@ -310,7 +360,6 @@ test("runtime admission accepts Activate Main rested DON attachment to named fie
         trigger: { type: "activateMain" },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -331,7 +380,7 @@ test("runtime admission accepts opponent field-removal replacement with reusable
     target,
   };
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "replacement",
@@ -351,7 +400,6 @@ test("runtime admission accepts opponent field-removal replacement with reusable
         },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -372,7 +420,7 @@ test("runtime admission accepts opponent field-removal replacement with reusable
     target,
   };
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "replacement",
@@ -427,12 +475,11 @@ test("runtime admission accepts opponent field-removal replacement with reusable
         },
       }),
     ),
-    { supported: true },
   );
 });
 
 test("runtime admission accepts costed main sequences with conditional draw and this-turn power reduction", () => {
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -497,12 +544,11 @@ test("runtime admission accepts costed main sequences with conditional draw and 
         },
       }),
     ),
-    { supported: true },
   );
 });
 
 test("runtime admission accepts opponent-attack optional rest-DON target-rest sequence", () => {
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -549,7 +595,6 @@ test("runtime admission accepts opponent-attack optional rest-DON target-rest se
         },
       }),
     ),
-    { supported: true },
   );
 });
 
@@ -596,7 +641,7 @@ test("runtime admission accepts saved Leader or Character effect invalidation se
     ],
   };
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -605,10 +650,9 @@ test("runtime admission accepts saved Leader or Character effect invalidation se
         effect,
       }),
     ),
-    { supported: true },
   );
 
-  assert.deepEqual(
+  assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
       block({
         category: "auto",
@@ -617,23 +661,26 @@ test("runtime admission accepts saved Leader or Character effect invalidation se
         effect,
       }),
     ),
-    { supported: true },
   );
 });
 
 test("runtime admission rejects parsed unsupported entry adapters", () => {
-  assert.deepEqual(
-    evaluateEffectBlockRuntimeSupport(
-      block({
-        category: "auto",
-        effect: { type: "draw", player: "self", count: 1 },
-        sourcePresencePolicy: "mustRemainInSameZone",
-        trigger: { type: "onBlock" },
-      }),
-    ),
-    {
-      reason: "unsupported trigger/category/source-presence envelope",
-      supported: false,
-    },
+  const report = evaluateEffectBlockRuntimeSupport(
+    block({
+      category: "auto",
+      effect: { type: "draw", player: "self", count: 1 },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onBlock" },
+    }),
   );
+
+  assert.equal(report.supported, false);
+  assert.equal(
+    report.reason,
+    "unsupported trigger/category/source-presence envelope",
+  );
+  const firstMissing = report.missing[0];
+  assert.ok(firstMissing);
+  assert.equal(firstMissing.family, "entryPoint");
+  assert.equal(firstMissing.id, "onBlock");
 });

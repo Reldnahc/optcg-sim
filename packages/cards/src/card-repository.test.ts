@@ -7,6 +7,7 @@ import {
   createCardRepository,
   type CachedResolvedCard,
   type CardDataCache,
+  type CreateCardRepositoryInput,
   type CardRepositoryVersions,
   type PoneglyphClient,
 } from "./card-repository.js";
@@ -20,6 +21,18 @@ const versions: CardRepositoryVersions = {
   rulesVersion: "rules-v1",
 };
 
+const runtimeSupported = (): { readonly supported: true } => ({
+  supported: true,
+});
+
+const createRuntimeSupportedCardRepository = (
+  input: Omit<CreateCardRepositoryInput, "runtimeSupportEvaluator">,
+) =>
+  createCardRepository({
+    ...input,
+    runtimeSupportEvaluator: runtimeSupported,
+  });
+
 describe("card repository", () => {
   test("returns cached resolved cards without calling Poneglyph", async () => {
     const cache = new FakeCardCache();
@@ -31,7 +44,7 @@ describe("card repository", () => {
       card,
     } satisfies CachedResolvedCard);
     const client = new FakePoneglyphClient({});
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -49,7 +62,7 @@ describe("card repository", () => {
     const client = new FakePoneglyphClient({
       "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -81,13 +94,36 @@ describe("card repository", () => {
     assert.equal(cachedDefinition.cardId, cardId);
   });
 
-  test("resolved implemented DSL card includes effect text source map", async () => {
+  test("fails closed for parsed effect text without a runtime support evaluator", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;
     const client = new FakePoneglyphClient({
       "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
     });
     const repository = createCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.equal(resolved.support.status, "unsupported");
+    assert.equal(resolved.support.effectDefinitionId, undefined);
+    assert.match(
+      resolved.support.notes ?? "",
+      /runtime evaluator unavailable/u,
+    );
+  });
+
+  test("resolved implemented DSL card includes effect text source map", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
+    });
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -112,7 +148,7 @@ describe("card repository", () => {
     const client = new FakePoneglyphClient({
       "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -143,7 +179,7 @@ describe("card repository", () => {
     const client = new FakePoneglyphClient({
       "OP01-001": poneglyphCard("OP01-001", effect),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -191,7 +227,7 @@ describe("card repository", () => {
         "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
       ),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -218,7 +254,7 @@ describe("card repository", () => {
         ].join("\n"),
       ),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -247,7 +283,7 @@ describe("card repository", () => {
     const client = new FakePoneglyphClient({
       "OP01-002": poneglyphCard("OP01-002", null),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -272,7 +308,7 @@ describe("card repository", () => {
       "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
       "OP01-002": poneglyphCard("OP01-002", "Unsupported text."),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -308,7 +344,7 @@ describe("card repository", () => {
         "[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.",
       ),
     });
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache,
       poneglyphClient: client,
       versions,
@@ -334,7 +370,7 @@ describe("card repository", () => {
   });
 
   test("fails clearly when Poneglyph reports missing cards", async () => {
-    const repository = createCardRepository({
+    const repository = createRuntimeSupportedCardRepository({
       cache: new FakeCardCache(),
       poneglyphClient: new FakePoneglyphClient({}),
       versions,

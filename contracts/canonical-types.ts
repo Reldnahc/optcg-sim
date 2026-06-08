@@ -7,3 +7,4 @@ export type * from "./types/effects.js";
 export type * from "./types/decisions.js";
 export type * from "./types/runtime.js";
 export type * from "./types/effect-presentation.js";
+export type * from "./types/support-certification.js";

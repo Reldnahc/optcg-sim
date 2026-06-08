@@ -9,6 +9,7 @@ import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditio
 import { isSupportedContinuousQueueEffect } from "./runtime/continuous/continuous.js";
 import {
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
+  isSupportedDrawBody,
   isSupportedWinGameBody,
 } from "./runtime/primitives/execute.js";
 import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
@@ -24,14 +25,6 @@ export interface AutoRuntimeEntryAdapter {
   readonly sourcePresencePolicies: readonly SourcePresencePolicy[];
   readonly triggerType: Trigger["type"];
 }
-
-const isSupportedDrawBody = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "draw" }> =>
-  effect.type === "draw" &&
-  effect.player === "self" &&
-  Number.isInteger(effect.count) &&
-  effect.count >= 0;
 
 const isSupportedDrawUpToBody = (
   effect: Effect,
