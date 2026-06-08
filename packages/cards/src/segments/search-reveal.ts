@@ -74,18 +74,18 @@ export function searchRevealExpressionParser(
     ...reveal.evidence,
     ...remaining.evidence,
   ] as const;
-  const presentationSpans = searchRevealPresentationSpans({
-    input,
-    remainingEvidence: remaining.evidence,
-    searchEvidence,
-  });
-  const decomposedSearch = createBottomSearchSequence({
+  const decomposedSearch = createTopDeckSearchSequence({
     look,
     reveal,
     remaining,
   });
   const baseEffect = decomposedSearch?.effect ?? searchEffect;
   const baseEvidence = decomposedSearch?.evidence ?? searchEvidence;
+  const presentationSpans = searchRevealPresentationSpans({
+    input,
+    remainingEvidence: remaining.evidence,
+    searchEvidence: baseEvidence,
+  });
 
   if (remaining.rest.length === 0) {
     return {
@@ -148,7 +148,7 @@ type ParsedSearchParts = {
     | NonNullable<ReturnType<typeof parseRestToTrash>>;
 };
 
-const createBottomSearchSequence = ({
+const createTopDeckSearchSequence = ({
   look,
   reveal,
   remaining,
@@ -158,10 +158,6 @@ const createBottomSearchSequence = ({
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined => {
-  if (remaining.remainingCards.destination !== "deck") {
-    return undefined;
-  }
-
   const selectedReveal =
     reveal.revealTo === "bothPlayers"
       ? [
@@ -175,6 +171,18 @@ const createBottomSearchSequence = ({
           },
         ]
       : [];
+  const remainder =
+    remaining.remainingCards.destination === "deck"
+      ? {
+          destination: "deck" as const,
+          position: "bottom" as const,
+          order: "chooser" as const,
+        }
+      : {
+          destination: "trash" as const,
+          position: "bottom" as const,
+          order: "original" as const,
+        };
 
   return {
     effect: {
@@ -219,9 +227,7 @@ const createBottomSearchSequence = ({
             type: "placeSetRemainder",
             set: searchLookSet,
             owner: "self",
-            destination: "deck",
-            position: "bottom",
-            order: "chooser",
+            ...remainder,
           },
         },
       ],

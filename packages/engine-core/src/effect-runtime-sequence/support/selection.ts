@@ -149,9 +149,12 @@ export const isSupportedPlaceSetRemainderSegment = (
 ): effect is PlaceSetRemainderEffect =>
   effect.type === "placeSetRemainder" &&
   effect.owner === "self" &&
-  effect.destination === "deck" &&
-  (effect.position === "bottom" || effect.position === "top") &&
-  (effect.order === "chooser" || effect.order === "original");
+  ((effect.destination === "deck" &&
+    (effect.position === "bottom" || effect.position === "top") &&
+    (effect.order === "chooser" || effect.order === "original")) ||
+    (effect.destination === "trash" &&
+      effect.position === "bottom" &&
+      effect.order === "original"));
 
 export type SavedFieldObjectSelectionTarget = Extract<
   Target,

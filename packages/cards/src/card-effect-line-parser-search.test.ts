@@ -208,24 +208,55 @@ describe("card effect line parser search effects", () => {
             {
               connector: "always",
               effect: {
-                type: "search",
-                request: {
-                  zone: "deck",
-                  player: "self",
-                  lookCount: 3,
-                  filter: {
-                    typesAny: ["Celestial Dragons"],
-                    nameNot: ["Saint Shalria"],
-                  },
-                  min: 0,
-                  max: 1,
-                  destination: "hand",
-                  revealTo: "bothPlayers",
-                  remainingCards: {
-                    destination: "trash",
-                  },
-                  shuffleAfter: false,
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 3,
+                saveAs: "set:search-look",
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:search-look",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  typesAny: ["Celestial Dragons"],
+                  nameNot: ["Saint Shalria"],
                 },
+                saveAs: "searchSelection:hand",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                selection: "searchSelection:hand",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "searchSelection:hand",
+                from: "set:search-look",
+                to: "hand",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:search-look",
+                owner: "self",
+                destination: "trash",
+                position: "bottom",
+                order: "original",
               },
             },
             {
@@ -244,7 +275,11 @@ describe("card effect line parser search effects", () => {
     expect(result?.evidence).toEqual(
       expect.arrayContaining([
         "entry:onPlay",
-        "instruction:search",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:revealSelected",
+        "instruction:moveSelected",
+        "instruction:placeSetRemainder",
         "look:topDeck",
         "filter:type",
         "filter:nameNot",

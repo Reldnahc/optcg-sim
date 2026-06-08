@@ -1,33 +1,24 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type {
-  CardInstance,
-  CardRef,
-  Effect,
-  EffectDefinition,
-  EngineResult,
-  GameState,
-  SelectionId,
-  SelectionSetId,
-} from "@optcg/types";
+import type { Effect, SelectionId, SelectionSetId } from "@optcg/types";
 
 import {
   applyAction,
-  createActiveState,
   must,
   p1,
   processEffectRuntime,
-  queueDrawForP1,
   resolvedCard,
-  reviewedOnPlayDrawDefinition,
-  toEffectId,
-  toQueueEntryId,
-  toSourceSnapshot,
-  toTimingWindowId,
-  withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
 import { filterStateForPlayer } from "../view/filter-state-for-player.js";
+import {
+  isCardRevealedPayload,
+  markTopDeckAsSearchCandidates,
+  respondWithCards,
+  respondWithNoCards,
+  respondWithOrderedIds,
+  sequenceQueueState,
+} from "./search-reveal-test-support.js";
 
 const searchThenDrawSequence = (
   lookCount: number,
@@ -350,7 +341,7 @@ const lookTopRevealAddOneBottomRestSequence = (): Extract<
           type: "revealSelected",
           selection,
           visibility: "bothPlayers",
-        } as unknown as Effect,
+        },
       },
       {
         connector: "ifPreviousSucceeded",
@@ -376,158 +367,69 @@ const lookTopRevealAddOneBottomRestSequence = (): Extract<
   };
 };
 
-const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
-  cards.map((card, index) => ({
-    ...card,
-    zone: { zone: "hand", playerId: p1, slot: "hand", index },
-  }));
-
-const setupSequenceDefinition = (
-  state: GameState,
-  source: CardInstance,
-  effect: Effect,
-): EffectDefinition => {
-  const effectDefinitionId = "def-search-sequence";
-  const supportCard = resolvedCard({
-    cardId: source.cardId,
-    category: "character",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId,
-      rulesVersion: "search-sequence-rules",
-      sourceTextHash: "search-sequence-source",
-    },
-  });
-  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
-  const baseEffect = must(base.effects[0], "base effect");
-  const definition: EffectDefinition = {
-    ...base,
+const lookTopRevealAddOneTrashRestSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const revealSet = "set:search-look" as SelectionSetId;
+  const selection = "searchSelection:hand" as SelectionId;
+  return {
+    type: "sequence",
     effects: [
       {
-        ...baseEffect,
-        id: toEffectId("effect-search-sequence"),
-        effect,
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          zone: "deck",
+          count: 3,
+          saveAs: revealSet,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: revealSet,
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {},
+          saveAs: selection,
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "revealSelected",
+          selection,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: revealSet,
+          to: "hand",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "placeSetRemainder",
+          set: revealSet,
+          owner: "self",
+          destination: "trash",
+          position: "bottom",
+          order: "original",
+        },
       },
     ],
   };
-  state.cardManifest.effectDefinitionsVersion =
-    definition.metadata.effectDefinitionsVersion;
-  state.cardManifest.effectDefinitions = {
-    [effectDefinitionId]: definition,
-  };
-  state.cardManifest.cards[source.cardId] = supportCard;
-  return definition;
 };
-
-const sequenceQueueState = (
-  effect: Effect,
-  minimumDeckCount: number,
-): { state: GameState; definition: EffectDefinition } => {
-  const state = createActiveState();
-  state.turn.turnPlayerId = p1;
-  const player = must(state.players[p1], "p1");
-  const source = withCardInZone({
-    state,
-    playerId: p1,
-    card: must(player.hand[0], "source"),
-    zone: "characterArea",
-  });
-  player.hand = reindexHand(player.hand.slice(1));
-  while (player.deck.length < minimumDeckCount) {
-    const refill = must(player.hand.at(-1), "deck refill");
-    player.hand = reindexHand(player.hand.slice(0, -1));
-    player.deck = [
-      ...player.deck,
-      {
-        ...refill,
-        zone: {
-          zone: "deck",
-          playerId: p1,
-          slot: "deck",
-          index: player.deck.length,
-        },
-      },
-    ];
-  }
-  const definition = setupSequenceDefinition(state, source, effect);
-  state.effectQueue = [
-    {
-      ...queueDrawForP1(),
-      id: toQueueEntryId("queue-entry-search-sequence"),
-      timingWindowId: toTimingWindowId("window-search-sequence"),
-      controllerId: p1,
-      source: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
-        playerId: p1,
-        zone: source.zone,
-      },
-      sourceSnapshot: toSourceSnapshot(source, p1, p1),
-      effectBlockId: must(definition.effects[0], "sequence effect").id,
-      sourcePresencePolicy: "mustRemainInSameZone",
-      causedBy: { type: "ruleProcess", name: "search-sequence-test" },
-    },
-  ];
-  return { state, definition };
-};
-
-const respondWithCards = (state: GameState): EngineResult => {
-  const decision = must(state.pendingDecision, "pending decision");
-  assert.equal(decision.type, "selectCards");
-  const selected = must(decision.candidates[0], "search candidate").card;
-  return applyAction(state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "cards", cards: [selected] },
-  });
-};
-
-const respondWithNoCards = (state: GameState): EngineResult => {
-  const decision = must(state.pendingDecision, "pending decision");
-  assert.equal(decision.type, "selectCards");
-  return applyAction(state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "cards", cards: [] },
-  });
-};
-
-const respondWithOrderedIds = (state: GameState): EngineResult => {
-  const decision = must(state.pendingDecision, "pending decision");
-  assert.equal(decision.type, "orderCards");
-  return applyAction(state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: {
-      type: "orderedIds",
-      ids: decision.cards.map((card) => String(card.instanceId)),
-    },
-  });
-};
-
-const markTopDeckAsSearchCandidates = (
-  state: GameState,
-  count: number,
-): readonly CardInstance[] => {
-  const player = must(state.players[p1], "p1");
-  const cards = player.deck.slice(0, count);
-  assert.equal(cards.length, count);
-  for (const card of cards) {
-    state.cardManifest.cards[card.cardId] = resolvedCard({
-      cardId: card.cardId,
-      category: "event",
-    });
-  }
-  return cards;
-};
-
-const isCardRevealedPayload = (
-  payload: unknown,
-): payload is { readonly cards: readonly CardRef[] } =>
-  typeof payload === "object" &&
-  payload !== null &&
-  "cards" in payload &&
-  Array.isArray(payload.cards);
 
 test("sequence search segment resumes into following then segment", () => {
   const { state } = sequenceQueueState(searchThenDrawSequence(1), 2);
@@ -886,6 +788,68 @@ test("sequence can publicly reveal selected looked card before adding it to hand
   assert.deepEqual(
     resolvedPlayer.deck.slice(-2).map((card) => card.instanceId),
     [second.instanceId, third.instanceId],
+  );
+});
+
+test("sequence can trash unselected looked cards after adding selected card to hand", () => {
+  const { state } = sequenceQueueState(
+    lookTopRevealAddOneTrashRestSequence(),
+    4,
+  );
+  const player = must(state.players[p1], "p1");
+  const [first, second, third, fourth] = player.deck.slice(0, 4);
+  assert.ok(first !== undefined);
+  assert.ok(second !== undefined);
+  assert.ok(third !== undefined);
+  assert.ok(fourth !== undefined);
+  for (const card of [first, second, third]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "event",
+      cost: 1,
+    });
+  }
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+
+  const selectDecision = must(paused.state.pendingDecision, "select decision");
+  assert.equal(selectDecision.type, "selectCards");
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(selectDecision.candidates[0], "candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.revealedCards.length, 0);
+  const resolvedPlayer = must(resolved.state.players[p1], "resolved p1");
+  assert.ok(
+    resolvedPlayer.hand.some((card) => card.instanceId === first.instanceId),
+  );
+  assert.ok(
+    resolvedPlayer.trash.some((card) => card.instanceId === second.instanceId),
+  );
+  assert.ok(
+    resolvedPlayer.trash.some((card) => card.instanceId === third.instanceId),
+  );
+  assert.deepEqual(
+    resolvedPlayer.deck.map((card) => card.instanceId),
+    [fourth.instanceId],
+  );
+  assert.ok(
+    resolved.events.some(
+      (event) =>
+        event.type === "cardRevealed" && event.visibility.type === "public",
+    ),
+  );
+  assert.ok(
+    resolved.events.filter((event) => event.type === "cardTrashed").length >= 2,
   );
 });
 

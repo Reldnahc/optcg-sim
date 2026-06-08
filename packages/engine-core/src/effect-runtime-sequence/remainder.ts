@@ -18,6 +18,7 @@ import {
   orderedIdsFromResponse,
   placeOrderedCardsOnDeck,
 } from "../effect-runtime-card-set/remainder-order.js";
+import { moveConcreteCardsToTrash } from "../movement/concrete-card-movement.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type PlaceSetRemainderEffect = Extract<Effect, { type: "placeSetRemainder" }>;
@@ -106,9 +107,14 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
   const effect = params.effect;
   if (
     effect.owner !== "self" ||
-    effect.destination !== "deck" ||
-    (effect.position !== "bottom" && effect.position !== "top") ||
-    (effect.order !== "chooser" && effect.order !== "original")
+    !(
+      (effect.destination === "deck" &&
+        (effect.position === "bottom" || effect.position === "top") &&
+        (effect.order === "chooser" || effect.order === "original")) ||
+      (effect.destination === "trash" &&
+        effect.position === "bottom" &&
+        effect.order === "original")
+    )
   ) {
     return { ok: false };
   }
@@ -139,6 +145,42 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
       },
     },
   });
+  if (effect.destination === "trash") {
+    const events: EngineEvent[] = [];
+    const moved = moveConcreteCardsToTrash(
+      params.state,
+      events,
+      current.remainder,
+      {
+        cardMovedPayloadExtra: { selectionSetId: String(effect.set) },
+        cardMovedPayloadShape: "zoneRefs",
+        cardMovedVisibility: { type: "public" },
+        cardTrashedVisibility: { type: "public" },
+        causedBy: {
+          type: "effect",
+          queueEntryId: params.entry.id,
+          effectId: params.entry.effectBlockId,
+        },
+        emitCardTrashed: true,
+        includeCardIdentityInCardMoved: true,
+        playerId: params.entry.controllerId,
+        reason: "searchRevealRemainder",
+        sourceZone: "deck",
+      },
+    );
+    return {
+      events,
+      ledgers: completedLedgers(current.remainder.length > 0),
+      ok: true,
+      state: {
+        ...moved.state,
+        revealedCards: moved.state.revealedCards.filter(
+          (record) => record.id !== current.reveal.id,
+        ),
+        eventJournal: [...params.state.eventJournal, ...events],
+      },
+    };
+  }
   if (current.remainder.length === 0) {
     return {
       events: [],
