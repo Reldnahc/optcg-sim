@@ -65,7 +65,6 @@ export const LobbyDeckPanel = ({
               onChange={setSelectedLoadoutId}
             />
           </div>
-          {loadoutsStatus === "loading" ? <p>Loading loadouts...</p> : null}
           {loadoutsStatus === "error" ? (
             <p className="error-text">
               {loadoutsError ?? "Unable to load account loadouts."}
@@ -83,6 +82,9 @@ export const LobbyDeckPanel = ({
             >
               Open deck editor
             </a>
+            <span className="deck-loadout-loading">
+              {loadoutsStatus === "loading" ? "Loading loadouts..." : ""}
+            </span>
             <button
               className="deck-loadout-refresh-button"
               type="button"
