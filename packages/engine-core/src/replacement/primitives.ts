@@ -1,11 +1,9 @@
 import type {
-  CardInstance,
   CardRef,
   Effect,
   EffectDefinition,
   EngineError,
   GameState,
-  MatchCardManifest,
   PlayerId,
   ReplacementProcess,
   ResolvedCard,
@@ -28,7 +26,15 @@ import {
   fieldRemovalProcessTargets,
 } from "./field-removal-targets.js";
 import { isSupportedOwnerDeckBottomInsteadEffect } from "./instead-effects.js";
+import {
+  effectIdFromReplacementProcess,
+  resolveReviewedImplementedDslEffectDefinition,
+} from "./primitives/definition-lookup.js";
 import { failure } from "./primitives/errors.js";
+import {
+  findCardByInstanceId,
+  replacementSourcesForController,
+} from "./primitives/source-lookup.js";
 import type {
   DetectSelectedTargetKoReplacementCandidateResult,
   LocatedCard,
@@ -45,172 +51,6 @@ export type {
   SelectedTargetKoReplacementCandidate,
   SelectedTargetKoReplacementDetectionFailureReason,
 } from "./primitives/types.js";
-
-type ReplacementLookup =
-  | { ok: true; definition: EffectDefinition }
-  | { ok: false; error: EngineError };
-
-const hasHumanReviewMetadata = (definition: EffectDefinition): boolean =>
-  definition.metadata.reviewer !== undefined ||
-  (definition.metadata.reviewedBy !== undefined &&
-    definition.metadata.reviewedAt !== undefined);
-
-const resolveReviewedImplementedDslEffectDefinition = (
-  card: ResolvedCard,
-  manifest: MatchCardManifest,
-  effectId: string,
-): ReplacementLookup => {
-  const support = card.support;
-  if (support.status === "implemented-custom") {
-    return failure(effectId, "implemented-custom-status");
-  }
-  if (support.status === "vanilla-confirmed") {
-    return failure(
-      effectId,
-      support.effectDefinitionId === undefined
-        ? "unsupported-support-status"
-        : "unexpected-vanilla-effect-definition",
-    );
-  }
-  if (support.status !== "implemented-dsl") {
-    return failure(effectId, "unsupported-support-status");
-  }
-  if ((support.customHandlerIds?.length ?? 0) > 0) {
-    return failure(effectId, "unsupported-ko-replacement-shape");
-  }
-  if (support.effectDefinitionId === undefined) {
-    return failure(effectId, "missing-effect-definition-id");
-  }
-  if (!support.tested) {
-    return failure(effectId, "untested-support-metadata");
-  }
-  if (support.cardDataVersion !== manifest.cardDataVersion) {
-    return failure(effectId, "support-card-data-version-mismatch");
-  }
-
-  const definition = manifest.effectDefinitions?.[support.effectDefinitionId];
-  if (definition === undefined)
-    return failure(effectId, "missing-effect-definition");
-  if (definition.cardId !== support.cardId) {
-    return failure(effectId, "definition-card-id-mismatch");
-  }
-  if (definition.implementationStatus !== support.status) {
-    return failure(effectId, "definition-status-mismatch");
-  }
-  if (definition.metadata.rulesVersion !== support.rulesVersion) {
-    return failure(effectId, "rules-version-mismatch");
-  }
-  if (definition.metadata.sourceTextHash !== support.sourceTextHash) {
-    return failure(effectId, "source-text-hash-mismatch");
-  }
-  if (
-    definition.metadata.effectDefinitionsVersion !==
-    manifest.effectDefinitionsVersion
-  ) {
-    return failure(effectId, "definition-version-mismatch");
-  }
-  if (!definition.metadata.tested)
-    return failure(effectId, "untested-definition-metadata");
-  if (!hasHumanReviewMetadata(definition)) {
-    return failure(effectId, "unreviewed-definition-metadata");
-  }
-  return { ok: true, definition };
-};
-
-const effectIdFromReplacementProcess = (
-  process: ReplacementProcess,
-): string => {
-  if (
-    typeof process.payload === "object" &&
-    process.payload !== null &&
-    "effectId" in process.payload &&
-    typeof process.payload.effectId === "string"
-  ) {
-    return process.payload.effectId;
-  }
-  return process.id;
-};
-
-const findCardByInstanceId = (
-  state: GameState,
-  instanceId: CardInstance["instanceId"],
-): LocatedCard | null => {
-  for (const [playerId, player] of Object.entries(state.players) as [
-    PlayerId,
-    GameState["players"][PlayerId],
-  ][]) {
-    if (player.leader.instanceId === instanceId) {
-      return { playerId, zone: "leaderArea", card: player.leader };
-    }
-
-    const collections = [
-      ["characterArea", player.characters],
-      ["stageArea", player.stage === undefined ? [] : [player.stage]],
-      ["hand", player.hand],
-      ["deck", player.deck],
-      ["trash", player.trash],
-      ["costArea", player.costArea],
-      ["donDeck", player.donDeck],
-      ["life", player.life.map((lifeCard) => lifeCard.card)],
-    ] as const;
-
-    for (const [zone, cards] of collections) {
-      const card = cards.find(
-        (candidate) => candidate.instanceId === instanceId,
-      );
-      if (card !== undefined) return { playerId, zone, card };
-    }
-  }
-  return null;
-};
-
-const toPublicFieldCardRef = (
-  card: CardInstance,
-  playerId: PlayerId,
-): CardRef => ({
-  instanceId: card.instanceId,
-  cardId: card.cardId,
-  playerId,
-  zone: card.zone,
-});
-
-const replacementSourcesForController = (
-  state: GameState,
-  playerId: PlayerId,
-  effectId: string,
-):
-  | { ok: true; sources: LocatedReplacementSource[] }
-  | { ok: false; error: EngineError } => {
-  const player = state.players[playerId];
-  if (player === undefined) {
-    return failure(effectId, "missing-card");
-  }
-  const cards = [
-    player.leader,
-    ...player.characters,
-    ...(player.stage === undefined ? [] : [player.stage]),
-  ];
-  const sources: LocatedReplacementSource[] = [];
-  for (const card of cards) {
-    const resolved = state.cardManifest.cards[card.cardId];
-    if (resolved === undefined) {
-      continue;
-    }
-    if (
-      resolved.support.status === "vanilla-confirmed" &&
-      resolved.support.effectDefinitionId === undefined
-    ) {
-      continue;
-    }
-    sources.push({
-      card,
-      playerId,
-      ref: toPublicFieldCardRef(card, playerId),
-      resolved,
-    });
-  }
-  return { ok: true, sources };
-};
 
 const isSelfTarget = (
   target: Target,
