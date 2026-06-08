@@ -336,6 +336,7 @@ test("setup-selected Stage cannot be redrawn during mulligan", () => {
     language: "en",
     name: "Setup Stage",
     category: "stage",
+    cost: 1,
     set: "TEST",
     setName: "Test",
     released: true,
@@ -423,6 +424,7 @@ test("setup-selected Stage cannot be redrawn during mulligan", () => {
       cards: [must(setupDecision.candidates[0], "candidate").card],
     },
   });
+  assert.equal(setupResolved.errors, undefined);
   assert.equal(
     must(setupResolved.state.players[p1], "p1").stage?.cardId,
     toCardId("p1-a"),

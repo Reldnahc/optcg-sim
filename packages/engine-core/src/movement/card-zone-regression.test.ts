@@ -145,7 +145,17 @@ test("start-of-game stage replacement delegates concrete movement", () => {
     "packages/engine-core/src/setup/start-of-game-effects.ts",
   );
 
-  assert.match(source, /\bmoveConcreteCardsToTrash\b/);
+  assert.match(source, /\bapplyRuntimePlaySelected\b/);
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardMoved"/s,
+    "start-of-game setup must not hand-roll cardMoved",
+  );
+  assert.doesNotMatch(
+    source,
+    /appendEvent\([^)]*"cardPlayed"/s,
+    "start-of-game setup must not hand-roll cardPlayed",
+  );
   assert.doesNotMatch(
     source,
     /appendEvent\([^)]*"cardTrashed"/s,

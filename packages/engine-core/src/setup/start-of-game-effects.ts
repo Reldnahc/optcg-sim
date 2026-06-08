@@ -14,25 +14,31 @@ import type {
   SearchRequest,
 } from "@optcg/types";
 
-import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  rebaseEvents,
+  toDecisionId,
+  toStateSeq,
+} from "../action-results.js";
 import {
   cardMatchesSearchFilter,
-  reindexZoneCards,
   toCardRef,
   zonesEqual,
 } from "../actions/state.js";
-import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
+import { applyRuntimePlaySelected } from "../play-card/core.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
 
 export type StartOfGameEffectPlan = {
   sourceCardId: CardId;
   sourcePlayerId: PlayerId;
   search: SearchRequest;
+  playSelected: Extract<Effect, { type: "playSelected" }>;
   triggerBlockId: EffectBlock["id"];
 };
 
 const setupDecisionSetPrefix = "set:setup-start-of-game:";
+const startOfGameSelection = "selected:start-of-game";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -70,7 +76,40 @@ const isCardRefLike = (value: unknown): value is CardRef => {
   return true;
 };
 
-const stageSearchPlan = (effect: Effect): SearchRequest | null => {
+const isStartOfGameStageSearchRequest = (request: SearchRequest): boolean => {
+  if (
+    request.zone !== "deck" ||
+    request.player !== "self" ||
+    request.lookCount !== undefined ||
+    request.remainingCards !== undefined ||
+    request.min !== 0 ||
+    request.max !== 1 ||
+    request.destination !== "stageArea" ||
+    request.revealTo !== "chooserOnly" ||
+    request.shuffleAfter !== false
+  ) {
+    return false;
+  }
+  return (
+    request.filter.categories !== undefined &&
+    request.filter.categories.length === 1 &&
+    request.filter.categories[0] === "stage" &&
+    request.filter.typesAny !== undefined &&
+    request.filter.typesAny.length > 0
+  );
+};
+
+const isStartOfGameStagePlaySelected = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "playSelected" }> =>
+  effect.type === "playSelected" &&
+  String(effect.selection) === startOfGameSelection &&
+  effect.ignoreCost === true &&
+  effect.enterRested === undefined;
+
+const stageSearchPlan = (
+  effect: Effect,
+): Pick<StartOfGameEffectPlan, "search" | "playSelected"> | null => {
   if (effect.type !== "sequence") {
     return null;
   }
@@ -83,30 +122,16 @@ const stageSearchPlan = (effect: Effect): SearchRequest | null => {
     first === undefined ||
     second === undefined ||
     first.effect.type !== "search" ||
-    second.effect.type !== "playSelected"
+    second.effect.type !== "playSelected" ||
+    !isStartOfGameStagePlaySelected(second.effect)
   ) {
     return null;
   }
   const request = first.effect.request;
-  if (
-    request.zone !== "deck" ||
-    request.player !== "self" ||
-    request.min !== 0 ||
-    request.max !== 1 ||
-    request.destination !== "stageArea"
-  ) {
+  if (!isStartOfGameStageSearchRequest(request)) {
     return null;
   }
-  if (
-    request.filter.categories === undefined ||
-    request.filter.categories.length !== 1 ||
-    request.filter.categories[0] !== "stage" ||
-    request.filter.typesAny === undefined ||
-    request.filter.typesAny.length < 1
-  ) {
-    return null;
-  }
-  return request;
+  return { search: request, playSelected: second.effect };
 };
 
 export const isSupportedStartOfGameEffectBlock = (
@@ -169,8 +194,8 @@ export const collectStartOfGamePlans = (
       if (block.trigger.type !== "startOfGame") {
         continue;
       }
-      const request = stageSearchPlan(block.effect);
-      if (request === null) {
+      const plan = stageSearchPlan(block.effect);
+      if (plan === null) {
         return {
           plans: [],
           errors: setupRuntimeError("unsupported start-of-game effect shape"),
@@ -179,7 +204,8 @@ export const collectStartOfGamePlans = (
       plans.push({
         sourceCardId: player.leader.cardId,
         sourcePlayerId: playerId,
-        search: request,
+        search: plan.search,
+        playSelected: plan.playSelected,
         triggerBlockId: block.id,
       });
     }
@@ -262,99 +288,65 @@ const applyStageSelection = (
   state: PreMulliganSetupGameState,
   player: PlayerState,
   selected: CardRef | undefined,
+  playSelected: Extract<Effect, { type: "playSelected" }>,
   events: EngineEvent[],
 ):
-  | { player: PlayerState }
+  | { state: PreMulliganSetupGameState }
   | { error: readonly [EngineError, ...EngineError[]] } => {
   if (selected === undefined) {
-    return { player };
+    return { state };
   }
-  const deckIndex = player.deck.findIndex(
-    (card) => card.instanceId === selected.instanceId,
-  );
-  if (deckIndex < 0) {
+
+  const played = applyRuntimePlaySelected({
+    state,
+    playerId: player.playerId,
+    cardInstanceId: selected.instanceId,
+    sourceZone: "deck",
+    enterRested: playSelected.enterRested === true,
+    ignoreCost: playSelected.ignoreCost === true,
+    causedBy: { type: "ruleProcess", name: "setup:startOfGame" },
+  });
+  if (played.errors !== undefined) {
+    const reason = played.errors
+      .map((error) =>
+        "reason" in error && typeof error.reason === "string"
+          ? error.reason
+          : error.type,
+      )
+      .join("; ");
+    return { error: invalidDecision(reason) };
+  }
+  if (played.state.pendingDecision !== undefined) {
     return {
-      error: invalidDecision("start-of-game selected card became stale"),
+      error: invalidDecision("start-of-game playSelected produced a decision"),
     };
   }
-  const selectedCard = player.deck[deckIndex];
-  if (selectedCard === undefined) {
-    return { error: invalidDecision("start-of-game selected card missing") };
+  if (played.state.players[player.playerId] === undefined) {
+    return { error: invalidDecision("start-of-game player missing") };
   }
-  let nextPlayer: PlayerState = player;
-  if (player.stage !== undefined) {
-    if (player.stage.attachedDon.length > 0) {
-      return {
-        error: invalidDecision("start-of-game stage replacement is unsafe"),
-      };
-    }
-    const movement = moveConcreteCardsToTrash(state, events, [player.stage], {
-      cardMovedPayloadShape: "zoneRefs",
-      cardMovedVisibility: { type: "public" },
-      cardTrashedVisibility: { type: "public" },
-      emitCardTrashed: true,
-      includeCardIdentityInCardMoved: true,
-      playerId: player.playerId,
-      reason: "ruleProcessStageReplacement",
-      sourceZone: "stageArea",
-    });
-    const movedPlayer = movement.state.players[player.playerId];
-    if (movedPlayer === undefined) {
-      return { error: invalidDecision("start-of-game player missing") };
-    }
-    nextPlayer = movedPlayer;
-  }
-
-  const nextDeck = reindexZoneCards(
-    nextPlayer.deck.filter((_, index) => index !== deckIndex),
-    "deck",
-    player.playerId,
-    "deck",
-  );
-  const nextStage = {
-    ...selectedCard,
-    attachedDon: [],
-    state: "active" as const,
-    zone: {
-      zone: "stageArea" as const,
-      playerId: player.playerId,
-      slot: "stage" as const,
-      index: 0,
-    },
-  };
-  appendEvent(
-    state,
-    events,
-    "cardMoved",
-    {
-      instanceId: selectedCard.instanceId,
-      cardId: selectedCard.cardId,
-      from: selectedCard.zone,
-      to: nextStage.zone,
-      reason: "startOfGamePlaySelectedStage",
-    },
-    { type: "public" },
-  );
-  appendEvent(
-    state,
-    events,
-    "cardPlayed",
-    {
-      playerId: player.playerId,
-      instanceId: selectedCard.instanceId,
-      cardId: selectedCard.cardId,
-      category: "stage",
-    },
-    { type: "public" },
-  );
-
+  events.push(...rebaseEvents(state, played.events, events.length + 1));
   return {
-    player: {
-      ...nextPlayer,
-      deck: nextDeck,
-      stage: nextStage,
+    state: played.state as PreMulliganSetupGameState,
+  };
+};
+
+const nextSetupStateAfterSelection = (
+  setupState: PreMulliganSetupGameState,
+  selectedState: PreMulliganSetupGameState,
+  continuation: NonNullable<PreMulliganSetupGameState["setupContinuation"]>,
+): PreMulliganSetupGameState => {
+  const nextState: PreMulliganSetupGameState = {
+    ...selectedState,
+    seq: toStateSeq(setupState.seq + 1),
+    actionSeq: setupState.actionSeq + 1,
+    eventJournal: [...setupState.eventJournal],
+    setupContinuation: {
+      ...continuation,
+      nextStartOfGamePlanIndex: continuation.nextStartOfGamePlanIndex + 1,
     },
   };
+  delete nextState.pendingDecision;
+  return nextState;
 };
 
 export const isStartOfGameSetupDecision = (
@@ -519,6 +511,7 @@ export const applyStartOfGameSetupDecisionResponse = (
     setupState,
     player,
     candidate,
+    currentPlan.playSelected,
     events,
   );
   if ("error" in selectedResult) {
@@ -530,21 +523,11 @@ export const applyStartOfGameSetupDecisionResponse = (
     };
   }
 
-  const nextState: PreMulliganSetupGameState = {
-    ...setupState,
-    seq: toStateSeq(setupState.seq + 1),
-    actionSeq: setupState.actionSeq + 1,
-    players: {
-      ...setupState.players,
-      [pending.playerId]: selectedResult.player,
-    },
-    eventJournal: [...setupState.eventJournal],
-  };
-  delete nextState.pendingDecision;
-  nextState.setupContinuation = {
-    ...continuation,
-    nextStartOfGamePlanIndex: continuation.nextStartOfGamePlanIndex + 1,
-  };
+  const nextState = nextSetupStateAfterSelection(
+    setupState,
+    selectedResult.state,
+    continuation,
+  );
 
   const nextPlansResult = collectStartOfGamePlans(
     nextState.players,
@@ -560,10 +543,20 @@ export const applyStartOfGameSetupDecisionResponse = (
     };
   }
 
+  const nextContinuation = nextState.setupContinuation;
+  if (nextContinuation === undefined) {
+    return {
+      state: nextState,
+      events,
+      errors: invalidDecision("setup continuation missing after selection"),
+      shouldFinalizeSetup: false,
+    };
+  }
+
   const nextDecisionResult = createStartOfGameSetupDecision(
     nextState,
     nextPlansResult.plans,
-    nextState.setupContinuation.nextStartOfGamePlanIndex,
+    nextContinuation.nextStartOfGamePlanIndex,
   );
   if (nextDecisionResult.errors !== undefined) {
     return {

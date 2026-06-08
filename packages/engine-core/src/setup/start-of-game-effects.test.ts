@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardInstance,
   CardId,
   CardRef,
   EffectBlock,
@@ -59,6 +60,7 @@ const baseManifest = (): MatchCardManifest => ({
       ...resolvedCard({
         cardId: toCardId("p1-stage"),
         category: "stage",
+        cost: 1,
       }),
       types: ["Navy"],
     };
@@ -338,14 +340,22 @@ test("occupied Stage replacement keeps cardMoved before cardTrashed ordering", (
   ].map(toCardId);
   const setup = createInitialState(input);
   const setupPlayer = must(setup.players[p1], "p1");
+  const oldStage = must(setupPlayer.deck[0], "old-stage");
+  const deckWithoutOldStage = setupPlayer.deck.slice(1).map(
+    (card, index): CardInstance => ({
+      ...card,
+      zone: { zone: "deck", playerId: p1, slot: "deck", index },
+    }),
+  );
   const staged: typeof setup = {
     ...setup,
     players: {
       ...setup.players,
       [p1]: {
         ...setupPlayer,
+        deck: deckWithoutOldStage,
         stage: {
-          ...must(setupPlayer.deck[0], "old-stage"),
+          ...oldStage,
           zone: { zone: "stageArea", playerId: p1, slot: "stage", index: 0 },
           state: "active",
           attachedDon: [],
@@ -456,6 +466,47 @@ test("unsupported startOfGame DSL fails closed at createInitialState", () => {
   );
 });
 
+test("startOfGame setup rejects mismatched playSelected consumer", () => {
+  const input = createInput();
+  const definition = must(
+    input.cardManifest.effectDefinitions?.["leader-red-sog"],
+    "leader-red-sog definition",
+  );
+  const block = must(definition.effects[0], "startOfGame block");
+  assert.equal(block.effect.type, "sequence");
+  const play = must(block.effect.effects[1], "play segment");
+  play.effect = {
+    type: "playSelected",
+    selection: "handSelection:stage" as never,
+    ignoreCost: true,
+  };
+
+  assert.throws(
+    () => createInitialState(input),
+    /effectRuntimeError|unsupported/i,
+  );
+});
+
+test("startOfGame setup rejects playSelected without ignoreCost", () => {
+  const input = createInput();
+  const definition = must(
+    input.cardManifest.effectDefinitions?.["leader-red-sog"],
+    "leader-red-sog definition",
+  );
+  const block = must(definition.effects[0], "startOfGame block");
+  assert.equal(block.effect.type, "sequence");
+  const play = must(block.effect.effects[1], "play segment");
+  play.effect = {
+    type: "playSelected",
+    selection: "selected:start-of-game" as never,
+  };
+
+  assert.throws(
+    () => createInitialState(input),
+    /effectRuntimeError|unsupported/i,
+  );
+});
+
 test("implemented-dsl leader missing effect definition fails closed at setup", () => {
   const input = createInput();
   delete input.cardManifest.effectDefinitions?.["leader-red-sog"];
@@ -484,6 +535,7 @@ test("multi-step setup decisions keep contiguous seq and unique decision ids", (
     ...resolvedCard({
       cardId: toCardId("p2-stage"),
       category: "stage",
+      cost: 1,
     }),
     types: ["Navy"],
   };
