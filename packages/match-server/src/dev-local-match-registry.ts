@@ -344,7 +344,10 @@ const previousLoserId = (
 export const createLocalDevMatchRegistry = async (
   createDefaultSetup: (matchId?: MatchId) => Promise<LocalDevMatchSetup>,
   initialSetup?: LocalDevMatchSetup,
-  options: { readonly matchTimerPolicy?: MatchTimerPolicy } = {},
+  options: {
+    readonly createDefaultMatch?: boolean;
+    readonly matchTimerPolicy?: MatchTimerPolicy;
+  } = {},
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
@@ -361,16 +364,18 @@ export const createLocalDevMatchRegistry = async (
       matchId,
     };
   };
-  const defaultSetup = await createTemplateSetup("dev-local-match" as MatchId);
-  const defaultMatchId = defaultSetup.matchId;
-  sessions.set(
-    defaultMatchId,
-    createActiveLocalDevMatchSession(
-      defaultSetup,
-      sessionService,
-      matchTimerPolicy,
-    ),
-  );
+  const defaultMatchId = "dev-local-match" as MatchId;
+  if (options.createDefaultMatch !== false) {
+    const defaultSetup = await createTemplateSetup(defaultMatchId);
+    sessions.set(
+      defaultSetup.matchId,
+      createActiveLocalDevMatchSession(
+        defaultSetup,
+        sessionService,
+        matchTimerPolicy,
+      ),
+    );
+  }
 
   const buildCreatedResponse = (
     setup: LocalDevMatchSetup,

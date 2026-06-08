@@ -8,6 +8,19 @@ import {
 import { createMatchHttpServer } from "./match-http-server.js";
 
 describe("match HTTP server health", () => {
+  test("serves health without creating a default dev match", async () => {
+    const server = await createMatchHttpServer({ createDefaultMatch: false });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/health`);
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { data: { ok: true } });
+    } finally {
+      await server.close();
+    }
+  });
+
   test("serves a production health endpoint", async () => {
     const server = await createMatchHttpServer({
       setup: await createFixtureDevMatchSetup(),

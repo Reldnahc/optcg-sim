@@ -85,6 +85,7 @@ export interface MatchHttpServer {
 
 export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
+  readonly createDefaultMatch?: boolean;
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly authBaseUrl?: string;
@@ -173,10 +174,6 @@ const handleApiRequest = async (
 ): Promise<void> => {
   const url = request.url ?? "/";
   const pathname = new URL(url, "http://localhost").pathname;
-  const defaultMatch = registry.getMatch(registry.defaultMatchId);
-  if (defaultMatch === undefined) {
-    throw new Error("Default dev match is missing.");
-  }
   const matchRoute =
     /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
   if (request.method === "POST" && pathname === "/api/matches") {
@@ -519,10 +516,20 @@ const handleApiRequest = async (
     return;
   }
   if (request.method === "GET" && pathname === "/api/state") {
+    const defaultMatch = registry.getMatch(registry.defaultMatchId);
+    if (defaultMatch === undefined) {
+      matchNotFound(response, registry.defaultMatchId);
+      return;
+    }
     sendJson(response, 200, getLocalDevSnapshot(defaultMatch));
     return;
   }
   if (request.method === "GET" && pathname === "/api/cards") {
+    const defaultMatch = registry.getMatch(registry.defaultMatchId);
+    if (defaultMatch === undefined) {
+      matchNotFound(response, registry.defaultMatchId);
+      return;
+    }
     sendJson(response, 200, getLocalDevCardCatalog(defaultMatch));
     return;
   }
@@ -535,6 +542,13 @@ const handleApiRequest = async (
       return;
     }
     const resetRequest: DevResetRequest = isRecord(body) ? body : {};
+    if (
+      resetRequest.setup === undefined &&
+      registry.getMatch(registry.defaultMatchId) === undefined
+    ) {
+      matchNotFound(response, registry.defaultMatchId);
+      return;
+    }
     if (
       resetRequest.setup !== undefined &&
       !isDevMatchSetup(resetRequest.setup)
@@ -895,6 +909,9 @@ export const createMatchHttpServer = async (
     createDefaultSetup,
     options.setup,
     {
+      ...(options.createDefaultMatch === undefined
+        ? {}
+        : { createDefaultMatch: options.createDefaultMatch }),
       matchTimerPolicy: options.matchTimerPolicy ?? defaultMatchTimerPolicy,
     },
   );
