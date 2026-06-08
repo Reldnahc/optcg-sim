@@ -1,0 +1,10 @@
+.git
+.github
+.husky
+coverage
+node_modules
+packages/*/dist
+packages/*/node_modules
+packages/*/tsconfig.tsbuildinfo
+docs/superpowers/plans
+*.log
