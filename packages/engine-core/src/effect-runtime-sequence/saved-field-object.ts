@@ -1,6 +1,5 @@
 import type {
   CardInstance,
-  CardRef,
   ContinuousEffectRecord,
   EffectExecutionFrame,
   EffectQueueEntry,
@@ -22,6 +21,7 @@ import {
   restFieldObjects,
   restProtectionAttemptFromEntry,
 } from "./saved-field-object/field-object-state.js";
+import { continuousRecordForSavedObject } from "./saved-field-object/continuous-records.js";
 import { resolveActivateTargets } from "./saved-field-object/saved-target-resolution.js";
 
 export { restFieldObjects };
@@ -29,105 +29,6 @@ export { restFieldObjects };
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
-};
-
-const exactTargetForSavedObject = (
-  entry: EffectQueueEntry,
-  card: CardRef,
-  state: GameState,
-  objectIndex: number,
-): ContinuousEffectRecord["modifier"]["target"] => ({
-  type: "exactCard",
-  card,
-  binding: {
-    family: "selectedTargets",
-    saveResultAs: String(entry.effectBlockId),
-    objectIndex,
-  },
-  createdAtStateSeq: state.seq,
-});
-
-const continuousRecordForSavedObject = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  segment: SupportedSequenceSegment,
-  target: CardRef,
-  objectIndex: number,
-): ContinuousEffectRecord | undefined => {
-  if (
-    segment.effect.type !== "modifyPower" &&
-    segment.effect.type !== "cannotBecomeActive" &&
-    segment.effect.type !== "cannotAttack" &&
-    segment.effect.type !== "cannotBlock" &&
-    segment.effect.type !== "preventBlockerActivation" &&
-    segment.effect.type !== "invalidateEffects"
-  ) {
-    return undefined;
-  }
-  if (segment.effect.type === "invalidateEffects") {
-    return {
-      id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
-      source: entry.source,
-      sourceSnapshot: entry.sourceSnapshot,
-      controller: entry.controllerId,
-      modifier: {
-        layer: "effectInvalidation",
-        target: exactTargetForSavedObject(entry, target, state, objectIndex),
-        operation: { type: "invalidateEffects" },
-      },
-      duration: segment.effect.duration,
-      createdBy: {
-        type: "effect",
-        queueEntryId: entry.id,
-        effectId: entry.effectBlockId,
-      },
-      createdAtStateSeq: state.seq,
-    };
-  }
-  if (segment.effect.type === "modifyPower") {
-    if (typeof segment.effect.value !== "number") {
-      return undefined;
-    }
-    return {
-      id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
-      source: entry.source,
-      sourceSnapshot: entry.sourceSnapshot,
-      controller: entry.controllerId,
-      modifier: {
-        layer: "powerAdd",
-        target: exactTargetForSavedObject(entry, target, state, objectIndex),
-        operation: { type: "addPower", value: segment.effect.value },
-      },
-      duration: segment.effect.duration,
-      createdBy: {
-        type: "effect",
-        queueEntryId: entry.id,
-        effectId: entry.effectBlockId,
-      },
-      createdAtStateSeq: state.seq,
-    };
-  }
-  return {
-    id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
-    source: entry.source,
-    sourceSnapshot: entry.sourceSnapshot,
-    controller: entry.controllerId,
-    modifier: {
-      layer: "restriction",
-      target: exactTargetForSavedObject(entry, target, state, objectIndex),
-      operation: {
-        type: "restriction",
-        restriction: segment.effect.type,
-      },
-    },
-    duration: segment.effect.duration,
-    createdBy: {
-      type: "effect",
-      queueEntryId: entry.id,
-      effectId: entry.effectBlockId,
-    },
-    createdAtStateSeq: state.seq,
-  };
 };
 
 export const applySavedFieldObjectKoSequenceSegment = (params: {
