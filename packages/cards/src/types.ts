@@ -99,7 +99,6 @@ export type PrimitiveEvidence =
   | "instruction:modifyPower"
   | "instruction:invalidateEffects"
   | "instruction:setBasePower"
-  | "instruction:search"
   | "instruction:placeTopDeckCards"
   | "instruction:playSelected"
   | "instruction:activateSelectedEvent"

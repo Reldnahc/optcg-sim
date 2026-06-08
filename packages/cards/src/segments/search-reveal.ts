@@ -53,44 +53,21 @@ export function searchRevealExpressionParser(
     return undefined;
   }
 
-  const searchEffect = {
-    type: "search" as const,
-    request: {
-      zone: "deck" as const,
-      player: "self" as const,
-      lookCount: look.count,
-      filter: reveal.filter,
-      min: reveal.min,
-      max: reveal.max,
-      destination: "hand" as const,
-      revealTo: reveal.revealTo,
-      remainingCards: remaining.remainingCards,
-      shuffleAfter: false,
-    },
-  };
-  const searchEvidence = [
-    "instruction:search",
-    ...look.evidence,
-    ...reveal.evidence,
-    ...remaining.evidence,
-  ] as const;
   const decomposedSearch = createTopDeckSearchSequence({
     look,
     reveal,
     remaining,
   });
-  const baseEffect = decomposedSearch?.effect ?? searchEffect;
-  const baseEvidence = decomposedSearch?.evidence ?? searchEvidence;
   const presentationSpans = searchRevealPresentationSpans({
     input,
     remainingEvidence: remaining.evidence,
-    searchEvidence: baseEvidence,
+    searchEvidence: decomposedSearch.evidence,
   });
 
   if (remaining.rest.length === 0) {
     return {
-      effect: baseEffect,
-      evidence: baseEvidence,
+      effect: decomposedSearch.effect,
+      evidence: decomposedSearch.evidence,
       rest: "",
       ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
@@ -111,21 +88,18 @@ export function searchRevealExpressionParser(
     effect: {
       type: "sequence",
       effects: [
-        ...(baseEffect.type === "sequence"
-          ? baseEffect.effects
-          : [
-              {
-                connector: "always" as const,
-                effect: baseEffect,
-              },
-            ]),
+        ...decomposedSearch.effect.effects,
         {
           connector: "then",
           effect: trailing.effect,
         },
       ],
     },
-    evidence: ["expression:sequence", ...baseEvidence, ...trailing.evidence],
+    evidence: [
+      "expression:sequence",
+      ...decomposedSearch.evidence,
+      ...trailing.evidence,
+    ],
     rest: "",
     ...(presentationSpans.length === 0
       ? trailing.presentationSpans === undefined
@@ -152,12 +126,10 @@ const createTopDeckSearchSequence = ({
   look,
   reveal,
   remaining,
-}: ParsedSearchParts):
-  | {
-      readonly effect: Extract<Effect, { type: "sequence" }>;
-      readonly evidence: readonly PrimitiveEvidence[];
-    }
-  | undefined => {
+}: ParsedSearchParts): {
+  readonly effect: Extract<Effect, { type: "sequence" }>;
+  readonly evidence: readonly PrimitiveEvidence[];
+} => {
   const selectedReveal =
     reveal.revealTo === "bothPlayers"
       ? [
