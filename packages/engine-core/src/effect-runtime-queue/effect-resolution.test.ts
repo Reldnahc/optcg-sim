@@ -94,7 +94,7 @@ test("queued primitive resolvers keep one wrapper reusable across draw and searc
             min: 0,
             max: 1,
             destination: "hand",
-            revealTo: "all",
+            revealTo: "bothPlayers",
             shuffleAfter: true,
             filter: { categories: ["character"] },
           },
