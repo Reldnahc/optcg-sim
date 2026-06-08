@@ -66,8 +66,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-deck-hash:
-        specifier: ^0.1.3
-        version: 0.1.3
+        specifier: ^0.1.4
+        version: 0.1.4
 
   packages/cards:
     dependencies:
@@ -136,8 +136,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-deck-hash:
-        specifier: ^0.1.3
-        version: 0.1.3
+        specifier: ^0.1.4
+        version: 0.1.4
 
   packages/types: {}
 
@@ -1746,10 +1746,10 @@ packages:
     peerDependencies:
       react: ">=18"
 
-  optcg-deck-hash@0.1.3:
+  optcg-deck-hash@0.1.4:
     resolution:
       {
-        integrity: sha512-6tLHlCcS37CSTqqkwUnsHlx/wZcJSFB4t+baKwWKCnV5ELHDYv6nWxWOMeMaB0j151fGLh5NTeIKIeebv7Zaqg==,
+        integrity: sha512-+Fz6bFeqbLWdmkSUIJbDPkvo/5ggoiK6Rg2ET+SKtQo0gqOunZy2iYulLY4+D/oVQfw1qSEfzF3LR5e5JbbiyA==,
       }
     engines: { node: ">=20" }
 
@@ -3218,7 +3218,7 @@ snapshots:
     dependencies:
       react: 19.2.6
 
-  optcg-deck-hash@0.1.3: {}
+  optcg-deck-hash@0.1.4: {}
 
   optionator@0.9.4:
     dependencies:
