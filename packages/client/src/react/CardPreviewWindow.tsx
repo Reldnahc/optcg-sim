@@ -60,6 +60,9 @@ export const CardPreviewContent = ({
   const previewStyle = {
     "--card-preview-zoom": String(zoom),
     "--card-preview-rules-height": `${String(textPanelHeight)}%`,
+    "--card-preview-image-bottom-reserve": textVisible
+      ? `calc(${String(textPanelHeight)}% + 24px)`
+      : "0px",
   } as CSSProperties;
 
   const zoomBy = (delta: number): void => {
@@ -98,16 +101,18 @@ export const CardPreviewContent = ({
       ) : (
         <>
           <div className="card-preview-stage" ref={stageRef}>
-            <div className="card-preview-image-frame">
-              {card.imageUrl === undefined ? (
-                <div className="card-preview-placeholder">{card.name}</div>
-              ) : (
-                <img
-                  className="card-preview-card-image"
-                  src={card.imageUrl}
-                  alt={card.name}
-                />
-              )}
+            <div className="card-preview-image-scroll">
+              <div className="card-preview-image-frame">
+                {card.imageUrl === undefined ? (
+                  <div className="card-preview-placeholder">{card.name}</div>
+                ) : (
+                  <img
+                    className="card-preview-card-image"
+                    src={card.imageUrl}
+                    alt={card.name}
+                  />
+                )}
+              </div>
             </div>
             {textVisible ? (
               <section className="card-preview-rules-panel">

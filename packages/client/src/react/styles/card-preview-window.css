@@ -14,11 +14,19 @@
   overflow: hidden;
   --card-preview-zoom: 1;
   --card-preview-rules-height: 42%;
+  --card-preview-image-bottom-reserve: calc(
+    var(--card-preview-rules-height) + 24px
+  );
 }
 
 .card-preview-stage {
   position: relative;
   min-height: 0;
+  overflow: hidden;
+}
+
+.card-preview-image-scroll {
+  height: 100%;
   overflow: auto;
 }
 
@@ -26,8 +34,8 @@
   display: grid;
   min-width: max-content;
   min-height: 100%;
-  padding: 0 0 calc(var(--card-preview-rules-height) + 24px);
-  place-items: start;
+  padding: 0 0 var(--card-preview-image-bottom-reserve);
+  place-items: start center;
 }
 
 .card-preview-card-image,
@@ -55,16 +63,19 @@
 
 .card-preview-rules-panel {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  left: 10px;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   height: var(--card-preview-rules-height);
   min-height: 104px;
   max-height: calc(100% - 42px);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 6px;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
   background: rgba(20, 23, 27, 0.88);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(5px);

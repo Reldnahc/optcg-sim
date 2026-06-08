@@ -72,8 +72,13 @@ describe("card preview window", () => {
     );
 
     assert.match(markup, /card-preview-stage/u);
+    assert.match(markup, /card-preview-image-scroll/u);
     assert.match(markup, /card-preview-card-image/u);
     assert.match(markup, /--card-preview-zoom:1/u);
+    assert.match(
+      markup,
+      /--card-preview-image-bottom-reserve:calc\(42% \+ 24px\)/u,
+    );
     assert.match(markup, /card-preview-rules-panel/u);
     assert.match(markup, /card-preview-rules-resize-handle/u);
     assert.match(markup, /--card-preview-rules-height:42%/u);
@@ -91,9 +96,18 @@ describe("card preview window", () => {
     );
 
     assert.doesNotMatch(styles, /\.card-preview-stage\s*\{[^}]*background:/u);
+    assert.match(styles, /\.card-preview-stage\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(
       styles,
-      /\.card-preview-image-frame\s*\{[^}]*padding:\s*0 0 calc\(var\(--card-preview-rules-height\) \+ 24px\);[^}]*place-items:\s*start;/u,
+      /\.card-preview-image-scroll\s*\{[^}]*overflow:\s*auto;/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-image-frame\s*\{[^}]*padding:\s*0 0 var\(--card-preview-image-bottom-reserve\);[^}]*place-items:\s*start center;/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-rules-panel\s*\{[^}]*right:\s*0;[^}]*bottom:\s*0;[^}]*left:\s*0;/u,
     );
     assert.match(
       markupForPreviewControls(),
