@@ -89,12 +89,39 @@ const resolvedSpotlightSourcesForEvent = (
   }));
 };
 
+const noEffectDecisionResponseTypes = new Set(["paymentDeclined"]);
+
+const isNoEffectDecisionResolvedEvent = (event: EngineEvent): boolean => {
+  if (event.type !== "decisionResolved" || !isObjectRecord(event.payload)) {
+    return false;
+  }
+  const responseType = event.payload["responseType"];
+  if (
+    typeof responseType === "string" &&
+    noEffectDecisionResponseTypes.has(responseType)
+  ) {
+    return true;
+  }
+  return responseType === "targets" && event.payload["selectedCount"] === 0;
+};
+
+const clearsNoEffectDecisionCandidate = (event: EngineEvent): boolean =>
+  event.type !== "decisionResolved" &&
+  event.type !== "effectResolved" &&
+  event.type !== "ruleProcessingChecked";
+
 export const resolvedEffectTextSourcesForSpotlight = (
   events: readonly EngineEvent[],
 ): readonly EffectSpotlightActiveSource[] => {
   const sources: EffectSpotlightActiveSource[] = [];
   let pendingPlayedCard: EffectSpotlightActiveSource | undefined;
+  let skipNextEffectResolved = false;
   for (const event of events) {
+    if (isNoEffectDecisionResolvedEvent(event)) {
+      skipNextEffectResolved = true;
+    } else if (clearsNoEffectDecisionCandidate(event)) {
+      skipNextEffectResolved = false;
+    }
     if (event.type === "cardPlayed") {
       if (pendingPlayedCard !== undefined) {
         sources.push(pendingPlayedCard);
@@ -104,6 +131,10 @@ export const resolvedEffectTextSourcesForSpotlight = (
     }
     if (event.type === "effectQueued") {
       pendingPlayedCard = undefined;
+      continue;
+    }
+    if (event.type === "effectResolved" && skipNextEffectResolved) {
+      skipNextEffectResolved = false;
       continue;
     }
     sources.push(...resolvedSpotlightSourcesForEvent(event));

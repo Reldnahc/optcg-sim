@@ -490,4 +490,140 @@ describe("activeEffectTextForSpotlight", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("does not create a resolved spotlight after a declined cost decision", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 3,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:body"],
+        },
+      },
+    });
+
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({
+          type: "decisionResolved",
+          seq: 2,
+          payload: {
+            decisionId: "decision:payCost:1",
+            decisionType: "payCost",
+            playerId: "p1",
+            responseType: "paymentDeclined",
+            status: "resolved",
+          },
+        }),
+        resolved,
+      ]),
+    ).toEqual([]);
+  });
+
+  it("does not create a resolved spotlight after choosing zero targets", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 3,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:body:rest"],
+        },
+      },
+    });
+
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({
+          type: "decisionResolved",
+          seq: 2,
+          payload: {
+            decisionId: "decision:selectTargets:1",
+            decisionType: "selectTargets",
+            playerId: "p1",
+            responseType: "targets",
+            selectedCount: 0,
+            status: "resolved",
+          },
+        }),
+        resolved,
+      ]),
+    ).toEqual([]);
+  });
+
+  it("keeps a resolved spotlight after choosing zero cards", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 3,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:search:remaining"],
+        },
+      },
+    });
+
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({
+          type: "decisionResolved",
+          seq: 2,
+          payload: {
+            decisionId: "decision:selectCards:1",
+            decisionType: "selectCards",
+            playerId: "p1",
+            responseType: "cards",
+            selectedCount: 0,
+            status: "resolved",
+          },
+        }),
+        resolved,
+      ]).map((candidate) => candidate.key),
+    ).toEqual([String(resolved.id)]);
+  });
+
+  it("keeps a resolved spotlight when gameplay events happen after zero target selection", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 4,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:body"],
+        },
+      },
+    });
+
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({
+          type: "decisionResolved",
+          seq: 2,
+          payload: {
+            decisionId: "decision:selectTargets:1",
+            decisionType: "selectTargets",
+            playerId: "p1",
+            responseType: "targets",
+            selectedCount: 0,
+            status: "resolved",
+          },
+        }),
+        event({
+          type: "cardDrawn",
+          seq: 3,
+          payload: {},
+        }),
+        resolved,
+      ]).map((candidate) => candidate.key),
+    ).toEqual([String(resolved.id)]);
+  });
 });
