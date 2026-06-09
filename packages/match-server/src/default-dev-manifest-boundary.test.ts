@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { CardId, PlayerId, VariantKey } from "@optcg/types";
+import type { CardId, MatchId, PlayerId, VariantKey } from "@optcg/types";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
 
 import {
@@ -9,6 +9,7 @@ import {
   createDevDeckCardIds,
   createDevDeckVariantIndexes,
   createDevDonDeckCardIds,
+  createDefaultDevMatchSetup,
   createDevRngSeed,
   createDevManifestCardIds,
   createDevPlayerSetupFromDecklist,
@@ -19,6 +20,7 @@ import {
   validateAndAdaptDevDecklist,
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
+import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 
 const readySubmission = (
   leaderCardId: CardId,
@@ -211,7 +213,7 @@ describe("default dev manifest boundary", () => {
   });
 
   test("dev generated effect definition cache version invalidates parser-output changes", () => {
-    assert.equal(defaultDevEffectDefinitionsVersion, "generated-dev-v6");
+    assert.equal(defaultDevEffectDefinitionsVersion, "generated-dev-v7");
   });
 
   test("dev RNG seed is fresh for each generated setup", () => {
@@ -259,6 +261,23 @@ describe("default dev manifest boundary", () => {
       "OP13-082",
       "OP13-082",
     ]);
+  });
+
+  test("creates the default dev setup without local deck hash files", async () => {
+    const setup = await createDefaultDevMatchSetup({
+      matchId: "default-dev-match" as MatchId,
+      firstPlayerId: "p1" as PlayerId,
+      playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+      createdAt: "2026-05-04T00:00:00.000Z",
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+
+    assert.equal(setup.matchId, "default-dev-match");
+    const [firstPlayer, secondPlayer] = setup.players;
+    assert.equal(firstPlayer.leaderCardId, "OP13-079");
+    assert.equal(secondPlayer.leaderCardId, "OP13-079");
+    assert.equal(firstPlayer.deckCardIds.length, 32);
+    assert.equal(secondPlayer.deckCardIds.length, 32);
   });
 
   test("rejects non-ready deck submissions before setup creation", () => {

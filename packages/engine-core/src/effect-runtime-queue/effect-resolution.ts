@@ -60,10 +60,6 @@ export interface QueuedEffectResolvers {
     state: GameState,
     entry: EffectQueueEntry,
   ) => ContinuousQueueEffect | undefined;
-  readonly resolveQueuedSearchRevealEffect: (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ) => Extract<Effect, { type: "search" }> | undefined;
   readonly resolveQueuedPlaySourceEffect: (
     state: GameState,
     entry: EffectQueueEntry,
@@ -200,29 +196,6 @@ export const createQueuedEffectResolvers = (
     return supportShape.effect;
   };
 
-  const resolveQueuedSearchRevealEffect = (
-    state: GameState,
-    entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "search" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
-    if (
-      match === undefined ||
-      match.effect.type !== "search" ||
-      match.category !== "auto" ||
-      match.optional === true ||
-      match.oncePerTurn === true ||
-      match.conditionTiming !== undefined ||
-      match.cost !== undefined ||
-      match.failurePolicy !== undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      (match.sourcePresencePolicy !== "mustRemainInSameZone" &&
-        match.sourcePresencePolicy !== "resolveFromDestinationZone")
-    ) {
-      return undefined;
-    }
-    return match.effect;
-  };
-
   const resolveQueuedPlaySourceEffect = (
     state: GameState,
     entry: EffectQueueEntry,
@@ -251,7 +224,6 @@ export const createQueuedEffectResolvers = (
     resolveQueuedDrawEffect,
     resolveQueuedDrawUpToEffect,
     resolveQueuedContinuousEffect,
-    resolveQueuedSearchRevealEffect,
     resolveQueuedPlaySourceEffect,
     withoutConditionFields,
     canResolveQueuedDrawFromActivateMainEntry,

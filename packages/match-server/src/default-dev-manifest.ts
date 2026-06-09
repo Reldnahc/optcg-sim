@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { createRedisCardDataCache } from "@optcg/cards";
 import {
@@ -8,7 +7,6 @@ import {
 import type { CardId, PlayerId, VariantKey } from "@optcg/types";
 
 import {
-  decodeDeckHashSubmission,
   type DeckSubmission,
   type ReadyDeckSubmission,
 } from "./deck-submission.js";
@@ -121,8 +119,33 @@ export const defaultDevDonCounts: DevDonCounts = {
   secondPlayer: 10,
 };
 
-export const defaultDevEffectDefinitionsVersion = "generated-dev-v6";
+export const defaultDevEffectDefinitionsVersion = "generated-dev-v7";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v1";
+
+const defaultDevLeader: DevDeckCardEntry = {
+  cardId: "OP13-079" as CardId,
+  count: 1,
+};
+
+const defaultDevMainDeckEntries: readonly DevDeckCardEntry[] = [
+  "OP13-080",
+  "OP13-082",
+  "OP13-083",
+  "OP13-084",
+  "OP13-086",
+  "OP13-089",
+  "OP13-091",
+  "OP13-099",
+].map((cardId) => ({
+  cardId: cardId as CardId,
+  count: 4,
+}));
+
+const createDefaultDevDecklist = (donDeckCount: number): DevDecklist => ({
+  leader: defaultDevLeader,
+  deckEntries: defaultDevMainDeckEntries,
+  donDeckCount,
+});
 
 const assertValidDevDonCount = (value: number, label: string): number => {
   if (!Number.isInteger(value) || value <= 0) {
@@ -291,20 +314,6 @@ export const validateReadyDevDeckSubmission = async (
   );
 };
 
-const readDefaultDevDeckSubmission = async (
-  fileName: "deck1.hash" | "deck2.hash",
-  donDeckCount: number,
-): Promise<ReadyDeckSubmission> => {
-  const hash = (
-    await readFile(new URL(`../dev-decks/${fileName}`, import.meta.url), "utf8")
-  ).trim();
-  const submission = await decodeDeckHashSubmission({ hash, donDeckCount });
-  if (submission.status !== "ready") {
-    throw new Error(`Invalid ${fileName}: ${submission.error}`);
-  }
-  return submission;
-};
-
 const buildDevManifestFromCardIds = async (
   cardIds: readonly CardId[],
   input: CreateDefaultDevMatchSetupInput,
@@ -376,12 +385,22 @@ const createDevMatchSetupFromDecklists = ({
 export const createDevMatchSetupFromDeckSubmissions = async (
   input: CreateDevMatchSetupFromDeckSubmissionsInput,
 ): Promise<DevMatchSetup> => {
-  const firstPlayerDecklist = createDevDecklistFromSubmission(
-    input.firstPlayer,
-  );
-  const secondPlayerDecklist = createDevDecklistFromSubmission(
-    input.secondPlayer,
-  );
+  return await createValidatedDevMatchSetupFromDecklists({
+    input,
+    firstPlayerDecklist: createDevDecklistFromSubmission(input.firstPlayer),
+    secondPlayerDecklist: createDevDecklistFromSubmission(input.secondPlayer),
+  });
+};
+
+const createValidatedDevMatchSetupFromDecklists = async ({
+  input,
+  firstPlayerDecklist,
+  secondPlayerDecklist,
+}: {
+  readonly input: CreateDefaultDevMatchSetupInput;
+  readonly firstPlayerDecklist: DevDecklist;
+  readonly secondPlayerDecklist: DevDecklist;
+}): Promise<DevMatchSetup> => {
   const devDonCount = Math.max(
     firstPlayerDecklist.donDeckCount,
     secondPlayerDecklist.donDeckCount,
@@ -422,16 +441,10 @@ export const createDefaultDevMatchSetup = async (
 ): Promise<DevMatchSetup> => {
   const [firstPlayerDonCount, secondPlayerDonCount] =
     resolveDevDonCounts(defaultDevDonCounts);
-  return await createDevMatchSetupFromDeckSubmissions({
-    ...input,
-    firstPlayer: await readDefaultDevDeckSubmission(
-      "deck1.hash",
-      firstPlayerDonCount,
-    ),
-    secondPlayer: await readDefaultDevDeckSubmission(
-      "deck2.hash",
-      secondPlayerDonCount,
-    ),
+  return await createValidatedDevMatchSetupFromDecklists({
+    input,
+    firstPlayerDecklist: createDefaultDevDecklist(firstPlayerDonCount),
+    secondPlayerDecklist: createDefaultDevDecklist(secondPlayerDonCount),
   });
 };
 

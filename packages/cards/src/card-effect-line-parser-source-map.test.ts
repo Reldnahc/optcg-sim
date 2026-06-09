@@ -256,7 +256,11 @@ describe("card effect parser source maps", () => {
       role: "body",
       text: "Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand.",
     });
-    expect(selection?.primitiveEvidence).toContain("instruction:search");
+    expect(selection?.primitiveEvidence).toContain("instruction:revealTop");
+    expect(selection?.primitiveEvidence).toContain("instruction:selectFromSet");
+    expect(selection?.primitiveEvidence).toContain(
+      "instruction:revealSelected",
+    );
     expect(remaining).toMatchObject({
       role: "body",
       text: "Then, place the rest at the bottom of your deck in any order.",

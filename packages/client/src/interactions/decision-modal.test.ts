@@ -927,7 +927,7 @@ describe("headless decision modal models", () => {
     };
     const normalSelection: PublicSelectCardsDecision = {
       ...selectDecision(),
-      id: "decision:selectCards:search-reveal:queue-entry-1" as DecisionId,
+      id: "decision:selectCards:sequence-set:queue-entry-1" as DecisionId,
     };
 
     assert.equal(isDecisionModalSuppressed(counterPass), true);
@@ -954,7 +954,7 @@ describe("headless decision modal models", () => {
       getPendingDecisionInteractionMode(
         {
           ...selectDecision(),
-          id: "decision:selectCards:search-reveal:queue-entry-1" as DecisionId,
+          id: "decision:selectCards:sequence-set:queue-entry-1" as DecisionId,
         },
         { visibleZoneClickInstanceIds: [] },
       ),

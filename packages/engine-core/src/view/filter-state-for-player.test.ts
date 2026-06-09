@@ -227,7 +227,7 @@ test("shows pending decision only to the recipient with public shape", () => {
   assert.equal(forOpponent.pendingDecision, undefined);
 });
 
-test("search selectCards projection includes visible nonselectable choices without exposing them as legal candidates", () => {
+test("set selectCards projection includes visible nonselectable choices without exposing them as legal candidates", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");
   const legalCard = must(p1State.hand[0], "legal searched card");
@@ -237,20 +237,21 @@ test("search selectCards projection includes visible nonselectable choices witho
 
   state.revealedCards = [
     {
-      id: "reveal:search-reveal:queue-public-choices",
+      id: "reveal:sequence:queue-public-choices",
       cards: [legalRef, illegalRef],
       visibility: { type: "private", playerId: p1 },
       origin: "topOfDeck",
+      selectionSetId: "set:looked-cards:queue-public-choices",
       createdAtStateSeq: toStateSeq(state.seq),
       cleanupPolicy: "none",
     },
   ];
   state.pendingDecision = {
-    id: toDecisionId("decision:selectCards:search-reveal:queue-public-choices"),
+    id: toDecisionId("decision:selectCards:sequence-set:queue-public-choices"),
     type: "selectCards",
     playerId: p1,
     prompt: "Choose a revealed card or decline.",
-    causedBy: { type: "ruleProcess", name: "test:searchReveal" },
+    causedBy: { type: "ruleProcess", name: "test:selectFromSet" },
     visibility: { type: "private", playerId: p1 },
     request: {
       timing: "onResolution",
@@ -261,7 +262,7 @@ test("search selectCards projection includes visible nonselectable choices witho
       max: 1,
       allowFewerIfUnavailable: true,
       visibility: "privateToChooser",
-      set: "set:search-reveal:queue-public-choices" as never,
+      set: "set:looked-cards:queue-public-choices" as never,
     },
     candidates: [
       { card: legalRef, visibility: { type: "private", playerId: p1 } },

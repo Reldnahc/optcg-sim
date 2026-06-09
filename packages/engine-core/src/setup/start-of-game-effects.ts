@@ -2,6 +2,7 @@ import type {
   Action,
   CardId,
   CardRef,
+  CardFilter,
   DecisionId,
   Effect,
   EffectBlock,
@@ -11,7 +12,7 @@ import type {
   MatchCardManifest,
   PlayerId,
   PlayerState,
-  SearchRequest,
+  SelectCardsEffect,
 } from "@optcg/types";
 
 import {
@@ -32,9 +33,14 @@ import type { PreMulliganSetupGameState } from "./initial-state.js";
 export type StartOfGameEffectPlan = {
   sourceCardId: CardId;
   sourcePlayerId: PlayerId;
-  search: SearchRequest;
+  selection: StartOfGameStageSelection;
   playSelected: Extract<Effect, { type: "playSelected" }>;
   triggerBlockId: EffectBlock["id"];
+};
+
+type StartOfGameStageSelection = SelectCardsEffect & {
+  filter: CardFilter;
+  saveAs: typeof startOfGameSelection;
 };
 
 const setupDecisionSetPrefix = "set:setup-start-of-game:";
@@ -76,62 +82,76 @@ const isCardRefLike = (value: unknown): value is CardRef => {
   return true;
 };
 
-const isStartOfGameStageSearchRequest = (request: SearchRequest): boolean => {
+const isSequencedRuntimeEffect = (
+  effect: Effect | { type: "payCost" },
+): effect is Effect => effect.type !== "payCost";
+
+const isStartOfGameStageSelection = (
+  effect: Effect,
+): effect is StartOfGameStageSelection => {
   if (
-    request.zone !== "deck" ||
-    request.player !== "self" ||
-    request.lookCount !== undefined ||
-    request.remainingCards !== undefined ||
-    request.min !== 0 ||
-    request.max !== 1 ||
-    request.destination !== "stageArea" ||
-    request.revealTo !== "chooserOnly" ||
-    request.shuffleAfter !== false
+    effect.type !== "selectCards" ||
+    effect.zone !== "deck" ||
+    effect.player !== "self" ||
+    effect.chooser !== "self" ||
+    effect.min !== 0 ||
+    effect.max !== 1 ||
+    String(effect.saveAs) !== startOfGameSelection ||
+    effect.visibility !== "chooserOnly"
   ) {
     return false;
   }
   return (
-    request.filter.categories !== undefined &&
-    request.filter.categories.length === 1 &&
-    request.filter.categories[0] === "stage" &&
-    request.filter.typesAny !== undefined &&
-    request.filter.typesAny.length > 0
+    effect.filter?.categories !== undefined &&
+    effect.filter.categories.length === 1 &&
+    effect.filter.categories[0] === "stage" &&
+    effect.filter.typesAny !== undefined &&
+    effect.filter.typesAny.length > 0
   );
 };
 
 const isStartOfGameStagePlaySelected = (
   effect: Effect,
+  selection: StartOfGameStageSelection,
 ): effect is Extract<Effect, { type: "playSelected" }> =>
   effect.type === "playSelected" &&
-  String(effect.selection) === startOfGameSelection &&
+  String(effect.selection) === String(selection.saveAs) &&
   effect.ignoreCost === true &&
   effect.enterRested === undefined;
 
 const stageSearchPlan = (
   effect: Effect,
-): Pick<StartOfGameEffectPlan, "search" | "playSelected"> | null => {
+): Pick<StartOfGameEffectPlan, "selection" | "playSelected"> | null => {
   if (effect.type !== "sequence") {
     return null;
   }
-  if (effect.effects.length !== 2) {
+  let selection: StartOfGameStageSelection | undefined;
+  let playSelected: Extract<Effect, { type: "playSelected" }> | undefined;
+  for (const segment of effect.effects) {
+    if (segment.connector !== "always") {
+      return null;
+    }
+    const segmentEffect = segment.effect;
+    if (!isSequencedRuntimeEffect(segmentEffect)) {
+      return null;
+    }
+    if (selection === undefined && isStartOfGameStageSelection(segmentEffect)) {
+      selection = segmentEffect;
+      continue;
+    }
+    if (
+      selection !== undefined &&
+      playSelected === undefined &&
+      isStartOfGameStagePlaySelected(segmentEffect, selection)
+    ) {
+      playSelected = segmentEffect;
+      continue;
+    }
     return null;
   }
-  const first = effect.effects[0];
-  const second = effect.effects[1];
-  if (
-    first === undefined ||
-    second === undefined ||
-    first.effect.type !== "search" ||
-    second.effect.type !== "playSelected" ||
-    !isStartOfGameStagePlaySelected(second.effect)
-  ) {
-    return null;
-  }
-  const request = first.effect.request;
-  if (!isStartOfGameStageSearchRequest(request)) {
-    return null;
-  }
-  return { search: request, playSelected: second.effect };
+  return selection === undefined || playSelected === undefined
+    ? null
+    : { selection, playSelected };
 };
 
 export const isSupportedStartOfGameEffectBlock = (
@@ -150,14 +170,14 @@ export const isSupportedStartOfGameEffectBlock = (
 const findStageCandidates = (
   player: PlayerState,
   manifest: MatchCardManifest,
-  search: SearchRequest,
+  selection: StartOfGameStageSelection,
 ): CardRef[] =>
   player.deck
     .filter((card) => {
       const resolved = manifest.cards[card.cardId];
       return (
         resolved !== undefined &&
-        cardMatchesSearchFilter(resolved, search.filter)
+        cardMatchesSearchFilter(resolved, selection.filter)
       );
     })
     .map((card) => toCardRef(card, player.playerId));
@@ -204,7 +224,7 @@ export const collectStartOfGamePlans = (
       plans.push({
         sourceCardId: player.leader.cardId,
         sourcePlayerId: playerId,
-        search: plan.search,
+        selection: plan.selection,
         playSelected: plan.playSelected,
         triggerBlockId: block.id,
       });
@@ -230,7 +250,7 @@ const setupDecisionForPlan = (
     const candidates = findStageCandidates(
       player,
       state.cardManifest,
-      plan.search,
+      plan.selection,
     );
     if (candidates.length === 0) {
       continue;
@@ -254,7 +274,7 @@ const setupDecisionForPlan = (
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "privateToChooser",
-        filter: plan.search.filter,
+        filter: plan.selection.filter,
         set: `${setupDecisionSetPrefix}${String(planIndex)}` as never,
       },
       candidates: candidates.map((card) => ({

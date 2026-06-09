@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect line parser expanded reusable primitive shapes", () => {
+  const blockEffect = (result: ReturnType<typeof parseCardEffectLine>) =>
+    result !== undefined && "block" in result ? result.block.effect : undefined;
+
   it("parses activate-main conditional Rush:Character grant without permanent relabeling", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] [Once Per Turn] If your opponent has a Character with 8000 power or more, this Character gains [Rush: Character] during this turn.",
@@ -56,22 +59,14 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
           },
         },
         effect: {
-          type: "search",
-          request: {
-            zone: "deck",
-            player: "self",
-            lookCount: 4,
-            filter: { cost: { min: 3 } },
-            min: 0,
-            max: 1,
-            destination: "hand",
-            revealTo: "bothPlayers",
-            remainingCards: {
-              destination: "deck",
-              position: "bottom",
-              order: "ownerChoice",
-            },
-          },
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 4 } },
+            { effect: { type: "selectFromSet", filter: { cost: { min: 3 } } } },
+            { effect: { type: "revealSelected" } },
+            { effect: { type: "moveSelected", to: "hand" } },
+            { effect: { type: "placeSetRemainder", position: "bottom" } },
+          ],
         },
       },
     });
@@ -172,5 +167,95 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
         },
       },
     });
+  });
+
+  it("parses forced opponent DON return under different wrappers", () => {
+    const onPlay = parseCardEffectLine(
+      "[On Play] If your Leader has the {Impel Down} type, your opponent returns 1 DON!! card from their field to their DON!! deck.",
+    );
+    const onKo = parseCardEffectLine(
+      "[On K.O.] Your opponent returns 4 DON!! cards from their field to their DON!! deck.",
+    );
+
+    expect(onPlay?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "condition:leaderIdentity",
+        "filter:type",
+        "instruction:returnDon",
+        "player:opponent",
+        "count:positiveInteger",
+        "expression:conditional",
+      ]),
+    );
+    expect(onKo?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onKO",
+        "instruction:returnDon",
+        "player:opponent",
+        "count:positiveInteger",
+      ]),
+    );
+  });
+
+  it("parses global all-character KO with source exclusion", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] DON!! \u221210: K.O. all Characters other than this Character.",
+    );
+
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "cost:returnDon",
+        "instruction:ko",
+        "cardinality:all",
+        "player:any",
+        "filter:category:character",
+        "filter:excludeSelf",
+      ]),
+    );
+  });
+
+  it("parses up-to opponent life top trash as movement, not damage", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] Trash up to 1 card from the top of your opponent's Life cards.",
+    );
+
+    expect(blockEffect(result)).toMatchObject({
+      type: "moveCards",
+      min: 0,
+      count: 1,
+      from: { player: "opponent", zone: "life", position: "top" },
+      to: { player: "opponent", zone: "trash" },
+      order: "original",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:moveCards",
+        "cardinality:upTo",
+        "player:opponent",
+        "zone:life",
+        "destination:trash",
+      ]),
+    );
+    expect(result?.evidence).not.toContain("instruction:damage");
+  });
+
+  it("parses selected character current power as a base-power snapshot source", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] Select up to 1 of your opponent's Characters. This Character's base power becomes the same as the selected Character's power during this turn.",
+    );
+
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "composition:selectThenApply",
+        "instruction:setBasePower",
+        "target:thisCharacter",
+        "target:selectedCharacter",
+        "value:basePower:snapshotCurrentPower",
+        "duration:thisTurn",
+      ]),
+    );
   });
 });

@@ -3,14 +3,16 @@ import { randomUUID } from "node:crypto";
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import type { AuthSubject } from "./dev-auth.js";
-import type { DeckSubmission } from "./deck-submission.js";
+import type { ReadyDeckSubmission } from "./deck-submission.js";
 import type { RedisLike } from "./redis-match-persistence.js";
 import type { FirstPlayerChoiceState } from "./session-types.js";
+import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export interface CustomLobbySeatState {
   readonly playerId: PlayerId;
   subject?: AuthSubject;
-  deckSubmission?: DeckSubmission;
+  deckSubmission?: ReadyDeckSubmission;
+  verifiedHandoff?: VerifiedSimHandoff;
 }
 
 export interface CustomLobbyState {

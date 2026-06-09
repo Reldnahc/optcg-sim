@@ -981,17 +981,27 @@ describe("card effect event parser", () => {
         trigger: { type: "main" },
         sourcePresencePolicy: "resolveFromDestinationZone",
         effect: {
-          type: "search",
-          request: {
-            lookCount: 3,
-            filter: {
-              typesAny: ["Celestial Dragons"],
-              nameNot: ["The Five Elders Are at Your Service!!!"],
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 3 } },
+            {
+              effect: {
+                type: "selectFromSet",
+                filter: {
+                  typesAny: ["Celestial Dragons"],
+                  nameNot: ["The Five Elders Are at Your Service!!!"],
+                },
+              },
             },
-            revealTo: "bothPlayers",
-            destination: "hand",
-            remainingCards: { destination: "trash" },
-          },
+            { effect: { type: "revealSelected" } },
+            { effect: { type: "moveSelected", to: "hand" } },
+            {
+              effect: {
+                type: "placeSetRemainder",
+                destination: "trash",
+              },
+            },
+          ],
         },
       },
     });

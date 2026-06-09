@@ -18,7 +18,7 @@ import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const matchScope = "match-1";
-const revealId = "reveal:search-reveal:selected:choice-1";
+const revealId = "reveal:sequence-selected:choice-1";
 const cardRef = {
   instanceId: "revealed-card-1" as InstanceId,
   cardId: "OP13-089" as CardId,
@@ -26,7 +26,7 @@ const cardRef = {
 };
 
 const revealEvent = (): EngineEvent => ({
-  id: "event:search-reveal" as EngineEventId,
+  id: "event:selected-reveal" as EngineEventId,
   seq: 1,
   type: "cardRevealed",
   payload: {

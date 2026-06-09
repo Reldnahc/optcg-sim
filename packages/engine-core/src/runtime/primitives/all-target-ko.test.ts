@@ -290,6 +290,126 @@ test("optional-cost nested all-target K.O. sequence filters against current comp
   );
 });
 
+test("all-target K.O. excludes the source card when filter requests excludeSelf", () => {
+  const state = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        id: "turn-life-face-up",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "turnLifeFaceUp",
+            count: 1,
+            player: "self",
+            position: "top",
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "ko-after-cost",
+        connector: "ifYouDo",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "ko",
+                target: {
+                  type: "all",
+                  zone: "characterArea",
+                  player: "self",
+                  filter: { categories: ["character"], excludeSelf: true },
+                },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "ko",
+                target: {
+                  type: "all",
+                  zone: "characterArea",
+                  player: "opponent",
+                  filter: { categories: ["character"], excludeSelf: true },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p1State.characters[0], "source character");
+  const selfTarget = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[1], "self target"),
+    zone: "characterArea",
+    index: 1,
+  });
+  const opponentTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "opponent target"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const sourceSupportCard = must(
+    state.cardManifest.cards[source.cardId],
+    "source support card",
+  );
+  state.cardManifest.cards[source.cardId] = {
+    ...sourceSupportCard,
+    category: "character",
+    power: 5000,
+  };
+  for (const card of [selfTarget, opponentTarget]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      power: 5000,
+    });
+  }
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "turnLifeFaceUp");
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "turnLifeFaceUp:top",
+    },
+  });
+  const nextP1 = must(result.state.players[p1], "p1 result");
+  const nextP2 = must(result.state.players[p2], "p2 result");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    nextP1.characters.some((card) => card.instanceId === source.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP1.trash.some((card) => card.instanceId === selfTarget.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === opponentTarget.instanceId),
+    true,
+  );
+});
+
 test("generic effect decision continuation resolves nested On K.O. triggers", () => {
   const state = sequenceQueueState(
     optionalCostThenNestedReduceOpponentPowerThenKoZeroPowerSequence(),

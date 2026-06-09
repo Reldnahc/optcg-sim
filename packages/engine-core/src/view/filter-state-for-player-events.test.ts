@@ -315,20 +315,19 @@ test("preserves safe replacementApplied presentation for effect text spotlight",
   assert.equal(JSON.stringify(view.events).includes("hidden"), false);
 });
 
-test("keeps historical public search reveal events after transient reveal cleanup", () => {
+test("keeps public selected reveal events after transient reveal cleanup", () => {
   const state = createActiveState();
   const cardId = toCardId("OP13-089");
   const instanceId = "revealed-card-1" as InstanceId;
   state.revealedCards = [];
   state.eventJournal = [
     {
-      id: toEngineEventId("event:search-reveal"),
+      id: toEngineEventId("event:set-reveal-selected"),
       seq: 1,
       type: "cardRevealed",
       actor: p1,
       payload: {
-        revealId: "reveal:search-reveal:selected:choice-1",
-        selectionSetId: "set:search-reveal:choice-1",
+        revealId: "reveal:sequence-selected:choice-1",
         cards: [
           {
             playerId: p1,
@@ -349,8 +348,7 @@ test("keeps historical public search reveal events after transient reveal cleanu
     view.events.map((event) => event.payload),
     [
       {
-        revealId: "reveal:search-reveal:selected:choice-1",
-        selectionSetId: "set:search-reveal:choice-1",
+        revealId: "reveal:sequence-selected:choice-1",
         cards: [{ instanceId, cardId, playerId: p1 }],
       },
     ],
@@ -358,20 +356,20 @@ test("keeps historical public search reveal events after transient reveal cleanu
   assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
 });
 
-test("censors stale transient search reveal candidates instead of omitting the log row", () => {
+test("censors stale transient set reveal candidates instead of omitting the log row", () => {
   const state = createActiveState();
   const cardId = toCardId("OP13-089");
   const instanceId = "stale-revealed-card-1" as InstanceId;
   state.revealedCards = [];
   state.eventJournal = [
     {
-      id: toEngineEventId("event:stale-search-reveal"),
+      id: toEngineEventId("event:stale-set-reveal"),
       seq: 1,
       type: "cardRevealed",
       actor: p1,
       payload: {
-        revealId: "reveal:search-reveal:candidate:choice-1",
-        selectionSetId: "set:search-reveal:choice-1",
+        revealId: "reveal:sequence:candidate:choice-1",
+        selectionSetId: "set:looked-cards:choice-1",
         cards: [
           {
             playerId: p1,
@@ -394,8 +392,8 @@ test("censors stale transient search reveal candidates instead of omitting the l
       {
         censored: true,
         reason: "hidden-info",
-        revealId: "reveal:search-reveal:candidate:choice-1",
-        selectionSetId: "set:search-reveal:choice-1",
+        revealId: "reveal:sequence:candidate:choice-1",
+        selectionSetId: "set:looked-cards:choice-1",
         revealedCount: 1,
       },
     ],

@@ -13,13 +13,8 @@ import {
   isSupportedQueuedAutoSequenceForEntryPoint,
   isSupportedSequenceBlock,
 } from "../../packages/engine-core/src/effect-runtime-sequence/support.ts";
-import { createSupportedSearchRevealTransientSet } from "../../packages/engine-core/src/effect-runtime-search-reveal.ts";
 import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/runtime/trigger-queueing/attack.ts";
 import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/runtime/trigger-queueing/ko.ts";
-import {
-  createActiveState,
-  queueDrawForP1,
-} from "../../packages/engine-core/src/effect-runtime-queue/test-support.ts";
 
 const parseSupportedEffectBlock = (text, evidence = []) => {
   const parsed = parseCardEffectLine(text);
@@ -431,12 +426,16 @@ test("cards parser emits field-control primitives accepted by engine sequence su
   );
 });
 
-test("cards parser emits top-of-deck type search accepted by engine search-reveal support", () => {
+test("cards parser emits public top-of-deck type search accepted by engine sequence support", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
     [
       "entry:onPlay",
-      "instruction:search",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:revealSelected",
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
       "look:topDeck",
       "filter:type",
       "cardinality:upTo",
@@ -447,16 +446,31 @@ test("cards parser emits top-of-deck type search accepted by engine search-revea
     ],
   );
 
-  assert.equal(effectBlock.effect.type, "search");
-  assert.deepEqual(effectBlock.effect.request.filter, {
+  assert.equal(effectBlock.effect.type, "sequence");
+  assert.deepEqual(
+    effectBlock.effect.effects.map((segment) => segment.effect.type),
+    [
+      "revealTop",
+      "selectFromSet",
+      "revealSelected",
+      "moveSelected",
+      "placeSetRemainder",
+    ],
+  );
+  const selectSegment = effectBlock.effect.effects.find(
+    (segment) => segment.effect.type === "selectFromSet",
+  );
+  assert.deepEqual(selectSegment?.effect.filter, {
     typesAny: ["Five Elders"],
   });
-  const result = createSupportedSearchRevealTransientSet(
-    createActiveState(),
-    queueDrawForP1(),
-    effectBlock.effect,
+  assert.equal(
+    isSupportedQueuedAutoSequenceForEntryPoint(
+      effectBlock,
+      "onPlay",
+      "mustRemainInSameZone",
+    ),
+    true,
   );
-  assert.equal(result.ok, true);
 });
 
 test("cards parser emits costed private search plus trash accepted by engine sequence support", () => {
@@ -465,7 +479,10 @@ test("cards parser emits costed private search plus trash accepted by engine seq
     [
       "entry:onPlay",
       "cost:returnDon",
-      "instruction:search",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
       "look:topDeck",
       "filter:any",
       "reveal:chooserOnly",
@@ -477,20 +494,24 @@ test("cards parser emits costed private search plus trash accepted by engine seq
   assert.equal(effectBlock.effect.type, "sequence");
   const body = effectBlock.effect.effects[1]?.effect;
   assert.equal(body?.type, "sequence");
-  const searchSegment = body.effects.find(
-    (segment) => segment.effect.type === "search",
+  assert.deepEqual(
+    body.effects.map((segment) => segment.effect.type),
+    [
+      "revealTop",
+      "selectFromSet",
+      "moveSelected",
+      "placeSetRemainder",
+      "trashFromHand",
+    ],
   );
-  assert.ok(searchSegment, "expected search segment after DON cost");
-  assert.equal(searchSegment.effect.request.revealTo, "chooserOnly");
-  assert.deepEqual(searchSegment.effect.request.filter, {});
-  assert.equal(
-    createSupportedSearchRevealTransientSet(
-      createActiveState(),
-      queueDrawForP1(),
-      searchSegment.effect,
-    ).ok,
-    true,
+  const revealSegment = body.effects.find(
+    (segment) => segment.effect.type === "revealTop",
   );
+  assert.equal(revealSegment?.effect.visibility, "chooserOnly");
+  const selectSegment = body.effects.find(
+    (segment) => segment.effect.type === "selectFromSet",
+  );
+  assert.deepEqual(selectSegment?.effect.filter, {});
   assert.equal(
     isSupportedQueuedAutoSequenceForEntryPoint(
       effectBlock,
@@ -558,7 +579,7 @@ test("cards parser emits start-of-game stage search and play-selected in engine 
       "entry:startOfGame",
       "deckRestriction:ignored",
       "deckRestriction:eventCostGte",
-      "instruction:search",
+      "instruction:selectCards",
       "instruction:playSelected",
       "filter:type",
       "filter:category:stage",
@@ -570,15 +591,16 @@ test("cards parser emits start-of-game stage search and play-selected in engine 
   assert.equal(effectBlock.trigger.type, "startOfGame");
   assert.equal(effectBlock.sourcePresencePolicy, "noSourceRequired");
   assert.equal(effectBlock.effect.type, "sequence");
-  assert.deepEqual(effectBlock.effect.effects[0]?.effect.request, {
+  assert.deepEqual(effectBlock.effect.effects[0]?.effect, {
+    type: "selectCards",
     zone: "deck",
     player: "self",
+    chooser: "self",
     filter: { categories: ["stage"], typesAny: ["Mary Geoise"] },
     min: 0,
     max: 1,
-    destination: "stageArea",
-    revealTo: "chooserOnly",
-    shuffleAfter: false,
+    saveAs: "selected:start-of-game",
+    visibility: "chooserOnly",
   });
   assert.deepEqual(effectBlock.effect.effects[1]?.effect, {
     type: "playSelected",
@@ -732,7 +754,11 @@ test("cards parser emits adjacent circled DON and rest-self costs accepted befor
       "composition:costSequence",
       "cost:restDon",
       "cost:restSelf",
-      "instruction:search",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:revealSelected",
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
       "filter:type",
       "remaining:bottomDeck",
     ],

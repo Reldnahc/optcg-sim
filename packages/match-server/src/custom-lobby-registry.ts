@@ -349,6 +349,7 @@ export const createCustomLobbyRegistry = async (
           return "seatNotFound";
         }
         seat.deckSubmission = submission;
+        seat.verifiedHandoff = handoff;
         await ensureMatchWhenReady(lobby);
         return {
           ...lobbyResponse(lobby),

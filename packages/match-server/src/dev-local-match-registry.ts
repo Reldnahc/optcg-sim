@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
+import {
+  buildLocalCompletedMatchRecord,
+  type CompletedMatchSeatContext,
+} from "./local-completed-match-record.js";
 import { devSessionMetadata } from "./dev-session-metadata.js";
 import { createDevUserSessionToken, type AuthContext } from "./dev-auth.js";
 import { subjectsMatch, subjectsOwnSameAccount } from "./dev-auth.js";
@@ -28,6 +32,7 @@ import type {
   FirstPlayerChoiceValue,
   SessionActionResult,
 } from "./session-types.js";
+import type { CompletedMatchRepository } from "./postgres-completed-match.js";
 
 type LocalDevMatchSetup = Parameters<typeof createLocalDevMatch>[0];
 
@@ -48,10 +53,8 @@ export interface ClaimedDevSeatResponse {
   firstPlayerChoice?: CreatedDevMatchResponse["firstPlayerChoice"];
 }
 
-export interface LocalDevMatchSeat {
+export interface LocalDevMatchSeat extends CompletedMatchSeatContext {
   matchId: MatchId;
-  playerId: PlayerId;
-  subject?: AuthContext["subject"];
 }
 
 interface ActiveLocalDevMatchSession {
@@ -133,7 +136,7 @@ export interface LocalDevMatchRegistry {
   ) => CreatedDevMatchResponse["firstPlayerChoice"] | undefined;
   applyEnvelope: (
     envelope: ClientActionEnvelope,
-  ) => SessionActionResult | "matchNotFound";
+  ) => Promise<SessionActionResult | "matchNotFound">;
   advanceTimers: (input: {
     readonly elapsedMs: number;
     readonly connectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
@@ -307,6 +310,12 @@ export const matchSeatsWithMatchId = (
         ...(seat.subject === undefined
           ? {}
           : { subject: structuredClone(seat.subject) }),
+        ...(seat.deckSubmission === undefined
+          ? {}
+          : { deckSubmission: structuredClone(seat.deckSubmission) }),
+        ...(seat.verifiedHandoff === undefined
+          ? {}
+          : { verifiedHandoff: structuredClone(seat.verifiedHandoff) }),
       },
     ]),
   );
@@ -322,6 +331,12 @@ const rematchSeatsFromSource = (
         ...(seat.subject === undefined
           ? {}
           : { subject: structuredClone(seat.subject) }),
+        ...(seat.deckSubmission === undefined
+          ? {}
+          : { deckSubmission: structuredClone(seat.deckSubmission) }),
+        ...(seat.verifiedHandoff === undefined
+          ? {}
+          : { verifiedHandoff: structuredClone(seat.verifiedHandoff) }),
       },
     ]),
   );
@@ -346,11 +361,13 @@ export const createLocalDevMatchRegistry = async (
   initialSetup?: LocalDevMatchSetup,
   options: {
     readonly createDefaultMatch?: boolean;
+    readonly completedMatchRepository?: CompletedMatchRepository;
     readonly matchTimerPolicy?: MatchTimerPolicy;
   } = {},
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
+  const completedPersistedMatchIds = new Set<MatchId>();
   const sessionService = createMatchSessionService();
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
   const createTemplateSetup = async (
@@ -390,6 +407,31 @@ export const createLocalDevMatchRegistry = async (
         ? { snapshot: getLocalDevSnapshot(session.match) }
         : {}),
     };
+  };
+
+  const persistCompletedMatchIfNeeded = async (
+    session: ActiveLocalDevMatchSession,
+  ): Promise<void> => {
+    if (
+      options.completedMatchRepository === undefined ||
+      completedPersistedMatchIds.has(session.match.state.matchId)
+    ) {
+      return;
+    }
+    const record = buildLocalCompletedMatchRecord({
+      match: session.match,
+      setup: session.setup,
+      seats: session.seats,
+      firstPlayerChoice: session.firstPlayerChoice,
+      records:
+        sessionService.getRuntime(session.match.state.matchId)?.records() ?? [],
+      endedAt: new Date().toISOString(),
+    });
+    if (record === undefined) {
+      return;
+    }
+    await options.completedMatchRepository.saveCompletedMatch(record);
+    completedPersistedMatchIds.add(session.match.state.matchId);
   };
 
   return {
@@ -599,7 +641,7 @@ export const createLocalDevMatchRegistry = async (
         ? undefined
         : firstPlayerChoiceResponse(session.firstPlayerChoice);
     },
-    applyEnvelope(envelope) {
+    async applyEnvelope(envelope) {
       const session = sessions.get(envelope.matchId);
       if (session === undefined) {
         return "matchNotFound";
@@ -615,7 +657,11 @@ export const createLocalDevMatchRegistry = async (
           errors: ["First-player setup is not resolved."],
         };
       }
-      return sessionService.applyEnvelope(envelope);
+      const result = sessionService.applyEnvelope(envelope);
+      if (result.accepted) {
+        await persistCompletedMatchIfNeeded(session);
+      }
+      return result;
     },
     advanceTimers({ elapsedMs, connectedPlayerIds, matchIds }) {
       const allowedMatchIds =

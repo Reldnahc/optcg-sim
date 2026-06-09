@@ -27,6 +27,10 @@ import {
   createPoneglyphSimHandoffVerifier,
   type SimHandoffVerifier,
 } from "./sim-handoff.js";
+import {
+  createPostgresCompletedMatchRepository,
+  type CompletedMatchRepository,
+} from "./postgres-completed-match.js";
 import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
 import {
@@ -93,6 +97,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly staticAssetsDirectory?: string;
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly simHandoffVerifier?: SimHandoffVerifier;
+  readonly completedMatchRepository?: CompletedMatchRepository;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;
   readonly matchTimerPolicy?: MatchTimerPolicy;
@@ -101,6 +106,11 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
 
 const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
 const defaultMatchTimerTickMs = 1_000;
+
+const envCompletedMatchRepository = (): CompletedMatchRepository | undefined =>
+  process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
+    ? createPostgresCompletedMatchRepository()
+    : undefined;
 
 const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
   await new Promise((resolve, reject) => {
@@ -779,7 +789,7 @@ const handleWebSocketUpgrade = async (
   }
 
   let buffered: Buffer = Buffer.alloc(0);
-  socket.on("data", (chunk: Buffer) => {
+  const handleMatchSocketData = async (chunk: Buffer): Promise<void> => {
     resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
     buffered = Buffer.concat([buffered, chunk]);
     const parsed = parseWebSocketFrames(buffered);
@@ -815,7 +825,7 @@ const handleWebSocketUpgrade = async (
         continue;
       }
       const envelope = clientActionEnvelopeFromSocketPayload(payload);
-      const result = registry.applyEnvelope(envelope);
+      const result = await registry.applyEnvelope(envelope);
       if (result === "matchNotFound") {
         sendSocketJson(connection, {
           type: "matchError",
@@ -842,6 +852,9 @@ const handleWebSocketUpgrade = async (
         broadcastMatchState(matchId, registry, connections);
       }
     }
+  };
+  socket.on("data", (chunk: Buffer) => {
+    void handleMatchSocketData(chunk);
   });
 };
 
@@ -864,6 +877,13 @@ export const createMatchHttpServer = async (
       ...(options.createDefaultMatch === undefined
         ? {}
         : { createDefaultMatch: options.createDefaultMatch }),
+      ...(() => {
+        const completedMatchRepository =
+          options.completedMatchRepository ?? envCompletedMatchRepository();
+        return completedMatchRepository === undefined
+          ? {}
+          : { completedMatchRepository };
+      })(),
       matchTimerPolicy: options.matchTimerPolicy ?? defaultMatchTimerPolicy,
     },
   );

@@ -84,7 +84,7 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
         },
       ],
       origin: "topOfDeck",
-      selectionSetId: "set:search-reveal:event-allow-list",
+      selectionSetId: "set:looked-cards:event-allow-list",
       hiddenCardIds: [toCardId("hidden-card-id-5")],
       rawProcessPayload: { secret: true },
       privateCandidates: [source.instanceId],
@@ -122,7 +122,7 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
           },
         ],
         origin: "topOfDeck",
-        selectionSetId: "set:search-reveal:event-allow-list",
+        selectionSetId: "set:looked-cards:event-allow-list",
       },
     ],
   );

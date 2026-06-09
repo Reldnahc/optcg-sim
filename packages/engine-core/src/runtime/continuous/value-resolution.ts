@@ -124,6 +124,7 @@ const cardRefForSnapshotTarget = (
   state: GameState,
   entry: EffectQueueEntry,
   target: SnapshotNumberValue["target"],
+  context: ContinuousResolutionContext | undefined,
 ): CardRef | null => {
   if (target.type === "opponentLeader") {
     const opponentId = opponentOf(state, entry.controllerId);
@@ -152,6 +153,29 @@ const cardRefForSnapshotTarget = (
       playerId: entry.controllerId,
       zone: player.leader.zone,
     };
+  }
+  if (target.type === "savedFieldObject") {
+    const saved = context?.savedReferences?.[target.binding.saveResultAs];
+    if (saved?.kind !== "selectedTargets") {
+      return null;
+    }
+    const object = saved.targets[target.binding.objectIndex ?? 0]?.object;
+    if (object === undefined) {
+      return null;
+    }
+    if (target.zone !== undefined && object.zone?.zone !== target.zone) {
+      return null;
+    }
+    const expectedPlayer =
+      target.player === "self"
+        ? entry.controllerId
+        : target.player === "opponent"
+          ? opponentOf(state, entry.controllerId)
+          : target.player;
+    if (expectedPlayer === null || object.playerId !== expectedPlayer) {
+      return null;
+    }
+    return object;
   }
   return null;
 };
@@ -247,10 +271,11 @@ export const resolveBasePowerValue = (
   state: GameState,
   entry: EffectQueueEntry,
   value: Extract<Effect, { type: "setBasePower" }>["value"],
+  context?: ContinuousResolutionContext,
 ): number | null => {
   if (typeof value === "number") {
     return value;
   }
-  const target = cardRefForSnapshotTarget(state, entry, value.target);
+  const target = cardRefForSnapshotTarget(state, entry, value.target, context);
   return target === null ? null : currentPowerForSnapshotTarget(state, target);
 };

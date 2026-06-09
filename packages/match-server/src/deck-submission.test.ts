@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
+import { createDeckHashCodec } from "optcg-deck-hash";
 import type { CardId } from "@optcg/types";
 
 import {
@@ -62,6 +63,33 @@ describe("deck hash submissions", () => {
     assert.equal(submission.status, "ready");
     assert.equal(JSON.stringify(submission).includes("DON!!"), false);
     assert.equal(submission.donDeckCount, 10);
+  });
+
+  test("preserves real decoded high-count main entries as repeated chunks", async () => {
+    const codec = createDeckHashCodec({
+      dictionary: ["OP15-058", "OP16-042"],
+    });
+    const hash = await codec.encode(
+      {
+        leader: { card_number: "OP15-058", count: 1 },
+        main: [{ card_number: "OP16-042", count: 18 }],
+        don: null,
+      },
+      { compression: "raw" },
+    );
+
+    const submission = await decodeDeckHashSubmission({
+      hash,
+      donDeckCount: 10,
+      codec,
+    });
+
+    assert.equal(submission.status, "ready");
+    assert.deepEqual(submission.decoded.main, [
+      { cardId: "OP16-042" as CardId, count: 8 },
+      { cardId: "OP16-042" as CardId, count: 8 },
+      { cardId: "OP16-042" as CardId, count: 2 },
+    ]);
   });
 
   test("fails closed when the hash has no one-copy leader", async () => {

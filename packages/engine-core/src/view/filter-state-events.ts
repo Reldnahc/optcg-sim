@@ -377,10 +377,7 @@ export const toPlayerEvent = (event: EngineEvent): EngineEvent => {
   return { ...base, payload: toAllowedPlayerEventPayload(event) };
 };
 
-const searchRevealSelectedRevealIdPrefix = "reveal:search-reveal:selected:";
-const searchRevealSetIdPrefix = "set:search-reveal:";
-
-const shouldCensorSearchRevealEvent = (
+const shouldCensorStaleSelectionSetRevealEvent = (
   state: GameState,
   event: EngineEvent,
 ): boolean => {
@@ -389,16 +386,11 @@ const shouldCensorSearchRevealEvent = (
   }
   const revealId = event.payload["revealId"];
   const selectionSetId = event.payload["selectionSetId"];
-  if (
-    typeof selectionSetId !== "string" ||
-    !selectionSetId.startsWith(searchRevealSetIdPrefix)
-  ) {
+  const origin = event.payload["origin"];
+  if (typeof selectionSetId !== "string") {
     return false;
   }
-  if (
-    typeof revealId === "string" &&
-    revealId.startsWith(searchRevealSelectedRevealIdPrefix)
-  ) {
+  if (isObjectRecord(origin)) {
     return false;
   }
   if (typeof revealId !== "string") {
@@ -407,7 +399,7 @@ const shouldCensorSearchRevealEvent = (
   return !state.revealedCards.some((record) => record.id === revealId);
 };
 
-const toCensoredSearchRevealPayload = (
+const toCensoredSelectionSetRevealPayload = (
   payload: Record<string, unknown>,
 ): Record<string, unknown> => {
   const revealId = payload["revealId"];
@@ -427,12 +419,12 @@ export const toPlayerEventForView = (
   event: EngineEvent,
 ): EngineEvent => {
   if (
-    shouldCensorSearchRevealEvent(state, event) &&
+    shouldCensorStaleSelectionSetRevealEvent(state, event) &&
     isObjectRecord(event.payload)
   ) {
     return {
       ...toPlayerEvent(event),
-      payload: toCensoredSearchRevealPayload(event.payload),
+      payload: toCensoredSelectionSetRevealPayload(event.payload),
     };
   }
   return toPlayerEvent(event);

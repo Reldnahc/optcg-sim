@@ -364,19 +364,60 @@ test("getSupportedPlayMetadata accepts implemented-DSL Event play when trigger t
         trigger: { type: "main" as const },
         sourcePresencePolicy: "resolveFromDestinationZone" as const,
         effect: {
-          type: "search" as const,
-          request: {
-            zone: "deck" as const,
-            player: "self" as const,
-            lookCount: 3,
-            filter: { typesAny: ["Celestial Dragons"] },
-            min: 0,
-            max: 1,
-            destination: "hand" as const,
-            revealTo: "bothPlayers" as const,
-            remainingCards: { destination: "trash" as const },
-            shuffleAfter: false,
-          },
+          type: "sequence" as const,
+          effects: [
+            {
+              connector: "always" as const,
+              effect: {
+                type: "revealTop" as const,
+                player: "self" as const,
+                zone: "deck" as const,
+                count: 3,
+                saveAs: "set:event-main-search" as never,
+                visibility: "chooserOnly" as const,
+              },
+            },
+            {
+              connector: "then" as const,
+              effect: {
+                type: "selectFromSet" as const,
+                set: "set:event-main-search" as never,
+                chooser: "self" as const,
+                filter: { typesAny: ["Celestial Dragons"] },
+                min: 0,
+                max: 1,
+                saveAs: "selected:event-main-search" as never,
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded" as const,
+              effect: {
+                type: "revealSelected" as const,
+                selection: "selected:event-main-search" as never,
+                visibility: "bothPlayers" as const,
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded" as const,
+              effect: {
+                type: "moveSelected" as const,
+                selection: "selected:event-main-search" as never,
+                from: "set:event-main-search" as never,
+                to: "hand" as const,
+              },
+            },
+            {
+              connector: "then" as const,
+              effect: {
+                type: "placeSetRemainder" as const,
+                set: "set:event-main-search" as never,
+                owner: "self" as const,
+                destination: "trash" as const,
+                position: "bottom" as const,
+                order: "original" as const,
+              },
+            },
+          ],
         },
       },
       {

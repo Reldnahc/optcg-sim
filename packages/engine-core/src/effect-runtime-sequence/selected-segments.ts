@@ -6,6 +6,7 @@ import type {
   EffectQueueEntry,
   EngineError,
   EngineEvent,
+  EventVisibility,
   GameState,
   OrderCardsDecision,
   SelectCardsDecision,
@@ -14,7 +15,6 @@ import type {
 } from "@optcg/types";
 
 import {
-  addCardsToHand,
   cardMatchesHandSelectionFilter,
   reindexZoneCards,
 } from "../actions/state.js";
@@ -22,6 +22,10 @@ import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
 import { applyTrashToLifeSelectedCardMoveSegment } from "./selected-trash-to-life.js";
+import {
+  applySetToHandSelectedCardMoveSegment,
+  applyTrashToHandSelectedCardMoveSegment,
+} from "./selected-to-hand.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
@@ -42,6 +46,22 @@ type SegmentLedgers = {
 
 const selectedHandDeckPlacementDecisionPrefix =
   "decision:orderCards:selected-hand-to-deck:";
+
+const zoneNames = new Set<string>([
+  "hand",
+  "deck",
+  "trash",
+  "life",
+  "costArea",
+  "characterArea",
+  "stageArea",
+  "leaderArea",
+  "donDeck",
+  "noZone",
+]);
+
+const isSelectionSetSource = (source: MoveSelectedEffect["from"]): boolean =>
+  !zoneNames.has(source);
 
 const selectedCardRefsForMove = (
   ledgers: SegmentLedgers,
@@ -219,6 +239,10 @@ export const createSelectFromSetDecision = (params: {
   if (set?.kind !== "selectedCards") {
     return { ok: false };
   }
+  const visibility =
+    params.state.revealedCards.find(
+      (record) => record.selectionSetId === String(params.effect.set),
+    )?.visibility ?? ({ type: "public" } satisfies EventVisibility);
   const candidates = set.cards.filter((card) => {
     const player = params.state.players[card.playerId];
     const deckCard =
@@ -249,7 +273,7 @@ export const createSelectFromSetDecision = (params: {
       queueEntryId: params.entry.id,
       effectId: params.entry.effectBlockId,
     },
-    visibility: { type: "public" },
+    visibility,
     request: {
       timing: "onResolution",
       chooser: "self",
@@ -257,14 +281,14 @@ export const createSelectFromSetDecision = (params: {
       min: params.effect.min,
       max: params.effect.max,
       allowFewerIfUnavailable: true,
-      visibility: "public",
+      visibility: visibility.type === "private" ? "privateToChooser" : "public",
       ...(params.effect.filter === undefined
         ? {}
         : { filter: params.effect.filter }),
     },
     candidates: candidates.map((card) => ({
       card,
-      visibility: { type: "public" as const },
+      visibility,
     })),
     defaultResponse: { type: "cards", cards: [] },
   };
@@ -278,7 +302,7 @@ export const createSelectFromSetDecision = (params: {
       decisionType: decision.type,
       playerId: decision.playerId,
     },
-    { type: "public" },
+    visibility,
   );
   const event = events[0];
   if (event !== undefined) {
@@ -365,123 +389,15 @@ export const applySelectedCardMoveSegment = (
   ) {
     return applyHandToDeckSelectedCardMoveSegment(params, selected);
   }
+  if (
+    isSelectionSetSource(params.effect.from) &&
+    params.effect.to === "hand" &&
+    params.effect.position === undefined &&
+    params.effect.destinationFaceUp === undefined
+  ) {
+    return applySetToHandSelectedCardMoveSegment(params, selected);
+  }
   return { ok: false };
-};
-
-const applyTrashToHandSelectedCardMoveSegment = (
-  params: SelectedCardMoveSegmentParams,
-  selected: readonly CardRef[],
-):
-  | {
-      events: EngineEvent[];
-      ledgers: SegmentLedgers;
-      ok: true;
-      state: GameState;
-    }
-  | { ok: false } => {
-  if (selected.length === 0) {
-    return {
-      events: [],
-      ledgers: {
-        ...params.ledgers,
-        segmentResults: {
-          ...params.ledgers.segmentResults,
-          [params.segmentKey(params.segment, params.index)]: {
-            ...params.emptySegmentResult(),
-            attempted: true,
-            succeeded: true,
-            changedState: false,
-            selectedCards: [],
-          },
-        },
-      },
-      ok: true,
-      state: params.state,
-    };
-  }
-  const playerId = selectedRefsPlayerId(selected);
-  const player = playerId === null ? undefined : params.state.players[playerId];
-  if (playerId === null || player === undefined) {
-    return { ok: false };
-  }
-  const selectedIds = new Set(selected.map((card) => card.instanceId));
-  const movedCards: CardInstance[] = [];
-  for (const selectedCard of selected) {
-    const current = player.trash.find(
-      (card) =>
-        card.instanceId === selectedCard.instanceId &&
-        card.cardId === selectedCard.cardId,
-    );
-    if (current === undefined) {
-      return { ok: false };
-    }
-    movedCards.push(current);
-  }
-  const nextTrash = reindexZoneCards(
-    player.trash.filter((card) => !selectedIds.has(card.instanceId)),
-    "trash",
-    playerId,
-    "trash",
-  );
-  const nextHand = addCardsToHand(player.hand, movedCards, playerId);
-  const eventBaseState: GameState = {
-    ...params.state,
-    players: {
-      ...params.state.players,
-      [playerId]: {
-        ...player,
-        hand: nextHand,
-        trash: nextTrash,
-      },
-    },
-  };
-  const events: EngineEvent[] = [];
-  for (const card of movedCards) {
-    appendEvent(
-      eventBaseState,
-      events,
-      "cardMoved",
-      {
-        instanceId: card.instanceId,
-        cardId: card.cardId,
-        from: card.zone,
-        to: nextHand.find(
-          (candidate) => candidate.instanceId === card.instanceId,
-        )?.zone,
-        reason: "effect",
-      },
-      { type: "public" },
-    );
-    const event = events[events.length - 1];
-    if (event !== undefined) {
-      event.causedBy = {
-        type: "effect",
-        queueEntryId: params.entry.id,
-        effectId: params.entry.effectBlockId,
-      };
-    }
-  }
-  return {
-    events,
-    ledgers: {
-      ...params.ledgers,
-      segmentResults: {
-        ...params.ledgers.segmentResults,
-        [params.segmentKey(params.segment, params.index)]: {
-          ...params.emptySegmentResult(),
-          attempted: true,
-          succeeded: true,
-          changedState: movedCards.length > 0,
-          selectedCards: [...selected],
-        },
-      },
-    },
-    ok: true,
-    state: {
-      ...eventBaseState,
-      eventJournal: [...params.state.eventJournal, ...events],
-    },
-  };
 };
 
 const applyHandToDeckSelectedCardMoveSegment = (

@@ -330,6 +330,16 @@ export interface SelectedTargetsRequest extends TargetRequest {
   visibility: "public";
 }
 
+export type RemainingCardsPlacement =
+  | {
+      destination: "deck";
+      position: "top" | "bottom";
+      order: "ownerChoice" | "random";
+    }
+  | {
+      destination: "trash";
+    };
+
 export interface CardSelectionRequest {
   timing: "onActivation" | "onResolution";
   chooser: PlayerRef;
@@ -341,7 +351,7 @@ export interface CardSelectionRequest {
   max: number;
   allowFewerIfUnavailable: boolean;
   visibility?: "public" | "privateToChooser";
-  remainingCards?: SearchRequest["remainingCards"];
+  remainingCards?: RemainingCardsPlacement;
 }
 
 export type OpponentActivationKind = "event" | "blocker" | "trigger";
@@ -426,27 +436,6 @@ export type Duration =
   | { type: "whileSourceOnField" }
   | { type: "whileConditionTrue"; condition: Condition }
   | { type: "permanent" };
-
-export interface SearchRequest {
-  zone: "deck" | "trash" | "life";
-  player: PlayerRef;
-  lookCount?: number;
-  filter: CardFilter;
-  min: number;
-  max: number;
-  destination: Zone;
-  revealTo: Visibility;
-  remainingCards?:
-    | {
-        destination: "deck";
-        position: "top" | "bottom";
-        order: "ownerChoice" | "random";
-      }
-    | {
-        destination: "trash";
-      };
-  shuffleAfter?: boolean;
-}
 
 export type ReplacementTrigger =
   | {
@@ -725,7 +714,6 @@ export type Effect =
       filter: CardFilter;
       duration: Duration;
     }
-  | { type: "search"; request: SearchRequest }
   | {
       type: "placeTopDeckCards";
       player: PlayerRef;
@@ -760,6 +748,11 @@ export type Effect =
       filter?: CardFilter;
       saveAs: SelectionId;
     }
+  | {
+      type: "revealSelected";
+      selection: SelectionId;
+      visibility: Visibility;
+    }
   | SelectCardsEffect
   | SelectTargetsEffect
   | {
@@ -790,6 +783,14 @@ export type Effect =
       zone: Zone;
       position: "top" | "bottom";
       order: "ownerChoice" | "chooserChoice" | "random";
+    }
+  | {
+      type: "placeSetRemainder";
+      set: SelectionSetId;
+      owner: PlayerRef;
+      destination: Zone;
+      position: "top" | "bottom" | "topOrBottom";
+      order: "chooser" | "owner" | "original" | "random";
     }
   | { type: "shuffleDeck"; player: PlayerRef }
   | {

@@ -112,6 +112,32 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
         }),
       },
       {
+        id: "trash-up-to-n-cards-from-opponent-life-top",
+        pattern:
+          /^trash up to (?<count>[1-9]\d*) cards? from the top of your opponent's Life cards\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "moveCards",
+            min: 0,
+            count: Number.parseInt(groups["count"] ?? "", 10),
+            from: { player: "opponent", zone: "life", position: "top" },
+            to: { player: "opponent", zone: "trash" },
+            order: "original",
+          },
+          evidence: [
+            "instruction:moveCards",
+            "cardinality:upTo",
+            "count:positiveInteger",
+            "player:opponent",
+            "zone:life",
+            "position:top",
+            "destination:trash",
+            "order:original",
+          ],
+          rest: "",
+        }),
+      },
+      {
         id: "trash-n-cards-from-top-of-each-players-life",
         pattern:
           /^trash (?<count>[1-9]\d*) cards? from the top of each of your and your opponent's Life cards\.?$/i,

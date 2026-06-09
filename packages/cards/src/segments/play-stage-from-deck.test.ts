@@ -15,20 +15,18 @@ describe("play stage from deck expression parser", () => {
           {
             connector: "always",
             effect: {
-              type: "search",
-              request: {
-                zone: "deck",
-                player: "self",
-                filter: {
-                  categories: ["stage"],
-                  typesAny: ["Mary Geoise"],
-                },
-                min: 0,
-                max: 1,
-                destination: "stageArea",
-                revealTo: "chooserOnly",
-                shuffleAfter: false,
+              type: "selectCards",
+              zone: "deck",
+              player: "self",
+              chooser: "self",
+              filter: {
+                categories: ["stage"],
+                typesAny: ["Mary Geoise"],
               },
+              min: 0,
+              max: 1,
+              saveAs: "selected:start-of-game",
+              visibility: "chooserOnly",
             },
           },
           {
@@ -43,7 +41,7 @@ describe("play stage from deck expression parser", () => {
       },
       rest: "",
     });
-    expect(result?.evidence).toContain("instruction:search");
+    expect(result?.evidence).toContain("instruction:selectCards");
     expect(result?.evidence).toContain("instruction:playSelected");
     expect(result?.evidence).toContain("filter:type");
     expect(result?.evidence).toContain("filter:category:stage");

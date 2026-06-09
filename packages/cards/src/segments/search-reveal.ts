@@ -1,4 +1,9 @@
-import type { EffectTextSpan } from "@optcg/types";
+import type {
+  Effect,
+  EffectTextSpan,
+  SelectionId,
+  SelectionSetId,
+} from "@optcg/types";
 
 import type {
   ExpressionParseResult,
@@ -25,6 +30,9 @@ import {
 } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
+const searchLookSet = "set:search-look" as SelectionSetId;
+const searchHandSelection = "searchSelection:hand" as SelectionId;
+
 export function searchRevealExpressionParser(
   input: ParseInput,
 ): ExpressionParseResult | undefined {
@@ -45,37 +53,21 @@ export function searchRevealExpressionParser(
     return undefined;
   }
 
-  const searchEffect = {
-    type: "search" as const,
-    request: {
-      zone: "deck" as const,
-      player: "self" as const,
-      lookCount: look.count,
-      filter: reveal.filter,
-      min: reveal.min,
-      max: reveal.max,
-      destination: "hand" as const,
-      revealTo: reveal.revealTo,
-      remainingCards: remaining.remainingCards,
-      shuffleAfter: false,
-    },
-  };
-  const searchEvidence = [
-    "instruction:search",
-    ...look.evidence,
-    ...reveal.evidence,
-    ...remaining.evidence,
-  ] as const;
+  const decomposedSearch = createTopDeckSearchSequence({
+    look,
+    reveal,
+    remaining,
+  });
   const presentationSpans = searchRevealPresentationSpans({
     input,
     remainingEvidence: remaining.evidence,
-    searchEvidence,
+    searchEvidence: decomposedSearch.evidence,
   });
 
   if (remaining.rest.length === 0) {
     return {
-      effect: searchEffect,
-      evidence: searchEvidence,
+      effect: decomposedSearch.effect,
+      evidence: decomposedSearch.evidence,
       rest: "",
       ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
@@ -96,17 +88,18 @@ export function searchRevealExpressionParser(
     effect: {
       type: "sequence",
       effects: [
-        {
-          connector: "always",
-          effect: searchEffect,
-        },
+        ...decomposedSearch.effect.effects,
         {
           connector: "then",
           effect: trailing.effect,
         },
       ],
     },
-    evidence: ["expression:sequence", ...searchEvidence, ...trailing.evidence],
+    evidence: [
+      "expression:sequence",
+      ...decomposedSearch.evidence,
+      ...trailing.evidence,
+    ],
     rest: "",
     ...(presentationSpans.length === 0
       ? trailing.presentationSpans === undefined
@@ -120,6 +113,112 @@ export function searchRevealExpressionParser(
         }),
   };
 }
+
+type ParsedSearchParts = {
+  readonly look: NonNullable<ReturnType<typeof parseTopDeckLook>>;
+  readonly reveal: NonNullable<ReturnType<typeof parseSearchSelectionToHand>>;
+  readonly remaining:
+    | NonNullable<ReturnType<typeof parseRestToBottomAnyOrder>>
+    | NonNullable<ReturnType<typeof parseRestToTrash>>;
+};
+
+const createTopDeckSearchSequence = ({
+  look,
+  reveal,
+  remaining,
+}: ParsedSearchParts): {
+  readonly effect: Extract<Effect, { type: "sequence" }>;
+  readonly evidence: readonly PrimitiveEvidence[];
+} => {
+  const selectedReveal =
+    reveal.revealTo === "bothPlayers"
+      ? [
+          {
+            connector: "ifPreviousSucceeded" as const,
+            effect: {
+              type: "revealSelected" as const,
+              selection: searchHandSelection,
+              visibility: "bothPlayers" as const,
+            },
+          },
+        ]
+      : [];
+  const remainder =
+    remaining.remainingCards.destination === "deck"
+      ? {
+          destination: "deck" as const,
+          position: "bottom" as const,
+          order: "chooser" as const,
+        }
+      : {
+          destination: "trash" as const,
+          position: "bottom" as const,
+          order: "original" as const,
+        };
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "revealTop",
+            player: "self",
+            zone: "deck",
+            count: look.count,
+            saveAs: searchLookSet,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "selectFromSet",
+            set: searchLookSet,
+            chooser: "self",
+            min: reveal.min,
+            max: reveal.max,
+            filter: reveal.filter,
+            saveAs: searchHandSelection,
+          },
+        },
+        ...selectedReveal,
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "moveSelected",
+            selection: searchHandSelection,
+            from: searchLookSet,
+            to: "hand",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "placeSetRemainder",
+            set: searchLookSet,
+            owner: "self",
+            ...remainder,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "expression:sequence",
+      "instruction:revealTop",
+      ...look.evidence,
+      "instruction:selectFromSet",
+      ...reveal.evidence,
+      ...(reveal.revealTo === "bothPlayers"
+        ? (["instruction:revealSelected"] as const)
+        : []),
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
+      ...remaining.evidence,
+    ],
+  };
+};
 
 const sourceFromDelimiterThroughSegment = (
   inputSource: SourceSlice,

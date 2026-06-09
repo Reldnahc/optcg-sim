@@ -424,9 +424,9 @@
 }
 
 .deck-loadout-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
 }
 
@@ -444,6 +444,7 @@
 }
 
 .deck-loadout-refresh-button {
+  justify-self: end;
   padding: 0 10px;
   background: rgba(255, 255, 255, 0.14);
   font-size: 13px;
@@ -453,6 +454,15 @@
 .deck-loadout-refresh-button:hover:not(:disabled),
 .deck-loadout-refresh-button:focus-visible:not(:disabled) {
   background: rgba(255, 255, 255, 0.22);
+}
+
+.deck-loadout-loading {
+  justify-self: center;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .deck-hash-form button:disabled {

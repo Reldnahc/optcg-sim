@@ -362,7 +362,7 @@ describe("local dev card catalog", () => {
       throw new Error("Missing reveal card in p1 deck.");
     }
     match.state.revealedCards.push({
-      id: "reveal:search-reveal:test",
+      id: "reveal:sequence:test",
       cards: [
         {
           instanceId: revealed.instanceId,

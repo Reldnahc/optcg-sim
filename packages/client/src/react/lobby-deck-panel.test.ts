@@ -156,6 +156,23 @@ describe("lobby deck panel", () => {
     );
   });
 
+  test("renders loading deck status in the deck action row", () => {
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts,
+        loadoutsStatus: "loading",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(
+      html,
+      /<div class="deck-loadout-actions">[\s\S]*Open deck editor[\s\S]*<span class="deck-loadout-loading">Loading loadouts\.\.\.<\/span>[\s\S]*Refresh decks[\s\S]*<\/div>/u,
+    );
+  });
+
   test("disables deck refresh while loading, disabled, or locked", () => {
     const loading = renderToStaticMarkup(
       createElement(LobbyDeckPanel, {

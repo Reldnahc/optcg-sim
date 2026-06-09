@@ -74,6 +74,14 @@ export type {
 } from "./match-persistence.js";
 export { createRedisMatchPersistence } from "./redis-match-persistence.js";
 export type { RedisLike, RedisSetOptions } from "./redis-match-persistence.js";
+export { createPostgresCompletedMatchRepository } from "./postgres-completed-match.js";
+export type {
+  CompletedMatchPlayerRecord,
+  CompletedMatchRecord,
+  CompletedMatchReplayRecord,
+  CompletedMatchRepository,
+  CompletedMatchTransaction,
+} from "./postgres-completed-match.js";
 export { recoverActiveMatches } from "./match-recovery.js";
 export type {
   RecoveredMatchSummary,

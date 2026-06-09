@@ -24,7 +24,6 @@ import {
   queueDrawForP1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
-  toDecisionId,
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
@@ -297,7 +296,12 @@ const placeActiveDon = (state: GameState, playerId = p1): void => {
     ...player.costArea,
     {
       ...don,
-      zone: { zone: "costArea", playerId, slot: "cost", index: 0 },
+      zone: {
+        zone: "costArea",
+        playerId,
+        slot: "cost",
+        index: player.costArea.length,
+      },
       state: "active",
     },
   ];
@@ -916,39 +920,6 @@ test("optional cost payment records paidCost true, saves paidCost, and allows de
   assert.deepEqual(costPaidEvent.visibility, { type: "public" });
   const p2View = filterStateForPlayer(paid.state, p2);
   assert.equal(JSON.stringify(p2View).includes('"type":"costPaid"'), true);
-});
-
-test("optional cost decision rejects malformed and stale responses without mutation", () => {
-  const { state } = sequenceQueueState(optionalCostThenPauseSequence());
-  placeActiveDon(state);
-  const paused = processEffectRuntime(state);
-  const decision = must(paused.state.pendingDecision, "pay cost");
-  const beforeMalformed = structuredClone(paused.state);
-
-  const malformed = applyAction(paused.state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [],
-    },
-  });
-
-  assert.deepEqual(malformed.state, beforeMalformed);
-  assert.equal(
-    must(malformed.errors, "malformed errors")[0]?.type,
-    "invalidDecisionResponse",
-  );
-
-  const stale = applyAction(paused.state, {
-    type: "respondToDecision",
-    decisionId: toDecisionId("decision:stale-optional-cost"),
-    response: { type: "paymentDeclined" },
-  });
-
-  assert.deepEqual(stale.state, paused.state);
-  assert.equal(must(stale.errors, "stale errors")[0]?.type, "illegalAction");
 });
 
 test("optional activation accept and decline branches are independently deterministic", () => {

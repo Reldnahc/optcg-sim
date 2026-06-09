@@ -359,27 +359,26 @@ it("parses On Play/On K.O. search with name-or-type-including reveal filter", ()
       category: "auto",
       trigger: { type: "onPlay" },
       effect: {
-        type: "search",
-        request: {
-          zone: "deck",
-          player: "self",
-          lookCount: 5,
-          min: 0,
-          max: 1,
-          filter: {
-            anyOf: [
-              { names: ["Monkey.D.Luffy"] },
-              { typesAny: ["Whitebeard Pirates"] },
-            ],
+        type: "sequence",
+        effects: [
+          { effect: { type: "revealTop", count: 5 } },
+          {
+            effect: {
+              type: "selectFromSet",
+              min: 0,
+              max: 1,
+              filter: {
+                anyOf: [
+                  { names: ["Monkey.D.Luffy"] },
+                  { typesAny: ["Whitebeard Pirates"] },
+                ],
+              },
+            },
           },
-          destination: "hand",
-          revealTo: "bothPlayers",
-          remainingCards: {
-            destination: "deck",
-            position: "bottom",
-            order: "ownerChoice",
-          },
-        },
+          { effect: { type: "revealSelected" } },
+          { effect: { type: "moveSelected", to: "hand" } },
+          { effect: { type: "placeSetRemainder", position: "bottom" } },
+        ],
       },
     },
   });
@@ -387,7 +386,11 @@ it("parses On Play/On K.O. search with name-or-type-including reveal filter", ()
     expect.arrayContaining([
       "entry:onPlay",
       "composition:entryAlternatives",
-      "instruction:search",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:revealSelected",
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
       "look:topDeck",
       "filter:anyOf",
       "filter:name",

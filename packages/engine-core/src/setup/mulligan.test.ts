@@ -383,17 +383,15 @@ test("setup-selected Stage cannot be redrawn during mulligan", () => {
               {
                 connector: "always",
                 effect: {
-                  type: "search",
-                  request: {
-                    zone: "deck",
-                    player: "self",
-                    filter: { categories: ["stage"], typesAny: ["Navy"] },
-                    min: 0,
-                    max: 1,
-                    destination: "stageArea",
-                    revealTo: "chooserOnly",
-                    shuffleAfter: false,
-                  },
+                  type: "selectCards",
+                  zone: "deck",
+                  player: "self",
+                  chooser: "self",
+                  filter: { categories: ["stage"], typesAny: ["Navy"] },
+                  min: 0,
+                  max: 1,
+                  saveAs: "selected:start-of-game" as never,
+                  visibility: "chooserOnly",
                 },
               },
               {

@@ -33,7 +33,7 @@ export function playStageFromDeckExpressionParser(
 
   const evidence = [
     "expression:sequence",
-    "instruction:search",
+    "instruction:selectCards",
     "instruction:playSelected",
     ...cardinality.evidence,
     ...filter.evidence,
@@ -48,17 +48,15 @@ export function playStageFromDeckExpressionParser(
         {
           connector: "always",
           effect: {
-            type: "search",
-            request: {
-              zone: "deck",
-              player: "self",
-              filter: filter.filter,
-              min: cardinality.cardinality.min,
-              max: cardinality.cardinality.max,
-              destination: "stageArea",
-              revealTo: "chooserOnly",
-              shuffleAfter: false,
-            },
+            type: "selectCards",
+            zone: "deck",
+            player: "self",
+            chooser: "self",
+            filter: filter.filter,
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            saveAs: startOfGameSelection,
+            visibility: "chooserOnly",
           },
         },
         {

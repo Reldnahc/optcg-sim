@@ -30,6 +30,52 @@ export const parseKoInstruction: InstructionParser = (input) => {
     return composed;
   }
 
+  const allCharactersExceptSelf =
+    /^all Characters other than this Character\.?$/i.exec(actionRest);
+  if (allCharactersExceptSelf !== null) {
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "ko",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "self",
+                filter: { categories: ["character"], excludeSelf: true },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "ko",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "opponent",
+                filter: { categories: ["character"], excludeSelf: true },
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "expression:sequence",
+        "instruction:ko",
+        "cardinality:all",
+        "player:any",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:excludeSelf",
+      ],
+      rest: "",
+    };
+  }
+
   const allTarget = parseAllFieldTarget({ text: actionRest });
   if (
     allTarget !== undefined &&

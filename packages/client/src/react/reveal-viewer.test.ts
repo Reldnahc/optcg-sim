@@ -51,7 +51,7 @@ describe("reveal viewer", () => {
     const reveal = opponentRevealFromEvents(
       [
         revealEvent({
-          revealId: "reveal:search-reveal:selected:choice-1",
+          revealId: "reveal:sequence-selected:choice-1",
           cardOwner: p1,
         }),
       ],
@@ -63,7 +63,7 @@ describe("reveal viewer", () => {
     if (reveal === undefined) {
       throw new Error("Expected opponent reveal.");
     }
-    assert.equal(reveal.revealId, "reveal:search-reveal:selected:choice-1");
+    assert.equal(reveal.revealId, "reveal:sequence-selected:choice-1");
     assert.equal(reveal.title, "Monkey D. Luffy revealed");
     assert.equal(reveal.cards[0]?.playerId, p1);
   });
@@ -72,7 +72,7 @@ describe("reveal viewer", () => {
     const reveal = opponentRevealFromEvents(
       [
         revealEvent({
-          revealId: "reveal:search-reveal:selected:own-choice",
+          revealId: "reveal:sequence-selected:own-choice",
           cardOwner: p1,
         }),
       ],
@@ -107,12 +107,12 @@ describe("reveal viewer", () => {
     const reveal = opponentRevealFromEvents(
       [
         revealEvent({
-          revealId: "reveal:search-reveal:selected:closed-reveal",
+          revealId: "reveal:sequence-selected:closed-reveal",
           cardOwner: p1,
         }),
       ],
       p2,
-      new Set(["reveal:search-reveal:selected:closed-reveal"]),
+      new Set(["reveal:sequence-selected:closed-reveal"]),
     );
 
     assert.equal(reveal, undefined);
@@ -139,7 +139,7 @@ describe("reveal viewer", () => {
     const reveal = opponentRevealFromEvents(
       [
         revealEvent({
-          revealId: "reveal:search-reveal:selected:private",
+          revealId: "reveal:sequence-selected:private",
           cardOwner: p1,
           visibility: "private",
         }),
@@ -151,12 +151,12 @@ describe("reveal viewer", () => {
         }),
         revealEvent({ cardOwner: p1, seq: 3 }),
         revealEvent({
-          revealId: "reveal:search-reveal:selected:older",
+          revealId: "reveal:sequence-selected:older",
           cardOwner: p1,
           seq: 4,
         }),
         revealEvent({
-          revealId: "reveal:search-reveal:selected:newer",
+          revealId: "reveal:sequence-selected:newer",
           cardOwner: p1,
           seq: 5,
         }),
@@ -165,19 +165,19 @@ describe("reveal viewer", () => {
       new Set(),
     );
 
-    assert.equal(reveal?.revealId, "reveal:search-reveal:selected:newer");
+    assert.equal(reveal?.revealId, "reveal:sequence-selected:newer");
   });
 
   test("returns every active search reveal instead of replacing older reveal windows", () => {
     const reveals = opponentRevealsFromEvents(
       [
         revealEvent({
-          revealId: "reveal:search-reveal:selected:first",
+          revealId: "reveal:sequence-selected:first",
           cardOwner: p1,
           seq: 1,
         }),
         revealEvent({
-          revealId: "reveal:search-reveal:selected:second",
+          revealId: "reveal:sequence-selected:second",
           cardOwner: p1,
           seq: 2,
         }),
@@ -188,10 +188,7 @@ describe("reveal viewer", () => {
 
     assert.deepEqual(
       reveals.map((reveal) => reveal.revealId),
-      [
-        "reveal:search-reveal:selected:first",
-        "reveal:search-reveal:selected:second",
-      ],
+      ["reveal:sequence-selected:first", "reveal:sequence-selected:second"],
     );
   });
 });

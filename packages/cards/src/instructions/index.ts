@@ -54,6 +54,7 @@ export {
   parseReturnToOwnerHandInstruction,
   selectThenReturnToOwnerHand,
 } from "./return-to-owner-hand.js";
+export { parseForcedReturnDonInstruction } from "./return-don.js";
 export {
   parseExplicitProtectionInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
