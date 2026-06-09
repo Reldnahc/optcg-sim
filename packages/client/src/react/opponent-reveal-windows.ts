@@ -1,4 +1,4 @@
-import type { CardRef, PlayerId } from "@optcg/types";
+import type { CardRef, PlayerId, PublicRevealRecord } from "@optcg/types";
 
 import type { ClientPlayerSnapshot } from "../transport.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
@@ -19,6 +19,34 @@ export interface OpponentRevealWindow {
 
 export const revealWindowKey = (revealId: string): string =>
   `reveal:${revealId}`;
+
+const revealOwnerLabel = (
+  record: PublicRevealRecord,
+  currentPlayerId: PlayerId,
+  board?: Pick<BoardViewModel, "selfLabel" | "opponentLabel">,
+): string => {
+  const firstCard = record.cards[0];
+  return firstCard?.playerId === currentPlayerId
+    ? (board?.selfLabel ?? "Player")
+    : (board?.opponentLabel ?? "Opponent");
+};
+
+const revealTitleFromRecord = (
+  record: PublicRevealRecord,
+  currentPlayerId: PlayerId,
+  board?: Pick<BoardViewModel, "selfLabel" | "opponentLabel">,
+): string => {
+  if (record.visibility === "privateToRecipient") {
+    return record.origin === "topOfDeck" ? "Looked at deck" : "Looked at cards";
+  }
+  if (record.origin !== "topOfDeck") {
+    return "Revealed";
+  }
+  return `${revealOwnerLabel(record, currentPlayerId, board)} revealed`;
+};
+
+const isWindowRevealRecord = (record: PublicRevealRecord): boolean =>
+  !record.id.startsWith("reveal:setup-start-of-game:");
 
 export const opponentRevealWindowsFromState = ({
   currentPlayerId,
@@ -45,32 +73,42 @@ export const opponentRevealWindowsFromState = ({
   ) {
     return [];
   }
-  const activeRevealIds = new Set(
-    playerSnapshot.view.revealedCards.map((record) => record.id),
+  const eventRevealsById = new Map(
+    opponentRevealsFromEvents(
+      playerSnapshot.view.events,
+      currentPlayerId,
+      activeDismissedRevealIds,
+      board === undefined
+        ? undefined
+        : {
+            selfLabel: board.selfLabel,
+            opponentLabel: board.opponentLabel,
+          },
+    ).map((reveal) => [reveal.revealId, reveal]),
   );
-  return opponentRevealsFromEvents(
-    playerSnapshot.view.events,
-    currentPlayerId,
-    activeDismissedRevealIds,
-    board === undefined
-      ? undefined
-      : {
-          selfLabel: board.selfLabel,
-          opponentLabel: board.opponentLabel,
+  return playerSnapshot.view.revealedCards
+    .filter(
+      (record) =>
+        isWindowRevealRecord(record) &&
+        !activeDismissedRevealIds.has(record.id) &&
+        record.cards.length > 0,
+    )
+    .map((record, index) => {
+      const eventReveal = eventRevealsById.get(record.id);
+      return {
+        revealId: record.id,
+        initialRect: {
+          x: 380 + index * 24,
+          y: 100 + index * 24,
+          width: 300,
+          height: 420,
         },
-  )
-    .filter((reveal) => activeRevealIds.has(reveal.revealId))
-    .map((reveal, index) => ({
-      revealId: reveal.revealId,
-      initialRect: {
-        x: 380 + index * 24,
-        y: 100 + index * 24,
-        width: 300,
-        height: 420,
-      },
-      model: {
-        title: reveal.title,
-        cards: reveal.cards.map((card) => cardModel(card)),
-      },
-    }));
+        model: {
+          title:
+            eventReveal?.title ??
+            revealTitleFromRecord(record, currentPlayerId, board),
+          cards: record.cards.map((card) => cardModel(card)),
+        },
+      };
+    });
 };

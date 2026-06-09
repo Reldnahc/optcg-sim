@@ -96,4 +96,81 @@ describe("opponent reveal windows", () => {
     assert.equal(activeWindows.length, 1);
     assert.equal(activeWindows[0]?.revealId, revealId);
   });
+
+  test("opens a window from private active reveal records without requiring a public event", () => {
+    const snapshot: ClientPlayerSnapshot = {
+      view: {
+        events: [],
+        revealedCards: [
+          {
+            id: "reveal:sequence:look-at-top:0",
+            cards: [cardRef],
+            visibility: "privateToRecipient",
+            origin: "topOfDeck",
+            cleanupPolicy: "returnToOrigin",
+            createdAtStateSeq: 1 as StateSeq,
+          },
+        ],
+      } as unknown as PlayerView,
+      actions: [],
+    };
+
+    const windows = opponentRevealWindowsFromState({
+      currentPlayerId: p1,
+      playerSnapshot: snapshot,
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+
+    assert.equal(windows.length, 1);
+    const window = windows[0];
+    if (window === undefined) {
+      throw new Error("Expected private reveal window.");
+    }
+    assert.equal(window.revealId, "reveal:sequence:look-at-top:0");
+    assert.deepEqual(
+      window.model.cards.map((card) => card.instanceId),
+      [cardRef.instanceId],
+    );
+  });
+
+  test("does not open floating reveal windows for setup candidate records", () => {
+    const snapshot: ClientPlayerSnapshot = {
+      view: {
+        events: [],
+        revealedCards: [
+          {
+            id: "reveal:setup-start-of-game:decision-1",
+            cards: [cardRef],
+            visibility: "privateToRecipient",
+            origin: "topOfDeck",
+            cleanupPolicy: "none",
+            createdAtStateSeq: 1 as StateSeq,
+          },
+        ],
+      } as unknown as PlayerView,
+      actions: [],
+    };
+
+    const windows = opponentRevealWindowsFromState({
+      currentPlayerId: p1,
+      playerSnapshot: snapshot,
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+
+    assert.deepEqual(windows, []);
+  });
 });
