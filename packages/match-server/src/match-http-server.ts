@@ -64,6 +64,7 @@ import {
   applyBrowserCorsHeaders,
   handleBrowserCorsPreflight,
 } from "./browser-cors.js";
+import { createSocketActionTiming } from "./action-timing-log.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
@@ -106,7 +107,6 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
 
 const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
 const defaultMatchTimerTickMs = 1_000;
-
 const envCompletedMatchRepository = (): CompletedMatchRepository | undefined =>
   process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
     ? createPostgresCompletedMatchRepository()
@@ -135,7 +135,6 @@ const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
 const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
@@ -799,6 +798,7 @@ const handleWebSocketUpgrade = async (
       return;
     }
     for (const raw of parsed.messages) {
+      const timing = createSocketActionTiming(raw);
       let payload: unknown;
       try {
         payload = JSON.parse(raw) as unknown;
@@ -825,7 +825,7 @@ const handleWebSocketUpgrade = async (
         continue;
       }
       const envelope = clientActionEnvelopeFromSocketPayload(payload);
-      const result = await registry.applyEnvelope(envelope);
+      const result = await timing.apply(() => registry.applyEnvelope(envelope));
       if (result === "matchNotFound") {
         sendSocketJson(connection, {
           type: "matchError",
@@ -851,6 +851,7 @@ const handleWebSocketUpgrade = async (
       if (result.accepted) {
         broadcastMatchState(matchId, registry, connections);
       }
+      timing.write({ matchId, playerId, payload, envelope, result });
     }
   };
   socket.on("data", (chunk: Buffer) => {
