@@ -377,6 +377,11 @@ export const cardCostPaymentLabel = (
       return group.chooseLabel;
     case "returnDon":
       return `Return ${countLabel(count, "DON!!", "DON!!")}`;
+    case "reveal":
+      if (group.source?.zone === "hand") {
+        return `Reveal ${countLabel(count, "card", "cards")} from hand`;
+      }
+      return `Reveal ${countLabel(count, "card", "cards")}`;
     case "returnToHand":
       return `Return ${countLabel(count, "card", "cards")} to hand`;
   }
@@ -392,6 +397,8 @@ const chooseLabelForCardCostOperation = (
     case "moveCards":
       return fallback;
     case "returnDon":
+      return fallback;
+    case "reveal":
       return fallback;
     case "returnToHand":
       return fallback;

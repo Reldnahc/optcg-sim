@@ -16,7 +16,14 @@ type PayCostDecision = Extract<
 
 type CardCostPaymentOption = Extract<
   PayCostDecision["paymentOptions"][number],
-  { type: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon" }
+  {
+    type:
+      | "trashFromHand"
+      | "trashFromField"
+      | "moveCards"
+      | "returnDon"
+      | "revealFromHand";
+  }
 >;
 
 export const actionDecisionPayment = (
@@ -97,13 +104,20 @@ const isDeterministicDeckTopMoveCost = (
   option.from.position === "top";
 
 const cardCostOperation = (
-  optionType: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon",
-): "trash" | "moveCards" | "returnDon" => {
+  optionType:
+    | "trashFromHand"
+    | "trashFromField"
+    | "moveCards"
+    | "returnDon"
+    | "revealFromHand",
+): "trash" | "moveCards" | "returnDon" | "reveal" => {
   switch (optionType) {
     case "moveCards":
       return "moveCards";
     case "returnDon":
       return "returnDon";
+    case "revealFromHand":
+      return "reveal";
     case "trashFromField":
     case "trashFromHand":
       return "trash";
@@ -124,6 +138,8 @@ const chooseCardCostLabel = (option: CardCostPaymentOption): string => {
       return "Choose cards from trash";
     case "returnDon":
       return "Choose DON!! to return";
+    case "revealFromHand":
+      return "Choose card to reveal";
     case "trashFromHand":
       return "Choose card to trash";
   }
@@ -135,7 +151,8 @@ const isCardCostPaymentOption = (
   option?.type === "trashFromHand" ||
   option?.type === "trashFromField" ||
   option?.type === "moveCards" ||
-  option?.type === "returnDon";
+  option?.type === "returnDon" ||
+  option?.type === "revealFromHand";
 
 const selectedCardDetails = (
   state: GameState,

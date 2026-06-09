@@ -43,6 +43,12 @@ const handCard = (instanceId: string): CardInstance => ({
   attachedDon: [],
 });
 
+const secondHandCard = (instanceId: string): CardInstance => ({
+  ...handCard(instanceId),
+  cardId: "second-hand-card" as CardId,
+  zone: { zone: "hand", playerId: p1, slot: "hand", index: 1 },
+});
+
 const deckCard = (instanceId: string, index: number): CardInstance => ({
   instanceId: instanceId as InstanceId,
   cardId: "deck-card" as CardId,
@@ -287,6 +293,69 @@ describe("dev action payment metadata", () => {
           zone: "hand",
           playerId: p1,
           index: 0,
+        },
+      ],
+      source: { zone: "hand", playerId: p1 },
+    });
+  });
+
+  test("projects reveal-from-hand cost as selectable hand cards", () => {
+    const first = handCard("hand-1");
+    const second = secondHandCard("hand-2");
+    const state = minimalState([]);
+    state.pendingDecision = {
+      id: "decision:reveal-from-hand" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: {
+        type: "revealFromHand",
+        count: 2,
+        chooser: "self",
+        optional: true,
+      },
+      paymentOptions: [
+        {
+          id: "revealFromHand",
+          type: "revealFromHand",
+          count: 2,
+        },
+      ],
+    };
+    const player = state.players[p1];
+    if (player === undefined) {
+      throw new Error("Expected p1 in minimal state.");
+    }
+    player.hand = [first, second];
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:reveal-from-hand" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "revealFromHand",
+        selectedCardInstanceIds: [first.instanceId, second.instanceId],
+      },
+    };
+
+    assert.deepEqual(actionDecisionPayment(state, action), {
+      kind: "cardCost",
+      operation: "reveal",
+      chooseLabel: "Choose card to reveal",
+      selectedCardInstanceIds: [first.instanceId, second.instanceId],
+      selectedCards: [
+        {
+          instanceId: first.instanceId,
+          zone: "hand",
+          playerId: p1,
+          index: 0,
+        },
+        {
+          instanceId: second.instanceId,
+          zone: "hand",
+          playerId: p1,
+          index: 1,
         },
       ],
       source: { zone: "hand", playerId: p1 },

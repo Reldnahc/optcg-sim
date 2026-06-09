@@ -19,7 +19,12 @@ export interface DevVisibleAction {
     | { kind: "paymentDeclined" }
     | {
         kind: "cardCost";
-        operation: "trash" | "returnToHand" | "moveCards" | "returnDon";
+        operation:
+          | "trash"
+          | "returnToHand"
+          | "moveCards"
+          | "returnDon"
+          | "reveal";
         chooseLabel: string;
         selectedCardInstanceIds: CardInstance["instanceId"][];
         selectedCards?: Array<{

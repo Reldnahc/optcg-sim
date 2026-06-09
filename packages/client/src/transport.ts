@@ -19,7 +19,12 @@ export interface ClientVisibleAction {
     | { kind: "paymentDeclined" }
     | {
         kind: "cardCost";
-        operation: "trash" | "returnToHand" | "moveCards" | "returnDon";
+        operation:
+          | "trash"
+          | "returnToHand"
+          | "moveCards"
+          | "returnDon"
+          | "reveal";
         chooseLabel: string;
         selectedCardInstanceIds: InstanceId[];
         selectedCards?: Array<{

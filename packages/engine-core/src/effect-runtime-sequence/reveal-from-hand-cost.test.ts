@@ -66,6 +66,133 @@ const revealFromHandThenDrawSequence = (): Extract<
   ],
 });
 
+const revealFromHandThenKoSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-reveal-from-hand",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "revealFromHand",
+          count: 1,
+          chooser: "self",
+          optional: true,
+          filter: {
+            categories: ["character"],
+            power: { op: "eq", value: 8000 },
+          },
+        },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "ko-if-paid",
+      connector: "ifYouDo",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select-ko-target",
+            connector: "always",
+            saveResultAs: "selected:ko-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: {
+                  categories: ["character"],
+                  power: { max: 2000 },
+                },
+              },
+            },
+          },
+          {
+            id: "ko-selected-target",
+            connector: "then",
+            effect: {
+              type: "ko",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:ko-target",
+                  sourceSegmentId: "select-ko-target",
+                },
+                zone: "characterArea",
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
+const revealTwoFromHandThenPowerReductionSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-reveal-from-hand",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "revealFromHand",
+          count: 2,
+          chooser: "self",
+          optional: true,
+          filter: {
+            categories: ["character"],
+            power: { op: "eq", value: 8000 },
+          },
+        },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "power-reduction-if-paid",
+      connector: "ifYouDo",
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character"] },
+          },
+        },
+        value: -6000,
+        duration: { type: "thisTurn" },
+      },
+    },
+  ],
+});
+
 const setupSequenceDefinition = (
   state: GameState,
   source: CardInstance,
@@ -104,7 +231,9 @@ const setupSequenceDefinition = (
   return definition;
 };
 
-const sequenceQueueState = (): GameState => {
+const sequenceQueueState = (
+  effect: Effect = revealFromHandThenDrawSequence(),
+): GameState => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   const p1State = must(state.players[p1], "p1");
@@ -132,11 +261,7 @@ const sequenceQueueState = (): GameState => {
       },
     },
   ];
-  const definition = setupSequenceDefinition(
-    state,
-    source,
-    revealFromHandThenDrawSequence(),
-  );
+  const definition = setupSequenceDefinition(state, source, effect);
   state.effectQueue = [
     {
       ...queueDrawForP1(),
@@ -232,4 +357,79 @@ test("optional reveal-from-hand cost reveals filtered hand cards without moving 
   );
   assert.equal(afterP1.deck.length, beforeDeckCount - 1);
   assert.equal(afterP1.hand.length, beforeHandCount + 1);
+});
+
+test("optional reveal-from-hand cost asks for reveal before a dependent K.O. target body", () => {
+  const state = sequenceQueueState(revealFromHandThenKoSequence());
+  const p1State = must(state.players[p1], "p1");
+  const eligible = must(p1State.hand[0], "eligible reveal card");
+  eligible.cardId = toCardId("eligible-8000-character");
+  state.cardManifest.cards[eligible.cardId] = resolvedCard({
+    cardId: eligible.cardId,
+    category: "character",
+    power: 8000,
+  });
+
+  const revealPaused = processEffectRuntime(state);
+  const revealDecision = must(
+    revealPaused.state.pendingDecision,
+    "reveal-from-hand decision",
+  );
+
+  assert.equal(revealPaused.errors, undefined);
+  assert.equal(revealDecision.type, "payCost");
+  assert.equal(revealDecision.cost.type, "revealFromHand");
+  assert.deepEqual(revealDecision.paymentOptions, [
+    {
+      id: "revealFromHand",
+      type: "revealFromHand",
+      count: 1,
+      filter: {
+        categories: ["character"],
+        power: { op: "eq", value: 8000 },
+      },
+    },
+  ]);
+});
+
+test("optional reveal-from-hand cost asks for both reveal cards before a dependent power reduction body", () => {
+  const state = sequenceQueueState(
+    revealTwoFromHandThenPowerReductionSequence(),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const eligibleA = must(p1State.hand[0], "first eligible reveal card");
+  const eligibleB = must(p1State.hand[1], "second eligible reveal card");
+  eligibleA.cardId = toCardId("eligible-8000-character-a");
+  eligibleB.cardId = toCardId("eligible-8000-character-b");
+  state.cardManifest.cards[eligibleA.cardId] = resolvedCard({
+    cardId: eligibleA.cardId,
+    category: "character",
+    power: 8000,
+  });
+  state.cardManifest.cards[eligibleB.cardId] = resolvedCard({
+    cardId: eligibleB.cardId,
+    category: "character",
+    power: 8000,
+  });
+
+  const revealPaused = processEffectRuntime(state);
+  const revealDecision = must(
+    revealPaused.state.pendingDecision,
+    "reveal-from-hand decision",
+  );
+
+  assert.equal(revealPaused.errors, undefined);
+  assert.equal(revealDecision.type, "payCost");
+  assert.equal(revealDecision.cost.type, "revealFromHand");
+  assert.deepEqual(revealDecision.paymentOptions, [
+    {
+      id: "revealFromHand",
+      type: "revealFromHand",
+      count: 2,
+      filter: {
+        categories: ["character"],
+        power: { op: "eq", value: 8000 },
+      },
+    },
+  ]);
 });

@@ -275,6 +275,64 @@ describe("optional card-cost interaction", () => {
     });
   });
 
+  test("collapses reveal-from-hand payments into one selectable hand group", () => {
+    const source = { zone: "hand" as Zone, playerId: "p1" as PlayerId };
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Reveal 2 cards from hand",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "reveal",
+          chooseLabel: "Choose card to reveal",
+          selectedCardInstanceIds: [
+            "hand-1" as InstanceId,
+            "hand-2" as InstanceId,
+          ],
+          source,
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Reveal 2 cards from hand",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "reveal",
+          chooseLabel: "Choose card to reveal",
+          selectedCardInstanceIds: [
+            "hand-1" as InstanceId,
+            "hand-3" as InstanceId,
+          ],
+          source,
+        },
+      },
+    ];
+
+    const group = autoOptionalCardCostGroup(
+      createOptionalCardCostChoice(payCostDecision, actions),
+    );
+
+    assert.deepEqual(group, {
+      chooseActionIndex: -5,
+      operation: "reveal",
+      chooseLabel: "Choose card to reveal",
+      requiredCount: 2,
+      source,
+      cardActions: [
+        { instanceIds: ["hand-1", "hand-2"], actionIndex: 2 },
+        { instanceIds: ["hand-1", "hand-3"], actionIndex: 3 },
+      ],
+    });
+  });
+
   test("card costs progress from clicked cards and submit when a legal set is complete", () => {
     const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
     const group: OptionalCardCostGroup = {
@@ -853,5 +911,18 @@ describe("card cost payment labels", () => {
       cardCostPaymentLabel(group),
       "Place 2 cards from trash at bottom",
     );
+  });
+
+  test("formats selected reveal-from-hand costs from structured card-cost data", () => {
+    const group: OptionalCardCostGroup = {
+      chooseActionIndex: -5,
+      operation: "reveal",
+      chooseLabel: "Choose card to reveal",
+      requiredCount: 2,
+      source: { zone: "hand", playerId: "p1" as PlayerId },
+      cardActions: [],
+    };
+
+    assert.equal(cardCostPaymentLabel(group), "Reveal 2 cards from hand");
   });
 });
