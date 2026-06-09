@@ -158,6 +158,13 @@ export const createMatchClientController = ({
   let currentState: MatchClientState | undefined;
   let currentFirstPlayerSetupState: FirstPlayerSetupClientState | undefined;
   let currentLobbyState: LobbyClientState | undefined;
+  let currentCatalog:
+    | {
+        matchId: MatchId;
+        playerId: PlayerId;
+        cards: MatchCardCatalog;
+      }
+    | undefined;
   let liveConnection: LiveMatchConnection | undefined;
   let lobbyLiveConnection: LiveLobbyConnection | undefined;
 
@@ -409,11 +416,21 @@ export const createMatchClientController = ({
         sessionToken: credential.sessionToken,
         onError,
         onStateSync(message) {
-          const cards = message.cards ?? currentState?.cards;
+          const cachedCatalog =
+            currentCatalog?.matchId === message.matchId &&
+            currentCatalog.playerId === credential.playerId
+              ? currentCatalog.cards
+              : undefined;
+          const cards = message.cards ?? currentState?.cards ?? cachedCatalog;
           if (cards === undefined) {
             onError("Match state sync did not include card catalog.");
             return;
           }
+          currentCatalog = {
+            matchId: message.matchId,
+            playerId: credential.playerId,
+            cards,
+          };
           currentState = {
             matchId: message.matchId,
             seat: {
@@ -557,6 +574,11 @@ export const createMatchClientController = ({
         snapshot: result.snapshot,
         cards: previousState.cards,
       };
+      currentCatalog = {
+        matchId: credential.matchId,
+        playerId: credential.playerId,
+        cards: previousState.cards,
+      };
       return currentState;
     },
     async respondToDecision(input) {
@@ -585,6 +607,11 @@ export const createMatchClientController = ({
         snapshot: result.snapshot,
         cards: previousState.cards,
       };
+      currentCatalog = {
+        matchId: credential.matchId,
+        playerId: credential.playerId,
+        cards: previousState.cards,
+      };
       return currentState;
     },
     async requestRollback(input) {
@@ -611,6 +638,11 @@ export const createMatchClientController = ({
         snapshot: result.snapshot,
         cards: previousState.cards,
       };
+      currentCatalog = {
+        matchId: credential.matchId,
+        playerId: credential.playerId,
+        cards: previousState.cards,
+      };
       return currentState;
     },
     async cancelRollback() {
@@ -634,6 +666,11 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
+        cards: previousState.cards,
+      };
+      currentCatalog = {
+        matchId: credential.matchId,
+        playerId: credential.playerId,
         cards: previousState.cards,
       };
       return currentState;
