@@ -27,7 +27,11 @@ export const sendSocketJson = (
   if (connection.socket.destroyed || connection.socket.writableEnded) {
     return;
   }
-  connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
+  try {
+    connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
+  } catch {
+    connection.socket.destroy();
+  }
 };
 
 export const clearConnectionHeartbeat = (
@@ -72,4 +76,23 @@ export const startConnectionHeartbeat = (
     });
   }, 25_000);
   connection.heartbeat.unref();
+};
+
+export const registerConnectionLifecycle = (
+  connection: DevSocketBaseConnection,
+  onClose: () => void,
+): void => {
+  let closed = false;
+  connection.socket.on("error", () => {
+    connection.socket.destroy();
+  });
+  connection.socket.on("close", () => {
+    if (closed) {
+      return;
+    }
+    closed = true;
+    clearConnectionHeartbeat(connection);
+    clearConnectionIdleTimeout(connection);
+    onClose();
+  });
 };

@@ -44,6 +44,7 @@ import {
 import {
   clearConnectionHeartbeat,
   clearConnectionIdleTimeout,
+  registerConnectionLifecycle,
   resetConnectionIdleTimeout,
   sendSocketJson,
   startConnectionHeartbeat,
@@ -679,9 +680,7 @@ const handleWebSocketUpgrade = async (
     lobbyConnections.add(connection);
     startConnectionHeartbeat(connection, "lobbyHeartbeat");
     resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
-    socket.on("close", () => {
-      clearConnectionHeartbeat(connection);
-      clearConnectionIdleTimeout(connection);
+    registerConnectionLifecycle(connection, () => {
       lobbyConnections.delete(connection);
     });
     sendSocketJson(connection, lobbyStatePayload(lobby, connection));
@@ -755,9 +754,7 @@ const handleWebSocketUpgrade = async (
     connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
     matchIds: [matchId],
   });
-  socket.on("close", () => {
-    clearConnectionHeartbeat(connection);
-    clearConnectionIdleTimeout(connection);
+  registerConnectionLifecycle(connection, () => {
     connections.delete(connection);
     registry.advanceTimers({
       elapsedMs: 0,
