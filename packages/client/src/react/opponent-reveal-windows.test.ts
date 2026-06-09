@@ -37,6 +37,20 @@ const revealEvent = (): EngineEvent => ({
   createdAtStateSeq: 1 as StateSeq,
 });
 
+const revealFromHandCostEvent = (): EngineEvent => ({
+  id: "event:reveal-from-hand-cost" as EngineEventId,
+  seq: 1,
+  type: "cardRevealed",
+  payload: {
+    revealId: "reveal:reveal-from-hand:decision-1",
+    cards: [cardRef],
+    origin: "hand",
+    reason: "revealFromHandCost",
+  },
+  visibility: { type: "public" },
+  createdAtStateSeq: 1 as StateSeq,
+});
+
 const cardModel = (card: typeof cardRef): ClientCardModel => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
@@ -101,6 +115,54 @@ describe("opponent reveal windows", () => {
     assert.equal(eventWindow.model.title, "Opponent revealed");
     assert.equal(activeWindows.length, 1);
     assert.equal(activeWindows[0]?.revealId, revealId);
+  });
+
+  test("opens reveal-from-hand cost events for the opponent only", () => {
+    const opponentWindows = opponentRevealWindowsFromState({
+      currentPlayerId: p2,
+      playerSnapshot: {
+        view: {
+          events: [revealFromHandCostEvent()],
+          revealedCards: [],
+        } as unknown as PlayerView,
+        actions: [],
+      },
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+    const ownerWindows = opponentRevealWindowsFromState({
+      currentPlayerId: p1,
+      playerSnapshot: {
+        view: {
+          events: [revealFromHandCostEvent()],
+          revealedCards: [],
+        } as unknown as PlayerView,
+        actions: [],
+      },
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+
+    assert.equal(opponentWindows.length, 1);
+    const opponentWindow = opponentWindows[0];
+    if (opponentWindow === undefined) {
+      throw new Error("Expected reveal-from-hand cost window.");
+    }
+    assert.equal(opponentWindow.revealId, "reveal:reveal-from-hand:decision-1");
+    assert.equal(opponentWindow.model.title, "Opponent revealed");
+    assert.deepEqual(ownerWindows, []);
   });
 
   test("does not open floating windows for private looked deck records", () => {

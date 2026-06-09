@@ -67,6 +67,21 @@ const isOpponentSelectedRevealEvent = (event: EngineEvent): boolean => {
   );
 };
 
+const isRevealFromHandCostEvent = (event: EngineEvent): boolean => {
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const revealId = event.payload["revealId"];
+  const origin = event.payload["origin"];
+  const reason = event.payload["reason"];
+  return (
+    typeof revealId === "string" &&
+    revealId.startsWith("reveal:reveal-from-hand:") &&
+    origin === "hand" &&
+    reason === "revealFromHandCost"
+  );
+};
+
 const isLifeRevealEvent = (event: EngineEvent): boolean => {
   if (!isRecord(event.payload)) {
     return false;
@@ -109,7 +124,11 @@ export const opponentRevealsFromEvents = (
       continue;
     }
     const showToBothPlayers = isLifeRevealEvent(event);
-    if (!showToBothPlayers && !isOpponentSelectedRevealEvent(event)) {
+    if (
+      !showToBothPlayers &&
+      !isOpponentSelectedRevealEvent(event) &&
+      !isRevealFromHandCostEvent(event)
+    ) {
       continue;
     }
     const revealId = revealIdFromEvent(event);
