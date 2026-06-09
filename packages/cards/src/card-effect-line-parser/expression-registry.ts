@@ -35,6 +35,7 @@ import {
   handTrashedByEffectReactionExpressionParser,
   instructionExpressionSegmentParser,
   lifeRemovedReactionExpressionParser,
+  lookPlayFromTopExpressionParser,
   opponentEventOrBlockerActivatedExpressionParser,
   optionalCostedEffectExpressionParser,
   playStageFromDeckExpressionParser,
@@ -114,6 +115,7 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
 };
 
 const costedExpressions = [
+  lookPlayFromTopExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   conditionalCostedBodyExpressionParser,
@@ -138,6 +140,7 @@ export const defaultRegistry = {
     chooseOneExpressionParser({
       conditions: conditionParsers,
       expressions: [
+        lookPlayFromTopExpressionParser,
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
         generalExpressionParser,
@@ -207,11 +210,15 @@ export const defaultRegistry = {
       conditions: conditionParsers,
       connectors: [parseThenConnector, parseAndConnector],
       instructions: instructionParsers,
-      expressions: [searchRevealExpressionParser],
+      expressions: [
+        lookPlayFromTopExpressionParser,
+        searchRevealExpressionParser,
+      ],
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,
       expressions: [
+        lookPlayFromTopExpressionParser,
         searchRevealExpressionParser,
         singleInstructionExpressionParser,
         generalExpressionParser,
@@ -224,6 +231,7 @@ export const defaultRegistry = {
     playStageFromDeckExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
+    lookPlayFromTopExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     singleInstructionExpressionParser,

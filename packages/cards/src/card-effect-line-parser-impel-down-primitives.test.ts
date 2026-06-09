@@ -75,6 +75,100 @@ describe("card effect line parser Impel Down primitive family", () => {
     );
   });
 
+  it("parses DON-costed looked-set play and bottoms only the rest", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may rest 7 of your DON!! cards: Look at 5 cards from the top of your deck; play up to 2 {Impel Down} type Character cards with 6000 power or less. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "restDon", count: 7, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "revealTop",
+                      player: "self",
+                      zone: "deck",
+                      count: 5,
+                      saveAs: "set:look-play",
+                      visibility: "chooserOnly",
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "selectFromSet",
+                      set: "set:look-play",
+                      chooser: "self",
+                      min: 0,
+                      max: 2,
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Impel Down"],
+                        power: { max: 6000 },
+                      },
+                      saveAs: "revealSelection:play",
+                    },
+                  },
+                  {
+                    connector: "ifPreviousSucceeded",
+                    effect: {
+                      type: "playSelected",
+                      selection: "revealSelection:play",
+                      ignoreCost: true,
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "placeSetRemainder",
+                      set: "set:look-play",
+                      owner: "self",
+                      destination: "deck",
+                      position: "bottom",
+                      order: "chooser",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "cost:restDon",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:playSelected",
+        "instruction:placeSetRemainder",
+        "filter:type",
+        "filter:category:character",
+        "filter:power",
+        "remaining:bottomDeck",
+        "order:anyOrder",
+      ]),
+    );
+  });
+
   it("parses base power snapshot from opponent leader current power", () => {
     const result = parseCardEffectLine(
       "[DON!! x1] [When Attacking] This Character's base power becomes the same as your opponent's Leader's power during this turn.",
