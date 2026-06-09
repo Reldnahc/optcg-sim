@@ -26,6 +26,10 @@ import {
   createMatchSessionService,
   type MatchSessionService,
 } from "./session-service.js";
+import {
+  recordActionTimingSpan,
+  recordActionTimingSpanAsync,
+} from "./action-timing-log.js";
 import type {
   ClientActionEnvelope,
   FirstPlayerChoiceState,
@@ -413,25 +417,31 @@ export const createLocalDevMatchRegistry = async (
   const persistCompletedMatchIfNeeded = async (
     session: ActiveLocalDevMatchSession,
   ): Promise<void> => {
+    const completedMatchRepository = options.completedMatchRepository;
     if (
-      options.completedMatchRepository === undefined ||
+      completedMatchRepository === undefined ||
       completedPersistedMatchIds.has(session.match.state.matchId)
     ) {
       return;
     }
-    const record = buildLocalCompletedMatchRecord({
-      match: session.match,
-      setup: session.setup,
-      seats: session.seats,
-      firstPlayerChoice: session.firstPlayerChoice,
-      records:
-        sessionService.getRuntime(session.match.state.matchId)?.records() ?? [],
-      endedAt: new Date().toISOString(),
-    });
+    const record = recordActionTimingSpan("completedMatchRecordBuild", () =>
+      buildLocalCompletedMatchRecord({
+        match: session.match,
+        setup: session.setup,
+        seats: session.seats,
+        firstPlayerChoice: session.firstPlayerChoice,
+        records:
+          sessionService.getRuntime(session.match.state.matchId)?.records() ??
+          [],
+        endedAt: new Date().toISOString(),
+      }),
+    );
     if (record === undefined) {
       return;
     }
-    await options.completedMatchRepository.saveCompletedMatch(record);
+    await recordActionTimingSpanAsync("completedMatchSave", async () => {
+      await completedMatchRepository.saveCompletedMatch(record);
+    });
     completedPersistedMatchIds.add(session.match.state.matchId);
   };
 

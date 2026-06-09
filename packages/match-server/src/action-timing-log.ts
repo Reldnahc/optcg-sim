@@ -23,7 +23,8 @@ export interface ActionTimingSpan {
 }
 
 export interface SocketActionTiming {
-  readonly apply: <T>(fn: () => T) => T;
+  readonly apply: <T>(fn: () => T | Promise<T>) => Promise<T>;
+  readonly record: <T>(fn: () => T) => T;
   readonly write: (input: SocketActionTimingLogInput) => void;
 }
 
@@ -65,25 +66,52 @@ export const recordActionTimingSpan = <T>(name: string, fn: () => T): T => {
   }
 };
 
+export const recordActionTimingSpanAsync = async <T>(
+  name: string,
+  fn: () => Promise<T>,
+): Promise<T> => {
+  if (activeActionTimingSpans === undefined) {
+    return await fn();
+  }
+  const startedAt = performance.now();
+  try {
+    return await fn();
+  } finally {
+    activeActionTimingSpans.push({
+      name,
+      ms: roundTimingMs(performance.now() - startedAt),
+    });
+  }
+};
+
 export const createSocketActionTiming = (raw: string): SocketActionTiming => {
   const receivedAt = performance.now();
   let applyMs = 0;
-  let spans: readonly ActionTimingSpan[] | undefined;
+  const spans: ActionTimingSpan[] = [];
+  const runWithSpans = <T>(fn: () => T): T => {
+    const previousSpans = activeActionTimingSpans;
+    activeActionTimingSpans = spans;
+    try {
+      return fn();
+    } finally {
+      activeActionTimingSpans = previousSpans;
+    }
+  };
   return {
-    apply(fn) {
+    async apply(fn) {
       const startedAt = performance.now();
       const previousSpans = activeActionTimingSpans;
-      const nextSpans: ActionTimingSpan[] = [];
-      activeActionTimingSpans = nextSpans;
+      activeActionTimingSpans = spans;
       try {
-        const result = fn();
+        const result = await fn();
         applyMs = roundTimingMs(performance.now() - startedAt);
-        spans = nextSpans;
         return result;
       } finally {
         activeActionTimingSpans = previousSpans;
+        applyMs = roundTimingMs(performance.now() - startedAt);
       }
     },
+    record: runWithSpans,
     write(input) {
       const request = input.envelope.request;
       writeActionTimingLog({
@@ -98,7 +126,7 @@ export const createSocketActionTiming = (raw: string): SocketActionTiming => {
         stateSeq: input.result.stateSeq,
         rawBytes: Buffer.byteLength(raw),
         applyMs,
-        ...(spans === undefined || spans.length === 0 ? {} : { spans }),
+        ...(spans.length === 0 ? {} : { spans }),
         totalServerMs: roundTimingMs(performance.now() - receivedAt),
       });
     },

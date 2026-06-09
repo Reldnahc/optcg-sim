@@ -801,29 +801,35 @@ const handleWebSocketUpgrade = async (
       const envelope = clientActionEnvelopeFromSocketPayload(payload);
       const result = await timing.apply(() => registry.applyEnvelope(envelope));
       if (result === "matchNotFound") {
-        sendSocketJson(connection, {
-          type: "matchError",
-          matchId,
-          serverSeq: ++connection.serverSeq,
-          message: "Match session is not active on this server.",
+        timing.record(() => {
+          sendSocketJson(connection, {
+            type: "matchError",
+            matchId,
+            serverSeq: ++connection.serverSeq,
+            message: "Match session is not active on this server.",
+          });
         });
         continue;
       }
       const errors = [...result.errors];
-      sendSocketJson(connection, {
-        type: "actionResult",
-        matchId,
-        clientActionId: payload.clientActionId,
-        accepted: result.accepted,
-        stateSeq: result.stateSeq,
-        ...(result.actionSeq === undefined
-          ? {}
-          : { actionSeq: result.actionSeq }),
-        ...(result.reason === undefined ? {} : { reason: result.reason }),
-        errors,
+      timing.record(() => {
+        sendSocketJson(connection, {
+          type: "actionResult",
+          matchId,
+          clientActionId: payload.clientActionId,
+          accepted: result.accepted,
+          stateSeq: result.stateSeq,
+          ...(result.actionSeq === undefined
+            ? {}
+            : { actionSeq: result.actionSeq }),
+          ...(result.reason === undefined ? {} : { reason: result.reason }),
+          errors,
+        });
       });
       if (result.accepted) {
-        broadcastMatchState(matchId, registry, connections);
+        timing.record(() => {
+          broadcastMatchState(matchId, registry, connections);
+        });
       }
       timing.write({ matchId, playerId, payload, envelope, result });
     }

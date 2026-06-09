@@ -3,14 +3,15 @@ import {
   advanceDonPhase,
   advanceDrawPhase,
   advanceRefreshPhase,
+  canonicalSerializeStateValue,
   createInitialState,
   enterMainPhase,
   filterStateForPlayer,
   getLegalActions,
-  hashCanonicalStateValue,
   respondToMulliganDecision,
   startMulliganFlow,
 } from "@optcg/engine-core";
+import { createHash } from "node:crypto";
 import type { DevPoneglyphFetch } from "@optcg/card-support";
 import type {
   CardId,
@@ -127,8 +128,14 @@ type ExecutableDevAction = DevVisibleAction & {
   response?: DecisionResponse;
 };
 
-const timedStateHash = (name: string, value: unknown): string =>
-  recordActionTimingSpan(`hash:${name}`, () => hashCanonicalStateValue(value));
+const timedStateHash = (name: string, value: unknown): string => {
+  const serialized = recordActionTimingSpan(`hash:${name}:serialize`, () =>
+    canonicalSerializeStateValue(value),
+  );
+  return recordActionTimingSpan(`hash:${name}:sha256`, () =>
+    createHash("sha256").update(serialized, "utf8").digest("hex"),
+  );
+};
 
 const localActionResult = (
   match: LocalDevMatch,

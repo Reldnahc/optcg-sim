@@ -1,6 +1,7 @@
 import type { Duplex } from "node:stream";
 import type { MatchId, PlayerId } from "@optcg/types";
 
+import { recordActionTimingSpan } from "./action-timing-log.js";
 import { websocketTextFrame } from "./dev-websocket-protocol.js";
 
 export interface DevSocketBaseConnection {
@@ -28,7 +29,15 @@ export const sendSocketJson = (
     return;
   }
   try {
-    connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
+    const text = recordActionTimingSpan("socketJsonStringify", () =>
+      JSON.stringify(payload),
+    );
+    const frame = recordActionTimingSpan("socketFrameEncode", () =>
+      websocketTextFrame(text),
+    );
+    recordActionTimingSpan("socketWrite", () => {
+      connection.socket.write(frame);
+    });
   } catch {
     connection.socket.destroy();
   }
