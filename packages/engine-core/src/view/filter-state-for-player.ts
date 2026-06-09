@@ -134,22 +134,8 @@ const toPublicCardCandidates = (
     .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
     .map((candidate) => ({ card: candidate.card }));
 
-const searchRevealSetIdPrefix = "set:search-reveal:";
-const searchRevealRecordIdPrefix = "reveal:search-reveal:";
-
-const searchRevealRecordIdForSet = (setId: string): string | undefined =>
-  setId.startsWith(searchRevealSetIdPrefix)
-    ? `${searchRevealRecordIdPrefix}${setId.slice(searchRevealSetIdPrefix.length)}`
-    : undefined;
-
 const revealRecordForSelectionSet = (state: GameState, setId: string) =>
-  state.revealedCards.find((record) => record.selectionSetId === setId) ??
-  (() => {
-    const revealId = searchRevealRecordIdForSet(setId);
-    return revealId === undefined
-      ? undefined
-      : state.revealedCards.find((record) => record.id === revealId);
-  })();
+  state.revealedCards.find((record) => record.selectionSetId === setId);
 
 const cardRefKey = (card: CardRef): string => String(card.instanceId);
 

@@ -70,6 +70,20 @@ const hasQueuedOpponentAttackTimingWindow = (
   });
 };
 
+const hasQueuedWhenAttackingTimingWindow = (
+  state: GameState,
+  event: EngineEvent,
+): boolean => {
+  const timingWindowId = `timing-window:${String(event.id)}`;
+  return state.eventJournal.some((candidate) => {
+    if (candidate.type !== "effectQueued") {
+      return false;
+    }
+    const payload = candidate.payload as { timingWindowId?: string };
+    return payload.timingWindowId === timingWindowId;
+  });
+};
+
 const attackDeclaredEventsForOpponentAttackTiming = (
   state: GameState,
   battle: NonNullable<GameState["battle"]>,
@@ -134,7 +148,8 @@ export const createAttackTriggerQueueing = (
     const attackDeclaredEvents = state.eventJournal.filter(
       (event) =>
         event.type === "attackDeclared" &&
-        event.createdAtStateSeq === state.seq,
+        event.createdAtStateSeq === state.seq &&
+        !hasQueuedWhenAttackingTimingWindow(state, event),
     );
     if (attackDeclaredEvents.length === 0) {
       return undefined;

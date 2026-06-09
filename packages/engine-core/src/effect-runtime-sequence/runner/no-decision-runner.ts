@@ -28,7 +28,6 @@ import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.j
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
 import { applySelectTargetsSequenceSegment } from "../select-targets.js";
 import { createTopDeckPlacementDecision } from "../../effect-runtime-top-deck-placement.js";
-import { applySearchRevealSequenceSegment } from "../search-reveal.js";
 import {
   applyDrawSegment,
   applyMoveCardsSegment,
@@ -264,30 +263,6 @@ export const continueNoDecisionSegments = (
         ledgers: nextLedgers,
         state: quantityDecision.state,
       });
-    }
-    if (segment.effect.type === "search") {
-      const search = applySearchRevealSequenceSegment({
-        emptySegmentResult,
-        entry,
-        events,
-        effectPath,
-        index,
-        nextLedgers,
-        nextState,
-        segment: segment as SupportedSequenceSegment & {
-          effect: Extract<
-            SupportedSequenceSegment["effect"],
-            { type: "search" }
-          >;
-        },
-        segmentKey: ledgerKey,
-      });
-      if (!search.ok || search.kind === "paused") {
-        return search;
-      }
-      nextState = search.state;
-      nextLedgers = search.ledgers;
-      continue;
     }
     if (segment.effect.type === "revealTop") {
       if (

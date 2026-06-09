@@ -54,19 +54,12 @@ import {
   applyOptionalActivationDecisionResponse,
   getOptionalActivationLegalActions,
 } from "./runtime/optional-activation/actions.js";
-import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
 import {
-  applySearchRevealOrderResponse,
-  getSearchRevealDecisionLegalActions,
-} from "./effect-runtime-search-reveal/order-actions.js";
-import {
-  applySearchRevealSequenceChoiceResponse,
   applySequenceSelectCardsChoiceResponse,
   applyPlaceSetRemainderSequenceAwareResponse,
   applySelectedHandDeckPlacementSequenceAwareResponse,
   applyTopDeckPlacementSequenceAwareResponse,
-  resumeSequenceAfterSearchRevealOrderResponse,
-} from "./search-reveal-sequence-actions.js";
+} from "./effect-runtime-sequence/decision-actions.js";
 import {
   applySupportedTrashFromHandChoiceResponse,
   createSupportedTrashFromHandChoiceDecision,
@@ -184,7 +177,6 @@ export const getLegalActions = (
     actions.push(...getChooseReplacementLegalActions(state, playerId));
     actions.push(...getChooseEffectOptionLegalActions(state, playerId));
     actions.push(...getChooseQuantityLegalActions(state, playerId));
-    actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
     actions.push(...getHandSelectionDecisionLegalActions(state, playerId));
     actions.push(...getSetupStartOfGameLegalActions(state, playerId));
@@ -487,6 +479,16 @@ const applyRespondToDecision = (
     }
     return playCardResult;
   }
+  const sequenceSelectCards = applySequenceSelectCardsChoiceResponse(
+    state,
+    action,
+  );
+  if (sequenceSelectCards !== null) {
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      sequenceSelectCards,
+    );
+  }
   if (isHandSelectionSelectCardsDecision(decision)) {
     const handSelection = applySupportedHandSelectionChoiceResponse(
       state,
@@ -548,53 +550,6 @@ const applyRespondToDecision = (
   );
   if (targetSelectionResult !== null) {
     return continueAfterEffectDecision(state, decision, targetSelectionResult);
-  }
-  if (
-    decision.type === "selectCards" &&
-    decision.request.set !== undefined &&
-    String(decision.request.set).startsWith("set:search-reveal:")
-  ) {
-    const sequenceSearchResult = applySearchRevealSequenceChoiceResponse(
-      state,
-      action,
-    );
-    if (sequenceSearchResult !== null) {
-      return continueRuntimeAndAttackTimingAfterDecision(
-        state,
-        sequenceSearchResult,
-      );
-    }
-    return continueRuntimeAndAttackTimingAfterDecision(
-      state,
-      applySupportedSearchRevealChoiceResponse(state, action),
-    );
-  }
-  const sequenceSelectCards = applySequenceSelectCardsChoiceResponse(
-    state,
-    action,
-  );
-  if (sequenceSelectCards !== null) {
-    return continueRuntimeAndAttackTimingAfterDecision(
-      state,
-      sequenceSelectCards,
-    );
-  }
-  const searchRevealOrderResult = applySearchRevealOrderResponse(state, action);
-  if (searchRevealOrderResult !== null) {
-    const sequenceOrderResult = resumeSequenceAfterSearchRevealOrderResponse(
-      state,
-      searchRevealOrderResult,
-    );
-    if (sequenceOrderResult !== null) {
-      return continueRuntimeAndAttackTimingAfterDecision(
-        state,
-        sequenceOrderResult,
-      );
-    }
-    return continueRuntimeAndAttackTimingAfterDecision(
-      state,
-      searchRevealOrderResult,
-    );
   }
   const placeSetRemainderResult = applyPlaceSetRemainderSequenceAwareResponse(
     state,

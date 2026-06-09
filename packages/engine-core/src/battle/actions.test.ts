@@ -239,18 +239,41 @@ const installWhenAttackingSearchReveal = (
         oncePerTurn: false,
         sourcePresencePolicy: "mustRemainInSameZone",
         effect: {
-          type: "search",
-          request: {
-            zone: "deck",
-            player: "self",
-            lookCount: 1,
-            filter: { categories: ["character"] },
-            min: 0,
-            max: 1,
-            destination: "hand",
-            revealTo: "chooserOnly",
-            shuffleAfter: false,
-          },
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 1,
+                saveAs: "set:when-attacking-search" as never,
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:when-attacking-search" as never,
+                chooser: "self",
+                filter: { categories: ["character"] },
+                min: 0,
+                max: 1,
+                saveAs: "selected:when-attacking-search" as never,
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "selected:when-attacking-search" as never,
+                from: "set:when-attacking-search" as never,
+                to: "hand",
+              },
+            },
+          ],
         },
       },
     ],
@@ -704,7 +727,21 @@ test("When Attacking search reveal resumes battle after choosing a card", () => 
   });
 
   assert.equal(resolved.errors, undefined);
-  const passed = passCounterStep(resolved.state, p2);
+  let afterSearch = resolved.state;
+  if (afterSearch.pendingDecision?.type === "orderCards") {
+    const order = afterSearch.pendingDecision;
+    const ordered = applyAction(afterSearch, {
+      type: "respondToDecision",
+      decisionId: order.id,
+      response: {
+        type: "orderedIds",
+        ids: order.cards.map((card) => String(card.instanceId)),
+      },
+    });
+    assert.equal(ordered.errors, undefined);
+    afterSearch = ordered.state;
+  }
+  const passed = passCounterStep(afterSearch, p2);
   assert.equal(passed.errors, undefined);
   assert.equal(passed.state.pendingDecision, undefined);
   assert.equal(passed.state.battle, undefined);

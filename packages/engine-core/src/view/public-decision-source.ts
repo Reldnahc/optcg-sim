@@ -11,8 +11,6 @@ import type {
 import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
   activeSpanIdsForCost,
-  activeSpanIdsForSearchRevealRemaining,
-  activeSpanIdsForSearchRevealSelection,
   activeSpanIdsForSequenceIndex,
 } from "../runtime/effect-presentation.js";
 
@@ -79,8 +77,6 @@ export const publicDecisionSourceFromEffectQueue = (params: {
   visibleCards: readonly VisibleDecisionSourceCard[];
 }): CardRef | undefined => visibleEffectQueueEntryForDecision(params)?.source;
 
-const searchRevealSelectSetPrefix = "set:search-reveal:";
-const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
 const topLevelSequenceIndexForDecision = (
@@ -124,26 +120,6 @@ const narrowSequenceActiveSpanIds = (
     : activeSpanIdsForSequenceIndex(activeSpanIds, topLevelIndex);
 };
 
-const narrowSearchRevealActiveSpanIds = (
-  pending: PendingDecision,
-  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
-): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
-  if (
-    pending.type === "selectCards" &&
-    pending.request.set !== undefined &&
-    String(pending.request.set).startsWith(searchRevealSelectSetPrefix)
-  ) {
-    return activeSpanIdsForSearchRevealSelection(activeSpanIds);
-  }
-  if (
-    pending.type === "orderCards" &&
-    pending.id.startsWith(searchRevealOrderDecisionPrefix)
-  ) {
-    return activeSpanIdsForSearchRevealRemaining(activeSpanIds);
-  }
-  return undefined;
-};
-
 const narrowPayCostActiveSpanIds = (
   pending: PendingDecision,
   activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
@@ -167,10 +143,6 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
     ...visible.entry.presentation,
     activeSpanIds:
       narrowPayCostActiveSpanIds(
-        params.pending,
-        visible.entry.presentation.activeSpanIds,
-      ) ??
-      narrowSearchRevealActiveSpanIds(
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??

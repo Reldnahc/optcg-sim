@@ -14,7 +14,6 @@ import {
 } from "./runtime/primitives/execute.js";
 import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";
-import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence/support.js";
 import { isSupportedTrashFromHandUntilCountBody } from "./runtime/primitives/trash-from-hand-until.js";
 
@@ -33,14 +32,6 @@ const isSupportedDrawUpToBody = (
   effect.player === "self" &&
   Number.isInteger(effect.count) &&
   effect.count >= 0;
-
-const isSupportedSearchBody = (
-  block: EffectBlock,
-): block is EffectBlock & { effect: Extract<Effect, { type: "search" }> } =>
-  (block.sourcePresencePolicy === "mustRemainInSameZone" ||
-    block.sourcePresencePolicy === "resolveFromDestinationZone") &&
-  block.effect.type === "search" &&
-  isSupportedSearchRequestShape(block.effect.request);
 
 const isSupportedActivateReferencedEffectBody = (
   effect: Effect,
@@ -172,7 +163,6 @@ const isSupportedNonOptionalBody = (
   isSupportedDamageBody(block.effect) ||
   isSupportedPlaceTopDeckCardsBody(block.effect) ||
   isSupportedWinGameBody(block.effect) ||
-  isSupportedSearchBody(block) ||
   isSupportedContinuousBody(block) ||
   isSupportedActivateReferencedEffectBody(block.effect) ||
   isSupportedPlaySourceBody(block.effect) ||

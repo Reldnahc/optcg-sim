@@ -11,7 +11,6 @@ import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
 import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
 import { removeFrame, replaceQueueEntry } from "./segments.js";
 import {
-  activeSpanIdsForSearchRevealRemaining,
   activeSpanIdsForSequenceIndex,
   activeSpanIdsWithoutCost,
 } from "../runtime/effect-presentation.js";
@@ -49,7 +48,6 @@ type SequenceFrameRunResult =
     }
   | { ok: false };
 
-const searchRevealOrderDecisionPrefix = "decision:orderCards:search-reveal:";
 const payCostDecisionPrefix = "decision:payCost:sequence:";
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
 
@@ -112,11 +110,6 @@ const narrowedActiveSpanIdsForCompletedFrame = (
   if (frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix)) {
     return activeSpanIdsWithoutCost(presentation.activeSpanIds);
   }
-  const searchPhaseSpanIds = frame.pendingDecision.decisionId.startsWith(
-    searchRevealOrderDecisionPrefix,
-  )
-    ? activeSpanIdsForSearchRevealRemaining(presentation.activeSpanIds)
-    : undefined;
   const topLevelIndex = topLevelSequenceIndexForFrame(frame);
   const sequenceSpanIds =
     topLevelIndex === undefined
@@ -125,7 +118,7 @@ const narrowedActiveSpanIdsForCompletedFrame = (
           presentation.activeSpanIds,
           topLevelIndex,
         );
-  const narrowed = [...(searchPhaseSpanIds ?? []), ...(sequenceSpanIds ?? [])];
+  const narrowed = [...(sequenceSpanIds ?? [])];
   return narrowed.length === 0 ? undefined : narrowed;
 };
 

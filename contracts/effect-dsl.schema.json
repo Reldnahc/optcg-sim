@@ -178,49 +178,7 @@
         "filter": { "$ref": "#/$defs/scopedSetBasePowerFilter" }
       }
     },
-    "scopedTopNSearchPublicFilter": {
-      "type": "object",
-      "additionalProperties": false,
-      "minProperties": 1,
-      "properties": {
-        "anyOf": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/scopedTopNSearchPublicFilter" },
-          "minItems": 1
-        },
-        "names": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1
-        },
-        "categories": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/cardCategory" },
-          "minItems": 1
-        },
-        "colorsAny": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/color" },
-          "minItems": 1
-        },
-        "typesAny": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1
-        },
-        "nameNot": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1
-        }
-      }
-    },
-    "scopedTopNSearchChooserOnlyFilter": {
-      "type": "object",
-      "additionalProperties": false,
-      "maxProperties": 0
-    },
-    "scopedStartOfGameStageSearchFilter": {
+    "scopedStartOfGameStageSelectionFilter": {
       "type": "object",
       "additionalProperties": false,
       "required": ["categories", "typesAny"],
@@ -238,104 +196,6 @@
           "minItems": 1
         }
       }
-    },
-    "scopedTopNSearchRemainingCards": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["destination", "position", "order"],
-      "properties": {
-        "destination": { "const": "deck" },
-        "position": { "const": "bottom" },
-        "order": { "const": "ownerChoice" }
-      }
-    },
-    "scopedTopNSearchRequest": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "zone",
-            "player",
-            "lookCount",
-            "filter",
-            "min",
-            "max",
-            "destination",
-            "revealTo",
-            "remainingCards",
-            "shuffleAfter"
-          ],
-          "properties": {
-            "zone": { "const": "deck" },
-            "player": { "const": "self" },
-            "lookCount": { "type": "integer", "minimum": 1 },
-            "filter": { "$ref": "#/$defs/scopedTopNSearchPublicFilter" },
-            "min": { "const": 0 },
-            "max": { "const": 1 },
-            "destination": { "const": "hand" },
-            "revealTo": { "const": "bothPlayers" },
-            "remainingCards": {
-              "$ref": "#/$defs/scopedTopNSearchRemainingCards"
-            },
-            "shuffleAfter": { "const": false }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "zone",
-            "player",
-            "lookCount",
-            "filter",
-            "min",
-            "max",
-            "destination",
-            "revealTo",
-            "remainingCards",
-            "shuffleAfter"
-          ],
-          "properties": {
-            "zone": { "const": "deck" },
-            "player": { "const": "self" },
-            "lookCount": { "type": "integer", "minimum": 1 },
-            "filter": { "$ref": "#/$defs/scopedTopNSearchChooserOnlyFilter" },
-            "min": { "const": 0 },
-            "max": { "const": 1 },
-            "destination": { "const": "hand" },
-            "revealTo": { "const": "chooserOnly" },
-            "remainingCards": {
-              "$ref": "#/$defs/scopedTopNSearchRemainingCards"
-            },
-            "shuffleAfter": { "const": false }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "zone",
-            "player",
-            "filter",
-            "min",
-            "max",
-            "destination",
-            "revealTo",
-            "shuffleAfter"
-          ],
-          "properties": {
-            "zone": { "const": "deck" },
-            "player": { "const": "self" },
-            "filter": { "$ref": "#/$defs/scopedStartOfGameStageSearchFilter" },
-            "min": { "const": 0 },
-            "max": { "const": 1 },
-            "destination": { "const": "stageArea" },
-            "revealTo": { "const": "chooserOnly" },
-            "shuffleAfter": { "const": false }
-          }
-        }
-      ]
     },
     "scopedOptionalFieldTrashCostFilter": {
       "type": "object",
@@ -585,15 +445,6 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["type", "request"],
-          "properties": {
-            "type": { "const": "search" },
-            "request": { "$ref": "#/$defs/scopedTopNSearchRequest" }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
           "required": ["type", "count", "player"],
           "properties": {
             "type": { "const": "drawUpTo" },
@@ -646,29 +497,60 @@
         },
         {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "zone",
-            "player",
-            "chooser",
-            "min",
-            "max",
-            "filter",
-            "saveAs",
-            "visibility"
-          ],
-          "properties": {
-            "type": { "const": "selectCards" },
-            "zone": { "const": "hand" },
-            "player": { "const": "self" },
-            "chooser": { "const": "self" },
-            "min": { "type": "integer", "minimum": 0 },
-            "max": { "type": "integer", "minimum": 0 },
-            "filter": { "$ref": "#/$defs/cardFilter" },
-            "saveAs": { "$ref": "#/$defs/handSelectionId" },
-            "visibility": { "const": "chooserOnly" }
-          }
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "zone",
+                "player",
+                "chooser",
+                "min",
+                "max",
+                "filter",
+                "saveAs",
+                "visibility"
+              ],
+              "properties": {
+                "type": { "const": "selectCards" },
+                "zone": { "const": "hand" },
+                "player": { "const": "self" },
+                "chooser": { "const": "self" },
+                "min": { "type": "integer", "minimum": 0 },
+                "max": { "type": "integer", "minimum": 0 },
+                "filter": { "$ref": "#/$defs/cardFilter" },
+                "saveAs": { "$ref": "#/$defs/handSelectionId" },
+                "visibility": { "const": "chooserOnly" }
+              }
+            },
+            {
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "zone",
+                "player",
+                "chooser",
+                "filter",
+                "min",
+                "max",
+                "saveAs",
+                "visibility"
+              ],
+              "properties": {
+                "type": { "const": "selectCards" },
+                "zone": { "const": "deck" },
+                "player": { "const": "self" },
+                "chooser": { "const": "self" },
+                "filter": {
+                  "$ref": "#/$defs/scopedStartOfGameStageSelectionFilter"
+                },
+                "min": { "const": 0 },
+                "max": { "const": 1 },
+                "saveAs": { "const": "selected:start-of-game" },
+                "visibility": { "const": "chooserOnly" }
+              }
+            }
+          ]
         },
         {
           "type": "object",
@@ -875,35 +757,29 @@
                       "properties": {
                         "effect": {
                           "type": "object",
-                          "required": ["type", "request"],
+                          "required": [
+                            "type",
+                            "zone",
+                            "player",
+                            "chooser",
+                            "filter",
+                            "min",
+                            "max",
+                            "saveAs",
+                            "visibility"
+                          ],
                           "properties": {
-                            "type": { "const": "search" },
-                            "request": {
-                              "type": "object",
-                              "additionalProperties": false,
-                              "required": [
-                                "zone",
-                                "player",
-                                "filter",
-                                "min",
-                                "max",
-                                "destination",
-                                "revealTo",
-                                "shuffleAfter"
-                              ],
-                              "properties": {
-                                "zone": { "const": "deck" },
-                                "player": { "const": "self" },
-                                "filter": {
-                                  "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
-                                },
-                                "min": { "const": 0 },
-                                "max": { "const": 1 },
-                                "destination": { "const": "stageArea" },
-                                "revealTo": { "const": "chooserOnly" },
-                                "shuffleAfter": { "const": false }
-                              }
-                            }
+                            "type": { "const": "selectCards" },
+                            "zone": { "const": "deck" },
+                            "player": { "const": "self" },
+                            "chooser": { "const": "self" },
+                            "filter": {
+                              "$ref": "#/$defs/scopedStartOfGameStageSelectionFilter"
+                            },
+                            "min": { "const": 0 },
+                            "max": { "const": 1 },
+                            "saveAs": { "const": "selected:start-of-game" },
+                            "visibility": { "const": "chooserOnly" }
                           }
                         }
                       }
@@ -1033,33 +909,17 @@
                   {
                     "not": {
                       "properties": {
-                        "type": { "const": "search" },
-                        "request": {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "zone",
-                            "player",
-                            "filter",
-                            "min",
-                            "max",
-                            "destination",
-                            "revealTo",
-                            "shuffleAfter"
-                          ],
-                          "properties": {
-                            "zone": { "const": "deck" },
-                            "player": { "const": "self" },
-                            "filter": {
-                              "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
-                            },
-                            "min": { "const": 0 },
-                            "max": { "const": 1 },
-                            "destination": { "const": "stageArea" },
-                            "revealTo": { "const": "chooserOnly" },
-                            "shuffleAfter": { "const": false }
-                          }
-                        }
+                        "type": { "const": "selectCards" },
+                        "zone": { "const": "deck" },
+                        "player": { "const": "self" },
+                        "chooser": { "const": "self" },
+                        "filter": {
+                          "$ref": "#/$defs/scopedStartOfGameStageSelectionFilter"
+                        },
+                        "min": { "const": 0 },
+                        "max": { "const": 1 },
+                        "saveAs": { "const": "selected:start-of-game" },
+                        "visibility": { "const": "chooserOnly" }
                       }
                     }
                   },
@@ -1075,35 +935,31 @@
                             "properties": {
                               "effect": {
                                 "type": "object",
-                                "required": ["type", "request"],
+                                "required": [
+                                  "type",
+                                  "zone",
+                                  "player",
+                                  "chooser",
+                                  "filter",
+                                  "min",
+                                  "max",
+                                  "saveAs",
+                                  "visibility"
+                                ],
                                 "properties": {
-                                  "type": { "const": "search" },
-                                  "request": {
-                                    "type": "object",
-                                    "additionalProperties": false,
-                                    "required": [
-                                      "zone",
-                                      "player",
-                                      "filter",
-                                      "min",
-                                      "max",
-                                      "destination",
-                                      "revealTo",
-                                      "shuffleAfter"
-                                    ],
-                                    "properties": {
-                                      "zone": { "const": "deck" },
-                                      "player": { "const": "self" },
-                                      "filter": {
-                                        "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
-                                      },
-                                      "min": { "const": 0 },
-                                      "max": { "const": 1 },
-                                      "destination": { "const": "stageArea" },
-                                      "revealTo": { "const": "chooserOnly" },
-                                      "shuffleAfter": { "const": false }
-                                    }
-                                  }
+                                  "type": { "const": "selectCards" },
+                                  "zone": { "const": "deck" },
+                                  "player": { "const": "self" },
+                                  "chooser": { "const": "self" },
+                                  "filter": {
+                                    "$ref": "#/$defs/scopedStartOfGameStageSelectionFilter"
+                                  },
+                                  "min": { "const": 0 },
+                                  "max": { "const": 1 },
+                                  "saveAs": {
+                                    "const": "selected:start-of-game"
+                                  },
+                                  "visibility": { "const": "chooserOnly" }
                                 }
                               }
                             }

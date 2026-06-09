@@ -24,22 +24,63 @@ const reviewedMainEventSearchDefinition = (
       {
         ...baseEffect,
         effect: {
-          type: "search",
-          request: {
-            zone: "deck",
-            player: "self",
-            lookCount: 3,
-            filter: {
-              typesAny: ["Celestial Dragons"],
-              nameNot: ["The Five Elders Are at Your Service!!!"],
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 3,
+                saveAs: "set:event-main-search" as never,
+                visibility: "chooserOnly",
+              },
             },
-            min: 0,
-            max: 1,
-            destination: "hand",
-            revealTo: "bothPlayers",
-            shuffleAfter: false,
-            remainingCards: { destination: "trash" },
-          },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:event-main-search" as never,
+                chooser: "self",
+                filter: {
+                  typesAny: ["Celestial Dragons"],
+                  nameNot: ["The Five Elders Are at Your Service!!!"],
+                },
+                min: 0,
+                max: 1,
+                saveAs: "selected:event-main-search" as never,
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                selection: "selected:event-main-search" as never,
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "selected:event-main-search" as never,
+                from: "set:event-main-search" as never,
+                to: "hand",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:event-main-search" as never,
+                owner: "self",
+                destination: "trash",
+                position: "bottom",
+                order: "original",
+              },
+            },
+          ],
         },
       },
     ],

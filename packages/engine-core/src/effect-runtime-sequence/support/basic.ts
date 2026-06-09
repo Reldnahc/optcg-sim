@@ -1,7 +1,6 @@
 import type { Effect } from "@optcg/types";
 
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
-import { isSupportedSearchRequestShape } from "../../effect-runtime-search-reveal.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -12,7 +11,6 @@ export type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
-export type SearchEffect = Extract<Effect, { type: "search" }>;
 export type PlaceTopDeckCardsEffect = Extract<
   Effect,
   { type: "placeTopDeckCards" }
@@ -56,11 +54,6 @@ export const isSupportedReturnDonSegment = (
   effect.player === "opponent" &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
-
-export const isSupportedSearchSegment = (
-  effect: SequenceSegmentEffect,
-): effect is SearchEffect =>
-  effect.type === "search" && isSupportedSearchRequestShape(effect.request);
 
 export const isSupportedPlaceTopDeckCardsSegment = (
   effect: SequenceSegmentEffect,

@@ -278,7 +278,7 @@ test("ENG-060A: attacker When Attacking metadata remains usable with an unrelate
   const result = passCounterStep(opened.state, p2);
   assert.equal(result.errors, undefined);
   assert.equal(
-    result.events.some((event) => event.type === "effectQueued"),
+    opened.events.some((event) => event.type === "effectQueued"),
     true,
   );
 });

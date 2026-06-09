@@ -22,7 +22,6 @@ import type {
   HandSelectionId,
   PlayHandSelectedEffect,
   ReplacementTrigger,
-  SearchRequest,
   SavedFieldObjectReferenceFailure,
   SavedFieldObjectTarget,
   SavedFieldObjectTargetBinding,
@@ -98,16 +97,6 @@ test("effect support contracts compile with canonical representative values", ()
     type: "whileConditionTrue",
     condition: { type: "yourTurn" },
   };
-  const search: SearchRequest = {
-    zone: "deck",
-    player: "self",
-    filter,
-    min: 0,
-    max: 1,
-    destination: "hand",
-    revealTo: "bothPlayers",
-    shuffleAfter: true,
-  };
   const replacement: ReplacementTrigger = {
     type: "wouldMoveZone",
     from: "characterArea",
@@ -117,7 +106,29 @@ test("effect support contracts compile with canonical representative values", ()
   const effect: Effect = {
     type: "sequence",
     effects: [
-      { connector: "always", effect: { type: "search", request: search } },
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          zone: "deck",
+          count: 5,
+          saveAs: "set-1" as SelectionSetId,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: "set-1" as SelectionSetId,
+          chooser: "self",
+          filter,
+          min: 0,
+          max: 1,
+          saveAs: "selection-1" as SelectionId,
+        },
+      },
       { connector: "ifPreviousSucceeded", effect: { type: "trash", target } },
     ],
   };

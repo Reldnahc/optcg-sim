@@ -372,7 +372,7 @@ test("TYP-009B specs define saved field-object references and exact-card continu
   const sequenceSemantics = extractSection(
     dslSpec,
     "05-effect-dsl-reference.s013",
-    "05-effect-dsl-reference.s014",
+    "05-effect-dsl-reference.s015",
   );
   const permanentExample = extractSection(
     dslSpec,
@@ -693,7 +693,7 @@ test("optional cost contract pins response failures use consumption and replay s
   const sequenceConnectors = extractSection(
     dslSpec,
     "05-effect-dsl-reference.s013",
-    "05-effect-dsl-reference.s014",
+    "05-effect-dsl-reference.s015",
   );
 
   for (const requiredText of [

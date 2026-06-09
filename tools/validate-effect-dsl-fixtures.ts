@@ -62,31 +62,26 @@ function isJsonObject(value: JsonValue | undefined): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isAllowedStartOfGameStageSearchProducer(effect: JsonObject): boolean {
-  if (effect["type"] !== "search") {
-    return false;
-  }
-
-  const request = effect["request"];
-  if (!isJsonObject(request)) {
+function isAllowedStartOfGameStageSelectionProducer(
+  effect: JsonObject,
+): boolean {
+  if (effect["type"] !== "selectCards") {
     return false;
   }
 
   if (
-    request["zone"] !== "deck" ||
-    request["player"] !== "self" ||
-    request["min"] !== 0 ||
-    request["max"] !== 1 ||
-    request["destination"] !== "stageArea" ||
-    request["revealTo"] !== "chooserOnly" ||
-    request["shuffleAfter"] !== false ||
-    Object.hasOwn(request, "lookCount") ||
-    Object.hasOwn(request, "remainingCards")
+    effect["zone"] !== "deck" ||
+    effect["player"] !== "self" ||
+    effect["chooser"] !== "self" ||
+    effect["min"] !== 0 ||
+    effect["max"] !== 1 ||
+    effect["saveAs"] !== "selected:start-of-game" ||
+    effect["visibility"] !== "chooserOnly"
   ) {
     return false;
   }
 
-  const filter = request["filter"];
+  const filter = effect["filter"];
   if (!isJsonObject(filter)) {
     return false;
   }
@@ -159,10 +154,10 @@ function validateEffectSemantics(
 
   if (
     !isStartOfGameEffectBlock &&
-    isAllowedStartOfGameStageSearchProducer(effect)
+    isAllowedStartOfGameStageSelectionProducer(effect)
   ) {
     return [
-      `${pathPrefix} scoped start-of-game stage search request is allowed only in startOfGame effect blocks`,
+      `${pathPrefix} scoped start-of-game Stage selection is allowed only in startOfGame effect blocks`,
     ];
   }
 
@@ -204,7 +199,7 @@ function validateEffectSemantics(
           ))
       ) {
         failures.push(
-          `${segmentPath}/effect playSelected must reference a prior selectCards saveAs or supported start-of-game stage search producer in the same sequence`,
+          `${segmentPath}/effect playSelected must reference a prior selectCards saveAs in the same sequence`,
         );
       }
       if (selection === "selected:start-of-game") {
@@ -269,7 +264,7 @@ function validateEffectSemantics(
     }
     if (
       isStartOfGameEffectBlock &&
-      isAllowedStartOfGameStageSearchProducer(segmentEffect)
+      isAllowedStartOfGameStageSelectionProducer(segmentEffect)
     ) {
       producedStartOfGameStageSelection = true;
     }

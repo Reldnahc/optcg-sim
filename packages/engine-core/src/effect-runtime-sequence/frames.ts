@@ -14,11 +14,7 @@ export {
   resumeSequenceFrameAfterSelectTargets,
   resumeSequenceFrameAfterTrashFromHand,
 } from "./frames/selections.js";
-export {
-  resumeSequenceFrameAfterSearchReveal,
-  resumeSequenceFrameAfterTopDeckPlacement,
-  retargetSequenceFrameAfterSearchRevealOrder,
-} from "./frames/search-and-placement.js";
+export { resumeSequenceFrameAfterTopDeckPlacement } from "./frames/search-and-placement.js";
 export {
   resumeSequenceFrameAfterOptionalActivation,
   resumeSequenceFrameAfterOptionalCost,

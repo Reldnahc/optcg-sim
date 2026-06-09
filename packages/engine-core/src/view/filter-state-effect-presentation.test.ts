@@ -207,11 +207,11 @@ test("player decision projection narrows active effect text to the paused sequen
   });
 });
 
-test("player decision projection prefers search selection spans over generic sequence spans", () => {
+test("player decision projection narrows set selection to the active sequence span", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");
   const sourceCard = must(p1State.hand.shift(), "source card");
-  sourceCard.instanceId = toInstanceId("search-source-instance");
+  sourceCard.instanceId = toInstanceId("set-selection-source-instance");
   sourceCard.zone = {
     zone: "characterArea",
     playerId: p1,
@@ -241,7 +241,7 @@ test("player decision projection prefers search selection spans over generic seq
       ] as EffectTextSpanId[],
     },
   };
-  const decisionId = toDecisionId("decision:selectCards:search-reveal:test");
+  const decisionId = toDecisionId("decision:selectCards:sequence-set:test");
   const decisionCausedBy = {
     type: "effect" as const,
     queueEntryId: entry.id,
@@ -257,7 +257,7 @@ test("player decision projection prefers search selection spans over generic seq
     visibility: { type: "private", playerId: p1 },
     request: {
       timing: "onResolution",
-      set: "set:search-reveal:test" as never,
+      set: "set:looked-cards:test" as never,
       chooser: "self",
       min: 0,
       max: 1,
@@ -289,7 +289,7 @@ test("player decision projection prefers search selection spans over generic seq
   assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
     source,
     textKind: "effect",
-    activeSpanIds: ["span:search:selection"],
+    activeSpanIds: ["span:sequence:0:body"],
   });
 });
 

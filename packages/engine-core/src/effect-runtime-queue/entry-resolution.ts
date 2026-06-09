@@ -21,7 +21,6 @@ import {
   resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
 } from "../effect-runtime-move-cards.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-runtime-top-deck-placement.js";
-import { createSupportedSearchRevealChoiceDecision } from "../effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
 import { applyRuntimePlaySource } from "../play-card/core.js";
 import {
@@ -193,47 +192,6 @@ export const createQueueEntryResolver = (
           : sequenceFrame.error !== undefined
             ? toEngineResult(originalState, [], [sequenceFrame.error])
             : unsupportedEffectQueueResult(originalState);
-      }
-      const searchEffect =
-        queuedEffectResolvers.resolveQueuedSearchRevealEffect(
-          nextState,
-          selected,
-        );
-      if (searchEffect !== undefined) {
-        const searchDecision = createSupportedSearchRevealChoiceDecision(
-          nextState,
-          selected,
-          searchEffect,
-        );
-        if (!searchDecision.ok) {
-          return unsupportedEffectQueueResult(originalState);
-        }
-        if (searchDecision.kind === "decisionCreated") {
-          return toEngineResult(searchDecision.state, [
-            ...allEvents,
-            ...searchDecision.events,
-          ]);
-        }
-
-        const resolvedEvents: EngineEvent[] = [];
-        appendEffectResolvedEvent(
-          searchDecision.state,
-          resolvedEvents,
-          selected,
-        );
-        const resolvedEvent = resolvedEvents[0];
-        if (resolvedEvent !== undefined) {
-          nextState = {
-            ...searchDecision.state,
-            seq: toStateSeq(searchDecision.state.seq + 1),
-            effectQueue: searchDecision.state.effectQueue.filter(
-              (entry) => entry.id !== selected.id,
-            ),
-            eventJournal: [...searchDecision.state.eventJournal, resolvedEvent],
-          };
-          allEvents.push(...searchDecision.events, resolvedEvent);
-        }
-        continue;
       }
       const placement = placeTopDeck(nextState, queuedEffect, selected);
       if (placement !== undefined) return placement;

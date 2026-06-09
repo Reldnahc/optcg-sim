@@ -56,14 +56,14 @@ const revealIdFromEvent = (event: EngineEvent): string => {
   return String(event.id);
 };
 
-const isOpponentSearchRevealEvent = (event: EngineEvent): boolean => {
+const isOpponentSelectedRevealEvent = (event: EngineEvent): boolean => {
   if (!isRecord(event.payload)) {
     return false;
   }
   const revealId = event.payload["revealId"];
   return (
     typeof revealId === "string" &&
-    revealId.startsWith("reveal:search-reveal:selected:")
+    revealId.startsWith("reveal:sequence-selected:")
   );
 };
 
@@ -109,7 +109,7 @@ export const opponentRevealsFromEvents = (
       continue;
     }
     const showToBothPlayers = isLifeRevealEvent(event);
-    if (!showToBothPlayers && !isOpponentSearchRevealEvent(event)) {
+    if (!showToBothPlayers && !isOpponentSelectedRevealEvent(event)) {
       continue;
     }
     const revealId = revealIdFromEvent(event);

@@ -127,19 +127,60 @@ test("activated life trigger can activate this card's supported Main search effe
         trigger: { type: "main" },
         sourcePresencePolicy: "resolveFromDestinationZone",
         effect: {
-          type: "search",
-          request: {
-            zone: "deck",
-            player: "self",
-            lookCount: 3,
-            filter: { typesAny: ["Celestial Dragons"] },
-            min: 0,
-            max: 1,
-            destination: "hand",
-            revealTo: "bothPlayers",
-            remainingCards: { destination: "trash" },
-            shuffleAfter: false,
-          },
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 3,
+                saveAs: "set:trigger-main-search" as never,
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:trigger-main-search" as never,
+                chooser: "self",
+                filter: { typesAny: ["Celestial Dragons"] },
+                min: 0,
+                max: 1,
+                saveAs: "selected:trigger-main-search" as never,
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                selection: "selected:trigger-main-search" as never,
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "selected:trigger-main-search" as never,
+                from: "set:trigger-main-search" as never,
+                to: "hand",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:trigger-main-search" as never,
+                owner: "self",
+                destination: "trash",
+                position: "bottom",
+                order: "original",
+              },
+            },
+          ],
         },
       },
     ],

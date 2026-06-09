@@ -9,8 +9,6 @@ import type {
 } from "@optcg/types";
 
 const costSpanPrefix = "span:cost";
-const searchRevealRemainingSpanPrefix = "span:search:remaining";
-const searchRevealSelectionSpanPrefix = "span:search:selection";
 
 const activeSpanIdsWithPrefix = (
   activeSpanIds: readonly EffectTextSpanId[],
@@ -54,16 +52,6 @@ export const activeSpanIdsWithoutCost = (
   );
   return narrowed.length === 0 ? undefined : narrowed;
 };
-
-export const activeSpanIdsForSearchRevealRemaining = (
-  activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] | undefined =>
-  activeSpanIdsWithPrefix(activeSpanIds, searchRevealRemainingSpanPrefix);
-
-export const activeSpanIdsForSearchRevealSelection = (
-  activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] | undefined =>
-  activeSpanIdsWithPrefix(activeSpanIds, searchRevealSelectionSpanPrefix);
 
 export const activeSpanIdsForSequenceIndex = (
   activeSpanIds: readonly EffectTextSpanId[],

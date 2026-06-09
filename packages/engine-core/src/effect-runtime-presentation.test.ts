@@ -10,7 +10,6 @@ import {
   activeEffectTextPresentationForEffectBlock,
   activeSpanIdsForCost,
   activeSpanIdsForEffectPath,
-  activeSpanIdsForSearchRevealRemaining,
   activeSpanIdsForSequenceIndex,
   activeSpanIdsWithoutCost,
 } from "./runtime/effect-presentation.js";
@@ -105,23 +104,31 @@ describe("runtime effect presentation refs", () => {
         effectBlock: {
           ...effectBlock,
           effect: {
-            type: "search",
-            request: {
-              zone: "deck",
-              player: "self",
-              lookCount: 5,
-              filter: { typesAny: ["Sky Island"] },
-              min: 0,
-              max: 1,
-              destination: "hand",
-              revealTo: "bothPlayers",
-              shuffleAfter: false,
-              remainingCards: {
-                destination: "deck",
-                position: "bottom",
-                order: "ownerChoice",
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "revealTop",
+                  player: "self",
+                  zone: "deck",
+                  count: 5,
+                  saveAs: "set:presentation-search" as never,
+                  visibility: "chooserOnly",
+                },
               },
-            },
+              {
+                connector: "then",
+                effect: {
+                  type: "placeSetRemainder",
+                  set: "set:presentation-search" as never,
+                  owner: "self",
+                  destination: "deck",
+                  position: "bottom",
+                  order: "chooser",
+                },
+              },
+            ],
           },
           presentation: {
             textKind: "effect",
@@ -194,19 +201,19 @@ describe("runtime effect presentation refs", () => {
     const ids = [
       "span:cost:optional",
       "span:sequence:1:body",
-      "span:search:remaining",
+      "span:sequence:2:body",
     ] as const;
 
     expect(activeSpanIdsForCost(ids)).toEqual(["span:cost:optional"]);
     expect(activeSpanIdsWithoutCost(ids)).toEqual([
       "span:sequence:1:body",
-      "span:search:remaining",
+      "span:sequence:2:body",
     ]);
     expect(activeSpanIdsForSequenceIndex(ids, 1)).toEqual([
       "span:sequence:1:body",
     ]);
-    expect(activeSpanIdsForSearchRevealRemaining(ids)).toEqual([
-      "span:search:remaining",
+    expect(activeSpanIdsForSequenceIndex(ids, 2)).toEqual([
+      "span:sequence:2:body",
     ]);
     expect(activeSpanIdsForSequenceIndex(ids, 0)).toBeUndefined();
   });

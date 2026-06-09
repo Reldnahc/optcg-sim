@@ -24,14 +24,12 @@ import {
   isSupportedMoveCardsSegment,
   isSupportedPlaceTopDeckCardsSegment,
   isSupportedReturnDonSegment,
-  isSupportedSearchSegment,
   isSupportedTrashFromHandSegment,
   type DrawEffect,
   type DrawUpToEffect,
   type MoveCardsEffect,
   type PlaceTopDeckCardsEffect,
   type ReturnDonEffect,
-  type SearchEffect,
   type TrashFromHandEffect,
 } from "./support/basic.js";
 import {
@@ -91,7 +89,6 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | MoveCardsEffect
     | ReturnDonEffect
     | TrashFromHandEffect
-    | SearchEffect
     | PlaceTopDeckCardsEffect
     | PayCostEffect
     | SelectCardsEffect
@@ -162,9 +159,6 @@ const isSupportedConditionalSegment = (
       return true;
     }
     if (isSupportedTrashSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedSearchSegment(segment.effect)) {
       return true;
     }
     if (isSupportedDrawSegment(segment.effect)) {
@@ -283,10 +277,6 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedReturnDonSegment(segment.effect)) {
-        return true;
-      }
-      if (isSupportedSearchSegment(segment.effect)) {
-        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (isSupportedPlaceTopDeckCardsSegment(segment.effect)) {
