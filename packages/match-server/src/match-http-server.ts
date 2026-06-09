@@ -14,11 +14,8 @@ import {
 } from "./custom-lobby-registry.js";
 import {
   createPremadeDevMatchSetup,
-  getLocalDevCardCatalogForPlayer,
-  getLocalDevSnapshotForPlayer,
   isDevMatchSetup,
   type CreatePremadeDevMatchSetupOptions,
-  type LocalDevMatch,
   type createLocalDevMatch,
 } from "./local-match.js";
 import type { AuthContext, AuthProvider } from "./dev-auth.js";
@@ -55,10 +52,7 @@ import {
   type DevLobbySocketConnection,
   type DevSocketConnection,
 } from "./dev-socket-connections.js";
-import {
-  connectedPlayerIdsForMatch,
-  snapshotWithConnectionStatuses,
-} from "./dev-match-connection-state.js";
+import { connectedPlayerIdsForMatch } from "./dev-match-connection-state.js";
 import { advanceMatchTimersAndBroadcast } from "./dev-match-timer-broadcast.js";
 import {
   applyBrowserCorsHeaders,
@@ -68,6 +62,7 @@ import { createSocketActionTiming } from "./action-timing-log.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
+import { playerStatePayload } from "./match-state-payload.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 
@@ -523,27 +518,6 @@ const handleApiRequest = async (
 const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
   sendText(response, 404, "text/plain; charset=utf-8", "Not found");
   return Promise.resolve();
-};
-
-const playerStatePayload = (
-  match: LocalDevMatch,
-  connection: DevSocketConnection,
-  connections: ReadonlySet<DevSocketConnection>,
-): Record<string, unknown> => {
-  const snapshot = snapshotWithConnectionStatuses(
-    getLocalDevSnapshotForPlayer(match, connection.playerId),
-    match,
-    connection.matchId,
-    connections,
-  );
-  return {
-    type: "stateSync",
-    matchId: connection.matchId,
-    serverSeq: ++connection.serverSeq,
-    stateSeq: snapshot.stateSeq,
-    snapshot,
-    cards: getLocalDevCardCatalogForPlayer(match, connection.playerId),
-  };
 };
 
 const playerSetupPayload = (
