@@ -522,13 +522,26 @@ export const applyRuntimePlaySource = (params: {
   if (player === undefined) {
     return illegalAction(state, "playSource requires an existing player.");
   }
+  const trashSourceIndex = player.trash.findIndex(
+    (card) =>
+      card.instanceId === entry.source.instanceId &&
+      card.cardId === entry.source.cardId,
+  );
+  const trashSource =
+    trashSourceIndex < 0 ? undefined : player.trash[trashSourceIndex];
+  const resolvedSourceZone =
+    entry.source.zone?.zone === "trash" ||
+    (entry.sourcePresencePolicy === "resolveFromDestinationZone" &&
+      trashSource !== undefined)
+      ? "trash"
+      : "noZone";
   const sourceCard: CardInstance = {
     instanceId: entry.source.instanceId,
     cardId: entry.source.cardId,
     owner: entry.sourceSnapshot.ownerId,
     controller: entry.sourceSnapshot.controllerId,
     attachedDon: [],
-    zone: entry.source.zone ?? entry.sourceSnapshot.zone,
+    zone: trashSource?.zone ?? entry.source.zone ?? entry.sourceSnapshot.zone,
   };
   const supported = getSupportedPlayMetadata(state, sourceCard);
   if (supported === null) {
@@ -550,13 +563,8 @@ export const applyRuntimePlaySource = (params: {
   if (!canResolveDestinationConflict(player, supported.category)) {
     return illegalAction(state, "playSource destination conflict is invalid.");
   }
-  const sourceZone = entry.source.zone?.zone === "trash" ? "trash" : "noZone";
-  const sourceIndex =
-    sourceZone === "trash"
-      ? player.trash.findIndex(
-          (card) => card.instanceId === entry.source.instanceId,
-        )
-      : -1;
+  const sourceZone = resolvedSourceZone;
+  const sourceIndex = sourceZone === "trash" ? trashSourceIndex : -1;
   if (sourceZone === "trash" && sourceIndex < 0) {
     return illegalAction(state, "playSource trash card not found.");
   }
