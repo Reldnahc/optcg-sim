@@ -23,10 +23,6 @@ import { hasUnsupportedCounterWindow } from "./counter-actions.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
-import {
-  getSupportedLifeTriggerDecision,
-  hasLifeTriggerText,
-} from "../life-trigger/actions.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
 
@@ -196,21 +192,6 @@ const hasUnsupportedBlockDecisionState = (
     !hasOnlyFieldRemovalProtections(targetView.protectedFrom)
   ) {
     return true;
-  }
-  const attackerHasBanish = attackerView.keywords.includes("banish");
-  if (target.isLeader && !attackerHasBanish) {
-    const targetPlayer = state.players[target.playerId];
-    const topLife = targetPlayer?.life[0];
-    const topLifeMeta =
-      topLife && state.cardManifest.cards[topLife.card.cardId];
-    if (
-      topLife !== undefined &&
-      hasLifeTriggerText(topLifeMeta?.triggerText) &&
-      getSupportedLifeTriggerDecision(state, target.playerId, topLife.card) ===
-        undefined
-    ) {
-      return true;
-    }
   }
   return false;
 };

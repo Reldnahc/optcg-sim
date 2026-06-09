@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { Effect } from "@optcg/types";
+
 import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
 import {
@@ -292,6 +294,119 @@ test("life damage creates the same trigger decision pause when taken card has no
   );
 });
 
+test("unsupported life trigger activation still takes damage and only offers add to hand", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("trigger-life-unsupported-activation");
+  const beforeLifeCount = p2State.life.length;
+  const beforeHandCount = p2State.hand.length;
+  const definition = effectDefinition(lifeCardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "trigger effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
+  const unsupportedEffect: Effect = {
+    type: "ko",
+    target: { type: "opponentLeader" },
+  };
+  const unsupported = {
+    ...definition,
+    effects: [
+      {
+        ...effectWithoutFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        effect: unsupportedEffect,
+      },
+    ],
+  };
+  p2State.life[0] = {
+    ...topLife,
+    card: { ...topLife.card, cardId: lifeCardId },
+  };
+  state.cardManifest.cards[lifeCardId] = {
+    ...resolvedCard({
+      cardId: lifeCardId,
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: unsupported activation",
+    support: {
+      cardId: lifeCardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-unsupported-life-trigger-activation",
+      tested: true,
+      rulesVersion: unsupported.metadata.rulesVersion,
+      cardDataVersion: "fixture",
+      sourceTextHash: unsupported.metadata.sourceTextHash,
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    unsupported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-unsupported-life-trigger-activation": unsupported,
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(opened.errors, undefined);
+  const passed = passCounterStep(opened.state, p2);
+  assert.equal(passed.errors, undefined);
+  const pendingDecision = must(
+    passed.state.pendingDecision,
+    "pending decision",
+  );
+  const damaged = must(passed.state.players[p2], "damaged player");
+
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.deepEqual(pendingDecision.options, ["addToHand"]);
+  assert.equal(damaged.life.length, beforeLifeCount - 1);
+  assert.equal(damaged.hand.length, beforeHandCount);
+  assert.deepEqual(
+    getLegalActions(passed.state, p2)
+      .filter((action) => action.type === "respondToDecision")
+      .map((action) => action.response),
+    [{ type: "lifeTrigger", choice: "addToHand" }],
+  );
+  const unavailableActivation = applyAction(passed.state, {
+    type: "respondToDecision",
+    decisionId: pendingDecision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  assert.deepEqual(unavailableActivation.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Life Trigger choice is not available.",
+    },
+  ]);
+
+  const resolved = applyAction(passed.state, {
+    type: "respondToDecision",
+    decisionId: pendingDecision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
+  const nextP2 = must(resolved.state.players[p2], "p2 after add to hand");
+  assert.equal(nextP2.life.length, beforeLifeCount - 1);
+  assert.equal(nextP2.hand.length, beforeHandCount + 1);
+  assert.equal(must(nextP2.hand.at(-1), "moved life card").cardId, lifeCardId);
+});
+
 test("respondToDecision addToHand declines life trigger and moves taken card to hand hidden", () => {
   const opened = applySupportedLifeTriggerAttack();
   const pendingDecision = must(
@@ -486,13 +601,14 @@ test("applyAction declareAttack keeps conditioned life trigger activation reacha
   assert.equal(passed.state.pendingDecision?.type, "confirmLifeTrigger");
 });
 
-test("applyAction declareAttack fail-closes unsupported conditioned life trigger before decision without identity leak", () => {
+test("unsupported conditioned life trigger takes damage and exposes only add to hand without identity leak", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
   const lifeCardId = toCardId("trigger-life-unsupported-conditioned");
   const beforeLifeCount = p2State.life.length;
+  const beforeHandCount = p2State.hand.length;
   p2State.life[0] = {
     ...topLife,
     card: { ...topLife.card, cardId: lifeCardId },
@@ -562,25 +678,22 @@ test("applyAction declareAttack fail-closes unsupported conditioned life trigger
   );
   const opponentView = filterStateForPlayer(result.state, p1);
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "illegalAction",
-      reason:
-        "Life trigger reveal decisions are unsupported in this battle path.",
-    },
-  ]);
-  assert.equal(
-    result.state.pendingDecision?.prompt,
-    "Use counter or end step.",
+  assert.equal(result.errors, undefined);
+  const pendingDecision = must(
+    result.state.pendingDecision,
+    "pending life trigger decision",
   );
-  assert.equal(nextP2.life.length, beforeLifeCount);
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.deepEqual(pendingDecision.options, ["addToHand"]);
+  assert.equal(nextP2.life.length, beforeLifeCount - 1);
+  assert.equal(nextP2.hand.length, beforeHandCount);
   assert.equal(
     nextP2.hand.some((card) => card.cardId === lifeCardId),
     false,
   );
   assert.equal(
     nextP2.life.some((lifeCard) => lifeCard.card.cardId === lifeCardId),
-    true,
+    false,
   );
   assert.equal(
     result.events.some((event) => event.type === "cardRevealed"),
@@ -601,13 +714,18 @@ test("applyAction declareAttack fail-closes unsupported conditioned life trigger
         (event.payload as { decisionType?: string }).decisionType ===
           "confirmLifeTrigger",
     ),
-    false,
+    true,
+  );
+  assert.deepEqual(
+    getLegalActions(result.state, p2)
+      .filter((action) => action.type === "respondToDecision")
+      .map((action) => action.response),
+    [{ type: "lifeTrigger", choice: "addToHand" }],
   );
   assert.equal(
     JSON.stringify(publicEvents).includes(String(lifeCardId)),
     false,
   );
-  assert.equal(result.events.length, 0);
   assert.equal(
     JSON.stringify(opponentView).includes(String(lifeCardId)),
     false,
@@ -615,6 +733,21 @@ test("applyAction declareAttack fail-closes unsupported conditioned life trigger
   assert.equal(
     JSON.stringify(opponentView).includes("confirmLifeTrigger"),
     false,
+  );
+
+  const resolved = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: pendingDecision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const resolvedP2 = must(resolved.state.players[p2], "resolved p2");
+  assert.equal(resolvedP2.life.length, beforeLifeCount - 1);
+  assert.equal(resolvedP2.hand.length, beforeHandCount + 1);
+  assert.equal(
+    must(resolvedP2.hand.at(-1), "added unsupported trigger card").cardId,
+    lifeCardId,
   );
 });
 

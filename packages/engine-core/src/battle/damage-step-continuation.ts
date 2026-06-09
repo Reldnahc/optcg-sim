@@ -5,10 +5,6 @@ import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
-import {
-  getSupportedLifeTriggerDecision,
-  hasLifeTriggerText,
-} from "../life-trigger/actions.js";
 
 export const getUnsupportedDamageStepContinuationReason = (
   state: GameState,
@@ -84,24 +80,5 @@ export const getUnsupportedDamageStepContinuationReason = (
       return "Battle target is no longer a supported rested character target.";
     }
   }
-  if (
-    attackerView.currentPower >= targetView.currentPower &&
-    target.isLeader &&
-    !attackerView.keywords.includes("banish")
-  ) {
-    const targetPlayer = state.players[target.playerId];
-    const topLife = targetPlayer?.life[0];
-    const topLifeMeta =
-      topLife && state.cardManifest.cards[topLife.card.cardId];
-    if (
-      topLife !== undefined &&
-      hasLifeTriggerText(topLifeMeta?.triggerText) &&
-      getSupportedLifeTriggerDecision(state, target.playerId, topLife.card) ===
-        undefined
-    ) {
-      return "Life trigger reveal decisions are unsupported in this battle path.";
-    }
-  }
-
   return undefined;
 };

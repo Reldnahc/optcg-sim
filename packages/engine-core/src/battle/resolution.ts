@@ -62,8 +62,6 @@ import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-pro
 import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getLifeDamageDecision,
-  getSupportedLifeTriggerDecision,
-  hasLifeTriggerText,
   registerLifeTriggerDamageContinuationResolver,
 } from "../life-trigger/actions.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
@@ -513,23 +511,9 @@ const processLeaderDamagePoint = ({
       }),
     };
   }
-  const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
   const lifeDamageDecision = attackerHasBanish
     ? undefined
     : getLifeDamageDecision(nextState, targetPlayerId, topLife.card);
-  if (
-    !attackerHasBanish &&
-    hasLifeTriggerText(lifeMeta?.triggerText) &&
-    getSupportedLifeTriggerDecision(nextState, targetPlayerId, topLife.card) ===
-      undefined
-  ) {
-    return {
-      result: unsupportedBattleResolution(
-        state,
-        "Life trigger reveal decisions are unsupported in this battle path.",
-      ),
-    };
-  }
   appendEvent(state, events, "damageDealt", {
     attacker: attackerInstanceId,
     target: targetInstanceId,

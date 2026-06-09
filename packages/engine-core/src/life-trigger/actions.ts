@@ -257,6 +257,27 @@ export const getSupportedLifeTriggerDecision = (
   };
 };
 
+const getAddToHandOnlyLifeTriggerDecision = (
+  state: GameState,
+  damagedPlayerId: PlayerId,
+  card: CardInstance,
+): ConfirmLifeTriggerDecision => ({
+  id: toDecisionId(
+    `decision:life-trigger:${String(card.instanceId)}:${String(state.seq + 1)}`,
+  ),
+  type: "confirmLifeTrigger",
+  playerId: damagedPlayerId,
+  prompt: "Activate life trigger?",
+  causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+  visibility: { type: "public" },
+  card: {
+    instanceId: card.instanceId,
+    cardId: card.cardId,
+    playerId: damagedPlayerId,
+  },
+  options: ["addToHand"],
+});
+
 export const getLifeDamageDecision = (
   state: GameState,
   damagedPlayerId: PlayerId,
@@ -267,24 +288,12 @@ export const getLifeDamageDecision = (
     return undefined;
   }
   if (hasLifeTriggerText(resolved.triggerText)) {
-    return getSupportedLifeTriggerDecision(state, damagedPlayerId, card);
+    return (
+      getSupportedLifeTriggerDecision(state, damagedPlayerId, card) ??
+      getAddToHandOnlyLifeTriggerDecision(state, damagedPlayerId, card)
+    );
   }
-  return {
-    id: toDecisionId(
-      `decision:life-trigger:${String(card.instanceId)}:${String(state.seq + 1)}`,
-    ),
-    type: "confirmLifeTrigger",
-    playerId: damagedPlayerId,
-    prompt: "Activate life trigger?",
-    causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
-    visibility: { type: "public" },
-    card: {
-      instanceId: card.instanceId,
-      cardId: card.cardId,
-      playerId: damagedPlayerId,
-    },
-    options: ["activateTrigger", "addToHand"],
-  };
+  return getAddToHandOnlyLifeTriggerDecision(state, damagedPlayerId, card);
 };
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
@@ -399,32 +408,61 @@ export const getLifeTriggerLegalActions = (
         playerId: decision.card.playerId,
       })
     : undefined;
-  if (
-    hasLifeTriggerText(resolved.triggerText) &&
-    supportedTrigger === undefined
-  ) {
-    return [];
-  }
-  return [
-    ...(supportedTrigger === undefined
-      ? []
-      : [
-          {
-            type: "respondToDecision" as const,
-            decisionId: decision.id,
-            response: {
-              type: "lifeTrigger" as const,
-              choice: "activateTrigger" as const,
-            },
-          },
-        ]),
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "lifeTrigger", choice: "addToHand" },
-    },
-  ];
+  const canActivate =
+    decision.options.includes("activateTrigger") &&
+    supportedTrigger !== undefined;
+  const canAddToHand = decision.options.includes("addToHand");
+  return getAvailableLifeTriggerLegalActions(
+    decision,
+    canActivate,
+    canAddToHand,
+  );
 };
+
+const isLifeTriggerChoiceAvailable = (
+  decision: ConfirmLifeTriggerDecision,
+  choice: string,
+): boolean =>
+  (choice === "activateTrigger" || choice === "addToHand") &&
+  decision.options.includes(choice);
+
+const getUnavailableLifeTriggerChoiceError = (state: GameState): EngineResult =>
+  toEngineResult(
+    state,
+    [],
+    invalidDecision("Life Trigger choice is not available."),
+  );
+
+const getAvailableLifeTriggerLegalActions = (
+  decision: ConfirmLifeTriggerDecision,
+  canActivate: boolean,
+  canAddToHand: boolean,
+): LegalAction[] => [
+  ...(canActivate
+    ? [
+        {
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "lifeTrigger" as const,
+            choice: "activateTrigger" as const,
+          },
+        },
+      ]
+    : []),
+  ...(canAddToHand
+    ? [
+        {
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "lifeTrigger" as const,
+            choice: "addToHand" as const,
+          },
+        },
+      ]
+    : []),
+];
 
 const malformedContinuation = (state: GameState): EngineResult =>
   toEngineResult(
@@ -699,6 +737,9 @@ export const applyLifeTriggerDecisionResponse = (
     );
   }
   const choice: string = action.response.choice;
+  if (!isLifeTriggerChoiceAvailable(decision, choice)) {
+    return getUnavailableLifeTriggerChoiceError(state);
+  }
   if (choice === "activateTrigger") {
     const continuationValidation = validateDamageContinuation(state);
     if (continuationValidation !== undefined) {
