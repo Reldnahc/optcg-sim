@@ -16,7 +16,7 @@ export const DashboardPage = (): React.JSX.Element => (
       />
       <ShellPageCard
         title="Custom Lobbies"
-        description="Create or join custom games with the current local lobby flow."
+        description="Create or join custom games with account-backed lobby seats."
         href={appRoutePath("lobbies")}
         label="Open Lobbies"
       />

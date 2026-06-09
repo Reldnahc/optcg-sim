@@ -19,10 +19,10 @@ describe("client app routes", () => {
   });
 
   test("maps concrete lobby URLs to the lobbies route", () => {
-    const route = appRouteFromPath("/lobbies/dev-local-lobby-1");
+    const route = appRouteFromPath("/lobbies/lobby-1");
 
     assert.equal(route.id, "lobbies");
-    assert.equal(route.path, "/lobbies/dev-local-lobby-1");
+    assert.equal(route.path, "/lobbies/lobby-1");
   });
 
   test("preserves query strings for the match route", () => {

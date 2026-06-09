@@ -5,9 +5,7 @@ export const LobbiesPage = (): React.JSX.Element => (
   <section className="shell-page">
     <div className="shell-page-heading">
       <h1>Custom Lobbies</h1>
-      <p>
-        Use the current local lobby flow while production lobby services evolve.
-      </p>
+      <p>Create a lobby, share the link, and pick account deck loadouts.</p>
     </div>
     <div className="shell-card-grid">
       <ShellPageCard

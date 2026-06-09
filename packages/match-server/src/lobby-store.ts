@@ -88,7 +88,7 @@ export const createMemoryLobbyStore = (): LobbyStore => {
   const lobbies = new Map<string, LocalDevLobbyState>();
   return {
     createLobbyId() {
-      return `dev-local-lobby-${String(nextLobbyNumber++)}`;
+      return `lobby-${String(nextLobbyNumber++)}`;
     },
     createLobby(lobby) {
       lobbies.set(lobby.lobbyId, structuredClone(lobby));

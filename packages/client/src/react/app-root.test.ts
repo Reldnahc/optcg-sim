@@ -63,7 +63,7 @@ describe("client app root", () => {
     const html = renderToStaticMarkup(
       createElement(AppRootContent, {
         matchSurface: createElement("div", { "data-testid": "lobby-surface" }),
-        path: "/lobbies/dev-local-lobby-1",
+        path: "/lobbies/lobby-1",
       }),
     );
 

@@ -629,7 +629,7 @@ describe("match client controller", () => {
     });
   });
 
-  test("starts a local lobby by joining with account session and assigned seat", async () => {
+  test("starts a custom lobby by joining with account session and assigned seat", async () => {
     const transport = createFakeTransport();
     const sessionStore = createClientSessionStore({
       storage: createMemoryClientStorage(),
@@ -651,7 +651,7 @@ describe("match client controller", () => {
     assert.equal(joinedLobby.sessionToken, accountSessionToken);
   });
 
-  test("joins a local lobby without caller-selected player id", async () => {
+  test("joins a custom lobby without caller-selected player id", async () => {
     const transport = createFakeTransport();
     const sessionStore = createClientSessionStore({
       storage: createMemoryClientStorage(),
