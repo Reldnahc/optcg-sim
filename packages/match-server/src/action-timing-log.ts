@@ -39,7 +39,17 @@ export interface SocketActionTimingLogInput {
 export const roundTimingMs = (value: number): number =>
   Math.round(value * 10) / 10;
 
+const actionTimingLogsEnabled = (): boolean => {
+  const value = process.env["PONEGLYPH_SIM_ACTION_TIMING_LOGS"]
+    ?.trim()
+    .toLowerCase();
+  return value === "true" || value === "1" || value === "on";
+};
+
 export const writeActionTimingLog = (input: ActionTimingLogInput): void => {
+  if (!actionTimingLogsEnabled()) {
+    return;
+  }
   process.stdout.write(
     `${JSON.stringify({
       type: "simActionTiming",
@@ -85,6 +95,19 @@ export const recordActionTimingSpanAsync = async <T>(
 };
 
 export const createSocketActionTiming = (raw: string): SocketActionTiming => {
+  if (!actionTimingLogsEnabled()) {
+    return {
+      async apply(fn) {
+        return await fn();
+      },
+      record(fn) {
+        return fn();
+      },
+      write() {
+        return;
+      },
+    };
+  }
   const receivedAt = performance.now();
   let applyMs = 0;
   const spans: ActionTimingSpan[] = [];
