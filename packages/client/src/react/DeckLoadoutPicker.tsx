@@ -90,7 +90,7 @@ const loadoutMeta = (loadout: AccountLoadout | undefined): string =>
       ].join(" / ");
 
 const isSelectableLoadout = (loadout: AccountLoadout | undefined): boolean =>
-  loadout?.validation === undefined || loadout.validation.status === "playable";
+  loadout?.validation?.status === "playable";
 
 const LeaderCrop = ({
   loadout,

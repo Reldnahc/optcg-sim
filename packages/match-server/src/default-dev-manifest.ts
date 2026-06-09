@@ -123,7 +123,7 @@ export const defaultDevDonCounts: DevDonCounts = {
 };
 
 export const defaultDevEffectDefinitionsVersion = "generated-dev-v7";
-const defaultDevDeckValidatorVersion = "dev-deck-validator-v1";
+const defaultDevDeckValidatorVersion = "dev-deck-validator-v2";
 
 const defaultDevLeader: DevDeckCardEntry = {
   cardId: "OP13-079" as CardId,

@@ -43,8 +43,7 @@ export const LobbyDeckPanel = ({
   );
   const pickerLocked = selfDeckStatus === "ready";
   const selectedLoadoutPlayable =
-    selectedLoadout?.validation === undefined ||
-    selectedLoadout.validation.status === "playable";
+    selectedLoadout?.validation?.status === "playable";
   const canSubmit =
     selectedLoadoutExists &&
     selectedLoadoutPlayable &&

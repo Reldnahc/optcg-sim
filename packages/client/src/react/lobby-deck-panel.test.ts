@@ -422,4 +422,24 @@ describe("lobby deck panel", () => {
     assert.match(source, /setHideIllegalLoadouts/u);
     assert.match(source, /validation\?\.status !== "playable"/u);
   });
+
+  test("deck loadout picker fails closed when validation is missing", async () => {
+    const panelSource = await readFile(
+      new URL("LobbyDeckPanel.tsx", import.meta.url),
+      "utf8",
+    );
+    const pickerSource = await readFile(
+      new URL("DeckLoadoutPicker.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(
+      panelSource,
+      /selectedLoadout\?\.validation\?\.status === "playable"/u,
+    );
+    assert.match(
+      pickerSource,
+      /loadout\?\.validation\?\.status === "playable"/u,
+    );
+  });
 });

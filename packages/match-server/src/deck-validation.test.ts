@@ -251,4 +251,41 @@ describe("deck validation", () => {
       ["deckRuleViolation"],
     );
   });
+
+  test("rejects cards that are not playable by the simulator implementation", async () => {
+    const result = await validateDeckLoadout(
+      validInput({
+        cards: {
+          ["LDR-001" as CardId]: card("LDR-001", {
+            category: "leader",
+            life: 5,
+          }),
+          ["CHR-001" as CardId]: card("CHR-001", {
+            support: {
+              cardId: "CHR-001" as CardId,
+              status: "unsupported",
+              tested: false,
+              rulesVersion: "rules-v1",
+              cardDataVersion: "card-data-v1",
+              sourceTextHash: "CHR-001:source",
+              behaviorHash: "CHR-001:behavior",
+            },
+          }),
+          ["EVT-001" as CardId]: card("EVT-001", {
+            category: "event",
+            cost: 1,
+          }),
+          ["DON-001" as CardId]: card("DON-001", {
+            category: "don",
+          }),
+        },
+      }),
+    );
+
+    assert.equal(result.valid, false);
+    assert.deepEqual(
+      result.errors.map((error) => error.code),
+      ["unsupportedCard"],
+    );
+  });
 });

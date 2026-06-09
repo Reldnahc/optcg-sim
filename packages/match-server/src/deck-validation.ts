@@ -69,7 +69,8 @@ export interface DeckValidationError {
     | "invalidDonDeck"
     | "donDeckTooShort"
     | "deckRuleViolation"
-    | "formatIllegal";
+    | "formatIllegal"
+    | "unsupportedCard";
   readonly message: string;
   readonly cardId?: CardId;
 }
@@ -267,6 +268,14 @@ const runDeckValidation = (
     if (resolved === undefined) {
       continue;
     }
+    if (!isSimulatorPlayableCard(resolved)) {
+      errors.push({
+        code: "unsupportedCard",
+        message: `${String(entry.cardId)} is not playable by the simulator yet.`,
+        cardId: entry.cardId,
+      });
+      continue;
+    }
     const legality = resolved.legality[input.formatId];
     if (legality?.status === "banned") {
       errors.push({
@@ -285,6 +294,14 @@ const runDeckValidation = (
         cardId: entry.cardId,
       });
     }
+  }
+
+  if (leader !== undefined && !isSimulatorPlayableCard(leader)) {
+    errors.push({
+      code: "unsupportedCard",
+      message: `${String(leader.cardId)} is not playable by the simulator yet.`,
+      cardId: leader.cardId,
+    });
   }
 
   if (errors.length > 0) {
@@ -384,6 +401,11 @@ const validateRequestedVariants = (
   }
   return errors;
 };
+
+const isSimulatorPlayableCard = (card: ResolvedCard): boolean =>
+  card.support.status === "implemented-dsl" ||
+  card.support.status === "implemented-custom" ||
+  card.support.status === "vanilla-confirmed";
 
 const extractDeckConstructionRules = (
   card: ResolvedCard,
