@@ -75,8 +75,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-card-cache:
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.1.1
+        version: 0.1.1
       redis:
         specifier: ^5.12.1
         version: 5.12.1
@@ -139,8 +139,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-card-cache:
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.1.1
+        version: 0.1.1
       optcg-db:
         specifier: ^0.4.40
         version: 0.4.40
@@ -1756,10 +1756,10 @@ packages:
       }
     engines: { node: ">=20" }
 
-  optcg-card-cache@0.1.0:
+  optcg-card-cache@0.1.1:
     resolution:
       {
-        integrity: sha512-1xV7a5Gn8qyj6pnMDD3tksAbti5IzuOwLAg1kXJgeQg05aOrW8QaRWyA6rXaiHQfuhXcJ6z5/6Wz7eCRxiNmSg==,
+        integrity: sha512-RoM2o0KsVVBeyTvi1NSLMf30q6n9eQ76kiWKcvITF/YMdpYUw6QVltWBamWRquvxX292zD9wS/SmyIZ9J0KZEg==,
       }
     engines: { node: ">=20" }
 
@@ -3349,7 +3349,7 @@ snapshots:
 
   optcg-auth-client@0.1.7: {}
 
-  optcg-card-cache@0.1.0:
+  optcg-card-cache@0.1.1:
     dependencies:
       redis: 5.12.1
     transitivePeerDependencies:
