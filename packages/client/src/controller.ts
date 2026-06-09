@@ -409,6 +409,11 @@ export const createMatchClientController = ({
         sessionToken: credential.sessionToken,
         onError,
         onStateSync(message) {
+          const cards = message.cards ?? currentState?.cards;
+          if (cards === undefined) {
+            onError("Match state sync did not include card catalog.");
+            return;
+          }
           currentState = {
             matchId: message.matchId,
             seat: {
@@ -416,7 +421,7 @@ export const createMatchClientController = ({
               playerId: credential.playerId,
             },
             snapshot: message.snapshot,
-            cards: message.cards,
+            cards,
           };
           currentLobbyState = undefined;
           onState(currentState);

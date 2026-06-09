@@ -202,7 +202,7 @@ export interface MatchStateSyncMessage {
   serverSeq: number;
   stateSeq: number;
   snapshot: MatchSnapshot;
-  cards: MatchCardCatalog;
+  cards?: MatchCardCatalog;
 }
 
 export interface MatchSetupSyncMessage {

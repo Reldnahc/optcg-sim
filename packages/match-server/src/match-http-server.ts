@@ -537,13 +537,17 @@ const playerStatePayload = (
     connection.matchId,
     connections,
   );
+  const includeCardCatalog = connection.sentCardCatalog !== true;
+  connection.sentCardCatalog = true;
   return {
     type: "stateSync",
     matchId: connection.matchId,
     serverSeq: ++connection.serverSeq,
     stateSeq: snapshot.stateSeq,
     snapshot,
-    cards: getLocalDevCardCatalogForPlayer(match, connection.playerId),
+    ...(includeCardCatalog
+      ? { cards: getLocalDevCardCatalogForPlayer(match, connection.playerId) }
+      : {}),
   };
 };
 

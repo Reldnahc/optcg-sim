@@ -16,6 +16,7 @@ import type {
   LobbyStateSyncMessage,
   LiveMatchConnection,
   MatchLiveTransport,
+  MatchCardCatalog,
   MatchSessionTransitionMessage,
   MatchSetupSyncMessage,
   MatchStateSyncMessage,
@@ -540,6 +541,65 @@ describe("match client controller", () => {
 
     const match = states.at(-1);
     assert.equal(match !== undefined && "snapshot" in match, true);
+  });
+
+  test("reuses live card catalog when later state sync omits cards", async () => {
+    const p1 = "p1" as PlayerId;
+    const p2 = "p2" as PlayerId;
+    const cards: MatchCardCatalog = {
+      players: { [p1]: { cards: {} }, [p2]: { cards: {} } },
+    };
+    const transport = createFakeTransport();
+    transport.createMatch = () =>
+      Promise.resolve({
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: { playerId: p1, claimed: false },
+          p2: { playerId: p2, claimed: false },
+        },
+        snapshot: { stateSeq: 1, players: {} },
+      });
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p1" as PlayerId);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      stateSeq: 1,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 1, players: {} },
+      cards,
+    });
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 3,
+      stateSeq: 2,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 2, players: {} },
+    });
+
+    const match = states.at(-1);
+    assert.deepEqual(
+      match !== undefined && "cards" in match ? match.cards : undefined,
+      cards,
+    );
   });
 
   test("joins an existing local match by claiming only the requested seat", async () => {
