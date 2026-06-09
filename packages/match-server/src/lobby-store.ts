@@ -7,26 +7,26 @@ import type { DeckSubmission } from "./deck-submission.js";
 import type { RedisLike } from "./redis-match-persistence.js";
 import type { FirstPlayerChoiceState } from "./session-types.js";
 
-export interface LocalDevLobbySeatState {
+export interface CustomLobbySeatState {
   readonly playerId: PlayerId;
   subject?: AuthSubject;
   deckSubmission?: DeckSubmission;
 }
 
-export interface LocalDevLobbyState {
+export interface CustomLobbyState {
   readonly lobbyId: string;
-  readonly seats: Record<string, LocalDevLobbySeatState>;
+  readonly seats: Record<string, CustomLobbySeatState>;
   firstPlayerChoice?: FirstPlayerChoiceState;
   playerOrder?: readonly [PlayerId, PlayerId];
   matchId?: MatchId;
 }
 
 export interface LobbyStore {
-  createLobby: (lobby: LocalDevLobbyState) => Promise<LocalDevLobbyState>;
-  getLobby: (lobbyId: string) => Promise<LocalDevLobbyState | undefined>;
+  createLobby: (lobby: CustomLobbyState) => Promise<CustomLobbyState>;
+  getLobby: (lobbyId: string) => Promise<CustomLobbyState | undefined>;
   updateLobby: <T>(
     lobbyId: string,
-    update: (lobby: LocalDevLobbyState) => Promise<T>,
+    update: (lobby: CustomLobbyState) => Promise<T>,
   ) => Promise<T | "lobbyNotFound">;
   createLobbyId: () => string;
 }
@@ -51,7 +51,7 @@ const serialize = (value: unknown): string => JSON.stringify(value);
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const parseLobby = (value: string): LocalDevLobbyState => {
+const parseLobby = (value: string): CustomLobbyState => {
   const parsed = JSON.parse(value) as unknown;
   if (!isRecord(parsed) || typeof parsed["lobbyId"] !== "string") {
     throw new TypeError("Redis lobby state is malformed.");
@@ -61,7 +61,7 @@ const parseLobby = (value: string): LocalDevLobbyState => {
   }
   return {
     lobbyId: parsed["lobbyId"],
-    seats: parsed["seats"] as LocalDevLobbyState["seats"],
+    seats: parsed["seats"] as CustomLobbyState["seats"],
     ...(parsed["firstPlayerChoice"] === undefined
       ? {}
       : {
@@ -85,7 +85,7 @@ const parseLobby = (value: string): LocalDevLobbyState => {
 
 export const createMemoryLobbyStore = (): LobbyStore => {
   let nextLobbyNumber = 1;
-  const lobbies = new Map<string, LocalDevLobbyState>();
+  const lobbies = new Map<string, CustomLobbyState>();
   return {
     createLobbyId() {
       return `lobby-${String(nextLobbyNumber++)}`;
@@ -173,7 +173,7 @@ export const createRedisLobbyStore = ({
   },
 });
 
-export const createDefaultLobbySeats = (): LocalDevLobbyState["seats"] => ({
+export const createDefaultLobbySeats = (): CustomLobbyState["seats"] => ({
   p1: { playerId: p1 },
   p2: { playerId: p2 },
 });

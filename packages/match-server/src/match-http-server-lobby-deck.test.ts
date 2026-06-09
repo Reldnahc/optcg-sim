@@ -9,7 +9,7 @@ import {
 } from "./default-dev-fixture-fetch.test-support.js";
 import type { SimHandoffVerifier, VerifiedSimHandoff } from "./sim-handoff.js";
 
-interface CreatedDevLobbyBody {
+interface CreatedCustomLobbyBody {
   lobbyId?: string;
   matchId?: string;
   seat?: { playerId?: string; sessionToken?: string };
@@ -26,9 +26,9 @@ interface CreatedDevLobbyBody {
 }
 
 const requireLobbySeat = (
-  lobby: CreatedDevLobbyBody,
+  lobby: CreatedCustomLobbyBody,
   seatId: string,
-): CreatedDevLobbyBody["seats"][string] => {
+): CreatedCustomLobbyBody["seats"][string] => {
   const seat = lobby.seats[seatId];
   if (seat === undefined) {
     throw new Error(`Lobby response was missing ${seatId}.`);
@@ -124,36 +124,36 @@ const createHandoffMatchHttpServer = async (
     },
   });
 
-const createDevLobby = async (
+const createCustomLobby = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
     method: "POST",
   });
   assert.equal(response.status, 201);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
-const joinDevLobby = async (
+const joinCustomLobby = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
     method: "POST",
     headers: { "x-optcg-session-token": sessionToken },
   });
   assert.equal(response.status, 200);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
-const submitDevLobbyDeck = async (
+const submitCustomLobbyDeck = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
   deckHash: string,
   donDeckCount = 10,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/deck`, {
     method: "POST",
     headers: {
@@ -163,14 +163,14 @@ const submitDevLobbyDeck = async (
     body: JSON.stringify({ deckHash, donDeckCount }),
   });
   assert.equal(response.status, 200);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
-const submitDevLobbyLoadout = async (
+const submitCustomLobbyLoadout = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   handoffToken: string,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(
     `${server.url()}/api/lobbies/${lobbyId}/loadout`,
     {
@@ -180,7 +180,7 @@ const submitDevLobbyLoadout = async (
     },
   );
   assert.equal(response.status, 200);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
 const lobbyWebSocketUrl = (
@@ -254,13 +254,13 @@ describe("dev HTTP lobby deck submissions", () => {
     );
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const result = await submitDevLobbyLoadout(
+      const result = await submitCustomLobbyLoadout(
         server,
         lobbyId,
         "handoff-token",
@@ -286,7 +286,7 @@ describe("dev HTTP lobby deck submissions", () => {
     const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
@@ -297,7 +297,7 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(requireLobbySeat(created, "p1").deck.status, "missing");
       assert.equal(requireLobbySeat(created, "p2").deck.status, "missing");
 
-      const oneSeat = await joinDevLobby(
+      const oneSeat = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-p1:session-1",
@@ -306,7 +306,7 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(oneSeat.seat?.playerId, "p1");
       assert.equal(requireLobbySeat(oneSeat, "p1").deck.status, "missing");
 
-      const twoSeats = await joinDevLobby(
+      const twoSeats = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-p2:session-1",
@@ -315,7 +315,7 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(twoSeats.seats["p1"]?.claimed, true);
       assert.equal(twoSeats.seats["p2"]?.claimed, true);
 
-      const oneDeck = await submitDevLobbyDeck(
+      const oneDeck = await submitCustomLobbyDeck(
         server,
         lobbyId,
         "user:user-p1:session-1",
@@ -325,7 +325,7 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(requireLobbySeat(oneDeck, "p1").deck.status, "ready");
       assert.equal(requireLobbySeat(oneDeck, "p2").deck.status, "missing");
 
-      const ready = await submitDevLobbyDeck(
+      const ready = await submitCustomLobbyDeck(
         server,
         lobbyId,
         "user:user-p2:session-1",
@@ -352,12 +352,12 @@ describe("dev HTTP lobby deck submissions", () => {
     await server.listen(0, "127.0.0.1");
     const sockets: WebSocket[] = [];
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
-      await joinDevLobby(server, lobbyId, "user:user-p1:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-p1:session-1");
       const p1LobbySocket = await openSocket(
         lobbyWebSocketUrl(server, lobbyId, "p1", "user:user-p1:session-1"),
       );
@@ -365,20 +365,20 @@ describe("dev HTTP lobby deck submissions", () => {
 
       const initial = (await p1LobbySocket.next()) as {
         type?: string;
-        lobby?: CreatedDevLobbyBody;
+        lobby?: CreatedCustomLobbyBody;
       };
       assert.equal(initial.type, "lobbySync");
       assert.equal(initial.lobby?.matchId, undefined);
 
-      await joinDevLobby(server, lobbyId, "user:user-p2:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-p2:session-1");
       const joinUpdate = (await p1LobbySocket.next()) as {
         type?: string;
-        lobby?: CreatedDevLobbyBody;
+        lobby?: CreatedCustomLobbyBody;
       };
       assert.equal(joinUpdate.type, "lobbySync");
       assert.equal(joinUpdate.lobby?.matchId, undefined);
 
-      await submitDevLobbyDeck(
+      await submitCustomLobbyDeck(
         server,
         lobbyId,
         "user:user-p1:session-1",
@@ -386,7 +386,7 @@ describe("dev HTTP lobby deck submissions", () => {
       );
       const deckUpdate = (await p1LobbySocket.next()) as {
         type?: string;
-        lobby?: CreatedDevLobbyBody;
+        lobby?: CreatedCustomLobbyBody;
       };
       assert.equal(deckUpdate.type, "lobbySync");
       assert.equal(deckUpdate.lobby?.matchId, undefined);
@@ -398,7 +398,7 @@ describe("dev HTTP lobby deck submissions", () => {
         "ready",
       );
 
-      await submitDevLobbyDeck(
+      await submitCustomLobbyDeck(
         server,
         lobbyId,
         "user:user-p2:session-1",
@@ -406,7 +406,7 @@ describe("dev HTTP lobby deck submissions", () => {
       );
       const ready = (await p1LobbySocket.next()) as {
         type?: string;
-        lobby?: CreatedDevLobbyBody;
+        lobby?: CreatedCustomLobbyBody;
       };
       assert.equal(ready.type, "lobbySync");
       const readyLobby = ready.lobby;
@@ -428,12 +428,12 @@ describe("dev HTTP lobby deck submissions", () => {
     const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
-      await joinDevLobby(server, lobbyId, "user:user-p1:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-p1:session-1");
 
       await assert.rejects(
         () =>
@@ -451,14 +451,14 @@ describe("dev HTTP lobby deck submissions", () => {
     const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      await joinDevLobby(server, lobbyId, "user:user-a:session-1");
-      await submitDevLobbyDeck(
+      await joinCustomLobby(server, lobbyId, "user:user-a:session-1");
+      await submitCustomLobbyDeck(
         server,
         lobbyId,
         "user:user-a:session-1",
@@ -466,7 +466,7 @@ describe("dev HTTP lobby deck submissions", () => {
       );
       const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}`);
       assert.equal(response.status, 200);
-      const lobby = (await response.json()) as CreatedDevLobbyBody;
+      const lobby = (await response.json()) as CreatedCustomLobbyBody;
 
       assert.equal(JSON.stringify(lobby).includes("OP13-079"), false);
       assert.equal(JSON.stringify(lobby).includes("p1-hash"), false);
@@ -481,13 +481,13 @@ describe("dev HTTP lobby deck submissions", () => {
     const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      await joinDevLobby(server, lobbyId, "user:user-a:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-a:session-1");
       const response = await fetch(
         `${server.url()}/api/lobbies/${lobbyId}/deck`,
         {
@@ -508,7 +508,7 @@ describe("dev HTTP lobby deck submissions", () => {
         `${server.url()}/api/lobbies/${lobbyId}`,
       );
       assert.equal(lobbyResponse.status, 200);
-      const lobby = (await lobbyResponse.json()) as CreatedDevLobbyBody;
+      const lobby = (await lobbyResponse.json()) as CreatedCustomLobbyBody;
       assert.equal(requireLobbySeat(lobby, "p1").deck.status, "missing");
       assert.equal(lobby.matchId, undefined);
     } finally {

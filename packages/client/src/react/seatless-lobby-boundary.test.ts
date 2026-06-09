@@ -20,7 +20,7 @@ describe("seatless custom lobby boundaries", () => {
       const source = await readFile(join(reactSourceDirectory, file), "utf8");
 
       assert.doesNotMatch(source, /setLobbyLocation\([^)]*,/u, file);
-      assert.doesNotMatch(source, /joinLocalLobby\(\{[^}]*playerId/u, file);
+      assert.doesNotMatch(source, /joinCustomLobby\(\{[^}]*playerId/u, file);
       assert.doesNotMatch(source, /lobbyIdFromUrl/u, file);
       assert.doesNotMatch(source, /searchParams\.get\("lobbyId"\)/u, file);
       assert.doesNotMatch(source, /seatIdFromUrl/u, file);

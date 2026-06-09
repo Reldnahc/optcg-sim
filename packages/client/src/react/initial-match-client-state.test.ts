@@ -48,11 +48,11 @@ const fakeController = (): MatchClientController & {
   const joinedByAccount: MatchId[] = [];
   return {
     joinedByAccount,
-    startNewLocalLobby() {
-      throw new Error("startNewLocalLobby was not expected.");
+    startCustomLobby() {
+      throw new Error("startCustomLobby was not expected.");
     },
-    joinLocalLobby() {
-      throw new Error("joinLocalLobby was not expected.");
+    joinCustomLobby() {
+      throw new Error("joinCustomLobby was not expected.");
     },
     submitLobbyLoadoutHandoff() {
       throw new Error("submitLobbyLoadoutHandoff was not expected.");

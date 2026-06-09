@@ -40,7 +40,7 @@ interface ClaimedDevSeatBody {
   };
 }
 
-interface CreatedDevLobbyBody {
+interface CreatedCustomLobbyBody {
   lobbyId?: string;
   matchId?: string;
   seat?: { playerId?: string };
@@ -56,9 +56,9 @@ interface CreatedDevLobbyBody {
 }
 
 const requireLobbySeat = (
-  lobby: CreatedDevLobbyBody,
+  lobby: CreatedCustomLobbyBody,
   seatId: string,
-): CreatedDevLobbyBody["seats"][string] => {
+): CreatedCustomLobbyBody["seats"][string] => {
   const seat = lobby.seats[seatId];
   if (seat === undefined) {
     throw new Error(`Lobby response was missing ${seatId}.`);
@@ -260,27 +260,27 @@ const claimDevSeatWithToken = async (
   return token;
 };
 
-const createDevLobby = async (
+const createCustomLobby = async (
   server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
     method: "POST",
   });
   assert.equal(response.status, 201);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
-const joinDevLobby = async (
+const joinCustomLobby = async (
   server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/join`, {
     method: "POST",
     headers: { "x-optcg-session-token": sessionToken },
   });
   assert.equal(response.status, 200);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
 describe("match HTTP server", () => {
@@ -313,18 +313,18 @@ describe("match HTTP server", () => {
     const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const first = await joinDevLobby(
+      const first = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-a:session-1",
       );
-      const second = await joinDevLobby(
+      const second = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-b:session-1",
@@ -346,18 +346,18 @@ describe("match HTTP server", () => {
     const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const first = await joinDevLobby(
+      const first = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-a:session-1",
       );
-      const second = await joinDevLobby(
+      const second = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-a:session-2",
@@ -375,14 +375,14 @@ describe("match HTTP server", () => {
     const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      await joinDevLobby(server, lobbyId, "user:user-a:session-1");
-      await joinDevLobby(server, lobbyId, "user:user-b:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-a:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-b:session-1");
       const response = await fetch(
         `${server.url()}/api/lobbies/${lobbyId}/join`,
         {
@@ -390,7 +390,7 @@ describe("match HTTP server", () => {
           headers: { "x-optcg-session-token": "user:user-c:session-1" },
         },
       );
-      const body = (await response.json()) as CreatedDevLobbyBody;
+      const body = (await response.json()) as CreatedCustomLobbyBody;
 
       assert.equal(response.status, 409);
       assert.deepEqual(body.errors, ["Lobby is full."]);
@@ -403,13 +403,13 @@ describe("match HTTP server", () => {
     const server = await createFixtureMatchHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const created = await createDevLobby(server);
+      const created = await createCustomLobby(server);
       const lobbyId = created.lobbyId;
       if (lobbyId === undefined) {
         throw new Error("Created lobby response did not include a lobby id.");
       }
 
-      const joined = await joinDevLobby(
+      const joined = await joinCustomLobby(
         server,
         lobbyId,
         "user:user-a:session-1",

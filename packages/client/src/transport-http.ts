@@ -3,8 +3,8 @@ import type { MatchId } from "@optcg/types";
 import type {
   ClaimedSeat,
   CreatedMatch,
-  JoinedLobby,
-  LocalLobby,
+  JoinedCustomLobby,
+  CustomLobby,
   MatchTransport,
 } from "./transport.js";
 
@@ -59,30 +59,30 @@ export const createDevHttpMatchTransport = ({
 
   return {
     async createLobby() {
-      return postJson<LocalLobby>(`${root}/api/lobbies`, {});
+      return postJson<CustomLobby>(`${root}/api/lobbies`, {});
     },
     async joinLobby(input) {
-      return postJson<JoinedLobby>(
+      return postJson<JoinedCustomLobby>(
         lobbyPath(input.lobbyId, "/join"),
         {},
         input.sessionToken,
       );
     },
     async submitLobbyDeck(input) {
-      return postJson<LocalLobby>(
+      return postJson<CustomLobby>(
         lobbyPath(input.lobbyId, "/deck"),
         { deckHash: input.deckHash, donDeckCount: input.donDeckCount },
         input.sessionToken,
       );
     },
     async submitLobbyLoadoutHandoff(input) {
-      return postJson<JoinedLobby>(lobbyPath(input.lobbyId, "/loadout"), {
+      return postJson<JoinedCustomLobby>(lobbyPath(input.lobbyId, "/loadout"), {
         handoffToken: input.handoffToken,
       });
     },
     async loadLobby(lobbyId) {
       const response = await fetchImpl(lobbyPath(lobbyId));
-      return readJson<LocalLobby>(response);
+      return readJson<CustomLobby>(response);
     },
     async createMatch() {
       return postJson<CreatedMatch>(`${root}/api/matches`, {});

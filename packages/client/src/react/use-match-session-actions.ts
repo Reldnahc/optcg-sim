@@ -78,7 +78,7 @@ export const useMatchSessionActions = ({
   ]);
 
   const createNewMatch = useCallback(async (): Promise<void> => {
-    const created = await controller.startNewLocalLobby();
+    const created = await controller.startCustomLobby();
     if (
       isMatchClientState(created) ||
       isHydratingMatchClientState(created) ||

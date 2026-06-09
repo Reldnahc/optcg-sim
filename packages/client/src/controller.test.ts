@@ -579,7 +579,7 @@ describe("match client controller", () => {
       }),
     });
 
-    const initial = await controller.startNewLocalLobby();
+    const initial = await controller.startCustomLobby();
     assert.equal("lobbyId" in initial, true);
 
     const readyStatePromise = new Promise<MatchClientSessionState>(
@@ -640,7 +640,7 @@ describe("match client controller", () => {
       sessionStore,
     });
 
-    const state = await controller.startNewLocalLobby();
+    const state = await controller.startCustomLobby();
 
     assert.equal("lobbyId" in state, true);
     const joinedLobby = transport.joinedLobbies[0];
@@ -662,7 +662,7 @@ describe("match client controller", () => {
       sessionStore,
     });
 
-    await controller.joinLocalLobby({ lobbyId: "lobby-1" });
+    await controller.joinCustomLobby({ lobbyId: "lobby-1" });
 
     assert.deepEqual(Object.keys(transport.joinedLobbies[0] ?? {}), [
       "lobbyId",
@@ -680,7 +680,7 @@ describe("match client controller", () => {
       }),
     });
 
-    await controller.joinLocalLobby({ lobbyId: "lobby-1" });
+    await controller.joinCustomLobby({ lobbyId: "lobby-1" });
     const next = await controller.submitLobbyLoadoutHandoff({
       handoffToken: "handoff-token",
     });

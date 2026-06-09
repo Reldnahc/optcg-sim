@@ -8,10 +8,10 @@ import type { MatchId, PlayerId } from "@optcg/types";
 
 import { type DeckHashCodecPort } from "./deck-submission.js";
 import {
-  createLocalDevLobbyRegistry,
-  type CreatedDevLobbyResponse,
-  type LocalDevLobbyRegistry,
-} from "./dev-lobby-registry.js";
+  createCustomLobbyRegistry,
+  type CreatedCustomLobbyResponse,
+  type CustomLobbyRegistry,
+} from "./custom-lobby-registry.js";
 import {
   createPremadeDevMatchSetup,
   getLocalDevCardCatalogForPlayer,
@@ -129,7 +129,7 @@ const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
   registry: LocalDevMatchRegistry,
-  lobbyRegistry: LocalDevLobbyRegistry,
+  lobbyRegistry: CustomLobbyRegistry,
   matchConnections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
@@ -548,7 +548,7 @@ const playerSetupPayload = (
 });
 
 const lobbyStatePayload = (
-  lobby: CreatedDevLobbyResponse,
+  lobby: CreatedCustomLobbyResponse,
   connection: DevLobbySocketConnection,
 ): Record<string, unknown> => ({
   type: "lobbySync",
@@ -558,7 +558,7 @@ const lobbyStatePayload = (
 });
 
 const broadcastLobbyState = (
-  lobby: CreatedDevLobbyResponse,
+  lobby: CreatedCustomLobbyResponse,
   connections: Set<DevLobbySocketConnection>,
 ): void => {
   for (const connection of connections) {
@@ -621,7 +621,7 @@ const handleWebSocketUpgrade = async (
   request: IncomingMessage,
   socket: Duplex,
   registry: LocalDevMatchRegistry,
-  lobbyRegistry: LocalDevLobbyRegistry,
+  lobbyRegistry: CustomLobbyRegistry,
   authProvider: AuthProvider,
   connections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
@@ -870,7 +870,7 @@ export const createMatchHttpServer = async (
       matchTimerPolicy: options.matchTimerPolicy ?? defaultMatchTimerPolicy,
     },
   );
-  const lobbyRegistry = await createLocalDevLobbyRegistry(registry, options);
+  const lobbyRegistry = await createCustomLobbyRegistry(registry, options);
   const authProvider = createDevAuthProvider();
   const socketIdleTimeoutMs =
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;

@@ -145,7 +145,7 @@ export interface FirstPlayerChoiceResult {
   snapshot?: MatchSnapshot;
 }
 
-export interface LocalLobby {
+export interface CustomLobby {
   lobbyId: string;
   seats: Record<
     string,
@@ -158,7 +158,7 @@ export interface LobbyDeckStatus {
   status: "missing" | "ready" | "invalid";
 }
 
-export interface JoinedLobby extends LocalLobby {
+export interface JoinedCustomLobby extends CustomLobby {
   seat: { playerId: PlayerId; sessionToken?: string };
 }
 
@@ -225,7 +225,7 @@ export interface LobbyStateSyncMessage {
   type: "lobbySync";
   lobbyId: string;
   serverSeq: number;
-  lobby: LocalLobby;
+  lobby: CustomLobby;
 }
 
 export interface MatchActionResultMessage {
@@ -277,28 +277,28 @@ export interface LobbyLiveTransport {
 }
 
 export interface MatchTransport {
-  createLobby: () => Promise<LocalLobby>;
+  createLobby: () => Promise<CustomLobby>;
   joinLobby: (input: {
     lobbyId: string;
     sessionToken: string;
-  }) => Promise<JoinedLobby>;
+  }) => Promise<JoinedCustomLobby>;
   submitLobbyDeck: (input: {
     lobbyId: string;
     sessionToken: string;
     deckHash: string;
     donDeckCount: number;
-  }) => Promise<LocalLobby>;
+  }) => Promise<CustomLobby>;
   submitLobbyLoadoutHandoff: (input: {
     lobbyId: string;
     handoffToken: string;
-  }) => Promise<JoinedLobby>;
-  loadLobby: (lobbyId: string) => Promise<LocalLobby>;
+  }) => Promise<JoinedCustomLobby>;
+  loadLobby: (lobbyId: string) => Promise<CustomLobby>;
   createMatch: () => Promise<CreatedMatch>;
   createRematch: (input: {
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken: string;
-  }) => Promise<CreatedMatch | JoinedLobby>;
+  }) => Promise<CreatedMatch | JoinedCustomLobby>;
   claimSeat: (input: {
     matchId: MatchId;
     playerId: PlayerId;

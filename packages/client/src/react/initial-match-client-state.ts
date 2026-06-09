@@ -21,7 +21,7 @@ export const loadInitialMatchClientState = async (
     });
   }
   if (urlLobbyId !== undefined) {
-    return await controller.joinLocalLobby({ lobbyId: urlLobbyId });
+    return await controller.joinCustomLobby({ lobbyId: urlLobbyId });
   }
-  return await controller.startNewLocalLobby();
+  return await controller.startCustomLobby();
 };

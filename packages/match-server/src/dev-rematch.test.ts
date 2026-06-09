@@ -70,7 +70,7 @@ interface TestSessionTransitionBody {
   };
 }
 
-interface CreatedDevLobbyBody {
+interface CreatedCustomLobbyBody {
   lobbyId?: string;
   matchId?: string;
   seat?: { playerId?: string };
@@ -265,7 +265,7 @@ const createRematch = async (
   sessionToken: string,
 ): Promise<{
   status: number;
-  body: CreatedDevMatchBody & CreatedDevLobbyBody;
+  body: CreatedDevMatchBody & CreatedCustomLobbyBody;
 }> => {
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/rematch`,
@@ -284,13 +284,13 @@ const createRematch = async (
   };
 };
 
-const submitDevLobbyDeck = async (
+const submitCustomLobbyDeck = async (
   server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   lobbyId: string,
   sessionToken: string,
   deckHash: string,
   donDeckCount = 10,
-): Promise<CreatedDevLobbyBody> => {
+): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/deck`, {
     method: "POST",
     headers: {
@@ -300,7 +300,7 @@ const submitDevLobbyDeck = async (
     body: JSON.stringify({ deckHash, donDeckCount }),
   });
   assert.equal(response.status, 200);
-  return (await response.json()) as CreatedDevLobbyBody;
+  return (await response.json()) as CreatedCustomLobbyBody;
 };
 
 const nextStateSync = async (socket: TestSocket): Promise<TestDevStateBody> => {
@@ -490,13 +490,13 @@ describe("dev rematches", () => {
       assert.equal(rematchP1Seat.deck.status, "missing");
       assert.equal(rematchP2Seat.deck.status, "missing");
 
-      await submitDevLobbyDeck(
+      await submitCustomLobbyDeck(
         server,
         rematchLobbyId,
         loserToken,
         "p1-rematch-hash",
       );
-      const ready = await submitDevLobbyDeck(
+      const ready = await submitCustomLobbyDeck(
         server,
         rematchLobbyId,
         p2Token,
@@ -562,14 +562,14 @@ describe("dev rematches", () => {
         lobbyWebSocketUrl(server, rematchLobbyId, "p1", loserToken),
       );
       await rematchLobbyP1.next();
-      await submitDevLobbyDeck(
+      await submitCustomLobbyDeck(
         server,
         rematchLobbyId,
         loserToken,
         "p1-rematch-hash",
       );
       await rematchLobbyP1.next();
-      const ready = await submitDevLobbyDeck(
+      const ready = await submitCustomLobbyDeck(
         server,
         rematchLobbyId,
         p2Token,
@@ -583,7 +583,7 @@ describe("dev rematches", () => {
       }
       const lobbyReady = (await rematchLobbyP1.next()) as {
         type?: string;
-        lobby?: CreatedDevLobbyBody;
+        lobby?: CreatedCustomLobbyBody;
       };
       assert.equal(lobbyReady.type, "lobbySync");
       assert.equal(lobbyReady.lobby?.matchId, rematchId);

@@ -4,7 +4,7 @@ import type { PlayerId } from "@optcg/types";
 import {
   createDefaultLobbySeats,
   createRedisLobbyStore,
-  type LocalDevLobbyState,
+  type CustomLobbyState,
 } from "./lobby-store.js";
 import type { RedisLike, RedisSetOptions } from "./redis-match-persistence.js";
 
@@ -51,7 +51,7 @@ class FakeRedis implements RedisLike {
   }
 }
 
-const lobby = (): LocalDevLobbyState => ({
+const lobby = (): CustomLobbyState => ({
   lobbyId: "lobby-test",
   seats: createDefaultLobbySeats(),
 });

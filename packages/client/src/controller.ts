@@ -14,7 +14,7 @@ import type {
   FirstPlayerChoiceValue,
   FirstPlayerChoiceView,
   LiveLobbyConnection,
-  LocalLobby,
+  CustomLobby,
   LobbyLiveTransport,
   LobbyStateSyncMessage,
   MatchCardCatalog,
@@ -31,7 +31,7 @@ export interface LobbyClientState {
     playerId: PlayerId;
     sessionToken: string;
   };
-  lobby: LocalLobby;
+  lobby: CustomLobby;
 }
 
 export interface MatchClientState {
@@ -59,8 +59,8 @@ export type MatchClientSessionState =
   | MatchClientState;
 
 export interface MatchClientController {
-  startNewLocalLobby: () => Promise<MatchClientSessionState>;
-  joinLocalLobby: (input: {
+  startCustomLobby: () => Promise<MatchClientSessionState>;
+  joinCustomLobby: (input: {
     lobbyId: string;
   }) => Promise<MatchClientSessionState>;
   submitLobbyLoadoutHandoff: (input: {
@@ -137,9 +137,9 @@ const requireCurrentState = (
   return currentState;
 };
 
-const isJoinedLobby = (
+const isJoinedCustomLobby = (
   value: Awaited<ReturnType<MatchTransport["createRematch"]>>,
-): value is LocalLobby & { seat: { playerId: PlayerId } } =>
+): value is CustomLobby & { seat: { playerId: PlayerId } } =>
   "lobbyId" in value && "seat" in value;
 
 export const createMatchClientController = ({
@@ -231,7 +231,7 @@ export const createMatchClientController = ({
   };
 
   return {
-    async startNewLocalLobby() {
+    async startCustomLobby() {
       const lobby = await transport.createLobby();
       const joinedLobby = await transport.joinLobby({
         lobbyId: lobby.lobbyId,
@@ -247,7 +247,7 @@ export const createMatchClientController = ({
         lobby: joinedLobby,
       });
     },
-    async joinLocalLobby(input) {
+    async joinCustomLobby(input) {
       const joinedLobby = await transport.joinLobby({
         lobbyId: input.lobbyId,
         sessionToken: accountSessionToken,
@@ -341,7 +341,7 @@ export const createMatchClientController = ({
         playerId: credential.playerId,
         sessionToken: credential.sessionToken,
       });
-      if (isJoinedLobby(created)) {
+      if (isJoinedCustomLobby(created)) {
         currentState = undefined;
         currentFirstPlayerSetupState = undefined;
         currentLobbyState = {
