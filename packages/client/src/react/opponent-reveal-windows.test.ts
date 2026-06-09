@@ -99,7 +99,7 @@ describe("opponent reveal windows", () => {
     assert.equal(activeWindows[0]?.revealId, revealId);
   });
 
-  test("opens a window from private active reveal records without requiring a public event", () => {
+  test("does not open floating reveal windows for private look-at-top records", () => {
     const snapshot: ClientPlayerSnapshot = {
       view: {
         events: [],
@@ -130,19 +130,10 @@ describe("opponent reveal windows", () => {
       cardModel,
     });
 
-    assert.equal(windows.length, 1);
-    const window = windows[0];
-    if (window === undefined) {
-      throw new Error("Expected private reveal window.");
-    }
-    assert.equal(window.revealId, "reveal:sequence:look-at-top:0");
-    assert.deepEqual(
-      window.model.cards.map((card) => card.instanceId),
-      [cardRef.instanceId],
-    );
+    assert.deepEqual(windows, []);
   });
 
-  test("maps active reveal cards through the current card catalog for images", () => {
+  test("maps public active reveal cards through the current card catalog for images", () => {
     const snapshot: ClientPlayerSnapshot = {
       view: {
         events: [],
@@ -150,8 +141,8 @@ describe("opponent reveal windows", () => {
           {
             id: "reveal:sequence:look-at-top:0",
             cards: [cardRef],
-            visibility: "privateToRecipient",
-            origin: "topOfDeck",
+            visibility: "public",
+            origin: { zone: "life", playerId: p1 },
             cleanupPolicy: "returnToOrigin",
             createdAtStateSeq: 1 as StateSeq,
           },

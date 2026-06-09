@@ -36,9 +36,6 @@ const revealTitleFromRecord = (
   currentPlayerId: PlayerId,
   board?: Pick<BoardViewModel, "selfLabel" | "opponentLabel">,
 ): string => {
-  if (record.visibility === "privateToRecipient") {
-    return record.origin === "topOfDeck" ? "Looked at deck" : "Looked at cards";
-  }
   if (record.origin !== "topOfDeck") {
     return "Revealed";
   }
@@ -46,6 +43,7 @@ const revealTitleFromRecord = (
 };
 
 const isWindowRevealRecord = (record: PublicRevealRecord): boolean =>
+  record.visibility === "public" &&
   !record.id.startsWith("reveal:setup-start-of-game:");
 
 export const opponentRevealWindowsFromState = ({
