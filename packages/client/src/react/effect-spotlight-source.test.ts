@@ -11,6 +11,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  activeEffectTextSourcesForSpotlight,
   activeEffectTextSourceForSpotlight,
   resolvedEffectTextSourcesForSpotlight,
 } from "./effect-spotlight-source.js";
@@ -269,6 +270,41 @@ describe("activeEffectTextForSpotlight", () => {
     });
 
     const sources = resolvedEffectTextSourcesForSpotlight([resolved]);
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      `${String(resolved.id)}:span:search:selection`,
+      `${String(resolved.id)}:span:search:remaining`,
+    ]);
+    expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
+      ["span:search:selection"],
+      ["span:search:remaining"],
+    ]);
+  });
+
+  it("uses resolved search segments instead of the live whole-effect spotlight while an effect is active", () => {
+    const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:search:selection", "span:search:remaining"],
+    };
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:search:selection", "span:search:remaining"],
+        },
+      },
+    });
+
+    const sources = activeEffectTextSourcesForSpotlight({
+      activeEffectText,
+      pendingDecision: undefined,
+      events: [resolved],
+    });
 
     expect(sources.map((candidate) => candidate.key)).toEqual([
       `${String(resolved.id)}:span:search:selection`,

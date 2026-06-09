@@ -158,6 +158,46 @@ const liveKey = (
     active.activeSpanIds.join("\n"),
   ].join("|");
 
+const splitResolvedSourceKeyIndex = (key: string): number =>
+  key.indexOf(":span:");
+
+const sameEffectTextSource = (
+  left: ActiveEffectTextPresentation["source"],
+  right: ActiveEffectTextPresentation["source"],
+): boolean =>
+  left.instanceId === right.instanceId &&
+  left.cardId === right.cardId &&
+  left.playerId === right.playerId;
+
+const newestSplitResolvedSourcesForActive = ({
+  activeEffectText,
+  events,
+}: {
+  readonly activeEffectText: ActiveEffectTextPresentation;
+  readonly events: readonly EngineEvent[];
+}): readonly EffectSpotlightActiveSource[] => {
+  const sources = resolvedEffectTextSourcesForSpotlight(events);
+  let latestGroupKey: string | undefined;
+  let latestGroup: EffectSpotlightActiveSource[] | undefined;
+  for (const source of sources) {
+    const splitIndex = splitResolvedSourceKeyIndex(source.key);
+    if (
+      source.mode !== "resolved" ||
+      splitIndex < 0 ||
+      !sameEffectTextSource(source.active.source, activeEffectText.source)
+    ) {
+      continue;
+    }
+    const groupKey = source.key.slice(0, splitIndex);
+    if (groupKey !== latestGroupKey) {
+      latestGroupKey = groupKey;
+      latestGroup = [];
+    }
+    latestGroup?.push(source);
+  }
+  return latestGroup ?? [];
+};
+
 export const activeEffectTextSourceForSpotlight = ({
   activeEffectText,
   events,
@@ -183,6 +223,13 @@ export const activeEffectTextSourceForSpotlight = ({
     return undefined;
   }
   if (activeEffectText !== undefined) {
+    const splitResolvedSources = newestSplitResolvedSourcesForActive({
+      activeEffectText,
+      events,
+    });
+    if (splitResolvedSources.length > 0) {
+      return splitResolvedSources.at(-1);
+    }
     return {
       active: activeEffectText,
       key: liveKey(activeEffectText, "active"),
@@ -209,8 +256,19 @@ export const activeEffectTextSourcesForSpotlight = ({
   if (activeSource?.mode === "live") {
     return [activeSource];
   }
-  if (pendingDecision !== undefined || activeEffectText !== undefined) {
+  if (pendingDecision !== undefined) {
     return activeSource === undefined ? [] : [activeSource];
+  }
+  if (activeEffectText !== undefined) {
+    const splitResolvedSources = newestSplitResolvedSourcesForActive({
+      activeEffectText,
+      events,
+    });
+    return splitResolvedSources.length === 0
+      ? activeSource === undefined
+        ? []
+        : [activeSource]
+      : splitResolvedSources;
   }
   return resolvedEffectTextSourcesForSpotlight(events);
 };
