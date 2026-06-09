@@ -22,6 +22,7 @@ import type {
   MatchSnapshot,
   MatchTransport,
   LiveMatchConnection,
+  ValidatedLobbyLoadouts,
 } from "./transport.js";
 
 export interface LobbyClientState {
@@ -66,6 +67,9 @@ export interface MatchClientController {
   submitLobbyLoadoutHandoff: (input: {
     handoffToken: string;
   }) => Promise<MatchClientSessionState>;
+  validateLobbyLoadouts: (input: {
+    handoffTokens: readonly string[];
+  }) => Promise<ValidatedLobbyLoadouts>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
   joinLocalMatch: (
     input: ClientSeatIdentity,
@@ -281,6 +285,15 @@ export const createMatchClientController = ({
             currentLobbyState.seat.sessionToken,
         },
         lobby,
+      });
+    },
+    async validateLobbyLoadouts(input) {
+      if (currentLobbyState === undefined) {
+        throw new Error("Cannot validate loadouts before joining a lobby.");
+      }
+      return transport.validateLobbyLoadouts({
+        lobbyId: currentLobbyState.lobbyId,
+        handoffTokens: input.handoffTokens,
       });
     },
     async startNewLocalMatch(playerId) {

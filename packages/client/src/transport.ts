@@ -167,6 +167,18 @@ export interface JoinedCustomLobby extends CustomLobby {
   seat: { playerId: PlayerId; sessionToken?: string };
 }
 
+export interface ValidatedLobbyLoadout {
+  loadoutId: string | null;
+  status: "playable" | "unplayable" | "unverified";
+  errors: string[];
+}
+
+export interface ValidatedLobbyLoadouts {
+  data: {
+    loadouts: ValidatedLobbyLoadout[];
+  };
+}
+
 export interface SubmitVisibleActionInput {
   matchId: MatchId;
   playerId: PlayerId;
@@ -307,6 +319,10 @@ export interface MatchTransport {
     lobbyId: string;
     handoffToken: string;
   }) => Promise<JoinedCustomLobby>;
+  validateLobbyLoadouts: (input: {
+    lobbyId: string;
+    handoffTokens: readonly string[];
+  }) => Promise<ValidatedLobbyLoadouts>;
   loadLobby: (lobbyId: string) => Promise<CustomLobby>;
   createMatch: () => Promise<CreatedMatch>;
   createRematch: (input: {

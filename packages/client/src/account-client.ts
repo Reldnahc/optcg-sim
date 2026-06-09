@@ -11,7 +11,31 @@ export interface AccountLoadout {
   readonly leaderVariantIndex: number | null;
   readonly leaderImageUrl: string | null;
   readonly updatedAt: string;
+  readonly validation?: AccountLoadoutValidation | undefined;
 }
+
+export type AccountLoadoutValidationStatus =
+  | "unchecked"
+  | "playable"
+  | "unplayable"
+  | "unverified";
+
+export interface AccountLoadoutValidation {
+  readonly status: AccountLoadoutValidationStatus;
+  readonly errors: readonly string[];
+}
+
+export type AccountSimHandoffBatchResult =
+  | {
+      readonly loadoutId: string;
+      readonly status: "created";
+      readonly token: string;
+    }
+  | {
+      readonly loadoutId: string;
+      readonly status: "rejected";
+      readonly error: string;
+    };
 
 export interface PoneglyphAccountClient {
   readonly listLoadouts: () => Promise<readonly AccountLoadout[]>;
@@ -19,6 +43,10 @@ export interface PoneglyphAccountClient {
     loadoutId: string;
     lobbyId: string;
   }) => Promise<string>;
+  readonly createSimHandoffs: (input: {
+    loadoutIds: readonly string[];
+    lobbyId: string;
+  }) => Promise<readonly AccountSimHandoffBatchResult[]>;
 }
 
 export interface CreatePoneglyphAccountClientOptions {
@@ -70,6 +98,43 @@ const playableDeckCollections = (
 ): DeckCollection[] =>
   decks.filter((deck) => deck.kind === "deck" && deck.loadout_id !== null);
 
+interface BatchHandoffResponse {
+  readonly data: {
+    readonly handoffs: readonly BatchHandoffItem[];
+  };
+}
+
+type BatchHandoffItem =
+  | {
+      readonly loadout_id: string;
+      readonly status: "created";
+      readonly token: string;
+      readonly expires_at: string;
+    }
+  | {
+      readonly loadout_id: string;
+      readonly status: "rejected";
+      readonly error: {
+        readonly status: number;
+        readonly message: string;
+      };
+    };
+
+const normalizeBatchHandoff = (
+  handoff: BatchHandoffItem,
+): AccountSimHandoffBatchResult =>
+  handoff.status === "created"
+    ? {
+        loadoutId: handoff.loadout_id,
+        status: "created",
+        token: handoff.token,
+      }
+    : {
+        loadoutId: handoff.loadout_id,
+        status: "rejected",
+        error: handoff.error.message,
+      };
+
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
   baseUrl,
@@ -93,6 +158,17 @@ export const createPoneglyphAccountClient = ({
         seat_id: null,
       });
       return response.data.token;
+    },
+    async createSimHandoffs(input) {
+      const response = await authClient.post<BatchHandoffResponse>(
+        "/sim/handoffs",
+        {
+          loadout_ids: input.loadoutIds,
+          lobby_id: input.lobbyId,
+          seat_id: null,
+        },
+      );
+      return response.data.handoffs.map(normalizeBatchHandoff);
     },
   };
 };

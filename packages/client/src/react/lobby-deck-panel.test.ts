@@ -64,6 +64,19 @@ const loadouts: readonly AccountLoadout[] = [
   },
 ];
 
+const validatedLoadouts: readonly AccountLoadout[] = loadouts.map(
+  (loadout, index) => ({
+    ...loadout,
+    validation:
+      index === 0
+        ? { status: "playable", errors: [] }
+        : {
+            status: "unplayable",
+            errors: ["Resolved loadout is invalid."],
+          },
+  }),
+);
+
 describe("lobby deck panel", () => {
   test("selects account loadouts instead of accepting deck hashes", () => {
     const html = renderToStaticMarkup(
@@ -154,6 +167,22 @@ describe("lobby deck panel", () => {
       html,
       /<button class="deck-loadout-refresh-button" type="button">Refresh decks<\/button>/u,
     );
+  });
+
+  test("marks illegal loadouts unselectable and exposes a hide illegal toggle", () => {
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts: validatedLoadouts,
+        loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(html, /Hide illegal decks/u);
+    assert.match(html, /Resolved loadout is invalid\./u);
+    assert.match(html, /deck-loadout-option[^>]*disabled=""[\s\S]*Luffy Life/u);
   });
 
   test("renders loading deck status in the deck action row", () => {
@@ -337,7 +366,7 @@ describe("lobby deck panel", () => {
     assert.match(source, /locked=\{pickerLocked\}/u);
     assert.match(
       source,
-      /const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;/u,
+      /selectedLoadoutExists\s*&&\s*selectedLoadoutPlayable\s*&&\s*!disabled\s*&&\s*!pickerLocked/u,
     );
   });
 
@@ -358,6 +387,8 @@ describe("lobby deck panel", () => {
     assert.match(supportSource, /refreshAccountLoadouts: \(\) => void;/u);
     assert.match(clientSource, /const refreshAccountLoadouts = useCallback/u);
     assert.match(clientSource, /accountClient\s*\.listLoadouts\(\)/u);
+    assert.match(clientSource, /accountClient\s*\.createSimHandoffs\(/u);
+    assert.match(clientSource, /controller\.validateLobbyLoadouts\(/u);
     assert.match(
       matchAppSource,
       /onRefreshLoadouts=\{client\.refreshAccountLoadouts\}/u,
@@ -379,5 +410,16 @@ describe("lobby deck panel", () => {
       /setClosedFolderKeys\(new Set\(groups\.slice\(1\)\.map\(\(group\) => group\.key\)\)\);/u,
     );
     assert.match(source, /setInitializedFolderState\(true\);/u);
+  });
+
+  test("deck loadout picker can filter illegal decks", async () => {
+    const source = await readFile(
+      new URL("LobbyDeckPanel.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(source, /hideIllegalLoadouts/u);
+    assert.match(source, /setHideIllegalLoadouts/u);
+    assert.match(source, /validation\?\.status !== "playable"/u);
   });
 });

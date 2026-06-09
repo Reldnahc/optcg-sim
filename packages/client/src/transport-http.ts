@@ -6,6 +6,7 @@ import type {
   JoinedCustomLobby,
   CustomLobby,
   MatchTransport,
+  ValidatedLobbyLoadouts,
 } from "./transport.js";
 
 export interface DevHttpMatchTransportOptions {
@@ -79,6 +80,12 @@ export const createDevHttpMatchTransport = ({
       return postJson<JoinedCustomLobby>(lobbyPath(input.lobbyId, "/loadout"), {
         handoffToken: input.handoffToken,
       });
+    },
+    async validateLobbyLoadouts(input) {
+      return postJson<ValidatedLobbyLoadouts>(
+        lobbyPath(input.lobbyId, "/loadouts/validate"),
+        { handoffTokens: input.handoffTokens },
+      );
     },
     async loadLobby(lobbyId) {
       const response = await fetchImpl(lobbyPath(lobbyId));

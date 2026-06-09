@@ -33,8 +33,21 @@ export interface VerifiedSimHandoff {
   readonly resolvedLoadout: ResolvedLoadout;
 }
 
+export type SimHandoffBatchVerificationResult =
+  | {
+      readonly status: "verified";
+      readonly handoff: VerifiedSimHandoff;
+    }
+  | {
+      readonly status: "rejected";
+      readonly error: string;
+    };
+
 export interface SimHandoffVerifier {
   readonly verify: (token: string) => Promise<VerifiedSimHandoff>;
+  readonly verifyBatch: (
+    tokens: readonly string[],
+  ) => Promise<readonly SimHandoffBatchVerificationResult[]>;
 }
 
 export interface CreatePoneglyphSimHandoffVerifierOptions {
@@ -189,6 +202,39 @@ const extractErrorMessage = (body: unknown): string | undefined => {
   return readString(body, "message");
 };
 
+const normalizeVerifiedHandoff = (value: unknown): VerifiedSimHandoff => {
+  if (!isRecord(value)) {
+    throw new TypeError("Sim handoff verification response is malformed.");
+  }
+  return {
+    claims: normalizeClaims(value["claims"]),
+    resolvedLoadout: normalizeResolvedLoadout(value["resolved_loadout"]),
+  };
+};
+
+const normalizeBatchVerificationResult = (
+  value: unknown,
+): SimHandoffBatchVerificationResult => {
+  if (!isRecord(value)) {
+    throw new TypeError("Sim handoff batch verification item is malformed.");
+  }
+  if (value["status"] === "verified") {
+    return {
+      status: "verified",
+      handoff: normalizeVerifiedHandoff(value),
+    };
+  }
+  if (value["status"] === "rejected") {
+    const error = value["error"];
+    const message = isRecord(error) ? readString(error, "message") : undefined;
+    return {
+      status: "rejected",
+      error: message ?? "Sim handoff verification failed.",
+    };
+  }
+  throw new TypeError("Sim handoff batch verification status is malformed.");
+};
+
 export const createPoneglyphSimHandoffVerifier = ({
   authBaseUrl = process.env["PONEGLYPH_AUTH_BASE_URL"] ?? defaultAuthBaseUrl,
   fetch: fetchImpl = fetch,
@@ -212,11 +258,35 @@ export const createPoneglyphSimHandoffVerifier = ({
     if (!isRecord(body) || !isRecord(body["data"])) {
       throw new TypeError("Sim handoff verification response is malformed.");
     }
-    return {
-      claims: normalizeClaims(body["data"]["claims"]),
-      resolvedLoadout: normalizeResolvedLoadout(
-        body["data"]["resolved_loadout"],
-      ),
-    };
+    return normalizeVerifiedHandoff(body["data"]);
+  },
+  async verifyBatch(tokens) {
+    const response = await fetchImpl(
+      `${trimTrailingSlash(authBaseUrl)}/v1/sim/handoffs/verify`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tokens }),
+      },
+    );
+    const body = (await response.json()) as unknown;
+    if (!response.ok) {
+      throw new Error(
+        extractErrorMessage(body) ??
+          `Sim handoff batch verification failed with HTTP ${String(response.status)}.`,
+      );
+    }
+    if (!isRecord(body) || !isRecord(body["data"])) {
+      throw new TypeError(
+        "Sim handoff batch verification response is malformed.",
+      );
+    }
+    const handoffs = body["data"]["handoffs"];
+    if (!Array.isArray(handoffs)) {
+      throw new TypeError(
+        "Sim handoff batch verification response is malformed.",
+      );
+    }
+    return handoffs.map(normalizeBatchVerificationResult);
   },
 });

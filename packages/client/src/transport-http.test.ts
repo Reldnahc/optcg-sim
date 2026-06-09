@@ -186,6 +186,58 @@ describe("dev HTTP match transport", () => {
     });
   });
 
+  test("validates lobby loadout handoff tokens without resolved deck payloads", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        data: {
+          loadouts: [
+            {
+              loadoutId: "loadout-1",
+              status: "playable",
+              errors: [],
+            },
+            {
+              loadoutId: "loadout-2",
+              status: "unplayable",
+              errors: ["Resolved loadout is invalid."],
+            },
+          ],
+        },
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    const result = await transport.validateLobbyLoadouts({
+      lobbyId: "lobby-1",
+      handoffTokens: ["token-1", "token-2"],
+    });
+
+    const request = recorder.requests[0];
+    if (request === undefined || request.init === undefined) {
+      throw new Error("Expected a loadout validation request.");
+    }
+    assert.equal(
+      request.url,
+      "http://localhost:3000/api/lobbies/lobby-1/loadouts/validate",
+    );
+    assert.equal(
+      request.init.body,
+      JSON.stringify({ handoffTokens: ["token-1", "token-2"] }),
+    );
+    assert.equal(
+      JSON.stringify(request.init.body).includes("resolved_loadout"),
+      false,
+    );
+    assert.deepEqual(result.data.loadouts[1], {
+      loadoutId: "loadout-2",
+      status: "unplayable",
+      errors: ["Resolved loadout is invalid."],
+    });
+  });
+
   test("creates a match without accepting bulk seat tokens", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

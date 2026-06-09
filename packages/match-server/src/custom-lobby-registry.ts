@@ -29,7 +29,10 @@ import {
 } from "./lobby-store.js";
 import type { CreatePremadeDevMatchSetupOptions } from "./local-match.js";
 import { resolveRedisConfig } from "./redis-config.js";
-import type { VerifiedSimHandoff } from "./sim-handoff.js";
+import type {
+  SimHandoffBatchVerificationResult,
+  VerifiedSimHandoff,
+} from "./sim-handoff.js";
 
 export interface CreatedCustomLobbyResponse {
   lobbyId: string;
@@ -43,6 +46,18 @@ export interface CreatedCustomLobbyResponse {
   >;
   matchId?: MatchId;
   seat?: { playerId: PlayerId; sessionToken?: string };
+}
+
+export interface ValidatedCustomLobbyLoadout {
+  readonly loadoutId: string | null;
+  readonly status: "playable" | "unplayable" | "unverified";
+  readonly errors: readonly string[];
+}
+
+export interface ValidatedCustomLobbyLoadoutsResponse {
+  readonly data: {
+    readonly loadouts: readonly ValidatedCustomLobbyLoadout[];
+  };
 }
 
 export interface CustomLobbyRegistry {
@@ -75,6 +90,10 @@ export interface CustomLobbyRegistry {
     | "invalidDeck"
     | "full"
   >;
+  validateLoadouts: (
+    lobbyId: string,
+    handoffs: readonly SimHandoffBatchVerificationResult[],
+  ) => Promise<ValidatedCustomLobbyLoadoutsResponse | "lobbyNotFound">;
   getLobby: (
     lobbyId: string,
   ) => Promise<CreatedCustomLobbyResponse | undefined>;
@@ -375,6 +394,69 @@ export const createCustomLobbyRegistry = async (
           },
         };
       });
+    },
+    async validateLoadouts(lobbyId, handoffs) {
+      const lobby = await lobbyStore.getLobby(lobbyId);
+      if (lobby === undefined) {
+        return "lobbyNotFound";
+      }
+      const loadouts = [];
+      for (const result of handoffs) {
+        if (result.status === "rejected") {
+          loadouts.push({
+            loadoutId: null,
+            status: "unverified" as const,
+            errors: [result.error],
+          });
+          continue;
+        }
+        const { handoff } = result;
+        if (
+          handoff.claims.lobby_id !== null &&
+          handoff.claims.lobby_id !== lobbyId
+        ) {
+          loadouts.push({
+            loadoutId: handoff.resolvedLoadout.loadoutId,
+            status: "unverified" as const,
+            errors: ["Sim handoff token is not authorized for this lobby."],
+          });
+          continue;
+        }
+        let submission;
+        try {
+          submission = await decodeDeckHashSubmission({
+            hash: handoff.resolvedLoadout.mainDeck.hash,
+            donDeckCount: handoff.resolvedLoadout.donDeck.count,
+            ...(options.deckHashCodec === undefined
+              ? {}
+              : { codec: options.deckHashCodec }),
+          });
+        } catch {
+          loadouts.push({
+            loadoutId: handoff.resolvedLoadout.loadoutId,
+            status: "unplayable" as const,
+            errors: ["Resolved loadout is invalid."],
+          });
+          continue;
+        }
+        if (
+          submission.status !== "ready" ||
+          !(await validateReadySubmission(submission))
+        ) {
+          loadouts.push({
+            loadoutId: handoff.resolvedLoadout.loadoutId,
+            status: "unplayable" as const,
+            errors: ["Resolved loadout is invalid."],
+          });
+          continue;
+        }
+        loadouts.push({
+          loadoutId: handoff.resolvedLoadout.loadoutId,
+          status: "playable" as const,
+          errors: [],
+        });
+      }
+      return { data: { loadouts } };
     },
     async getLobby(lobbyId) {
       const lobby = await lobbyStore.getLobby(lobbyId);

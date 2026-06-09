@@ -113,6 +113,73 @@ describe("sim handoff verification client", () => {
       /Invalid sim handoff token/u,
     );
   });
+
+  test("posts handoff tokens to the batch verification endpoint", async () => {
+    const requests: RecordedRequest[] = [];
+    const verifier = createPoneglyphSimHandoffVerifier({
+      authBaseUrl: "https://auth.example/",
+      fetch: (input, init) => {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              handoffs: [
+                {
+                  status: "verified",
+                  claims: {
+                    jti: "token-1",
+                    sub: "user-1",
+                    sid: "session-1",
+                    loadout_id: "loadout-1",
+                    lobby_id: "lobby-1",
+                    seat_id: null,
+                    aud: "optcg-sim",
+                    iat: 1,
+                    exp: 2,
+                  },
+                  resolved_loadout: resolvedLoadoutBody(),
+                },
+                {
+                  status: "rejected",
+                  error: {
+                    status: 401,
+                    message: "Invalid sim handoff token",
+                  },
+                },
+              ],
+            },
+          }),
+        );
+      },
+    });
+
+    const result = await verifier.verifyBatch(["handoff-token-1", "bad-token"]);
+    const request = requests[0];
+    if (request === undefined) {
+      throw new Error("Expected the handoff verifier to call auth.");
+    }
+    if (request.init === undefined) {
+      throw new Error("Expected the handoff verifier to include request init.");
+    }
+
+    assert.equal(request.url, "https://auth.example/v1/sim/handoffs/verify");
+    assert.equal(
+      request.init.body,
+      JSON.stringify({ tokens: ["handoff-token-1", "bad-token"] }),
+    );
+    const firstResult = result[0];
+    if (firstResult?.status !== "verified") {
+      throw new Error("Expected first batch handoff to verify.");
+    }
+    assert.equal(firstResult.handoff.resolvedLoadout.loadoutId, "loadout-1");
+    assert.deepEqual(result[1], {
+      status: "rejected",
+      error: "Invalid sim handoff token",
+    });
+  });
 });
 
 describe("resolved loadout normalization", () => {

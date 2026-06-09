@@ -247,4 +247,75 @@ describe("Poneglyph account client", () => {
       false,
     );
   });
+
+  test("creates batch sim handoff tokens without sending deck contents", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createPoneglyphAccountClient({
+      baseUrl: "https://auth.example",
+      fetch(input, init) {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              handoffs: [
+                {
+                  loadout_id: "loadout-1",
+                  status: "created",
+                  token: "handoff-token-1",
+                  expires_at: "2026-06-02T00:05:00.000Z",
+                },
+                {
+                  loadout_id: "loadout-2",
+                  status: "rejected",
+                  error: {
+                    status: 403,
+                    message: "Saved deck hash is required for sim handoff.",
+                  },
+                },
+              ],
+            },
+          }),
+        );
+      },
+    });
+
+    const handoffs = await client.createSimHandoffs({
+      loadoutIds: ["loadout-1", "loadout-2"],
+      lobbyId: "lobby-1",
+    });
+    const request = requests[0];
+    if (request === undefined || request.init === undefined) {
+      throw new Error("Expected a batch sim handoff request.");
+    }
+
+    assert.deepEqual(handoffs, [
+      {
+        loadoutId: "loadout-1",
+        status: "created",
+        token: "handoff-token-1",
+      },
+      {
+        loadoutId: "loadout-2",
+        status: "rejected",
+        error: "Saved deck hash is required for sim handoff.",
+      },
+    ]);
+    assert.equal(request.url, "https://auth.example/v1/sim/handoffs");
+    assert.equal(request.init.credentials, "include");
+    assert.equal(
+      request.init.body,
+      JSON.stringify({
+        loadout_ids: ["loadout-1", "loadout-2"],
+        lobby_id: "lobby-1",
+        seat_id: null,
+      }),
+    );
+    assert.equal(
+      JSON.stringify(request.init.body).includes("deck_hash"),
+      false,
+    );
+  });
 });

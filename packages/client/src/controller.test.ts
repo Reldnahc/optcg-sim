@@ -99,12 +99,8 @@ const createFakeTransport = (): MatchTransport & {
     joinedLobbies,
     submittedLobbyDecks,
     submittedLoadoutHandoffs,
-    createLobby() {
-      return Promise.resolve({
-        lobbyId: "lobby-1",
-        seats: lobbySeats(),
-      });
-    },
+    createLobby: () =>
+      Promise.resolve({ lobbyId: "lobby-1", seats: lobbySeats() }),
     joinLobby(input) {
       joinedLobbies.push(input);
       const rematchPlayerId =
@@ -135,6 +131,7 @@ const createFakeTransport = (): MatchTransport & {
         seats: lobbySeats({ p1Ready: true }),
       });
     },
+    validateLobbyLoadouts: () => Promise.resolve({ data: { loadouts: [] } }),
     loadLobby(lobbyId) {
       return Promise.resolve({
         lobbyId,

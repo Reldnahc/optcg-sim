@@ -28,12 +28,28 @@ export const LobbyDeckPanel = ({
   const [selectedLoadoutId, setSelectedLoadoutId] = useState(
     loadouts[0]?.id ?? "",
   );
+  const [hideIllegalLoadouts, setHideIllegalLoadouts] = useState(false);
   const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
-  const selectedLoadoutExists = loadouts.some(
+  const visibleLoadouts = hideIllegalLoadouts
+    ? loadouts.filter((loadout) =>
+        loadout.validation?.status !== "playable" ? false : true,
+      )
+    : loadouts;
+  const selectedLoadout = loadouts.find(
+    (loadout) => loadout.id === selectedLoadoutId,
+  );
+  const selectedLoadoutExists = visibleLoadouts.some(
     (loadout) => loadout.id === selectedLoadoutId,
   );
   const pickerLocked = selfDeckStatus === "ready";
-  const canSubmit = selectedLoadoutExists && !disabled && !pickerLocked;
+  const selectedLoadoutPlayable =
+    selectedLoadout?.validation === undefined ||
+    selectedLoadout.validation.status === "playable";
+  const canSubmit =
+    selectedLoadoutExists &&
+    selectedLoadoutPlayable &&
+    !disabled &&
+    !pickerLocked;
   const refreshDisabled =
     disabled || pickerLocked || loadoutsStatus === "loading";
 
@@ -53,6 +69,9 @@ export const LobbyDeckPanel = ({
             if (!selectedLoadoutExists) {
               return;
             }
+            if (!selectedLoadoutPlayable) {
+              return;
+            }
             void onSubmitLoadout(selectedLoadoutId);
           }}
         >
@@ -61,7 +80,7 @@ export const LobbyDeckPanel = ({
               selectedLoadoutId={selectedLoadoutId}
               disabled={disabled || loadoutsStatus !== "ready"}
               locked={pickerLocked}
-              loadouts={loadouts}
+              loadouts={visibleLoadouts}
               onChange={setSelectedLoadoutId}
             />
           </div>
@@ -72,6 +91,19 @@ export const LobbyDeckPanel = ({
           ) : null}
           {loadoutsStatus === "ready" && loadouts.length === 0 ? (
             <p>No account loadouts are available.</p>
+          ) : null}
+          {loadoutsStatus === "ready" && loadouts.length > 0 ? (
+            <label className="deck-loadout-filter">
+              <input
+                type="checkbox"
+                checked={hideIllegalLoadouts}
+                disabled={disabled || pickerLocked}
+                onChange={(event) => {
+                  setHideIllegalLoadouts(event.currentTarget.checked);
+                }}
+              />
+              Hide illegal decks
+            </label>
           ) : null}
           <div className="deck-loadout-actions">
             <a

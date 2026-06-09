@@ -15,7 +15,11 @@ import {
   toggleDecisionSelectedCard,
 } from "../index.js";
 import { createPoneglyphAccountClient } from "../account-client.js";
-import type { AccountLoadout } from "../account-client.js";
+import type {
+  AccountLoadout,
+  AccountSimHandoffBatchResult,
+} from "../account-client.js";
+import type { ValidatedLobbyLoadout } from "../transport.js";
 import type {
   ClientActionModel,
   DecisionDraft,
@@ -51,6 +55,49 @@ export interface UseMatchClientOptions {
   readonly accountSessionToken: string;
   readonly quickPayActivateMainCosts?: boolean | undefined;
 }
+
+const attachLoadoutValidation = (
+  loadouts: readonly AccountLoadout[],
+  handoffs: readonly AccountSimHandoffBatchResult[],
+  validated: readonly ValidatedLobbyLoadout[],
+): readonly AccountLoadout[] => {
+  const authRejectedByLoadoutId = new Map(
+    handoffs
+      .filter((handoff) => handoff.status === "rejected")
+      .map((handoff) => [handoff.loadoutId, handoff.error]),
+  );
+  const validationByLoadoutId = new Map(
+    validated
+      .filter((loadout) => loadout.loadoutId !== null)
+      .map((loadout) => [loadout.loadoutId, loadout]),
+  );
+  return loadouts.map((loadout) => {
+    const authError = authRejectedByLoadoutId.get(loadout.id);
+    if (authError !== undefined) {
+      return {
+        ...loadout,
+        validation: { status: "unverified", errors: [authError] },
+      };
+    }
+    const validation = validationByLoadoutId.get(loadout.id);
+    if (validation !== undefined) {
+      return {
+        ...loadout,
+        validation: {
+          status: validation.status,
+          errors: validation.errors,
+        },
+      };
+    }
+    return {
+      ...loadout,
+      validation: {
+        status: "unverified",
+        errors: ["Deck validation did not return a result."],
+      },
+    };
+  });
+};
 
 export const useMatchClient = ({
   accountSessionToken,
@@ -177,16 +224,37 @@ export const useMatchClient = ({
       return;
     }
     const requestId = accountLoadoutsRequestId.current + 1;
+    const lobbyId = clientState.lobbyId;
     accountLoadoutsRequestId.current = requestId;
     setAccountLoadoutsStatus("loading");
     setAccountLoadoutsError(undefined);
     void accountClient
       .listLoadouts()
-      .then((loadouts) => {
+      .then(async (loadouts) => {
         if (accountLoadoutsRequestId.current !== requestId) {
           return;
         }
-        setAccountLoadouts(loadouts);
+        const handoffs = await accountClient.createSimHandoffs({
+          loadoutIds: loadouts.map((loadout) => loadout.id),
+          lobbyId,
+        });
+        const createdTokens = handoffs.flatMap((handoff) =>
+          handoff.status === "created" ? [handoff.token] : [],
+        );
+        const validated =
+          createdTokens.length === 0
+            ? []
+            : (
+                await controller.validateLobbyLoadouts({
+                  handoffTokens: createdTokens,
+                })
+              ).data.loadouts;
+        if (accountLoadoutsRequestId.current !== requestId) {
+          return;
+        }
+        setAccountLoadouts(
+          attachLoadoutValidation(loadouts, handoffs, validated),
+        );
         setAccountLoadoutsStatus("ready");
       })
       .catch((error: unknown) => {
@@ -199,7 +267,7 @@ export const useMatchClient = ({
           error instanceof Error ? error.message : String(error),
         );
       });
-  }, [accountClient, clientState]);
+  }, [accountClient, clientState, controller]);
 
   useEffect(() => {
     if (!isLobbyClientState(clientState)) {

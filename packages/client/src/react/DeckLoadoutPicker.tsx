@@ -78,7 +78,19 @@ const loadoutMeta = (loadout: AccountLoadout | undefined): string =>
     : [
         loadout.leaderCardId === null ? "No leader" : loadout.leaderCardId,
         loadout.folderName ?? unfiledLoadoutGroupLabel,
+        ...(loadout.validation?.status === undefined ||
+        loadout.validation.status === "playable"
+          ? []
+          : [
+              loadout.validation.errors[0] ??
+                (loadout.validation.status === "unverified"
+                  ? "Unable to verify"
+                  : "Unplayable"),
+            ]),
       ].join(" / ");
+
+const isSelectableLoadout = (loadout: AccountLoadout | undefined): boolean =>
+  loadout?.validation === undefined || loadout.validation.status === "playable";
 
 const LeaderCrop = ({
   loadout,
@@ -229,8 +241,13 @@ export const DeckLoadoutPicker = ({
                               : ""
                           } ${loadout.favorite ? "is-favorite" : ""}`}
                           type="button"
-                          disabled={disabled || closed}
+                          disabled={
+                            disabled || closed || !isSelectableLoadout(loadout)
+                          }
                           onClick={() => {
+                            if (!isSelectableLoadout(loadout)) {
+                              return;
+                            }
                             onChange(loadout.id);
                             setOpen(false);
                           }}

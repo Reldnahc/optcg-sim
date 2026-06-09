@@ -23,6 +23,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly allowedBrowserOrigins?: readonly string[];
   readonly staticAssetsDirectory?: string;
   readonly deckHashCodec?: DeckHashCodecPort;
+  readonly allowRawDeckHashSubmissions?: boolean;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;
   readonly authBaseUrl?: string;
@@ -33,6 +34,16 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
 
 export const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
 export const defaultMatchTimerTickMs = 1_000;
+
+export const resolveAllowRawDeckHashSubmissions = (
+  options: CreateMatchHttpServerOptions,
+): boolean => {
+  if (options.allowRawDeckHashSubmissions !== undefined) {
+    return options.allowRawDeckHashSubmissions;
+  }
+  const simEnv = process.env["PONEGLYPH_SIM_ENV"]?.trim().toLowerCase();
+  return simEnv !== "dev" && simEnv !== "prod" && simEnv !== "production";
+};
 
 export const resolveCompletedMatchRepository = (
   options: CreateMatchHttpServerOptions,

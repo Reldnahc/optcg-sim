@@ -57,6 +57,9 @@ const fakeController = (): MatchClientController & {
     submitLobbyLoadoutHandoff() {
       throw new Error("submitLobbyLoadoutHandoff was not expected.");
     },
+    validateLobbyLoadouts() {
+      throw new Error("validateLobbyLoadouts was not expected.");
+    },
     startNewLocalMatch() {
       throw new Error("startNewLocalMatch was not expected.");
     },

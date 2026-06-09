@@ -48,6 +48,8 @@ import { createSocketActionTiming } from "./action-timing-log.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
+import { handleLobbyLoadoutValidationRequest } from "./lobby-loadout-validation-route.js";
+import { isRecord, readRequestJson } from "./request-json.js";
 import {
   playerStatePayload,
   playerTimerPayload,
@@ -56,6 +58,7 @@ import {
   createDefaultMatchSetupFactory,
   defaultMatchTimerTickMs,
   defaultSocketIdleTimeoutMs,
+  resolveAllowRawDeckHashSubmissions,
   resolveCompletedMatchRepository,
   resolveMatchTimerPolicy,
   type CreateMatchHttpServerOptions,
@@ -83,29 +86,6 @@ export interface MatchHttpServer {
   url: () => string;
 }
 
-const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
-  await new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    request.on("data", (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    request.on("end", () => {
-      const raw = Buffer.concat(chunks).toString("utf8");
-      if (raw.trim() === "") {
-        resolve({});
-        return;
-      }
-      try {
-        resolve(JSON.parse(raw) as unknown);
-      } catch (error: unknown) {
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
-    });
-    request.on("error", reject);
-  });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
@@ -116,6 +96,7 @@ const handleApiRequest = async (
   authProvider: AuthProvider,
   simHandoffVerifier: SimHandoffVerifier,
   allowTemplateMatches: boolean,
+  allowRawDeckHashSubmissions: boolean,
 ): Promise<void> => {
   const url = request.url ?? "/";
   const pathname = new URL(url, "http://localhost").pathname;
@@ -179,6 +160,12 @@ const handleApiRequest = async (
     pathname,
   );
   if (request.method === "POST" && lobbyDeckRoute !== null) {
+    if (!allowRawDeckHashSubmissions) {
+      sendJson(response, 403, {
+        errors: ["Raw deck hash submissions are only available locally."],
+      });
+      return;
+    }
     const lobbyId = decodeURIComponent(
       lobbyDeckRoute.groups?.["lobbyId"] ?? "",
     );
@@ -226,6 +213,17 @@ const handleApiRequest = async (
     }
     broadcastLobbyState(result, lobbyConnections);
     sendJson(response, 200, result);
+    return;
+  }
+  if (
+    await handleLobbyLoadoutValidationRequest({
+      request,
+      response,
+      pathname,
+      lobbyRegistry,
+      simHandoffVerifier,
+    })
+  ) {
     return;
   }
   const lobbyLoadoutRoute =
@@ -859,6 +857,8 @@ export const createMatchHttpServer = async (
   const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
   const allowTemplateMatches = options.allowTemplateMatches ?? true;
+  const allowRawDeckHashSubmissions =
+    resolveAllowRawDeckHashSubmissions(options);
   const staticAssetsDirectory = options.staticAssetsDirectory;
   const simHandoffVerifier =
     options.simHandoffVerifier ??
@@ -917,6 +917,7 @@ export const createMatchHttpServer = async (
           authProvider,
           simHandoffVerifier,
           allowTemplateMatches,
+          allowRawDeckHashSubmissions,
         )
       : serveStaticAssetsOrNotFound(
           request,
