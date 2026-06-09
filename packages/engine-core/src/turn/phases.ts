@@ -25,15 +25,21 @@ const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toEngineEventId = (value: string): EngineEventId =>
   value as EngineEventId;
 
+export interface PhaseAdvanceOptions {
+  readonly includeStateHash?: boolean;
+}
+
 const toEngineResult = (
   state: GameState,
   events: EngineEvent[],
   errors?: readonly [EngineError, ...EngineError[]],
+  options: PhaseAdvanceOptions = {},
 ): EngineResult => {
   const result: EngineResult = {
     state,
     events,
-    stateHash: hashCanonicalStateValue(state),
+    stateHash:
+      options.includeStateHash === false ? "" : hashCanonicalStateValue(state),
   };
   if (state.pendingDecision !== undefined) {
     result.decisions = [state.pendingDecision];
@@ -282,7 +288,10 @@ const readyPlayerCards = (
   return next;
 };
 
-export const advanceRefreshPhase = (state: GameState): EngineResult => {
+export const advanceRefreshPhase = (
+  state: GameState,
+  options: PhaseAdvanceOptions = {},
+): EngineResult => {
   if (state.turn.phase !== "refresh") {
     return invalidPhaseTransition(state, "refresh");
   }
@@ -363,10 +372,13 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
   });
   nextWithRules.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextWithRules);
-  return toEngineResult(nextWithRules, events);
+  return toEngineResult(nextWithRules, events, undefined, options);
 };
 
-export const advanceDrawPhase = (state: GameState): EngineResult => {
+export const advanceDrawPhase = (
+  state: GameState,
+  options: PhaseAdvanceOptions = {},
+): EngineResult => {
   if (state.turn.phase !== "draw") {
     return invalidPhaseTransition(state, "draw");
   }
@@ -455,10 +467,13 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
   });
   nextWithRules.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextWithRules);
-  return toEngineResult(nextWithRules, events);
+  return toEngineResult(nextWithRules, events, undefined, options);
 };
 
-export const advanceDonPhase = (state: GameState): EngineResult => {
+export const advanceDonPhase = (
+  state: GameState,
+  options: PhaseAdvanceOptions = {},
+): EngineResult => {
   if (state.turn.phase !== "don") {
     return invalidPhaseTransition(state, "don");
   }
@@ -526,10 +541,13 @@ export const advanceDonPhase = (state: GameState): EngineResult => {
   });
   nextWithRules.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextWithRules);
-  return toEngineResult(nextWithRules, events);
+  return toEngineResult(nextWithRules, events, undefined, options);
 };
 
-export const enterMainPhase = (state: GameState): EngineResult => {
+export const enterMainPhase = (
+  state: GameState,
+  options: PhaseAdvanceOptions = {},
+): EngineResult => {
   if (!isMatchActive(state)) {
     return toEngineResult(
       state,
@@ -588,7 +606,7 @@ export const enterMainPhase = (state: GameState): EngineResult => {
   });
   nextWithRules.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextWithRules);
-  return toEngineResult(nextWithRules, events);
+  return toEngineResult(nextWithRules, events, undefined, options);
 };
 
 export const advanceEndPhase = (state: GameState): EngineResult => {

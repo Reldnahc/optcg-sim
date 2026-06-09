@@ -253,6 +253,8 @@ const combinedEngineResult = (
 const advanceToMainPhase = (state: GameState): EngineResult => {
   const events: EngineResult["events"] = [];
   let current = state;
+  let currentHash: string | undefined;
+  const livePhaseOptions = { includeStateHash: false } as const;
   for (let stepCount = 0; stepCount < 4; stepCount += 1) {
     if (
       current.turn.phase === "main" ||
@@ -264,7 +266,8 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
         {
           state: current,
           events,
-          stateHash: timedStateHash("advanceToMainPhaseReturn", current),
+          stateHash:
+            currentHash ?? timedStateHash("advanceToMainPhaseReturn", current),
         },
         events,
       );
@@ -272,48 +275,52 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
 
     if (current.turn.phase === "refresh") {
       const result = recordActionTimingSpan("advanceRefreshPhase", () =>
-        advanceRefreshPhase(current),
+        advanceRefreshPhase(current, livePhaseOptions),
       );
       events.push(...result.events);
       if (result.errors !== undefined && result.errors.length > 0) {
         return combinedEngineResult(result, events);
       }
       current = result.state;
+      currentHash = result.stateHash;
       continue;
     }
 
     if (current.turn.phase === "draw") {
       const result = recordActionTimingSpan("advanceDrawPhase", () =>
-        advanceDrawPhase(current),
+        advanceDrawPhase(current, livePhaseOptions),
       );
       events.push(...result.events);
       if (result.errors !== undefined && result.errors.length > 0) {
         return combinedEngineResult(result, events);
       }
       current = result.state;
+      currentHash = result.stateHash;
       continue;
     }
 
     if (current.turn.phase === "don") {
       const donResult = recordActionTimingSpan("advanceDonPhase", () =>
-        advanceDonPhase(current),
+        advanceDonPhase(current, livePhaseOptions),
       );
       events.push(...donResult.events);
       if (donResult.errors !== undefined && donResult.errors.length > 0) {
         return combinedEngineResult(donResult, events);
       }
       current = donResult.state;
+      currentHash = donResult.stateHash;
       if (current.pendingDecision !== undefined) {
         continue;
       }
       const mainResult = recordActionTimingSpan("enterMainPhase", () =>
-        enterMainPhase(current),
+        enterMainPhase(current, livePhaseOptions),
       );
       events.push(...mainResult.events);
       if (mainResult.errors !== undefined && mainResult.errors.length > 0) {
         return combinedEngineResult(mainResult, events);
       }
       current = mainResult.state;
+      currentHash = mainResult.stateHash;
       continue;
     }
 
@@ -321,7 +328,8 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       {
         state: current,
         events,
-        stateHash: timedStateHash("advanceToMainPhaseFallback", current),
+        stateHash:
+          currentHash ?? timedStateHash("advanceToMainPhaseFallback", current),
       },
       events,
     );
@@ -330,7 +338,8 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
     {
       state: current,
       events,
-      stateHash: timedStateHash("advanceToMainPhaseLimit", current),
+      stateHash:
+        currentHash ?? timedStateHash("advanceToMainPhaseLimit", current),
     },
     events,
   );

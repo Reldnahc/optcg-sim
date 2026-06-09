@@ -1,8 +1,6 @@
 import type { LocalDevMatch } from "./local-match.js";
-import {
-  getLocalDevCardCatalogForPlayer,
-  getLocalDevSnapshotForPlayer,
-} from "./local-match.js";
+import { getLocalDevSnapshotForPlayer } from "./local-match.js";
+import { buildLocalDevCardCatalogForPlayer } from "./local-card-catalog.js";
 import { snapshotWithConnectionStatuses } from "./dev-match-connection-state.js";
 import type { DevSocketConnection } from "./dev-socket-connections.js";
 import { recordActionTimingSpan } from "./action-timing-log.js";
@@ -27,7 +25,12 @@ export const playerStatePayload = (
     stateSeq: snapshot.stateSeq,
     snapshot,
     cards: recordActionTimingSpan("statePayloadCardCatalog", () =>
-      getLocalDevCardCatalogForPlayer(match, connection.playerId),
+      buildLocalDevCardCatalogForPlayer(
+        match.state,
+        snapshot,
+        connection.playerId,
+        match.cardVariantOverrides,
+      ),
     ),
   };
 };
