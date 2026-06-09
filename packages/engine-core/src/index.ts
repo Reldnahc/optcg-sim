@@ -28,6 +28,7 @@ export {
   advanceRefreshPhase,
   enterMainPhase,
 } from "./turn/phases.js";
+export { applyEndMainPhase } from "./turn/actions.js";
 export {
   applyAction,
   getLegalActions,

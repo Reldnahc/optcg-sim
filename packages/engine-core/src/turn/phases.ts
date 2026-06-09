@@ -710,7 +710,10 @@ export const enterMainPhase = (
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
-export const advanceEndPhase = (state: GameState): EngineResult => {
+export const advanceEndPhase = (
+  state: GameState,
+  options: PhaseAdvanceOptions = {},
+): EngineResult => {
   if (state.turn.phase !== "end") {
     return invalidPhaseTransition(state, "end");
   }
@@ -769,14 +772,25 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
       playerId: nextTurnPlayerId,
     }),
   ];
-  const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextStateWithExpiry,
-    events,
-    phase: "refresh",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
+  const nextWithRules = profilePhaseSpan(
+    options,
+    "advanceEndPhase:applyRules",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: nextStateWithExpiry,
+        events,
+        phase: "refresh",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
+  profilePhaseSpan(options, "advanceEndPhase:appendJournal", () => {
+    nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  nextWithRules.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextWithRules);
-  return toEngineResult(nextWithRules, events);
+  assertPhaseInvariants(
+    options,
+    "advanceEndPhase:assertInvariants",
+    nextWithRules,
+  );
+  return toEngineResult(nextWithRules, events, undefined, options);
 };

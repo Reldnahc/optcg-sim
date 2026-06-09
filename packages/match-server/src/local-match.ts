@@ -3,6 +3,7 @@ import {
   advanceDonPhase,
   advanceDrawPhase,
   advanceRefreshPhase,
+  applyEndMainPhase,
   canonicalSerializeStateValue,
   createInitialState,
   enterMainPhase,
@@ -137,6 +138,12 @@ const timedStateHash = (name: string, value: unknown): string => {
   );
 };
 
+const liveEngineOptions = {
+  includeStateHash: false,
+  profileSpan: recordActionTimingSpan,
+  validateInvariants: false,
+} as const;
+
 const localActionResult = (
   match: LocalDevMatch,
   errors: string[],
@@ -263,11 +270,6 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
   const events: EngineResult["events"] = [];
   let current = state;
   let currentHash = "";
-  const livePhaseOptions = {
-    includeStateHash: false,
-    profileSpan: recordActionTimingSpan,
-    validateInvariants: false,
-  } as const;
   for (let stepCount = 0; stepCount < 4; stepCount += 1) {
     if (
       current.turn.phase === "main" ||
@@ -287,7 +289,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
 
     if (current.turn.phase === "refresh") {
       const result = recordActionTimingSpan("advanceRefreshPhase", () =>
-        advanceRefreshPhase(current, livePhaseOptions),
+        advanceRefreshPhase(current, liveEngineOptions),
       );
       events.push(...result.events);
       if (result.errors !== undefined && result.errors.length > 0) {
@@ -300,7 +302,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
 
     if (current.turn.phase === "draw") {
       const result = recordActionTimingSpan("advanceDrawPhase", () =>
-        advanceDrawPhase(current, livePhaseOptions),
+        advanceDrawPhase(current, liveEngineOptions),
       );
       events.push(...result.events);
       if (result.errors !== undefined && result.errors.length > 0) {
@@ -313,7 +315,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
 
     if (current.turn.phase === "don") {
       const donResult = recordActionTimingSpan("advanceDonPhase", () =>
-        advanceDonPhase(current, livePhaseOptions),
+        advanceDonPhase(current, liveEngineOptions),
       );
       events.push(...donResult.events);
       if (donResult.errors !== undefined && donResult.errors.length > 0) {
@@ -325,7 +327,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
         continue;
       }
       const mainResult = recordActionTimingSpan("enterMainPhase", () =>
-        enterMainPhase(current, livePhaseOptions),
+        enterMainPhase(current, liveEngineOptions),
       );
       events.push(...mainResult.events);
       if (mainResult.errors !== undefined && mainResult.errors.length > 0) {
@@ -666,7 +668,10 @@ const executableActions = (
   const rawActions = getLegalActions(state, playerId).map(
     (action): Omit<ExecutableDevAction, "index"> => ({
       ...visibleAction(state, action),
-      apply: (currentState) => applyAction(currentState, action),
+      apply: (currentState) =>
+        action.type === "endMainPhase"
+          ? applyEndMainPhase(currentState, liveEngineOptions)
+          : applyAction(currentState, action),
     }),
   );
   const actions = [
@@ -682,32 +687,37 @@ const executableActions = (
 const devPlayerSnapshot = (
   state: GameState,
   playerId: PlayerId,
-): DevPlayerSnapshot => ({
-  view: filterStateForPlayer(state, playerId),
-  actions: executableActions(state, playerId).map(
-    ({
-      index,
-      type,
-      label,
-      responseKey,
-      decisionPayment,
-      attack,
-      counter,
-      placement,
-      attachment,
-    }) => ({
-      index,
-      type,
-      label,
-      ...(responseKey === undefined ? {} : { responseKey }),
-      ...(decisionPayment === undefined ? {} : { decisionPayment }),
-      ...(attack === undefined ? {} : { attack }),
-      ...(counter === undefined ? {} : { counter }),
-      ...(placement === undefined ? {} : { placement }),
-      ...(attachment === undefined ? {} : { attachment }),
-    }),
-  ),
-});
+): DevPlayerSnapshot => {
+  const view = recordActionTimingSpan("playerSnapshot:filterState", () =>
+    filterStateForPlayer(state, playerId, { includeLegalActions: false }),
+  );
+  const actions = recordActionTimingSpan("playerSnapshot:actions", () =>
+    executableActions(state, playerId).map(
+      ({
+        index,
+        type,
+        label,
+        responseKey,
+        decisionPayment,
+        attack,
+        counter,
+        placement,
+        attachment,
+      }) => ({
+        index,
+        type,
+        label,
+        ...(responseKey === undefined ? {} : { responseKey }),
+        ...(decisionPayment === undefined ? {} : { decisionPayment }),
+        ...(attack === undefined ? {} : { attack }),
+        ...(counter === undefined ? {} : { counter }),
+        ...(placement === undefined ? {} : { placement }),
+        ...(attachment === undefined ? {} : { attachment }),
+      }),
+    ),
+  );
+  return { view, actions };
+};
 
 const devPlayerSnapshots = (
   state: GameState,
@@ -741,6 +751,9 @@ export const getLocalDevSnapshotForPlayer = (
   playerId: PlayerId,
 ): DevMatchSnapshot => {
   const player = devPlayerSnapshot(match.state, playerId);
+  const rollback = recordActionTimingSpan("playerSnapshot:rollbackView", () =>
+    rollbackView(match.rollback, match.state),
+  );
   return {
     stateSeq: match.state.seq,
     actionSeq: match.state.actionSeq,
@@ -753,7 +766,7 @@ export const getLocalDevSnapshotForPlayer = (
       ? {}
       : { playerLabels: structuredClone(match.playerLabels) }),
     players: { [playerId]: player },
-    rollback: rollbackView(match.rollback, match.state),
+    rollback,
   };
 };
 

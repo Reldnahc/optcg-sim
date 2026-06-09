@@ -15,6 +15,7 @@ import {
   advanceRngFloat01,
   advanceRngUint32,
   applyAction,
+  applyEndMainPhase,
   assertGameStateInvariants,
   canonicalSerializeStateValue,
   collectGameStateInvariantViolations,
@@ -42,6 +43,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "advanceRngFloat01",
     "advanceRngUint32",
     "applyAction",
+    "applyEndMainPhase",
     "assertGameStateInvariants",
     "canonicalSerializeStateValue",
     "collectGameStateInvariantViolations",
@@ -67,6 +69,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
   assert.equal(engineCorePackage.advanceRngFloat01, advanceRngFloat01);
   assert.equal(engineCorePackage.getLegalActions, getLegalActions);
   assert.equal(engineCorePackage.applyAction, applyAction);
+  assert.equal(engineCorePackage.applyEndMainPhase, applyEndMainPhase);
   assert.equal(
     engineCorePackage.resolveSupportedVanillaBattle,
     resolveSupportedVanillaBattle,

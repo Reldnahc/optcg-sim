@@ -22,6 +22,31 @@ import { assertGameStateInvariants } from "../state/invariants.js";
 import { advanceEndPhase } from "./phases.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 
+export interface EndMainPhaseOptions {
+  readonly includeStateHash?: boolean;
+  readonly validateInvariants?: boolean;
+  readonly profileSpan?: <T>(name: string, fn: () => T) => T;
+}
+
+const profileEndMainSpan = <T>(
+  options: EndMainPhaseOptions,
+  name: string,
+  fn: () => T,
+): T => options.profileSpan?.(name, fn) ?? fn();
+
+const assertEndMainInvariants = (
+  options: EndMainPhaseOptions,
+  name: string,
+  state: GameState,
+): void => {
+  if (options.validateInvariants === false) {
+    return;
+  }
+  profileEndMainSpan(options, name, () => {
+    assertGameStateInvariants(state);
+  });
+};
+
 export const getTurnLegalActions = (
   state: GameState,
   playerId: PlayerId,
@@ -78,7 +103,10 @@ export const applyConcede = (
   return toEngineResult(nextState, events);
 };
 
-export const applyEndMainPhase = (state: GameState): EngineResult => {
+export const applyEndMainPhase = (
+  state: GameState,
+  options: EndMainPhaseOptions = {},
+): EngineResult => {
   if (!isMatchActive(state)) {
     return illegalAction(
       state,
@@ -104,33 +132,51 @@ export const applyEndMainPhase = (state: GameState): EngineResult => {
     actionSeq: state.actionSeq + 1,
     turn: { ...state.turn, phase: "end" },
   };
-  const postRuleState = applyRuleProcessingCheckpoint({
-    state: preEndState,
-    events: transitionEvents,
-    phase: "end",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
-  });
+  const postRuleState = profileEndMainSpan(
+    options,
+    "endMainPhase:applyRules",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: preEndState,
+        events: transitionEvents,
+        phase: "end",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
   if (postRuleState.status.type !== "active") {
     const terminalState: GameState = {
       ...postRuleState,
       seq: toStateSeq(state.seq + 1),
       eventJournal: [...state.eventJournal, ...transitionEvents],
     };
-    assertGameStateInvariants(terminalState);
-    return toEngineResult(terminalState, transitionEvents);
+    assertEndMainInvariants(
+      options,
+      "endMainPhase:terminalAssertInvariants",
+      terminalState,
+    );
+    return toEngineResult(terminalState, transitionEvents, undefined, options);
   }
-  assertGameStateInvariants(preEndState);
+  assertEndMainInvariants(
+    options,
+    "endMainPhase:preEndAssertInvariants",
+    preEndState,
+  );
 
   const endPhaseState: GameState = {
     ...postRuleState,
     seq: toStateSeq(state.seq + 1),
     eventJournal: [...state.eventJournal, ...transitionEvents],
   };
-  const firstRuntimeResult = processEffectRuntime(endPhaseState);
-  const runtimeResult = continueRuntimeUntilIdle(
-    endPhaseState,
-    firstRuntimeResult,
+  const firstRuntimeResult = profileEndMainSpan(
+    options,
+    "endMainPhase:processEffectRuntime",
+    () => processEffectRuntime(endPhaseState),
+  );
+  const runtimeResult = profileEndMainSpan(
+    options,
+    "endMainPhase:continueRuntimeUntilIdle",
+    () => continueRuntimeUntilIdle(endPhaseState, firstRuntimeResult),
   );
   if (
     runtimeResult.errors !== undefined ||
@@ -138,22 +184,32 @@ export const applyEndMainPhase = (state: GameState): EngineResult => {
   ) {
     const events = [...transitionEvents, ...runtimeResult.events];
     const nextState = runtimeResult.state;
-    assertGameStateInvariants(nextState);
+    assertEndMainInvariants(
+      options,
+      "endMainPhase:pendingAssertInvariants",
+      nextState,
+    );
     const errors = runtimeResult.errors;
     if (errors !== undefined) {
       const firstError: EngineError = errors[0] ?? {
         type: "illegalAction",
         reason: "Runtime failed without error.",
       };
-      return toEngineResult(nextState, events, [
-        firstError,
-        ...errors.slice(1),
-      ]);
+      return toEngineResult(
+        nextState,
+        events,
+        [firstError, ...errors.slice(1)],
+        options,
+      );
     }
-    return toEngineResult(nextState, events);
+    return toEngineResult(nextState, events, undefined, options);
   }
   if (runtimeResult.events.length > 0) {
-    const endResult = advanceEndPhase(runtimeResult.state);
+    const endResult = profileEndMainSpan(
+      options,
+      "endMainPhase:advanceEndPhase",
+      () => advanceEndPhase(runtimeResult.state, options),
+    );
     if (endResult.errors !== undefined) {
       return endResult;
     }
@@ -162,11 +218,19 @@ export const applyEndMainPhase = (state: GameState): EngineResult => {
       ...runtimeResult.events,
       ...endResult.events,
     ];
-    assertGameStateInvariants(endResult.state);
-    return toEngineResult(endResult.state, events);
+    assertEndMainInvariants(
+      options,
+      "endMainPhase:runtimeAssertInvariants",
+      endResult.state,
+    );
+    return toEngineResult(endResult.state, events, undefined, options);
   }
 
-  const endResult = advanceEndPhase(postRuleState);
+  const endResult = profileEndMainSpan(
+    options,
+    "endMainPhase:advanceEndPhase",
+    () => advanceEndPhase(postRuleState, options),
+  );
   if (endResult.errors !== undefined) {
     return endResult;
   }
@@ -178,6 +242,10 @@ export const applyEndMainPhase = (state: GameState): EngineResult => {
     ...endResult.state,
     eventJournal: [...state.eventJournal, ...events],
   };
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  assertEndMainInvariants(
+    options,
+    "endMainPhase:finalAssertInvariants",
+    nextState,
+  );
+  return toEngineResult(nextState, events, undefined, options);
 };

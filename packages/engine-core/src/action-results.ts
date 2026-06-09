@@ -18,15 +18,21 @@ export const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEngineEventId = (value: string): EngineEventId =>
   value as EngineEventId;
 
+export interface EngineResultOptions {
+  readonly includeStateHash?: boolean;
+}
+
 export const toEngineResult = (
   state: GameState,
   events: EngineEvent[],
   errors?: readonly [EngineError, ...EngineError[]],
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const result: EngineResult = {
     state,
     events,
-    stateHash: hashCanonicalStateValue(state),
+    stateHash:
+      options.includeStateHash === false ? "" : hashCanonicalStateValue(state),
   };
   if (state.pendingDecision !== undefined) {
     result.decisions = [state.pendingDecision];

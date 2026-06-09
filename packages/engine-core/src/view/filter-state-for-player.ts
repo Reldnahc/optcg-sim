@@ -617,6 +617,7 @@ const toPublicRevealRecord = (
 export const filterStateForPlayer = (
   state: GameState,
   playerId: PlayerId,
+  options: { readonly includeLegalActions?: boolean } = {},
 ): PlayerView => {
   const selfState = state.players[playerId];
   if (selfState === undefined) {
@@ -692,11 +693,16 @@ export const filterStateForPlayer = (
       ? {}
       : { activeEffectSources: [activeEffectSource] }),
     ...(activeEffectText === undefined ? {} : { activeEffectText }),
-    legalActions: dedupePublicLegalActions([
-      ...getLegalActions(state, playerId)
-        .map((action) => toPublicLegalAction(state, playerId, action))
-        .filter((action): action is PublicLegalAction => action !== undefined),
-    ]),
+    legalActions:
+      options.includeLegalActions === false
+        ? []
+        : dedupePublicLegalActions([
+            ...getLegalActions(state, playerId)
+              .map((action) => toPublicLegalAction(state, playerId, action))
+              .filter(
+                (action): action is PublicLegalAction => action !== undefined,
+              ),
+          ]),
     revealedCards: toPublicRevealRecord(state, playerId),
     events: state.eventJournal
       .filter((event) => isEventVisibleToPlayer(event, playerId))
