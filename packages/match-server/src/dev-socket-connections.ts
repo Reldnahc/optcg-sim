@@ -13,7 +13,6 @@ export interface DevSocketBaseConnection {
 export interface DevSocketConnection extends DevSocketBaseConnection {
   matchId: MatchId;
   playerId: PlayerId;
-  sentCardCatalog?: boolean;
 }
 
 export interface DevLobbySocketConnection extends DevSocketBaseConnection {

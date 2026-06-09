@@ -563,12 +563,10 @@ describe("match HTTP server", () => {
       const actionResult = await nextActionResult(p1Socket);
       const p1Update = (await p1Socket.next()) as {
         type?: string;
-        cards?: unknown;
         snapshot?: { players?: Record<string, unknown> };
       };
       const p2Update = (await p2Socket.next()) as {
         type?: string;
-        cards?: unknown;
         snapshot?: { players?: Record<string, unknown> };
       };
 
@@ -577,8 +575,6 @@ describe("match HTTP server", () => {
       assert.equal(actionResult.accepted, true);
       assert.equal(p1Update.type, "stateSync");
       assert.equal(p2Update.type, "stateSync");
-      assert.equal(p1Update.cards, undefined);
-      assert.equal(p2Update.cards, undefined);
       assert.deepEqual(Object.keys(p1Update.snapshot?.players ?? {}), ["p1"]);
       assert.deepEqual(Object.keys(p2Update.snapshot?.players ?? {}), ["p2"]);
     } finally {
