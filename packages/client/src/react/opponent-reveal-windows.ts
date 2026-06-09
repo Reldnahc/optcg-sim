@@ -73,25 +73,20 @@ export const opponentRevealWindowsFromState = ({
   ) {
     return [];
   }
-  const revealLabels =
-    board === undefined
-      ? undefined
-      : {
-          selfLabel: board.selfLabel,
-          opponentLabel: board.opponentLabel,
-        };
-  const currentEventReveals = opponentRevealsFromEvents(
-    playerSnapshot.view.events.filter(
-      (event) => event.createdAtStateSeq === playerSnapshot.view.stateSeq,
-    ),
-    currentPlayerId,
-    activeDismissedRevealIds,
-    revealLabels,
-  );
   const eventRevealsById = new Map(
-    currentEventReveals.map((reveal) => [reveal.revealId, reveal]),
+    opponentRevealsFromEvents(
+      playerSnapshot.view.events,
+      currentPlayerId,
+      activeDismissedRevealIds,
+      board === undefined
+        ? undefined
+        : {
+            selfLabel: board.selfLabel,
+            opponentLabel: board.opponentLabel,
+          },
+    ).map((reveal) => [reveal.revealId, reveal]),
   );
-  const activeRecordWindows = playerSnapshot.view.revealedCards
+  return playerSnapshot.view.revealedCards
     .filter(
       (record) =>
         isWindowRevealRecord(record) &&
@@ -116,23 +111,4 @@ export const opponentRevealWindowsFromState = ({
         },
       };
     });
-  const activeRecordIds = new Set(
-    activeRecordWindows.map((window) => window.revealId),
-  );
-  const eventOnlyWindows = currentEventReveals
-    .filter((reveal) => !activeRecordIds.has(reveal.revealId))
-    .map((reveal, index) => ({
-      revealId: reveal.revealId,
-      initialRect: {
-        x: 380 + (activeRecordWindows.length + index) * 24,
-        y: 100 + (activeRecordWindows.length + index) * 24,
-        width: 300,
-        height: 420,
-      },
-      model: {
-        title: reveal.title,
-        cards: reveal.cards.map((card) => cardModel(card)),
-      },
-    }));
-  return [...activeRecordWindows, ...eventOnlyWindows];
 };

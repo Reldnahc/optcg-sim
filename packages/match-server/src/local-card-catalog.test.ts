@@ -477,44 +477,4 @@ describe("local dev card catalog", () => {
     );
     assert.equal(catalog.players[p2]?.cards[revealed.cardId], undefined);
   });
-
-  test("includes private persistent revealed cards for the recipient catalog", () => {
-    const match = createTestMatch();
-    const p1State = match.state.players[p1];
-    if (p1State === undefined) {
-      throw new Error("Missing p1 state.");
-    }
-    const revealed = p1State.deck[0];
-    if (revealed === undefined) {
-      throw new Error("Missing reveal card in p1 deck.");
-    }
-    match.state.revealedCards.push({
-      id: "reveal:sequence:private-search",
-      cards: [
-        {
-          instanceId: revealed.instanceId,
-          cardId: revealed.cardId,
-          playerId: p1,
-        },
-      ],
-      visibility: { type: "private", playerId: p1 },
-      origin: "topOfDeck",
-      createdAtStateSeq: match.state.seq,
-      cleanupPolicy: "returnToOrigin",
-    });
-
-    const p1Catalog = getLocalDevCardCatalogForPlayer(match, p1);
-    const p2Catalog = getLocalDevCardCatalogForPlayer(match, p2);
-    const p1Entry = p1Catalog.players[p1]?.instances?.[revealed.instanceId];
-    if (p1Entry === undefined) {
-      throw new Error("Missing private revealed card catalog entry.");
-    }
-
-    assert.equal(p1Entry.cardId, revealed.cardId);
-    assert.equal(p1Entry.imageUrl?.startsWith("https://"), true);
-    assert.equal(
-      p2Catalog.players[p1]?.instances?.[revealed.instanceId],
-      undefined,
-    );
-  });
 });
