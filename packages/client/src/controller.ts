@@ -580,7 +580,7 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards: previousState.cards,
+        cards: result.cards,
       };
       return currentState;
     },
@@ -608,7 +608,7 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards: previousState.cards,
+        cards: result.cards,
       };
       return currentState;
     },
@@ -634,7 +634,7 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards: previousState.cards,
+        cards: result.cards,
       };
       return currentState;
     },
@@ -659,7 +659,7 @@ export const createMatchClientController = ({
           playerId: credential.playerId,
         },
         snapshot: result.snapshot,
-        cards: previousState.cards,
+        cards: result.cards,
       };
       return currentState;
     },

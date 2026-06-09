@@ -154,6 +154,7 @@ export const createDevWebSocketMatchTransport = ({
           pending.delete(clientActionId);
           request.resolve({
             snapshot: parsed.snapshot,
+            cards: parsed.cards,
             errors: [],
           });
         }

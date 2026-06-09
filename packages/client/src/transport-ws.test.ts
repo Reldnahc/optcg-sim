@@ -189,11 +189,15 @@ describe("dev WebSocket match transport", () => {
       serverSeq: 3,
       stateSeq: 8,
       snapshot: { stateSeq: 8, players: {} },
+      cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
     });
 
     const result = await resultPromise;
 
     assert.equal(result.snapshot.stateSeq, 8);
+    assert.deepEqual(result.cards, {
+      players: { ["p1" as PlayerId]: { cards: {} } },
+    });
     assert.equal(receivedStates.length, 1);
   });
 
@@ -410,6 +414,7 @@ describe("dev WebSocket match transport", () => {
       serverSeq: 3,
       stateSeq: 8,
       snapshot: { stateSeq: 8, players: {} },
+      cards: { players: {} },
     });
 
     const result = await resultPromise;
@@ -477,6 +482,7 @@ describe("dev WebSocket match transport", () => {
       serverSeq: 3,
       stateSeq: 8,
       snapshot: { stateSeq: 8, players: {} },
+      cards: { players: {} },
     });
 
     const result = await resultPromise;

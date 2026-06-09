@@ -226,6 +226,7 @@ const createFakeLiveTransport = (options?: {
       submittedActions.push(input.actionIndex);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
+        cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
         errors: options?.actionErrors ?? [],
       });
     },
@@ -233,6 +234,7 @@ const createFakeLiveTransport = (options?: {
       submittedDecisions.push(input.decisionId);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
+        cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
         errors: options?.decisionErrors ?? [],
       });
     },
@@ -240,6 +242,7 @@ const createFakeLiveTransport = (options?: {
       requestedRollbacks.push(input.rollbackPointId);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
+        cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
         errors: options?.rollbackErrors ?? [],
       });
     },
@@ -247,6 +250,7 @@ const createFakeLiveTransport = (options?: {
       cancelledRollbacks += 1;
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
+        cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
         errors: options?.cancelRollbackErrors ?? [],
       });
     },
@@ -621,6 +625,44 @@ describe("match client controller", () => {
       900,
     );
     assert.deepEqual(match.cards, { players: { [p1Id]: { cards: {} } } });
+  });
+
+  test("submitted live actions keep the fresh state sync card catalog", async () => {
+    const transport = createFakeTransport();
+    const liveTransport = createFakeLiveTransport();
+    const p1Id = "p1" as PlayerId;
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch(p1Id);
+    controller.connectLive({
+      onState() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 1,
+      stateSeq: 1,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 1, players: {} },
+      cards: { players: { ["stale" as PlayerId]: { cards: {} } } },
+    });
+
+    const result = await controller.submitVisibleAction({ actionIndex: 1 });
+
+    assert.deepEqual(result.cards, {
+      players: { [p1Id]: { cards: {} } },
+    });
+    assert.deepEqual(controller.currentState()?.cards, {
+      players: { [p1Id]: { cards: {} } },
+    });
   });
 
   test("joins an existing local match by claiming only the requested seat", async () => {

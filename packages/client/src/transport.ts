@@ -193,6 +193,7 @@ export interface CancelRollbackInput {
 
 export interface MatchActionResult {
   snapshot: MatchSnapshot;
+  cards: MatchCardCatalog;
   errors: string[];
 }
 
