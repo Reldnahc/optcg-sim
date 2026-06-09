@@ -16,7 +16,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { getLegalActions } from "../actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import { createInitialState } from "../setup/initial-state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import {
@@ -490,6 +490,21 @@ test("enterMainPhase accepts known trigger-free path and exposes ordinary main a
     true,
   );
   assert.notEqual(JSON.stringify(result.state), beforeHash);
+});
+
+test("applyAction forwards live result options through end main phase", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const main = enterMainPhase(state);
+
+  const result = applyAction(
+    main.state,
+    { type: "endMainPhase" },
+    { includeStateHash: false, validateInvariants: false },
+  );
+
+  assert.equal(result.stateHash, "");
 });
 
 test("enterMainPhase rejects non-active don-phase states without mutation or events", () => {

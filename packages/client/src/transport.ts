@@ -205,6 +205,14 @@ export interface MatchStateSyncMessage {
   cards: MatchCardCatalog;
 }
 
+export interface MatchTimerSyncMessage {
+  type: "timerSync";
+  matchId: MatchId;
+  serverSeq: number;
+  stateSeq: number;
+  timers: PlayerView["timers"];
+}
+
 export interface MatchSetupSyncMessage {
   type: "setupSync";
   matchId: MatchId;
@@ -260,6 +268,7 @@ export interface MatchLiveTransport {
     playerId: PlayerId;
     sessionToken: string;
     onStateSync: (message: MatchStateSyncMessage) => void;
+    onTimerSync: (message: MatchTimerSyncMessage) => void;
     onSetupSync: (message: MatchSetupSyncMessage) => void;
     onSessionTransition: (message: MatchSessionTransitionMessage) => void;
     onError: (message: string) => void;

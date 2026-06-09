@@ -14,16 +14,16 @@ export const advanceMatchTimersAndBroadcast = (
   registry: LocalDevMatchRegistry,
   connections: Set<MatchSocketConnection>,
   elapsedMs: number,
-  broadcast: (matchId: MatchId) => void,
+  broadcast: (matchId: MatchId, sync: "state" | "timers") => void,
   matchIds?: readonly MatchId[],
 ): void => {
-  const changedMatchIds = registry.advanceTimers({
+  const changedMatches = registry.advanceTimers({
     elapsedMs,
     connectedPlayerIds: (matchId) =>
       connectedPlayerIdsForMatch(matchId, connections),
     ...(matchIds === undefined ? {} : { matchIds }),
   });
-  for (const matchId of changedMatchIds) {
-    broadcast(matchId);
+  for (const changed of changedMatches) {
+    broadcast(changed.matchId, changed.sync);
   }
 };

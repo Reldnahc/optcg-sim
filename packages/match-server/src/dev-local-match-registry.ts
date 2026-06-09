@@ -61,6 +61,11 @@ export interface LocalDevMatchSeat extends CompletedMatchSeatContext {
   matchId: MatchId;
 }
 
+export interface TimerAdvanceBroadcast {
+  matchId: MatchId;
+  sync: "state" | "timers";
+}
+
 interface ActiveLocalDevMatchSession {
   status: "active";
   match: LocalDevMatch;
@@ -145,7 +150,7 @@ export interface LocalDevMatchRegistry {
     readonly elapsedMs: number;
     readonly connectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
     readonly matchIds?: readonly MatchId[];
-  }) => readonly MatchId[];
+  }) => readonly TimerAdvanceBroadcast[];
   authorizeSeat: (
     auth: AuthContext | undefined,
     matchId: MatchId,
@@ -677,7 +682,7 @@ export const createLocalDevMatchRegistry = async (
     advanceTimers({ elapsedMs, connectedPlayerIds, matchIds }) {
       const allowedMatchIds =
         matchIds === undefined ? undefined : new Set(matchIds);
-      const changedMatchIds: MatchId[] = [];
+      const changedMatches: TimerAdvanceBroadcast[] = [];
       for (const [matchId, session] of sessions) {
         if (
           session.status !== "active" ||
@@ -694,10 +699,13 @@ export const createLocalDevMatchRegistry = async (
           applyLocalDevMatchTimerExpiries(session.match, result.expiries);
         }
         if (result.changed || result.expiries.length > 0) {
-          changedMatchIds.push(matchId);
+          changedMatches.push({
+            matchId,
+            sync: result.expiries.length > 0 ? "state" : "timers",
+          });
         }
       }
-      return changedMatchIds;
+      return changedMatches;
     },
     authorizeSeat(auth, matchId, playerId) {
       if (auth === undefined) {

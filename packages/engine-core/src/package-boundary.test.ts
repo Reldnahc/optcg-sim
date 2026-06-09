@@ -31,6 +31,7 @@ import {
   enterMainPhase,
   respondToMulliganDecision,
   startMulliganFlow,
+  toPublicTimerState,
 } from "./index.js";
 
 test("package runtime boundary exposes engine-core helpers", () => {
@@ -58,6 +59,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
     "startMulliganFlow",
+    "toPublicTimerState",
   ]);
   assert.equal(engineCorePackage.advanceRefreshPhase, advanceRefreshPhase);
   assert.equal(engineCorePackage.advanceDrawPhase, advanceDrawPhase);
@@ -106,6 +108,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     respondToMulliganDecision,
   );
   assert.equal(engineCorePackage.startMulliganFlow, startMulliganFlow);
+  assert.equal(engineCorePackage.toPublicTimerState, toPublicTimerState);
 });
 
 const repoRoot = path.resolve(

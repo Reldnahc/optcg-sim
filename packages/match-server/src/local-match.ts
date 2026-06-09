@@ -3,7 +3,6 @@ import {
   advanceDonPhase,
   advanceDrawPhase,
   advanceRefreshPhase,
-  applyEndMainPhase,
   canonicalSerializeStateValue,
   createInitialState,
   enterMainPhase,
@@ -669,9 +668,7 @@ const executableActions = (
     (action): Omit<ExecutableDevAction, "index"> => ({
       ...visibleAction(state, action),
       apply: (currentState) =>
-        action.type === "endMainPhase"
-          ? applyEndMainPhase(currentState, liveEngineOptions)
-          : applyAction(currentState, action),
+        applyAction(currentState, action, liveEngineOptions),
     }),
   );
   const actions = [

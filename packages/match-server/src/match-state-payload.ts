@@ -1,3 +1,5 @@
+import { toPublicTimerState } from "@optcg/engine-core";
+
 import type { LocalDevMatch } from "./local-match.js";
 import { getLocalDevSnapshotForPlayer } from "./local-match.js";
 import { buildLocalDevCardCatalogForPlayer } from "./local-card-catalog.js";
@@ -34,3 +36,14 @@ export const playerStatePayload = (
     ),
   };
 };
+
+export const playerTimerPayload = (
+  match: LocalDevMatch,
+  connection: DevSocketConnection,
+): Record<string, unknown> => ({
+  type: "timerSync",
+  matchId: connection.matchId,
+  serverSeq: ++connection.serverSeq,
+  stateSeq: match.state.seq,
+  timers: toPublicTimerState(match.state),
+});

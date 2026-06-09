@@ -7,6 +7,7 @@ import type {
   MatchSessionTransitionMessage,
   MatchSetupSyncMessage,
   MatchStateSyncMessage,
+  MatchTimerSyncMessage,
   CancelRollbackInput,
   RequestRollbackInput,
 } from "./transport.js";
@@ -59,6 +60,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isStateSync = (value: unknown): value is MatchStateSyncMessage =>
   isRecord(value) && value["type"] === "stateSync";
 
+const isTimerSync = (value: unknown): value is MatchTimerSyncMessage =>
+  isRecord(value) && value["type"] === "timerSync";
+
 const isSetupSync = (value: unknown): value is MatchSetupSyncMessage =>
   isRecord(value) && value["type"] === "setupSync";
 
@@ -88,6 +92,7 @@ export const createDevWebSocketMatchTransport = ({
     playerId,
     sessionToken,
     onStateSync,
+    onTimerSync,
     onSetupSync,
     onSessionTransition,
     onError,
@@ -152,6 +157,11 @@ export const createDevWebSocketMatchTransport = ({
             errors: [],
           });
         }
+        return;
+      }
+
+      if (isTimerSync(parsed)) {
+        onTimerSync(parsed);
         return;
       }
 

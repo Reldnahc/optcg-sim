@@ -48,6 +48,16 @@ interface StateSyncMessage {
   };
 }
 
+interface TimerSyncMessage {
+  type?: string;
+  timers?: {
+    players?: Record<string, { remainingMs?: number; isRunning?: boolean }>;
+    disconnects?: Record<string, { remainingMs?: number; isRunning?: boolean }>;
+  };
+  snapshot?: unknown;
+  cards?: unknown;
+}
+
 interface TestSocket {
   socket: WebSocket;
   next: () => Promise<unknown>;
@@ -219,13 +229,23 @@ const connectionStatus = (
   message.snapshot?.playerLabels?.[playerId]?.connectionStatus;
 
 const nextStateSync = async (socket: TestSocket): Promise<StateSyncMessage> => {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
     const message = (await socket.next()) as StateSyncMessage;
     if (message.type === "stateSync") {
       return message;
     }
   }
   throw new Error("Timed out waiting for state sync.");
+};
+
+const nextTimerSync = async (socket: TestSocket): Promise<TimerSyncMessage> => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const message = (await socket.next()) as TimerSyncMessage;
+    if (message.type === "timerSync") {
+      return message;
+    }
+  }
+  throw new Error("Timed out waiting for timer sync.");
 };
 
 const nextStateSyncWithStatus = async (
@@ -419,6 +439,43 @@ describe("dev HTTP server websocket presence", () => {
         }
       }
       throw new Error("Timed out waiting for disconnect auto-concede.");
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
+      await server.close();
+    }
+  });
+
+  test("timer ticks send lightweight timer sync without full snapshot or cards", async () => {
+    const server = await createFixtureMatchHttpServer({
+      matchTimerPolicy: { gameTimeMs: 1_000, disconnectGraceMs: 1_000 },
+      matchTimerTickMs: 10,
+    });
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const match = await createReadyDevMatch(server);
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p2Token = await claimDevSeat(server, match.matchId, "p2");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      const p2Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      sockets.push(p1Socket.socket, p2Socket.socket);
+      await p1Socket.next();
+      await p2Socket.next();
+
+      const timerUpdate = await nextTimerSync(p1Socket);
+
+      assert.equal(timerUpdate.type, "timerSync");
+      assert.equal(timerUpdate.snapshot, undefined);
+      assert.equal(timerUpdate.cards, undefined);
+      const p1Timer = timerUpdate.timers?.players?.["p1"];
+      assert.ok(p1Timer !== undefined);
+      assert.ok(p1Timer.remainingMs !== undefined);
     } finally {
       for (const socket of sockets) {
         socket.close();

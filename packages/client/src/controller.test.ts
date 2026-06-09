@@ -19,6 +19,7 @@ import type {
   MatchSessionTransitionMessage,
   MatchSetupSyncMessage,
   MatchStateSyncMessage,
+  MatchTimerSyncMessage,
   MatchTransport,
 } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
@@ -206,6 +207,7 @@ const createFakeLiveTransport = (options?: {
   connection: LiveMatchConnection;
   emitSetup: (message: MatchSetupSyncMessage) => void;
   emitState: (message: MatchStateSyncMessage) => void;
+  emitTimer: (message: MatchTimerSyncMessage) => void;
   emitTransition: (message: MatchSessionTransitionMessage) => void;
 } => {
   const submittedActions: number[] = [];
@@ -213,6 +215,7 @@ const createFakeLiveTransport = (options?: {
   const requestedRollbacks: string[] = [];
   let onSetupSync: ((message: MatchSetupSyncMessage) => void) | undefined;
   let onStateSync: ((message: MatchStateSyncMessage) => void) | undefined;
+  let onTimerSync: ((message: MatchTimerSyncMessage) => void) | undefined;
   let onSessionTransition:
     | ((message: MatchSessionTransitionMessage) => void)
     | undefined;
@@ -259,6 +262,7 @@ const createFakeLiveTransport = (options?: {
     connect(input) {
       onSetupSync = input.onSetupSync;
       onStateSync = input.onStateSync;
+      onTimerSync = input.onTimerSync;
       onSessionTransition = input.onSessionTransition;
       return connection;
     },
@@ -273,6 +277,12 @@ const createFakeLiveTransport = (options?: {
         throw new Error("Match live transport was not connected.");
       }
       onStateSync(message);
+    },
+    emitTimer(message) {
+      if (onTimerSync === undefined) {
+        throw new Error("Match live transport was not connected.");
+      }
+      onTimerSync(message);
     },
     emitTransition(message) {
       if (onSessionTransition === undefined) {
@@ -540,6 +550,77 @@ describe("match client controller", () => {
 
     const match = states.at(-1);
     assert.equal(match !== undefined && "snapshot" in match, true);
+  });
+
+  test("live timer sync updates timers without replacing cards", async () => {
+    const transport = createFakeTransport();
+    const liveTransport = createFakeLiveTransport();
+    const p1Id = "p1" as PlayerId;
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch(p1Id);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const initialTimers = {
+      players: {
+        [p1Id]: { remainingMs: 1_000, isRunning: true },
+      },
+    };
+
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 1,
+      stateSeq: 1,
+      snapshot: {
+        matchId: "match-1" as MatchId,
+        stateSeq: 1,
+        players: {
+          [p1Id]: {
+            view: {
+              timers: initialTimers,
+            } as unknown as MatchStateSyncMessage["snapshot"]["players"][PlayerId]["view"],
+            actions: [],
+          },
+        },
+      },
+      cards: { players: { [p1Id]: { cards: {} } } },
+    });
+    liveTransport.emitTimer({
+      type: "timerSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      stateSeq: 1,
+      timers: {
+        players: {
+          [p1Id]: { remainingMs: 900, isRunning: true },
+        },
+      },
+    });
+
+    const match = states.at(-1);
+    assert.equal(match !== undefined && "snapshot" in match, true);
+    if (match === undefined || !("snapshot" in match)) {
+      throw new Error("Expected current match state.");
+    }
+    assert.equal(
+      match.snapshot.players[p1Id]?.view.timers.players[p1Id]?.remainingMs,
+      900,
+    );
+    assert.deepEqual(match.cards, { players: { [p1Id]: { cards: {} } } });
   });
 
   test("joins an existing local match by claiming only the requested seat", async () => {

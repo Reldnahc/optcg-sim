@@ -62,7 +62,10 @@ import { createSocketActionTiming } from "./action-timing-log.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
-import { playerStatePayload } from "./match-state-payload.js";
+import {
+  playerStatePayload,
+  playerTimerPayload,
+} from "./match-state-payload.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 
@@ -572,6 +575,22 @@ const broadcastMatchState = (
   }
 };
 
+const broadcastMatchTimers = (
+  matchId: MatchId,
+  registry: LocalDevMatchRegistry,
+  connections: Set<DevSocketConnection>,
+): void => {
+  const match = registry.getMatch(matchId);
+  if (match === undefined) {
+    return;
+  }
+  for (const connection of connections) {
+    if (connection.matchId === matchId) {
+      sendSocketJson(connection, playerTimerPayload(match, connection));
+    }
+  }
+};
+
 const broadcastSessionTransition = (
   sourceMatchId: MatchId,
   created: {
@@ -894,7 +913,11 @@ export const createMatchHttpServer = async (
       registry,
       socketConnections,
       elapsedMs,
-      (matchId) => {
+      (matchId, sync) => {
+        if (sync === "timers") {
+          broadcastMatchTimers(matchId, registry, socketConnections);
+          return;
+        }
         broadcastMatchState(matchId, registry, socketConnections);
       },
     );

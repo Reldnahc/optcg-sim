@@ -421,6 +421,36 @@ export const createMatchClientController = ({
           currentLobbyState = undefined;
           onState(currentState);
         },
+        onTimerSync(message) {
+          if (
+            currentState === undefined ||
+            currentState.matchId !== message.matchId
+          ) {
+            return;
+          }
+          currentState = {
+            ...currentState,
+            snapshot: {
+              ...currentState.snapshot,
+              stateSeq: message.stateSeq,
+              players: Object.fromEntries(
+                Object.entries(currentState.snapshot.players).map(
+                  ([playerId, player]) => [
+                    playerId,
+                    {
+                      ...player,
+                      view: {
+                        ...player.view,
+                        timers: message.timers,
+                      },
+                    },
+                  ],
+                ),
+              ),
+            },
+          };
+          onState(currentState);
+        },
         onSetupSync(message) {
           onState(
             loadSetupState(

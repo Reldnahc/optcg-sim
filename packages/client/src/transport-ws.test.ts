@@ -136,6 +136,7 @@ describe("dev WebSocket match transport", () => {
       onStateSync(message) {
         receivedStates.push(message);
       },
+      onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
       onError(message) {
@@ -209,6 +210,7 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onTimerSync() {},
       onSetupSync(message) {
         setupMessages.push(message);
       },
@@ -248,6 +250,47 @@ describe("dev WebSocket match transport", () => {
     assert.equal(transitionMessages.length, 1);
   });
 
+  test("routes timer sync messages without requiring a full state sync", () => {
+    const recording = createRecordingWebSocket();
+    const timerMessages: unknown[] = [];
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+    });
+    transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onTimerSync(message) {
+        timerMessages.push(message);
+      },
+      onSetupSync() {},
+      onSessionTransition() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    socket.receive({
+      type: "timerSync",
+      matchId: "match-1",
+      serverSeq: 2,
+      stateSeq: 8,
+      timers: {
+        players: {
+          p1: { remainingMs: 900, isRunning: true },
+        },
+      },
+    });
+
+    assert.equal(timerMessages.length, 1);
+  });
+
   test("falls back to getRandomValues for client action ids when randomUUID is unavailable", async () => {
     const recording = createRecordingWebSocket();
     const originalCrypto = globalThis.crypto;
@@ -271,6 +314,7 @@ describe("dev WebSocket match transport", () => {
         playerId: "p1" as PlayerId,
         sessionToken: "token-p1",
         onStateSync() {},
+        onTimerSync() {},
         onSetupSync() {},
         onSessionTransition() {},
         onError(message) {
@@ -315,6 +359,7 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
       onError(message) {
@@ -384,6 +429,7 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
       onError(message) {
@@ -450,6 +496,7 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       sessionToken: "token-p1",
       onStateSync() {},
+      onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
       onError(message) {

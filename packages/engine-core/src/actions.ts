@@ -9,6 +9,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   illegalAction,
   toEngineResult,
   toStateSeq,
@@ -79,6 +80,7 @@ import {
 import {
   applyConcede,
   applyEndMainPhase,
+  type EndMainPhaseOptions,
   getTurnLegalActions,
 } from "./turn/actions.js";
 import { advanceEndPhase } from "./turn/phases.js";
@@ -110,6 +112,9 @@ import {
 import { getReturnDonEligibleInstanceIds } from "./runtime/primitives/return-don.js";
 
 const returnDonBodyDecisionPrefix = "decision:returnDon:sequence:";
+
+export interface ApplyActionOptions
+  extends EngineResultOptions, EndMainPhaseOptions {}
 
 const getSetupStartOfGameLegalActions = (
   state: GameState,
@@ -195,14 +200,18 @@ export const getLegalActions = (
 const continueRuntimeAndAttackTimingAfterDecision = (
   originalState: GameState,
   result: EngineResult,
+  options: ApplyActionOptions = {},
 ): EngineResult => {
   const continued = continueAttackTimingDecisionResultIfReady(
     continueRuntimeAfterDecisionResult(originalState, result),
   );
-  return continueEndPhaseIfReady(continued);
+  return continueEndPhaseIfReady(continued, options);
 };
 
-const continueEndPhaseIfReady = (result: EngineResult): EngineResult => {
+const continueEndPhaseIfReady = (
+  result: EngineResult,
+  options: ApplyActionOptions = {},
+): EngineResult => {
   if (
     result.errors !== undefined ||
     result.state.pendingDecision !== undefined ||
@@ -211,11 +220,16 @@ const continueEndPhaseIfReady = (result: EngineResult): EngineResult => {
   ) {
     return result;
   }
-  const ended = advanceEndPhase(result.state);
+  const ended = advanceEndPhase(result.state, options);
   if (ended.errors !== undefined) {
     return ended;
   }
-  return toEngineResult(ended.state, [...result.events, ...ended.events]);
+  return toEngineResult(
+    ended.state,
+    [...result.events, ...ended.events],
+    undefined,
+    options,
+  );
 };
 
 const shouldContinueRuntimeAfterEffectDecision = (
@@ -233,10 +247,15 @@ const continueAfterEffectDecision = (
   originalState: GameState,
   decision: NonNullable<GameState["pendingDecision"]>,
   result: EngineResult,
+  options: ApplyActionOptions = {},
 ): EngineResult =>
   result.events.some((event) => event.type === "effectQueued") ||
   shouldContinueRuntimeAfterEffectDecision(originalState, decision)
-    ? continueRuntimeAndAttackTimingAfterDecision(originalState, result)
+    ? continueRuntimeAndAttackTimingAfterDecision(
+        originalState,
+        result,
+        options,
+      )
     : continueAttackTimingDecisionResultIfReady(result);
 
 const applyReturnDonBodyDecisionResponse = (
@@ -661,7 +680,11 @@ const applyRespondToDecision = (
 
 export { resolveSupportedVanillaBattle };
 
-export const applyAction = (state: GameState, action: Action): EngineResult => {
+export const applyAction = (
+  state: GameState,
+  action: Action,
+  options: ApplyActionOptions = {},
+): EngineResult => {
   if (action.type === "concede") {
     return applyConcede(state, action);
   }
@@ -672,6 +695,7 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       applyUseCounter(state, action),
+      options,
     );
   }
   if (state.pendingDecision !== undefined) {
@@ -687,7 +711,7 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
     );
   }
   if (action.type === "playCard") return applyPlayCard(state, action);
-  if (action.type === "endMainPhase") return applyEndMainPhase(state);
+  if (action.type === "endMainPhase") return applyEndMainPhase(state, options);
   if (action.type === "attachDon") return applyAttachDon(state, action);
   if (action.type === "declareAttack") return applyDeclareAttack(state, action);
   if (action.type === "activateEffect")
