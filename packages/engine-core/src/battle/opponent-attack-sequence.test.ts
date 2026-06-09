@@ -120,6 +120,62 @@ const optionalTrashSelfThenSetDonActiveSequence = (): Extract<
   ],
 });
 
+const optionalFilteredHandTrashThenSetBasePowerSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-trash-8000-character",
+      connector: "always",
+      saveResultAs: "paidCost",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "trashFromHand",
+          count: 1,
+          chooser: "self",
+          optional: true,
+          filter: {
+            categories: ["character"],
+            power: { op: "eq", value: 8000 },
+          },
+        },
+      },
+    },
+    {
+      id: "set-base-power-if-paid",
+      connector: "ifYouDo",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "set-leader-base-power",
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: { type: "myLeader" },
+              value: 7000,
+              duration: { type: "thisTurn" },
+            },
+          },
+          {
+            id: "set-this-character-base-power",
+            connector: "always",
+            effect: {
+              type: "setBasePower",
+              target: { type: "self" },
+              value: 7000,
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
 test("defender On Your Opponent's Attack sequence resolves before Counter Step pass decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -236,6 +292,118 @@ test("defender On Your Opponent's Attack sequence resolves before Counter Step p
     must(targeted.state.players[p1], "targeted p1").leader.state,
     "rested",
   );
+});
+
+test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or declined", () => {
+  const openAttackWithFilteredHandTrashCost = () => {
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "p1");
+    const p2State = must(state.players[p2], "p2");
+    const source = must(p2State.characters[0], "opponent attack source");
+    const costCard = must(p2State.hand[0], "8000 power hand cost card");
+    state.cardManifest.cards[costCard.cardId] = resolvedCard({
+      cardId: costCard.cardId,
+      category: "character",
+      power: 8000,
+    });
+    const definition = withOnOpponentAttackDrawEffect(
+      state,
+      source,
+      "def-on-opponent-attack-filtered-hand-trash-base-power",
+    );
+    const effect = must(definition.effects[0], "On Opponent Attack effect");
+    state.cardManifest.effectDefinitions = {
+      ...state.cardManifest.effectDefinitions,
+      "def-on-opponent-attack-filtered-hand-trash-base-power": {
+        ...definition,
+        effects: [
+          {
+            ...effect,
+            effect: optionalFilteredHandTrashThenSetBasePowerSequence(),
+          },
+        ],
+      },
+    };
+
+    const opened = applyDeclareAttack(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+      },
+      target: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+      },
+    });
+
+    assert.equal(opened.errors, undefined);
+    assert.equal(opened.state.pendingDecision?.type, "payCost");
+    assert.equal(opened.state.pendingDecision.playerId, p2);
+    assert.equal(opened.state.pendingDecision.cost.type, "trashFromHand");
+    return { opened, costCard, source };
+  };
+
+  const paidAttack = openAttackWithFilteredHandTrashCost();
+  const paidDecision = must(
+    paidAttack.opened.state.pendingDecision,
+    "paid attack decision",
+  );
+  const paid = applyAction(paidAttack.opened.state, {
+    type: "respondToDecision",
+    decisionId: paidDecision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [paidAttack.costCard.instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.battle?.step, "counter");
+  assert.equal(paid.state.pendingDecision?.type, "selectCards");
+  assert.equal(
+    must(paid.state.players[p2], "paid p2").trash[0]?.instanceId,
+    paidAttack.costCard.instanceId,
+  );
+  assert.deepEqual(
+    paid.state.continuousEffects.map((record) => ({
+      layer: record.modifier.layer,
+      operation: record.modifier.operation,
+      targetType: record.modifier.target.type,
+    })),
+    [
+      {
+        layer: "basePowerSet",
+        operation: { type: "setBasePower", value: 7000 },
+        targetType: "exactCard",
+      },
+      {
+        layer: "basePowerSet",
+        operation: { type: "setBasePower", value: 7000 },
+        targetType: "self",
+      },
+    ],
+  );
+
+  const declinedAttack = openAttackWithFilteredHandTrashCost();
+  const declinedDecision = must(
+    declinedAttack.opened.state.pendingDecision,
+    "declined attack decision",
+  );
+  const declined = applyAction(declinedAttack.opened.state, {
+    type: "respondToDecision",
+    decisionId: declinedDecision.id,
+    response: { type: "paymentDeclined" },
+  });
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.battle?.step, "counter");
+  assert.equal(declined.state.pendingDecision?.type, "selectCards");
+  assert.equal(must(declined.state.players[p2], "declined p2").trash.length, 0);
+  assert.deepEqual(declined.state.continuousEffects, []);
 });
 
 test("defender On Your Opponent's Attack trash-self sequence resumes battle after selecting DON", () => {

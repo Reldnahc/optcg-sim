@@ -80,6 +80,16 @@ const flattenNestedSequenceSegments = (
   if (flattened === null) {
     return null;
   }
+  if (segment.connector !== "always") {
+    return flattened.effects.map((child, index) => {
+      if (index === 0) {
+        return { ...child, connector: segment.connector };
+      }
+      return child.connector === "always"
+        ? { ...child, connector: "then" }
+        : child;
+    });
+  }
   return flattened.effects.map((child, index) =>
     index === 0 ? { ...child, connector: segment.connector } : child,
   );

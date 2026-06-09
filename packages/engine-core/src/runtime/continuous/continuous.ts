@@ -738,11 +738,13 @@ const effectPartsForPermanentBlock = (
     ? effect.effects
     : [{ connector: "always", effect }];
 
-const hasSelfPlayCostModifierPart = (effect: Effect): boolean =>
-  effectPartsForPermanentBlock(effect).some(
-    (part) =>
-      part.effect.type === "modifyCost" && part.effect.target?.type === "self",
-  );
+const isHandSelfPlayCostModifierPart = (part: SequencedEffect): boolean =>
+  part.effect.type === "modifyCost" &&
+  part.effect.sourceZone === "hand" &&
+  part.effect.target?.type === "self";
+
+const hasHandSelfPlayCostModifierPart = (effect: Effect): boolean =>
+  effectPartsForPermanentBlock(effect).some(isHandSelfPlayCostModifierPart);
 
 const deriveImplementedDslContinuousEffectsForCards = (
   state: GameState,
@@ -839,7 +841,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
     for (const block of permanentBlocks) {
       if (
         options.mode === "playCostHand" &&
-        !hasSelfPlayCostModifierPart(block.effect)
+        !hasHandSelfPlayCostModifierPart(block.effect)
       ) {
         continue;
       }
@@ -868,10 +870,12 @@ const deriveImplementedDslContinuousEffectsForCards = (
       }
       const effects = effectPartsForPermanentBlock(block.effect);
       for (const [index, part] of effects.entries()) {
+        if (options.mode === "field" && isHandSelfPlayCostModifierPart(part)) {
+          continue;
+        }
         if (
           options.mode === "playCostHand" &&
-          (part.effect.type !== "modifyCost" ||
-            part.effect.target?.type !== "self")
+          !isHandSelfPlayCostModifierPart(part)
         ) {
           continue;
         }
