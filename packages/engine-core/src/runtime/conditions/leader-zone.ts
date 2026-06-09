@@ -24,7 +24,12 @@ type ConditionEvaluationResult =
 type SupportedLeaderZoneFilter = Required<Pick<CardFilter, "categories">> &
   Pick<
     CardFilter,
-    "typesAny" | "attributesAny" | "names" | "nameContains" | "anyOf"
+    | "typesAny"
+    | "typesIncludeAny"
+    | "attributesAny"
+    | "names"
+    | "nameContains"
+    | "anyOf"
   >;
 
 type LeaderMetadata = ResolvedCard & {
@@ -87,6 +92,7 @@ export const isSupportedLeaderZoneFilter = (
     if (
       key !== "categories" &&
       key !== "typesAny" &&
+      key !== "typesIncludeAny" &&
       key !== "attributesAny" &&
       key !== "names" &&
       key !== "nameContains" &&
@@ -106,6 +112,10 @@ export const isSupportedLeaderZoneFilter = (
     Array.isArray(filter.typesAny) &&
     filter.typesAny.length > 0 &&
     filter.typesAny.every((value) => typeof value === "string");
+  const hasTypesInclude =
+    Array.isArray(filter.typesIncludeAny) &&
+    filter.typesIncludeAny.length > 0 &&
+    filter.typesIncludeAny.every((value) => typeof value === "string");
   const hasAttributes =
     Array.isArray(filter.attributesAny) &&
     filter.attributesAny.length > 0 &&
@@ -125,7 +135,14 @@ export const isSupportedLeaderZoneFilter = (
         ...branch,
       }),
     );
-  return hasTypes || hasAttributes || hasNames || hasNameContains || hasAnyOf;
+  return (
+    hasTypes ||
+    hasTypesInclude ||
+    hasAttributes ||
+    hasNames ||
+    hasNameContains ||
+    hasAnyOf
+  );
 };
 
 const leaderMatchesFilter = (
@@ -136,6 +153,12 @@ const leaderMatchesFilter = (
     filter.typesAny === undefined
       ? true
       : filter.typesAny.some((type) => leader.types.includes(type));
+  const typesIncludeMatch =
+    filter.typesIncludeAny === undefined
+      ? true
+      : filter.typesIncludeAny.some((typeText) =>
+          leader.types.some((type) => type.includes(typeText)),
+        );
   const attributesMatch =
     filter.attributesAny === undefined
       ? true
@@ -161,6 +184,7 @@ const leaderMatchesFilter = (
         );
   return (
     typesMatch &&
+    typesIncludeMatch &&
     attributesMatch &&
     namesMatch &&
     nameContainsMatch &&

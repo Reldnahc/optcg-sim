@@ -144,7 +144,7 @@ it("parses branch-specific character filters for temporary keyword grants", () =
               anyOf: [
                 { names: ["Monkey.D.Luffy"] },
                 {
-                  typesAny: ["Whitebeard Pirates"],
+                  typesIncludeAny: ["Whitebeard Pirates"],
                   currentPower: { min: 8000 },
                 },
               ],

@@ -138,7 +138,7 @@ describe("card filter predicate parser", () => {
       ),
     ).toEqual({
       filter: {
-        typesAny: ["Whitebeard Pirates"],
+        typesIncludeAny: ["Whitebeard Pirates"],
         currentPower: { min: 8000 },
       },
       evidence: [

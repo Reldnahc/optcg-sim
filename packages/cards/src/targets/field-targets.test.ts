@@ -233,7 +233,7 @@ describe("field target parsers", () => {
             anyOf: [
               { names: ["Monkey.D.Luffy"] },
               {
-                typesAny: ["Whitebeard Pirates"],
+                typesIncludeAny: ["Whitebeard Pirates"],
                 currentPower: { min: 8000 },
               },
             ],

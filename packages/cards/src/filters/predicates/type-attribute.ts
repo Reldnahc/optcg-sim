@@ -173,7 +173,7 @@ export const parseQuotedTypeIncludingPredicate: PredicateParser = (
   }
 
   return {
-    filter: { ...current, typesAny: [typeText] },
+    filter: { ...current, typesIncludeAny: [typeText] },
     evidence: ["filter:type"],
     rest: match?.groups?.["rest"] ?? "",
   };

@@ -20,7 +20,11 @@ export const isSupportedAttachDonTargetFilter = (
     return false;
   }
   return Object.keys(filter).every(
-    (key) => key === "categories" || key === "names" || key === "typesAny",
+    (key) =>
+      key === "categories" ||
+      key === "names" ||
+      key === "typesAny" ||
+      key === "typesIncludeAny",
   );
 };
 
@@ -38,6 +42,7 @@ const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "power",
   "state",
   "typesAny",
+  "typesIncludeAny",
 ]);
 
 export const isSupportedPublicFieldTargetFilter = (

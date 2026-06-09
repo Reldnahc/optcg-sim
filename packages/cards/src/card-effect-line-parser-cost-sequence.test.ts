@@ -195,6 +195,43 @@ it("parses filtered trash-to-bottom cost without binding the filter to one body"
   });
 });
 
+it("parses quoted type-including trash-to-bottom costs as substring type filters", () => {
+  expect(
+    parseCardEffectLine(
+      '[On Play] You may place 3 cards with a type including "CP" from your trash at the bottom of your deck in any order: Draw 1 card.',
+    ),
+  ).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 3,
+                from: { player: "self", zone: "trash" },
+                to: { player: "self", zone: "deck", position: "bottom" },
+                filter: {
+                  typesIncludeAny: ["CP"],
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+  });
+});
+
 it("parses active DON attachment and trash-self as reusable optional cost sequence", () => {
   expect(
     parseCardEffectLine(

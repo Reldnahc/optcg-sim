@@ -105,8 +105,10 @@ const isStartOfGameStageSelection = (
     effect.filter?.categories !== undefined &&
     effect.filter.categories.length === 1 &&
     effect.filter.categories[0] === "stage" &&
-    effect.filter.typesAny !== undefined &&
-    effect.filter.typesAny.length > 0
+    ((effect.filter.typesAny !== undefined &&
+      effect.filter.typesAny.length > 0) ||
+      (effect.filter.typesIncludeAny !== undefined &&
+        effect.filter.typesIncludeAny.length > 0))
   );
 };
 

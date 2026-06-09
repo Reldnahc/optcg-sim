@@ -135,6 +135,7 @@ const supportedSearchFilterKeys = new Set([
   "cost",
   "names",
   "typesAny",
+  "typesIncludeAny",
   "nameNot",
 ]);
 const supportedHandSelectionFilterKeys = new Set([
@@ -151,6 +152,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "power",
   "state",
   "typesAny",
+  "typesIncludeAny",
 ]);
 const supportedHandSelectionStates = new Set(["active", "rested", "attached"]);
 
@@ -197,6 +199,8 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
     isSupportedNumericFilter(filter.baseCost) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    (filter.typesIncludeAny === undefined ||
+      isStringArray(filter.typesIncludeAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot))
   );
 };
@@ -220,6 +224,8 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    (filter.typesIncludeAny === undefined ||
+      isStringArray(filter.typesIncludeAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
     isSupportedEffectEntryPointFilter(filter.effectEntryPoint) &&
     (filter.state === undefined ||
@@ -258,6 +264,14 @@ const cardMatchesBaseFilter = (
   if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => card.types.includes(type))
+  ) {
+    return false;
+  }
+  if (
+    filter.typesIncludeAny !== undefined &&
+    !filter.typesIncludeAny.some((typeText) =>
+      card.types.some((type) => type.includes(typeText)),
+    )
   ) {
     return false;
   }

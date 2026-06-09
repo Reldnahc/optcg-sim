@@ -162,7 +162,7 @@ describe("search reveal primitives", () => {
       filter: {
         anyOf: [
           { names: ["Monkey.D.Luffy"] },
-          { typesAny: ["Whitebeard Pirates"] },
+          { typesIncludeAny: ["Whitebeard Pirates"] },
         ],
       },
       min: 0,

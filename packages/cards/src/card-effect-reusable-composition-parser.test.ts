@@ -251,7 +251,7 @@ describe("card effect reusable parser compositions", () => {
           player: "self",
           filter: {
             categories: ["character"],
-            typesAny: ["GERMA"],
+            typesIncludeAny: ["GERMA"],
           },
         },
       },

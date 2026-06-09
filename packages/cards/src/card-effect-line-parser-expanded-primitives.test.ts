@@ -157,7 +157,7 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
               player: "self",
               filter: {
                 categories: ["character"],
-                typesAny: ["Whitebeard Pirates"],
+                typesIncludeAny: ["Whitebeard Pirates"],
                 cost: { min: 8 },
               },
               op: "eq",

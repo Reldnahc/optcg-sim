@@ -112,7 +112,8 @@ const isSupportedEventCardFilter = (
       key === "categories" ||
       key === "cost" ||
       key === "effectEntryPoint" ||
-      key === "typesAny",
+      key === "typesAny" ||
+      key === "typesIncludeAny",
   );
 };
 
@@ -220,6 +221,14 @@ const resolvedMatchesFilter = (
   if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => resolved.types.includes(type))
+  ) {
+    return false;
+  }
+  if (
+    filter.typesIncludeAny !== undefined &&
+    !filter.typesIncludeAny.some((typeText) =>
+      resolved.types.some((type) => type.includes(typeText)),
+    )
   ) {
     return false;
   }

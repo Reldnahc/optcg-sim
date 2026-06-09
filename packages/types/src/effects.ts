@@ -400,6 +400,7 @@ export interface CardFilter {
   colorsAny?: CardColor[];
   colorsAll?: CardColor[];
   typesAny?: string[];
+  typesIncludeAny?: string[];
   typesAll?: string[];
   attributesAny?: Attribute[];
   attributesAll?: Attribute[];

@@ -39,6 +39,7 @@ const supportedHandCardFilterKeys = new Set<keyof CardFilter>([
   "cost",
   "names",
   "typesAny",
+  "typesIncludeAny",
 ]);
 
 const cardMatchesHandFilter = (
@@ -65,6 +66,14 @@ const cardMatchesHandFilter = (
   if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((type) => metadata.types.includes(type))
+  ) {
+    return false;
+  }
+  if (
+    filter.typesIncludeAny !== undefined &&
+    !filter.typesIncludeAny.some((typeText) =>
+      metadata.types.some((type) => type.includes(typeText)),
+    )
   ) {
     return false;
   }

@@ -370,7 +370,7 @@ it("parses On Play/On K.O. search with name-or-type-including reveal filter", ()
               filter: {
                 anyOf: [
                   { names: ["Monkey.D.Luffy"] },
-                  { typesAny: ["Whitebeard Pirates"] },
+                  { typesIncludeAny: ["Whitebeard Pirates"] },
                 ],
               },
             },

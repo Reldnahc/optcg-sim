@@ -44,7 +44,7 @@ describe("field card count condition parser", () => {
         player: "self",
         filter: {
           categories: ["character"],
-          typesAny: ["Whitebeard Pirates"],
+          typesIncludeAny: ["Whitebeard Pirates"],
           cost: { min: 8 },
         },
         op: "eq",

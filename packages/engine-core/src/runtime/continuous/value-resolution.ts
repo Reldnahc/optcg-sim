@@ -59,6 +59,14 @@ const cardMatchesBasicFilter = (
   ) {
     return false;
   }
+  if (
+    filter.typesIncludeAny !== undefined &&
+    !filter.typesIncludeAny.some((typeText) =>
+      metadata.types.some((typeName) => typeName.includes(typeText)),
+    )
+  ) {
+    return false;
+  }
   return true;
 };
 

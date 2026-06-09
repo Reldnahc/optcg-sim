@@ -30,6 +30,7 @@ const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "names",
   "typesAny",
+  "typesIncludeAny",
 ]);
 
 const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
@@ -37,6 +38,7 @@ const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "cost",
   "typesAny",
+  "typesIncludeAny",
 ]);
 
 const supportedPlayRestrictionFilterKeys = new Set<keyof CardFilter>([
@@ -45,6 +47,7 @@ const supportedPlayRestrictionFilterKeys = new Set<keyof CardFilter>([
   "cost",
   "names",
   "typesAny",
+  "typesIncludeAny",
 ]);
 
 const supportedDerivedKeywords = new Set<Keyword>([
@@ -151,6 +154,7 @@ export const isSupportedBasePowerSetFilter = (
   }
   return (
     isNonEmptyStringArray(filter.typesAny) ||
+    isNonEmptyStringArray(filter.typesIncludeAny) ||
     isNonEmptyStringArray(filter.names)
   );
 };
@@ -164,7 +168,8 @@ const isSupportedCostModifierFilter = (
   ) &&
   (filter.categories === undefined ||
     filter.categories.every((category) => category === "character")) &&
-  isNonEmptyStringArray(filter.typesAny) &&
+  (isNonEmptyStringArray(filter.typesAny) ||
+    isNonEmptyStringArray(filter.typesIncludeAny)) &&
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
@@ -195,6 +200,8 @@ const isSupportedPlayRestrictionFilter = (
   (filter.categories === undefined || filter.categories.length > 0) &&
   (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
   (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
+  (filter.typesIncludeAny === undefined ||
+    isNonEmptyStringArray(filter.typesIncludeAny)) &&
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 

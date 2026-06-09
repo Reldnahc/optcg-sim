@@ -58,6 +58,14 @@ const handCardMatchesCounterFilter = (
     return false;
   }
   if (
+    filter.typesIncludeAny !== undefined &&
+    !filter.typesIncludeAny.some((typeText) =>
+      metadata.types.some((type) => type.includes(typeText)),
+    )
+  ) {
+    return false;
+  }
+  if (
     filter.names !== undefined &&
     !filter.names.some((name) => metadata.name === name)
   ) {

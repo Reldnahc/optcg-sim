@@ -38,7 +38,7 @@ it("parses singular matching Character presence as a reusable field-count thresh
       filter: {
         categories: ["character"],
         currentPower: { min: 8000 },
-        typesAny: ["Whitebeard Pirates"],
+        typesIncludeAny: ["Whitebeard Pirates"],
       },
       op: "gte",
       value: 1,

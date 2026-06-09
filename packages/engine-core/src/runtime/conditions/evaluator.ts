@@ -250,6 +250,7 @@ const isSupportedCharacterFieldCountFilter = (
   state?: "active" | "rested";
   names?: string[];
   typesAny?: string[];
+  typesIncludeAny?: string[];
   baseCost?: NumericFilter;
   cost?: NumericFilter;
   currentPower?: NumericFilter;
@@ -266,6 +267,7 @@ const isSupportedCharacterFieldCountFilter = (
       key !== "state" &&
       key !== "names" &&
       key !== "typesAny" &&
+      key !== "typesIncludeAny" &&
       key !== "baseCost" &&
       key !== "cost" &&
       key !== "currentPower" &&
@@ -285,6 +287,7 @@ const isSupportedCharacterFieldCountFilter = (
   const stateValue = filter.state as unknown;
   const namesValue = filter.names as unknown;
   const typesValue = filter.typesAny as unknown;
+  const typesIncludeValue = filter.typesIncludeAny as unknown;
   const costValue = filter.cost;
   const baseCostValue = filter.baseCost;
   const currentPowerValue = filter.currentPower;
@@ -302,6 +305,10 @@ const isSupportedCharacterFieldCountFilter = (
       (Array.isArray(typesValue) &&
         typesValue.length > 0 &&
         typesValue.every((value) => typeof value === "string"))) &&
+    (typesIncludeValue === undefined ||
+      (Array.isArray(typesIncludeValue) &&
+        typesIncludeValue.length > 0 &&
+        typesIncludeValue.every((value) => typeof value === "string"))) &&
     hasSupportedNumericFilter(costValue) &&
     hasSupportedNumericFilter(baseCostValue) &&
     hasSupportedNumericFilter(currentPowerValue) &&
@@ -468,6 +475,14 @@ const cardMatchesFilter = (
     return false;
   }
   if (
+    filter.typesIncludeAny !== undefined &&
+    !filter.typesIncludeAny.some((typeText) =>
+      metadata.types.some((typeName) => typeName.includes(typeText)),
+    )
+  ) {
+    return false;
+  }
+  if (
     filter.names !== undefined &&
     !filter.names.some((name) => metadata.name === name)
   ) {
@@ -539,13 +554,19 @@ const isSupportedOnlyMatchingFieldCardsFilter = (
 ): boolean => {
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   return (
-    keys.every((key) => key === "categories" || key === "typesAny") &&
+    keys.every(
+      (key) =>
+        key === "categories" || key === "typesAny" || key === "typesIncludeAny",
+    ) &&
     Array.isArray(filter.categories) &&
     filter.categories.length === 1 &&
     filter.categories[0] === "character" &&
-    Array.isArray(filter.typesAny) &&
-    filter.typesAny.length > 0 &&
-    filter.typesAny.every((value) => typeof value === "string")
+    ((Array.isArray(filter.typesAny) &&
+      filter.typesAny.length > 0 &&
+      filter.typesAny.every((value) => typeof value === "string")) ||
+      (Array.isArray(filter.typesIncludeAny) &&
+        filter.typesIncludeAny.length > 0 &&
+        filter.typesIncludeAny.every((value) => typeof value === "string")))
   );
 };
 
