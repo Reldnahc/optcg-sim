@@ -12,6 +12,8 @@ import type {
 } from "@optcg/types";
 
 import type { ClientPlayerSnapshot } from "../transport.js";
+import type { MatchCardCatalog } from "../transport.js";
+import { cardModelFromCatalog } from "./card-model.js";
 import type { ClientCardModel } from "../view-model.js";
 import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
 
@@ -138,6 +140,111 @@ describe("opponent reveal windows", () => {
       window.model.cards.map((card) => card.instanceId),
       [cardRef.instanceId],
     );
+  });
+
+  test("maps active reveal cards through the current card catalog for images", () => {
+    const snapshot: ClientPlayerSnapshot = {
+      view: {
+        events: [],
+        revealedCards: [
+          {
+            id: "reveal:sequence:look-at-top:0",
+            cards: [cardRef],
+            visibility: "privateToRecipient",
+            origin: "topOfDeck",
+            cleanupPolicy: "returnToOrigin",
+            createdAtStateSeq: 1 as StateSeq,
+          },
+        ],
+      } as unknown as PlayerView,
+      actions: [],
+    };
+    const catalog: MatchCardCatalog = {
+      players: {
+        [p1]: {
+          cards: {
+            [cardRef.cardId]: {
+              cardId: cardRef.cardId,
+              name: "Catalog revealed card",
+              category: "Character",
+              imageUrl: "https://cdn.example.test/revealed-card.webp",
+            },
+          },
+        },
+      },
+    };
+
+    const windows = opponentRevealWindowsFromState({
+      currentPlayerId: p1,
+      playerSnapshot: snapshot,
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel: (card) => cardModelFromCatalog(catalog, card),
+    });
+
+    assert.equal(windows.length, 1);
+    assert.equal(
+      windows[0]?.model.cards[0]?.imageUrl,
+      "https://cdn.example.test/revealed-card.webp",
+    );
+  });
+
+  test("opens a current selected reveal event without a persistent reveal record", () => {
+    const snapshot: ClientPlayerSnapshot = {
+      view: {
+        stateSeq: 1 as StateSeq,
+        events: [revealEvent()],
+        revealedCards: [],
+      } as unknown as PlayerView,
+      actions: [],
+    };
+
+    const windows = opponentRevealWindowsFromState({
+      currentPlayerId: p2,
+      playerSnapshot: snapshot,
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+
+    assert.equal(windows.length, 1);
+    assert.equal(windows[0]?.revealId, revealId);
+  });
+
+  test("does not reopen older event-only selected reveal windows", () => {
+    const snapshot: ClientPlayerSnapshot = {
+      view: {
+        stateSeq: 2 as StateSeq,
+        events: [revealEvent()],
+        revealedCards: [],
+      } as unknown as PlayerView,
+      actions: [],
+    };
+
+    const windows = opponentRevealWindowsFromState({
+      currentPlayerId: p2,
+      playerSnapshot: snapshot,
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+
+    assert.deepEqual(windows, []);
   });
 
   test("does not open floating reveal windows for setup candidate records", () => {
