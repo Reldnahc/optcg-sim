@@ -129,6 +129,7 @@ export const reorderDeckSlice = (params: {
 const supportedSearchFilterKeys = new Set([
   "anyOf",
   "attributesAny",
+  "baseCost",
   "categories",
   "colorsAny",
   "cost",
@@ -139,6 +140,7 @@ const supportedSearchFilterKeys = new Set([
 const supportedHandSelectionFilterKeys = new Set([
   "anyOf",
   "attributesAny",
+  "baseCost",
   "categories",
   "colorsAny",
   "custom",
@@ -192,6 +194,7 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     isSupportedNumericFilter(filter.cost) &&
+    isSupportedNumericFilter(filter.baseCost) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot))
@@ -222,6 +225,7 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.state === undefined ||
       supportedHandSelectionStates.has(filter.state)) &&
     isSupportedNumericFilter(filter.cost) &&
+    isSupportedNumericFilter(filter.baseCost) &&
     isSupportedNumericFilter(filter.power) &&
     (filter.custom === undefined ||
       supportedHandSelectionCustomFilters.has(filter.custom))
@@ -283,6 +287,31 @@ const cardMatchesBaseFilter = (
     } else {
       if (filter.cost.min !== undefined && cost < filter.cost.min) return false;
       if (filter.cost.max !== undefined && cost > filter.cost.max) return false;
+    }
+  }
+  if (filter.baseCost !== undefined) {
+    const cost = card.cost;
+    if (cost === undefined) {
+      return false;
+    }
+    if ("op" in filter.baseCost) {
+      if (filter.baseCost.op === "eq" && cost !== filter.baseCost.value)
+        return false;
+      if (filter.baseCost.op === "neq" && cost === filter.baseCost.value)
+        return false;
+      if (filter.baseCost.op === "gt" && cost <= filter.baseCost.value)
+        return false;
+      if (filter.baseCost.op === "gte" && cost < filter.baseCost.value)
+        return false;
+      if (filter.baseCost.op === "lt" && cost >= filter.baseCost.value)
+        return false;
+      if (filter.baseCost.op === "lte" && cost > filter.baseCost.value)
+        return false;
+    } else {
+      if (filter.baseCost.min !== undefined && cost < filter.baseCost.min)
+        return false;
+      if (filter.baseCost.max !== undefined && cost > filter.baseCost.max)
+        return false;
     }
   }
   if (filter.power !== undefined) {

@@ -273,7 +273,7 @@ const activatedReactionPredicate = (
           {
             filter: {
               categories: ["character"],
-              cost: { op: "gte", value: 8 },
+              baseCost: { op: "gte", value: 8 },
             },
           },
           {

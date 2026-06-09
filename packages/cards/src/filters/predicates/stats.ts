@@ -92,7 +92,7 @@ export const parsePowerPredicate: PredicateParser = (
 
 export const parseCostPredicate: PredicateParser = (text, current) => {
   const rangeMatch =
-    /^a (?:base )?cost of (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
+    /^a (?<base>base )?cost of (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
       text,
     );
   const minText = rangeMatch?.groups?.["min"];
@@ -103,8 +103,10 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
     if (min > max) {
       return undefined;
     }
+    const key =
+      rangeMatch?.groups?.["base"] === undefined ? "cost" : "baseCost";
     return {
-      filter: { ...current, cost: { min, max } },
+      filter: { ...current, [key]: { min, max } },
       evidence: [
         "filter:cost",
         "condition:comparator:gte",
@@ -117,15 +119,17 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
   }
 
   const exactMatch =
-    /^a (?:base )?cost of (?<exact>0|[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
+    /^a (?<base>base )?cost of (?<exact>0|[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
       text,
     );
   const exactValueText = exactMatch?.groups?.["exact"];
   if (exactValueText !== undefined) {
+    const key =
+      exactMatch?.groups?.["base"] === undefined ? "cost" : "baseCost";
     return {
       filter: {
         ...current,
-        cost: { op: "eq", value: Number.parseInt(exactValueText, 10) },
+        [key]: { op: "eq", value: Number.parseInt(exactValueText, 10) },
       },
       evidence: [
         "filter:cost",
@@ -137,7 +141,7 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
   }
 
   const match =
-    /^a (?:base )?cost of (?<value>0|[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
+    /^a (?<base>base )?cost of (?<value>0|[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const valueText = match?.groups?.["value"];
@@ -147,10 +151,11 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
   }
 
   const op: Comparator = direction.toLowerCase() === "or more" ? "gte" : "lte";
+  const key = match?.groups?.["base"] === undefined ? "cost" : "baseCost";
   return {
     filter: {
       ...current,
-      cost:
+      [key]:
         op === "gte"
           ? { min: Number.parseInt(valueText, 10) }
           : { max: Number.parseInt(valueText, 10) },

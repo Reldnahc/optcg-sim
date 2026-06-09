@@ -250,6 +250,7 @@ const isSupportedCharacterFieldCountFilter = (
   state?: "active" | "rested";
   names?: string[];
   typesAny?: string[];
+  baseCost?: NumericFilter;
   cost?: NumericFilter;
   currentPower?: NumericFilter;
   excludeSelf?: boolean;
@@ -265,6 +266,7 @@ const isSupportedCharacterFieldCountFilter = (
       key !== "state" &&
       key !== "names" &&
       key !== "typesAny" &&
+      key !== "baseCost" &&
       key !== "cost" &&
       key !== "currentPower" &&
       key !== "excludeSelf" &&
@@ -284,6 +286,7 @@ const isSupportedCharacterFieldCountFilter = (
   const namesValue = filter.names as unknown;
   const typesValue = filter.typesAny as unknown;
   const costValue = filter.cost;
+  const baseCostValue = filter.baseCost;
   const currentPowerValue = filter.currentPower;
   const excludeSelfValue = filter.excludeSelf as unknown;
   const customValue = filter.custom as unknown;
@@ -300,6 +303,7 @@ const isSupportedCharacterFieldCountFilter = (
         typesValue.length > 0 &&
         typesValue.every((value) => typeof value === "string"))) &&
     hasSupportedNumericFilter(costValue) &&
+    hasSupportedNumericFilter(baseCostValue) &&
     hasSupportedNumericFilter(currentPowerValue) &&
     (excludeSelfValue === undefined || excludeSelfValue === true) &&
     (customValue === undefined || customValue === "differentNames")
@@ -398,6 +402,7 @@ const countPublicCharactersOnField = (
     if (
       filter.names === undefined &&
       filter.typesAny === undefined &&
+      filter.baseCost === undefined &&
       filter.cost === undefined &&
       filter.currentPower === undefined
     ) {
@@ -471,6 +476,12 @@ const cardMatchesFilter = (
   if (
     filter.nameContains !== undefined &&
     !metadata.name.includes(filter.nameContains)
+  ) {
+    return false;
+  }
+  if (
+    filter.baseCost !== undefined &&
+    !numericFilterMatches(metadata.cost, filter.baseCost)
   ) {
     return false;
   }

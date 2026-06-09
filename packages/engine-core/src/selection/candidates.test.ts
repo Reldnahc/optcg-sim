@@ -301,6 +301,92 @@ describe("resolvePublicTargetCandidates", () => {
     expect(targetCards(basePowerResult)).toEqual([refs[0]]);
   });
 
+  test("distinguishes current cost from printed/base cost filters", () => {
+    const state = createActiveState();
+    const reduced = toCardId("current-cost-reduced");
+    const printedLow = toCardId("printed-low-cost");
+    addManifestCard(state, {
+      cardId: reduced,
+      category: "character",
+      cost: 1,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: printedLow,
+      category: "character",
+      cost: 0,
+      power: 5000,
+    });
+    const player = must(state.players[p1], "p1");
+    addManifestCard(state, {
+      cardId: player.leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: must(state.players[p2], "p2").leader.cardId,
+      category: "leader",
+      cost: 0,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p1, [reduced, printedLow]);
+    const reducedCharacter = must(player.characters[0], "reduced character");
+    state.continuousEffects.push({
+      id: "current-cost-targeting-reduction",
+      source: cardRef(player.leader, p1),
+      sourceSnapshot: {
+        instanceId: player.leader.instanceId,
+        cardId: player.leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: player.leader.zone,
+        category: "leader",
+        colors: ["black"],
+        power: 5000,
+        keywords: [],
+      },
+      controller: p1,
+      modifier: {
+        layer: "costAdd",
+        target: {
+          type: "exactCard",
+          card: cardRef(reducedCharacter, p1),
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "test:current-cost-targeting",
+          },
+          createdAtStateSeq: state.seq,
+        },
+        operation: { type: "addCost", value: -1 },
+      },
+      duration: { type: "thisTurn" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    });
+
+    const currentCostResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: { categories: ["character"], cost: { op: "eq", value: 0 } },
+      }),
+      { sourceControllerId: p1 },
+    );
+    const baseCostResult = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: {
+          categories: ["character"],
+          baseCost: { op: "eq", value: 0 },
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(currentCostResult)).toEqual([refs[0], refs[1]]);
+    expect(targetCards(baseCostResult)).toEqual([refs[1]]);
+  });
+
   test("uses broad permanent power modifiers when resolving current-power target filters", () => {
     const state = createActiveState();
     const reduced = toCardId("permanent-reduced-character");

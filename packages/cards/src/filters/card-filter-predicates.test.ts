@@ -47,7 +47,7 @@ describe("card filter predicate parser", () => {
     });
   });
 
-  it("parses base cost as the same reusable cost predicate family", () => {
+  it("parses base cost as a reusable printed/base cost predicate", () => {
     expect(
       parseCardFilterPredicates({
         text: "Characters with a base cost of 5 or less",
@@ -55,7 +55,7 @@ describe("card filter predicate parser", () => {
     ).toEqual({
       filter: {
         categories: ["character"],
-        cost: { max: 5 },
+        baseCost: { max: 5 },
       },
       evidence: [
         "filter:category:character",

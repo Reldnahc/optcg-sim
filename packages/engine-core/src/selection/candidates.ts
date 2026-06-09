@@ -38,6 +38,7 @@ const publicCandidateVisibility = { type: "public" } as const;
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attributesAny",
+  "baseCost",
   "categories",
   "colorsAny",
   "cost",
@@ -124,7 +125,11 @@ const hasOnlySupportedFilterKeys = (filter: CardFilter): boolean =>
   );
 
 const hasSupportedNumericFilter = (
-  filter: CardFilter["cost"] | CardFilter["power"] | CardFilter["currentPower"],
+  filter:
+    | CardFilter["baseCost"]
+    | CardFilter["cost"]
+    | CardFilter["power"]
+    | CardFilter["currentPower"],
 ): boolean => {
   if (filter === undefined) {
     return true;
@@ -167,13 +172,18 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
     (filter.state === undefined ||
       filter.state === "active" ||
       filter.state === "rested") &&
+    hasSupportedNumericFilter(filter.baseCost) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power) &&
     hasSupportedNumericFilter(filter.currentPower));
 
 const numericFilterMatches = (
   value: number | undefined,
-  filter: CardFilter["cost"] | CardFilter["power"],
+  filter:
+    | CardFilter["baseCost"]
+    | CardFilter["cost"]
+    | CardFilter["power"]
+    | CardFilter["currentPower"],
 ): boolean => {
   if (filter === undefined) {
     return true;
@@ -238,6 +248,12 @@ const cardMatchesEffectEntryPointFilter = (
   const hasEntryPoint = cardHasKnownEffectEntryPoint(state, card, filter);
   return filter.mode === "with" ? hasEntryPoint : !hasEntryPoint;
 };
+
+const computedCardViewFor = (state: GameState, instance: CardInstance) =>
+  computeView(state, {
+    supportStatusPolicy: "ignore",
+    unsupportedCombatKeywordPolicy: "ignore",
+  }).cards[instance.instanceId];
 
 const cardMatchesFilter = (
   state: GameState,
@@ -307,7 +323,18 @@ const cardMatchesFilter = (
     return false;
   }
 
-  if (!numericFilterMatches(card.cost, filter.cost)) {
+  const computedCard =
+    state.continuousEffects.length > 0 &&
+    (filter.cost !== undefined || filter.currentPower !== undefined)
+      ? computedCardViewFor(state, instance)
+      : undefined;
+
+  if (!numericFilterMatches(card.cost, filter.baseCost)) {
+    return false;
+  }
+  if (
+    !numericFilterMatches(computedCard?.currentCost ?? card.cost, filter.cost)
+  ) {
     return false;
   }
   if (!numericFilterMatches(card.power, filter.power)) {
@@ -317,10 +344,7 @@ const cardMatchesFilter = (
     return true;
   }
   return numericFilterMatches(
-    computeView(state, {
-      supportStatusPolicy: "ignore",
-      unsupportedCombatKeywordPolicy: "ignore",
-    }).cards[instance.instanceId]?.currentPower,
+    computedCard?.currentPower ?? card.power,
     filter.currentPower,
   );
 };

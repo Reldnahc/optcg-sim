@@ -513,7 +513,7 @@ describe("card effect event parser", () => {
                           zone: "characterArea",
                           filter: {
                             categories: ["character"],
-                            cost: { max: 6 },
+                            baseCost: { max: 6 },
                           },
                         },
                       },

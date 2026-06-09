@@ -60,7 +60,7 @@ describe("K.O. instruction parser", () => {
                 visibility: "public",
                 filter: {
                   categories: ["character"],
-                  cost: { max: 5 },
+                  baseCost: { max: 5 },
                 },
               },
             },

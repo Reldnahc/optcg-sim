@@ -201,7 +201,7 @@ describe("card effect reusable parser compositions", () => {
             {
               filter: {
                 categories: ["character"],
-                cost: { op: "gte", value: 8 },
+                baseCost: { op: "gte", value: 8 },
               },
             },
             {

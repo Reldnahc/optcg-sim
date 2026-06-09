@@ -18,6 +18,7 @@ const supportedRestriction = new Set([
 ]);
 
 const supportedFilterKeys = new Set<keyof CardFilter>([
+  "baseCost",
   "categories",
   "cost",
   "names",
@@ -32,12 +33,14 @@ const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
 ]);
 
 const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
+  "baseCost",
   "categories",
   "cost",
   "typesAny",
 ]);
 
 const supportedPlayRestrictionFilterKeys = new Set<keyof CardFilter>([
+  "baseCost",
   "categories",
   "cost",
   "names",
@@ -98,7 +101,7 @@ export const isSupportedBasePowerDuration = (duration: Duration): boolean =>
     isSupportedQueuedEffectConditionShape(duration.condition));
 
 const hasSupportedNumericFilter = (
-  filter: CardFilter["cost"] | CardFilter["power"],
+  filter: CardFilter["baseCost"] | CardFilter["cost"] | CardFilter["power"],
 ): boolean => {
   if (filter === undefined) return true;
   if ("op" in filter) {
@@ -118,6 +121,7 @@ const isSupportedAllFilter = (filter: CardFilter | undefined): boolean =>
   (Object.keys(filter).every((key) =>
     supportedFilterKeys.has(key as keyof CardFilter),
   ) &&
+    hasSupportedNumericFilter(filter.baseCost) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power));
 
@@ -161,6 +165,7 @@ const isSupportedCostModifierFilter = (
   (filter.categories === undefined ||
     filter.categories.every((category) => category === "character")) &&
   isNonEmptyStringArray(filter.typesAny) &&
+  hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
 export const isSupportedCostModifierEffect = (
@@ -190,6 +195,7 @@ const isSupportedPlayRestrictionFilter = (
   (filter.categories === undefined || filter.categories.length > 0) &&
   (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
   (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
+  hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
 const isSupportedPowerValue = (

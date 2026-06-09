@@ -403,6 +403,7 @@ export interface CardFilter {
   typesAll?: string[];
   attributesAny?: Attribute[];
   attributesAll?: Attribute[];
+  baseCost?: { op: Comparator; value: number } | { min?: number; max?: number };
   cost?: { op: Comparator; value: number } | { min?: number; max?: number };
   power?: { op: Comparator; value: number } | { min?: number; max?: number };
   currentPower?:

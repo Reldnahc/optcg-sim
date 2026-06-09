@@ -485,7 +485,7 @@ it("parses on-play DON activation followed by filtered play restriction", () => 
             effect: {
               type: "preventPlay",
               player: "self",
-              filter: { categories: ["character"], cost: { min: 7 } },
+              filter: { categories: ["character"], baseCost: { min: 7 } },
               duration: { type: "thisTurn" },
             },
           },

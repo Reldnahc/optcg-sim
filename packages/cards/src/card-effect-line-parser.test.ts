@@ -825,7 +825,7 @@ describe("card effect line parser", () => {
                         zone: "characterArea",
                         filter: {
                           categories: ["character"],
-                          cost: { max: 5 },
+                          baseCost: { max: 5 },
                         },
                       },
                     },

@@ -281,7 +281,7 @@ describe("replacement effect parser", () => {
       player: "self",
       filter: {
         categories: ["character"],
-        cost: { min: 4 },
+        baseCost: { min: 4 },
       },
     } as const;
     const when = {
