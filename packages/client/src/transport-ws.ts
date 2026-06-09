@@ -20,7 +20,7 @@ export interface DevWebSocketMatchTransportOptions {
 }
 
 type PendingRequest = {
-  accepted: boolean;
+  acceptedStateSeq?: number | undefined;
   resolve: (result: MatchActionResult) => void;
   reject: (error: Error) => void;
 };
@@ -148,7 +148,10 @@ export const createDevWebSocketMatchTransport = ({
       if (isStateSync(parsed)) {
         onStateSync(parsed);
         for (const [clientActionId, request] of pending) {
-          if (!request.accepted) {
+          if (
+            request.acceptedStateSeq === undefined ||
+            parsed.stateSeq < request.acceptedStateSeq
+          ) {
             continue;
           }
           pending.delete(clientActionId);
@@ -187,7 +190,10 @@ export const createDevWebSocketMatchTransport = ({
           pending.delete(parsed.clientActionId);
           return;
         }
-        pending.set(parsed.clientActionId, { ...request, accepted: true });
+        pending.set(parsed.clientActionId, {
+          ...request,
+          acceptedStateSeq: parsed.stateSeq,
+        });
         return;
       }
 
@@ -208,7 +214,7 @@ export const createDevWebSocketMatchTransport = ({
       clientActionId: string,
     ): Promise<MatchActionResult> => {
       const result = new Promise<MatchActionResult>((resolve, reject) => {
-        pending.set(clientActionId, { accepted: false, resolve, reject });
+        pending.set(clientActionId, { resolve, reject });
       });
       try {
         await openPromise;

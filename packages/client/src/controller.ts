@@ -409,6 +409,12 @@ export const createMatchClientController = ({
         sessionToken: credential.sessionToken,
         onError,
         onStateSync(message) {
+          if (
+            currentState !== undefined &&
+            message.stateSeq < currentState.snapshot.stateSeq
+          ) {
+            return;
+          }
           currentState = {
             matchId: message.matchId,
             seat: {

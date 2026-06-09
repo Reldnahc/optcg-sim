@@ -665,6 +665,51 @@ describe("match client controller", () => {
     });
   });
 
+  test("live state sync ignores older snapshots and catalogs", async () => {
+    const transport = createFakeTransport();
+    const liveTransport = createFakeLiveTransport();
+    const p1Id = "p1" as PlayerId;
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch(p1Id);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      stateSeq: 8,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 8, players: {} },
+      cards: { players: { [p1Id]: { cards: {} } } },
+    });
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 3,
+      stateSeq: 7,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 7, players: {} },
+      cards: { players: { ["stale" as PlayerId]: { cards: {} } } },
+    });
+
+    assert.equal(states.length, 1);
+    assert.deepEqual(controller.currentState()?.cards, {
+      players: { [p1Id]: { cards: {} } },
+    });
+  });
+
   test("joins an existing local match by claiming only the requested seat", async () => {
     const transport = createFakeTransport();
     const controller = createMatchClientController({

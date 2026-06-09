@@ -201,6 +201,78 @@ describe("dev WebSocket match transport", () => {
     assert.equal(receivedStates.length, 1);
   });
 
+  test("waits for a state sync at the accepted action state before resolving", async () => {
+    const recording = createRecordingWebSocket();
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      randomUUID: () => "client-action-1",
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onTimerSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    const resultPromise = connection.submitVisibleAction({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      actionIndex: 2,
+      expectedStateSeq: 7,
+    });
+    socket.open();
+    await waitForSentPayload(socket);
+    socket.receive({
+      type: "actionResult",
+      clientActionId: "client-action-1",
+      matchId: "match-1",
+      accepted: true,
+      stateSeq: 8,
+      actionSeq: 1,
+      errors: [],
+    });
+    socket.receive({
+      type: "stateSync",
+      matchId: "match-1",
+      serverSeq: 2,
+      stateSeq: 7,
+      snapshot: { stateSeq: 7, players: {} },
+      cards: { players: { ["stale" as PlayerId]: { cards: {} } } },
+    });
+
+    const pending = await Promise.race([
+      resultPromise.then(() => "resolved" as const),
+      Promise.resolve("pending" as const),
+    ]);
+    assert.equal(pending, "pending");
+
+    socket.receive({
+      type: "stateSync",
+      matchId: "match-1",
+      serverSeq: 3,
+      stateSeq: 8,
+      snapshot: { stateSeq: 8, players: {} },
+      cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
+    });
+    const result = await resultPromise;
+
+    assert.equal(result.snapshot.stateSeq, 8);
+    assert.deepEqual(result.cards, {
+      players: { ["p1" as PlayerId]: { cards: {} } },
+    });
+  });
+
   test("routes setup and session transition sync messages", () => {
     const recording = createRecordingWebSocket();
     const setupMessages: unknown[] = [];
