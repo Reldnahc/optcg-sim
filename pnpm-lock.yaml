@@ -74,6 +74,9 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
+      optcg-card-cache:
+        specifier: 0.1.0
+        version: 0.1.0
       redis:
         specifier: ^5.12.1
         version: 5.12.1
@@ -135,6 +138,9 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
+      optcg-card-cache:
+        specifier: 0.1.0
+        version: 0.1.0
       optcg-db:
         specifier: ^0.4.40
         version: 0.4.40
@@ -1750,6 +1756,13 @@ packages:
       }
     engines: { node: ">=20" }
 
+  optcg-card-cache@0.1.0:
+    resolution:
+      {
+        integrity: sha512-1xV7a5Gn8qyj6pnMDD3tksAbti5IzuOwLAg1kXJgeQg05aOrW8QaRWyA6rXaiHQfuhXcJ6z5/6Wz7eCRxiNmSg==,
+      }
+    engines: { node: ">=20" }
+
   optcg-card-rules@0.1.0:
     resolution:
       {
@@ -3335,6 +3348,13 @@ snapshots:
       mimic-function: 5.0.1
 
   optcg-auth-client@0.1.7: {}
+
+  optcg-card-cache@0.1.0:
+    dependencies:
+      redis: 5.12.1
+    transitivePeerDependencies:
+      - "@node-rs/xxhash"
+      - "@opentelemetry/api"
 
   optcg-card-rules@0.1.0(react@19.2.6):
     dependencies:

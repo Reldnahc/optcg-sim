@@ -94,6 +94,25 @@ describe("card repository", () => {
     assert.equal(cachedDefinition.cardId, cardId);
   });
 
+  test("returns cache warm entries with generated definitions", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", "[On Play] Draw 1 card."),
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeEntry] = await repository.resolveCacheEntries([cardId]);
+    const entry = required(maybeEntry, "cache entry");
+
+    assert.equal(entry.card.cardId, cardId);
+    assert.equal(entry.definition?.cardId, cardId);
+  });
+
   test("fails closed for parsed effect text without a runtime support evaluator", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;

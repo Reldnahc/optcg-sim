@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createCardCacheKey as createSharedCardCacheKey } from "optcg-card-cache";
 import type {
   Attribute,
   CardColor,
@@ -84,8 +85,14 @@ export interface CachedResolvedCard {
   readonly definition?: EffectDefinition;
 }
 
+export interface CardCacheEntry {
+  readonly card: ResolvedCard;
+  readonly definition?: EffectDefinition;
+}
+
 export interface CardRepository {
   resolveCards(cardIds: readonly CardId[]): Promise<ResolvedCard[]>;
+  resolveCacheEntries(cardIds: readonly CardId[]): Promise<CardCacheEntry[]>;
   buildMatchManifest(input: {
     readonly cardIds: readonly CardId[];
     readonly createdAt?: string;
@@ -93,10 +100,7 @@ export interface CardRepository {
   }): Promise<MatchCardManifest>;
 }
 
-interface BuiltCard {
-  readonly card: ResolvedCard;
-  readonly definition?: EffectDefinition;
-}
+type BuiltCard = CardCacheEntry;
 
 export interface CreateCardRepositoryInput {
   readonly cache: CardDataCache;
@@ -115,13 +119,10 @@ export const createCardCacheKey = (input: {
   readonly cardId: CardId;
   readonly versions: CardRepositoryVersions;
 }): string =>
-  [
-    "card",
-    input.versions.cardDataVersion,
-    input.versions.effectDefinitionsVersion,
-    input.versions.overlayVersion,
-    input.cardId,
-  ].join(":");
+  createSharedCardCacheKey({
+    cardId: input.cardId,
+    versions: input.versions,
+  });
 
 export const createCardRepository = (
   input: CreateCardRepositoryInput,
@@ -201,6 +202,9 @@ export const createCardRepository = (
   return {
     async resolveCards(cardIds) {
       return (await resolveBuiltCards(cardIds)).map((built) => built.card);
+    },
+    resolveCacheEntries(cardIds) {
+      return resolveBuiltCards(cardIds);
     },
     async buildMatchManifest(manifestInput) {
       const cards: Record<CardId, ResolvedCard> = {};

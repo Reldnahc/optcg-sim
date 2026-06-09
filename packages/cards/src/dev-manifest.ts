@@ -35,7 +35,7 @@ interface DevManifestVersions {
   readonly overlayVersion: string;
 }
 
-const defaultVersions: DevManifestVersions = {
+export const defaultDevManifestVersions: DevManifestVersions = {
   cardDataVersion: "live-poneglyph-dev-v1",
   effectDefinitionsVersion: "generated-dev-v1",
   customHandlerVersion: "none",
@@ -62,7 +62,7 @@ export const buildDevMatchCardManifestFromPoneglyphIds = async (
   request: BuildDevMatchCardManifestFromPoneglyphIdsRequest,
 ): Promise<MatchCardManifest> => {
   const versions: CardRepositoryVersions = {
-    ...defaultVersions,
+    ...defaultDevManifestVersions,
     ...request.versions,
   };
   return createCardRepository({

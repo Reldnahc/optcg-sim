@@ -22,11 +22,13 @@ export {
 } from "./redis-card-cache.js";
 export {
   buildDevMatchCardManifestFromPoneglyphIds,
+  defaultDevManifestVersions,
   parseDevCardIdList,
 } from "./dev-manifest.js";
 export { createParserSupportCertificate } from "./materialization/support-certificate.js";
 export type {
   CachedResolvedCard,
+  CardCacheEntry,
   CardDataCache,
   CardRepository,
   CardRepositoryVersions,

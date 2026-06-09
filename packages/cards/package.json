@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@optcg/types": "workspace:*",
+    "optcg-card-cache": "0.1.0",
     "redis": "^5.12.1"
   }
 }
