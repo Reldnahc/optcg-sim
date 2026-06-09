@@ -743,7 +743,7 @@ export const getLocalDevSnapshotForPlayer = (
   return {
     stateSeq: match.state.seq,
     actionSeq: match.state.actionSeq,
-    stateHash: timedStateHash("playerSnapshot", match.state),
+    stateHash: "",
     status: match.state.status.type,
     turn: match.state.turn,
     activePlayerId:
