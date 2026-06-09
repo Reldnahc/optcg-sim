@@ -234,11 +234,7 @@ test("player decision projection narrows set selection to the active sequence sp
     presentation: {
       source,
       textKind: "effect",
-      activeSpanIds: [
-        "span:search:selection",
-        "span:search:remaining",
-        "span:sequence:0:body",
-      ] as EffectTextSpanId[],
+      activeSpanIds: ["span:sequence:0:body"] as EffectTextSpanId[],
     },
   };
   const decisionId = toDecisionId("decision:selectCards:sequence-set:test");
@@ -290,6 +286,143 @@ test("player decision projection narrows set selection to the active sequence sp
     source,
     textKind: "effect",
     activeSpanIds: ["span:sequence:0:body"],
+  });
+});
+
+test("player decision projection narrows search card selection to the search selection span", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  sourceCard.instanceId = toInstanceId("search-selection-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry: EffectQueueEntry = {
+    ...queuedEffect(source),
+    presentation: {
+      source,
+      textKind: "effect",
+      activeSpanIds: [
+        "span:search:selection",
+        "span:search:remaining",
+      ] as EffectTextSpanId[],
+    },
+  };
+  const decisionId = toDecisionId("decision:selectCards:search:test");
+  const decisionCausedBy = {
+    type: "effect" as const,
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  };
+  state.effectQueue = [entry];
+  state.pendingDecision = {
+    id: decisionId,
+    type: "selectCards",
+    playerId: p1,
+    prompt: "Choose a card.",
+    causedBy: decisionCausedBy,
+    visibility: { type: "private", playerId: p1 },
+    request: {
+      timing: "onResolution",
+      set: "set:looked-cards:test" as never,
+      chooser: "self",
+      min: 0,
+      max: 1,
+      allowFewerIfUnavailable: true,
+      visibility: "privateToChooser",
+    },
+    candidates: [],
+  };
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
+    source,
+    textKind: "effect",
+    activeSpanIds: ["span:search:selection"],
+  });
+});
+
+test("player decision projection narrows search remainder ordering to the search remaining span", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  const orderedCard = must(p1State.deck.shift(), "ordered card");
+  sourceCard.instanceId = toInstanceId("search-remaining-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry: EffectQueueEntry = {
+    ...queuedEffect(source),
+    presentation: {
+      source,
+      textKind: "effect",
+      activeSpanIds: [
+        "span:search:selection",
+        "span:search:remaining",
+      ] as EffectTextSpanId[],
+    },
+  };
+  const decisionId = toDecisionId("decision:orderCards:search:test");
+  const decisionCausedBy = {
+    type: "effect" as const,
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  };
+  state.effectQueue = [entry];
+  state.pendingDecision = {
+    id: decisionId,
+    type: "orderCards",
+    playerId: p1,
+    prompt: "Order the remaining looked cards.",
+    causedBy: decisionCausedBy,
+    visibility: { type: "private", playerId: p1 },
+    cards: [
+      {
+        instanceId: orderedCard.instanceId,
+        cardId: orderedCard.cardId,
+        playerId: p1,
+        zone: orderedCard.zone,
+      },
+    ],
+    destination: "deck",
+    placement: { type: "topOrBottom" },
+  };
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
+    source,
+    textKind: "effect",
+    activeSpanIds: ["span:search:remaining"],
   });
 });
 

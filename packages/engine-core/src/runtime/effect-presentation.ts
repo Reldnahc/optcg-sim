@@ -9,6 +9,8 @@ import type {
 } from "@optcg/types";
 
 const costSpanPrefix = "span:cost";
+const searchSelectionSpanPrefix = "span:search:selection";
+const searchRemainingSpanPrefix = "span:search:remaining";
 
 const activeSpanIdsWithPrefix = (
   activeSpanIds: readonly EffectTextSpanId[],
@@ -43,6 +45,16 @@ export const activeSpanIdsForCost = (
   activeSpanIds: readonly EffectTextSpanId[],
 ): readonly EffectTextSpanId[] | undefined =>
   activeSpanIdsWithPrefix(activeSpanIds, costSpanPrefix);
+
+export const activeSpanIdsForSearchSelection = (
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined =>
+  activeSpanIdsWithPrefix(activeSpanIds, searchSelectionSpanPrefix);
+
+export const activeSpanIdsForSearchRemaining = (
+  activeSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] | undefined =>
+  activeSpanIdsWithPrefix(activeSpanIds, searchRemainingSpanPrefix);
 
 export const activeSpanIdsWithoutCost = (
   activeSpanIds: readonly EffectTextSpanId[],

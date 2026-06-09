@@ -11,6 +11,8 @@ import type {
 import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
   activeSpanIdsForCost,
+  activeSpanIdsForSearchRemaining,
+  activeSpanIdsForSearchSelection,
   activeSpanIdsForSequenceIndex,
 } from "../runtime/effect-presentation.js";
 
@@ -130,6 +132,19 @@ const narrowPayCostActiveSpanIds = (
   return activeSpanIdsForCost(activeSpanIds);
 };
 
+const narrowSearchActiveSpanIds = (
+  pending: PendingDecision,
+  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
+  if (pending.type === "selectCards") {
+    return activeSpanIdsForSearchSelection(activeSpanIds);
+  }
+  if (pending.type === "orderCards") {
+    return activeSpanIdsForSearchRemaining(activeSpanIds);
+  }
+  return undefined;
+};
+
 export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   state: GameState;
   pending: PendingDecision;
@@ -143,6 +158,10 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
     ...visible.entry.presentation,
     activeSpanIds:
       narrowPayCostActiveSpanIds(
+        params.pending,
+        visible.entry.presentation.activeSpanIds,
+      ) ??
+      narrowSearchActiveSpanIds(
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??
