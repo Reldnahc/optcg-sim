@@ -570,7 +570,7 @@ describe("activeEffectTextForSpotlight", () => {
     ).toEqual([]);
   });
 
-  it("does not create a resolved spotlight after choosing zero targets", () => {
+  it("keeps a resolved spotlight after choosing zero targets", () => {
     const resolved = event({
       type: "effectResolved",
       seq: 3,
@@ -599,8 +599,8 @@ describe("activeEffectTextForSpotlight", () => {
           },
         }),
         resolved,
-      ]),
-    ).toEqual([]);
+      ]).map((candidate) => candidate.key),
+    ).toEqual([String(resolved.id)]);
   });
 
   it("keeps a resolved spotlight after choosing zero cards", () => {

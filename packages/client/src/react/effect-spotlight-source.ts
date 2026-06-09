@@ -102,7 +102,7 @@ const isNoEffectDecisionResolvedEvent = (event: EngineEvent): boolean => {
   ) {
     return true;
   }
-  return responseType === "targets" && event.payload["selectedCount"] === 0;
+  return false;
 };
 
 const clearsNoEffectDecisionCandidate = (event: EngineEvent): boolean =>
