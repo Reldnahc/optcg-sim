@@ -491,6 +491,53 @@ describe("activeEffectTextForSpotlight", () => {
     ).toBeUndefined();
   });
 
+  it("keeps resolved spotlight sources ahead of pending decision active text", () => {
+    const pendingActiveEffectText: NonNullable<
+      PlayerView["pendingDecision"]
+    >["presentation"]["activeEffectText"] = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:decision"],
+    };
+    const resolved = event({
+      type: "effectResolved",
+      seq: 2,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:resolved"],
+        },
+      },
+    });
+
+    expect(
+      activeEffectTextSourcesForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: {
+          id: "decision:selectTargets:1" as DecisionId,
+          type: "selectTargets",
+          playerId: "p1" as PlayerId,
+          prompt: "Select target.",
+          causedBy: { type: "ruleProcess", name: "effect" },
+          presentation: {
+            title: "Select target",
+            instruction: "Select target.",
+            activeEffectText: pendingActiveEffectText,
+          },
+          min: 0,
+          max: 1,
+          candidates: [],
+        },
+        events: [resolved],
+      }).map((candidate) => candidate.key),
+    ).toEqual([
+      String(resolved.id),
+      `decision:decision:selectTargets:1|${String(source.instanceId)}|effect|span:decision`,
+    ]);
+  });
+
   it("does not create a resolved spotlight after a declined cost decision", () => {
     const resolved = event({
       type: "effectResolved",

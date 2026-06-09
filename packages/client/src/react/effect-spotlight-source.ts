@@ -279,13 +279,14 @@ export const activeEffectTextSourcesForSpotlight = ({
   readonly pendingDecision: PlayerView["pendingDecision"];
   readonly events: readonly EngineEvent[];
 }): readonly EffectSpotlightActiveSource[] => {
+  const resolvedSources = resolvedEffectTextSourcesForSpotlight(events);
   const activeSource = activeEffectTextSourceForSpotlight({
     activeEffectText,
     pendingDecision,
     events,
   });
   if (activeSource?.mode === "live") {
-    return [activeSource];
+    return [...resolvedSources, activeSource];
   }
   if (pendingDecision !== undefined) {
     return activeSource === undefined ? [] : [activeSource];
@@ -301,5 +302,5 @@ export const activeEffectTextSourcesForSpotlight = ({
         : [activeSource]
       : splitResolvedSources;
   }
-  return resolvedEffectTextSourcesForSpotlight(events);
+  return resolvedSources;
 };

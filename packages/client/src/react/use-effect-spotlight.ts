@@ -135,13 +135,16 @@ export const consumeResolvedSpotlightSourceKeys = (
 export const shouldDisplayLiveSpotlightSource = ({
   liveSourceExists,
   model,
+  pendingResolvedSourceCount,
   resolvedQueueLength,
 }: {
   readonly liveSourceExists: boolean;
   readonly model: EffectSpotlightState | undefined;
+  readonly pendingResolvedSourceCount: number;
   readonly resolvedQueueLength: number;
 }): boolean =>
   liveSourceExists &&
+  pendingResolvedSourceCount === 0 &&
   resolvedQueueLength === 0 &&
   (model === undefined || model.activeMode === "live");
 
@@ -234,6 +237,15 @@ export const useEffectSpotlight = ({
   );
   const liveSource = normalizedSources.find((source) => source.mode === "live");
   const [model, setModel] = useState<EffectSpotlightState>();
+  const currentResolvedKey =
+    model?.activeMode === "resolved" ? model.activeKey : "";
+  const pendingResolvedSources = queuedResolvedSpotlightSources({
+    consumedKeys: consumedResolvedKeys.current,
+    consumedSignatures: consumedSourceSignatures.current,
+    currentKey: currentResolvedKey,
+    previousQueue: resolvedQueue,
+    sources: normalizedSources,
+  });
   useEffect(() => {
     if (
       !initializedConsumedResolvedKeys.current &&
@@ -245,21 +257,21 @@ export const useEffectSpotlight = ({
         normalizedSources,
       );
     }
-    const currentKey = model?.activeMode === "resolved" ? model.activeKey : "";
     setResolvedQueue((previous) => {
       const next = queuedResolvedSpotlightSources({
         consumedKeys: consumedResolvedKeys.current,
         consumedSignatures: consumedSourceSignatures.current,
-        currentKey,
+        currentKey: currentResolvedKey,
         previousQueue: previous,
         sources: normalizedSources,
       });
       return next === previous ? previous : [...next];
     });
-  }, [model?.activeKey, model?.activeMode, normalizedSources]);
+  }, [currentResolvedKey, normalizedSources]);
   const liveSourceCanDisplay = shouldDisplayLiveSpotlightSource({
     liveSourceExists: liveSource !== undefined,
     model,
+    pendingResolvedSourceCount: pendingResolvedSources.length,
     resolvedQueueLength: resolvedQueue.length,
   });
   const effectiveActive = liveSourceCanDisplay ? liveSource?.active : undefined;

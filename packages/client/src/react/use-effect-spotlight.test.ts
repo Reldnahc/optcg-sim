@@ -297,6 +297,7 @@ describe("effect spotlight model", () => {
       shouldDisplayLiveSpotlightSource({
         liveSourceExists: true,
         model: resolvedModel,
+        pendingResolvedSourceCount: 0,
         resolvedQueueLength: 0,
       }),
     ).toBe(false);
@@ -304,6 +305,7 @@ describe("effect spotlight model", () => {
       shouldDisplayLiveSpotlightSource({
         liveSourceExists: true,
         model: undefined,
+        pendingResolvedSourceCount: 0,
         resolvedQueueLength: 1,
       }),
     ).toBe(false);
@@ -311,9 +313,18 @@ describe("effect spotlight model", () => {
       shouldDisplayLiveSpotlightSource({
         liveSourceExists: true,
         model: undefined,
+        pendingResolvedSourceCount: 0,
         resolvedQueueLength: 0,
       }),
     ).toBe(true);
+    expect(
+      shouldDisplayLiveSpotlightSource({
+        liveSourceExists: true,
+        model: undefined,
+        pendingResolvedSourceCount: 1,
+        resolvedQueueLength: 0,
+      }),
+    ).toBe(false);
   });
 
   it("can seed initial resolved sources as consumed without blocking later sources", () => {
