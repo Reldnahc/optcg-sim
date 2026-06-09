@@ -272,6 +272,7 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
       });
       const revealId = payload["revealId"];
       const origin = payload["origin"];
+      const reason = payload["reason"];
       const selectionSetId = payload["selectionSetId"];
       const lifeOrigin =
         isObjectRecord(origin) &&
@@ -284,6 +285,7 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
         cards,
         ...(typeof origin === "string" ? { origin } : {}),
         ...(lifeOrigin === undefined ? {} : { origin: lifeOrigin }),
+        ...(typeof reason === "string" ? { reason } : {}),
         ...(typeof selectionSetId === "string" ? { selectionSetId } : {}),
       };
     }
