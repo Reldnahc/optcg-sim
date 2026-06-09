@@ -9,8 +9,10 @@ import type {
 
 import {
   consumeResolvedSpotlightSourceKeys,
+  consumeSpotlightSourceSignatures,
   effectSpotlightModel,
   queuedResolvedSpotlightSources,
+  shouldDisplayLiveSpotlightSource,
 } from "./use-effect-spotlight.js";
 
 describe("effect spotlight model", () => {
@@ -184,6 +186,134 @@ describe("effect spotlight model", () => {
       "event:queued",
       "event:next",
     ]);
+  });
+
+  it("does not queue resolved spans that were already displayed live", () => {
+    const baseSource = {
+      instanceId: "source-1" as InstanceId,
+      cardId: "OP00-001" as CardId,
+      playerId: "p1" as PlayerId,
+    };
+    const consumedSignatures = new Set<string>();
+    consumeSpotlightSourceSignatures(consumedSignatures, [
+      {
+        active: {
+          source: baseSource,
+          activeSpanIds: ["span:search:selection"],
+        },
+        key: "decision:search-selection",
+        mode: "live",
+      },
+    ]);
+
+    const queued = queuedResolvedSpotlightSources({
+      consumedKeys: new Set(),
+      consumedSignatures,
+      currentKey: undefined,
+      previousQueue: [],
+      sources: [
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:search:selection"],
+          },
+          key: "event:resolved-search:span:search:selection",
+          mode: "resolved",
+        },
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:search:remaining"],
+          },
+          key: "event:resolved-search:span:search:remaining",
+          mode: "resolved",
+        },
+      ],
+    });
+
+    expect(queued.map((source) => source.key)).toEqual([
+      "event:resolved-search:span:search:remaining",
+    ]);
+  });
+
+  it("keeps resolved multi-span sources when only part of the source was displayed live", () => {
+    const baseSource = {
+      instanceId: "source-1" as InstanceId,
+      cardId: "OP00-001" as CardId,
+      playerId: "p1" as PlayerId,
+    };
+    const consumedSignatures = new Set<string>();
+    consumeSpotlightSourceSignatures(consumedSignatures, [
+      {
+        active: {
+          source: baseSource,
+          activeSpanIds: ["span:cost"],
+        },
+        key: "decision:cost",
+        mode: "live",
+      },
+    ]);
+
+    const queued = queuedResolvedSpotlightSources({
+      consumedKeys: new Set(),
+      consumedSignatures,
+      currentKey: undefined,
+      previousQueue: [],
+      sources: [
+        {
+          active: {
+            source: baseSource,
+            activeSpanIds: ["span:cost", "span:body"],
+          },
+          key: "event:resolved-body",
+          mode: "resolved",
+        },
+      ],
+    });
+
+    expect(queued.map((source) => source.key)).toEqual(["event:resolved-body"]);
+  });
+
+  it("holds live pending-decision spotlight sources behind active resolved queue work", () => {
+    const resolvedModel = effectSpotlightModel({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      active: {
+        source: {
+          instanceId: "source-1" as InstanceId,
+          cardId: "OP00-001" as CardId,
+          playerId: "p1" as PlayerId,
+        },
+        activeSpanIds: ["span:already-queued"],
+      },
+      activeKey: "event:resolved:already-queued",
+      activeMode: "resolved",
+      pendingDecisionId: undefined,
+    });
+
+    expect(
+      shouldDisplayLiveSpotlightSource({
+        liveSourceExists: true,
+        model: resolvedModel,
+        resolvedQueueLength: 0,
+      }),
+    ).toBe(false);
+    expect(
+      shouldDisplayLiveSpotlightSource({
+        liveSourceExists: true,
+        model: undefined,
+        resolvedQueueLength: 1,
+      }),
+    ).toBe(false);
+    expect(
+      shouldDisplayLiveSpotlightSource({
+        liveSourceExists: true,
+        model: undefined,
+        resolvedQueueLength: 0,
+      }),
+    ).toBe(true);
   });
 
   it("can seed initial resolved sources as consumed without blocking later sources", () => {

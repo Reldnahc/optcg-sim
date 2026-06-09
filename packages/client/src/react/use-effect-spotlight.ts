@@ -53,13 +53,52 @@ const activePresentationKey = (active: ActiveEffectTextPresentation): string =>
     spanKey(active.activeSpanIds),
   ].join("|");
 
+const spotlightSourceSignatures = (
+  source: EffectSpotlightActiveSourceInput,
+): readonly string[] => {
+  const spanIds =
+    source.active.activeSpanIds.length === 0
+      ? [""]
+      : source.active.activeSpanIds;
+  return spanIds.map((spanId) =>
+    [
+      String(source.active.source.playerId),
+      String(source.active.source.instanceId),
+      String(source.active.source.cardId),
+      source.active.textKind ?? "",
+      spanId,
+    ].join("|"),
+  );
+};
+
+const sourceSignaturesConsumed = (
+  consumedSignatures: ReadonlySet<string>,
+  source: EffectSpotlightActiveSourceInput,
+): boolean =>
+  spotlightSourceSignatures(source).every((signature) =>
+    consumedSignatures.has(signature),
+  );
+
+export const consumeSpotlightSourceSignatures = (
+  consumedSignatures: Set<string>,
+  sources: readonly EffectSpotlightActiveSourceInput[],
+): void => {
+  for (const source of sources) {
+    for (const signature of spotlightSourceSignatures(source)) {
+      consumedSignatures.add(signature);
+    }
+  }
+};
+
 export const queuedResolvedSpotlightSources = ({
   consumedKeys,
+  consumedSignatures = new Set<string>(),
   currentKey,
   previousQueue,
   sources,
 }: {
   readonly consumedKeys: ReadonlySet<string>;
+  readonly consumedSignatures?: ReadonlySet<string>;
   readonly currentKey: string | undefined;
   readonly previousQueue: readonly EffectSpotlightActiveSourceInput[];
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
@@ -71,6 +110,7 @@ export const queuedResolvedSpotlightSources = ({
       source.mode === "resolved" &&
       source.key !== currentKey &&
       !consumedKeys.has(source.key) &&
+      !sourceSignaturesConsumed(consumedSignatures, source) &&
       !queuedKeys.has(source.key)
     ) {
       next ??= [...previousQueue];
@@ -91,6 +131,19 @@ export const consumeResolvedSpotlightSourceKeys = (
     }
   }
 };
+
+export const shouldDisplayLiveSpotlightSource = ({
+  liveSourceExists,
+  model,
+  resolvedQueueLength,
+}: {
+  readonly liveSourceExists: boolean;
+  readonly model: EffectSpotlightState | undefined;
+  readonly resolvedQueueLength: number;
+}): boolean =>
+  liveSourceExists &&
+  resolvedQueueLength === 0 &&
+  (model === undefined || model.activeMode === "live");
 
 export const effectSpotlightModel = ({
   active,
@@ -160,6 +213,7 @@ export const useEffectSpotlight = ({
   pendingDecisionId,
 }: UseEffectSpotlightInput): EffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
+  const consumedSourceSignatures = useRef(new Set<string>());
   const initializedConsumedResolvedKeys = useRef(false);
   const [resolvedQueue, setResolvedQueue] = useState<
     EffectSpotlightActiveSourceInput[]
@@ -179,9 +233,6 @@ export const useEffectSpotlight = ({
     [active, activeKey, activeMode, activeSources],
   );
   const liveSource = normalizedSources.find((source) => source.mode === "live");
-  const effectiveActive = liveSource?.active;
-  const effectiveActiveKey = liveSource?.key;
-  const effectiveActiveMode = liveSource?.mode ?? activeMode;
   const [model, setModel] = useState<EffectSpotlightState>();
   useEffect(() => {
     if (
@@ -198,6 +249,7 @@ export const useEffectSpotlight = ({
     setResolvedQueue((previous) => {
       const next = queuedResolvedSpotlightSources({
         consumedKeys: consumedResolvedKeys.current,
+        consumedSignatures: consumedSourceSignatures.current,
         currentKey,
         previousQueue: previous,
         sources: normalizedSources,
@@ -205,9 +257,25 @@ export const useEffectSpotlight = ({
       return next === previous ? previous : [...next];
     });
   }, [model?.activeKey, model?.activeMode, normalizedSources]);
+  const liveSourceCanDisplay = shouldDisplayLiveSpotlightSource({
+    liveSourceExists: liveSource !== undefined,
+    model,
+    resolvedQueueLength: resolvedQueue.length,
+  });
+  const effectiveActive = liveSourceCanDisplay ? liveSource?.active : undefined;
+  const effectiveActiveKey = liveSourceCanDisplay ? liveSource?.key : undefined;
+  const effectiveActiveMode = liveSourceCanDisplay
+    ? (liveSource?.mode ?? activeMode)
+    : activeMode;
   useEffect(() => {
-    if (liveSource !== undefined) {
-      setResolvedQueue([]);
+    if (
+      effectiveActive !== undefined &&
+      effectiveActiveKey !== undefined &&
+      effectiveActiveMode === "live"
+    ) {
+      consumeSpotlightSourceSignatures(consumedSourceSignatures.current, [
+        { active: effectiveActive, key: effectiveActiveKey, mode: "live" },
+      ]);
     }
     setModel((previous) =>
       effectSpotlightModel({
@@ -226,14 +294,12 @@ export const useEffectSpotlight = ({
     effectiveActiveKey,
     effectiveActiveMode,
     graceMs,
-    liveSource,
     minimumDwellMs,
     pendingDecisionId,
   ]);
   useEffect(() => {
     if (
-      liveSource !== undefined ||
-      pendingDecisionId !== undefined ||
+      liveSourceCanDisplay ||
       model !== undefined ||
       resolvedQueue.length === 0
     ) {
@@ -256,14 +322,7 @@ export const useEffectSpotlight = ({
         pendingDecisionId: undefined,
       }),
     );
-  }, [
-    graceMs,
-    liveSource,
-    minimumDwellMs,
-    model,
-    pendingDecisionId,
-    resolvedQueue,
-  ]);
+  }, [graceMs, liveSourceCanDisplay, minimumDwellMs, model, resolvedQueue]);
   useEffect(() => {
     if (
       model === undefined ||
