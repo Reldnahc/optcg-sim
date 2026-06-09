@@ -80,6 +80,7 @@ export interface DevMatchSetup {
   players: readonly [DevMatchPlayerSetup, DevMatchPlayerSetup];
   cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
+  lobbyId?: string;
   shuffleDecks?: boolean;
   rollback?: Parameters<typeof createLocalRollbackState>[0];
 }
@@ -96,6 +97,7 @@ export interface CreatePremadeDevMatchSetupOptions {
   readonly baseUrl?: string;
   readonly redisUrl?: string;
   readonly matchId?: MatchId;
+  readonly lobbyId?: string;
 }
 
 export interface ApplyLocalDevActionInput {
@@ -363,6 +365,7 @@ export const createPremadeDevMatchSetup = async (
     firstPlayerId: p1,
     playerOrder: [p1, p2],
     createdAt,
+    ...(options.lobbyId === undefined ? {} : { lobbyId: options.lobbyId }),
     ...(options.fetchCard === undefined
       ? {}
       : { fetchCard: options.fetchCard }),

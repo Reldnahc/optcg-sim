@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
@@ -226,11 +228,12 @@ export const createCustomLobbyRegistry = async (
     if (first?.status !== "ready" || second?.status !== "ready") {
       return;
     }
-    const matchId = `${lobby.lobbyId}-match` as MatchId;
+    const matchId = randomUUID() as MatchId;
     const playerOrder = twoPlayerOrder(lobby.playerOrder);
     const created = await matchRegistry.createMatch(
       await createDevMatchSetupFromDeckSubmissions({
         matchId,
+        lobbyId: lobby.lobbyId,
         firstPlayerId: playerOrder[0],
         playerOrder,
         createdAt: devLobbyCreatedAt,

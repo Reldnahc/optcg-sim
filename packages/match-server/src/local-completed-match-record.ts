@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { hashCanonicalStateValue } from "@optcg/engine-core";
-import type { MatchId, PlayerId } from "@optcg/types";
+import type { PlayerId } from "@optcg/types";
 
 import { canonicalJson } from "./canonical-json.js";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
@@ -96,11 +96,11 @@ const playerResult = (
   return winner === playerId ? "win" : "loss";
 };
 
-const creationSourceForSetup = (matchId: MatchId): MatchCreationSource =>
-  String(matchId).includes("-lobby-")
+const creationSourceForSetup = (setup: DevMatchSetup): MatchCreationSource =>
+  setup.lobbyId !== undefined
     ? {
         type: "customLobby",
-        lobbyId: String(matchId).replace(/-match$/u, ""),
+        lobbyId: setup.lobbyId,
         lobbyConfigId: "dev-local-lobby",
       }
     : { type: "dev" };
@@ -175,9 +175,9 @@ export const buildLocalCompletedMatchRecord = (
     gameType: "dev",
     formatId: "dev",
     ladderId: null,
-    lobbyId: String(input.match.state.matchId).replace(/-match$/u, ""),
+    lobbyId: input.setup.lobbyId ?? null,
     queueId: null,
-    creationSource: creationSourceForSetup(input.match.state.matchId),
+    creationSource: creationSourceForSetup(input.setup),
     spectatorPolicy: { mode: "live-filtered" },
     disconnectPolicy: { mode: "dev-none" },
     rollbackPolicy: { mode: "mutual-consent" },

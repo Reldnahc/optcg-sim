@@ -60,7 +60,8 @@ const verifiedHandoff = (hash: string): VerifiedSimHandoff => ({
 describe("local completed match record mapping", () => {
   test("preserves verified account loadout snapshots for completed matches", async () => {
     const setup = await createPremadeDevMatchSetup({
-      matchId: "lobby-1-match" as MatchId,
+      matchId: "11111111-1111-1111-1111-111111111111" as MatchId,
+      lobbyId: "lobby-1",
     });
     const match = createLocalDevMatch(setup);
     match.state.status = { type: "completed", winner: setup.playerOrder[0] };
@@ -98,6 +99,12 @@ describe("local completed match record mapping", () => {
     });
 
     expect(record).toBeDefined();
+    expect(record?.matchId).toBe("11111111-1111-1111-1111-111111111111");
+    expect(record?.lobbyId).toBe("lobby-1");
+    expect(record?.creationSource).toMatchObject({
+      type: "customLobby",
+      lobbyId: "lobby-1",
+    });
     const firstPlayer = record?.players[0];
     expect(firstPlayer?.userId).toBe("00000000-0000-0000-0000-000000000001");
     expect(firstPlayer?.savedDeckId).toBe(

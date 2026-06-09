@@ -21,6 +21,7 @@ interface CreateDefaultDevMatchSetupInput {
   readonly firstPlayerId: PlayerId;
   readonly playerOrder: readonly [PlayerId, PlayerId];
   readonly createdAt: string;
+  readonly lobbyId?: string;
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
@@ -378,6 +379,7 @@ const createDevMatchSetupFromDecklists = ({
       ),
     ],
     cardManifest,
+    ...(input.lobbyId === undefined ? {} : { lobbyId: input.lobbyId }),
     shuffleDecks: true,
   };
 };
