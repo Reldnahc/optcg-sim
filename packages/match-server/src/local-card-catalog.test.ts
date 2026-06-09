@@ -255,6 +255,99 @@ describe("local dev card catalog", () => {
     assert.equal(entry.imageUrl?.startsWith("https://"), true);
   });
 
+  test("includes private select-card decision candidates for modal images", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const candidate = p1State.deck[0];
+    if (candidate === undefined) {
+      throw new Error("Missing select candidate card.");
+    }
+    match.state.pendingDecision = {
+      id: "decision:selectCards:test" as DecisionId,
+      type: "selectCards",
+      playerId: p1,
+      prompt: "Choose a card.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      visibility: { type: "private", playerId: p1 },
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "privateToChooser",
+      },
+      candidates: [
+        {
+          card: {
+            instanceId: candidate.instanceId,
+            cardId: candidate.cardId,
+            playerId: p1,
+            zone: candidate.zone,
+          },
+          visibility: { type: "private", playerId: p1 },
+        },
+      ],
+    };
+
+    const p1Catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const p2Catalog = getLocalDevCardCatalogForPlayer(match, p2);
+    const entry = p1Catalog.players[p1]?.instances?.[candidate.instanceId];
+    if (entry === undefined) {
+      throw new Error("Missing pending select candidate catalog entry.");
+    }
+
+    assert.equal(entry.cardId, candidate.cardId);
+    assert.equal(entry.imageUrl?.startsWith("https://"), true);
+    assert.equal(
+      p2Catalog.players[p1]?.instances?.[candidate.instanceId],
+      undefined,
+    );
+  });
+
+  test("includes visible moved event cards for action log images", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const moved = p1State.deck[0];
+    if (moved === undefined) {
+      throw new Error("Missing moved card.");
+    }
+    match.state.eventJournal.push({
+      id: "event:test:card-moved" as EngineEventId,
+      seq: 1,
+      type: "cardMoved",
+      payload: {
+        playerId: p1,
+        instanceId: moved.instanceId,
+        cardId: moved.cardId,
+        from: "deck",
+        to: "hand",
+      },
+      visibility: { type: "private", playerId: p1 },
+      createdAtStateSeq: match.state.seq,
+    });
+
+    const p1Catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const p2Catalog = getLocalDevCardCatalogForPlayer(match, p2);
+    const entry = p1Catalog.players[p1]?.instances?.[moved.instanceId];
+    if (entry === undefined) {
+      throw new Error("Missing visible cardMoved catalog entry.");
+    }
+
+    assert.equal(entry.cardId, moved.cardId);
+    assert.equal(entry.imageUrl?.startsWith("https://"), true);
+    assert.equal(
+      p2Catalog.players[p1]?.instances?.[moved.instanceId],
+      undefined,
+    );
+  });
+
   test("includes private life trigger decision cards for the decision player", () => {
     const match = createTestMatch();
     const p1State = match.state.players[p1];

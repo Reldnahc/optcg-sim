@@ -181,6 +181,35 @@ const addVisibleCatalogEntriesForRevealEvents = (
   }
 };
 
+const cardIdentityEventTypes = new Set([
+  "cardMoved",
+  "cardPlayed",
+  "cardTrashed",
+  "cardDiscarded",
+  "cardKOd",
+  "cardReturned",
+  "counterUsed",
+  "triggerActivated",
+]);
+
+const addVisibleCatalogEntriesForCardIdentityEvents = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
+  view: PlayerView,
+  variantOverrides: Record<InstanceId, VariantKey>,
+): void => {
+  for (const event of view.events) {
+    if (!cardIdentityEventTypes.has(event.type)) {
+      continue;
+    }
+    const card = revealPayloadCardRef(event.payload);
+    if (card === undefined) {
+      continue;
+    }
+    addVisibleCatalogEntryForCardRef(players, manifest, card, variantOverrides);
+  }
+};
+
 const activeEffectTextSourceFromPayload = (
   payload: unknown,
 ): CardRef | undefined => {
@@ -245,6 +274,24 @@ const addVisibleCatalogEntriesForPendingDecision = (
         players,
         manifest,
         card,
+        variantOverrides,
+      );
+    }
+  }
+  if (pending?.type === "selectCards") {
+    for (const candidate of pending.candidates) {
+      addVisibleCatalogEntryForCardRef(
+        players,
+        manifest,
+        candidate.card,
+        variantOverrides,
+      );
+    }
+    for (const choice of pending.choices) {
+      addVisibleCatalogEntryForCardRef(
+        players,
+        manifest,
+        choice.card,
         variantOverrides,
       );
     }
@@ -348,6 +395,12 @@ const addVisibleCatalogEntries = (
     variantOverrides,
   );
   addVisibleCatalogEntriesForRevealEvents(
+    players,
+    manifest,
+    view,
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForCardIdentityEvents(
     players,
     manifest,
     view,
