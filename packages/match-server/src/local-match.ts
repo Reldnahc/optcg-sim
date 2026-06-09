@@ -30,6 +30,7 @@ import type {
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
 import { actionDecisionPayment } from "./dev-action-payment.js";
+import { recordActionTimingSpan } from "./action-timing-log.js";
 import { cardName } from "./dev-card-utils.js";
 import {
   buildLocalDevCardCatalog,
@@ -119,6 +120,9 @@ type ExecutableDevAction = DevVisibleAction & {
   decisionId?: DecisionId;
   response?: DecisionResponse;
 };
+
+const timedStateHash = (name: string, value: unknown): string =>
+  recordActionTimingSpan(`hash:${name}`, () => hashCanonicalStateValue(value));
 
 const responseKeyForDecisionResponse = (
   response: DecisionResponse | undefined,
@@ -239,14 +243,16 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
         {
           state: current,
           events,
-          stateHash: hashCanonicalStateValue(current),
+          stateHash: timedStateHash("advanceToMainPhaseReturn", current),
         },
         events,
       );
     }
 
     if (current.turn.phase === "refresh") {
-      const result = advanceRefreshPhase(current);
+      const result = recordActionTimingSpan("advanceRefreshPhase", () =>
+        advanceRefreshPhase(current),
+      );
       events.push(...result.events);
       if (result.errors !== undefined && result.errors.length > 0) {
         return combinedEngineResult(result, events);
@@ -256,7 +262,9 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
     }
 
     if (current.turn.phase === "draw") {
-      const result = advanceDrawPhase(current);
+      const result = recordActionTimingSpan("advanceDrawPhase", () =>
+        advanceDrawPhase(current),
+      );
       events.push(...result.events);
       if (result.errors !== undefined && result.errors.length > 0) {
         return combinedEngineResult(result, events);
@@ -266,7 +274,9 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
     }
 
     if (current.turn.phase === "don") {
-      const donResult = advanceDonPhase(current);
+      const donResult = recordActionTimingSpan("advanceDonPhase", () =>
+        advanceDonPhase(current),
+      );
       events.push(...donResult.events);
       if (donResult.errors !== undefined && donResult.errors.length > 0) {
         return combinedEngineResult(donResult, events);
@@ -275,7 +285,9 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       if (current.pendingDecision !== undefined) {
         continue;
       }
-      const mainResult = enterMainPhase(current);
+      const mainResult = recordActionTimingSpan("enterMainPhase", () =>
+        enterMainPhase(current),
+      );
       events.push(...mainResult.events);
       if (mainResult.errors !== undefined && mainResult.errors.length > 0) {
         return combinedEngineResult(mainResult, events);
@@ -288,7 +300,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       {
         state: current,
         events,
-        stateHash: hashCanonicalStateValue(current),
+        stateHash: timedStateHash("advanceToMainPhaseFallback", current),
       },
       events,
     );
@@ -297,7 +309,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
     {
       state: current,
       events,
-      stateHash: hashCanonicalStateValue(current),
+      stateHash: timedStateHash("advanceToMainPhaseLimit", current),
     },
     events,
   );
@@ -307,7 +319,9 @@ const autoAdvanceMandatoryTurnFlow = (result: EngineResult): EngineResult => {
   if (result.errors !== undefined && result.errors.length > 0) {
     return result;
   }
-  const advanced = advanceToMainPhase(result.state);
+  const advanced = recordActionTimingSpan("advanceToMainPhase", () =>
+    advanceToMainPhase(result.state),
+  );
   return combinedEngineResult(advanced, [...result.events, ...advanced.events]);
 };
 
@@ -544,7 +558,7 @@ const rollbackConsentActions = (
       apply: (currentState) => ({
         state: currentState,
         events: [],
-        stateHash: hashCanonicalStateValue(currentState),
+        stateHash: timedStateHash("legalActionCurrentState", currentState),
       }),
     },
     {
@@ -557,7 +571,7 @@ const rollbackConsentActions = (
       apply: (currentState) => ({
         state: currentState,
         events: [],
-        stateHash: hashCanonicalStateValue(currentState),
+        stateHash: timedStateHash("legalActionCurrentState", currentState),
       }),
     },
   ];
@@ -669,7 +683,7 @@ export const getLocalDevSnapshot = (
 ): DevMatchSnapshot => ({
   stateSeq: match.state.seq,
   actionSeq: match.state.actionSeq,
-  stateHash: hashCanonicalStateValue(match.state),
+  stateHash: timedStateHash("snapshot", match.state),
   status: match.state.status.type,
   turn: match.state.turn,
   activePlayerId:
@@ -689,7 +703,7 @@ export const getLocalDevSnapshotForPlayer = (
   return {
     stateSeq: match.state.seq,
     actionSeq: match.state.actionSeq,
-    stateHash: hashCanonicalStateValue(match.state),
+    stateHash: timedStateHash("playerSnapshot", match.state),
     status: match.state.status.type,
     turn: match.state.turn,
     activePlayerId:
@@ -719,8 +733,10 @@ export const applyLocalDevAction = (
       ],
     };
   }
-  const action = executableActions(match.state, input.playerId).find(
-    (candidate) => candidate.index === input.actionIndex,
+  const action = recordActionTimingSpan("executableActions", () =>
+    executableActions(match.state, input.playerId).find(
+      (candidate) => candidate.index === input.actionIndex,
+    ),
   );
   if (action === undefined) {
     return {
@@ -745,21 +761,30 @@ export const applyLocalDevAction = (
     });
   }
 
-  const previousState = cloneGameState(match.state);
-  const result = autoAdvanceMandatoryTurnFlow(
-    startMulliganAfterSetupIfReady(action.apply(match.state)),
+  const previousState = recordActionTimingSpan("cloneGameState", () =>
+    cloneGameState(match.state),
+  );
+  const actionResult = recordActionTimingSpan("actionApply", () =>
+    action.apply(match.state),
+  );
+  const mulliganResult = recordActionTimingSpan(
+    "startMulliganAfterSetupIfReady",
+    () => startMulliganAfterSetupIfReady(actionResult),
+  );
+  const result = recordActionTimingSpan("autoAdvanceMandatoryTurnFlow", () =>
+    autoAdvanceMandatoryTurnFlow(mulliganResult),
   );
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
-    match.rollback = recordRollbackPoint(
-      match.rollback,
-      previousState,
-      result.events,
+    match.rollback = recordActionTimingSpan("recordRollbackPoint", () =>
+      recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
   return {
-    snapshot: getLocalDevSnapshot(match),
+    snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
+      getLocalDevSnapshot(match),
+    ),
     errors,
   };
 };
@@ -797,14 +822,22 @@ export const applyLocalDevDecision = (
         errors: ["Rollback consent requires a rollbackConsent response."],
       };
     }
-    const result = resolveRollbackConsent(match.state, match.rollback, {
-      playerId: input.playerId,
-      decisionId: input.decisionId,
-      response: input.response,
-    });
+    const rollbackResponse = input.response;
+    const result = recordActionTimingSpan("resolveRollbackConsent", () =>
+      resolveRollbackConsent(match.state, match.rollback, {
+        playerId: input.playerId,
+        decisionId: input.decisionId,
+        response: rollbackResponse,
+      }),
+    );
     match.state = result.state;
     match.rollback = result.rollback;
-    return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
+    return {
+      snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
+        getLocalDevSnapshot(match),
+      ),
+      errors: result.errors,
+    };
   }
 
   const action = {
@@ -812,25 +845,32 @@ export const applyLocalDevDecision = (
     decisionId: input.decisionId,
     response: input.response,
   };
-  const previousState = cloneGameState(match.state);
-  const responseResult =
+  const previousState = recordActionTimingSpan("cloneGameState", () =>
+    cloneGameState(match.state),
+  );
+  const responseResult = recordActionTimingSpan("decisionApply", () =>
     decision.type === "mulligan"
       ? respondToMulliganDecision(match.state, action)
-      : applyAction(match.state, action);
-  const result = autoAdvanceMandatoryTurnFlow(
-    startMulliganAfterSetupIfReady(responseResult),
+      : applyAction(match.state, action),
+  );
+  const mulliganResult = recordActionTimingSpan(
+    "startMulliganAfterSetupIfReady",
+    () => startMulliganAfterSetupIfReady(responseResult),
+  );
+  const result = recordActionTimingSpan("autoAdvanceMandatoryTurnFlow", () =>
+    autoAdvanceMandatoryTurnFlow(mulliganResult),
   );
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
-    match.rollback = recordRollbackPoint(
-      match.rollback,
-      previousState,
-      result.events,
+    match.rollback = recordActionTimingSpan("recordRollbackPoint", () =>
+      recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
   return {
-    snapshot: getLocalDevSnapshot(match),
+    snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
+      getLocalDevSnapshot(match),
+    ),
     errors,
   };
 };

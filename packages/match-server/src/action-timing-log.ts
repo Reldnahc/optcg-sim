@@ -13,7 +13,13 @@ export interface ActionTimingLogInput {
   readonly stateSeq: number;
   readonly rawBytes: number;
   readonly applyMs: number;
+  readonly spans?: readonly ActionTimingSpan[];
   readonly totalServerMs: number;
+}
+
+export interface ActionTimingSpan {
+  readonly name: string;
+  readonly ms: number;
 }
 
 export interface SocketActionTiming {
@@ -42,15 +48,41 @@ export const writeActionTimingLog = (input: ActionTimingLogInput): void => {
   );
 };
 
+let activeActionTimingSpans: ActionTimingSpan[] | undefined;
+
+export const recordActionTimingSpan = <T>(name: string, fn: () => T): T => {
+  if (activeActionTimingSpans === undefined) {
+    return fn();
+  }
+  const startedAt = performance.now();
+  try {
+    return fn();
+  } finally {
+    activeActionTimingSpans.push({
+      name,
+      ms: roundTimingMs(performance.now() - startedAt),
+    });
+  }
+};
+
 export const createSocketActionTiming = (raw: string): SocketActionTiming => {
   const receivedAt = performance.now();
   let applyMs = 0;
+  let spans: readonly ActionTimingSpan[] | undefined;
   return {
     apply(fn) {
       const startedAt = performance.now();
-      const result = fn();
-      applyMs = roundTimingMs(performance.now() - startedAt);
-      return result;
+      const previousSpans = activeActionTimingSpans;
+      const nextSpans: ActionTimingSpan[] = [];
+      activeActionTimingSpans = nextSpans;
+      try {
+        const result = fn();
+        applyMs = roundTimingMs(performance.now() - startedAt);
+        spans = nextSpans;
+        return result;
+      } finally {
+        activeActionTimingSpans = previousSpans;
+      }
     },
     write(input) {
       const request = input.envelope.request;
@@ -66,6 +98,7 @@ export const createSocketActionTiming = (raw: string): SocketActionTiming => {
         stateSeq: input.result.stateSeq,
         rawBytes: Buffer.byteLength(raw),
         applyMs,
+        ...(spans === undefined || spans.length === 0 ? {} : { spans }),
         totalServerMs: roundTimingMs(performance.now() - receivedAt),
       });
     },
