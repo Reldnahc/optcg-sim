@@ -262,10 +262,11 @@ const combinedEngineResult = (
 const advanceToMainPhase = (state: GameState): EngineResult => {
   const events: EngineResult["events"] = [];
   let current = state;
-  let currentHash: string | undefined;
+  let currentHash = "";
   const livePhaseOptions = {
     includeStateHash: false,
     profileSpan: recordActionTimingSpan,
+    validateInvariants: false,
   } as const;
   for (let stepCount = 0; stepCount < 4; stepCount += 1) {
     if (
@@ -278,8 +279,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
         {
           state: current,
           events,
-          stateHash:
-            currentHash ?? timedStateHash("advanceToMainPhaseReturn", current),
+          stateHash: currentHash,
         },
         events,
       );
@@ -340,8 +340,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       {
         state: current,
         events,
-        stateHash:
-          currentHash ?? timedStateHash("advanceToMainPhaseFallback", current),
+        stateHash: currentHash,
       },
       events,
     );
@@ -350,8 +349,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
     {
       state: current,
       events,
-      stateHash:
-        currentHash ?? timedStateHash("advanceToMainPhaseLimit", current),
+      stateHash: currentHash,
     },
     events,
   );

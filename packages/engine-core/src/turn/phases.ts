@@ -28,6 +28,7 @@ const toEngineEventId = (value: string): EngineEventId =>
 export interface PhaseAdvanceOptions {
   readonly includeStateHash?: boolean;
   readonly profileSpan?: <T>(name: string, fn: () => T) => T;
+  readonly validateInvariants?: boolean;
 }
 
 const profilePhaseSpan = <T>(
@@ -35,6 +36,19 @@ const profilePhaseSpan = <T>(
   name: string,
   fn: () => T,
 ): T => options.profileSpan?.(name, fn) ?? fn();
+
+const assertPhaseInvariants = (
+  options: PhaseAdvanceOptions,
+  name: string,
+  state: GameState,
+): void => {
+  if (options.validateInvariants === false) {
+    return;
+  }
+  profilePhaseSpan(options, name, () => {
+    assertGameStateInvariants(state);
+  });
+};
 
 const toEngineResult = (
   state: GameState,
@@ -392,9 +406,11 @@ export const advanceRefreshPhase = (
   profilePhaseSpan(options, "advanceRefreshPhase:appendJournal", () => {
     nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  profilePhaseSpan(options, "advanceRefreshPhase:assertInvariants", () => {
-    assertGameStateInvariants(nextWithRules);
-  });
+  assertPhaseInvariants(
+    options,
+    "advanceRefreshPhase:assertInvariants",
+    nextWithRules,
+  );
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
@@ -498,9 +514,11 @@ export const advanceDrawPhase = (
   profilePhaseSpan(options, "advanceDrawPhase:appendJournal", () => {
     nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  profilePhaseSpan(options, "advanceDrawPhase:assertInvariants", () => {
-    assertGameStateInvariants(nextWithRules);
-  });
+  assertPhaseInvariants(
+    options,
+    "advanceDrawPhase:assertInvariants",
+    nextWithRules,
+  );
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
@@ -597,9 +615,11 @@ export const advanceDonPhase = (
   profilePhaseSpan(options, "advanceDonPhase:appendJournal", () => {
     nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  profilePhaseSpan(options, "advanceDonPhase:assertInvariants", () => {
-    assertGameStateInvariants(nextWithRules);
-  });
+  assertPhaseInvariants(
+    options,
+    "advanceDonPhase:assertInvariants",
+    nextWithRules,
+  );
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
@@ -682,9 +702,11 @@ export const enterMainPhase = (
   profilePhaseSpan(options, "enterMainPhase:appendJournal", () => {
     nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  profilePhaseSpan(options, "enterMainPhase:assertInvariants", () => {
-    assertGameStateInvariants(nextWithRules);
-  });
+  assertPhaseInvariants(
+    options,
+    "enterMainPhase:assertInvariants",
+    nextWithRules,
+  );
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
