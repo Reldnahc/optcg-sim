@@ -270,6 +270,7 @@ export interface LobbyLiveTransport {
   connect: (input: {
     lobbyId: string;
     playerId: PlayerId;
+    sessionToken: string;
     onLobbySync: (message: LobbyStateSyncMessage) => void;
     onError: (message: string) => void;
   }) => LiveLobbyConnection;

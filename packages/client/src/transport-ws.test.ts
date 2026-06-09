@@ -4,7 +4,10 @@ import { describe, test } from "vitest";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
-import { createDevWebSocketMatchTransport } from "./transport-ws.js";
+import {
+  createDevWebSocketLobbyTransport,
+  createDevWebSocketMatchTransport,
+} from "./transport-ws.js";
 import type { MatchStateSyncMessage } from "./transport.js";
 
 const expectedCanonicalJson = (value: unknown): string => {
@@ -91,6 +94,33 @@ const createRecordingWebSocket = (): {
 };
 
 describe("dev WebSocket match transport", () => {
+  test("connects lobby websocket with player id and session token", () => {
+    const recording = createRecordingWebSocket();
+    const transport = createDevWebSocketLobbyTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+    });
+
+    transport.connect({
+      lobbyId: "lobby-1",
+      playerId: "p1" as PlayerId,
+      sessionToken: "user:user-1:session-1",
+      onLobbySync() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+    const url = new URL(String(socket.url));
+    assert.equal(url.pathname, "/api/lobbies/lobby-1/ws");
+    assert.equal(url.searchParams.get("playerId"), "p1");
+    assert.equal(url.searchParams.get("sessionToken"), "user:user-1:session-1");
+  });
+
   test("queues action requests until the socket opens and resolves them from state sync", async () => {
     const recording = createRecordingWebSocket();
     const receivedStates: MatchStateSyncMessage[] = [];

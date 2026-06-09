@@ -114,12 +114,14 @@ const lobbyWebSocketUrl = (
   server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
   lobbyId: string,
   playerId: string,
+  sessionToken: string,
 ): string => {
   const url = new URL(
     `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
     server.url().replace(/^http/u, "ws"),
   );
   url.searchParams.set("playerId", playerId);
+  url.searchParams.set("sessionToken", sessionToken);
   return url.toString();
 };
 
@@ -557,7 +559,7 @@ describe("dev rematches", () => {
       assert.equal(transition.nextMatchId, undefined);
 
       const rematchLobbyP1 = await openSocket(
-        lobbyWebSocketUrl(server, rematchLobbyId, "p1"),
+        lobbyWebSocketUrl(server, rematchLobbyId, "p1", loserToken),
       );
       await rematchLobbyP1.next();
       await submitDevLobbyDeck(

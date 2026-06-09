@@ -494,6 +494,7 @@ export const createMatchClientController = ({
       lobbyLiveConnection = lobbyLiveTransport.connect({
         lobbyId,
         playerId,
+        sessionToken: lobbySessionToken,
         onError,
         onLobbySync(message) {
           if (message.lobbyId !== lobbyId) {

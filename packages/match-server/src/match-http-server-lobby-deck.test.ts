@@ -187,12 +187,14 @@ const lobbyWebSocketUrl = (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
   playerId: string,
+  sessionToken: string,
 ): string => {
   const url = new URL(
     `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
     server.url().replace(/^http/u, "ws"),
   );
   url.searchParams.set("playerId", playerId);
+  url.searchParams.set("sessionToken", sessionToken);
   return url.toString();
 };
 
@@ -357,7 +359,7 @@ describe("dev HTTP lobby deck submissions", () => {
       }
       await joinDevLobby(server, lobbyId, "user:user-p1:session-1");
       const p1LobbySocket = await openSocket(
-        lobbyWebSocketUrl(server, lobbyId, "p1"),
+        lobbyWebSocketUrl(server, lobbyId, "p1", "user:user-p1:session-1"),
       );
       sockets.push(p1LobbySocket.socket);
 
@@ -418,6 +420,29 @@ describe("dev HTTP lobby deck submissions", () => {
       for (const socket of sockets) {
         socket.close();
       }
+      await server.close();
+    }
+  });
+
+  test("rejects lobby websocket subscriptions for another account seat", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+      await joinDevLobby(server, lobbyId, "user:user-p1:session-1");
+
+      await assert.rejects(
+        () =>
+          openSocket(
+            lobbyWebSocketUrl(server, lobbyId, "p1", "user:user-p2:session-1"),
+          ),
+        /WebSocket failed to open/u,
+      );
+    } finally {
       await server.close();
     }
   });

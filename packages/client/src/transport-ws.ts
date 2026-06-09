@@ -302,12 +302,13 @@ export const createDevWebSocketLobbyTransport = ({
   baseUrl,
   WebSocket: WebSocketImpl = WebSocket,
 }: DevWebSocketMatchTransportOptions): LobbyLiveTransport => ({
-  connect({ lobbyId, playerId, onLobbySync, onError }) {
+  connect({ lobbyId, playerId, sessionToken, onLobbySync, onError }) {
     const url = new URL(
       `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
       socketRoot(baseUrl),
     );
     url.searchParams.set("playerId", String(playerId));
+    url.searchParams.set("sessionToken", sessionToken);
 
     const socket = new WebSocketImpl(url);
     socket.addEventListener("message", (event) => {

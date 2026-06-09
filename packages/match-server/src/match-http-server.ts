@@ -634,16 +634,29 @@ const handleWebSocketUpgrade = async (
   if (lobbyRoute !== null) {
     const lobbyId = decodeURIComponent(lobbyRoute.groups?.["lobbyId"] ?? "");
     const playerId = (url.searchParams.get("playerId") ?? "") as PlayerId;
+    const sessionToken = url.searchParams.get("sessionToken") ?? "";
     const key = request.headers["sec-websocket-key"];
     const lobby = await lobbyRegistry.getLobby(lobbyId);
+    const subject = parseDevSessionToken(sessionToken);
+    const authorization = await lobbyRegistry.authorizeSeat(
+      subject === undefined ? undefined : { subject },
+      lobbyId,
+      playerId,
+    );
     if (
       lobby === undefined ||
       typeof key !== "string" ||
       key.length === 0 ||
       playerId.length === 0 ||
-      lobby.seats[String(playerId)]?.claimed !== true
+      authorization !== "authorized"
     ) {
-      socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+      socket.end(
+        authorization === "unauthenticated"
+          ? "HTTP/1.1 401 Unauthorized\r\n\r\n"
+          : authorization === "forbidden"
+            ? "HTTP/1.1 403 Forbidden\r\n\r\n"
+            : "HTTP/1.1 400 Bad Request\r\n\r\n",
+      );
       return;
     }
 

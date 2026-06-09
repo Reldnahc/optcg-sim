@@ -73,6 +73,13 @@ export interface LocalDevLobbyRegistry {
     | "full"
   >;
   getLobby: (lobbyId: string) => Promise<CreatedDevLobbyResponse | undefined>;
+  authorizeSeat: (
+    auth: AuthContext | undefined,
+    lobbyId: string,
+    playerId: PlayerId,
+  ) => Promise<
+    "authorized" | "lobbyNotFound" | "unauthenticated" | "forbidden"
+  >;
   createRematchLobby: (
     sourceMatchId: MatchId,
     playerId: PlayerId,
@@ -354,6 +361,23 @@ export const createLocalDevLobbyRegistry = async (
     async getLobby(lobbyId) {
       const lobby = await lobbyStore.getLobby(lobbyId);
       return lobby === undefined ? undefined : lobbyResponse(lobby);
+    },
+    async authorizeSeat(auth, lobbyId, playerId) {
+      if (auth === undefined) {
+        return "unauthenticated";
+      }
+      const lobby = await lobbyStore.getLobby(lobbyId);
+      if (lobby === undefined) {
+        return "lobbyNotFound";
+      }
+      const seat = lobby.seats[String(playerId)];
+      if (
+        seat?.subject === undefined ||
+        !subjectsOwnSameAccount(seat.subject, auth.subject)
+      ) {
+        return "forbidden";
+      }
+      return "authorized";
     },
     async createRematchLobby(sourceMatchId, playerId, auth) {
       const seed = matchRegistry.createRematchSeed(
