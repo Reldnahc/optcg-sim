@@ -239,10 +239,21 @@ export const createSelectFromSetDecision = (params: {
   if (set?.kind !== "selectedCards") {
     return { ok: false };
   }
+  const selectionSetId = String(params.effect.set);
+  let revealVisibility: EventVisibility | undefined;
+  for (
+    let recordIndex = params.state.revealedCards.length - 1;
+    recordIndex >= 0;
+    recordIndex -= 1
+  ) {
+    const record = params.state.revealedCards[recordIndex];
+    if (record?.selectionSetId === selectionSetId) {
+      revealVisibility = record.visibility;
+      break;
+    }
+  }
   const visibility =
-    params.state.revealedCards.find(
-      (record) => record.selectionSetId === String(params.effect.set),
-    )?.visibility ?? ({ type: "public" } satisfies EventVisibility);
+    revealVisibility ?? ({ type: "public" } satisfies EventVisibility);
   const candidates = set.cards.filter((card) => {
     const player = params.state.players[card.playerId];
     const deckCard =

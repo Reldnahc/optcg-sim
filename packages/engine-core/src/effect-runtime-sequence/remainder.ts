@@ -47,9 +47,15 @@ const currentRemainderDeckCards = (
   playerId: EffectQueueEntry["controllerId"],
 ) => {
   const player = state.players[playerId];
-  const reveal = state.revealedCards.find(
-    (record) => record.selectionSetId === String(effect.set),
-  );
+  let reveal: GameState["revealedCards"][number] | undefined;
+  const selectionSetId = String(effect.set);
+  for (let index = state.revealedCards.length - 1; index >= 0; index -= 1) {
+    const record = state.revealedCards[index];
+    if (record?.selectionSetId === selectionSetId) {
+      reveal = record;
+      break;
+    }
+  }
   if (
     player === undefined ||
     reveal === undefined ||

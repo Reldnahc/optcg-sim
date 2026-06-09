@@ -128,10 +128,22 @@ export const applySetToHandSelectedCardMoveSegment = (
       },
     },
   };
+  const selectionSetId = String(params.effect.from);
+  let revealVisibility: EventVisibility | undefined;
+  for (
+    let recordIndex = params.state.revealedCards.length - 1;
+    recordIndex >= 0;
+    recordIndex -= 1
+  ) {
+    const record = params.state.revealedCards[recordIndex];
+    if (record?.selectionSetId === selectionSetId) {
+      revealVisibility = record.visibility;
+      break;
+    }
+  }
   const visibility =
-    params.state.revealedCards.find(
-      (record) => record.selectionSetId === String(params.effect.from),
-    )?.visibility ?? ({ type: "private", playerId } satisfies EventVisibility);
+    revealVisibility ??
+    ({ type: "private", playerId } satisfies EventVisibility);
   const events: EngineEvent[] = [];
   for (const card of movedCards) {
     const moved = nextHand.find(

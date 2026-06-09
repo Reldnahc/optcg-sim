@@ -48,6 +48,11 @@ const revealTitleFromRecord = (
 const isWindowRevealRecord = (record: PublicRevealRecord): boolean =>
   !record.id.startsWith("reveal:setup-start-of-game:");
 
+const isPrivateLookedSetRecord = (record: PublicRevealRecord): boolean =>
+  record.visibility === "privateToRecipient" &&
+  record.origin === "topOfDeck" &&
+  record.cleanupPolicy === "returnToOrigin";
+
 export const opponentRevealWindowsFromState = ({
   currentPlayerId,
   playerSnapshot,
@@ -86,11 +91,29 @@ export const opponentRevealWindowsFromState = ({
           },
     ).map((reveal) => [reveal.revealId, reveal]),
   );
-  return playerSnapshot.view.revealedCards
+  const eventWindows: OpponentRevealWindow[] = [...eventRevealsById.values()]
+    .filter((reveal) => !activeDismissedRevealIds.has(reveal.revealId))
+    .map((reveal, index) => ({
+      revealId: reveal.revealId,
+      initialRect: {
+        x: 380 + index * 24,
+        y: 100 + index * 24,
+        width: 300,
+        height: 420,
+      },
+      model: {
+        title: reveal.title,
+        cards: reveal.cards.map((card) => cardModel(card)),
+      },
+    }));
+  const eventRevealIds = new Set(eventWindows.map((window) => window.revealId));
+  const recordWindows = playerSnapshot.view.revealedCards
     .filter(
       (record) =>
         isWindowRevealRecord(record) &&
+        !isPrivateLookedSetRecord(record) &&
         !activeDismissedRevealIds.has(record.id) &&
+        !eventRevealIds.has(record.id) &&
         record.cards.length > 0,
     )
     .map((record, index) => {
@@ -111,4 +134,5 @@ export const opponentRevealWindowsFromState = ({
         },
       };
     });
+  return [...eventWindows, ...recordWindows];
 };

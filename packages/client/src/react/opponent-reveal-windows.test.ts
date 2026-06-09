@@ -66,8 +66,8 @@ const snapshotWithActiveReveal = (active: boolean): ClientPlayerSnapshot => ({
 });
 
 describe("opponent reveal windows", () => {
-  test("uses active reveal records for windows while preserving historical events for logs", () => {
-    const inactiveWindows = opponentRevealWindowsFromState({
+  test("opens selected search reveal events for the opponent without an active reveal record", () => {
+    const eventOnlyWindows = opponentRevealWindowsFromState({
       currentPlayerId: p2,
       playerSnapshot: snapshotWithActiveReveal(false),
       matchScope,
@@ -92,12 +92,18 @@ describe("opponent reveal windows", () => {
       cardModel,
     });
 
-    assert.deepEqual(inactiveWindows, []);
+    assert.equal(eventOnlyWindows.length, 1);
+    const eventWindow = eventOnlyWindows[0];
+    if (eventWindow === undefined) {
+      throw new Error("Expected selected reveal event window.");
+    }
+    assert.equal(eventWindow.revealId, revealId);
+    assert.equal(eventWindow.model.title, "Opponent revealed");
     assert.equal(activeWindows.length, 1);
     assert.equal(activeWindows[0]?.revealId, revealId);
   });
 
-  test("opens a window from private active reveal records without requiring a public event", () => {
+  test("does not open floating windows for private looked deck records", () => {
     const snapshot: ClientPlayerSnapshot = {
       view: {
         events: [],
@@ -128,16 +134,7 @@ describe("opponent reveal windows", () => {
       cardModel,
     });
 
-    assert.equal(windows.length, 1);
-    const window = windows[0];
-    if (window === undefined) {
-      throw new Error("Expected private reveal window.");
-    }
-    assert.equal(window.revealId, "reveal:sequence:look-at-top:0");
-    assert.deepEqual(
-      window.model.cards.map((card) => card.instanceId),
-      [cardRef.instanceId],
-    );
+    assert.deepEqual(windows, []);
   });
 
   test("does not open floating reveal windows for setup candidate records", () => {
