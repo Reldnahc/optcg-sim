@@ -28,6 +28,7 @@ import {
   type CustomLobbyState,
 } from "./lobby-store.js";
 import type { CreatePremadeDevMatchSetupOptions } from "./local-match.js";
+import { resolveRedisConfig } from "./redis-config.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export interface CreatedCustomLobbyResponse {
@@ -144,10 +145,13 @@ const createLobbyStore = async (
   if (options.lobbyStore !== undefined) {
     return options.lobbyStore;
   }
-  const redisUrl = options.redisUrl ?? process.env["REDIS_URL"];
-  if (redisUrl !== undefined && redisUrl.length > 0) {
+  const redisConfig = resolveRedisConfig({
+    redisUrl: options.redisUrl,
+    redisMode: options.redisMode,
+  });
+  if (redisConfig.redisUrl !== undefined) {
     return createRedisLobbyStore({
-      redis: await createRedisClientForLobbyStore(redisUrl),
+      redis: await createRedisClientForLobbyStore(redisConfig.redisUrl),
     });
   }
   return createMemoryLobbyStore();
@@ -205,6 +209,9 @@ export const createCustomLobbyRegistry = async (
         ...(options.redisUrl === undefined
           ? {}
           : { redisUrl: options.redisUrl }),
+        ...(options.redisMode === undefined
+          ? {}
+          : { redisMode: options.redisMode }),
       });
       return true;
     } catch {
@@ -246,6 +253,9 @@ export const createCustomLobbyRegistry = async (
         ...(options.redisUrl === undefined
           ? {}
           : { redisUrl: options.redisUrl }),
+        ...(options.redisMode === undefined
+          ? {}
+          : { redisMode: options.redisMode }),
       }),
       {
         ...(lobby.firstPlayerChoice === undefined

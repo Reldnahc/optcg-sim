@@ -52,6 +52,11 @@ corepack pnpm --filter @optcg/engine-core test
 corepack pnpm --filter @optcg/cards test
 ```
 
+Local development does not require Redis by default. Redis can be toggled with
+`PONEGLYPH_SIM_REDIS`: use `off` to force in-memory/no-cache behavior, `auto`
+to use Redis only when `REDIS_URL` is set, or `on` to opt into Redis with
+`REDIS_URL` or `redis://localhost:6379`.
+
 ## Verification
 
 Run the full gate before claiming a broad change is complete:

@@ -28,6 +28,7 @@ import type {
   InstanceId,
   VariantKey,
 } from "@optcg/types";
+import type { RedisMode } from "./redis-config.js";
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
 import { actionDecisionPayment } from "./dev-action-payment.js";
@@ -97,6 +98,7 @@ export interface CreatePremadeDevMatchSetupOptions {
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
+  readonly redisMode?: RedisMode;
   readonly matchId?: MatchId;
   readonly lobbyId?: string;
 }
@@ -380,6 +382,9 @@ export const createPremadeDevMatchSetup = async (
       : { fetchCard: options.fetchCard }),
     ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
     ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
+    ...(options.redisMode === undefined
+      ? {}
+      : { redisMode: options.redisMode }),
   });
 };
 

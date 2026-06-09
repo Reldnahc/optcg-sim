@@ -6,38 +6,24 @@ import {
 import type { Duplex } from "node:stream";
 import type { MatchId, PlayerId } from "@optcg/types";
 
-import { type DeckHashCodecPort } from "./deck-submission.js";
 import {
   createCustomLobbyRegistry,
   type CreatedCustomLobbyResponse,
   type CustomLobbyRegistry,
 } from "./custom-lobby-registry.js";
-import {
-  createPremadeDevMatchSetup,
-  isDevMatchSetup,
-  type CreatePremadeDevMatchSetupOptions,
-  type createLocalDevMatch,
-} from "./local-match.js";
+import { isDevMatchSetup } from "./local-match.js";
 import type { AuthContext, AuthProvider } from "./dev-auth.js";
 import { createDevAuthProvider, parseDevSessionToken } from "./dev-auth.js";
 import {
   createPoneglyphSimHandoffVerifier,
   type SimHandoffVerifier,
 } from "./sim-handoff.js";
-import {
-  createPostgresCompletedMatchRepository,
-  type CompletedMatchRepository,
-} from "./postgres-completed-match.js";
 import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
 import {
   createLocalDevMatchRegistry,
   type LocalDevMatchRegistry,
 } from "./dev-local-match-registry.js";
-import {
-  defaultMatchTimerPolicy,
-  type MatchTimerPolicy,
-} from "./match-timers.js";
 import {
   parseWebSocketFrames,
   websocketAccept,
@@ -66,8 +52,17 @@ import {
   playerStatePayload,
   playerTimerPayload,
 } from "./match-state-payload.js";
+import {
+  createDefaultMatchSetupFactory,
+  defaultMatchTimerTickMs,
+  defaultSocketIdleTimeoutMs,
+  resolveCompletedMatchRepository,
+  resolveMatchTimerPolicy,
+  type CreateMatchHttpServerOptions,
+} from "./match-http-server-options.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
+export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
 
 interface DevResetRequest {
   setup?: unknown;
@@ -87,28 +82,6 @@ export interface MatchHttpServer {
   close: () => Promise<void>;
   url: () => string;
 }
-
-export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
-  readonly setup?: Parameters<typeof createLocalDevMatch>[0];
-  readonly createDefaultMatch?: boolean;
-  readonly allowTemplateMatches?: boolean;
-  readonly allowedBrowserOrigins?: readonly string[];
-  readonly staticAssetsDirectory?: string;
-  readonly deckHashCodec?: DeckHashCodecPort;
-  readonly simHandoffVerifier?: SimHandoffVerifier;
-  readonly completedMatchRepository?: CompletedMatchRepository;
-  readonly authBaseUrl?: string;
-  readonly socketIdleTimeoutMs?: number;
-  readonly matchTimerPolicy?: MatchTimerPolicy;
-  readonly matchTimerTickMs?: number;
-}
-
-const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
-const defaultMatchTimerTickMs = 1_000;
-const envCompletedMatchRepository = (): CompletedMatchRepository | undefined =>
-  process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
-    ? createPostgresCompletedMatchRepository()
-    : undefined;
 
 const readRequestJson = async (request: IncomingMessage): Promise<unknown> =>
   await new Promise((resolve, reject) => {
@@ -861,15 +834,7 @@ const handleWebSocketUpgrade = async (
 export const createMatchHttpServer = async (
   options: CreateMatchHttpServerOptions = {},
 ): Promise<MatchHttpServer> => {
-  const createDefaultSetup = async (matchId?: MatchId) =>
-    createPremadeDevMatchSetup({
-      ...(matchId === undefined ? {} : { matchId }),
-      ...(options.fetchCard === undefined
-        ? {}
-        : { fetchCard: options.fetchCard }),
-      ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
-      ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
-    });
+  const createDefaultSetup = createDefaultMatchSetupFactory(options);
   const registry = await createLocalDevMatchRegistry(
     createDefaultSetup,
     options.setup,
@@ -879,12 +844,12 @@ export const createMatchHttpServer = async (
         : { createDefaultMatch: options.createDefaultMatch }),
       ...(() => {
         const completedMatchRepository =
-          options.completedMatchRepository ?? envCompletedMatchRepository();
+          resolveCompletedMatchRepository(options);
         return completedMatchRepository === undefined
           ? {}
           : { completedMatchRepository };
       })(),
-      matchTimerPolicy: options.matchTimerPolicy ?? defaultMatchTimerPolicy,
+      matchTimerPolicy: resolveMatchTimerPolicy(options),
     },
   );
   const lobbyRegistry = await createCustomLobbyRegistry(registry, options);

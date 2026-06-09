@@ -15,6 +15,7 @@ import {
   type ExplicitDonDeckSubmission,
 } from "./deck-validation.js";
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
+import { resolveRedisConfig, type RedisMode } from "./redis-config.js";
 
 interface CreateDefaultDevMatchSetupInput {
   readonly matchId: DevMatchSetup["matchId"];
@@ -25,6 +26,7 @@ interface CreateDefaultDevMatchSetupInput {
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
+  readonly redisMode?: RedisMode;
 }
 
 export interface CreateDevMatchSetupFromDeckSubmissionsInput extends CreateDefaultDevMatchSetupInput {
@@ -292,13 +294,18 @@ export const validateReadyDevDeckSubmission = async (
       ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
       ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
       ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
+      ...(input.redisMode === undefined ? {} : { redisMode: input.redisMode }),
     },
     decklist.donDeckCount,
   );
+  const redisConfig = resolveRedisConfig({
+    redisUrl: input.redisUrl,
+    redisMode: input.redisMode,
+  });
   const validationCache =
-    input.fetchCard === undefined
+    input.fetchCard === undefined && redisConfig.redisUrl !== undefined
       ? await createRedisCardDataCache({
-          url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
+          url: redisConfig.redisUrl,
         })
       : undefined;
   validateDevDeckSubmissionVariants(decklist, cardManifest);
@@ -320,10 +327,14 @@ const buildDevManifestFromCardIds = async (
   input: CreateDefaultDevMatchSetupInput,
   devDonCount: number,
 ) => {
+  const redisConfig = resolveRedisConfig({
+    redisUrl: input.redisUrl,
+    redisMode: input.redisMode,
+  });
   const cache =
-    input.fetchCard === undefined
+    input.fetchCard === undefined && redisConfig.redisUrl !== undefined
       ? await createRedisCardDataCache({
-          url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
+          url: redisConfig.redisUrl,
         })
       : undefined;
   return await buildDevMatchCardManifestFromPoneglyphIds({
@@ -412,10 +423,14 @@ const createValidatedDevMatchSetupFromDecklists = async ({
     input,
     devDonCount,
   );
+  const redisConfig = resolveRedisConfig({
+    redisUrl: input.redisUrl,
+    redisMode: input.redisMode,
+  });
   const validationCache =
-    input.fetchCard === undefined
+    input.fetchCard === undefined && redisConfig.redisUrl !== undefined
       ? await createRedisCardDataCache({
-          url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
+          url: redisConfig.redisUrl,
         })
       : undefined;
   validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
@@ -449,5 +464,3 @@ export const createDefaultDevMatchSetup = async (
     secondPlayerDecklist: createDefaultDevDecklist(secondPlayerDonCount),
   });
 };
-
-const defaultRedisUrl = "redis://localhost:6379";
