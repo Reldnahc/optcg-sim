@@ -5,13 +5,7 @@ import type { CardRef, ContinuousEffectRecord, DecisionId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
-import {
-  must,
-  p1,
-  p2,
-  resolvedCard,
-  toCardId,
-} from "../action-test-fixtures.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   assertRejectsWithoutMutation,
   cardRef,
@@ -570,21 +564,5 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
       usedReplacementIds: [],
       payload: { hidden: "contents" },
     });
-  });
-  run((state) => {
-    const p2State = must(state.players[p2], "p2");
-    const topLife = must(p2State.life[0], "top life");
-    p2State.life[0] = {
-      ...topLife,
-      card: { ...topLife.card, cardId: toCardId("trigger-life-block-step") },
-    };
-    state.cardManifest.cards[toCardId("trigger-life-block-step")] = {
-      ...resolvedCard({
-        cardId: toCardId("trigger-life-block-step"),
-        category: "character",
-        power: 1000,
-      }),
-      triggerText: "TRIGGER: draw 1",
-    };
   });
 });

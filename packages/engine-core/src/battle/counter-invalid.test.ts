@@ -259,10 +259,11 @@ test("counter-step pass rejects stale battle participants without mutation", () 
   });
 });
 
-test("counter-step pass rejects unsupported life trigger damage without clearing decision", () => {
+test("counter-step pass opens add-to-hand fallback for unsupported life trigger damage", () => {
   const context = setupOpenedCounterStepPassDecision();
   const p2State = must(context.openedState.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
+  const beforeLifeCount = p2State.life.length;
   p2State.life[0] = {
     ...topLife,
     card: {
@@ -288,12 +289,24 @@ test("counter-step pass rejects unsupported life trigger damage without clearing
     response: { type: "cards", cards: [] },
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.deepEqual(result.events, []);
+  const pendingDecision = must(
+    result.state.pendingDecision,
+    "life trigger fallback",
+  );
+  assert.equal(result.errors, undefined);
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.deepEqual(pendingDecision.options, ["addToHand"]);
+  assert.deepEqual(
+    getLegalActions(result.state, p2)
+      .filter((action) => action.type === "respondToDecision")
+      .map((action) => action.response),
+    [{ type: "lifeTrigger", choice: "addToHand" }],
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2 after damage").life.length,
+    beforeLifeCount - 1,
+  );
   assert.equal(JSON.stringify(context.openedState), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.equal(result.state.pendingDecision?.id, context.decision.id);
-  assert.equal(result.state.battle?.step, "counter");
 });
 
 test("counter-step pass rejects replacement processing without clearing decision", () => {

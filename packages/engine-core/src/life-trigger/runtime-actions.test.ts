@@ -556,7 +556,7 @@ test("activated life trigger reveal is public while effect queue internals stay 
   }
 });
 
-test("activated life trigger fails closed without mutation when trigger metadata no longer supports no-zone activation", () => {
+test("unsupported life trigger activation keeps add-to-hand available without mutation", () => {
   const { state, lifeCardId, definition } = openSupportedLifeTriggerDecision();
   const decision = must(state.pendingDecision, "life trigger decision");
   const unsupportedEffect = must(definition.effects[0], "trigger effect");
@@ -569,10 +569,10 @@ test("activated life trigger fails closed without mutation when trigger metadata
   const before = structuredClone(state);
 
   assert.deepEqual(
-    getLegalActions(state, p2).filter(
-      (action) => action.type === "respondToDecision",
-    ),
-    [],
+    getLegalActions(state, p2)
+      .filter((action) => action.type === "respondToDecision")
+      .map((action) => action.response),
+    [{ type: "lifeTrigger", choice: "addToHand" }],
   );
 
   const result = applyAction(state, {
@@ -591,6 +591,15 @@ test("activated life trigger fails closed without mutation when trigger metadata
   ]);
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
+
+  const addedToHand = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.equal(addedToHand.errors, undefined);
+  assert.equal(addedToHand.state.pendingDecision, undefined);
 });
 
 test("malformed lifeTrigger choice fails closed without declining to hand", () => {
@@ -607,7 +616,7 @@ test("malformed lifeTrigger choice fails closed without declining to hand", () =
   assert.deepEqual(result.errors, [
     {
       type: "invalidDecisionResponse",
-      reason: "Life Trigger choice is unsupported.",
+      reason: "Life Trigger choice is not available.",
     },
   ]);
   assert.deepEqual(result.events, []);

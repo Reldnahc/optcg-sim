@@ -314,8 +314,8 @@ test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   assert.equal(JSON.stringify(state), before);
 });
 
-test("unsupported trigger/blocker/counter windows fail closed without mutation", () => {
-  const run = (
+test("unsupported trigger damage opens add-to-hand fallback while unsupported battle windows fail closed", () => {
+  const runFailClosed = (
     mutate: (state: ReturnType<typeof setupAttackState>) => void,
   ) => {
     const state = setupAttackState();
@@ -350,24 +350,66 @@ test("unsupported trigger/blocker/counter windows fail closed without mutation",
     assert.equal(finalResult.errors?.[0]?.type, "illegalAction");
     assert.equal(JSON.stringify(state), before);
   };
-  run((state) => {
-    must(state.players[p2], "p2").life[0] = {
-      ...must(must(state.players[p2], "p2").life[0], "life"),
-      card: {
-        ...must(must(state.players[p2], "p2").life[0], "life").card,
-        cardId: toCardId("trigger-life"),
-      },
-    };
-    state.cardManifest.cards[toCardId("trigger-life")] = {
-      ...resolvedCard({
-        cardId: toCardId("trigger-life"),
-        category: "character",
-        power: 1000,
-      }),
-      triggerText: "TRIGGER: do a thing",
-    };
-  });
-  run((state) => {
+
+  const triggerState = setupAttackState();
+  const triggerP1State = must(triggerState.players[p1], "p1");
+  const triggerP2State = must(triggerState.players[p2], "p2");
+  triggerState.battle = {
+    attacker: {
+      instanceId: triggerP1State.leader.instanceId,
+      cardId: triggerP1State.leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: triggerP2State.leader.instanceId,
+      cardId: triggerP2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: triggerP2State.leader.instanceId,
+      cardId: triggerP2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "attack",
+    damageCount: 1,
+  };
+  triggerP2State.life[0] = {
+    ...must(triggerP2State.life[0], "life"),
+    card: {
+      ...must(triggerP2State.life[0], "life").card,
+      cardId: toCardId("trigger-life"),
+    },
+  };
+  triggerState.cardManifest.cards[toCardId("trigger-life")] = {
+    ...resolvedCard({
+      cardId: toCardId("trigger-life"),
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: do a thing",
+  };
+  const beforeTriggerState = JSON.stringify(triggerState);
+  const result = resolveSupportedVanillaBattle(triggerState);
+  const triggerFallback =
+    result.state.pendingDecision === undefined
+      ? result
+      : passCounterStep(result.state, p2);
+  const pendingDecision = must(
+    triggerFallback.state.pendingDecision,
+    "life trigger fallback",
+  );
+  assert.equal(triggerFallback.errors, undefined);
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.deepEqual(pendingDecision.options, ["addToHand"]);
+  assert.deepEqual(
+    getLegalActions(triggerFallback.state, p2)
+      .filter((action) => action.type === "respondToDecision")
+      .map((action) => action.response),
+    [{ type: "lifeTrigger", choice: "addToHand" }],
+  );
+  assert.equal(JSON.stringify(triggerState), beforeTriggerState);
+
+  runFailClosed((state) => {
     const p1State = must(state.players[p1], "p1");
     const p2State = must(state.players[p2], "p2");
     state.battle = {
