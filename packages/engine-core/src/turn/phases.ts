@@ -27,7 +27,14 @@ const toEngineEventId = (value: string): EngineEventId =>
 
 export interface PhaseAdvanceOptions {
   readonly includeStateHash?: boolean;
+  readonly profileSpan?: <T>(name: string, fn: () => T) => T;
 }
+
+const profilePhaseSpan = <T>(
+  options: PhaseAdvanceOptions,
+  name: string,
+  fn: () => T,
+): T => options.profileSpan?.(name, fn) ?? fn();
 
 const toEngineResult = (
   state: GameState,
@@ -307,7 +314,9 @@ export const advanceRefreshPhase = (
 
   const events: EngineEvent[] = [];
   const refreshRestrictionState = state;
-  state = expireStartOfRefreshContinuousEffects(state, turnPlayerId);
+  state = profilePhaseSpan(options, "advanceRefreshPhase:expireEffects", () =>
+    expireStartOfRefreshContinuousEffects(state, turnPlayerId),
+  );
   if (!hasStartedCurrentPhase(state, "refresh", turnPlayerId)) {
     appendEvent(events, state, "phaseStarted", {
       phase: "refresh",
@@ -339,15 +348,20 @@ export const advanceRefreshPhase = (
     );
   }
 
-  const refreshedPlayer = readyPlayerCards(refreshRestrictionState, {
-    ...turnPlayer,
-    leader: { ...turnPlayer.leader, attachedDon: [] },
-    characters: turnPlayer.characters.map((card) => ({
-      ...card,
-      attachedDon: [],
-    })),
-    costArea,
-  });
+  const refreshedPlayer = profilePhaseSpan(
+    options,
+    "advanceRefreshPhase:readyPlayerCards",
+    () =>
+      readyPlayerCards(refreshRestrictionState, {
+        ...turnPlayer,
+        leader: { ...turnPlayer.leader, attachedDon: [] },
+        characters: turnPlayer.characters.map((card) => ({
+          ...card,
+          attachedDon: [],
+        })),
+        costArea,
+      }),
+  );
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
@@ -363,15 +377,24 @@ export const advanceRefreshPhase = (
     phase: "draw",
     playerId: turnPlayerId,
   });
-  const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextState,
-    events,
-    phase: "draw",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
+  const nextWithRules = profilePhaseSpan(
+    options,
+    "advanceRefreshPhase:applyRules",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: nextState,
+        events,
+        phase: "draw",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
+  profilePhaseSpan(options, "advanceRefreshPhase:appendJournal", () => {
+    nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  nextWithRules.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextWithRules);
+  profilePhaseSpan(options, "advanceRefreshPhase:assertInvariants", () => {
+    assertGameStateInvariants(nextWithRules);
+  });
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
@@ -397,14 +420,16 @@ export const advanceDrawPhase = (
   if (!isFirstPlayerFirstTurn(state, turnPlayerId)) {
     const drawn = turnPlayer.deck[0];
     if (drawn !== undefined) {
-      const nextDeck = turnPlayer.deck
-        .slice(1)
-        .map((card, index) => withIndexedZone(card, "deck", "deck", index));
-      const moved = withIndexedZone(
-        drawn,
-        "hand",
-        "hand",
-        turnPlayer.hand.length,
+      const nextDeck = profilePhaseSpan(
+        options,
+        "advanceDrawPhase:reindexDeck",
+        () =>
+          turnPlayer.deck
+            .slice(1)
+            .map((card, index) => withIndexedZone(card, "deck", "deck", index)),
+      );
+      const moved = profilePhaseSpan(options, "advanceDrawPhase:moveCard", () =>
+        withIndexedZone(drawn, "hand", "hand", turnPlayer.hand.length),
       );
       const nextHand = [...turnPlayer.hand, moved];
       nextPlayer = { ...turnPlayer, deck: nextDeck, hand: nextHand };
@@ -458,15 +483,24 @@ export const advanceDrawPhase = (
     phase: "don",
     playerId: turnPlayerId,
   });
-  const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextState,
-    events,
-    phase: "don",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
+  const nextWithRules = profilePhaseSpan(
+    options,
+    "advanceDrawPhase:applyRules",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: nextState,
+        events,
+        phase: "don",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
+  profilePhaseSpan(options, "advanceDrawPhase:appendJournal", () => {
+    nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  nextWithRules.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextWithRules);
+  profilePhaseSpan(options, "advanceDrawPhase:assertInvariants", () => {
+    assertGameStateInvariants(nextWithRules);
+  });
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
@@ -489,35 +523,51 @@ export const advanceDonPhase = (
 
   const placeCount = isFirstPlayerFirstTurn(state, turnPlayerId) ? 1 : 2;
   const toPlace = turnPlayer.donDeck.slice(0, placeCount);
-  const nextDonDeck = turnPlayer.donDeck
-    .slice(toPlace.length)
-    .map((card, index) => withIndexedZone(card, "donDeck", "donDeck", index));
-  const nextCostArea = [
-    ...turnPlayer.costArea,
-    ...toPlace.map((card, index) => ({
-      ...withIndexedZone(
-        card,
-        "costArea",
-        "cost",
-        turnPlayer.costArea.length + index,
-      ),
-      state: "active" as const,
-    })),
-  ];
+  const nextDonDeck = profilePhaseSpan(
+    options,
+    "advanceDonPhase:reindexDonDeck",
+    () =>
+      turnPlayer.donDeck
+        .slice(toPlace.length)
+        .map((card, index) =>
+          withIndexedZone(card, "donDeck", "donDeck", index),
+        ),
+  );
+  const nextCostArea = profilePhaseSpan(
+    options,
+    "advanceDonPhase:buildCostArea",
+    () => [
+      ...turnPlayer.costArea,
+      ...toPlace.map((card, index) => ({
+        ...withIndexedZone(
+          card,
+          "costArea",
+          "cost",
+          turnPlayer.costArea.length + index,
+        ),
+        state: "active" as const,
+      })),
+    ],
+  );
 
-  const events: EngineEvent[] = toPlace.map((card, index) =>
-    createEvent(
-      state,
-      index + 1,
-      "cardMoved",
-      {
-        playerId: turnPlayerId,
-        cardInstanceId: card.instanceId,
-        from: "donDeck",
-        to: "costArea",
-      },
-      { type: "replayOnly" },
-    ),
+  const events: EngineEvent[] = profilePhaseSpan(
+    options,
+    "advanceDonPhase:createEvents",
+    () =>
+      toPlace.map((card, index) =>
+        createEvent(
+          state,
+          index + 1,
+          "cardMoved",
+          {
+            playerId: turnPlayerId,
+            cardInstanceId: card.instanceId,
+            from: "donDeck",
+            to: "costArea",
+          },
+          { type: "replayOnly" },
+        ),
+      ),
   );
 
   const nextState: GameState = {
@@ -532,15 +582,24 @@ export const advanceDonPhase = (
       },
     },
   };
-  const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextState,
-    events,
-    phase: "don",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
+  const nextWithRules = profilePhaseSpan(
+    options,
+    "advanceDonPhase:applyRules",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: nextState,
+        events,
+        phase: "don",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
+  profilePhaseSpan(options, "advanceDonPhase:appendJournal", () => {
+    nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  nextWithRules.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextWithRules);
+  profilePhaseSpan(options, "advanceDonPhase:assertInvariants", () => {
+    assertGameStateInvariants(nextWithRules);
+  });
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 
@@ -563,11 +622,22 @@ export const enterMainPhase = (
   if (state.turn.phase !== "don") {
     return invalidPhaseTransition(state, "don");
   }
-  if (detectPendingRuntimeWork(state) !== undefined) {
-    return processEffectRuntime(state);
+  if (
+    profilePhaseSpan(options, "enterMainPhase:detectPendingRuntimeWork", () =>
+      detectPendingRuntimeWork(state),
+    ) !== undefined
+  ) {
+    return profilePhaseSpan(
+      options,
+      "enterMainPhase:processEffectRuntime",
+      () => processEffectRuntime(state),
+    );
   }
-  const unsupportedContinuousMaterialization =
-    materializeBoardContinuousEffects(state);
+  const unsupportedContinuousMaterialization = profilePhaseSpan(
+    options,
+    "enterMainPhase:materializeContinuous",
+    () => materializeBoardContinuousEffects(state),
+  );
   if (unsupportedContinuousMaterialization !== undefined) {
     return toEngineResult(
       state,
@@ -597,15 +667,24 @@ export const enterMainPhase = (
     seq: toStateSeq(state.seq + 1),
     turn: { ...state.turn, phase: "main" },
   };
-  const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextState,
-    events,
-    phase: "main",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
+  const nextWithRules = profilePhaseSpan(
+    options,
+    "enterMainPhase:applyRules",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: nextState,
+        events,
+        phase: "main",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
+  profilePhaseSpan(options, "enterMainPhase:appendJournal", () => {
+    nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  nextWithRules.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextWithRules);
+  profilePhaseSpan(options, "enterMainPhase:assertInvariants", () => {
+    assertGameStateInvariants(nextWithRules);
+  });
   return toEngineResult(nextWithRules, events, undefined, options);
 };
 

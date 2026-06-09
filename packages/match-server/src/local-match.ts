@@ -263,7 +263,10 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
   const events: EngineResult["events"] = [];
   let current = state;
   let currentHash: string | undefined;
-  const livePhaseOptions = { includeStateHash: false } as const;
+  const livePhaseOptions = {
+    includeStateHash: false,
+    profileSpan: recordActionTimingSpan,
+  } as const;
   for (let stepCount = 0; stepCount < 4; stepCount += 1) {
     if (
       current.turn.phase === "main" ||
