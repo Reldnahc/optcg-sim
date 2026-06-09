@@ -224,6 +224,7 @@ const createActiveLocalDevMatchSession = (
   sessionService.registerLocalDevMatch({
     local: match,
     metadata: devSessionMetadata(setup, resolvedChoice),
+    includeActionSnapshots: false,
   });
   return {
     status: "active",

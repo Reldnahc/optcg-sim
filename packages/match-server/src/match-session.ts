@@ -28,6 +28,7 @@ export interface CreateMatchSessionRuntimeOptions {
   readonly local: LocalDevMatch;
   readonly metadata?: MatchSessionMetadata;
   readonly persistence?: MatchPersistence;
+  readonly includeActionSnapshots?: boolean;
   readonly now?: () => string;
 }
 
@@ -39,9 +40,9 @@ const resultFromLocal = (
   matchId: envelope.matchId,
   clientActionId: envelope.clientActionId,
   accepted: applied.errors.length === 0,
-  stateSeq: applied.snapshot.stateSeq,
-  actionSeq: applied.snapshot.actionSeq,
-  snapshot: applied.snapshot,
+  stateSeq: applied.stateSeq,
+  actionSeq: applied.actionSeq,
+  ...(applied.snapshot === undefined ? {} : { snapshot: applied.snapshot }),
   errors: applied.errors,
 });
 
@@ -63,12 +64,19 @@ const rejectedResult = (
 const applyRequest = (
   local: LocalDevMatch,
   request: SessionActionRequest,
+  includeSnapshot: boolean,
 ): ReturnType<typeof applyLocalDevAction> => {
   switch (request.type) {
     case "submitAction":
-      return applyLocalDevAction(local, request);
+      return applyLocalDevAction(local, {
+        ...request,
+        includeSnapshot,
+      });
     case "respondToDecision":
-      return applyLocalDevDecision(local, request);
+      return applyLocalDevDecision(local, {
+        ...request,
+        includeSnapshot,
+      });
     case "requestRollback":
       return requestLocalDevRollback(local, request);
     case "cancelRollback":
@@ -85,6 +93,7 @@ export const createMatchSessionRuntime = ({
   local,
   metadata,
   persistence,
+  includeActionSnapshots = true,
   now = () => new Date().toISOString(),
 }: CreateMatchSessionRuntimeOptions): MatchSessionRuntime => {
   const idempotency = new Map<string, StoredSessionRecord>();
@@ -198,7 +207,7 @@ export const createMatchSessionRuntime = ({
 
       const result = resultFromLocal(
         envelope,
-        applyRequest(local, envelope.request),
+        applyRequest(local, envelope.request, includeActionSnapshots),
       );
       return storeRecord(envelope, result);
     },

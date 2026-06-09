@@ -102,16 +102,20 @@ export interface ApplyLocalDevActionInput {
   playerId: PlayerId;
   actionIndex: number;
   expectedStateSeq?: number;
+  includeSnapshot?: boolean;
 }
 
 export interface ApplyLocalDevDecisionInput {
   playerId: PlayerId;
   decisionId: DecisionId;
   response: DecisionResponse;
+  includeSnapshot?: boolean;
 }
 
 export interface ApplyLocalDevActionResult {
-  snapshot: DevMatchSnapshot;
+  stateSeq: number;
+  actionSeq: number;
+  snapshot?: DevMatchSnapshot;
   errors: string[];
 }
 
@@ -123,6 +127,23 @@ type ExecutableDevAction = DevVisibleAction & {
 
 const timedStateHash = (name: string, value: unknown): string =>
   recordActionTimingSpan(`hash:${name}`, () => hashCanonicalStateValue(value));
+
+const localActionResult = (
+  match: LocalDevMatch,
+  errors: string[],
+  includeSnapshot = true,
+): ApplyLocalDevActionResult => ({
+  stateSeq: match.state.seq,
+  actionSeq: match.state.actionSeq,
+  ...(includeSnapshot
+    ? {
+        snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
+          getLocalDevSnapshot(match),
+        ),
+      }
+    : {}),
+  errors,
+});
 
 const responseKeyForDecisionResponse = (
   response: DecisionResponse | undefined,
@@ -724,14 +745,15 @@ export const applyLocalDevAction = (
     input.expectedStateSeq !== undefined &&
     input.expectedStateSeq !== match.state.seq
   ) {
-    return {
-      snapshot: getLocalDevSnapshot(match),
-      errors: [
+    return localActionResult(
+      match,
+      [
         `Action request is stale for ${String(
           input.playerId,
         )}; refresh the current match state.`,
       ],
-    };
+      input.includeSnapshot,
+    );
   }
   const action = recordActionTimingSpan("executableActions", () =>
     executableActions(match.state, input.playerId).find(
@@ -739,14 +761,15 @@ export const applyLocalDevAction = (
     ),
   );
   if (action === undefined) {
-    return {
-      snapshot: getLocalDevSnapshot(match),
-      errors: [
+    return localActionResult(
+      match,
+      [
         `Action index ${String(input.actionIndex)} is not legal for ${String(
           input.playerId,
         )}.`,
       ],
-    };
+      input.includeSnapshot,
+    );
   }
 
   if (
@@ -758,6 +781,9 @@ export const applyLocalDevAction = (
       playerId: input.playerId,
       decisionId: action.decisionId,
       response: action.response,
+      ...(input.includeSnapshot === undefined
+        ? {}
+        : { includeSnapshot: input.includeSnapshot }),
     });
   }
 
@@ -781,12 +807,7 @@ export const applyLocalDevAction = (
       recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
-  return {
-    snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
-      getLocalDevSnapshot(match),
-    ),
-    errors,
-  };
+  return localActionResult(match, errors, input.includeSnapshot);
 };
 
 export const applyLocalDevDecision = (
@@ -795,32 +816,35 @@ export const applyLocalDevDecision = (
 ): ApplyLocalDevActionResult => {
   const decision = match.state.pendingDecision;
   if (decision === undefined || decision.id !== input.decisionId) {
-    return {
-      snapshot: getLocalDevSnapshot(match),
-      errors: [
+    return localActionResult(
+      match,
+      [
         `Decision ${String(input.decisionId)} is not pending for ${String(
           input.playerId,
         )}.`,
       ],
-    };
+      input.includeSnapshot,
+    );
   }
   if (decision.playerId !== input.playerId) {
-    return {
-      snapshot: getLocalDevSnapshot(match),
-      errors: [
+    return localActionResult(
+      match,
+      [
         `Decision ${String(input.decisionId)} is not pending for ${String(
           input.playerId,
         )}.`,
       ],
-    };
+      input.includeSnapshot,
+    );
   }
 
   if (decision.type === "rollbackConsent") {
     if (input.response.type !== "rollbackConsent") {
-      return {
-        snapshot: getLocalDevSnapshot(match),
-        errors: ["Rollback consent requires a rollbackConsent response."],
-      };
+      return localActionResult(
+        match,
+        ["Rollback consent requires a rollbackConsent response."],
+        input.includeSnapshot,
+      );
     }
     const rollbackResponse = input.response;
     const result = recordActionTimingSpan("resolveRollbackConsent", () =>
@@ -832,12 +856,7 @@ export const applyLocalDevDecision = (
     );
     match.state = result.state;
     match.rollback = result.rollback;
-    return {
-      snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
-        getLocalDevSnapshot(match),
-      ),
-      errors: result.errors,
-    };
+    return localActionResult(match, result.errors, input.includeSnapshot);
   }
 
   const action = {
@@ -867,12 +886,7 @@ export const applyLocalDevDecision = (
       recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
-  return {
-    snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
-      getLocalDevSnapshot(match),
-    ),
-    errors,
-  };
+  return localActionResult(match, errors, input.includeSnapshot);
 };
 
 export const requestLocalDevRollback = (
@@ -882,7 +896,7 @@ export const requestLocalDevRollback = (
   const result = requestRollbackConsent(match.state, match.rollback, input);
   match.state = result.state;
   match.rollback = result.rollback;
-  return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
+  return localActionResult(match, result.errors);
 };
 
 export const cancelLocalDevRollback = (
@@ -892,7 +906,7 @@ export const cancelLocalDevRollback = (
   const result = cancelRollbackConsent(match.state, match.rollback, input);
   match.state = result.state;
   match.rollback = result.rollback;
-  return { snapshot: getLocalDevSnapshot(match), errors: result.errors };
+  return localActionResult(match, result.errors);
 };
 
 export const getLocalDevCardCatalog = (

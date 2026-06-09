@@ -23,6 +23,7 @@ export interface RegisterLocalDevMatchInput {
   readonly local: LocalDevMatch;
   readonly metadata: MatchSessionMetadata;
   readonly persistence?: MatchPersistence;
+  readonly includeActionSnapshots?: boolean;
 }
 
 export interface CreateMatchSessionServiceOptions {
@@ -81,11 +82,19 @@ export const createMatchSessionService = ({
   };
 
   return {
-    registerLocalDevMatch({ local, metadata, persistence }) {
+    registerLocalDevMatch({
+      local,
+      metadata,
+      persistence,
+      includeActionSnapshots,
+    }) {
       const runtime = createMatchSessionRuntime({
         local,
         metadata,
         ...(persistence === undefined ? {} : { persistence }),
+        ...(includeActionSnapshots === undefined
+          ? {}
+          : { includeActionSnapshots }),
         now: clock.nowIso,
       });
       sessions.set(metadata.matchId, runtime);
