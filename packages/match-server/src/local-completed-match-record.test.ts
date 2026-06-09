@@ -21,7 +21,7 @@ const readySubmission = (
   status: "ready",
   decoded: {
     leader: { cardId: leaderCardNumber as CardId, count: 1 },
-    main: [{ cardId: "OP01-016" as CardId, count: 4 }],
+    main: [{ cardId: "OP01-016" as CardId, count: 50 }],
   },
   donDeckCount: 10,
 });

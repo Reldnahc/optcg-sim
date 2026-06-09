@@ -51,18 +51,18 @@ const createDeckHashMatchHttpServer = async () =>
           hash === "p1-hash"
             ? {
                 leader: { card_number: "OP13-079", count: 1 },
-                main: [{ card_number: "OP13-080", count: 8 }],
+                main: [{ card_number: "OP13-080", count: 50 }],
                 don: null,
               }
             : hash === "bad-cache-hash"
               ? {
                   leader: { card_number: "OP13-079", count: 1 },
-                  main: [{ card_number: "BAD-001", count: 8 }],
+                  main: [{ card_number: "BAD-001", count: 50 }],
                   don: null,
                 }
               : {
                   leader: { card_number: "OP13-079", count: 1 },
-                  main: [{ card_number: "OP13-082", count: 8 }],
+                  main: [{ card_number: "OP13-082", count: 50 }],
                   don: null,
                 },
         ),
@@ -117,7 +117,7 @@ const createHandoffMatchHttpServer = async (
         decodedHashes.push(hash);
         return Promise.resolve({
           leader: { card_number: "OP13-079", count: 1 },
-          main: [{ card_number: "OP13-080", count: 8 }],
+          main: [{ card_number: "OP13-080", count: 50 }],
           don: null,
         });
       },
@@ -319,12 +319,12 @@ describe("dev HTTP lobby deck submissions", () => {
             hash === "loadout-invalid"
               ? {
                   leader: { card_number: "OP13-079", count: 1 },
-                  main: [{ card_number: "BAD-001", count: 8 }],
+                  main: [{ card_number: "BAD-001", count: 50 }],
                   don: null,
                 }
               : {
                   leader: { card_number: "OP13-079", count: 1 },
-                  main: [{ card_number: "OP13-080", count: 8 }],
+                  main: [{ card_number: "OP13-080", count: 50 }],
                   don: null,
                 },
           );
@@ -502,7 +502,7 @@ describe("dev HTTP lobby deck submissions", () => {
           decodedHashes.push(hash);
           return Promise.resolve({
             leader: { card_number: "OP13-079", count: 1 },
-            main: [{ card_number: "OP13-080", count: 8 }],
+            main: [{ card_number: "OP13-080", count: 50 }],
             don: null,
           });
         },

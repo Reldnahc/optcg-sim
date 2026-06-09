@@ -21,7 +21,7 @@ const createFixtureMatchHttpServer = async () =>
           main: [
             {
               card_number: hash === "p1-rematch-hash" ? "OP13-080" : "OP13-082",
-              count: 9,
+              count: 50,
             },
           ],
           don: null,

@@ -130,7 +130,11 @@ describe("default dev manifest boundary", () => {
   test("deck validation adapts submitted DON decks from leader construction rules", async () => {
     const adapted = await validateAndAdaptDevDecklist({
       decklist: createDevDecklistFromSubmission(
-        readySubmission("OP15-058" as CardId, [], 10),
+        readySubmission(
+          "OP15-058" as CardId,
+          [{ cardId: "OP13-080" as CardId, count: 50 }],
+          10,
+        ),
       ),
       cardManifest: {
         manifestHash: "manifest",
@@ -165,6 +169,34 @@ describe("default dev manifest boundary", () => {
             support: {
               cardId: "OP15-058" as CardId,
               status: "implemented-dsl",
+              tested: true,
+              rulesVersion: "rules",
+              cardDataVersion: "cards",
+              sourceTextHash: "source",
+              behaviorHash: "behavior",
+            },
+          },
+          ["OP13-080" as CardId]: {
+            cardId: "OP13-080" as CardId,
+            language: "en",
+            name: "OP13-080",
+            category: "character",
+            set: "TEST",
+            setName: "Test",
+            released: true,
+            colors: ["black"],
+            attributes: [],
+            types: [],
+            printedKeywords: [],
+            variants: [],
+            legality: {},
+            officialFaq: [],
+            errata: [],
+            sourceTextHash: "source",
+            behaviorHash: "behavior",
+            support: {
+              cardId: "OP13-080" as CardId,
+              status: "vanilla-confirmed",
               tested: true,
               rulesVersion: "rules",
               cardDataVersion: "cards",
@@ -276,8 +308,8 @@ describe("default dev manifest boundary", () => {
     const [firstPlayer, secondPlayer] = setup.players;
     assert.equal(firstPlayer.leaderCardId, "OP13-079");
     assert.equal(secondPlayer.leaderCardId, "OP13-079");
-    assert.equal(firstPlayer.deckCardIds.length, 32);
-    assert.equal(secondPlayer.deckCardIds.length, 32);
+    assert.equal(firstPlayer.deckCardIds.length, 50);
+    assert.equal(secondPlayer.deckCardIds.length, 50);
   });
 
   test("rejects non-ready deck submissions before setup creation", () => {

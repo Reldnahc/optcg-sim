@@ -131,18 +131,15 @@ const defaultDevLeader: DevDeckCardEntry = {
 };
 
 const defaultDevMainDeckEntries: readonly DevDeckCardEntry[] = [
-  "OP13-080",
-  "OP13-082",
-  "OP13-083",
-  "OP13-084",
-  "OP13-086",
-  "OP13-089",
-  "OP13-091",
-  "OP13-099",
-].map((cardId) => ({
-  cardId: cardId as CardId,
-  count: 4,
-}));
+  { cardId: "OP13-080" as CardId, count: 7 },
+  { cardId: "OP13-082" as CardId, count: 7 },
+  { cardId: "OP13-083" as CardId, count: 6 },
+  { cardId: "OP13-084" as CardId, count: 6 },
+  { cardId: "OP13-086" as CardId, count: 6 },
+  { cardId: "OP13-089" as CardId, count: 6 },
+  { cardId: "OP13-091" as CardId, count: 6 },
+  { cardId: "OP13-099" as CardId, count: 6 },
+];
 
 const createDefaultDevDecklist = (donDeckCount: number): DevDecklist => ({
   leader: defaultDevLeader,
