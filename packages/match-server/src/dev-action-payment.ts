@@ -52,6 +52,9 @@ export const actionDecisionPayment = (
   ) {
     return undefined;
   }
+  if (isDeterministicDeckTopMoveCost(option)) {
+    return undefined;
+  }
   const selectedCardInstanceIds =
     option.type === "returnDon"
       ? response.selectedDonInstanceIds
@@ -84,6 +87,14 @@ const isDeterministicLifeToHandMoveCost = (
   option.to.zone === "hand" &&
   option.to.player === "self" &&
   option.to.position === undefined;
+
+const isDeterministicDeckTopMoveCost = (
+  option: CardCostPaymentOption,
+): boolean =>
+  option.type === "moveCards" &&
+  option.from.zone === "deck" &&
+  option.from.player === "self" &&
+  option.from.position === "top";
 
 const cardCostOperation = (
   optionType: "trashFromHand" | "trashFromField" | "moveCards" | "returnDon",

@@ -64,6 +64,23 @@ describe("local dev action labels", () => {
     );
   });
 
+  test("labels no-selection deck-top trash costs from payment option structure", () => {
+    const state = payCostState([
+      {
+        id: "moveCards",
+        type: "moveCards",
+        count: 2,
+        from: { player: "self", zone: "deck", position: "top" },
+        to: { player: "self", zone: "trash" },
+      },
+    ]);
+
+    assert.equal(
+      actionLabel(state, paymentAction("moveCards")),
+      "Trash 2 cards from top of deck",
+    );
+  });
+
   test("labels no-selection self costs from payment option structure", () => {
     const state = payCostState([{ id: "restSelf", type: "restSelf" }]);
 

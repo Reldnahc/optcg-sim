@@ -43,6 +43,15 @@ const handCard = (instanceId: string): CardInstance => ({
   attachedDon: [],
 });
 
+const deckCard = (instanceId: string, index: number): CardInstance => ({
+  instanceId: instanceId as InstanceId,
+  cardId: "deck-card" as CardId,
+  owner: p1,
+  controller: p1,
+  zone: { zone: "deck", playerId: p1, slot: "deck", index },
+  attachedDon: [],
+});
+
 const minimalState = (costArea: CardInstance[]): GameState =>
   ({
     pendingDecision: {
@@ -282,5 +291,53 @@ describe("dev action payment metadata", () => {
       ],
       source: { zone: "hand", playerId: p1 },
     });
+  });
+
+  test("does not project deterministic deck-top trash costs as card selection", () => {
+    const first = deckCard("deck-1", 0);
+    const second = deckCard("deck-2", 1);
+    const state = minimalState([]);
+    state.pendingDecision = {
+      id: "decision:deck-top-to-trash" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: {
+        type: "moveCards",
+        count: 2,
+        chooser: "self",
+        from: { player: "self", zone: "deck", position: "top" },
+        to: { player: "self", zone: "trash" },
+        order: "chooserChoice",
+        optional: true,
+      },
+      paymentOptions: [
+        {
+          id: "moveCards",
+          type: "moveCards",
+          count: 2,
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "trash" },
+        },
+      ],
+    };
+    const player = state.players[p1];
+    if (player === undefined) {
+      throw new Error("Expected p1 in minimal state.");
+    }
+    player.deck = [first, second];
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:deck-top-to-trash" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "moveCards",
+        selectedCardInstanceIds: [first.instanceId, second.instanceId],
+      },
+    };
+
+    assert.equal(actionDecisionPayment(state, action), undefined);
   });
 });

@@ -137,6 +137,13 @@ const paymentOptionLabel = (
       ) {
         return `Place ${countLabel(selectedCardsCount || option.count, "card", "cards")} from trash at bottom`;
       }
+      if (
+        option.from.zone === "deck" &&
+        option.from.position === "top" &&
+        option.to.zone === "trash"
+      ) {
+        return `Trash ${countLabel(selectedCardsCount || option.count, "card", "cards")} from top of deck`;
+      }
       return `Move ${countLabel(selectedCardsCount || option.count, "card", "cards")} from ${zoneLabel(
         option.from.zone,
       )} to ${zoneLabel(option.to.zone)}`;
