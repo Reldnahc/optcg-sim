@@ -57,6 +57,42 @@ Local development does not require Redis by default. Redis can be toggled with
 to use Redis only when `REDIS_URL` is set, or `on` to opt into Redis with
 `REDIS_URL` or `redis://localhost:6379`.
 
+## Card Support Probe
+
+Use the support probe when checking whether card text can enter the generated
+card path and the engine runtime. The command exits `0` when the probed input is
+supported and nonzero when parsing, certification, runtime support, card fetch,
+or deck-hash decoding fails.
+
+Probe one printed effect or trigger line:
+
+```sh
+corepack pnpm run support:probe -- --text "[On Play] Draw 1 card."
+```
+
+Probe the live Poneglyph data for one card number:
+
+```sh
+corepack pnpm run support:probe -- --card OP01-001
+```
+
+Probe every unique card in a deck hash:
+
+```sh
+corepack pnpm run support:probe -- --deck-hash <deck-hash>
+```
+
+Deck-hash mode prints the decoded card count summary and only the cards with
+failures. Add `--raw-unsupported-lines` when you want just the failing text
+lines for parser/runtime work:
+
+```sh
+corepack pnpm run support:probe -- --deck-hash <deck-hash> --raw-unsupported-lines
+```
+
+`--card` and `--deck-hash` fetch card text from the Poneglyph API. They do not
+use local fixtures.
+
 ## Verification
 
 Run the full gate before claiming a broad change is complete:
