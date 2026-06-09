@@ -217,6 +217,7 @@ const continueParentSequencesAfterNestedCompletion = (params: {
 
 export const resumeSequenceFrameFromLedgers = (params: {
   createTrashDecision: CreateTrashFromHandSequenceDecision;
+  completedSegmentEvents?: readonly EngineEvent[];
   effectBlock: SupportedSequenceBlock;
   entry: EffectQueueEntry;
   finalizeCompleted: boolean;
@@ -259,7 +260,9 @@ export const resumeSequenceFrameFromLedgers = (params: {
     };
   }
 
-  const events = [...continued.events];
+  const completedSegmentEvents = params.completedSegmentEvents ?? [];
+  const completedSegmentEventCount = completedSegmentEvents.length;
+  const events = [...completedSegmentEvents, ...continued.events];
   let completedState = removeFrame(continued.state, params.frame);
   const completed = continueParentSequencesAfterNestedCompletion({
     createTrashDecision: params.createTrashDecision,
@@ -281,7 +284,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
   }
   if (completed.kind === "paused") {
     return {
-      events: completed.events,
+      events: completed.events.slice(completedSegmentEventCount),
       ok: true,
       state: completed.state,
     };
@@ -316,7 +319,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
     };
   }
   return {
-    events,
+    events: events.slice(completedSegmentEventCount),
     ok: true,
     state: completedState,
   };

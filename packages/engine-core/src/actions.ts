@@ -652,6 +652,7 @@ const applyRespondToDecision = (
       const resumed = resumeSequenceFrameAfterReplacement(
         replacementResult.state,
         decision.id,
+        replacementResult.events,
       );
       if (resumed !== undefined) {
         if (!resumed.ok) {

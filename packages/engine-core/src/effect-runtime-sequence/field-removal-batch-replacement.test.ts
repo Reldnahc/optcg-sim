@@ -7,6 +7,7 @@ import type {
   EffectDefinition,
   EngineResult,
   GameState,
+  ReplacementTrigger,
 } from "@optcg/types";
 
 import {
@@ -26,6 +27,8 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
+import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
+import { getSupportedPlayMetadata } from "../play-card/support.js";
 
 const setupSequenceDefinition = (
   state: GameState,
@@ -134,7 +137,10 @@ const setupQueuedSequence = (effect: Effect): GameState => {
     card: must(p1State.hand[0], "source"),
     zone: "characterArea",
   });
-  p1State.hand = p1State.hand.slice(1);
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
   setupSequenceDefinition(state, source, effect);
   state.effectQueue = [
     {
@@ -246,6 +252,126 @@ const setupReviewedFieldRemovalRestSelfReplacementDefinition = (
   };
 };
 
+const setupReviewedFieldRemovalKoSelfReplacementWithOnKODefinition = (
+  state: GameState,
+  source: CardInstance,
+): EffectDefinition["effects"][number] => {
+  const support = {
+    cardId: source.cardId,
+    status: "implemented-dsl" as const,
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "replacement-ko-self-on-ko-source-hash",
+    behaviorHash: "replacement-ko-self-on-ko-behavior-hash",
+    effectDefinitionId: `definition:${String(source.cardId)}:ko-self-on-ko`,
+  };
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedCard({
+      cardId: source.cardId,
+      category: "character",
+      cost: 5,
+      power: 3000,
+      effectText:
+        "If one of your Characters would be removed from the field by your opponent's effect, you may K.O. this Character instead.\n[On K.O.] You may trash 1 Character card with 8000 power from your hand: Play this Character card from your trash.",
+      support,
+    }),
+    colors: ["green"],
+    name: "Replacement Source",
+  };
+  const replacementWhen: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    sourceKind: "cardEffect",
+    target: {
+      type: "all",
+      zone: "characterArea",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        colorsAny: ["green"],
+        nameNot: ["Replacement Source"],
+      },
+    },
+  };
+  const onKOEffect: EffectDefinition["effects"][number] = {
+    id: toEffectId("replacement-source:on-ko-trash-8000-play-source"),
+    category: "auto",
+    trigger: { type: "onKO" },
+    optional: false,
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "trash-8000-cost",
+          connector: "always",
+          saveResultAs: "paidCost",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "trashFromHand",
+              count: 1,
+              chooser: "self",
+              optional: true,
+              filter: {
+                categories: ["character"],
+                power: { op: "eq", value: 8000 },
+              },
+            },
+          },
+        },
+        {
+          id: "play-source-from-trash",
+          connector: "ifYouDo",
+          effect: {
+            type: "playSource",
+            source: { type: "triggerCard" },
+            ignoreCost: true,
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [support.effectDefinitionId]: {
+      cardId: source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: toEffectId("replacement:would-move-zone-ko-self"),
+          category: "replacement",
+          trigger: {
+            type: "replacement",
+            replacement: replacementWhen,
+          },
+          optional: true,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
+          effect: {
+            type: "replacement",
+            when: replacementWhen,
+            instead: {
+              type: "ko",
+              target: { type: "self" },
+            },
+          },
+        },
+        onKOEffect,
+      ],
+      metadata: {
+        sourceTextHash: support.sourceTextHash,
+        rulesVersion: support.rulesVersion,
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-06-09T00:00:00.000Z",
+      },
+    },
+  };
+  return onKOEffect;
+};
+
 const addGreenTarget = (
   state: GameState,
   card: CardInstance,
@@ -348,6 +474,138 @@ const acceptFirstReplacement = (resolved: EngineResult): EngineResult => {
     },
   });
 };
+
+test("sequence field-removal K.O.-self replacement queues its source On K.O. trigger after the sequence resolves", () => {
+  const state = setupQueuedSequence(
+    selectTargetsThenFieldRemovalSequence("ko"),
+  );
+  const p2State = must(state.players[p2], "p2");
+  p2State.characters = [];
+  const target = addGreenTarget(state, must(p2State.hand[0], "target"), 0);
+  const costCard: CardInstance = {
+    ...must(p2State.hand[2], "8000 power cost card"),
+    zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+  };
+  state.cardManifest.cards[costCard.cardId] = resolvedCard({
+    cardId: costCard.cardId,
+    category: "character",
+    power: 8000,
+  });
+  const replacementSource = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(p2State.hand[1], "replacement source"),
+      cardId: "replacement-ko-self-on-ko-source" as CardInstance["cardId"],
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  p2State.hand = [costCard];
+  const onKOEffect =
+    setupReviewedFieldRemovalKoSelfReplacementWithOnKODefinition(
+      state,
+      replacementSource,
+    );
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[
+      `definition:${String(replacementSource.cardId)}:ko-self-on-ko`
+    ],
+    "replacement source definition",
+  );
+  assert.deepEqual(
+    definition.effects.map(
+      (effect) => evaluateEffectBlockRuntimeSupport(effect).supported,
+    ),
+    [true, true],
+  );
+
+  const resolved = resolveSelectedTargets(state, [target]);
+  assert.equal(resolved.errors, undefined);
+  const decision = must(resolved.state.pendingDecision, "replacement decision");
+  assert.equal(decision.type, "chooseReplacement");
+
+  const accepted = applyAction(resolved.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "replacement",
+      replacementId: must(decision.replacementIds[0], "replacement id"),
+    },
+  });
+
+  const acceptedP2 = must(accepted.state.players[p2], "accepted p2");
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    acceptedP2.trash.some(
+      (card) => card.instanceId === replacementSource.instanceId,
+    ),
+    true,
+  );
+  const trashSource = must(
+    acceptedP2.trash.find(
+      (card) => card.instanceId === replacementSource.instanceId,
+    ),
+    "replacement source in trash",
+  );
+  const resolvedTrashSource = must(
+    accepted.state.cardManifest.cards[trashSource.cardId],
+    "resolved trash source",
+  );
+  assert.equal(resolvedTrashSource.support.status, "implemented-dsl");
+  assert.equal(resolvedTrashSource.cost, 5);
+  assert.notEqual(getSupportedPlayMetadata(accepted.state, trashSource), null);
+  assert.equal(acceptedP2.characters.length, 1);
+  assert.equal(
+    accepted.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+          onKOEffect.id,
+    ),
+    true,
+  );
+  const costDecision = must(
+    accepted.state.pendingDecision,
+    "On K.O. trash-from-hand cost decision",
+  );
+  assert.equal(costDecision.type, "payCost");
+  assert.equal(costDecision.cost.type, "trashFromHand");
+  const paid = applyAction(accepted.state, {
+    type: "respondToDecision",
+    decisionId: costDecision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [costCard.instanceId],
+    },
+  });
+  const paidP2 = must(paid.state.players[p2], "paid p2");
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision, undefined);
+  assert.equal(
+    paid.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+          onKOEffect.id,
+    ),
+    true,
+  );
+  assert.equal(
+    paidP2.trash.some((card) => card.instanceId === costCard.instanceId),
+    true,
+  );
+  assert.equal(
+    paidP2.characters.some(
+      (card) => card.instanceId === replacementSource.instanceId,
+    ),
+    true,
+  );
+  assert.equal(accepted.state.effectExecutionFrames.length, 1);
+  assert.equal(paid.state.effectExecutionFrames.length, 0);
+  assert.equal(paid.stateHash, hashCanonicalStateValue(paid.state));
+});
 
 test.each([
   { removal: "deckBottom" as const, destination: "deck" as const },

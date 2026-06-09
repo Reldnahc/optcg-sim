@@ -550,14 +550,24 @@ export const applyRuntimePlaySource = (params: {
   if (!canResolveDestinationConflict(player, supported.category)) {
     return illegalAction(state, "playSource destination conflict is invalid.");
   }
+  const sourceZone = entry.source.zone?.zone === "trash" ? "trash" : "noZone";
+  const sourceIndex =
+    sourceZone === "trash"
+      ? player.trash.findIndex(
+          (card) => card.instanceId === entry.source.instanceId,
+        )
+      : -1;
+  if (sourceZone === "trash" && sourceIndex < 0) {
+    return illegalAction(state, "playSource trash card not found.");
+  }
   return placePlayedCardResult({
     state,
     events: [],
     playerId: entry.controllerId,
     player,
-    sourceIndex: -1,
+    sourceIndex,
     sourceCard,
-    sourceZone: "noZone",
+    sourceZone,
     supported,
     costArea: player.costArea,
     enterRested,

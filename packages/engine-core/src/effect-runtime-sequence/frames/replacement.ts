@@ -1,4 +1,4 @@
-import type { GameState } from "@optcg/types";
+import type { EngineEvent, GameState } from "@optcg/types";
 
 import { resumeSequenceFrameFromLedgers } from "../resume.js";
 import {
@@ -13,6 +13,7 @@ import type { SequenceFrameResumeResult } from "./types.js";
 export const resumeSequenceFrameAfterReplacement = (
   state: GameState,
   decisionId: NonNullable<GameState["pendingDecision"]>["id"],
+  completedSegmentEvents: readonly EngineEvent[] = [],
 ): SequenceFrameResumeResult => {
   const context = getSupportedFrameContext(state, decisionId);
   if (!context.ok) {
@@ -36,6 +37,7 @@ export const resumeSequenceFrameAfterReplacement = (
   }
   return resumeSequenceFrameFromLedgers({
     createTrashDecision: createUnsupportedTrashDecision,
+    completedSegmentEvents,
     effectBlock: supportedBlock,
     entry,
     finalizeCompleted: true,

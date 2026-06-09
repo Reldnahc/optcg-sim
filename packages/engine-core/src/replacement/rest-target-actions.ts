@@ -105,6 +105,7 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
     const resumed = resumeSequenceFrameAfterReplacement(
       resumeState,
       pausedFrame.pendingDecision.decisionId,
+      result.events,
     );
     if (resumed !== undefined) {
       if (!resumed.ok) {
