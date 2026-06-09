@@ -80,7 +80,7 @@ const validInput = (
     decoded: {
       leader: { cardId: "LDR-001" as CardId, count: 1, variantIndex: 3 },
       main: [
-        { cardId: "CHR-001" as CardId, count: 2, variantIndex: 0 },
+        { cardId: "CHR-001" as CardId, count: 49, variantIndex: 0 },
         { cardId: "EVT-001" as CardId, count: 1, variantIndex: 3 },
       ],
     },
@@ -123,7 +123,7 @@ describe("deck validation", () => {
             leader: { cardId: "LDR-001" as CardId, count: 1 },
             main: [
               { cardId: "EVT-001" as CardId, count: 1 },
-              { cardId: "CHR-001" as CardId, count: 2, variantIndex: 3 },
+              { cardId: "CHR-001" as CardId, count: 49, variantIndex: 3 },
             ],
           },
           donDeckCount: 10,
@@ -137,7 +137,7 @@ describe("deck validation", () => {
 
     assert.equal(first.digest, second.digest);
     assert.deepEqual(first.identity.main, [
-      { cardId: "CHR-001", count: 2 },
+      { cardId: "CHR-001", count: 49 },
       { cardId: "EVT-001", count: 1 },
     ]);
     assert.deepEqual(first.identity.donDeck, [
@@ -166,7 +166,7 @@ describe("deck validation", () => {
           decoded: {
             leader: { cardId: "LDR-001" as CardId, count: 1 },
             main: [
-              { cardId: "CHR-001" as CardId, count: 2, variantIndex: 3 },
+              { cardId: "CHR-001" as CardId, count: 49, variantIndex: 3 },
               { cardId: "EVT-001" as CardId, count: 1 },
             ],
           },
@@ -204,6 +204,52 @@ describe("deck validation", () => {
         count: 6,
       },
     ]);
+  });
+
+  test("rejects main decks that do not contain exactly 50 cards", async () => {
+    const result = await validateDeckLoadout(
+      validInput({
+        mainDeck: {
+          source: "deckHash",
+          hash: "short-main-deck",
+          status: "ready",
+          decoded: {
+            leader: { cardId: "LDR-001" as CardId, count: 1 },
+            main: [{ cardId: "CHR-001" as CardId, count: 49 }],
+          },
+          donDeckCount: 10,
+        },
+      }),
+    );
+
+    assert.equal(result.valid, false);
+    assert.deepEqual(
+      result.errors.map((error) => error.code),
+      ["invalidMainDeckSize"],
+    );
+  });
+
+  test("rejects deck submissions that do not contain exactly one leader", async () => {
+    const result = await validateDeckLoadout(
+      validInput({
+        mainDeck: {
+          source: "deckHash",
+          hash: "two-leaders",
+          status: "ready",
+          decoded: {
+            leader: { cardId: "LDR-001" as CardId, count: 2 },
+            main: [{ cardId: "CHR-001" as CardId, count: 50 }],
+          },
+          donDeckCount: 10,
+        },
+      }),
+    );
+
+    assert.equal(result.valid, false);
+    assert.deepEqual(
+      result.errors.map((error) => error.code),
+      ["invalidLeader"],
+    );
   });
 
   test("rejects a submitted DON deck that is shorter than the match requirement", async () => {

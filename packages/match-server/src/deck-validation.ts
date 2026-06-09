@@ -67,6 +67,7 @@ export interface DeckValidationError {
     | "invalidLeader"
     | "invalidVariant"
     | "invalidDonDeck"
+    | "invalidMainDeckSize"
     | "donDeckTooShort"
     | "deckRuleViolation"
     | "formatIllegal"
@@ -107,6 +108,7 @@ interface CachedDeckValidationResult {
 }
 
 const cacheSchemaVersion = 1;
+const requiredMainDeckSize = 50;
 const defaultDonDeckSize = 10;
 
 export const normalizeDeckLoadoutIdentity = (
@@ -199,6 +201,26 @@ const runDeckValidation = (
   requestedDonDeck: ValidatedDonDeck,
 ): DeckValidationResult => {
   const errors: DeckValidationError[] = [];
+  const leaderCount = input.mainDeck.decoded.leader.count;
+  if (leaderCount !== 1) {
+    errors.push({
+      code: "invalidLeader",
+      message: `Deck must contain exactly 1 leader, but found ${String(leaderCount)}.`,
+      cardId: input.mainDeck.decoded.leader.cardId,
+    });
+  }
+
+  const mainDeckSize = input.mainDeck.decoded.main.reduce(
+    (total, entry) => total + entry.count,
+    0,
+  );
+  if (mainDeckSize !== requiredMainDeckSize) {
+    errors.push({
+      code: "invalidMainDeckSize",
+      message: `Main deck has ${String(mainDeckSize)} cards, but must contain exactly ${String(requiredMainDeckSize)} cards.`,
+    });
+  }
+
   const leader = input.cards[input.mainDeck.decoded.leader.cardId];
   if (leader === undefined) {
     errors.push({
