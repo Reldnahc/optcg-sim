@@ -82,6 +82,9 @@ const fakeController = (): MatchClientController & {
     validateLobbyLoadouts() {
       throw new Error("validateLobbyLoadouts was not expected.");
     },
+    validateLobbyDecks() {
+      throw new Error("validateLobbyDecks was not expected.");
+    },
     startNewLocalMatch() {
       throw new Error("startNewLocalMatch was not expected.");
     },

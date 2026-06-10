@@ -15,10 +15,7 @@ import {
   toggleDecisionSelectedCard,
 } from "../index.js";
 import { createPoneglyphAccountClient } from "../account-client.js";
-import type {
-  AccountLoadout,
-  AccountSimHandoffBatchResult,
-} from "../account-client.js";
+import type { AccountLoadout } from "../account-client.js";
 import { allowsLocalRawDeckSubmissions } from "../sim-environment.js";
 import type { ValidatedLobbyLoadout } from "../transport.js";
 import type {
@@ -57,44 +54,31 @@ export interface UseMatchClientOptions {
   readonly quickPayActivateMainCosts?: boolean | undefined;
 }
 
-const attachLoadoutValidation = (
+const attachDeckPreviewValidation = (
   loadouts: readonly AccountLoadout[],
-  handoffs: readonly AccountSimHandoffBatchResult[],
   validated: readonly ValidatedLobbyLoadout[],
 ): readonly AccountLoadout[] => {
-  const authRejectedByLoadoutId = new Map(
-    handoffs
-      .filter((handoff) => handoff.status === "rejected")
-      .map((handoff) => [handoff.loadoutId, handoff.error]),
-  );
   const validationByLoadoutId = new Map(
     validated
       .filter((loadout) => loadout.loadoutId !== null)
       .map((loadout) => [loadout.loadoutId, loadout]),
   );
   return loadouts.map((loadout) => {
-    const authError = authRejectedByLoadoutId.get(loadout.id);
-    if (authError !== undefined) {
-      return {
-        ...loadout,
-        validation: { status: "unverified", errors: [authError] },
-      };
-    }
     const validation = validationByLoadoutId.get(loadout.id);
-    if (validation !== undefined) {
+    if (validation === undefined) {
       return {
         ...loadout,
         validation: {
-          status: validation.status,
-          errors: validation.errors,
+          status: "unverified",
+          errors: ["Deck validation did not return a result."],
         },
       };
     }
     return {
       ...loadout,
       validation: {
-        status: "unverified",
-        errors: ["Deck validation did not return a result."],
+        status: validation.status,
+        errors: validation.errors,
       },
     };
   });
@@ -244,7 +228,6 @@ export const useMatchClient = ({
       return;
     }
     const requestId = accountLoadoutsRequestId.current + 1;
-    const lobbyId = clientState.lobbyId;
     accountLoadoutsRequestId.current = requestId;
     setAccountLoadoutsStatus("loading");
     setAccountLoadoutsError(undefined);
@@ -261,27 +244,22 @@ export const useMatchClient = ({
           setAccountLoadoutsStatus("ready");
           return;
         }
-        const handoffs = await accountClient.createSimHandoffs({
-          loadoutIds: loadouts.map((loadout) => loadout.id),
-          lobbyId,
-        });
-        const createdTokens = handoffs.flatMap((handoff) =>
-          handoff.status === "created" ? [handoff.token] : [],
-        );
         const validated =
-          createdTokens.length === 0
+          loadouts.length === 0
             ? []
             : (
-                await controller.validateLobbyLoadouts({
-                  handoffTokens: createdTokens,
+                await controller.validateLobbyDecks({
+                  decks: loadouts.map((loadout) => ({
+                    loadoutId: loadout.id,
+                    deckHash: loadout.deckHash,
+                    donDeckCount: 10,
+                  })),
                 })
               ).data.loadouts;
         if (accountLoadoutsRequestId.current !== requestId) {
           return;
         }
-        setAccountLoadouts(
-          attachLoadoutValidation(loadouts, handoffs, validated),
-        );
+        setAccountLoadouts(attachDeckPreviewValidation(loadouts, validated));
         setAccountLoadoutsStatus("ready");
       })
       .catch((error: unknown) => {

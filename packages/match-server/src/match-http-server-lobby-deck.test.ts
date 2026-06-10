@@ -219,6 +219,27 @@ const validateCustomLobbyLoadouts = async (
   return (await response.json()) as ValidatedLobbyLoadoutsBody;
 };
 
+const validateCustomLobbyDecks = async (
+  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
+  lobbyId: string,
+  decks: readonly {
+    readonly loadoutId: string;
+    readonly deckHash: string;
+    readonly donDeckCount: number;
+  }[],
+): Promise<ValidatedLobbyLoadoutsBody> => {
+  const response = await fetch(
+    `${server.url()}/api/lobbies/${lobbyId}/decks/validate`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decks }),
+    },
+  );
+  assert.equal(response.status, 200);
+  return (await response.json()) as ValidatedLobbyLoadoutsBody;
+};
+
 const lobbyWebSocketUrl = (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
@@ -425,6 +446,77 @@ describe("dev HTTP lobby deck submissions", () => {
       const lobby = (await lobbyResponse.json()) as CreatedCustomLobbyBody;
       assert.equal(requireLobbySeat(lobby, "p1").claimed, false);
       assert.equal(requireLobbySeat(lobby, "p1").deck.status, "missing");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("validates deck hashes for picker preflight without handoff verification", async () => {
+    const decodedHashes: string[] = [];
+    const server = await createMatchHttpServer({
+      setup: await createFixtureDevMatchSetup(),
+      fetchCard: createDefaultDevFixtureFetch(),
+      simHandoffVerifier: {
+        verify() {
+          throw new Error("verify was not expected.");
+        },
+        verifyBatch() {
+          throw new Error("verifyBatch was not expected.");
+        },
+      },
+      deckHashCodec: {
+        decode(hash): Promise<DeckHashDeck> {
+          decodedHashes.push(hash);
+          return Promise.resolve(
+            hash === "loadout-invalid"
+              ? {
+                  leader: { card_number: "OP13-079", count: 1 },
+                  main: [{ card_number: "BAD-001", count: 50 }],
+                  don: null,
+                }
+              : {
+                  leader: { card_number: "OP13-079", count: 1 },
+                  main: [{ card_number: "OP13-080", count: 50 }],
+                  don: null,
+                },
+          );
+        },
+      },
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createCustomLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      const result = await validateCustomLobbyDecks(server, lobbyId, [
+        {
+          loadoutId: "loadout-playable",
+          deckHash: "loadout-playable",
+          donDeckCount: 10,
+        },
+        {
+          loadoutId: "loadout-invalid",
+          deckHash: "loadout-invalid",
+          donDeckCount: 10,
+        },
+      ]);
+
+      assert.deepEqual(decodedHashes, ["loadout-playable", "loadout-invalid"]);
+      assert.deepEqual(result.data?.loadouts, [
+        {
+          loadoutId: "loadout-playable",
+          status: "playable",
+          errors: [],
+        },
+        {
+          loadoutId: "loadout-invalid",
+          status: "unplayable",
+          errors: ["Resolved loadout is invalid."],
+        },
+      ]);
     } finally {
       await server.close();
     }

@@ -90,6 +90,18 @@ export const createDevHttpMatchTransport = ({
         { handoffTokens: input.handoffTokens },
       );
     },
+    async validateLobbyDecks(input) {
+      return postJson<ValidatedLobbyLoadouts>(
+        lobbyPath(input.lobbyId, "/decks/validate"),
+        {
+          decks: input.decks.map((deck) => ({
+            loadoutId: deck.loadoutId,
+            deckHash: deck.deckHash,
+            donDeckCount: deck.donDeckCount,
+          })),
+        },
+      );
+    },
     async loadLobby(lobbyId) {
       const response = await fetchImpl(lobbyPath(lobbyId));
       return readJson<CustomLobby>(response);

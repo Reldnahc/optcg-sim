@@ -245,6 +245,64 @@ describe("dev HTTP match transport", () => {
     });
   });
 
+  test("validates lobby deck hashes for preflight without handoff tokens", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        data: {
+          loadouts: [
+            {
+              loadoutId: "loadout-1",
+              status: "playable",
+              errors: [],
+            },
+          ],
+        },
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    const result = await transport.validateLobbyDecks({
+      lobbyId: "lobby-1",
+      decks: [
+        {
+          loadoutId: "loadout-1",
+          deckHash: "deck-hash-1",
+          donDeckCount: 10,
+        },
+      ],
+    });
+
+    const request = recorder.requests[0];
+    if (request === undefined || request.init === undefined) {
+      throw new Error("Expected a deck validation request.");
+    }
+    assert.equal(
+      request.url,
+      "http://localhost:3000/api/lobbies/lobby-1/decks/validate",
+    );
+    assert.equal(
+      request.init.body,
+      JSON.stringify({
+        decks: [
+          {
+            loadoutId: "loadout-1",
+            deckHash: "deck-hash-1",
+            donDeckCount: 10,
+          },
+        ],
+      }),
+    );
+    assert.equal(JSON.stringify(request.init.body).includes("handoff"), false);
+    assert.deepEqual(result.data.loadouts[0], {
+      loadoutId: "loadout-1",
+      status: "playable",
+      errors: [],
+    });
+  });
+
   test("creates a match without accepting bulk seat tokens", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

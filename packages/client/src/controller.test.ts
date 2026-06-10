@@ -47,10 +47,7 @@ const createFakeTransport = (): MatchTransport & {
     deckHash: string;
     donDeckCount: number;
   }>;
-  submittedLoadoutHandoffs: Array<{
-    lobbyId: string;
-    handoffToken: string;
-  }>;
+  submittedLoadoutHandoffs: Array<{ lobbyId: string; handoffToken: string }>;
 } => {
   const claimedSeats: Array<{
     matchId: MatchId;
@@ -136,6 +133,7 @@ const createFakeTransport = (): MatchTransport & {
       });
     },
     validateLobbyLoadouts: () => Promise.resolve({ data: { loadouts: [] } }),
+    validateLobbyDecks: () => Promise.resolve({ data: { loadouts: [] } }),
     loadLobby(lobbyId) {
       return Promise.resolve({
         lobbyId,

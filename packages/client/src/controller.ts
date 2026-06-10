@@ -77,6 +77,13 @@ export interface MatchClientController {
   validateLobbyLoadouts: (input: {
     handoffTokens: readonly string[];
   }) => Promise<ValidatedLobbyLoadouts>;
+  validateLobbyDecks: (input: {
+    decks: readonly {
+      loadoutId: string;
+      deckHash: string;
+      donDeckCount: number;
+    }[];
+  }) => Promise<ValidatedLobbyLoadouts>;
   startNewLocalMatch: (playerId: PlayerId) => Promise<MatchClientSessionState>;
   joinLocalMatch: (
     input: ClientSeatIdentity,
@@ -316,6 +323,15 @@ export const createMatchClientController = ({
       return transport.validateLobbyLoadouts({
         lobbyId: currentLobbyState.lobbyId,
         handoffTokens: input.handoffTokens,
+      });
+    },
+    async validateLobbyDecks(input) {
+      if (currentLobbyState === undefined) {
+        throw new Error("Cannot validate decks before joining a lobby.");
+      }
+      return transport.validateLobbyDecks({
+        lobbyId: currentLobbyState.lobbyId,
+        decks: input.decks,
       });
     },
     async startNewLocalMatch(playerId) {

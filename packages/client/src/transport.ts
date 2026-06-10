@@ -188,6 +188,12 @@ export interface ValidatedLobbyLoadouts {
   };
 }
 
+export interface LobbyDeckValidationInput {
+  loadoutId: string;
+  deckHash: string;
+  donDeckCount: number;
+}
+
 export interface SubmitVisibleActionInput {
   matchId: MatchId;
   playerId: PlayerId;
@@ -331,6 +337,10 @@ export interface MatchTransport {
   validateLobbyLoadouts: (input: {
     lobbyId: string;
     handoffTokens: readonly string[];
+  }) => Promise<ValidatedLobbyLoadouts>;
+  validateLobbyDecks: (input: {
+    lobbyId: string;
+    decks: readonly LobbyDeckValidationInput[];
   }) => Promise<ValidatedLobbyLoadouts>;
   loadLobby: (lobbyId: string) => Promise<CustomLobby>;
   createMatch: () => Promise<CreatedMatch>;
