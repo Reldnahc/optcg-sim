@@ -171,10 +171,7 @@ const isSupportedNonOptionalBody = (
 
 const isSupportedOptionalBody = (
   block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
-  adapter: AutoRuntimeEntryAdapter,
-): boolean =>
-  adapter.supportsOptionalActivation !== false &&
-  isSupportedDrawBody(block.effect);
+): boolean => isSupportedDrawBody(block.effect);
 
 export const isSupportedAutoRuntimeEffectBlock = (
   block: EffectBlock,
@@ -184,7 +181,7 @@ export const isSupportedAutoRuntimeEffectBlock = (
     return false;
   }
   if (block.optional === true) {
-    return isSupportedOptionalBody(block, adapter);
+    return isSupportedOptionalBody(block);
   }
   return isSupportedNonOptionalBody(block, adapter);
 };

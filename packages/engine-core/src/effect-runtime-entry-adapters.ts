@@ -10,18 +10,15 @@ type AutoRuntimeTriggerType = Exclude<Trigger["type"], "anyOf">;
 export interface AutoRuntimeEntryAdapter {
   readonly category: "auto";
   readonly sourcePresencePolicies: readonly SourcePresencePolicy[];
-  readonly supportsOptionalActivation?: boolean;
   readonly triggerType: AutoRuntimeTriggerType;
 }
 
 const autoAdapter = (
   triggerType: AutoRuntimeEntryAdapter["triggerType"],
   sourcePresencePolicies: readonly SourcePresencePolicy[],
-  options: { readonly supportsOptionalActivation?: boolean } = {},
 ): AutoRuntimeEntryAdapter => ({
   category: "auto",
   sourcePresencePolicies,
-  supportsOptionalActivation: options.supportsOptionalActivation ?? true,
   triggerType,
 });
 
@@ -56,11 +53,10 @@ export const autoRuntimeEntryAdapterForTriggerType = (
     ]);
   }
   if (triggerType === "trigger") {
-    return autoAdapter(
-      "trigger",
-      ["noSourceRequired", "resolveFromLastKnownInformation"],
-      { supportsOptionalActivation: false },
-    );
+    return autoAdapter("trigger", [
+      "noSourceRequired",
+      "resolveFromLastKnownInformation",
+    ]);
   }
   if (triggerType === "counter") {
     return autoAdapter("counter", ["resolveFromDestinationZone"]);

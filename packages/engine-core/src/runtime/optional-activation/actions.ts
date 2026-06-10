@@ -38,6 +38,7 @@ import {
   processEffectRuntimeAfterOptionalActivationAccept,
   processEffectRuntimeAfterOptionalActivationDecline,
 } from "../../effect-runtime.js";
+import { cleanupResolvedLifeTrigger } from "../../effect-runtime-life-trigger-cleanup.js";
 import {
   getSequencePayCostLegalActions,
   hasSequenceFrameForDecision,
@@ -942,15 +943,24 @@ export const applyOptionalActivationDecisionResponse = (
   };
   delete nextState.pendingDecision;
 
-  const resumed = shouldActivate
-    ? processEffectRuntimeAfterOptionalActivationAccept(
-        nextState,
-        selected.id,
-        orderedCurrentChoiceGroupIds(state, selected) === undefined
-          ? undefined
-          : [selected.id],
-      )
-    : processEffectRuntimeAfterOptionalActivationDecline(nextState);
+  if (!shouldActivate) {
+    const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+    const resumed = processEffectRuntimeAfterOptionalActivationDecline(
+      cleanup.state,
+    );
+    return {
+      ...resumed,
+      events: [...events, ...cleanup.events, ...resumed.events],
+    };
+  }
+
+  const resumed = processEffectRuntimeAfterOptionalActivationAccept(
+    nextState,
+    selected.id,
+    orderedCurrentChoiceGroupIds(state, selected) === undefined
+      ? undefined
+      : [selected.id],
+  );
   return {
     ...resumed,
     events: [...events, ...resumed.events],

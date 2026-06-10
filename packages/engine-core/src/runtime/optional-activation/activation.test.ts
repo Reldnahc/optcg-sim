@@ -34,10 +34,8 @@ import {
 import {
   applyAction,
   queueDrawForP1,
-  queuedEffect,
   toCardId,
   toEffectId,
-  toInstanceId,
   toQueueEntryId,
   toSourceSnapshot,
   toStateSeq,
@@ -927,66 +925,6 @@ test("optional On K.O. queueing reaches chooseOptionalActivation", () => {
   const entry = must(result.state.effectQueue[0], "queued optional");
 
   assertOptionalDecision(result, entry);
-});
-
-test("optional life-trigger no-choice draw fails closed instead of creating optional decision", () => {
-  const state = createActiveState();
-  const cardId = toCardId("optional-life-trigger-card");
-  const source = must(state.players[p1], "p1").leader;
-  const supportCard = resolvedCard({ cardId, category: "event" });
-  const definition = optionalDefinition(
-    cardId,
-    supportCard.support,
-    { type: "trigger" },
-    "noSourceRequired",
-  );
-  const effect = must(definition.effects[0], "optional life effect");
-  installDefinition(
-    state,
-    { ...source, cardId },
-    definition,
-    "event",
-    "def-optional-life-trigger",
-  );
-  state.effectQueue = [
-    {
-      ...queuedEffect(cardId),
-      source: {
-        instanceId: toInstanceId("optional-life-instance"),
-        cardId,
-        playerId: p1,
-        zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
-      },
-      sourceSnapshot: {
-        ...queuedEffect(cardId).sourceSnapshot,
-        instanceId: toInstanceId("optional-life-instance"),
-        cardId,
-      },
-      effectBlockId: effect.id,
-      sourcePresencePolicy: must(
-        effect.sourcePresencePolicy,
-        "life source presence policy",
-      ),
-    },
-  ];
-  const before = structuredClone(state);
-
-  const result = processEffectRuntime(state);
-
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.state, before);
-  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
 });
 
 test("optional custom effect-resolved no-choice draw fails closed instead of creating optional decision", () => {

@@ -285,16 +285,12 @@ const hasSupportedDrawEffectEnvelope = (
 
 const isSupportedAutoRuntimeDrawEntryPoint = (
   effect: DrawEffectBlock,
-  options: { readonly optionalActivation?: boolean } = {},
 ): boolean => {
   const adapters = autoRuntimeEntryAdaptersForBlock(effect);
   return (
     adapters.length > 0 &&
-    adapters.every(
-      (adapter) =>
-        adapter.sourcePresencePolicies.includes(effect.sourcePresencePolicy) &&
-        (options.optionalActivation !== true ||
-          adapter.supportsOptionalActivation !== false),
+    adapters.every((adapter) =>
+      adapter.sourcePresencePolicies.includes(effect.sourcePresencePolicy),
     )
   );
 };
@@ -352,5 +348,4 @@ export const isSupportedQueuedOptionalDrawEffectBlock = (
   hasSupportedDrawEffectEnvelope(effect, {
     optional: "optional",
     allowOncePerTurn: true,
-  }) &&
-  isSupportedAutoRuntimeDrawEntryPoint(effect, { optionalActivation: true });
+  }) && isSupportedAutoRuntimeDrawEntryPoint(effect);
