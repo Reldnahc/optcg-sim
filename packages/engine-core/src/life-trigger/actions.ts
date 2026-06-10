@@ -33,10 +33,9 @@ import {
   releaseDamageDeferredEffectQueue,
   resolveImplementedDslEffectDefinition,
 } from "../effect-runtime.js";
-import { autoRuntimeEntryAdapterForTriggerType } from "../effect-runtime-block-support.js";
+import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "../effect-runtime-sequence/support.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { lifeTriggerQueueOrigin } from "./queue-origin.js";
@@ -63,68 +62,8 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
   ) {
     return false;
   }
-  if (effect.cost !== undefined) return false;
-  if (effect.conditionTiming !== undefined) return false;
-  if (effect.failurePolicy !== undefined) return false;
-  if (effect.optional !== undefined && effect.optional) return false;
-  if (effect.optional === false) return false;
-  if (effect.oncePerTurn !== undefined && effect.oncePerTurn) return false;
-  if (effect.oncePerTurn === false) return false;
-  return isSupportedTriggerQueuedBody(effect);
+  return evaluateEffectBlockRuntimeSupport(effect).supported;
 };
-
-const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
-  const effect = effectBlock.effect;
-  if (
-    effect.type === "activateReferencedEffect" &&
-    effect.source.type === "triggerCard" &&
-    effect.trigger.type !== "anyOf" &&
-    autoRuntimeEntryAdapterForTriggerType(effect.trigger.type) !== undefined
-  ) {
-    return true;
-  }
-  if (
-    effect.type === "playSource" &&
-    effect.source.type === "triggerCard" &&
-    effect.ignoreCost === true
-  ) {
-    return true;
-  }
-  if (effect.type === "draw") {
-    return (
-      Number.isInteger(effect.count) &&
-      effect.count >= 0 &&
-      effect.player === "self"
-    );
-  }
-  if (effect.type === "drawUpTo") {
-    return (
-      Number.isInteger(effect.count) &&
-      effect.count >= 0 &&
-      effect.player === "self"
-    );
-  }
-  if (effect.type === "sequence") {
-    if (effectBlock.sourcePresencePolicy === undefined) {
-      return false;
-    }
-    return isSupportedQueuedAutoSequenceForEntryPoint(
-      effectBlock,
-      "trigger",
-      effectBlock.sourcePresencePolicy,
-      { allowSavedReferences: false },
-    );
-  }
-  return false;
-};
-
-const hasUnsupportedShape = (effect: EffectBlock): boolean =>
-  !isSupportedTriggerQueuedBody(effect) ||
-  effect.cost !== undefined ||
-  effect.conditionTiming !== undefined ||
-  effect.failurePolicy !== undefined ||
-  effect.optional !== undefined ||
-  effect.oncePerTurn !== undefined;
 
 const selectSupportedTriggerEffects = (
   effects: readonly EffectBlock[],
@@ -135,12 +74,7 @@ const selectSupportedTriggerEffects = (
   if (triggerEffects.length === 0) {
     return undefined;
   }
-  if (
-    triggerEffects.some(
-      (effect) =>
-        hasUnsupportedShape(effect) || !isSupportedTriggerEffect(effect),
-    )
-  ) {
+  if (triggerEffects.some((effect) => !isSupportedTriggerEffect(effect))) {
     return undefined;
   }
   return triggerEffects;

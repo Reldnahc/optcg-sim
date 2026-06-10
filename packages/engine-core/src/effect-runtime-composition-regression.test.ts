@@ -538,10 +538,7 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
       ],
     },
   };
-  assert.equal(
-    getSupportedLifeTriggerDecision(lifeState, p2, lifeTop.card),
-    undefined,
-  );
+  assert.ok(getSupportedLifeTriggerDecision(lifeState, p2, lifeTop.card));
 
   const counterState = setupAttackState();
   const attacker = must(counterState.players[p1], "p1").leader;
