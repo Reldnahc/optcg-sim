@@ -332,7 +332,10 @@ describe("playmat structure", () => {
   test("control dock is tall and flush inside the panel", async () => {
     const controlsStyles = await readFile(controlsStylesPath, "utf8");
 
-    assert.match(controlsStyles, /--control-window-dock-height:\s*320px;/u);
+    assert.match(
+      controlsStyles,
+      /--control-window-dock-height:\s*clamp\(\s*260px,\s*calc\(var\(--card-height\) \* 2\.15\),\s*460px\s*\);/u,
+    );
     assert.match(controlsStyles, /\.control-window-dock\s*\{[^}]*right:\s*0;/u);
     assert.match(
       controlsStyles,

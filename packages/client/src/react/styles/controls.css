@@ -17,6 +17,11 @@
   --control-action-height: clamp(30px, calc(var(--card-height) / 5), 38px);
   --control-dock-tab-height: clamp(26px, calc(var(--card-height) / 5.4), 34px);
   --control-window-dock-height: clamp(260px, calc(var(--card-height) * 2.15), 460px);
+  --control-resize-hit-area: calc(var(--control-rail-gap) * 1.45);
+  --control-dock-resize-hit-area: calc(var(--control-rail-gap) * 1.7);
+  --control-grab-nub-width: calc(var(--control-dock-tab-height) * 0.58);
+  --control-grab-dot-width: var(--card-outline-thin);
+  --control-grab-dot-height: calc(var(--control-dock-tab-height) * 0.5);
   position: absolute;
   top: var(--control-rail-gap);
   right: var(--control-rail-gap);
@@ -34,9 +39,9 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -5px;
+  left: calc(var(--control-resize-hit-area) / -2);
   z-index: 3;
-  width: 10px;
+  width: var(--control-resize-hit-area);
   border: 0;
   background: transparent;
   cursor: ew-resize;
@@ -72,9 +77,9 @@
   border-color: #59ff8f;
   background: #8f9790;
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
-    0 0 0 2px rgba(89, 255, 143, 0.34),
-    0 0 18px rgba(89, 255, 143, 0.38);
+    inset 0 0 0 var(--card-outline-thin) rgba(0, 0, 0, 0.35),
+    0 0 0 var(--card-outline-medium) rgba(89, 255, 143, 0.34),
+    0 0 var(--card-glow-size) rgba(89, 255, 143, 0.38);
 }
 
 .summary-panel h2 {
@@ -102,11 +107,11 @@
 
 .connection-status {
   flex: 0 0 auto;
-  width: clamp(9px, calc(var(--card-height) / 15), 13px);
-  height: clamp(9px, calc(var(--card-height) / 15), 13px);
-  border: 1px solid rgba(0, 0, 0, 0.65);
+  width: calc(var(--control-title-font-size) * 0.36);
+  height: calc(var(--control-title-font-size) * 0.36);
+  border: var(--card-outline-thin) solid rgba(0, 0, 0, 0.65);
   border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 var(--card-outline-thin) rgba(255, 255, 255, 0.35);
 }
 
 .connection-status.is-connected {
@@ -521,21 +526,21 @@
 }
 
 .controls-panel {
-  --control-window-dock-height: 320px;
-
   position: relative;
   overflow: auto;
-  padding-top: 58px;
-  padding-bottom: calc(var(--control-window-dock-height) + 10px);
+  padding-top: calc(var(--control-icon-button-size) + (var(--control-panel-padding) * 2));
+  padding-bottom: calc(
+    var(--control-window-dock-height) + var(--control-panel-padding)
+  );
 }
 
 .control-tool-strip {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: var(--control-panel-padding);
+  left: var(--control-panel-padding);
   z-index: 1;
   display: flex;
-  gap: 4px;
+  gap: calc(var(--control-rail-gap) * 0.5);
   align-items: center;
 }
 
@@ -649,7 +654,7 @@
   display: grid;
   height: var(--control-window-dock-height);
   place-items: center;
-  border: 1px dashed rgba(244, 238, 231, 0.32);
+  border: var(--card-outline-thin) dashed rgba(244, 238, 231, 0.32);
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
@@ -669,11 +674,11 @@
 
 .control-window-dock-resize-handle {
   position: absolute;
-  top: -6px;
+  top: calc(var(--control-dock-resize-hit-area) / -2);
   right: 0;
   left: 0;
   z-index: 2;
-  height: 12px;
+  height: var(--control-dock-resize-hit-area);
   border: 0;
   background: transparent;
   cursor: ns-resize;
@@ -705,14 +710,14 @@
 .control-dock-window-tabs {
   display: flex;
   min-width: 0;
-  border-bottom: 1px solid rgba(244, 238, 231, 0.22);
+  border-bottom: var(--card-outline-thin) solid rgba(244, 238, 231, 0.22);
 }
 
 .control-dock-window-grab-nub {
   position: relative;
-  flex: 0 0 16px;
+  flex: 0 0 var(--control-grab-nub-width);
   border: 0;
-  border-right: 1px solid rgba(244, 238, 231, 0.14);
+  border-right: var(--card-outline-thin) solid rgba(244, 238, 231, 0.14);
   background: transparent;
   cursor: grab;
 }
@@ -723,11 +728,11 @@
 
 .control-dock-window-grab-nub::before {
   position: absolute;
-  top: 7px;
-  left: 6px;
-  width: 2px;
-  height: 14px;
-  border-left: 2px dotted rgba(255, 255, 255, 0.58);
+  top: calc((var(--control-dock-tab-height) - var(--control-grab-dot-height)) / 2);
+  left: calc((var(--control-grab-nub-width) - var(--control-grab-dot-width)) / 2);
+  width: var(--control-grab-dot-width);
+  height: var(--control-grab-dot-height);
+  border-left: var(--control-grab-dot-width) dotted rgba(255, 255, 255, 0.58);
   content: "";
 }
 
