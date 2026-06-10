@@ -7,6 +7,11 @@ import type { InstructionParser } from "../types.js";
 const fieldActivationTarget = "targetSelection:set-field-active" as SelectionId;
 
 export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
+  const selfActivation = parseSetThisCharacterActive(input.text);
+  if (selfActivation !== undefined) {
+    return selfActivation;
+  }
+
   const massFieldActivation = parseSetLeaderAndCharactersActive(input.text);
   if (massFieldActivation !== undefined) {
     return massFieldActivation;
@@ -97,6 +102,23 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseSetThisCharacterActive(
+  text: string,
+): ReturnType<InstructionParser> {
+  if (!/^set this Character as active\.?$/i.test(text)) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "activate",
+      target: { type: "self" },
+    },
+    evidence: ["instruction:activate", "target:thisCharacter", "state:active"],
+    rest: "",
+  };
+}
 
 function parseSetLeaderAndCharactersActive(
   text: string,

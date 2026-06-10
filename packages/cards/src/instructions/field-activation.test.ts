@@ -3,6 +3,25 @@ import { describe, expect, it } from "vitest";
 import { parseSetFieldActiveInstruction } from "./field-activation.js";
 
 describe("field activation instruction parser", () => {
+  it("parses this Character activation as a self-target activate primitive", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "Set this Character as active.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "activate",
+        target: { type: "self" },
+      },
+      evidence: [
+        "instruction:activate",
+        "target:thisCharacter",
+        "state:active",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses mass leader and character activation as reusable activate targets", () => {
     expect(
       parseSetFieldActiveInstruction({
