@@ -34,6 +34,7 @@ import {
   applyMoveCardsSegment,
   applyNoOpReturnDonSegment,
   applyRevealTopSequenceSegment,
+  previousSegmentCompleted,
   saveReference,
   shouldAttemptSegment,
 } from "../segments.js";
@@ -109,7 +110,20 @@ export const continueNoDecisionSegments = (
         ...nextLedgers,
         segmentResults: {
           ...nextLedgers.segmentResults,
-          [ledgerKey(segment, index)]: emptySegmentResult(),
+          [ledgerKey(segment, index)]:
+            segment.connector !== "then" &&
+            previousSegmentCompleted(
+              nextLedgers.segmentResults,
+              effect,
+              index,
+              ledgerKey,
+            )
+              ? {
+                  ...emptySegmentResult(),
+                  attempted: true,
+                  succeeded: true,
+                }
+              : emptySegmentResult(),
         },
       };
       continue;
