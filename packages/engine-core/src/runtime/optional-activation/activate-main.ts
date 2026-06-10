@@ -41,6 +41,7 @@ import {
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
+import { isSupportedDrawUpToBody } from "../../effect-runtime-reusable-body-support.js";
 import { isSupportedDrawBody } from "../primitives/draw.js";
 
 export { isScopedActivateMainQueueEntry };
@@ -73,6 +74,7 @@ const isSupportedActivateMainPrimitiveBody = (
   effect: EffectDefinition["effects"][number],
 ): boolean =>
   isSupportedDrawBody(effect.effect) ||
+  isSupportedDrawUpToBody(effect.effect) ||
   isSupportedMoveCardsEffect(effect.effect);
 
 export const isSupportedActivateMainRuntimeEffectBlock = (

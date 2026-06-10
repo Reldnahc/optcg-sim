@@ -9,7 +9,7 @@ import {
 } from "./runtime/primitives/execute.js";
 import { isSupportedTrashFromHandUntilCountBody } from "./runtime/primitives/trash-from-hand-until.js";
 
-const isSupportedDrawUpToBody = (
+export const isSupportedDrawUpToBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "drawUpTo" }> =>
   effect.type === "drawUpTo" &&

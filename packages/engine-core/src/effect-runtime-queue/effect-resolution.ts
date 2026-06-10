@@ -12,6 +12,7 @@ import {
   isSupportedActivateMainRuntimeEffectBlock,
 } from "../runtime/optional-activation/activate-main.js";
 import { isSupportedQueuedDrawEffectBlock } from "../runtime/primitives/execute.js";
+import { isSupportedDrawUpToBody } from "../effect-runtime-reusable-body-support.js";
 import type { QueuedEffectDefinitionResolverDependencies } from "./results-types.js";
 
 type ContinuousQueueEffect = Extract<
@@ -119,6 +120,31 @@ export const createQueuedEffectResolvers = (
     isSupportedActivateMainRuntimeEffectBlock(effect) &&
     effect.effect.type === "draw";
 
+  const isSupportedAutoQueuedDrawUpToEffectBlock = (
+    effect: EffectDefinition["effects"][number],
+  ): effect is EffectDefinition["effects"][number] & {
+    sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+    effect: Extract<Effect, { type: "drawUpTo" }>;
+  } =>
+    effect.category === "auto" &&
+    effect.optional !== true &&
+    effect.oncePerTurn !== true &&
+    effect.cost === undefined &&
+    effect.failurePolicy === undefined &&
+    isSupportedDrawUpToBody(effect.effect);
+
+  const isSupportedActivateMainQueuedDrawUpToEffectBlock = (
+    effect: EffectDefinition["effects"][number],
+    entry: EffectQueueEntry,
+  ): effect is EffectDefinition["effects"][number] & {
+    sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+    effect: Extract<Effect, { type: "drawUpTo" }>;
+  } =>
+    isScopedActivateMainQueueEntry(entry) &&
+    isSupportedActivateMainRuntimeEffectBlock(effect) &&
+    effect.optional !== true &&
+    isSupportedDrawUpToBody(effect.effect);
+
   const resolveQueuedDrawEffect = (
     state: GameState,
     entry: EffectQueueEntry,
@@ -156,14 +182,8 @@ export const createQueuedEffectResolvers = (
     delete (supportShape as { condition?: unknown }).condition;
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     if (
-      supportShape.category !== "auto" ||
-      supportShape.optional === true ||
-      supportShape.oncePerTurn === true ||
-      supportShape.cost !== undefined ||
-      supportShape.failurePolicy !== undefined ||
-      supportShape.effect.type !== "drawUpTo" ||
-      !Number.isInteger(supportShape.effect.count) ||
-      supportShape.effect.count < 0
+      !isSupportedAutoQueuedDrawUpToEffectBlock(supportShape) &&
+      !isSupportedActivateMainQueuedDrawUpToEffectBlock(supportShape, entry)
     ) {
       return undefined;
     }

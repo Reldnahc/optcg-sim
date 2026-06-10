@@ -123,3 +123,104 @@ test("optional activate main prompts before resolving reusable moveCards body", 
     true,
   );
 });
+
+test("activate main supports reusable drawUpTo body through quantity choice", () => {
+  const state = makeMainPhaseLegalActionState();
+  addExtraDeckCard(state, p1);
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-leader-draw-upto-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-leader-draw-upto",
+    effectId,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "drawUpTo",
+    count: 2,
+    player: "self",
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const decision = must(result.state.pendingDecision, "quantity decision");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: must(result.state.effectQueue[0], "queue entry").id,
+    effectId,
+  });
+});
+
+test("optional activate main prompts before resolving reusable drawUpTo body", () => {
+  const state = makeMainPhaseLegalActionState();
+  addExtraDeckCard(state, p1);
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-optional-draw-upto-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-draw-upto",
+    effectId,
+    optional: true,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "drawUpTo",
+    count: 2,
+    player: "self",
+  };
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const optionalDecision = must(
+    prompted.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    must(accepted.state.pendingDecision, "quantity decision").type,
+    "chooseQuantity",
+  );
+});
