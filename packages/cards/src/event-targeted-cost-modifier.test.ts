@@ -144,4 +144,47 @@ describe("event targeted cost modifier parser", () => {
       ]),
     );
   });
+
+  it("parses turn-windowed all own Character cost gain as reusable modifyCost", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] All of your Characters gain +1 cost.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        condition: { type: "opponentTurn" },
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "characterArea",
+            filter: { categories: ["character"] },
+          },
+          value: 1,
+          duration: {
+            type: "whileConditionTrue",
+            condition: { type: "opponentTurn" },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:opponentTurn",
+        "condition:opponentTurn",
+        "instruction:modifyCost",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:category:character",
+        "modifier:positiveCost",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
 });
