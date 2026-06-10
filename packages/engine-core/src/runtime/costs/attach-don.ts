@@ -5,11 +5,17 @@ import type {
   OptionalPayCostDecision,
   PaymentResponse,
   PlayerId,
+  PlayerRef,
   PlayerState,
+  Target,
+  TargetRequest,
 } from "@optcg/types";
 
 import { appendEvent } from "../../action-results.js";
-import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
+import {
+  cardMatchesHandSelectionFilter,
+  getOpponentId,
+} from "../../actions/state.js";
 
 export type AttachDonPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
@@ -30,32 +36,121 @@ type ApplyAttachDonPaymentResult =
         >;
       };
       events: EngineEvent[];
-      player: PlayerState;
+      players: GameState["players"];
     }
   | { ok: false; reason: string };
+
+const resolvePaymentPlayerId = (
+  state: GameState,
+  controllerId: PlayerId,
+  player: PlayerRef | undefined,
+): PlayerId | undefined => {
+  if (player === undefined || player === "self") {
+    return controllerId;
+  }
+  if (player === "opponent") {
+    return getOpponentId(state, controllerId) ?? undefined;
+  }
+  return undefined;
+};
+
+const resolveTargetPlayerIds = (
+  state: GameState,
+  controllerId: PlayerId,
+  player: TargetRequest["player"],
+): PlayerId[] => {
+  if (player === "anyPlayer") {
+    const opponentId = getOpponentId(state, controllerId);
+    return opponentId === null ? [controllerId] : [controllerId, opponentId];
+  }
+  const playerId = resolvePaymentPlayerId(state, controllerId, player);
+  return playerId === undefined ? [] : [playerId];
+};
+
+const targetRequest = (
+  target: Target,
+):
+  | Extract<Target, { type: "choose" }>["request"]
+  | Extract<Target, { type: "chooseFromZones" }>["request"]
+  | null => {
+  if (target.type === "choose") {
+    return target.request;
+  }
+  if (target.type === "chooseFromZones") {
+    return target.request;
+  }
+  return null;
+};
+
+const targetZones = (
+  request: NonNullable<ReturnType<typeof targetRequest>>,
+): readonly string[] => ("zones" in request ? request.zones : [request.zone]);
+
+export const attachDonSourceIds = (
+  state: GameState,
+  playerId: PlayerId,
+  option: AttachDonPaymentOption,
+): CardInstance["instanceId"][] => {
+  const sourcePlayerId = resolvePaymentPlayerId(
+    state,
+    playerId,
+    option.sourcePlayer,
+  );
+  const player =
+    sourcePlayerId === undefined ? undefined : state.players[sourcePlayerId];
+  return (
+    player?.costArea
+      .filter((card) => card.state === option.sourceState)
+      .map((card) => card.instanceId) ?? []
+  );
+};
 
 export const attachDonTargetCandidates = (
   state: GameState,
   playerId: PlayerId,
-  player: PlayerState,
   option: AttachDonPaymentOption,
 ): readonly CardInstance[] => {
-  if (option.target.type !== "chooseFromZones") {
+  const request = targetRequest(option.target);
+  if (request === null) {
     return [];
   }
-  const request = option.target.request;
   if (
     request.chooser !== "self" ||
-    request.player !== "self" ||
-    request.zones.length !== 2 ||
-    request.zones[0] !== "leaderArea" ||
-    request.zones[1] !== "characterArea"
+    request.min !== 1 ||
+    request.max !== 1 ||
+    request.allowFewerIfUnavailable ||
+    request.visibility !== "public"
   ) {
     return [];
   }
-  return [player.leader, ...player.characters].filter((card) =>
-    cardMatchesHandSelectionFilter(state, playerId, card, request.filter),
+  const targetPlayerIds = resolveTargetPlayerIds(
+    state,
+    playerId,
+    request.player,
   );
+  return targetPlayerIds.flatMap((targetPlayerId) => {
+    const player = state.players[targetPlayerId];
+    if (player === undefined) {
+      return [];
+    }
+    const candidates = targetZones(request).flatMap((zone) => {
+      if (zone === "leaderArea") {
+        return [player.leader];
+      }
+      if (zone === "characterArea") {
+        return player.characters;
+      }
+      return [];
+    });
+    return candidates.filter((card) =>
+      cardMatchesHandSelectionFilter(
+        state,
+        targetPlayerId,
+        card,
+        request.filter,
+      ),
+    );
+  });
 };
 
 export function applyAttachDonCostPayment(params: {
@@ -87,8 +182,24 @@ export function applyAttachDonCostPayment(params: {
       reason: "Payment DON!! selection contains duplicates.",
     };
   }
+
+  const sourcePlayerId = resolvePaymentPlayerId(
+    params.state,
+    params.playerId,
+    params.selectedOption.sourcePlayer,
+  );
+  const sourcePlayer =
+    sourcePlayerId === undefined
+      ? undefined
+      : params.state.players[sourcePlayerId];
+  if (sourcePlayerId === undefined || sourcePlayer === undefined) {
+    return {
+      ok: false,
+      reason: "Payment DON!! attachment source is invalid.",
+    };
+  }
   const costAreaById = new Map(
-    params.player.costArea.map((card) => [card.instanceId, card]),
+    sourcePlayer.costArea.map((card) => [card.instanceId, card]),
   );
   for (const donId of selectedDon) {
     const don = costAreaById.get(donId);
@@ -103,29 +214,40 @@ export function applyAttachDonCostPayment(params: {
   const target = attachDonTargetCandidates(
     params.state,
     params.playerId,
-    params.player,
     params.selectedOption,
   ).find((candidate) => candidate.instanceId === selectedTargetId);
   if (target === undefined) {
     return { ok: false, reason: "Payment DON!! attachment target is invalid." };
   }
-
   const selectedDonSet = new Set(selectedDon);
-  const targetsLeader = params.player.leader.instanceId === target.instanceId;
-  const player = {
-    ...params.player,
+  const targetPlayerId = target.zone.playerId;
+  if (targetPlayerId === undefined) {
+    return { ok: false, reason: "Payment DON!! attachment target is invalid." };
+  }
+  const targetPlayer = params.state.players[targetPlayerId];
+  if (targetPlayer === undefined) {
+    return { ok: false, reason: "Payment DON!! attachment target is invalid." };
+  }
+  const targetsLeader = targetPlayer.leader.instanceId === target.instanceId;
+  const updatedTargetPlayer: PlayerState = {
+    ...targetPlayer,
     leader: targetsLeader
       ? {
-          ...params.player.leader,
-          attachedDon: [...params.player.leader.attachedDon, ...selectedDon],
+          ...targetPlayer.leader,
+          attachedDon: [...targetPlayer.leader.attachedDon, ...selectedDon],
         }
-      : params.player.leader,
-    characters: params.player.characters.map((card) =>
+      : targetPlayer.leader,
+    characters: targetPlayer.characters.map((card) =>
       card.instanceId === target.instanceId
         ? { ...card, attachedDon: [...card.attachedDon, ...selectedDon] }
         : card,
     ),
-    costArea: params.player.costArea.map((card) => {
+  };
+  const sourceBase =
+    sourcePlayerId === targetPlayerId ? updatedTargetPlayer : sourcePlayer;
+  const updatedSourcePlayer: PlayerState = {
+    ...sourceBase,
+    costArea: sourcePlayer.costArea.map((card) => {
       if (!selectedDonSet.has(card.instanceId)) {
         return card;
       }
@@ -141,7 +263,7 @@ export function applyAttachDonCostPayment(params: {
       events,
       "donAttached",
       {
-        playerId: params.playerId,
+        playerId: sourcePlayerId,
         donInstanceId: donId,
         targetInstanceId: target.instanceId,
       },
@@ -161,6 +283,14 @@ export function applyAttachDonCostPayment(params: {
       selectedCardInstanceIds: selectedTargets,
     },
     events,
-    player,
+    players: {
+      ...params.state.players,
+      ...(sourcePlayerId === targetPlayerId
+        ? { [sourcePlayerId]: updatedSourcePlayer }
+        : {
+            [sourcePlayerId]: updatedSourcePlayer,
+            [targetPlayerId]: updatedTargetPlayer,
+          }),
+    },
   };
 }

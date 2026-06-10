@@ -94,6 +94,9 @@ export const createEffectRuntimeQueueProcessing = (
       ) {
         return resolved;
       }
+      if (resolved.state.pendingDecision !== undefined) {
+        return resolved;
+      }
       const continued = queueResults.processNoChoiceEffectQueue(resolved.state);
       return {
         ...continued,

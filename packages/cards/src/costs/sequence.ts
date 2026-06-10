@@ -151,6 +151,9 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
       return {
         type: "attachDon",
         count: cost.count,
+        ...(cost.sourcePlayer === undefined
+          ? {}
+          : { sourcePlayer: cost.sourcePlayer }),
         sourceState: cost.sourceState,
         target: cost.target,
       };

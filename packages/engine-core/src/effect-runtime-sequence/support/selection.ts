@@ -97,7 +97,9 @@ export const isSupportedAttachSelectedDonSegment = (
   effect.type === "attachSelectedDon" &&
   String(effect.selection).startsWith("donSelection:") &&
   effect.target.type === "savedFieldObject" &&
-  effect.target.player === "self" &&
+  (effect.target.player === "self" ||
+    effect.target.player === "opponent" ||
+    effect.target.player === "anyPlayer") &&
   ((effect.target.zone === "characterArea" &&
     effect.target.zones === undefined) ||
     (effect.target.zone === undefined &&

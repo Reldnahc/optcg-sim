@@ -14,6 +14,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
@@ -199,6 +200,75 @@ const leaderOrCharacterAttachDonSequence = (): Extract<
     }),
   };
 };
+
+const ownerRelativeAttachDonSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> =>
+  ({
+    type: "sequence",
+    effects: [
+      {
+        id: "select-owner-don",
+        connector: "always",
+        saveResultAs: "donSelection:owner-relative",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "anyPlayer",
+            zone: "costArea",
+            filter: { categories: ["don"] },
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+          },
+        },
+      },
+      {
+        id: "select-owner-target",
+        connector: "ifYouDo",
+        saveResultAs: "targetSelection:owner-relative",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "anyPlayer",
+            zones: ["leaderArea", "characterArea"],
+            filter: { categories: ["leader", "character"] },
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+          },
+        },
+      },
+      {
+        id: "attach-owner-don",
+        connector: "then",
+        effect: {
+          type: "attachSelectedDon",
+          selection: "donSelection:owner-relative" as SelectionId,
+          targetOwner: "selectedDonOwner",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "selectedTargets",
+              saveResultAs: "targetSelection:owner-relative",
+            },
+            zones: ["leaderArea", "characterArea"],
+            player: "anyPlayer",
+            filter: { categories: ["leader", "character"] },
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+        },
+      },
+    ],
+  }) as unknown as Extract<Effect, { type: "sequence" }>;
 
 const setupDefinition = (
   state: GameState,
@@ -401,6 +471,92 @@ test("DON attachment sequence can target the controller's typed leader", () => {
   assert.deepEqual(
     must(attached.state.players[p1], "after p1").leader.attachedDon,
     selectedDon.map((card) => card.instanceId),
+  );
+});
+
+test("DON attachment sequence can attach selected opponent DON to that owner's Character", () => {
+  const state = createActiveState();
+  setupDefinition(state, ownerRelativeAttachDonSequence());
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "opponent target character"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const don = must(p2State.donDeck[0], "opponent DON");
+  p2State.donDeck = p2State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p2, slot: "donDeck", index },
+  }));
+  p2State.costArea = [
+    {
+      ...don,
+      zone: { zone: "costArea", playerId: p2, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+  });
+  state.cardManifest.cards[don.cardId] = resolvedCard({
+    cardId: don.cardId,
+    category: "don",
+  });
+
+  const selectDonResult = processEffectRuntime(state);
+  const selectDon = must(selectDonResult.state.pendingDecision, "select DON");
+  assert.equal(selectDonResult.errors, undefined);
+  assert.equal(selectDon.type, "selectTargets");
+  const selectedDon = must(
+    selectDon.candidates.find(
+      (candidate) => candidate.card.instanceId === don.instanceId,
+    ),
+    "opponent DON candidate",
+  );
+
+  const selected = applyAction(selectDonResult.state, {
+    type: "respondToDecision",
+    decisionId: selectDon.id,
+    response: { type: "targets", targets: [selectedDon.card] },
+  });
+  const selectTarget = must(selected.state.pendingDecision, "select target");
+  assert.equal(selected.errors, undefined);
+  assert.equal(selectTarget.type, "selectTargets");
+  const ownerTarget = must(
+    selectTarget.candidates.find(
+      (candidate) => candidate.card.instanceId === target.instanceId,
+    ),
+    "opponent owner target",
+  );
+
+  const attached = applyAction(selected.state, {
+    type: "respondToDecision",
+    decisionId: selectTarget.id,
+    response: { type: "targets", targets: [ownerTarget.card] },
+  });
+
+  assert.equal(attached.errors, undefined);
+  const afterOpponent = must(attached.state.players[p2], "after opponent");
+  assert.deepEqual(
+    afterOpponent.characters.find(
+      (card) => card.instanceId === target.instanceId,
+    )?.attachedDon,
+    [don.instanceId],
+  );
+  assert.equal(
+    afterOpponent.costArea.find((card) => card.instanceId === don.instanceId)
+      ?.state,
+    undefined,
   );
 });
 

@@ -610,6 +610,101 @@ it("parses delayed DON activation body under another entry point", () => {
   );
 });
 
+it("parses opponent rested-DON cost and owner-relative DON attachment body separately", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] You may give 1 of your opponent's rested DON!! cards to 1 of your opponent's Characters: Give up to 1 DON!! card from its owner's cost area to its owner's Leader or 1 of their Characters.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "attachDon",
+                count: 1,
+                sourcePlayer: "opponent",
+                sourceState: "rested",
+                target: {
+                  type: "choose",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "opponent",
+                    zone: "characterArea",
+                    min: 1,
+                    max: 1,
+                    filter: { categories: ["character"] },
+                  },
+                },
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      chooser: "self",
+                      player: "anyPlayer",
+                      zone: "costArea",
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["don"] },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      chooser: "self",
+                      player: "anyPlayer",
+                      zones: ["leaderArea", "characterArea"],
+                      min: 1,
+                      max: 1,
+                      filter: { categories: ["leader", "character"] },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "attachSelectedDon",
+                    targetOwner: "selectedDonOwner",
+                    target: { type: "savedFieldObject", player: "anyPlayer" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "cost:attachDon",
+      "instruction:attachDon",
+      "player:opponent",
+      "reference:ownerOfSelected",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses main rest-DON cost with attached-DON condition and power reduction body", () => {
   const result = parseCardEffectLine(
     "[Main] You may rest 5 of your DON!! cards: If you have any DON!! cards given, give up to 1 of your opponent's Characters −8000 power during this turn.",

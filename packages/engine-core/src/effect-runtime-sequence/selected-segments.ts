@@ -79,7 +79,13 @@ const selectedCardRefsForAttachDon = (
   effect: AttachSelectedDonEffect,
 ): readonly CardRef[] | null => {
   const selected = ledgers.savedReferences[effect.selection];
-  return selected?.kind === "selectedCards" ? selected.cards : null;
+  if (selected?.kind === "selectedCards") {
+    return selected.cards;
+  }
+  if (selected?.kind === "selectedTargets") {
+    return selected.targets.map((target) => target.object);
+  }
+  return null;
 };
 
 const selectedTargetRefForAttachDon = (
@@ -123,31 +129,46 @@ export const applyAttachSelectedDonSequenceSegment = (params: {
     params.effect,
   );
   const target = selectedTargetRefForAttachDon(params.ledgers, params.effect);
-  const player = params.state.players[params.entry.controllerId];
-  if (selectedDon === null || target === null || player === undefined) {
+  if (selectedDon === null || target === null) {
+    return { ok: false };
+  }
+  const selectedDonPlayerId = selectedRefsPlayerId(selectedDon);
+  const sourcePlayer =
+    selectedDonPlayerId === null
+      ? undefined
+      : params.state.players[selectedDonPlayerId];
+  const targetPlayer = params.state.players[target.playerId];
+  if (
+    selectedDonPlayerId === null ||
+    sourcePlayer === undefined ||
+    targetPlayer === undefined ||
+    (params.effect.targetOwner === "selectedDonOwner" &&
+      target.playerId !== selectedDonPlayerId)
+  ) {
     return { ok: false };
   }
   const selectedIds = new Set(selectedDon.map((card) => card.instanceId));
-  const targetIndex = player.characters.findIndex(
+  const targetIndex = targetPlayer.characters.findIndex(
     (card) =>
       card.instanceId === target.instanceId &&
       card.cardId === target.cardId &&
       card.zone.zone === "characterArea",
   );
   const targetsLeader =
-    player.leader.instanceId === target.instanceId &&
-    player.leader.cardId === target.cardId &&
+    targetPlayer.leader.instanceId === target.instanceId &&
+    targetPlayer.leader.cardId === target.cardId &&
     target.zone?.zone === "leaderArea";
   if (targetIndex < 0 && !targetsLeader) {
     return { ok: false };
   }
   if (
     !selectedDon.every((card) =>
-      player.costArea.some(
+      sourcePlayer.costArea.some(
         (candidate) =>
           candidate.instanceId === card.instanceId &&
           candidate.cardId === card.cardId &&
-          candidate.state === "rested",
+          (params.effect.sourceState === undefined ||
+            candidate.state === params.effect.sourceState),
       ),
     )
   ) {
@@ -155,16 +176,16 @@ export const applyAttachSelectedDonSequenceSegment = (params: {
   }
   const nextLeader = targetsLeader
     ? {
-        ...player.leader,
-        attachedDon: [...player.leader.attachedDon, ...selectedIds],
+        ...targetPlayer.leader,
+        attachedDon: [...targetPlayer.leader.attachedDon, ...selectedIds],
       }
-    : player.leader;
-  const nextCharacters = player.characters.map((card, index) =>
+    : targetPlayer.leader;
+  const nextCharacters = targetPlayer.characters.map((card, index) =>
     index === targetIndex
       ? { ...card, attachedDon: [...card.attachedDon, ...selectedIds] }
       : card,
   );
-  const nextCostArea = player.costArea.map((card) => {
+  const nextCostArea = sourcePlayer.costArea.map((card) => {
     if (!selectedIds.has(card.instanceId)) {
       return card;
     }
@@ -177,10 +198,19 @@ export const applyAttachSelectedDonSequenceSegment = (params: {
     seq: toStateSeq(params.state.seq + 1),
     players: {
       ...params.state.players,
-      [params.entry.controllerId]: {
-        ...player,
+      [target.playerId]: {
+        ...targetPlayer,
         leader: nextLeader,
         characters: nextCharacters,
+      },
+      [selectedDonPlayerId]: {
+        ...(selectedDonPlayerId === target.playerId
+          ? {
+              ...targetPlayer,
+              leader: nextLeader,
+              characters: nextCharacters,
+            }
+          : sourcePlayer),
         costArea: nextCostArea,
       },
     },
@@ -192,7 +222,7 @@ export const applyAttachSelectedDonSequenceSegment = (params: {
       events,
       "donAttached",
       {
-        playerId: params.entry.controllerId,
+        playerId: selectedDonPlayerId,
         donInstanceId: don.instanceId,
         targetInstanceId: target.instanceId,
       },

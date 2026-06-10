@@ -8,6 +8,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
@@ -81,6 +82,50 @@ const attachActiveDonTrashSelfThenPowerSequence = (): Extract<
           value: -3000,
           duration: { type: "thisTurn" },
         },
+      },
+    ],
+  }) as unknown as Extract<Effect, { type: "sequence" }>;
+
+const opponentRestedDonAttachCostThenDrawSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> =>
+  ({
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-opponent-attach-don",
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "attachDon",
+            count: 1,
+            sourcePlayer: "opponent",
+            sourceState: "rested",
+            target: {
+              type: "choose",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: false,
+                visibility: "public",
+                filter: { categories: ["character"] },
+              },
+            },
+            optional: true,
+          },
+        },
+        saveResultAs: "paidOptionalCost",
+      },
+      {
+        id: "draw-if-paid",
+        connector: "ifYouDo",
+        effect: { type: "draw", count: 1, player: "self" },
       },
     ],
   }) as unknown as Extract<Effect, { type: "sequence" }>;
@@ -177,6 +222,104 @@ const setupQueue = (donState: "active" | "rested") => {
   return { activeDon, state };
 };
 
+const setupOpponentAttachDonCostQueue = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "opponent target"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const don = must(p2State.donDeck[0], "opponent DON");
+  p2State.donDeck = p2State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p2, slot: "donDeck", index },
+  }));
+  const costDon: CardInstance = {
+    ...don,
+    zone: { zone: "costArea", playerId: p2, slot: "cost", index: 0 },
+    state: "rested",
+  };
+  p2State.costArea = [costDon];
+
+  const effectDefinitionId = "def-opponent-attach-don-cost";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "opponent-attach-don-cost-rules",
+      sourceTextHash: "opponent-attach-don-cost-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base effect"),
+        id: toEffectId("effect-opponent-attach-don-cost"),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: opponentRestedDonAttachCostThenDrawSequence(),
+      },
+    ],
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 5000,
+  });
+  state.cardManifest.cards[don.cardId] = resolvedCard({
+    cardId: don.cardId,
+    category: "don",
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-opponent-attach-don-cost"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "effect").id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: {
+        type: "ruleProcess",
+        name: "opponent-attach-don-cost-test",
+      },
+    },
+  ];
+  return { costDon, state, target };
+};
+
 const payAttachActiveDonToLeader = (
   state: ReturnType<typeof createActiveState>,
 ) => {
@@ -262,5 +405,42 @@ test("attach-active-DON cost does not accept rested DON", () => {
   assert.equal(
     must(result.state.players[p1], "after").characters.length,
     p1Before.characters.length,
+  );
+});
+
+test("attach-DON cost can use opponent rested DON and opponent Character target", () => {
+  const { costDon, state, target } = setupOpponentAttachDonCostQueue();
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "attach DON decision");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "attachDon");
+  assert.equal(decision.paymentOptions.length, 1);
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "attachDon",
+      selectedDonInstanceIds: [costDon.instanceId],
+      selectedCardInstanceIds: [target.instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  const afterOpponent = must(paid.state.players[p2], "after opponent");
+  assert.deepEqual(
+    afterOpponent.characters.find(
+      (card) => card.instanceId === target.instanceId,
+    )?.attachedDon,
+    [costDon.instanceId],
+  );
+  assert.equal(
+    afterOpponent.costArea.find(
+      (card) => card.instanceId === costDon.instanceId,
+    )?.state,
+    undefined,
   );
 });

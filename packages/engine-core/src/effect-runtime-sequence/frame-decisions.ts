@@ -28,6 +28,7 @@ import {
 import { chooseQuantityPromptForEffect } from "../effect-runtime-quantity-prompts.js";
 import { activeDonCount } from "./segments.js";
 import {
+  attachDonSourceIds,
   attachDonTargetCandidates,
   type AttachDonPaymentOption,
 } from "../runtime/primitives/attach-don-cost.js";
@@ -83,24 +84,15 @@ const canPayModifyPowerCost = (
   Number.isSafeInteger(option.value) &&
   option.value !== 0;
 
-const attachDonSourceIds = (
-  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
-  option: AttachDonPaymentOption,
-): CardInstance["instanceId"][] =>
-  player.costArea
-    .filter((card) => card.state === option.sourceState)
-    .map((card) => card.instanceId);
-
 const canPayAttachDonCost = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
-  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
   option: AttachDonPaymentOption,
 ): boolean =>
   Number.isInteger(option.count) &&
   option.count > 0 &&
-  attachDonSourceIds(player, option).length >= option.count &&
-  attachDonTargetCandidates(state, playerId, player, option).length > 0;
+  attachDonSourceIds(state, playerId, option).length >= option.count &&
+  attachDonTargetCandidates(state, playerId, option).length > 0;
 
 export const findSequenceFrameByDecisionId = (
   state: GameState,
@@ -710,11 +702,10 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "attachDon") {
-      const selectableDonIds = attachDonSourceIds(player, option);
+      const selectableDonIds = attachDonSourceIds(state, playerId, option);
       const targetCandidates = attachDonTargetCandidates(
         state,
         playerId,
-        player,
         option,
       );
       legalPayments.push(
@@ -824,13 +815,13 @@ export const getSequenceOptionalPayCostOptions = (
       id: "attachDon",
       type: "attachDon",
       count: cost.count,
+      ...(cost.sourcePlayer === undefined
+        ? {}
+        : { sourcePlayer: cost.sourcePlayer }),
       sourceState: cost.sourceState,
       target: cost.target,
     };
-    if (
-      currentPlayer !== undefined &&
-      canPayAttachDonCost(state, entry.controllerId, currentPlayer, option)
-    ) {
+    if (canPayAttachDonCost(state, entry.controllerId, option)) {
       paymentOptions.push(option);
     }
     return paymentOptions;

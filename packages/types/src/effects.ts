@@ -268,6 +268,7 @@ export type OptionalCost =
   | {
       type: "attachDon";
       count: number;
+      sourcePlayer?: PlayerRef;
       sourceState: "active" | "rested";
       target: Target;
       optional: true;
@@ -915,7 +916,13 @@ export type Effect =
     }
   | { type: "addDon"; count: number; player: PlayerRef }
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
-  | { type: "attachSelectedDon"; selection: SelectionId; target: Target }
+  | {
+      type: "attachSelectedDon";
+      selection: SelectionId;
+      sourceState?: "active" | "rested";
+      target: Target;
+      targetOwner?: "selectedDonOwner";
+    }
   | { type: "returnDon"; count: number; player: PlayerRef }
   | { type: "winGame"; player: PlayerRef }
   | {

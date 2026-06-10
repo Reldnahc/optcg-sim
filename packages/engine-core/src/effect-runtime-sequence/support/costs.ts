@@ -53,7 +53,6 @@ export const isSupportedPayCostSegment = (
     return (
       Number.isInteger(cost.count) &&
       cost.count > 0 &&
-      cost.target.type === "chooseFromZones" &&
       isSupportedAttachDonCostTarget(cost.target)
     );
   }
@@ -140,17 +139,18 @@ const isSupportedMoveCardsCostRoute = (
   );
 };
 
-const isSupportedAttachDonCostTarget = (
-  target: Extract<Target, { type: "chooseFromZones" }>,
-): boolean => {
+const isSupportedAttachDonCostTarget = (target: Target): boolean => {
+  if (target.type !== "choose" && target.type !== "chooseFromZones") {
+    return false;
+  }
   const request = target.request;
+  const zones = "zones" in request ? request.zones : [request.zone];
   return (
     request.timing === "onResolution" &&
     request.chooser === "self" &&
-    request.player === "self" &&
-    request.zones.length === 2 &&
-    request.zones[0] === "leaderArea" &&
-    request.zones[1] === "characterArea" &&
+    (request.player === "self" || request.player === "opponent") &&
+    zones.length > 0 &&
+    zones.every((zone) => zone === "leaderArea" || zone === "characterArea") &&
     request.min === 1 &&
     request.max === 1 &&
     !request.allowFewerIfUnavailable &&

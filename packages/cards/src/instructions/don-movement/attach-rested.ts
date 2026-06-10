@@ -6,6 +6,11 @@ import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 import { donAttachSelection, donAttachTarget } from "./shared.js";
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
+  const ownerRelative = parseOwnerRelativeDonAttachmentInstruction(input);
+  if (ownerRelative !== undefined) {
+    return ownerRelative;
+  }
+
   const distribution = parseAttachRestedDonEachInstruction(input);
   if (distribution !== undefined) {
     return distribution;
@@ -21,6 +26,105 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
     return undefined;
   }
   return parseAttachRestedDonToTarget(quantityText, targetText);
+};
+
+const parseOwnerRelativeDonAttachmentInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^give (?<quantity>up to [1-9]\d*) DON!! cards? from its owner's cost area to its owner's Leader or 1 of their Characters\.?$/iu.exec(
+      input.text,
+    );
+  const quantityText = match?.groups?.["quantity"];
+  if (quantityText === undefined) {
+    return undefined;
+  }
+  const quantity = parseUpToCardinality({ text: quantityText });
+  if (quantity === undefined || quantity.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:owner-don-to-attach",
+          connector: "always",
+          saveResultAs: donAttachSelection,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              zone: "costArea",
+              player: "anyPlayer",
+              filter: { categories: ["don"] },
+              min: quantity.cardinality.min,
+              max: quantity.cardinality.max,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          id: "select:owner-don-attach-target",
+          connector: "ifYouDo",
+          saveResultAs: donAttachTarget,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "anyPlayer",
+              zones: ["leaderArea", "characterArea"],
+              filter: { categories: ["leader", "character"] },
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          id: "attach:owner-selected-don",
+          connector: "then",
+          effect: {
+            type: "attachSelectedDon",
+            selection: donAttachSelection,
+            targetOwner: "selectedDonOwner",
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: donAttachTarget,
+              },
+              zones: ["leaderArea", "characterArea"],
+              player: "anyPlayer",
+              filter: { categories: ["leader", "character"] },
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectTargets",
+      "instruction:attachDon",
+      ...quantity.evidence,
+      "chooser:self:upTo",
+      "zone:costArea",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:category:don",
+      "filter:category:leader",
+      "filter:category:character",
+      "reference:ownerOfSelected",
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
 };
 
 const parseAttachRestedDonEachInstruction: InstructionParser = (input) => {

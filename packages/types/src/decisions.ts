@@ -44,6 +44,7 @@ export type PaymentOption =
       id: string;
       type: "attachDon";
       count: number;
+      sourcePlayer?: PlayerRef;
       sourceState: "active" | "rested";
       target: Target;
     }

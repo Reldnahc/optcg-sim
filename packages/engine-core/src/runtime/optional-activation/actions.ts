@@ -146,6 +146,7 @@ export const applyOptionalActivationDecisionResponse = (
     const events: EngineEvent[] = [];
     let paidCost = false;
     let nextPlayer = player;
+    let nextPlayers: GameState["players"] | undefined;
     let nextContinuousEffects = state.continuousEffects;
     if (action.response.type === "payment") {
       const paymentResponse = action.response;
@@ -279,7 +280,7 @@ export const applyOptionalActivationDecisionResponse = (
         if (!paid.ok) {
           return toEngineResult(state, [], invalidDecision(paid.reason));
         }
-        nextPlayer = paid.player;
+        nextPlayers = paid.players;
         events.push(...paid.events);
         costPaidPayload = paid.costPaidPayload;
       } else if (selectedOption.type === "turnLifeFaceUp") {
@@ -773,7 +774,10 @@ export const applyOptionalActivationDecisionResponse = (
       ...state,
       seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
-      players: { ...state.players, [decision.playerId]: nextPlayer },
+      players: nextPlayers ?? {
+        ...state.players,
+        [decision.playerId]: nextPlayer,
+      },
       continuousEffects: nextContinuousEffects,
       eventJournal: [...state.eventJournal, ...events],
     };
