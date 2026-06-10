@@ -106,6 +106,7 @@
   --card-active-glow: 0 0 0 0 transparent;
   --card-hover-glow: 0 0 0 0 transparent;
   --card-pending-glow: 0 0 0 0 transparent;
+  --card-selected-glow: 0 0 0 0 transparent;
 
   display: grid;
   width: 100%;
@@ -115,7 +116,8 @@
   border-radius: 6px;
   object-fit: cover;
   box-shadow:
-    var(--card-active-glow), var(--card-hover-glow), var(--card-pending-glow);
+    var(--card-active-glow), var(--card-hover-glow), var(--card-pending-glow),
+    var(--card-selected-glow);
   color: #ffffff;
   background: #615d5b;
   font-size: 9px;
@@ -157,55 +159,27 @@
 }
 
 .card-tile.is-selected .card-face {
-  outline: 3px solid #ffdc62;
-  outline-offset: 0;
+  --card-selected-glow: inset 0 0 0 3px #ffdc62;
 }
 
 .card-tile:hover:not(:disabled) .card-face {
   --card-hover-glow:
-    0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 10px rgba(255, 255, 255, 0.72);
+    inset 0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 10px rgba(255, 255, 255, 0.56);
 }
 
 .card-tile.is-active .card-face {
   --card-active-glow:
-    0 0 0 2px rgba(89, 255, 143, 0.95), 0 0 12px rgba(89, 255, 143, 0.72);
-}
-
-.card-tile.is-active::after {
-  position: absolute;
-  inset: -3px;
-  z-index: 6;
-  border: 2px solid rgba(89, 255, 143, 0.98);
-  border-radius: 6px;
-  box-shadow:
-    0 0 0 1px rgba(6, 17, 10, 0.95),
-    0 0 16px rgba(89, 255, 143, 0.9),
-    inset 0 0 10px rgba(89, 255, 143, 0.35);
-  content: "";
-  pointer-events: none;
+    inset 0 0 0 3px rgba(89, 255, 143, 0.98), 0 0 12px rgba(89, 255, 143, 0.56);
 }
 
 .card-tile.is-pending-choice .card-face {
-  --card-pending-glow: 0 0 0 3px rgba(68, 216, 255, 0.75);
-}
-
-.card-tile.is-pending-choice::after {
-  position: absolute;
-  inset: -3px;
-  z-index: 6;
-  border: 2px solid rgba(68, 216, 255, 0.98);
-  border-radius: 6px;
-  box-shadow:
-    0 0 0 1px rgba(6, 15, 19, 0.95),
-    0 0 16px rgba(68, 216, 255, 0.9),
-    inset 0 0 10px rgba(68, 216, 255, 0.35);
-  content: "";
-  pointer-events: none;
+  --card-pending-glow:
+    inset 0 0 0 3px rgba(68, 216, 255, 0.98), 0 0 12px rgba(68, 216, 255, 0.56);
 }
 
 .card-tile.is-pending-choice.is-selected .card-face {
-  outline: 3px solid #ffdc62;
-  --card-pending-glow: 0 0 0 5px rgba(68, 216, 255, 0.55);
+  --card-pending-glow: inset 0 0 0 6px rgba(68, 216, 255, 0.55);
 }
 
 .card-tag {
