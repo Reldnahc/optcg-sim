@@ -298,7 +298,7 @@ describe("text-only support probe parser backend", () => {
     const report = await createSupportProbeReport({
       cardId: "OP10-045",
       fetchCard: (url) => {
-        requestedUrls.push(url);
+        requestedUrls.push(String(url));
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -400,10 +400,13 @@ describe("text-only support probe parser backend", () => {
           json: () =>
             Promise.resolve({
               data: {
-                card_number: "OP01-004",
-                effect: "",
-                trigger: "[Trigger] Draw 1 card.",
+                "OP01-004": {
+                  card_number: "OP01-004",
+                  effect: "",
+                  trigger: "[Trigger] Draw 1 card.",
+                },
               },
+              missing: [],
             }),
         }),
     });
@@ -436,6 +439,7 @@ describe("text-only support probe parser backend", () => {
 
   it("probes decoded deck-hash card lists without requiring a leader", async () => {
     const requestedUrls: string[] = [];
+    const requestedBodies: unknown[] = [];
     const report = await createSupportProbeReport({
       deckHash: "hash-with-card-list",
       deckHashCodec: {
@@ -450,27 +454,36 @@ describe("text-only support probe parser backend", () => {
             don: null,
           }),
       },
-      fetchCard: (url) => {
-        requestedUrls.push(url);
-        const cardId = url.endsWith("OP01-001") ? "OP01-001" : "OP01-002";
+      fetchCard: (url, init) => {
+        requestedUrls.push(String(url));
+        requestedBodies.push(JSON.parse(init?.body ?? "{}"));
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () =>
             Promise.resolve({
               data: {
-                card_number: cardId,
-                effect: "[On Play] Draw 1 card.",
+                "OP01-001": {
+                  card_number: "OP01-001",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
+                "OP01-002": {
+                  card_number: "OP01-002",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
               },
+              missing: [],
             }),
         });
       },
     });
 
     expect(report.exitCode).toBe(0);
-    expect(requestedUrls).toEqual([
-      "https://api.poneglyph.one/v1/cards/OP01-001",
-      "https://api.poneglyph.one/v1/cards/OP01-002",
+    expect(requestedUrls).toEqual(["https://api.poneglyph.one/v1/cards/batch"]);
+    expect(requestedBodies).toEqual([
+      { card_numbers: ["OP01-001", "OP01-002"] },
     ]);
     expect(report.lines).toContain("Deck hash: hash-with-card-list");
     expect(report.lines).toContain("Cards: 2 unique / 6 total");
@@ -481,6 +494,67 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).not.toContain(
       "OP01-002 line 1 engine runtime: passed",
     );
+  });
+
+  it("probes every card in a set with batched card detail fetches", async () => {
+    const requestedUrls: string[] = [];
+    const requestedBodies: unknown[] = [];
+    const report = await createSupportProbeReport({
+      setCode: "op16",
+      fetchCard: (url, init) => {
+        requestedUrls.push(String(url));
+        if (String(url).includes("/v1/search?")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: [
+                  { card_number: "OP16-001" },
+                  { card_number: "OP16-002" },
+                  { card_number: "OP15-001" },
+                ],
+                pagination: { has_more: false },
+              }),
+          });
+        }
+
+        requestedBodies.push(JSON.parse(init?.body ?? "{}"));
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                "OP16-001": {
+                  card_number: "OP16-001",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
+                "OP16-002": {
+                  card_number: "OP16-002",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(requestedUrls).toEqual([
+      "https://api.poneglyph.one/v1/search?page=1&limit=500&sort=card_number&order=asc&collapse=card",
+      "https://api.poneglyph.one/v1/cards/batch",
+    ]);
+    expect(requestedBodies).toEqual([
+      { card_numbers: ["OP16-001", "OP16-002"] },
+    ]);
+    expect(report.lines).toContain("Set: OP16");
+    expect(report.lines).toContain("Cards: 2");
+    expect(report.lines).toContain("Failures: none");
+    expect(report.lines).not.toContain("Card ID: OP15-001 x1");
   });
 
   it("prints only failing cards in deck-hash probe mode", async () => {
@@ -497,20 +571,25 @@ describe("text-only support probe parser backend", () => {
             don: null,
           }),
       },
-      fetchCard: (url) => {
-        const cardId = url.endsWith("OP01-001") ? "OP01-001" : "OP01-002";
+      fetchCard: () => {
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () =>
             Promise.resolve({
               data: {
-                card_number: cardId,
-                effect:
-                  cardId === "OP01-001"
-                    ? "[On Play] Draw 1 card."
-                    : "[On Block] Draw 1 card.",
+                "OP01-001": {
+                  card_number: "OP01-001",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
+                "OP01-002": {
+                  card_number: "OP01-002",
+                  effect: "[On Block] Draw 1 card.",
+                  trigger: null,
+                },
               },
+              missing: [],
             }),
         });
       },
@@ -555,21 +634,25 @@ describe("text-only support probe parser backend", () => {
             don: null,
           }),
       },
-      fetchCard: (url) => {
-        const cardId = url.endsWith("OP01-001") ? "OP01-001" : "OP01-002";
+      fetchCard: () => {
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () =>
             Promise.resolve({
               data: {
-                card_number: cardId,
-                effect:
-                  cardId === "OP01-001"
-                    ? "[On Play] Draw 1 card.\n[On Block] Draw 1 card."
-                    : "[Main] unsupported body.",
-                trigger: null,
+                "OP01-001": {
+                  card_number: "OP01-001",
+                  effect: "[On Play] Draw 1 card.\n[On Block] Draw 1 card.",
+                  trigger: null,
+                },
+                "OP01-002": {
+                  card_number: "OP01-002",
+                  effect: "[Main] unsupported body.",
+                  trigger: null,
+                },
               },
+              missing: [],
             }),
         });
       },

@@ -28,6 +28,7 @@ export interface SupportProbeRequest {
   readonly text?: string;
   readonly cardId?: string;
   readonly deckHash?: string;
+  readonly setCode?: string;
   readonly deckHashOutput?: "report" | "unsupportedTextLines";
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly fetchCard?: PoneglyphFetch;
@@ -52,9 +53,19 @@ interface PoneglyphFetchResponse {
   json(): Promise<unknown>;
 }
 
-type PoneglyphFetch = (url: string) => Promise<PoneglyphFetchResponse>;
+interface PoneglyphFetchRequest {
+  readonly method?: "GET" | "POST";
+  readonly headers?: Record<string, string>;
+  readonly body?: string;
+}
+
+type PoneglyphFetch = (
+  url: string | URL,
+  init?: PoneglyphFetchRequest,
+) => Promise<PoneglyphFetchResponse>;
 
 const defaultPoneglyphBaseUrl = "https://api.poneglyph.one";
+const maxBatchCardCount = 60;
 
 export interface DeckHashCodecPort {
   readonly decode: (hash: string) => Promise<DeckHashDeck>;
@@ -83,6 +94,14 @@ export const createSupportProbeReport = async (
     });
   }
 
+  if (request.setCode !== undefined && request.setCode.length > 0) {
+    return createSetSupportProbeReport(request.setCode, {
+      baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
+      output: request.deckHashOutput ?? "report",
+      fetchCard: request.fetchCard ?? fetchPoneglyphCard,
+    });
+  }
+
   if (request.cardId !== undefined && request.cardId.length > 0) {
     return createCardSupportProbeReport(request.cardId, {
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
@@ -95,7 +114,7 @@ export const createSupportProbeReport = async (
       exitCode: 1,
       lines: [],
       errors: [
-        "Usage: support:probe -- --text <effect line> | --card <card id> | --deck-hash <hash> [--raw-unsupported-lines]",
+        "Usage: support:probe -- --text <effect line> | --card <card id> | --deck-hash <hash> | --set <set code> [--raw-unsupported-lines]",
       ],
     };
   }
@@ -135,100 +154,28 @@ const createDeckHashSupportProbeReport = async (
 
   const cards = aggregateDeckHashEntries(decoded.entries);
   const totalCount = cards.reduce((sum, entry) => sum + entry.count, 0);
-  const failureLines: string[] = [];
-  const unsupportedTextLines: string[] = [];
-  let failedCardCount = 0;
-  let exitCode = 0;
-
-  for (const card of cards) {
-    const cardFailureLines: string[] = [];
-    const fetched = await fetchPoneglyphCardPayload(card.cardId, options);
-    if (!fetched.ok) {
-      exitCode = 1;
-      cardFailureLines.push(`${card.cardId} fetch: failed`);
-      cardFailureLines.push(`${card.cardId} fetch reason: ${fetched.error}`);
-      failedCardCount += 1;
-      failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
-      continue;
-    }
-
-    const effectLines = gameplayLinesFromTextParts([
-      fetched.card.effect,
-      fetched.card.trigger,
-    ]);
-    for (const [index, text] of effectLines.entries()) {
-      const lineNumber = index + 1;
-      const lineReport = evaluateParsedLine(
-        text,
-        `${card.cardId}:line:${String(lineNumber)}`,
-      );
-      if (!lineReport.parseOk) {
-        exitCode = 1;
-        unsupportedTextLines.push(text);
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
-        );
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} parse: failed`,
-        );
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} stage: ${lineReport.stage}`,
-        );
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} reason: ${lineReport.reason}`,
-        );
-        continue;
-      }
-
-      if (!lineReport.runtimeSupported) {
-        exitCode = 1;
-        unsupportedTextLines.push(text);
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
-        );
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} parse: passed`,
-        );
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} engine runtime: failed`,
-        );
-        cardFailureLines.push(
-          `${card.cardId} line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
-        );
-        cardFailureLines.push(
-          ...prefixPrimitiveSupportLines(
-            `${card.cardId} line ${String(lineNumber)} `,
-            formatPrimitiveSupportSections({
-              parserCertificate: lineReport.parserCertificate,
-              runtimeReports: lineReport.runtimeReports,
-            }),
-          ),
-        );
-      }
-    }
-
-    if (cardFailureLines.length > 0) {
-      failedCardCount += 1;
-      failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
-    }
-  }
+  const probed = await probeAggregatedCards(cards, options);
 
   if (options.output === "unsupportedTextLines") {
-    return { exitCode, lines: unsupportedTextLines, errors: [] };
+    return {
+      exitCode: probed.exitCode,
+      lines: probed.unsupportedTextLines,
+      errors: [],
+    };
   }
 
   const lines = [
     `Deck hash: ${deckHash}`,
     `Cards: ${String(cards.length)} unique / ${String(totalCount)} total`,
-    failedCardCount === 0
+    probed.failedCardCount === 0
       ? "Failures: none"
-      : `Failures: ${String(failedCardCount)} card${
-          failedCardCount === 1 ? "" : "s"
+      : `Failures: ${String(probed.failedCardCount)} card${
+          probed.failedCardCount === 1 ? "" : "s"
         }`,
-    ...failureLines,
+    ...probed.failureLines,
   ];
 
-  return { exitCode, lines, errors: [] };
+  return { exitCode: probed.exitCode, lines, errors: [] };
 };
 
 const decodeProbeDeckHash = async (
@@ -303,12 +250,176 @@ const uniqueNumbers = (values: readonly number[]): readonly number[] => [
   ...new Set(values),
 ];
 
+const uniqueStrings = (values: readonly string[]): string[] => [
+  ...new Set(values),
+];
+
+const chunks = <T>(values: readonly T[], size: number): T[][] => {
+  const chunked: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunked.push(values.slice(index, index + size));
+  }
+  return chunked;
+};
+
 const deckHashEntryLine = (entry: AggregatedDeckHashProbeEntry): string => {
   const variants =
     entry.variantIndexes.length === 0
       ? ""
       : ` variants: ${entry.variantIndexes.join(", ")}`;
   return `Card ID: ${entry.cardId} x${String(entry.count)}${variants}`;
+};
+
+const createSetSupportProbeReport = async (
+  setCode: string,
+  options: {
+    readonly baseUrl: string;
+    readonly output: "report" | "unsupportedTextLines";
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<SupportProbeReport> => {
+  const normalizedSetCode = setCode.trim().toUpperCase();
+  const fetchedSet = await fetchPoneglyphSetCardIds(normalizedSetCode, options);
+  if (!fetchedSet.ok) {
+    return {
+      exitCode: 1,
+      lines: [],
+      errors: [fetchedSet.error],
+    };
+  }
+
+  const cards = fetchedSet.cardIds.map((cardId) => ({
+    cardId,
+    count: 1,
+    variantIndexes: [],
+  }));
+  const probed = await probeAggregatedCards(cards, options);
+
+  if (options.output === "unsupportedTextLines") {
+    return {
+      exitCode: probed.exitCode,
+      lines: probed.unsupportedTextLines,
+      errors: [],
+    };
+  }
+
+  const lines = [
+    `Set: ${normalizedSetCode}`,
+    `Cards: ${String(cards.length)}`,
+    probed.failedCardCount === 0
+      ? "Failures: none"
+      : `Failures: ${String(probed.failedCardCount)} card${
+          probed.failedCardCount === 1 ? "" : "s"
+        }`,
+    ...probed.failureLines,
+  ];
+
+  return { exitCode: probed.exitCode, lines, errors: [] };
+};
+
+const probeAggregatedCards = async (
+  cards: readonly AggregatedDeckHashProbeEntry[],
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<{
+  readonly exitCode: number;
+  readonly failureLines: readonly string[];
+  readonly unsupportedTextLines: readonly string[];
+  readonly failedCardCount: number;
+}> => {
+  const fetchedCards = await fetchPoneglyphCardPayloads(
+    cards.map((card) => card.cardId),
+    options,
+  );
+  const failureLines: string[] = [];
+  const unsupportedTextLines: string[] = [];
+  let failedCardCount = 0;
+  let exitCode = 0;
+
+  for (const card of cards) {
+    const cardFailureLines: string[] = [];
+    const fetched = fetchedCards.get(card.cardId) ?? {
+      ok: false,
+      error: `Poneglyph card fetch failed for ${card.cardId}: missing batch result`,
+    };
+    if (!fetched.ok) {
+      exitCode = 1;
+      cardFailureLines.push(`${card.cardId} fetch: failed`);
+      cardFailureLines.push(`${card.cardId} fetch reason: ${fetched.error}`);
+      failedCardCount += 1;
+      failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
+      continue;
+    }
+
+    const effectLines = gameplayLinesFromTextParts([
+      fetched.card.effect,
+      fetched.card.trigger,
+    ]);
+    for (const [index, text] of effectLines.entries()) {
+      const lineNumber = index + 1;
+      const lineReport = evaluateParsedLine(
+        text,
+        `${card.cardId}:line:${String(lineNumber)}`,
+      );
+      if (!lineReport.parseOk) {
+        exitCode = 1;
+        unsupportedTextLines.push(text);
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} parse: failed`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} stage: ${lineReport.stage}`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} reason: ${lineReport.reason}`,
+        );
+        continue;
+      }
+
+      if (!lineReport.runtimeSupported) {
+        exitCode = 1;
+        unsupportedTextLines.push(text);
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} parse: passed`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} engine runtime: failed`,
+        );
+        cardFailureLines.push(
+          `${card.cardId} line ${String(lineNumber)} engine runtime reason: ${runtimeReason(lineReport)}`,
+        );
+        cardFailureLines.push(
+          ...prefixPrimitiveSupportLines(
+            `${card.cardId} line ${String(lineNumber)} `,
+            formatPrimitiveSupportSections({
+              parserCertificate: lineReport.parserCertificate,
+              runtimeReports: lineReport.runtimeReports,
+            }),
+          ),
+        );
+      }
+    }
+
+    if (cardFailureLines.length > 0) {
+      failedCardCount += 1;
+      failureLines.push(deckHashEntryLine(card), ...cardFailureLines);
+    }
+  }
+
+  return {
+    exitCode,
+    failureLines,
+    unsupportedTextLines,
+    failedCardCount,
+  };
 };
 
 const createCardSupportProbeReport = async (
@@ -410,6 +521,161 @@ const fetchPoneglyphCardPayload = async (
       trigger: cardPayload.trigger,
     },
   };
+};
+
+const fetchPoneglyphCardPayloads = async (
+  cardIds: readonly string[],
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<
+  Map<
+    string,
+    | { readonly ok: true; readonly card: PoneglyphCardProbePayload }
+    | { readonly ok: false; readonly error: string }
+  >
+> => {
+  const results = new Map<
+    string,
+    | { readonly ok: true; readonly card: PoneglyphCardProbePayload }
+    | { readonly ok: false; readonly error: string }
+  >();
+  for (const chunk of chunks(uniqueStrings(cardIds), maxBatchCardCount)) {
+    const fetched = await fetchPoneglyphCardPayloadBatch(chunk, options);
+    if (!fetched.ok) {
+      for (const cardId of chunk) {
+        results.set(cardId, { ok: false, error: fetched.error });
+      }
+      continue;
+    }
+    for (const cardId of chunk) {
+      const card = fetched.cards.get(cardId);
+      if (card === undefined) {
+        results.set(cardId, {
+          ok: false,
+          error: `Poneglyph card batch fetch failed for ${cardId}: missing card`,
+        });
+        continue;
+      }
+      if (card.cardId !== cardId) {
+        results.set(cardId, {
+          ok: false,
+          error: `Poneglyph card batch fetch failed for ${cardId}: response card_number was ${card.cardId}`,
+        });
+        continue;
+      }
+      results.set(cardId, { ok: true, card });
+    }
+  }
+  return results;
+};
+
+const fetchPoneglyphCardPayloadBatch = async (
+  cardIds: readonly string[],
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<
+  | {
+      readonly ok: true;
+      readonly cards: ReadonlyMap<string, PoneglyphCardProbePayload>;
+    }
+  | { readonly ok: false; readonly error: string }
+> => {
+  if (cardIds.length === 0) {
+    return { ok: true, cards: new Map() };
+  }
+  const url = `${options.baseUrl.replace(/\/+$/u, "")}/v1/cards/batch`;
+  const response = await options.fetchCard(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ card_numbers: cardIds }),
+  });
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: `Poneglyph card batch fetch failed: HTTP ${String(response.status)}`,
+    };
+  }
+
+  const payload = await response.json();
+  const batch = toPoneglyphCardProbeBatchPayload(payload);
+  if (batch === undefined) {
+    return {
+      ok: false,
+      error: "Poneglyph card batch fetch failed: invalid response payload",
+    };
+  }
+  if (batch.missing.length > 0) {
+    return {
+      ok: false,
+      error: `Poneglyph card batch fetch failed: missing ${batch.missing.join(", ")}`,
+    };
+  }
+
+  return {
+    ok: true,
+    cards: new Map(
+      Object.values(batch.data).map((card) => [
+        card.card_number,
+        {
+          cardId: card.card_number,
+          effect: card.effect,
+          trigger: card.trigger,
+        },
+      ]),
+    ),
+  };
+};
+
+const fetchPoneglyphSetCardIds = async (
+  setCode: string,
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<
+  | { readonly ok: true; readonly cardIds: readonly CardId[] }
+  | { readonly ok: false; readonly error: string }
+> => {
+  const prefix = `${setCode}-`;
+  const cardIds: CardId[] = [];
+  let page = 1;
+  let hasMore = true;
+  while (hasMore) {
+    const url = new URL(`${options.baseUrl.replace(/\/+$/u, "")}/v1/search`);
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", "500");
+    url.searchParams.set("sort", "card_number");
+    url.searchParams.set("order", "asc");
+    url.searchParams.set("collapse", "card");
+    const response = await options.fetchCard(url);
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: `Poneglyph set catalog fetch failed for ${setCode}: HTTP ${String(response.status)}`,
+      };
+    }
+    const payload = await response.json();
+    const catalog = toPoneglyphCardCatalogPayload(payload);
+    if (catalog === undefined) {
+      return {
+        ok: false,
+        error: `Poneglyph set catalog fetch failed for ${setCode}: invalid response payload`,
+      };
+    }
+    for (const cardId of catalog.cardIds) {
+      if (cardId.toUpperCase().startsWith(prefix)) {
+        cardIds.push(cardId);
+      }
+    }
+    hasMore = catalog.hasMore;
+    page += 1;
+  }
+
+  return { ok: true, cardIds: [...new Set(cardIds)] };
 };
 
 const createTextLineReport = (text: string): SupportProbeReport => {
@@ -629,7 +895,40 @@ const sourceSpanDiagnostics = (
     }),
   );
 
-const fetchPoneglyphCard: PoneglyphFetch = async (url) => fetch(url);
+const fetchPoneglyphCard: PoneglyphFetch = async (url, init) =>
+  fetch(url, init);
+
+const toPoneglyphCardCatalogPayload = (
+  value: unknown,
+):
+  | { readonly cardIds: readonly CardId[]; readonly hasMore: boolean }
+  | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const candidate = value as Record<string, unknown>;
+  const data = candidate["data"];
+  if (!Array.isArray(data)) {
+    return undefined;
+  }
+  const cardIds: CardId[] = [];
+  for (const card of data) {
+    if (typeof card !== "object" || card === null) {
+      return undefined;
+    }
+    const cardNumber = (card as Record<string, unknown>)["card_number"];
+    if (typeof cardNumber !== "string") {
+      return undefined;
+    }
+    cardIds.push(cardNumber as CardId);
+  }
+  const pagination = candidate["pagination"];
+  const hasMore =
+    typeof pagination === "object" &&
+    pagination !== null &&
+    (pagination as Record<string, unknown>)["has_more"] === true;
+  return { cardIds, hasMore };
+};
 
 const isPoneglyphCardProbePayload = (
   value: unknown,
@@ -678,4 +977,51 @@ const toPoneglyphCardProbePayload = (
         trigger: data.trigger ?? null,
       }
     : undefined;
+};
+
+const toPoneglyphCardProbeBatchPayload = (
+  value: unknown,
+):
+  | {
+      readonly data: Record<
+        string,
+        {
+          readonly card_number: CardId;
+          readonly effect: string | null;
+          readonly trigger: string | null;
+        }
+      >;
+      readonly missing: readonly string[];
+    }
+  | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const candidate = value as Record<string, unknown>;
+  const data = candidate["data"];
+  const missing = candidate["missing"];
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !Array.isArray(missing) ||
+    !missing.every((entry) => typeof entry === "string")
+  ) {
+    return undefined;
+  }
+  const cards: Record<
+    string,
+    {
+      readonly card_number: CardId;
+      readonly effect: string | null;
+      readonly trigger: string | null;
+    }
+  > = {};
+  for (const [cardId, card] of Object.entries(data)) {
+    const payload = toPoneglyphCardProbePayload(card);
+    if (payload === undefined) {
+      return undefined;
+    }
+    cards[cardId] = payload;
+  }
+  return { data: cards, missing };
 };

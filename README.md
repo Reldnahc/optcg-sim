@@ -82,7 +82,13 @@ Probe every unique card in a deck hash:
 corepack pnpm run support:probe -- --deck-hash <deck-hash>
 ```
 
-Deck-hash mode prints the decoded card count summary and only the cards with
+Probe every card in a set:
+
+```sh
+corepack pnpm run support:probe -- --set OP16
+```
+
+Deck-hash and set modes print the card count summary and only the cards with
 failures. Add `--raw-unsupported-lines` when you want just the failing text
 lines for parser/runtime work:
 
@@ -90,8 +96,9 @@ lines for parser/runtime work:
 corepack pnpm run support:probe -- --deck-hash <deck-hash> --raw-unsupported-lines
 ```
 
-`--card` and `--deck-hash` fetch card text from the Poneglyph API. They do not
-use local fixtures.
+`--card`, `--deck-hash`, and `--set` fetch card text from the Poneglyph API.
+Deck-hash and set modes batch card-detail requests through `/v1/cards/batch`.
+They do not use local fixtures.
 
 ## Verification
 
