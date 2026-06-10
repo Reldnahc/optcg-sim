@@ -123,10 +123,16 @@ describe("action log window", () => {
 
     assert.match(
       styles,
-      /\.action-log-entry\s*\{[^}]*grid-template-columns:\s*34px minmax\(0, 1fr\) 24px;/u,
+      /\.action-log-entry\s*\{[^}]*grid-template-columns:[^}]*clamp\(34px,[^}]*minmax\(0,\s*1fr\)[^}]*clamp\(24px,/u,
     );
-    assert.match(styles, /\.action-log-rollback\s*\{[^}]*width:\s*24px;/u);
-    assert.match(styles, /\.action-log-rollback\s*\{[^}]*height:\s*24px;/u);
+    assert.match(
+      styles,
+      /\.action-log-rollback\s*\{[^}]*width:\s*clamp\(24px,/u,
+    );
+    assert.match(
+      styles,
+      /\.action-log-rollback\s*\{[^}]*height:\s*clamp\(24px,/u,
+    );
   });
 
   test("control rail places action log control to the right of preview control", async () => {

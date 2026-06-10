@@ -348,11 +348,15 @@ describe("tabbed floating window", () => {
 
     assert.match(
       floatingStyles,
-      /\.floating-window\s*\{[^}]*min-width:\s*280px;/u,
+      /\.floating-window\s*\{[^}]*min-width:\s*var\(--floating-window-min-width\);/u,
     );
     assert.match(
       floatingStyles,
-      /\.floating-window\s*\{[^}]*min-height:\s*180px;/u,
+      /\.floating-window\s*\{[^}]*min-height:\s*var\(--floating-window-min-height\);/u,
+    );
+    assert.match(
+      tabbedStyles,
+      /\.floating-window-tab-panel\s*\{[^}]*padding:\s*calc\(var\(--floating-window-body-padding\) \* 0\.7\);/u,
     );
     assert.match(tabbedStyles, /\.floating-window-header-tabs\s*\{/u);
     assert.match(tabbedStyles, /\.floating-window-tab-panel\s*\{/u);

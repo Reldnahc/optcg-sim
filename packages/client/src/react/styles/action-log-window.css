@@ -1,10 +1,10 @@
 .action-log-window .floating-window-body {
-  padding: 8px;
+  padding: calc(var(--floating-window-body-padding) * 0.7);
 }
 
 .action-log-list {
   display: grid;
-  gap: 6px;
+  gap: calc(var(--floating-window-body-padding) * 0.55);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -12,15 +12,17 @@
 
 .action-log-entry {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 24px;
-  gap: 8px;
+  grid-template-columns:
+    clamp(34px, calc(var(--card-height) / 4.6), 44px) minmax(0, 1fr)
+    clamp(24px, calc(var(--card-height) / 6.6), 32px);
+  gap: calc(var(--floating-window-body-padding) * 0.7);
   align-items: center;
-  padding: 6px;
+  padding: calc(var(--floating-window-body-padding) * 0.55);
   border: 1px solid rgba(244, 238, 231, 0.18);
-  border-radius: 4px;
+  border-radius: calc(var(--floating-window-radius) * 0.65);
   background: rgba(255, 255, 255, 0.05);
   color: #f8f6f3;
-  font-size: 12px;
+  font-size: var(--floating-window-small-font-size);
 }
 
 .action-log-seq {
@@ -57,15 +59,15 @@
 .action-log-rollback {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: clamp(24px, calc(var(--card-height) / 6.6), 32px);
+  height: clamp(24px, calc(var(--card-height) / 6.6), 32px);
   padding: 0;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: rgba(248, 246, 243, 0.72);
   font: inherit;
-  font-size: 18px;
+  font-size: clamp(17px, calc(var(--card-height) / 8), 22px);
   line-height: 1;
   cursor: pointer;
 }
@@ -78,8 +80,8 @@
 }
 
 .action-log-rollback-icon {
-  width: 17px;
-  height: 17px;
+  width: clamp(17px, calc(var(--card-height) / 9), 22px);
+  height: clamp(17px, calc(var(--card-height) / 9), 22px);
   fill: none;
   stroke: currentcolor;
   stroke-linecap: round;

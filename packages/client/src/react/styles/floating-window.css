@@ -5,13 +5,14 @@
   z-index: 10;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-width: 280px;
-  min-height: 180px;
-  border: 1px solid #f4eee7;
-  border-radius: 6px;
+  min-width: var(--floating-window-min-width);
+  min-height: var(--floating-window-min-height);
+  border: var(--floating-window-border-width) solid #f4eee7;
+  border-radius: var(--floating-window-radius);
   background: rgba(38, 35, 34, 0.97);
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+  font-size: var(--floating-window-font-size);
 }
 
 .floating-window-header {
@@ -25,9 +26,9 @@
 
 .floating-window-drag-handle {
   min-width: 0;
-  min-height: 24px;
+  min-height: var(--floating-window-header-height);
   border: 0;
-  padding: 0 8px;
+  padding: 0 var(--floating-window-header-padding);
   color: #fff;
   background: transparent;
   cursor: move;
@@ -50,15 +51,15 @@
 .floating-window-minimize,
 .floating-window-close {
   display: grid;
-  width: 34px;
-  min-height: 24px;
+  width: var(--floating-window-control-width);
+  min-height: var(--floating-window-header-height);
   place-items: center;
   border: 0;
   border-radius: 0;
   color: #fff;
   background: transparent;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--floating-window-control-font-size);
   line-height: 1;
   padding: 0;
 }
@@ -78,7 +79,7 @@
 
 .floating-window-body {
   min-height: 0;
-  padding: 12px;
+  padding: var(--floating-window-body-padding);
   overflow: auto;
 }
 
@@ -86,12 +87,13 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 22px;
-  height: 22px;
+  width: var(--floating-window-resize-handle-size);
+  height: var(--floating-window-resize-handle-size);
   border: 0;
   background:
     linear-gradient(135deg, transparent 50%, rgba(244, 238, 231, 0.8) 50%)
-      bottom right / 12px 12px no-repeat,
+      bottom right / var(--floating-window-resize-corner-size)
+      var(--floating-window-resize-corner-size) no-repeat,
     transparent;
   cursor: nwse-resize;
 }

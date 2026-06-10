@@ -4,23 +4,27 @@
 
 .floating-window-header-tabs {
   display: flex;
-  gap: 2px;
+  gap: calc(var(--floating-window-header-padding) / 4);
   align-items: end;
   width: 100%;
   min-width: 0;
-  padding: 3px 4px 0;
+  padding: calc(var(--floating-window-header-padding) * 0.38)
+    calc(var(--floating-window-header-padding) * 0.5) 0;
   overflow-x: auto;
 }
 
 .floating-window-tab {
   min-width: 0;
   border: 0;
-  border-radius: 5px 5px 0 0;
-  padding: 5px 11px 6px;
+  border-radius: calc(var(--floating-window-radius) * 0.75)
+    calc(var(--floating-window-radius) * 0.75) 0 0;
+  padding: calc(var(--floating-window-header-padding) * 0.62)
+    calc(var(--floating-window-header-padding) * 1.25)
+    calc(var(--floating-window-header-padding) * 0.75);
   color: rgba(244, 238, 231, 0.75);
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--floating-window-small-font-size);
   line-height: 1.2;
   touch-action: none;
   user-select: none;
@@ -51,6 +55,6 @@
 
 .floating-window-tab-panel {
   min-height: 0;
-  padding: 8px;
+  padding: calc(var(--floating-window-body-padding) * 0.7);
   overflow: auto;
 }

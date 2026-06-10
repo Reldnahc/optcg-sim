@@ -29,6 +29,19 @@
   --card-badge-font-size: calc(var(--card-height) / 14);
   --card-status-font-size: calc(var(--card-height) / 13);
   --card-order-badge-size: calc(var(--card-height) / 8.5);
+  --floating-window-min-width: clamp(280px, calc(var(--card-width) * 4.25), 440px);
+  --floating-window-min-height: clamp(180px, calc(var(--card-height) * 1.7), 320px);
+  --floating-window-border-width: var(--card-outline-thin);
+  --floating-window-radius: calc(var(--card-corner-radius) * 0.85);
+  --floating-window-header-height: clamp(26px, calc(var(--card-height) / 5.8), 38px);
+  --floating-window-header-padding: clamp(8px, calc(var(--card-height) / 14), 14px);
+  --floating-window-control-width: clamp(34px, calc(var(--card-height) / 4.6), 46px);
+  --floating-window-control-font-size: clamp(15px, calc(var(--card-height) / 8), 20px);
+  --floating-window-body-padding: clamp(10px, calc(var(--card-height) / 12), 18px);
+  --floating-window-font-size: clamp(12px, calc(var(--card-height) / 12), 15px);
+  --floating-window-small-font-size: clamp(11px, calc(var(--card-height) / 14), 13px);
+  --floating-window-resize-handle-size: clamp(22px, calc(var(--card-height) / 5.4), 34px);
+  --floating-window-resize-corner-size: calc(var(--floating-window-resize-handle-size) * 0.58);
 
   position: relative;
   display: grid;

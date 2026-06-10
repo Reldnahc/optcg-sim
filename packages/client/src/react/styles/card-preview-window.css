@@ -12,6 +12,12 @@
 }
 
 .card-preview-content {
+  --card-preview-card-width: clamp(220px, calc(var(--card-height) * 1.55), 360px);
+  --card-preview-panel-min-height: clamp(104px, calc(var(--card-height) * 0.72), 172px);
+  --card-preview-panel-padding-block: clamp(9px, calc(var(--card-height) / 13), 16px);
+  --card-preview-panel-padding-inline: clamp(12px, calc(var(--card-height) / 10), 22px);
+  --card-preview-control-height: clamp(30px, calc(var(--card-height) / 5.4), 40px);
+  --card-preview-button-height: clamp(24px, calc(var(--card-height) / 7), 32px);
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
@@ -45,12 +51,12 @@
 
 .card-preview-card-image,
 .card-preview-placeholder {
-  border-radius: 6px;
+  border-radius: var(--floating-window-radius);
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.42);
 }
 
 .card-preview-card-image {
-  width: calc(260px * var(--card-preview-zoom));
+  width: calc(var(--card-preview-card-width) * var(--card-preview-zoom));
   max-width: none;
   height: auto;
 }
@@ -58,11 +64,11 @@
 .card-preview-placeholder {
   display: grid;
   aspect-ratio: 0.714;
-  width: calc(260px * var(--card-preview-zoom));
+  width: calc(var(--card-preview-card-width) * var(--card-preview-zoom));
   place-items: center;
   border: 1px solid rgba(244, 238, 231, 0.55);
   background: #5f5956;
-  padding: 10px;
+  padding: var(--floating-window-body-padding);
   text-align: center;
 }
 
@@ -73,7 +79,7 @@
   left: 0;
   display: grid;
   height: var(--card-preview-rules-height);
-  min-height: 104px;
+  min-height: var(--card-preview-panel-min-height);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-right: 0;
@@ -86,7 +92,7 @@
 }
 
 .card-preview-rules-resize-handle {
-  height: 13px;
+  height: clamp(13px, calc(var(--card-height) / 12), 18px);
   border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   background: linear-gradient(
@@ -102,11 +108,13 @@
 .card-preview-text {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: calc(var(--floating-window-body-padding) * 0.7);
   min-height: 0;
   overflow: auto;
-  padding: 9px 12px 12px;
-  font-size: 12px;
+  padding: var(--card-preview-panel-padding-block)
+    var(--card-preview-panel-padding-inline)
+    var(--card-preview-panel-padding-inline);
+  font-size: var(--floating-window-small-font-size);
 }
 
 .card-preview-text h2,
@@ -116,24 +124,28 @@
 
 .card-preview-text-header {
   display: grid;
-  gap: 3px;
+  gap: calc(var(--floating-window-body-padding) * 0.3);
 }
 
 .card-preview-text h2 {
-  font-size: 16px;
+  font-size: clamp(16px, calc(var(--card-height) / 8.5), 22px);
   line-height: 1.1;
 }
 
 .card-preview-metadata {
   display: grid;
-  gap: 2px 8px;
-  margin: 3px 0 0;
+  gap: calc(var(--floating-window-body-padding) * 0.2)
+    calc(var(--floating-window-body-padding) * 0.7);
+  margin: calc(var(--floating-window-body-padding) * 0.3) 0 0;
 }
 
 .card-preview-metadata-row {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: clamp(58px, calc(var(--card-height) / 1.9), 84px) minmax(
+      0,
+      1fr
+    );
+  gap: calc(var(--floating-window-body-padding) * 0.7);
   align-items: baseline;
 }
 
@@ -144,7 +156,7 @@
 
 .card-preview-metadata dt {
   color: rgba(255, 255, 255, 0.62);
-  font-size: 10px;
+  font-size: clamp(10px, calc(var(--card-height) / 16), 12px);
   text-transform: uppercase;
 }
 
@@ -156,18 +168,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 30px;
+  gap: calc(var(--floating-window-body-padding) * 0.55);
+  min-height: var(--card-preview-control-height);
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(14, 16, 19, 0.96);
-  padding: 2px 6px;
+  padding: calc(var(--floating-window-body-padding) * 0.2)
+    calc(var(--floating-window-body-padding) * 0.55);
 }
 
 .card-preview-control-bar button {
-  min-width: 32px;
-  height: 24px;
+  min-width: clamp(32px, calc(var(--card-height) / 4.7), 44px);
+  height: var(--card-preview-button-height);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 6px;
+  border-radius: calc(var(--floating-window-radius) * 0.8);
   background: rgba(255, 255, 255, 0.08);
   color: #f7f1e9;
   cursor: pointer;

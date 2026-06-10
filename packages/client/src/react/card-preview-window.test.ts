@@ -132,11 +132,15 @@ describe("card preview window", () => {
     assert.match(styles, /\.card-preview-control-bar button:active\s*\{/u);
     assert.match(
       styles,
-      /\.card-preview-control-bar\s*\{[^}]*min-height:\s*30px;/u,
+      /\.card-preview-content\s*\{[^}]*--card-preview-card-width:\s*clamp\(/u,
     );
     assert.match(
       styles,
-      /\.card-preview-control-bar button\s*\{[^}]*height:\s*24px;/u,
+      /\.card-preview-control-bar\s*\{[^}]*min-height:\s*var\(--card-preview-control-height\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-control-bar button\s*\{[^}]*height:\s*var\(--card-preview-button-height\);/u,
     );
     assert.match(styles, /\.card-preview-control-bar button:disabled\s*\{/u);
     assert.match(
