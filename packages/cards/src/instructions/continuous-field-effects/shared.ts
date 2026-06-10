@@ -1,11 +1,6 @@
 import type { Condition, Effect } from "@optcg/types";
 
-import {
-  parseOpponentNextEndPhaseDuration,
-  parseOpponentNextRefreshPhaseDuration,
-  parseThisBattleDuration,
-  parseThisTurnDuration,
-} from "../../durations/index.js";
+import { parseExplicitFieldEffectDuration as parseExplicitDuration } from "../../durations/index.js";
 import type {
   InstructionParseResult,
   ParseInput,
@@ -38,8 +33,4 @@ export const continuousDurationEvidence = (
     ? "duration:whileSourceOnField"
     : "duration:whileConditionTrue";
 
-export const parseExplicitFieldEffectDuration = (input: ParseInput) =>
-  parseOpponentNextEndPhaseDuration(input) ??
-  parseOpponentNextRefreshPhaseDuration(input) ??
-  parseThisTurnDuration(input) ??
-  parseThisBattleDuration(input);
+export const parseExplicitFieldEffectDuration = parseExplicitDuration;

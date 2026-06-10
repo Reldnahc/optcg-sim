@@ -146,6 +146,67 @@ describe("opponent attack effect line parser", () => {
     );
   });
 
+  it("parses opponent-attack hand-trash cost into opponent battle power debuff", () => {
+    const result = parseCardEffectLine(
+      "[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card from your hand: Give up to 1 of your opponent's Leader or Character cards -2000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onOpponentAttack" },
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 1,
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    player: "opponent",
+                    zones: ["leaderArea", "characterArea"],
+                    min: 0,
+                    max: 1,
+                    filter: { categories: ["leader", "character"] },
+                  },
+                },
+                value: -2000,
+                duration: { type: "thisBattle" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onOpponentAttack",
+        "composition:optionalCostedEffect",
+        "cost:trashFromHand",
+        "instruction:modifyPower",
+        "target:opponentLeaderOrCharacters",
+        "modifier:negativePower",
+        "duration:thisBattle",
+      ]),
+    );
+  });
+
   it("parses opponent-attack rest-stage plus filtered hand-trash cost into battle power primitives", () => {
     const result = parseCardEffectLine(
       "[On Your Opponent's Attack] You may rest this Stage and trash 1 Event or Stage card from your hand: Up to 1 of your Leader or Character cards gains +2000 power during this battle.",

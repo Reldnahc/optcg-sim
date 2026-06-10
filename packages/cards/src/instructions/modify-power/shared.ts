@@ -1,9 +1,6 @@
 import type { Target } from "@optcg/types";
 
-import {
-  parseThisBattleDuration,
-  parseThisTurnDuration,
-} from "../../durations/index.js";
+import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 
 export const modifyPowerInstructionPrimitive = {
@@ -20,6 +17,8 @@ export const modifyPowerInstructionPrimitive = {
     "modifier:positivePower",
     "duration:thisBattle",
     "duration:thisTurn",
+    "duration:opponentNextEndPhase",
+    "duration:opponentNextRefreshPhase",
   ],
 } as const;
 
@@ -34,9 +33,7 @@ export function parseGainsPositivePower(target: Target, text: string) {
     return undefined;
   }
 
-  const duration =
-    parseThisBattleDuration({ text: modifier.rest }) ??
-    parseThisTurnDuration({ text: modifier.rest });
+  const duration = parseExplicitFieldEffectDuration({ text: modifier.rest });
   if (duration?.duration === undefined) {
     return undefined;
   }

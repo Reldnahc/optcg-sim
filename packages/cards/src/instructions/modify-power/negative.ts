@@ -1,5 +1,5 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
-import { parseThisTurnDuration } from "../../durations/index.js";
+import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
 import { parseNegativePowerModifier } from "../../modifiers/index.js";
 import {
   parseAllFieldTarget,
@@ -22,7 +22,9 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
       return undefined;
     }
 
-    const duration = parseThisTurnDuration({ text: modifier.rest });
+    const duration = parseExplicitFieldEffectDuration({
+      text: modifier.rest,
+    });
     if (duration === undefined || duration.duration === undefined) {
       return undefined;
     }
@@ -63,7 +65,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const duration = parseThisTurnDuration({ text: modifier.rest });
+  const duration = parseExplicitFieldEffectDuration({ text: modifier.rest });
   if (duration === undefined || duration.duration === undefined) {
     return undefined;
   }

@@ -21,6 +21,8 @@ describe("modify power instruction parser", () => {
         "modifier:positivePower",
         "duration:thisBattle",
         "duration:thisTurn",
+        "duration:opponentNextEndPhase",
+        "duration:opponentNextRefreshPhase",
       ],
     });
   });
@@ -95,6 +97,83 @@ describe("modify power instruction parser", () => {
         "modifier:negativePower",
         "duration:thisTurn",
       ],
+    });
+  });
+
+  it("parses opponent Leader or Character negative power with battle duration", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Give up to 1 of your opponent's Leader or Character cards -2000 power during this battle.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "opponent",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: { categories: ["leader", "character"] },
+          },
+        },
+        value: -2000,
+        duration: { type: "thisBattle" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:opponentLeaderOrCharacters",
+        "player:opponent",
+        "filter:category:leader",
+        "filter:category:character",
+        "modifier:negativePower",
+        "duration:thisBattle",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses negative power with the reusable explicit field-effect duration family", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Give up to 1 of your opponent's Characters -1000 power until the end of your opponent's next turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "choose",
+          request: {
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: { categories: ["character"] },
+          },
+        },
+        value: -1000,
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "modifier:negativePower",
+        "duration:opponentNextEndPhase",
+      ],
+      rest: "",
     });
   });
 

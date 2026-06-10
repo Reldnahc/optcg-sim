@@ -1,6 +1,7 @@
 export {
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
+  parseExplicitFieldEffectDuration,
   parseSelfNextTurnStartDuration,
   parseThisBattleDuration,
   parseThisTurnDuration,

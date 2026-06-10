@@ -109,3 +109,11 @@ export function parseThisBattleDuration(
     rest: "",
   };
 }
+
+export const parseExplicitFieldEffectDuration = (
+  input: ParseInput,
+): DurationParseResult | undefined =>
+  parseOpponentNextEndPhaseDuration(input) ??
+  parseOpponentNextRefreshPhaseDuration(input) ??
+  parseThisTurnDuration(input) ??
+  parseThisBattleDuration(input);
