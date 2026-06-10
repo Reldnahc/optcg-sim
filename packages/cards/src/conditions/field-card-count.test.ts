@@ -3,6 +3,34 @@ import { describe, expect, it } from "vitest";
 import { parseFieldCardCountCondition } from "./field-card-count.js";
 
 describe("field card count condition parser", () => {
+  it("parses self matching Character presence through reusable filters", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you have an {Admiral} type Character",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Admiral"],
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:type",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses opponent matching Character presence through reusable filters", () => {
     expect(
       parseFieldCardCountCondition({

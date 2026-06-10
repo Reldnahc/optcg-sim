@@ -52,6 +52,31 @@ export const parseFieldCardCountCondition: ConditionParser = (
     };
   }
 
+  const selfPresence = /^you have an?\s+(?<predicate>.+)$/i.exec(input.text);
+  const selfPresencePredicate = selfPresence?.groups?.["predicate"];
+  if (selfPresencePredicate !== undefined) {
+    const predicates = parseFieldPredicates(selfPresencePredicate);
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: predicates.filter,
+        op: "gte",
+        value: 1,
+      },
+      evidence: fieldCountEvidence(
+        "self",
+        ["condition:comparator:gte", "condition:threshold:positiveInteger"],
+        predicates.evidence,
+      ),
+      rest: "",
+    };
+  }
+
   const exactSelfPresence =
     /^you have (?<count>[1-9]\d*)\s+(?<predicate>.+)$/i.exec(input.text);
   const exactSelfCountText = exactSelfPresence?.groups?.["count"];
