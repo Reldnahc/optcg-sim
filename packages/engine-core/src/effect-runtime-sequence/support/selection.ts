@@ -72,7 +72,7 @@ export const isSupportedMoveSelectedSegment = (
     String(effect.selection).startsWith("trashSelection:")) ||
     (effect.from === "trash" &&
       effect.to === "life" &&
-      effect.position === "top" &&
+      (effect.position === "top" || effect.position === "bottom") &&
       String(effect.selection).startsWith("trashSelection:")) ||
     (effect.from === "hand" &&
       effect.to === "deck" &&

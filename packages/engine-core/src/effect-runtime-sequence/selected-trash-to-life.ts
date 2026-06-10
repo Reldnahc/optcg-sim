@@ -97,6 +97,9 @@ export const applyTrashToLifeSelectedCardMoveSegment = (
   if (playerId === null || player === undefined) {
     return { ok: false };
   }
+  if (params.effect.position !== "top" && params.effect.position !== "bottom") {
+    return { ok: false };
+  }
   const selectedIds = new Set(selected.map((card) => card.instanceId));
   const movedCards: CardInstance[] = [];
   for (const selectedCard of selected) {
@@ -126,7 +129,12 @@ export const applyTrashToLifeSelectedCardMoveSegment = (
     playerId,
     "trash",
   );
-  const nextLife = reindexLife([...movedLifeCards, ...player.life], playerId);
+  const nextLife = reindexLife(
+    params.effect.position === "top"
+      ? [...movedLifeCards, ...player.life]
+      : [...player.life, ...movedLifeCards],
+    playerId,
+  );
   const eventBaseState: GameState = {
     ...params.state,
     players: {

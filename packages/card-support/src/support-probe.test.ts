@@ -176,6 +176,16 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports support for optional hand-trash into selected trash-to-Life placement", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] You may trash 1 card from your hand: Add up to 1 {Blackbeard Pirates} type card with a cost of 6 or less from your trash to the top of your Life cards face-up.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports engine runtime support for DON return into conditional opponent hand trash", async () => {
     const report = await createSupportProbeReport({
       text: "[On Play] DON!! \u22121 (You may return the specified number of DON!! cards from your field to your DON!! deck.): If your opponent has 7 or more cards in their hand, trash 2 cards from your opponent's hand.",

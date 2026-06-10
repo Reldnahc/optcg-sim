@@ -416,6 +416,129 @@ describe("card effect reusable parser compositions", () => {
     });
   });
 
+  it("parses direct selected trash card move to top of Life face-up", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may trash 1 card from your hand: Add up to 1 {Blackbeard Pirates} type card with a cost of 6 or less from your trash to the top of your Life cards face-up.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 1,
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    saveResultAs: "trashSelection:addToLife",
+                    effect: {
+                      type: "selectCards",
+                      zone: "trash",
+                      player: "self",
+                      chooser: "self",
+                      min: 0,
+                      max: 1,
+                      filter: {
+                        typesAny: ["Blackbeard Pirates"],
+                        cost: { max: 6 },
+                      },
+                      saveAs: "trashSelection:addToLife",
+                      visibility: "bothPlayers",
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "moveSelected",
+                      selection: "trashSelection:addToLife",
+                      from: "trash",
+                      to: "life",
+                      position: "top",
+                      destinationFaceUp: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:optionalCostedEffect",
+        "cost:trashFromHand",
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "filter:type",
+        "filter:cost",
+        "destination:life",
+        "position:top",
+        "destination:faceUp",
+      ]),
+    );
+  });
+
+  it("parses direct selected trash card move to bottom of Life face-down", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Add up to 1 Character card with a cost of 4 or less from your trash to the bottom of your Life cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              saveResultAs: "trashSelection:addToLife",
+              effect: {
+                type: "selectCards",
+                zone: "trash",
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 4 },
+                },
+              },
+            },
+            {
+              effect: {
+                type: "moveSelected",
+                selection: "trashSelection:addToLife",
+                from: "trash",
+                to: "life",
+                position: "bottom",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "filter:category:character",
+        "filter:cost",
+        "destination:life",
+        "position:bottom",
+      ]),
+    );
+  });
+
   it("parses rested DON distribution as repeated reusable attach flows", () => {
     const result = parseCardEffectLine(
       "[On Play] Draw 2 cards and trash 1 card from your hand. Then, give your Leader and 1 Character up to 2 rested DON!! cards each.",

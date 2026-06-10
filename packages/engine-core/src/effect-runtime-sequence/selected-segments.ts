@@ -390,7 +390,7 @@ export const applySelectedCardMoveSegment = (
   if (
     params.effect.from === "trash" &&
     params.effect.to === "life" &&
-    params.effect.position === "top"
+    (params.effect.position === "top" || params.effect.position === "bottom")
   ) {
     return applyTrashToLifeSelectedCardMoveSegment(params, selected);
   }

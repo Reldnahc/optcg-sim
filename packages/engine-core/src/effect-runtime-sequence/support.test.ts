@@ -399,6 +399,53 @@ test("sequence support accepts looked-set selection moved to Life bottom face-up
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts selected trash cards moved to Life bottom", () => {
+  const selection = "trashSelection:addToLife" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: selection,
+          effect: {
+            type: "selectCards",
+            zone: "trash",
+            player: "self",
+            chooser: "self",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              cost: { max: 4 },
+            },
+            saveAs: selection,
+            visibility: "bothPlayers",
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: "trash",
+            to: "life",
+            position: "bottom",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts saved restriction followed by owner deck-bottom bounce", () => {
   const effectBlock: EffectDefinition["effects"][number] = {
     id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
