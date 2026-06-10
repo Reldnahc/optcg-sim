@@ -1,5 +1,8 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
-import { parseOpponentNextEndPhaseDuration } from "../../durations/index.js";
+import {
+  parseOpponentNextEndPhaseDuration,
+  parseThisTurnDuration,
+} from "../../durations/index.js";
 import { parseYourCharactersTarget } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { parsePositiveCostModifier } from "./shared.js";
@@ -29,7 +32,9 @@ export const parseTargetedModifyCostInstruction: InstructionParser = (
     return undefined;
   }
 
-  const duration = parseOpponentNextEndPhaseDuration({ text: modifier.rest });
+  const duration =
+    parseOpponentNextEndPhaseDuration({ text: modifier.rest }) ??
+    parseThisTurnDuration({ text: modifier.rest });
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }
