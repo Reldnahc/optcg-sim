@@ -639,11 +639,15 @@ describe("card action menu", () => {
     assert.match(styles, /\.card-face\s*\{[^}]*border:\s*0;/u);
     assert.match(
       styles,
+      /\.card-tile-shell\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 16\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
+    );
+    assert.match(
+      styles,
       /\.card-tile::after\s*\{[^}]*inset:\s*0;[^}]*box-shadow:\s*[^}]*var\(--card-selected-glow\);/u,
     );
     assert.match(
       styles,
-      /\.card-tile\.is-selected\s*\{[^}]*--card-selected-glow:\s*inset 0 0 0 3px #ffdc62;/u,
+      /\.card-tile\.is-selected\s*\{[^}]*--card-selected-glow:\s*inset 0 0 0 var\(--card-outline-medium\) #ffdc62;/u,
     );
     assert.equal(/\.card-face\s*\{[^}]*border:\s*[12]px/u.test(styles), false);
   });
@@ -656,11 +660,11 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.card-tile:hover:not\(:disabled\)\s*\{[^}]*--card-hover-glow:\s*inset 0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.95\),\s*inset 0 0 10px\s+rgba\(255,\s*255,\s*255,\s*0\.56\);/u,
+      /\.card-tile:hover:not\(:disabled\)\s*\{[^}]*--card-hover-glow:\s*inset 0 0 0 var\(--card-outline-thin\) rgba\(255,\s*255,\s*255,\s*0\.95\),\s*inset 0 0 var\(--card-glow-size\)\s+rgba\(255,\s*255,\s*255,\s*0\.56\);/u,
     );
     assert.match(
       styles,
-      /\.card-tile\.is-active\s*\{[^}]*--card-active-glow:\s*inset 0 0 0 3px rgba\(89,\s*255,\s*143,\s*0\.98\),\s*inset 0 0 12px\s+rgba\(89,\s*255,\s*143,\s*0\.56\);/u,
+      /\.card-tile\.is-active\s*\{[^}]*--card-active-glow:\s*inset 0 0 0 var\(--card-outline-medium\) rgba\(89,\s*255,\s*143,\s*0\.98\),\s*inset 0 0 var\(--card-glow-size\)\s+rgba\(89,\s*255,\s*143,\s*0\.56\);/u,
     );
   });
 
@@ -672,7 +676,7 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.card-tile\.is-pending-choice\s*\{[^}]*--card-pending-glow:\s*inset 0 0 0 3px rgba\(68,\s*216,\s*255,\s*0\.98\),\s*inset 0 0 12px rgba\(68,\s*216,\s*255,\s*0\.56\);/u,
+      /\.card-tile\.is-pending-choice\s*\{[^}]*--card-pending-glow:\s*inset 0 0 0 var\(--card-outline-medium\) rgba\(68,\s*216,\s*255,\s*0\.98\),\s*inset 0 0 var\(--card-glow-size\) rgba\(68,\s*216,\s*255,\s*0\.56\);/u,
     );
     assert.match(styles, /\.card-tile::after/u);
   });
@@ -715,11 +719,17 @@ describe("card action menu", () => {
       styles,
       /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*inset:\s*0;/u,
     );
-    assert.match(styles, /\.card-tile\s*\{[^}]*border-radius:\s*6px;/u);
-    assert.match(styles, /\.card-face\s*\{[^}]*border-radius:\s*6px;/u);
     assert.match(
       styles,
-      /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*border-radius:\s*6px;/u,
+      /\.card-tile\s*\{[^}]*border-radius:\s*var\(--card-corner-radius\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-face\s*\{[^}]*border-radius:\s*var\(--card-corner-radius\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile\.is-freshly-played-attack-restricted::before\s*\{[^}]*border-radius:\s*var\(--card-corner-radius\);/u,
       "fresh restriction dimming must use the rounder visible card mask without clipping outer highlight rings.",
     );
     assert.equal(

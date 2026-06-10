@@ -223,7 +223,11 @@ describe("hand layout", () => {
     assert.match(styles, /\.card-tile\s*\{[^}]*isolation:\s*isolate;/u);
     assert.match(
       styles,
-      /\.card-tile\.is-selectable\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 2px rgba\(68,\s*216,\s*255,\s*0\.72\);/u,
+      /\.card-tile\.is-selectable\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 var\(--card-outline-thin\)\s+rgba\(68,\s*216,\s*255,\s*0\.72\);/u,
+    );
+    assert.match(
+      styles,
+      /\.hand-cards\s+\.card-tile\.is-selectable\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 var\(--card-outline-medium\) rgba\(68,\s*216,\s*255,\s*0\.95\),\s*inset 0 0 var\(--card-glow-size\) rgba\(68,\s*216,\s*255,\s*0\.62\);/u,
     );
     assert.match(
       styles,
