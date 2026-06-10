@@ -83,11 +83,11 @@ const normalizeEntry = (
 export const decodeDeckHashSubmission = async ({
   hash,
   donDeckCount,
-  codec = createPoneglyphDeckHashCodec(),
+  codec,
 }: {
   readonly hash: string;
   readonly donDeckCount: number;
-  readonly codec?: DeckHashCodecPort;
+  readonly codec: DeckHashCodecPort;
 }): Promise<DeckSubmission> => {
   if (!Number.isInteger(donDeckCount) || donDeckCount < 1) {
     return invalidSubmission(

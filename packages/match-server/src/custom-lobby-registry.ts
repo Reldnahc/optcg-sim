@@ -9,6 +9,7 @@ import {
   validateReadyDevDeckSubmissions,
 } from "./default-dev-manifest.js";
 import {
+  createPoneglyphDeckHashCodec,
   decodeDeckHashSubmission,
   type DeckHashCodecPort,
   type ReadyDeckSubmission,
@@ -205,6 +206,7 @@ export const createCustomLobbyRegistry = async (
   options: CreateCustomLobbyRegistryOptions,
 ): Promise<CustomLobbyRegistry> => {
   const lobbyStore = await createLobbyStore(options);
+  const deckHashCodec = options.deckHashCodec ?? createPoneglyphDeckHashCodec();
   const findSeatForAuth = (
     lobby: CustomLobbyState,
     auth: AuthContext,
@@ -394,9 +396,7 @@ export const createCustomLobbyRegistry = async (
       const submission = await decodeDeckHashSubmission({
         hash: deckHash,
         donDeckCount,
-        ...(options.deckHashCodec === undefined
-          ? {}
-          : { codec: options.deckHashCodec }),
+        codec: deckHashCodec,
       });
       if (submission.status !== "ready") {
         return "invalidDeck";
@@ -426,9 +426,7 @@ export const createCustomLobbyRegistry = async (
       const submission = await decodeDeckHashSubmission({
         hash: handoff.resolvedLoadout.mainDeck.hash,
         donDeckCount: handoff.resolvedLoadout.donDeck.count,
-        ...(options.deckHashCodec === undefined
-          ? {}
-          : { codec: options.deckHashCodec }),
+        codec: deckHashCodec,
       });
       if (submission.status !== "ready") {
         return "invalidDeck";
@@ -512,9 +510,7 @@ export const createCustomLobbyRegistry = async (
           submission = await decodeDeckHashSubmission({
             hash: handoff.resolvedLoadout.mainDeck.hash,
             donDeckCount: handoff.resolvedLoadout.donDeck.count,
-            ...(options.deckHashCodec === undefined
-              ? {}
-              : { codec: options.deckHashCodec }),
+            codec: deckHashCodec,
           });
         } catch {
           loadouts[index] = {
@@ -556,9 +552,7 @@ export const createCustomLobbyRegistry = async (
         const submission = await decodeDeckHashSubmission({
           hash: deck.deckHash,
           donDeckCount: deck.donDeckCount,
-          ...(options.deckHashCodec === undefined
-            ? {}
-            : { codec: options.deckHashCodec }),
+          codec: deckHashCodec,
         });
         if (submission.status !== "ready") {
           loadouts[index] = {
