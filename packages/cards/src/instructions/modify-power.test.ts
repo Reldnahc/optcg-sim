@@ -247,6 +247,49 @@ describe("modify power instruction parser", () => {
     });
   });
 
+  it("parses positive power for typed self Leader or Character targets", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Up to 1 of your {Donquixote Pirates} type Leader or Character cards gains +2000 power during this battle.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: {
+              categories: ["leader", "character"],
+              typesAny: ["Donquixote Pirates"],
+            },
+          },
+        },
+        value: 2000,
+        duration: { type: "thisBattle" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "filter:type",
+        "filter:category:leader",
+        "filter:category:character",
+        "modifier:positivePower",
+        "duration:thisBattle",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses positive power for typed self Character targets with parsed cardinality", () => {
     expect(
       parseModifyPowerInstruction({

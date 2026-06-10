@@ -44,6 +44,42 @@ export function parseYourLeaderTarget(
 export function parseYourLeaderOrCharacterCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
+  const typedMatch =
+    /^of your\s+(?<predicateText>.+?Leader or Character cards?)\b\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
+  const typedPredicateText = typedMatch?.groups?.["predicateText"]?.trim();
+  if (typedPredicateText !== undefined && typedPredicateText.length > 0) {
+    const predicates = parseCardFilterPredicates(
+      { text: typedPredicateText },
+      { powerSemantics: "current" },
+    );
+    if (predicates !== undefined && predicates.rest.trim().length === 0) {
+      return {
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: predicates.filter,
+          },
+        },
+        evidence: [
+          "target:yourLeaderOrCharacters",
+          "player:self",
+          ...predicates.evidence,
+        ],
+        rest: typedMatch?.groups?.["rest"]?.trim() ?? "",
+      };
+    }
+  }
+
   const match = /^of your Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
     input.text,
   );

@@ -69,6 +69,34 @@ test("continuous modifyPower supports myLeader as an exact leader target", () =>
   assert.equal(record.modifier.target.card.instanceId, "p1:leader");
 });
 
+test("continuous modifyPower supports typed Leader or Character targets", () => {
+  assert.equal(
+    isSupportedContinuousQueueEffect({
+      type: "modifyPower",
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            categories: ["leader", "character"],
+            typesAny: ["Donquixote Pirates"],
+          },
+        },
+      },
+      value: 2000,
+      duration: { type: "thisBattle" },
+    }),
+    true,
+  );
+});
+
 test("continuous giveKeyword supports self as a queued exact source target", () => {
   const state = createActiveState();
   const entry = { ...queueDrawForP1(), controllerId: p1 };

@@ -9,6 +9,7 @@ import {
   parseOpponentLeaderOrCharacterCardsTarget,
   parseCompoundYourCharactersTarget,
   parseYourCharactersTarget,
+  parseYourLeaderOrCharacterCardsTarget,
   parseYourNamedCardsTarget,
   parseYourLeaderTarget,
   yourCharactersTargetPrimitive,
@@ -161,6 +162,40 @@ describe("field target parsers", () => {
         "condition:threshold:positiveInteger",
       ],
       rest: ".",
+    });
+  });
+
+  it("parses typed own Leader or Character cards target", () => {
+    expect(
+      parseYourLeaderOrCharacterCardsTarget({
+        text: "of your {Donquixote Pirates} type Leader or Character cards gains +2000 power during this battle.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            categories: ["leader", "character"],
+            typesAny: ["Donquixote Pirates"],
+          },
+        },
+      },
+      evidence: [
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "filter:type",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      rest: "gains +2000 power during this battle.",
     });
   });
 
