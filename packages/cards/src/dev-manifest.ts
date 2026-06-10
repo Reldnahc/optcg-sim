@@ -1,4 +1,5 @@
 import type { CardId, MatchCardManifest } from "@optcg/types";
+import { defaultPoneglyphSimCardCacheVersions } from "optcg-card-cache";
 
 import {
   createCardRepository,
@@ -36,12 +37,10 @@ interface DevManifestVersions {
 }
 
 export const defaultDevManifestVersions: DevManifestVersions = {
-  cardDataVersion: "live-poneglyph-dev-v1",
-  effectDefinitionsVersion: "generated-dev-v1",
+  ...defaultPoneglyphSimCardCacheVersions,
   customHandlerVersion: "none",
   banlistVersion: "none",
   rulesVersion: "dev-rules",
-  overlayVersion: "none",
 };
 
 export const parseDevCardIdList = (text: string): CardId[] => {
