@@ -38,6 +38,7 @@ describe("client app shell pages", () => {
     assert.match(html, /Private Lobby/u);
     assert.match(html, /Unranked Queue/u);
     assert.match(html, /Ranked Queue/u);
+    assert.match(html, /Anything Goes/u);
     assert.match(html, /Make Lobby/u);
     assert.match(
       html,
@@ -77,6 +78,7 @@ describe("client app shell pages", () => {
       html,
       /<option value="Standard" selected="">Standard<\/option>/u,
     );
+    assert.doesNotMatch(html, /Anything Goes/u);
     assert.match(html, /deck-loadout-picker/u);
     assert.match(html, /Enel Yellow/u);
     assert.match(html, /Queue coming soon/u);

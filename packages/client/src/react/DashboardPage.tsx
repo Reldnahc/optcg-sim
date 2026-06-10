@@ -23,6 +23,14 @@ const playModeOptions: readonly PlayModeOption[] = [
   { id: "rankedQueue", label: "Ranked Queue", badge: "Soon" },
 ];
 
+const anythingGoesFormat: PoneglyphFormat = {
+  name: "Anything Goes",
+  description: "Private lobby sandbox format",
+  hasRotation: false,
+  legalBlocks: 0,
+  banCount: 0,
+};
+
 export interface DashboardPageViewProps {
   readonly mode: PlayMode;
   readonly formats: readonly PoneglyphFormat[];
@@ -40,6 +48,12 @@ export interface DashboardPageViewProps {
 }
 
 const isQueueMode = (mode: PlayMode): boolean => mode !== "privateLobby";
+
+const visibleFormatsForMode = (
+  mode: PlayMode,
+  formats: readonly PoneglyphFormat[],
+): readonly PoneglyphFormat[] =>
+  isQueueMode(mode) ? formats : [anythingGoesFormat, ...formats];
 
 const statusText = (
   status: ResourceStatus,
@@ -69,8 +83,9 @@ export const DashboardPageView = ({
   onRefreshLoadouts,
 }: DashboardPageViewProps): React.JSX.Element => {
   const queueMode = isQueueMode(mode);
+  const visibleFormats = visibleFormatsForMode(mode, formats);
   const formatSelectDisabled =
-    formatsStatus !== "ready" || formats.length === 0;
+    queueMode && (formatsStatus !== "ready" || visibleFormats.length === 0);
   const deckSelectVisible = queueMode;
   const deckPickerDisabled = loadoutsStatus !== "ready";
   const refreshDecksDisabled = loadoutsStatus === "loading";
@@ -112,10 +127,10 @@ export const DashboardPageView = ({
                 onSelectFormat(event.currentTarget.value);
               }}
             >
-              {formats.length === 0 ? (
+              {visibleFormats.length === 0 ? (
                 <option value="">Formats loading</option>
               ) : (
-                formats.map((format) => (
+                visibleFormats.map((format) => (
                   <option key={format.name} value={format.name}>
                     {format.name}
                   </option>
@@ -202,7 +217,9 @@ export const DashboardPage = (): React.JSX.Element => {
   const [formats, setFormats] = useState<readonly PoneglyphFormat[]>([]);
   const [formatsStatus, setFormatsStatus] = useState<ResourceStatus>("loading");
   const [formatsError, setFormatsError] = useState<string>();
-  const [selectedFormatName, setSelectedFormatName] = useState("");
+  const [selectedFormatName, setSelectedFormatName] = useState(
+    anythingGoesFormat.name,
+  );
   const [loadouts, setLoadouts] = useState<readonly AccountLoadout[]>([]);
   const [loadoutsStatus, setLoadoutsStatus] = useState<ResourceStatus>("idle");
   const [loadoutsError, setLoadoutsError] = useState<string>();
@@ -227,9 +244,7 @@ export const DashboardPage = (): React.JSX.Element => {
           return;
         }
         setFormats(nextFormats);
-        setSelectedFormatName(
-          (current) => current || (nextFormats[0]?.name ?? ""),
-        );
+        setSelectedFormatName((current) => current || anythingGoesFormat.name);
         setFormatsStatus("ready");
       })
       .catch((error: unknown) => {
@@ -244,6 +259,15 @@ export const DashboardPage = (): React.JSX.Element => {
       cancelled = true;
     };
   }, [apiClient]);
+
+  useEffect(() => {
+    if (mode === "privateLobby") {
+      return;
+    }
+    if (selectedFormatName === anythingGoesFormat.name) {
+      setSelectedFormatName(formats[0]?.name ?? "");
+    }
+  }, [formats, mode, selectedFormatName]);
 
   const refreshLoadouts = useCallback((): void => {
     if (!isQueueMode(mode)) {
