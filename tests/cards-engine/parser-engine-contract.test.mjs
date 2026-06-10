@@ -43,6 +43,7 @@ const activateMainSequenceEntry = {
   state: "pending",
   timingWindowId: "timing-window:activate-main:cards-engine-contract",
   generation: 0,
+  queueOrigin: { type: "activateMain" },
   controllerId: "player-1",
   source: {
     instanceId: "instance:leader",
