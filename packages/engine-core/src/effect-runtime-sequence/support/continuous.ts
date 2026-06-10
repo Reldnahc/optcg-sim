@@ -1,6 +1,7 @@
 import type { Duration, Effect, Target } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../../runtime/continuous/continuous.js";
+import { isSourceDependentContinuousQueueEffect } from "../../runtime/continuous/support.js";
 import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
 import {
   isSupportedSavedFieldObjectKoTarget,
@@ -71,22 +72,10 @@ export const isSupportedSequenceContinuousDuration = (
 
 export const isSourceDependentContinuousSegment = (
   effect: SequenceSegmentEffect,
-): boolean => {
-  if (
-    effect.type !== "modifyPower" &&
-    effect.type !== "cannotAttack" &&
-    effect.type !== "attackCost" &&
-    effect.type !== "setBasePower" &&
-    effect.type !== "cannotBlock" &&
-    effect.type !== "preventBlockerActivation"
-  ) {
-    return false;
-  }
-  return (
-    effect.target.type === "self" ||
-    effect.duration.type === "whileSourceOnField"
-  );
-};
+): boolean =>
+  effect.type !== "payCost" &&
+  isSupportedContinuousQueueEffect(effect) &&
+  isSourceDependentContinuousQueueEffect(effect);
 
 export const isSupportedSavedTargetContinuousSegment = (
   effect: SequenceSegmentEffect,

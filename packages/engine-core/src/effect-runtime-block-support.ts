@@ -7,6 +7,7 @@ import type {
 
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedContinuousQueueEffect } from "./runtime/continuous/continuous.js";
+import { isSourceDependentContinuousQueueEffect } from "./runtime/continuous/support.js";
 import {
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
   isSupportedDrawBody,
@@ -214,27 +215,12 @@ const isSupportedSequenceBody = (
     block.sourcePresencePolicy,
   );
 
-const isSourceDependentContinuousEffect = (effect: Effect): boolean => {
-  if (
-    effect.type !== "modifyPower" &&
-    effect.type !== "cannotAttack" &&
-    effect.type !== "cannotBlock" &&
-    effect.type !== "preventBlockerActivation"
-  ) {
-    return false;
-  }
-  return (
-    effect.target.type === "self" ||
-    effect.duration.type === "whileSourceOnField"
-  );
-};
-
 const isSupportedContinuousBody = (
   block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
 ): boolean =>
   isSupportedContinuousQueueEffect(block.effect) &&
   (block.sourcePresencePolicy === "mustRemainInSameZone" ||
-    !isSourceDependentContinuousEffect(block.effect));
+    !isSourceDependentContinuousQueueEffect(block.effect));
 
 const isSupportedTargetChoiceBody = (
   block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },

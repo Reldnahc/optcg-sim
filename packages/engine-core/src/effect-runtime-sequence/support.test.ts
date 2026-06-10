@@ -141,6 +141,44 @@ test("sequence support accepts self-target field activation segments", () => {
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support treats supported self-target continuous segments as source-dependent", () => {
+  const noSourceEntry: EffectQueueEntry = {
+    ...syntheticEntry(),
+    sourcePresencePolicy: "noSourceRequired",
+  };
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "trigger" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "noSourceRequired",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "giveKeyword",
+            target: { type: "self" },
+            keyword: "rush",
+            duration: { type: "thisTurn" },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(noSourceEntry, effectBlock), false);
+  assert.equal(
+    isSupportedSequenceBlock(syntheticEntry(), {
+      ...effectBlock,
+      sourcePresencePolicy: "mustRemainInSameZone",
+    }),
+    true,
+  );
+});
+
 test("sequence support accepts moveSelected by produced selection evidence instead of id prefix", () => {
   const savedSelection = "selected-trash-card" as SelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {

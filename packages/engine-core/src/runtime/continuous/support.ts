@@ -398,3 +398,9 @@ export const isSupportedContinuousQueueEffect = (
   }
   return true;
 };
+
+export const isSourceDependentContinuousQueueEffect = (
+  effect: ContinuousQueueEffect,
+): boolean =>
+  effect.duration.type === "whileSourceOnField" ||
+  ("target" in effect && effect.target.type === "self");

@@ -156,3 +156,36 @@ test("auto runtime admission accepts referenced non-continuous auto entry trigge
     false,
   );
 });
+
+test("auto runtime admission treats supported self-target continuous bodies as source-dependent", () => {
+  const selfKeywordEffect = {
+    type: "giveKeyword",
+    target: { type: "self" },
+    keyword: "rush",
+    duration: { type: "thisTurn" },
+  } as const;
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect: selfKeywordEffect,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+      autoAdapter("onPlay", "mustRemainInSameZone"),
+    ),
+    true,
+  );
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect: selfKeywordEffect,
+        sourcePresencePolicy: "noSourceRequired",
+        trigger: { type: "trigger" },
+      }),
+      autoAdapter("trigger", "noSourceRequired"),
+    ),
+    false,
+  );
+});
