@@ -412,7 +412,6 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
   const unsupportedBlockOverrides: readonly Partial<
     EffectDefinition["effects"][number]
   >[] = [
-    { optional: true },
     { cost: { type: "restDon", count: 1 } },
     { conditionTiming: "resolution" },
     { failurePolicy: "requiresAll" },
@@ -428,6 +427,41 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
     assert.deepEqual(result.events, []);
     assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
   }
+});
+
+test("optional draw-then-trash sequence prompts first then resumes the reusable sequence body", () => {
+  const { state } = sequenceQueueState(drawTrashSequence(1, 1), {
+    optional: true,
+  });
+
+  const paused = processEffectRuntime(state);
+  const optionalDecision = must(
+    paused.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+  assert.deepEqual(eventTypes(paused.events), ["decisionCreated"]);
+
+  const accepted = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    must(accepted.state.pendingDecision, "trash decision").type,
+    "selectCards",
+  );
+  assert.deepEqual(eventTypes(accepted.events), [
+    "decisionResolved",
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "decisionCreated",
+  ]);
 });
 
 test("conditioned draw-then-trash sequence is supported after queue-level condition pass", () => {

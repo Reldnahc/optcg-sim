@@ -4,7 +4,6 @@ export {
   executeNoChoiceEffectPrimitive,
   isSupportedDrawBody,
   isSupportedQueuedDrawEffectBlock,
-  isSupportedQueuedOptionalDrawEffectBlock,
   resolvePlayerId,
 } from "./draw.js";
 export type {

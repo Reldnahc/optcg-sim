@@ -286,18 +286,48 @@ test("Main Event queueing fails closed for unsupported target KO request shapes"
   assert.equal(result.state.effectQueue.length, 0);
 });
 
-test("Main Event queueing fails closed for optional, cost-bearing, and malformed drawUpTo shapes", () => {
+test("Main Event queueing accepts optional drawUpTo through the reusable body gate", () => {
+  const { state, eventInTrash } = setupMainEventQueueingState();
+  const implemented = resolvedCard({
+    cardId: eventInTrash.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] You may draw up to 2 cards.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-optional-main-event-draw-upto",
+    },
+  });
+  state.cardManifest.cards[eventInTrash.cardId] = implemented;
+  const base = reviewedMainEventDrawUpToDefinition(
+    implemented.cardId,
+    implemented.support,
+  );
+  const effect = must(base.effects[0], "effect");
+  state.cardManifest.effectDefinitions = {
+    "def-optional-main-event-draw-upto": {
+      ...base,
+      effects: [{ ...effect, optional: true }],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+  const entry = must(result.state.effectQueue[0], "queue entry");
+  assert.equal(entry.effectBlockId, effect.id);
+  assert.equal(entry.sourcePresencePolicy, "resolveFromDestinationZone");
+});
+
+test("Main Event queueing fails closed for cost-bearing and malformed drawUpTo shapes", () => {
   const cases: Array<{
     name: string;
     mutate: (base: EffectDefinition) => EffectDefinition;
   }> = [
-    {
-      name: "optional-draw-upto",
-      mutate: (base) => ({
-        ...base,
-        effects: [{ ...must(base.effects[0], "effect"), optional: true }],
-      }),
-    },
     {
       name: "cost-bearing-draw-upto",
       mutate: (base) => ({

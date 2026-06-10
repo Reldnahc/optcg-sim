@@ -288,7 +288,7 @@ test("getLegalActions keeps implemented-dsl Events inside the narrow reviewed Ma
   assert.equal(hasPlayCardAction(legal, filteredKo), false);
 });
 
-test("Main Event drawUpTo optional, cost-bearing, and malformed shapes fail closed at playCard entry", () => {
+test("Main Event drawUpTo cost-bearing and malformed shapes fail closed at playCard entry", () => {
   const cases: Array<{
     name: string;
     mutate: (
@@ -299,7 +299,6 @@ test("Main Event drawUpTo optional, cost-bearing, and malformed shapes fail clos
       typeof reviewedMainEventDrawUpToDefinition
     >["effects"][number];
   }> = [
-    { name: "optional", mutate: (effect) => ({ ...effect, optional: true }) },
     {
       name: "cost-bearing",
       mutate: (effect) => ({ ...effect, cost: { type: "restDon", count: 1 } }),

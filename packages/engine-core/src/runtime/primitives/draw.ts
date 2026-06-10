@@ -314,14 +314,3 @@ export const isSupportedQueuedDrawEffectBlock = (
   }) &&
   (isSupportedAutoRuntimeDrawEntryPoint(effect) ||
     isSupportedQueuedCustomDrawEntryPoint(effect));
-
-export const isSupportedQueuedOptionalDrawEffectBlock = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} =>
-  hasSupportedDrawEffectEnvelope(effect, {
-    optional: "optional",
-    allowOncePerTurn: true,
-  }) && isSupportedAutoRuntimeDrawEntryPoint(effect);

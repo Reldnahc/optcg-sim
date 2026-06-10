@@ -6,14 +6,12 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
+import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import {
   isScopedActivateMainQueueEntry,
   isSupportedActivateMainRuntimeEffectBlock,
 } from "../runtime/optional-activation/activate-main.js";
-import {
-  isSupportedQueuedDrawEffectBlock,
-  isSupportedQueuedOptionalDrawEffectBlock,
-} from "../runtime/primitives/execute.js";
+import { isSupportedQueuedDrawEffectBlock } from "../runtime/primitives/execute.js";
 import type { QueuedEffectDefinitionResolverDependencies } from "./results-types.js";
 
 type ContinuousQueueEffect = Extract<
@@ -57,6 +55,10 @@ export interface QueuedEffectResolvers {
     state: GameState,
     entry: EffectQueueEntry,
   ) => Extract<Effect, { type: "drawUpTo" }> | undefined;
+  readonly resolveQueuedDrawUpToEffectBlock: (
+    effect: EffectDefinition["effects"][number] | undefined,
+    entry: EffectQueueEntry,
+  ) => Extract<Effect, { type: "drawUpTo" }> | undefined;
   readonly resolveQueuedContinuousEffect: (
     state: GameState,
     entry: EffectQueueEntry,
@@ -72,9 +74,11 @@ export interface QueuedEffectResolvers {
     effect: EffectDefinition["effects"][number],
     entry: EffectQueueEntry,
   ) => effect is QueuedDrawEffectBlock;
-  readonly isSupportedQueuedOptionalDrawEffectBlock: (
+  readonly isSupportedQueuedOptionalEffectBlock: (
     effect: EffectDefinition["effects"][number],
-  ) => effect is QueuedDrawEffectBlock;
+  ) => effect is EffectDefinition["effects"][number] & {
+    sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  };
 }
 
 export const createQueuedEffectResolvers = (
@@ -138,18 +142,17 @@ export const createQueuedEffectResolvers = (
     return supportShape.effect;
   };
 
-  const resolveQueuedDrawUpToEffect = (
-    state: GameState,
+  const resolveQueuedDrawUpToEffectBlock = (
+    effect: EffectDefinition["effects"][number] | undefined,
     entry: EffectQueueEntry,
   ): Extract<Effect, { type: "drawUpTo" }> | undefined => {
-    const match = resolveQueuedEffectDefinition(state, entry);
     if (
-      match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy
+      effect === undefined ||
+      effect.sourcePresencePolicy !== entry.sourcePresencePolicy
     ) {
       return undefined;
     }
-    const supportShape = { ...match };
+    const supportShape = { ...effect };
     delete (supportShape as { condition?: unknown }).condition;
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     if (
@@ -167,6 +170,15 @@ export const createQueuedEffectResolvers = (
     return supportShape.effect;
   };
 
+  const resolveQueuedDrawUpToEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "drawUpTo" }> | undefined =>
+    resolveQueuedDrawUpToEffectBlock(
+      resolveQueuedEffectDefinition(state, entry),
+      entry,
+    );
+
   const withoutConditionFields = (
     effect: EffectDefinition["effects"][number],
   ): EffectDefinition["effects"][number] => {
@@ -175,6 +187,15 @@ export const createQueuedEffectResolvers = (
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     return supportShape;
   };
+
+  const isSupportedQueuedOptionalEffectBlock = (
+    effect: EffectDefinition["effects"][number],
+  ): effect is EffectDefinition["effects"][number] & {
+    sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  } =>
+    effect.optional === true &&
+    effect.sourcePresencePolicy !== undefined &&
+    evaluateEffectBlockRuntimeSupport(effect).supported;
 
   const resolveQueuedContinuousEffect = (
     state: GameState,
@@ -227,10 +248,11 @@ export const createQueuedEffectResolvers = (
     resolveQueuedEffectDefinition,
     resolveQueuedDrawEffect,
     resolveQueuedDrawUpToEffect,
+    resolveQueuedDrawUpToEffectBlock,
     resolveQueuedContinuousEffect,
     resolveQueuedPlaySourceEffect,
     withoutConditionFields,
     canResolveQueuedDrawFromActivateMainEntry,
-    isSupportedQueuedOptionalDrawEffectBlock,
+    isSupportedQueuedOptionalEffectBlock,
   };
 };

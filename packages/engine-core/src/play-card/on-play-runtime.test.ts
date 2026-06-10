@@ -10,6 +10,7 @@ import type {
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
+import { applyAction } from "../actions.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
@@ -364,6 +365,57 @@ test("supported implemented-dsl Character On Play drawUpTo playCard reachability
   );
 });
 
+test("supported implemented-dsl optional Character On Play drawUpTo prompts before quantity choice", () => {
+  const state = setupMainPlayState();
+  addExtraDeckCard(state);
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "optional on-play character");
+  setupImplementedDslOnPlayDrawUpTo(
+    state,
+    character,
+    "def-on-play-optional-draw-upto",
+    2,
+  );
+  const definition = must(
+    must(state.cardManifest.effectDefinitions, "effect definitions")[
+      "def-on-play-optional-draw-upto"
+    ],
+    "optional drawUpTo definition",
+  );
+  const effect = must(definition.effects[0], "drawUpTo effect");
+  state.cardManifest.effectDefinitions = {
+    "def-on-play-optional-draw-upto": {
+      ...definition,
+      effects: [{ ...effect, optional: true }],
+    },
+  };
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: character.instanceId,
+  });
+  const optionalDecision = must(
+    result.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+  assert.equal(optionalDecision.effectId, effect.id);
+
+  const accepted = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    must(accepted.state.pendingDecision, "quantity decision").type,
+    "chooseQuantity",
+  );
+});
+
 test("false On Play life condition silently drains queued deck-to-life effect after playCard", () => {
   const state = setupMainPlayState();
   addExtraDeckCard(state);
@@ -498,21 +550,6 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
           {
             ...must(definition.effects[0], "effect"),
             effect: { type: "custom" as const, handler: "custom-handler" },
-          },
-        ],
-      }),
-    },
-    {
-      name: "optional-draw-upto",
-      mutate: (
-        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
-      ) => ({
-        ...definition,
-        effects: [
-          {
-            ...must(definition.effects[0], "effect"),
-            optional: true,
-            effect: { type: "drawUpTo" as const, count: 2, player: "self" },
           },
         ],
       }),

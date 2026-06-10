@@ -68,6 +68,29 @@ test("auto runtime admission accepts a supported body primitive through differen
   );
 });
 
+test("auto runtime admission composes optionality with reusable body primitives", () => {
+  const moveCards = {
+    type: "moveCards",
+    count: 1,
+    from: { player: "self", zone: "deck", position: "top" },
+    to: { player: "self", zone: "trash" },
+    order: "original",
+  } as const;
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect: moveCards,
+        optional: true,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+      autoAdapter("onPlay", "mustRemainInSameZone"),
+    ),
+    true,
+  );
+});
+
 test("queued draw support follows reusable auto entry adapters", () => {
   const triggerType = "endOfYourTurn";
   const adapter = autoRuntimeEntryAdapterForTriggerType(triggerType);

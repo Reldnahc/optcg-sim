@@ -111,19 +111,16 @@ export const createQueueEntryResolver = (
         allEvents.push(...cleanup.events);
         continue;
       }
+      let queuedEffectForBodyResolution = queuedEffect;
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
       if (queuedEffect?.optional === true) {
         const optionalSupportShape =
           queuedEffectResolvers.withoutConditionFields(queuedEffect);
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
-          (!queuedEffectResolvers.isSupportedQueuedOptionalDrawEffectBlock(
+          !queuedEffectResolvers.isSupportedQueuedOptionalEffectBlock(
             optionalSupportShape,
-          ) &&
-            !queuedEffectResolvers.canResolveQueuedDrawFromActivateMainEntry(
-              optionalSupportShape,
-              selected,
-            ))
+          )
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
@@ -137,14 +134,19 @@ export const createQueueEntryResolver = (
             return unsupportedEffectQueueResult(originalState);
           }
         }
-        if (acceptedOptionalQueueEntryIds.has(selected.id)) {
-          drawEffect = optionalSupportShape.effect;
-        } else {
+        if (!acceptedOptionalQueueEntryIds.has(selected.id)) {
           const paused = createChooseOptionalActivationDecision(
             nextState,
             selected,
           );
           return { ...paused, events: [...allEvents, ...paused.events] };
+        }
+        queuedEffectForBodyResolution = {
+          ...optionalSupportShape,
+          optional: false,
+        };
+        if (queuedEffectForBodyResolution.effect.type === "draw") {
+          drawEffect = queuedEffectForBodyResolution.effect;
         }
       }
       const targetRequest =
@@ -180,7 +182,7 @@ export const createQueueEntryResolver = (
       const sequenceFrame = createSupportedSequenceFrameDecision(
         nextState,
         selected,
-        queuedEffect,
+        queuedEffectForBodyResolution,
         createSupportedTrashFromHandChoiceDecision,
       );
       if (sequenceFrame !== undefined) {
@@ -193,7 +195,11 @@ export const createQueueEntryResolver = (
             ? toEngineResult(originalState, [], [sequenceFrame.error])
             : unsupportedEffectQueueResult(originalState);
       }
-      const placement = placeTopDeck(nextState, queuedEffect, selected);
+      const placement = placeTopDeck(
+        nextState,
+        queuedEffectForBodyResolution,
+        selected,
+      );
       if (placement !== undefined) return placement;
       const trashFromHandDecision = resolveQueuedTrashFromHandDecision(
         nextState,
@@ -216,27 +222,34 @@ export const createQueueEntryResolver = (
             ])
           : unsupportedEffectQueueResult(originalState);
       }
-      let moveCardsEffect = resolveMoveCardsEffect(queuedEffect, selected);
+      let moveCardsEffect = resolveMoveCardsEffect(
+        queuedEffectForBodyResolution,
+        selected,
+      );
       const playSourceEffect =
         queuedEffectResolvers.resolveQueuedPlaySourceEffect(
           nextState,
           selected,
         );
-      const drawUpToEffect = queuedEffectResolvers.resolveQueuedDrawUpToEffect(
-        nextState,
-        selected,
-      );
+      const drawUpToEffect =
+        queuedEffectResolvers.resolveQueuedDrawUpToEffectBlock(
+          queuedEffectForBodyResolution,
+          selected,
+        ) ??
+        queuedEffectResolvers.resolveQueuedDrawUpToEffect(nextState, selected);
       const winGameEffect =
-        queuedEffect !== undefined &&
-        queuedEffect.sourcePresencePolicy === selected.sourcePresencePolicy &&
-        isSupportedQueuedWinGameEffect(queuedEffect)
-          ? queuedEffect.effect
+        queuedEffectForBodyResolution !== undefined &&
+        queuedEffectForBodyResolution.sourcePresencePolicy ===
+          selected.sourcePresencePolicy &&
+        isSupportedQueuedWinGameEffect(queuedEffectForBodyResolution)
+          ? queuedEffectForBodyResolution.effect
           : undefined;
       const damageEffect =
-        queuedEffect !== undefined &&
-        queuedEffect.sourcePresencePolicy === selected.sourcePresencePolicy &&
-        isSupportedDamageEffect(queuedEffect.effect)
-          ? queuedEffect.effect
+        queuedEffectForBodyResolution !== undefined &&
+        queuedEffectForBodyResolution.sourcePresencePolicy ===
+          selected.sourcePresencePolicy &&
+        isSupportedDamageEffect(queuedEffectForBodyResolution.effect)
+          ? queuedEffectForBodyResolution.effect
           : undefined;
       const queuedContinuousEffect =
         queuedEffectResolvers.resolveQueuedContinuousEffect(
