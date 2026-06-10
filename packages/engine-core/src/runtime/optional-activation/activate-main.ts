@@ -45,6 +45,7 @@ import {
   isSupportedDrawUpToBody,
   isSupportedTrashFromHandBody,
 } from "../../effect-runtime-reusable-body-support.js";
+import { isSupportedTrashFromHandUntilCountBody } from "../primitives/trash-from-hand-until.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import {
   isSupportedDrawBody,
@@ -83,6 +84,7 @@ const isSupportedActivateMainPrimitiveBody = (
   isSupportedDrawBody(effect.effect) ||
   isSupportedDrawUpToBody(effect.effect) ||
   isSupportedTrashFromHandBody(effect.effect) ||
+  isSupportedTrashFromHandUntilCountBody(effect.effect) ||
   isSupportedPlaceTopDeckCardsEffect(effect.effect) ||
   isSupportedWinGameBody(effect.effect) ||
   isSupportedMoveCardsEffect(effect.effect);

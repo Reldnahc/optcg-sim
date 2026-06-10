@@ -431,6 +431,109 @@ test("optional activate main prompts before resolving reusable trashFromHand bod
   );
 });
 
+test("activate main supports reusable trashFromHandUntilCount body through selection", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId(
+    "activate-main-leader-trash-from-hand-until-count-1",
+  );
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-leader-trash-from-hand-until-count",
+    effectId,
+  });
+  const handCount = 3;
+  assert.ok(p1State.hand.length > handCount);
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "trashFromHandUntilCount",
+    player: "self",
+    chooser: "self",
+    handCount,
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const decision = must(result.state.pendingDecision, "selection decision");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.request.zone, "hand");
+  assert.equal(decision.request.min, p1State.hand.length - handCount);
+  assert.equal(decision.request.max, p1State.hand.length - handCount);
+});
+
+test("optional activate main prompts before resolving reusable trashFromHandUntilCount body", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId(
+    "activate-main-optional-trash-from-hand-until-count-1",
+  );
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-trash-from-hand-until-count",
+    effectId,
+    optional: true,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "trashFromHandUntilCount",
+    player: "self",
+    chooser: "self",
+    handCount: 99,
+  };
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const optionalDecision = must(
+    prompted.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.equal(accepted.state.effectQueue.length, 0);
+});
+
 test("activate main supports reusable winGame body", () => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");

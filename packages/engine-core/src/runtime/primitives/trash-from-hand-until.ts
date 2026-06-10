@@ -5,6 +5,7 @@ import type {
   GameState,
 } from "@optcg/types";
 
+import { isScopedActivateMainQueueEntry } from "../optional-activation/activate-main-support.js";
 import { resolvePlayerId } from "./draw.js";
 
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
@@ -27,6 +28,19 @@ const isSupportedTrashFromHandUntilCountShape = (
   Number.isInteger(effect.handCount) &&
   effect.handCount >= 0;
 
+const hasSupportedTrashFromHandUntilCountEffectEnvelope = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: TrashFromHandUntilCountEffect;
+} =>
+  effect.optional !== true &&
+  effect.oncePerTurn !== true &&
+  effect.cost === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined &&
+  isSupportedTrashFromHandUntilCountShape(effect.effect);
+
 export const isSupportedQueuedTrashFromHandUntilCountEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -34,12 +48,20 @@ export const isSupportedQueuedTrashFromHandUntilCountEffect = (
   effect: TrashFromHandUntilCountEffect;
 } =>
   effect.category === "auto" &&
-  effect.optional !== true &&
-  effect.oncePerTurn !== true &&
-  effect.cost === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  isSupportedTrashFromHandUntilCountShape(effect.effect);
+  hasSupportedTrashFromHandUntilCountEffectEnvelope(effect);
+
+export const isSupportedActivateMainTrashFromHandUntilCountEffect = (
+  effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: TrashFromHandUntilCountEffect;
+} =>
+  isScopedActivateMainQueueEntry(entry) &&
+  effect.category === "activate" &&
+  effect.trigger.type === "activateMain" &&
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  hasSupportedTrashFromHandUntilCountEffectEnvelope(effect);
 
 export const isSupportedTrashFromHandUntilCountBody = (
   effect: Effect,

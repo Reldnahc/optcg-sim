@@ -10,6 +10,7 @@ import {
   isSupportedQueuedTrashFromHandEffect,
 } from "../runtime/primitives/trash-from-hand.js";
 import {
+  isSupportedActivateMainTrashFromHandUntilCountEffect,
   isSupportedQueuedTrashFromHandUntilCountEffect,
   resolveTrashFromHandUntilCount,
 } from "../runtime/primitives/trash-from-hand-until.js";
@@ -46,7 +47,10 @@ export const resolveQueuedTrashFromHandDecision = (
   ) {
     return { kind: "decision", effect: match.effect };
   }
-  if (isSupportedQueuedTrashFromHandUntilCountEffect(match)) {
+  if (
+    isSupportedQueuedTrashFromHandUntilCountEffect(match) ||
+    isSupportedActivateMainTrashFromHandUntilCountEffect(match, entry)
+  ) {
     const resolved = resolveTrashFromHandUntilCount(state, entry, match.effect);
     if (resolved.kind === "effect") {
       return { kind: "decision", effect: resolved.effect };
