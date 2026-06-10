@@ -323,6 +323,28 @@ describe("hand layout", () => {
     assert.match(pointerUpSource, /finishPointerReorder/u);
   });
 
+  test("card pointer reorder has a row-relative drag strategy for transformed modals", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardTile.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /type ReorderDragStrategy = "fixed" \| "absolute";/u);
+    assert.match(source, /reorderDragStrategy = "fixed"/u);
+    assert.match(source, /reorderDragStrategy === "absolute"/u);
+    assert.match(source, /originSurfaceLeft/u);
+    assert.match(source, /originSurfaceTop/u);
+    assert.match(source, /position: "absolute"/u);
+    assert.match(
+      source,
+      /left: pointerDrag\.originLeft - pointerDrag\.originSurfaceLeft/u,
+    );
+    assert.match(
+      source,
+      /top: pointerDrag\.originTop - pointerDrag\.originSurfaceTop/u,
+    );
+  });
+
   test("card images do not start native browser image dragging", async () => {
     const styles = await readFile(cardStylesPath, "utf8");
 

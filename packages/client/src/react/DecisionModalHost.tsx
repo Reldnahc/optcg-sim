@@ -232,6 +232,7 @@ export const DecisionModalHost = ({
                     onPreviewMoveNear={orderReorder.onPreviewMoveNear}
                     onMoveNear={orderReorder.onMoveNear}
                     onReorderCancel={orderReorder.onReorderCancel}
+                    reorderDragStrategy="absolute"
                     onHover={onPreviewCard}
                   />
                   {orderReorder.placeholderAfter(instanceId) ? (

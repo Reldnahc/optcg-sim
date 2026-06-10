@@ -160,6 +160,7 @@
 }
 
 .decision-order-card-grid {
+  position: relative;
   align-items: flex-start;
   overflow: visible;
 }

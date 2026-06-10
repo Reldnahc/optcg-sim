@@ -62,6 +62,8 @@ interface PointerReorderDrag {
   originY: number;
   originLeft: number;
   originTop: number;
+  originSurfaceLeft: number;
+  originSurfaceTop: number;
   width: number;
   height: number;
   currentX: number;
@@ -75,7 +77,7 @@ interface PointerReorderTarget {
   placement: ReorderPlacement;
 }
 
-type ReorderDragStrategy = "fixed" | "translate";
+type ReorderDragStrategy = "fixed" | "absolute";
 
 interface PointerReorderFinishEvent {
   pointerId: number;
@@ -185,9 +187,14 @@ export const CardTile = ({
   const pointerDragStyle =
     pointerDrag?.moved !== true
       ? undefined
-      : reorderDragStrategy === "translate"
+      : reorderDragStrategy === "absolute"
         ? ({
+            position: "absolute",
+            left: pointerDrag.originLeft - pointerDrag.originSurfaceLeft,
+            top: pointerDrag.originTop - pointerDrag.originSurfaceTop,
             zIndex: 40,
+            width: pointerDrag.width,
+            height: pointerDrag.height,
             transform: `translate(${String(pointerDrag.currentX - pointerDrag.originX)}px, ${String(pointerDrag.currentY - pointerDrag.originY)}px)`,
             pointerEvents: "none",
           } satisfies CSSProperties)
@@ -333,6 +340,7 @@ export const CardTile = ({
         completedPointerIdRef.current = undefined;
         const reorderRoot =
           event.currentTarget.closest<HTMLElement>(".hand-cards");
+        const reorderRootRect = reorderRoot?.getBoundingClientRect();
         const reorderEntries =
           reorderRoot === null
             ? []
@@ -358,6 +366,8 @@ export const CardTile = ({
           originY: event.clientY,
           originLeft: rect.left,
           originTop: rect.top,
+          originSurfaceLeft: reorderRootRect?.left ?? 0,
+          originSurfaceTop: reorderRootRect?.top ?? 0,
           width: rect.width,
           height: rect.height,
           currentX: event.clientX,
