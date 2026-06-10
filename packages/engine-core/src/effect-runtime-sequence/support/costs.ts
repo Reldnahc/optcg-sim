@@ -74,6 +74,7 @@ export const isSupportedPayCostSegment = (
   }
   return (
     (cost.type === "restDon" ||
+      cost.type === "restFromField" ||
       cost.type === "returnDon" ||
       cost.type === "trashFromHand" ||
       cost.type === "revealFromHand" ||
@@ -82,6 +83,8 @@ export const isSupportedPayCostSegment = (
     (cost.type !== "trashFromHand" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "revealFromHand" ||
+      isSupportedHandSelectionCardFilter(cost.filter)) &&
+    (cost.type !== "restFromField" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "moveCards" ||
       (isSupportedMoveCardsCostRoute(cost) &&

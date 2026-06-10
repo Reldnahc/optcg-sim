@@ -31,6 +31,7 @@ export interface PaymentSpec {
 
 export type PaymentOption =
   | { id: string; type: "restSelf" }
+  | { id: string; type: "restFromField"; count: number; filter?: CardFilter }
   | { id: string; type: "trashSelf"; filter?: CardFilter }
   | {
       id: string;

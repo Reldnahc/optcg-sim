@@ -36,6 +36,11 @@ import {
   expandMoveCardsCostRoutes,
   selectableMoveCardsCostIds,
 } from "./move-card-cost-options.js";
+import { chooseCombos } from "./payment-combos.js";
+import {
+  restFromFieldPaymentLegalActions,
+  restFromFieldPaymentOption,
+} from "./rest-from-field-cost-options.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -399,33 +404,6 @@ export const createChooseEffectOptionDecisionForSequenceSegment = (
   };
 };
 
-const chooseCombos = <T>(values: readonly T[], count: number): T[][] => {
-  if (count === 0) {
-    return [[]];
-  }
-  if (count < 0 || values.length < count) {
-    return [];
-  }
-  const results: T[][] = [];
-  const visit = (start: number, current: T[]): void => {
-    if (current.length === count) {
-      results.push([...current]);
-      return;
-    }
-    for (let index = start; index < values.length; index += 1) {
-      const value = values[index];
-      if (value === undefined) {
-        continue;
-      }
-      current.push(value);
-      visit(index + 1, current);
-      current.pop();
-    }
-  };
-  visit(0, []);
-  return results;
-};
-
 const supportsChooseOneTrashFilter = (
   filter: CardFilter | undefined,
 ): boolean => isSupportedHandSelectionCardFilter(filter);
@@ -632,6 +610,18 @@ export const getSequencePayCostLegalActions = (
       );
       continue;
     }
+    if (option.type === "restFromField") {
+      legalPayments.push(
+        ...restFromFieldPaymentLegalActions(
+          state,
+          playerId,
+          player,
+          decision.id,
+          option,
+        ),
+      );
+      continue;
+    }
     if (option.type === "moveCards") {
       const selectableCardIds = selectableMoveCardsCostIds(
         state,
@@ -749,6 +739,7 @@ export const getSequenceOptionalPayCostOptions = (
         | "restDon"
         | "attachDon"
         | "returnDon"
+        | "restFromField"
         | "trashFromHand"
         | "revealFromHand"
         | "trashFromField"
@@ -770,6 +761,7 @@ export const getSequenceOptionalPayCostOptions = (
           | "returnDon"
           | "trashFromHand"
           | "revealFromHand"
+          | "restFromField"
           | "trashFromField"
           | "moveCards"
           | "turnLifeFaceUp"
@@ -805,6 +797,18 @@ export const getSequenceOptionalPayCostOptions = (
         type: "restDon",
         count: cost.count,
       });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "restFromField") {
+    const option = restFromFieldPaymentOption(
+      state,
+      entry,
+      cost,
+      currentPlayer,
+    );
+    if (option !== undefined) {
+      paymentOptions.push(option);
     }
     return paymentOptions;
   }

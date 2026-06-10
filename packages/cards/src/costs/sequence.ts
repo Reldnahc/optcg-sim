@@ -11,6 +11,7 @@ import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseModifyPowerCost } from "./modify-power.js";
 import { parseRevealFromHandCost } from "./reveal-from-hand.js";
+import { parseRestFromFieldCost } from "./rest-from-field.js";
 import { parseRestSelfCost } from "./rest-self.js";
 import { parseReturnDonSequenceCost } from "./return-don.js";
 import { parseTrashFromHandCost } from "./trash-from-hand.js";
@@ -18,6 +19,7 @@ import { parseTrashSelfCost } from "./trash-self.js";
 
 const costParsers = [
   parseReturnDonSequenceCost,
+  parseRestFromFieldCost,
   parseRestSelfCost,
   parseTrashSelfCost,
   parseAttachDonCost,
@@ -97,6 +99,14 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
         optional: true,
       };
+    case "restFromField":
+      return {
+        type: "restFromField",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        optional: true,
+      };
     case "attachDon":
       return { ...cost, optional: true };
     case "returnDon":
@@ -159,6 +169,13 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
           : { sourcePlayer: cost.sourcePlayer }),
         sourceState: cost.sourceState,
         target: cost.target,
+      };
+    case "restFromField":
+      return {
+        type: "restFromField",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       };
     case "restSelf":
       return { type: "restSelf" };

@@ -368,6 +368,56 @@ test("optional returnDon cost payment records costPaid and returns DON to DON de
   );
 });
 
+test("optional restFromField cost rests a selected active field card", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "restFromField",
+            count: 1,
+            chooser: "self",
+            optional: true,
+          },
+        },
+      },
+      {
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  });
+  const before = must(state.players[p1], "before p1");
+  const leader = before.leader;
+  assert.notEqual(leader.state, "rested");
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(decision.type, "payCost");
+  assert.deepEqual(decision.paymentOptions, [
+    { id: "restFromField", type: "restFromField", count: 1 },
+  ]);
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restFromField",
+      selectedCardInstanceIds: [leader.instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(must(paid.state.players[p1], "after p1").leader.state, "rested");
+  assert.deepEqual(
+    eventTypes(paid.events).filter((type) => type === "costPaid"),
+    ["costPaid"],
+  );
+});
+
 test("active-only returnDon cost exposes and validates only active DON", () => {
   const { state } = sequenceQueueState({
     type: "sequence",

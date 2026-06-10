@@ -28,6 +28,7 @@ import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";
 import { applyTurnLifeFaceUpPayment } from "../../effect-runtime-life-face-up-cost.js";
 import { applyModifyPowerPayment } from "../primitives/modify-power-cost.js";
+import { applyRestFromFieldPaymentResponse } from "../costs/rest-from-field.js";
 import {
   applyMoveCardsPayment,
   isSupportedMoveCardsPaymentRoute,
@@ -126,6 +127,7 @@ export const applyOptionalActivationDecisionResponse = (
       player === undefined ||
       (decision.cost.type !== "restDon" &&
         decision.cost.type !== "restSelf" &&
+        decision.cost.type !== "restFromField" &&
         decision.cost.type !== "trashSelf" &&
         decision.cost.type !== "returnDon" &&
         decision.cost.type !== "attachDon" &&
@@ -191,6 +193,13 @@ export const applyOptionalActivationDecisionResponse = (
         | {
             playerId: PlayerId;
             optionId: "trashFromHand" | "trashFromField" | "revealFromHand";
+            selectedCardInstanceIds: NonNullable<
+              typeof action.response.selectedCardInstanceIds
+            >;
+          }
+        | {
+            playerId: PlayerId;
+            optionId: "restFromField";
             selectedCardInstanceIds: NonNullable<
               typeof action.response.selectedCardInstanceIds
             >;
@@ -419,6 +428,19 @@ export const applyOptionalActivationDecisionResponse = (
           optionId: "revealFromHand",
           selectedCardInstanceIds: selected,
         };
+      } else if (selectedOption.type === "restFromField") {
+        const paid = applyRestFromFieldPaymentResponse({
+          option: selectedOption,
+          player,
+          playerId: decision.playerId,
+          response: paymentResponse,
+          state,
+        });
+        if (!paid.ok) {
+          return toEngineResult(state, [], invalidDecision(paid.message));
+        }
+        nextPlayer = paid.player;
+        costPaidPayload = paid.costPaidPayload;
       } else if (
         selectedOption.type === "trashFromHand" ||
         selectedOption.type === "trashFromField"

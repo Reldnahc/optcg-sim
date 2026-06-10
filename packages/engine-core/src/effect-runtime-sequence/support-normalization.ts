@@ -12,6 +12,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
   switch (cost.type) {
     case "restSelf":
       return { type: "restSelf", optional: true };
+    case "restFromField":
+      return { ...cost, optional: true };
     case "trashSelf":
       return { ...cost, optional: true };
     case "restDon":

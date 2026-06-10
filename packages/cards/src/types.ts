@@ -125,6 +125,7 @@ export type PrimitiveEvidence =
   | "cardinality:upTo"
   | "cardinality:exact"
   | "cost:restSelf"
+  | "cost:restFromField"
   | "cost:restDon"
   | "cost:attachDon"
   | "cost:returnDon"

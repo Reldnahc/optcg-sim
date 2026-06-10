@@ -107,6 +107,104 @@ it("parses active leader power reduction as an optional cost before draw", () =>
   });
 });
 
+it("parses generic own field-card rest as an optional cost before Counter power", () => {
+  expect(
+    parseCardEffectLine(
+      "[Counter] You may rest 1 of your cards: Up to 1 of your Leader or Character cards gains +4000 power during this battle.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "counter" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "restFromField",
+                count: 1,
+                chooser: "self",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "modifyPower",
+              value: 4000,
+              duration: { type: "thisBattle" },
+            },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:eventCounter",
+      "sourcePresence:resolveFromDestination",
+      "composition:optionalCostedEffect",
+      "cost:restFromField",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "chooser:self",
+      "player:self",
+      "filter:any",
+      "instruction:modifyPower",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "chooser:self:upTo",
+      "target:yourLeaderOrCharacters",
+      "player:self",
+      "filter:category:leader",
+      "filter:category:character",
+      "modifier:positivePower",
+      "duration:thisBattle",
+      "composition:entryExpression",
+    ],
+  });
+});
+
+it("parses filtered own field-card rest before an unrelated Main body", () => {
+  expect(
+    parseCardEffectLine(
+      "[Main] You may rest 2 of your {Straw Hat Crew} type Characters: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "restFromField",
+                count: 2,
+                chooser: "self",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Straw Hat Crew"],
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+  });
+});
+
 it("parses explicit active DON return as a reusable optional cost before draw", () => {
   expect(
     parseCardEffectLine(

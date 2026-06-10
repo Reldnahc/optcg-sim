@@ -149,6 +149,13 @@ export type Condition =
 export type Cost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
   | {
+      type: "restFromField";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional?: boolean;
+    }
+  | {
       type: "attachDon";
       count: number;
       sourceState: "active" | "rested";
@@ -282,6 +289,13 @@ export type OptionalCost =
       optional: true;
     }
   | { type: "restSelf"; optional: true }
+  | {
+      type: "restFromField";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional: true;
+    }
   | { type: "trashSelf"; filter?: CardFilter; optional: true }
   | {
       type: "modifyPower";
