@@ -29,6 +29,7 @@ import {
   parseAttributeCategoryPredicate,
   parseAttributeOnlyPredicate,
   parseGenericTypeCardPredicate,
+  parseMultiTypePredicate,
   parseMultiTypeCardPredicate,
   parseMultiTypeCategoryPredicate,
   parseMultiTypeLeaderOrCharacterPredicate,
@@ -36,6 +37,7 @@ import {
   parseTypeCharacterPredicate,
   parseTypeLeaderOrCharacterPredicate,
   parseTypeOnlyPredicate,
+  parseTypeOrAttributePredicate,
   parseTypeOrAttributeCategoryPredicate,
 } from "./type-attribute.js";
 import type { PredicateParser } from "./types.js";
@@ -46,9 +48,11 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseMultiTypeLeaderOrCharacterPredicate,
   parseMultiTypeCardPredicate,
   parseTypeOrAttributeCategoryPredicate,
+  parseTypeOrAttributePredicate,
   parseTypeLeaderOrCharacterPredicate,
   parseTypeCharacterPredicate,
   parseGenericTypeCardPredicate,
+  parseMultiTypePredicate,
   parseQuotedTypeIncludingPredicate,
   parseTypeOnlyPredicate,
   parseAttributeCardPredicate,

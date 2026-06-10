@@ -305,6 +305,32 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses categoryless type alternatives as reusable type filters", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{FILM} or {Straw Hat Crew} type",
+      }),
+    ).toEqual({
+      filter: { typesAny: ["FILM", "Straw Hat Crew"] },
+      evidence: ["filter:type", "filter:type"],
+      rest: "",
+    });
+  });
+
+  it("parses categoryless type-or-attribute alternatives as reusable filters", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{FILM} type or the <Strike> attribute",
+      }),
+    ).toEqual({
+      filter: {
+        anyOf: [{ typesAny: ["FILM"] }, { attributesAny: ["strike"] }],
+      },
+      evidence: ["filter:anyOf", "filter:type", "filter:attribute"],
+      rest: "",
+    });
+  });
+
   it("parses attribute-card or color-event alternatives as reusable filters", () => {
     expect(
       parseCardFilterPredicates({

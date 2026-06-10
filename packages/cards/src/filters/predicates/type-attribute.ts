@@ -110,6 +110,36 @@ export const parseTypeOrAttributeCategoryPredicate: PredicateParser = (
   };
 };
 
+export const parseTypeOrAttributePredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match =
+    /^(?<type>\{[^}]+\}) type or (?:the\s+)?(?<attribute><[^>]+>) attribute\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeText = match?.groups?.["type"];
+  const attributeText = match?.groups?.["attribute"];
+  if (typeText === undefined || attributeText === undefined) {
+    return undefined;
+  }
+
+  const typeName = parseBraceName(typeText);
+  const attribute = parseAngleAttribute(attributeText);
+  if (typeName === undefined || attribute === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      anyOf: [{ typesAny: [typeName] }, { attributesAny: [attribute] }],
+    },
+    evidence: ["filter:anyOf", "filter:type", "filter:attribute"],
+    rest: match?.groups?.["rest"] ?? "",
+  };
+};
+
 export const parseTypeCharacterPredicate: PredicateParser = (text, current) => {
   const match =
     /^(?<type>\{[^}]+\}) type (?<category>Character|Stage)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
@@ -175,6 +205,23 @@ export const parseQuotedTypeIncludingPredicate: PredicateParser = (
   return {
     filter: { ...current, typesIncludeAny: [typeText] },
     evidence: ["filter:type"],
+    rest: match?.groups?.["rest"] ?? "",
+  };
+};
+
+export const parseMultiTypePredicate: PredicateParser = (text, current) => {
+  const match =
+    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeNames = parseBraceNameList(match?.groups?.["types"]);
+  if (typeNames.length < 2) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, typesAny: [...typeNames] },
+    evidence: typeNames.map(() => "filter:type" as const),
     rest: match?.groups?.["rest"] ?? "",
   };
 };

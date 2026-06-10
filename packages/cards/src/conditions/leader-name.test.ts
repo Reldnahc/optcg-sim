@@ -77,6 +77,61 @@ describe("leader name condition parser", () => {
     });
   });
 
+  it("parses leader type alternatives through reusable card filters", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your Leader has the {FILM} or {Straw Hat Crew} type",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          typesAny: ["FILM", "Straw Hat Crew"],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:type",
+        "filter:type",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses leader type-or-attribute alternatives through reusable card filters", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your Leader has the {FILM} type or the <Strike> attribute",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          anyOf: [{ typesAny: ["FILM"] }, { attributesAny: ["strike"] }],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:anyOf",
+        "filter:type",
+        "filter:attribute",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses leader card-name includes as a reusable name filter", () => {
     expect(
       parseLeaderNameCondition({
