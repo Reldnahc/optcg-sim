@@ -12,12 +12,12 @@
 }
 
 .card-preview-content {
-  --card-preview-card-width: clamp(220px, calc(var(--card-height) * 1.55), 360px);
-  --card-preview-panel-min-height: clamp(104px, calc(var(--card-height) * 0.72), 172px);
-  --card-preview-panel-padding-block: clamp(9px, calc(var(--card-height) / 13), 16px);
-  --card-preview-panel-padding-inline: clamp(12px, calc(var(--card-height) / 10), 22px);
-  --card-preview-control-height: clamp(30px, calc(var(--card-height) / 5.4), 40px);
-  --card-preview-button-height: clamp(24px, calc(var(--card-height) / 7), 32px);
+  --card-preview-card-width: clamp(190px, calc(var(--card-height) * 1.25), 300px);
+  --card-preview-panel-min-height: clamp(88px, calc(var(--card-height) * 0.56), 136px);
+  --card-preview-panel-padding-block: clamp(7px, calc(var(--card-height) / 17), 12px);
+  --card-preview-panel-padding-inline: clamp(9px, calc(var(--card-height) / 14), 16px);
+  --card-preview-control-height: clamp(26px, calc(var(--card-height) / 6.6), 34px);
+  --card-preview-button-height: clamp(22px, calc(var(--card-height) / 8.5), 28px);
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;

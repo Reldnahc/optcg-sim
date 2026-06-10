@@ -312,8 +312,8 @@ export const CardPreviewWindow = ({
         .filter(Boolean)
         .join(" ")}
       initialRect={initialRect}
-      minWidth={220}
-      minHeight={180}
+      minWidth={190}
+      minHeight={150}
       docked={docked}
       minimized={minimized}
       zIndex={zIndex}

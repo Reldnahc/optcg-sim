@@ -127,8 +127,8 @@ export const InfoTabbedWindow = ({
         .filter(Boolean)
         .join(" ")}
       initialRect={initialRect}
-      minWidth={260}
-      minHeight={180}
+      minWidth={220}
+      minHeight={140}
       docked={docked}
       minimized={minimized}
       zIndex={zIndex}
