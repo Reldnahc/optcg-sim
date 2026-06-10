@@ -12,10 +12,39 @@ describe("opponent rested Characters condition parser", () => {
       childPrimitiveIds: [
         "player:opponent",
         "condition:comparator:gte",
+        "condition:comparator:eq",
         "condition:threshold:positiveInteger",
         "filter:state:rested",
         "filter:category:character",
       ],
+    });
+  });
+
+  it("parses exact opponent rested Character count thresholds", () => {
+    expect(
+      parseOpponentRestedCharactersCondition({
+        text: "your opponent has 2 rested Characters",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: {
+          categories: ["character"],
+          state: "rested",
+        },
+        op: "eq",
+        value: 2,
+      },
+      evidence: [
+        "condition:opponentFieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+        "filter:state:rested",
+        "filter:category:character",
+      ],
+      rest: "",
     });
   });
 

@@ -7,6 +7,7 @@ export const donFieldCountConditionPrimitive = {
     "player:self",
     "condition:comparator:lte",
     "condition:comparator:gte",
+    "condition:comparator:eq",
     "condition:threshold:positiveInteger",
     "filter:category:don",
     "filter:state:attached",

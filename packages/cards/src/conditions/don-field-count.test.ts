@@ -13,6 +13,7 @@ describe("DON field count condition parser", () => {
         "player:self",
         "condition:comparator:lte",
         "condition:comparator:gte",
+        "condition:comparator:eq",
         "condition:threshold:positiveInteger",
         "filter:category:don",
         "filter:state:attached",
@@ -66,6 +67,30 @@ describe("DON field count condition parser", () => {
         "player:self",
         "filter:category:don",
       ],
+    });
+  });
+
+  it("uses the same comparator parser for exact thresholds", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have 10 DON!! cards on your field",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"] },
+        op: "eq",
+        value: 10,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+      ],
+      rest: "",
     });
   });
 

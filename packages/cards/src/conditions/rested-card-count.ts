@@ -7,6 +7,7 @@ export const restedCardCountConditionPrimitive = {
     "player:self",
     "condition:comparator:gte",
     "condition:comparator:lte",
+    "condition:comparator:eq",
     "condition:threshold:positiveInteger",
     "filter:state:rested",
   ],

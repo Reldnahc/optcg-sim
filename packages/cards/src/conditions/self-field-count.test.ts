@@ -26,6 +26,30 @@ it("parses self field-count thresholds with reusable card filters", () => {
   });
 });
 
+it("parses exact self field-count thresholds with reusable card filters", () => {
+  expect(
+    parseSelfFieldCountCondition({
+      text: "you have 2 Characters",
+    }),
+  ).toEqual({
+    condition: {
+      type: "fieldCount",
+      player: "self",
+      filter: { categories: ["character"] },
+      op: "eq",
+      value: 2,
+    },
+    evidence: [
+      "condition:fieldCount",
+      "condition:comparator:eq",
+      "condition:threshold:positiveInteger",
+      "player:self",
+      "filter:category:character",
+    ],
+    rest: "",
+  });
+});
+
 it("parses singular matching Character presence as a reusable field-count threshold", () => {
   expect(
     parseSelfFieldCountCondition({

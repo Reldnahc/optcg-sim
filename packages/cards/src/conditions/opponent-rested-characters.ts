@@ -7,6 +7,7 @@ export const opponentRestedCharactersConditionPrimitive = {
   childPrimitiveIds: [
     "player:opponent",
     "condition:comparator:gte",
+    "condition:comparator:eq",
     "condition:threshold:positiveInteger",
     "filter:state:rested",
     "filter:category:character",
