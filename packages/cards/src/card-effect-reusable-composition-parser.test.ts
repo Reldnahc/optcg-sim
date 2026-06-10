@@ -39,6 +39,53 @@ describe("card effect reusable parser compositions", () => {
     });
   });
 
+  it("parses implicit damage-or-KO reactions as composed trigger predicates", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] [Once Per Turn] When you take damage or your Character with 6000 base power or more is K.O.'d, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "anyOf",
+          triggers: [
+            { type: "damageDealt", players: ["self"] },
+            {
+              type: "fieldRemoved",
+              player: "self",
+              filter: {
+                categories: ["character"],
+                power: { min: 6000 },
+              },
+              sourceKind: "ko",
+            },
+          ],
+        },
+        oncePerTurn: true,
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 1,
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "marker:attachedDon",
+        "marker:oncePerTurn",
+        "trigger:damageDealt",
+        "trigger:fieldRemoved",
+        "composition:triggerAnyOf",
+        "filter:power",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("parses activated life-removed wording as an optional event reaction", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",

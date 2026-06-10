@@ -9,7 +9,7 @@ import type {
 import { isSupportedActivateMainRuntimeEffectBlock } from "./runtime/optional-activation/activate-main.js";
 import { isSupportedActivatedReactionEffect } from "./runtime/optional-activation/event-reaction.js";
 import {
-  autoRuntimeEntryAdapterForBlock,
+  autoRuntimeEntryAdaptersForBlock,
   isSupportedAutoRuntimeEffectBlock,
 } from "./effect-runtime-block-support.js";
 import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
@@ -36,12 +36,14 @@ export const evaluateEffectBlockRuntimeSupport = (
           );
     }
 
-    const adapter = autoRuntimeEntryAdapterForBlock(block);
-    if (adapter === undefined) {
+    const adapters = autoRuntimeEntryAdaptersForBlock(block);
+    if (adapters.length === 0) {
       return unsupportedEnvelope(block);
     }
 
-    return isSupportedAutoRuntimeEffectBlock(block, adapter)
+    return adapters.every((adapter) =>
+      isSupportedAutoRuntimeEffectBlock(block, adapter),
+    )
       ? supportedBlockReport(block)
       : unsupportedBodyReport(block, "unsupported auto effect body");
   }

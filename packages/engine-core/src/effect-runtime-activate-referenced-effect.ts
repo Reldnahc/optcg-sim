@@ -24,6 +24,7 @@ type ReferencedActivationEffectBlock = EffectDefinition["effects"][number] & {
 };
 
 const isSupportedReferencedTriggerType = (trigger: Trigger): boolean =>
+  trigger.type !== "anyOf" &&
   autoRuntimeEntryAdapterForTriggerType(trigger.type) !== undefined;
 
 const isSupportedActivateReferencedEntryTrigger = (

@@ -6,6 +6,7 @@ import type {
   PlaySelectedEffect,
   SelectTargetsEffect,
   SelectCardsEffect,
+  Trigger,
 } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
@@ -429,25 +430,39 @@ export const isSupportedSequenceBlock = (
 ): effectBlock is SupportedSequenceBlock =>
   toSupportedSequenceBlock(entry, effectBlock, options) !== undefined;
 
+type QueuedAutoSequenceTriggerType =
+  | "onPlay"
+  | "whenAttacking"
+  | "onKO"
+  | "onOpponentAttack"
+  | "endOfYourTurn"
+  | "main"
+  | "trigger"
+  | "counter"
+  | "lifeRemoved"
+  | "damageDealt"
+  | "fieldRemoved"
+  | "handTrashedByEffect"
+  | "opponentActivated";
+
+const sequenceTriggerContainsType = (
+  trigger: Trigger,
+  triggerType: QueuedAutoSequenceTriggerType,
+): boolean =>
+  trigger.type === "anyOf"
+    ? trigger.triggers.some((child) =>
+        sequenceTriggerContainsType(child, triggerType),
+      )
+    : trigger.type === triggerType;
+
 export const isSupportedQueuedAutoSequenceForEntryPoint = (
   effect: EffectDefinition["effects"][number],
-  triggerType:
-    | "onPlay"
-    | "whenAttacking"
-    | "onKO"
-    | "onOpponentAttack"
-    | "endOfYourTurn"
-    | "main"
-    | "trigger"
-    | "counter"
-    | "lifeRemoved"
-    | "handTrashedByEffect"
-    | "opponentActivated",
+  triggerType: QueuedAutoSequenceTriggerType,
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions = {},
 ): effect is SupportedSequenceBlock =>
   effect.category === "auto" &&
-  effect.trigger.type === triggerType &&
+  sequenceTriggerContainsType(effect.trigger, triggerType) &&
   effect.sourcePresencePolicy === sourcePresencePolicy &&
   isSupportedSequenceBlock(
     toSyntheticQueueEntry(sourcePresencePolicy),

@@ -10,6 +10,7 @@ export { replacementInsteadExpressionParser } from "./replacement-effect.js";
 export {
   activatedReactionExpressionParser,
   handTrashedByEffectReactionExpressionParser,
+  implicitEventReactionExpressionParser,
   lifeRemovedReactionExpressionParser,
   opponentEventOrBlockerActivatedExpressionParser,
 } from "./event-reaction.js";

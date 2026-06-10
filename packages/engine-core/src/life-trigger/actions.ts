@@ -77,6 +77,7 @@ const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
   if (
     effect.type === "activateReferencedEffect" &&
     effect.source.type === "triggerCard" &&
+    effect.trigger.type !== "anyOf" &&
     autoRuntimeEntryAdapterForTriggerType(effect.trigger.type) !== undefined
   ) {
     return true;

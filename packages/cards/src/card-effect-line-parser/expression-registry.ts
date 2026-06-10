@@ -33,6 +33,7 @@ import {
   costedEffectExpressionParser,
   entryConditionContinuousExpressionParser,
   handTrashedByEffectReactionExpressionParser,
+  implicitEventReactionExpressionParser,
   instructionExpressionSegmentParser,
   lifeRemovedReactionExpressionParser,
   lookPlayFromTopExpressionParser,
@@ -185,6 +186,9 @@ export const defaultRegistry = {
       ],
     }),
     lifeRemovedReactionExpressionParser({
+      expressions: [generalExpressionParser],
+    }),
+    implicitEventReactionExpressionParser({
       expressions: [generalExpressionParser],
     }),
     handTrashedByEffectReactionExpressionParser({

@@ -17,6 +17,7 @@ import { createOnPlayTriggerQueueing } from "./on-play.js";
 import { createOpponentActivationTriggerQueueing } from "./opponent-activation.js";
 import { createEndOfTurnTriggerQueueing } from "./end-turn.js";
 import { createHandTrashedByEffectTriggerQueueing } from "./hand-trash.js";
+import { createEventReactionTriggerQueueing } from "./event-reaction.js";
 
 export type OnPlayTriggerQueueingFailureReason =
   | "invalid-card-played-event"
@@ -66,6 +67,10 @@ export type OpponentActivationTriggerQueueingFailureReason =
   | "invalid-opponent-activation-event"
   | "unsupported-opponent-activation-definition";
 
+export type EventReactionTriggerQueueingFailureReason =
+  | "invalid-event-reaction"
+  | "unsupported-event-reaction-definition";
+
 export type EndOfYourTurnTriggerQueueingFailureReason =
   | "invalid-end-phase-event"
   | "missing-card-definition"
@@ -101,6 +106,10 @@ interface HandTrashedByEffectTriggerQueueingErrorDetails {
 
 interface OpponentActivationTriggerQueueingErrorDetails {
   reason: OpponentActivationTriggerQueueingFailureReason;
+}
+
+interface EventReactionTriggerQueueingErrorDetails {
+  reason: EventReactionTriggerQueueingFailureReason;
 }
 
 interface EndOfYourTurnTriggerQueueingErrorDetails {
@@ -162,6 +171,7 @@ export interface EffectRuntimeTriggerQueueingHelpers {
   queueOpponentActivationTriggers: (
     state: GameState,
   ) => EngineResult | undefined;
+  queueEventReactionTriggers: (state: GameState) => EngineResult | undefined;
   queueEndOfYourTurnTriggers: (state: GameState) => EngineResult | undefined;
   queueEffectResolvedCustomTriggers: (
     state: GameState,
@@ -238,6 +248,16 @@ const opponentActivationTriggerQueueingError = (
   } satisfies OpponentActivationTriggerQueueingErrorDetails,
 });
 
+const eventReactionTriggerQueueingError = (
+  reason: EventReactionTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "event-reaction-trigger-queueing",
+  details: {
+    reason,
+  } satisfies EventReactionTriggerQueueingErrorDetails,
+});
+
 const endOfYourTurnTriggerQueueingError = (
   reason: EndOfYourTurnTriggerQueueingFailureReason,
 ): EngineError => ({
@@ -275,6 +295,10 @@ export const createEffectRuntimeTriggerQueueing = (
       dependencies,
       opponentActivationTriggerQueueingError,
     );
+  const { queueEventReactionTriggers } = createEventReactionTriggerQueueing(
+    dependencies,
+    eventReactionTriggerQueueingError,
+  );
   const { queueWhenAttackingTriggers, queueOnOpponentAttackTriggers } =
     createAttackTriggerQueueing(
       dependencies,
@@ -296,6 +320,7 @@ export const createEffectRuntimeTriggerQueueing = (
     queueLifeRemovedTriggers,
     queueHandTrashedByEffectTriggers,
     queueOpponentActivationTriggers,
+    queueEventReactionTriggers,
     queueWhenAttackingTriggers,
     queueOnOpponentAttackTriggers,
     queueEffectResolvedCustomTriggers,

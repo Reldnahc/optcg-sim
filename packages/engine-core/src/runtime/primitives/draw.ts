@@ -290,9 +290,16 @@ const isSupportedRequiredDrawEntryPoint = (
     effect.trigger.type === "onPlay" ||
     effect.trigger.type === "whenAttacking" ||
     effect.trigger.type === "onOpponentAttack" ||
+    effect.trigger.type === "damageDealt" ||
+    effect.trigger.type === "fieldRemoved" ||
     effect.trigger.type === "custom"
   ) {
     return true;
+  }
+  if (effect.trigger.type === "anyOf") {
+    return effect.trigger.triggers.some((trigger) =>
+      isSupportedRequiredDrawEntryPoint({ ...effect, trigger }),
+    );
   }
   if (effect.trigger.type === "onKO") {
     return (

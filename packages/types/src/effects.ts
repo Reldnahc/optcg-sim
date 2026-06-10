@@ -42,6 +42,8 @@ export type Trigger =
   | { type: "endOfYourTurn" }
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
+  | { type: "anyOf"; triggers: Trigger[] }
+  | { type: "damageDealt"; players: PlayerRef[] }
   | { type: "lifeRemoved"; players: PlayerRef[] }
   | {
       type: "fieldRemoved";

@@ -15,6 +15,18 @@ const lifeRemovedTrigger = (players: PlayerRef[]): Trigger => ({
   players,
 });
 
+const damageDealtTrigger = (players: PlayerRef[]): Trigger => ({
+  type: "damageDealt",
+  players,
+});
+
+const anyOfTrigger = (triggers: readonly Trigger[]): Trigger => {
+  const first = triggers[0];
+  return first !== undefined && triggers.length === 1
+    ? first
+    : { type: "anyOf", triggers: [...triggers] };
+};
+
 const handTrashedByEffectTrigger = (): Trigger => ({
   type: "handTrashedByEffect",
   player: "self",
@@ -328,6 +340,74 @@ const activatedReactionPredicate = (
   return undefined;
 };
 
+const implicitReactionPredicate = (
+  text: string,
+):
+  | {
+      trigger: Trigger;
+      evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined => {
+  const normalized = text.trim();
+
+  if (normalized.toLowerCase() === "you take damage") {
+    return {
+      trigger: damageDealtTrigger(["self"]),
+      evidence: ["trigger:damageDealt", "player:self"],
+    };
+  }
+
+  const yourTypedKOD = /^your (?<filter>.+) is K\.O\.'d$/iu.exec(normalized);
+  const yourTypedFilter = yourTypedKOD?.groups?.["filter"];
+  if (
+    yourTypedFilter !== undefined &&
+    /\bCharacter(?: card)?\b/iu.test(yourTypedFilter)
+  ) {
+    const parsed = parseCharacterFilter(yourTypedFilter);
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        player: "self",
+        filter: parsed.filter,
+        sourceKind: "ko",
+      },
+      evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
+    };
+  }
+
+  return undefined;
+};
+
+const implicitReactionPredicates = (
+  text: string,
+):
+  | {
+      trigger: Trigger;
+      evidence: ExpressionParseResult["evidence"];
+    }
+  | undefined => {
+  const predicates = text
+    .split(/\s+or\s+(?=you(?:r)?\b)/iu)
+    .map((part) => implicitReactionPredicate(part));
+  if (predicates.some((predicate) => predicate === undefined)) {
+    return undefined;
+  }
+  const parsed = predicates.filter(
+    (predicate): predicate is NonNullable<typeof predicate> =>
+      predicate !== undefined,
+  );
+  if (parsed.length === 0) {
+    return undefined;
+  }
+  return {
+    trigger: anyOfTrigger(parsed.map((predicate) => predicate.trigger)),
+    evidence: [
+      ...parsed.flatMap((predicate) => predicate.evidence),
+      ...(parsed.length > 1 ? (["composition:triggerAnyOf"] as const) : []),
+    ],
+  };
+};
+
 const activatedReactionBodyPredicate = (
   predicate: ReturnType<typeof activatedReactionPredicate>,
   when: string,
@@ -417,6 +497,47 @@ export function lifeRemovedReactionExpressionParser(options: {
         blockPatch: {
           category: "auto",
           trigger: lifeRemovedTrigger(["self", "opponent"]),
+        },
+        ...(parsed.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: parsed.presentationSpans }),
+      };
+    }
+
+    return undefined;
+  };
+}
+
+export function implicitEventReactionExpressionParser(options: {
+  readonly expressions: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input: ParseInput) => {
+    const match = /^When (?<when>.+?),\s*(?<body>.+)$/iu.exec(input.text);
+    const when = match?.groups?.["when"];
+    const body = match?.groups?.["body"];
+    if (when === undefined || body === undefined) {
+      return undefined;
+    }
+    const predicate = implicitReactionPredicates(when);
+    if (predicate === undefined) {
+      return undefined;
+    }
+
+    for (const expressionParser of options.expressions) {
+      const parsed = parseReactionBody(expressionParser, input, body);
+      if (parsed === undefined || parsed.rest.length > 0) {
+        continue;
+      }
+      return {
+        effect: parsed.effect,
+        evidence: [...predicate.evidence, ...parsed.evidence],
+        rest: "",
+        blockPatch: {
+          ...parsed.blockPatch,
+          category: "auto",
+          trigger: predicate.trigger,
         },
         ...(parsed.presentationSpans === undefined
           ? {}

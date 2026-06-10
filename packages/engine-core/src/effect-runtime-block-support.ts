@@ -18,11 +18,12 @@ import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-seq
 import { isSupportedTrashFromHandUntilCountBody } from "./runtime/primitives/trash-from-hand-until.js";
 
 type EffectBlock = EffectDefinition["effects"][number];
+type AutoRuntimeTriggerType = Exclude<Trigger["type"], "anyOf">;
 
 export interface AutoRuntimeEntryAdapter {
   readonly category: "auto";
   readonly sourcePresencePolicies: readonly SourcePresencePolicy[];
-  readonly triggerType: Trigger["type"];
+  readonly triggerType: AutoRuntimeTriggerType;
 }
 
 const autoAdapter = (
@@ -35,7 +36,7 @@ const autoAdapter = (
 });
 
 export const autoRuntimeEntryAdapterForTriggerType = (
-  triggerType: Trigger["type"],
+  triggerType: AutoRuntimeTriggerType,
 ): AutoRuntimeEntryAdapter | undefined => {
   if (triggerType === "onPlay") {
     return autoAdapter("onPlay", ["mustRemainInSameZone"]);
@@ -70,6 +71,12 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "lifeRemoved") {
     return autoAdapter("lifeRemoved", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "damageDealt") {
+    return autoAdapter("damageDealt", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "fieldRemoved") {
+    return autoAdapter("fieldRemoved", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "handTrashedByEffect") {
     return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
   }
@@ -79,14 +86,36 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   return undefined;
 };
 
+const triggerTypes = (trigger: Trigger): readonly AutoRuntimeTriggerType[] =>
+  trigger.type === "anyOf"
+    ? trigger.triggers.flatMap(triggerTypes)
+    : [trigger.type];
+
+export const triggerContainsType = (
+  trigger: Trigger,
+  triggerType: AutoRuntimeTriggerType,
+): boolean => triggerTypes(trigger).includes(triggerType);
+
+export const autoRuntimeEntryAdaptersForBlock = (
+  block: EffectBlock,
+): readonly AutoRuntimeEntryAdapter[] => {
+  if (block.sourcePresencePolicy === undefined) {
+    return [];
+  }
+  const adapters = triggerTypes(block.trigger).map((triggerType) =>
+    autoRuntimeEntryAdapterForTriggerType(triggerType),
+  );
+  return adapters.every(
+    (adapter): adapter is AutoRuntimeEntryAdapter => adapter !== undefined,
+  )
+    ? adapters
+    : [];
+};
+
 export const autoRuntimeEntryAdapterForBlock = (
   block: EffectBlock,
-): AutoRuntimeEntryAdapter | undefined => {
-  if (block.sourcePresencePolicy === undefined) {
-    return undefined;
-  }
-  return autoRuntimeEntryAdapterForTriggerType(block.trigger.type);
-};
+): AutoRuntimeEntryAdapter | undefined =>
+  autoRuntimeEntryAdaptersForBlock(block)[0];
 
 const isSupportedDrawUpToBody = (
   effect: Effect,
@@ -101,6 +130,7 @@ const isSupportedActivateReferencedEffectBody = (
 ): effect is Extract<Effect, { type: "activateReferencedEffect" }> =>
   effect.type === "activateReferencedEffect" &&
   effect.source.type === "triggerCard" &&
+  effect.trigger.type !== "anyOf" &&
   autoRuntimeEntryAdapterForTriggerType(effect.trigger.type) !== undefined;
 
 const isSupportedPlaySourceBody = (
@@ -149,6 +179,8 @@ const isQueuedAutoSequenceTriggerType = (
   | "trigger"
   | "counter"
   | "lifeRemoved"
+  | "damageDealt"
+  | "fieldRemoved"
   | "handTrashedByEffect"
   | "opponentActivated" =>
   triggerType === "onPlay" ||
@@ -160,6 +192,8 @@ const isQueuedAutoSequenceTriggerType = (
   triggerType === "trigger" ||
   triggerType === "counter" ||
   triggerType === "lifeRemoved" ||
+  triggerType === "damageDealt" ||
+  triggerType === "fieldRemoved" ||
   triggerType === "handTrashedByEffect" ||
   triggerType === "opponentActivated";
 
@@ -206,7 +240,7 @@ const hasSupportedBlockEnvelope = (
   adapter: AutoRuntimeEntryAdapter,
 ): block is EffectBlock & { sourcePresencePolicy: SourcePresencePolicy } =>
   block.category === adapter.category &&
-  block.trigger.type === adapter.triggerType &&
+  triggerContainsType(block.trigger, adapter.triggerType) &&
   block.sourcePresencePolicy !== undefined &&
   adapter.sourcePresencePolicies.includes(block.sourcePresencePolicy) &&
   block.cost === undefined &&
