@@ -107,6 +107,133 @@ it("parses active leader power reduction as an optional cost before draw", () =>
   });
 });
 
+it("parses explicit active DON return as a reusable optional cost before draw", () => {
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] You may return 8 of your active DON!! cards to your DON!! deck: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "returnDon",
+                count: 8,
+                sourceState: "active",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:activateMain",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "cost:returnDon",
+      "count:positiveInteger",
+      "state:active",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
+it("composes active DON return with multi-card hand play using existing body primitives", () => {
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] You may return 8 of your active DON!! cards to your DON!! deck: Play up to 3 {Admiral} type Character cards with different card names from your hand.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "returnDon",
+                count: 8,
+                sourceState: "active",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 3,
+                    filter: {
+                      categories: ["character"],
+                      typesAny: ["Admiral"],
+                      custom: "differentNames",
+                    },
+                    visibility: "chooserOnly",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "playSelected",
+                    ignoreCost: true,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:activateMain",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "cost:returnDon",
+      "count:positiveInteger",
+      "state:active",
+      "instruction:playSelected",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "zone:hand",
+      "player:self",
+      "chooser:self:upTo",
+      "filter:type",
+      "filter:category:character",
+      "filter:differentNames",
+      "composition:selectThenPlay",
+      "composition:entryExpression",
+    ],
+  });
+});
+
 it("parses deck-top trash as a reusable move-cards cost before draw", () => {
   expect(
     parseCardEffectLine(

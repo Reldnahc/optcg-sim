@@ -159,6 +159,7 @@ export type Cost =
       type: "returnDon";
       count: number;
       chooser?: PlayerRef;
+      sourceState?: "active";
       optional?: boolean;
     }
   | { type: "restSelf"; optional?: boolean }
@@ -273,7 +274,13 @@ export type OptionalCost =
       target: Target;
       optional: true;
     }
-  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | {
+      type: "returnDon";
+      count: number;
+      chooser?: PlayerRef;
+      sourceState?: "active";
+      optional: true;
+    }
   | { type: "restSelf"; optional: true }
   | { type: "trashSelf"; filter?: CardFilter; optional: true }
   | {

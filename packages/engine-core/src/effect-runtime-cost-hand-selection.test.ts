@@ -215,6 +215,28 @@ const placeActiveDon = (state: GameState, playerId = p1): void => {
   ];
 };
 
+const placeRestedDon = (state: GameState, playerId = p1): void => {
+  const player = must(state.players[playerId], "player");
+  const don = must(player.donDeck[0], "don");
+  player.donDeck = player.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId, slot: "donDeck", index },
+  }));
+  player.costArea = [
+    ...player.costArea,
+    {
+      ...don,
+      zone: {
+        zone: "costArea",
+        playerId,
+        slot: "cost",
+        index: player.costArea.length,
+      },
+      state: "rested",
+    },
+  ];
+};
+
 const attachFirstCostDonToLeader = (
   state: GameState,
   playerId = p1,
@@ -343,6 +365,84 @@ test("optional returnDon cost payment records costPaid and returns DON to DON de
   assert.deepEqual(
     eventTypes(paid.events).filter((type) => type === "costPaid"),
     ["costPaid"],
+  );
+});
+
+test("active-only returnDon cost exposes and validates only active DON", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "returnDon",
+            count: 1,
+            sourceState: "active",
+            optional: true,
+          },
+        },
+      },
+      {
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  });
+  placeRestedDon(state);
+  placeActiveDon(state);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(decision.type, "payCost");
+  assert.deepEqual(decision.paymentOptions, [
+    {
+      id: "returnDon",
+      type: "returnDon",
+      count: 1,
+      sourceState: "active",
+    },
+  ]);
+  const player = must(paused.state.players[p1], "paused p1");
+  const rested = must(
+    player.costArea.find((card) => card.state === "rested"),
+    "rested DON",
+  );
+  const active = must(
+    player.costArea.find((card) => card.state === "active"),
+    "active DON",
+  );
+
+  const rejected = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: [rested.instanceId],
+    },
+  });
+  assert.equal(
+    must(rejected.errors, "rested selection errors")[0]?.type,
+    "invalidDecisionResponse",
+  );
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: [active.instanceId],
+    },
+  });
+  assert.equal(paid.errors, undefined);
+  assert.equal(
+    must(paid.state.players[p1], "after p1").costArea.some(
+      (card) => card.instanceId === active.instanceId,
+    ),
+    false,
   );
 });
 

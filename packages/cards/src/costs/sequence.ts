@@ -104,6 +104,9 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         type: "returnDon",
         count: cost.count,
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
+        ...(cost.sourceState === undefined
+          ? {}
+          : { sourceState: cost.sourceState }),
         optional: true,
       };
     case "restSelf":
@@ -176,6 +179,9 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         type: "returnDon",
         count: cost.count,
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
+        ...(cost.sourceState === undefined
+          ? {}
+          : { sourceState: cost.sourceState }),
       };
     case "trashFromHand":
       return {

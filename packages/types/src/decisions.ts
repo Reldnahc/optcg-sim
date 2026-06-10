@@ -48,7 +48,7 @@ export type PaymentOption =
       sourceState: "active" | "rested";
       target: Target;
     }
-  | { id: string; type: "returnDon"; count: number }
+  | { id: string; type: "returnDon"; count: number; sourceState?: "active" }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "revealFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }

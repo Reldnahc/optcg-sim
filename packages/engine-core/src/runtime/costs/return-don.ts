@@ -36,27 +36,37 @@ const isCostAreaDonEligible = (
 
 export const getReturnDonEligibleInstanceIds = (
   player: PlayerState,
+  sourceState?: "active",
 ): CardInstance["instanceId"][] => {
   const attachedHostMap = buildAttachedDonHostMap(player);
   return player.costArea
     .filter((card) =>
-      isCostAreaDonEligible(card, player.playerId, attachedHostMap),
+      sourceState === "active"
+        ? card.owner === player.playerId &&
+          card.controller === player.playerId &&
+          card.state === "active"
+        : isCostAreaDonEligible(card, player.playerId, attachedHostMap),
     )
     .map((card) => card.instanceId);
 };
 
-export const getReturnDonEligibleCount = (player: PlayerState): number =>
-  getReturnDonEligibleInstanceIds(player).length;
+export const getReturnDonEligibleCount = (
+  player: PlayerState,
+  sourceState?: "active",
+): number => getReturnDonEligibleInstanceIds(player, sourceState).length;
 
 export const applyReturnDonPayment = (params: {
   player: PlayerState;
   playerId: PlayerId;
   selectedDonIds: readonly CardInstance["instanceId"][];
+  sourceState?: "active";
 }): PlayerState | null => {
-  const { player, playerId, selectedDonIds } = params;
+  const { player, playerId, selectedDonIds, sourceState } = params;
   const attachedHostMap = buildAttachedDonHostMap(player);
   const selectedSet = new Set(selectedDonIds);
-  const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
+  const eligibleIds = new Set(
+    getReturnDonEligibleInstanceIds(player, sourceState),
+  );
   for (const selectedId of selectedSet) {
     if (!eligibleIds.has(selectedId)) {
       return null;

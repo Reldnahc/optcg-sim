@@ -16,7 +16,7 @@ export interface CostParseResult {
 
 export const returnDonCostPrimitive = {
   primitiveId: "cost:returnDon",
-  matches: [{ id: "don-minus-n" }],
+  matches: [{ id: "don-minus-n" }, { id: "return-active-don" }],
 } as const;
 
 export function parseReturnDonCost(
@@ -62,19 +62,29 @@ export function parseReturnDonCost(
 export function parseReturnDonSequenceCost(
   input: ParseInput,
 ): SequenceCostParseResult | undefined {
-  const match = /^DON!!\s*[-\u2212](?<count>[1-9]\d*)$/iu.exec(input.text);
+  const match =
+    /^DON!!\s*[-\u2212](?<count>[1-9]\d*)$/iu.exec(input.text) ??
+    /^return (?<count>[1-9]\d*) of your active DON!! cards? to your DON!! deck$/iu.exec(
+      input.text,
+    );
   const countText = match?.groups?.["count"];
   if (countText === undefined) {
     return undefined;
   }
+  const sourceState = /^return\b/iu.test(input.text) ? "active" : undefined;
 
   return {
     cost: {
       type: "returnDon",
       count: Number.parseInt(countText, 10),
+      ...(sourceState === undefined ? {} : { sourceState }),
       optional: true,
     },
-    evidence: ["cost:returnDon", "count:positiveInteger"],
+    evidence: [
+      "cost:returnDon",
+      "count:positiveInteger",
+      ...(sourceState === undefined ? [] : (["state:active"] as const)),
+    ],
     rest: "",
   };
 }

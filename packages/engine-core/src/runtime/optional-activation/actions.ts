@@ -714,7 +714,9 @@ export const applyOptionalActivationDecisionResponse = (
             ),
           };
         } else {
-          const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
+          const eligibleIds = new Set(
+            getReturnDonEligibleInstanceIds(player, selectedOption.sourceState),
+          );
           for (const donId of selected) {
             if (!eligibleIds.has(donId)) {
               return toEngineResult(
@@ -728,6 +730,9 @@ export const applyOptionalActivationDecisionResponse = (
             player,
             playerId: decision.playerId,
             selectedDonIds: selected,
+            ...(selectedOption.sourceState === undefined
+              ? {}
+              : { sourceState: selectedOption.sourceState }),
           });
           if (returned === null) {
             return toEngineResult(

@@ -684,7 +684,7 @@ export const getSequencePayCostLegalActions = (
     if (option.type === "restDon" || option.type === "returnDon") {
       const selectableDonIds =
         option.type === "returnDon"
-          ? getReturnDonEligibleInstanceIds(player)
+          ? getReturnDonEligibleInstanceIds(player, option.sourceState)
           : player.costArea
               .filter((card) => card.state === "active")
               .map((card) => card.instanceId);
@@ -778,8 +778,6 @@ export const getSequenceOptionalPayCostOptions = (
     >
   > = [];
   const currentPlayer = state.players[entry.controllerId];
-  const returnDonEligibleCount =
-    currentPlayer === undefined ? 0 : getReturnDonEligibleCount(currentPlayer);
 
   if (cost.type === "restSelf") {
     if (findRestableSource(state, entry) !== undefined) {
@@ -827,11 +825,18 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "returnDon") {
+    const returnDonEligibleCount =
+      currentPlayer === undefined
+        ? 0
+        : getReturnDonEligibleCount(currentPlayer, cost.sourceState);
     if (returnDonEligibleCount >= cost.count) {
       paymentOptions.push({
         id: "returnDon",
         type: "returnDon",
         count: cost.count,
+        ...(cost.sourceState === undefined
+          ? {}
+          : { sourceState: cost.sourceState }),
       });
     }
     return paymentOptions;
