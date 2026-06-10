@@ -11,6 +11,7 @@ import {
   parseOpponentRestedCharactersCondition,
   parseRestedCardCountCondition,
   parseSelfFieldCountCondition,
+  parseSourcePlayedThisTurnCondition,
   parseTrashCountCondition,
   parseTurnCountCondition,
 } from "../conditions/index.js";
@@ -138,6 +139,7 @@ export const conditionParsers = [
   parseNoOtherNamedCharactersCondition,
   parseOnlyMatchingFieldCardsCondition,
   parseTurnCountCondition,
+  parseSourcePlayedThisTurnCondition,
 ] as const;
 
 export const continuousInstructionParsers = [

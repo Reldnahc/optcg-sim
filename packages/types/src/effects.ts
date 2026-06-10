@@ -134,6 +134,7 @@ export type Condition =
   | { type: "hasCardInZone"; zone: Zone; player: PlayerRef; filter: CardFilter }
   | { type: "attackTarget"; targetType: "leader" | "character" | "any" }
   | { type: "cardState"; target: Target; state: "active" | "rested" }
+  | { type: "sourcePlayedThisTurn" }
   | { type: "sourceStillInZone" }
   | { type: "eventPayload"; path: string; op: Comparator; value: unknown }
   | { type: "and"; conditions: Condition[] }

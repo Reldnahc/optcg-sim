@@ -115,3 +115,161 @@ it("parses Trigger effect negation over the same reusable Leader or Character ta
     },
   });
 });
+
+it("parses When Attacking negation over opponent Leader and all Characters as reusable invalidate effects", () => {
+  const result = parseCardEffectLine(
+    "[When Attacking] Negate the effects of your opponent's Leader and all of their Characters during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "invalidateEffects",
+              target: {
+                type: "all",
+                player: "opponent",
+                zone: "leaderArea",
+                filter: { categories: ["leader"] },
+              },
+              duration: { type: "thisTurn" },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "invalidateEffects",
+              target: {
+                type: "all",
+                player: "opponent",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+              },
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "instruction:invalidateEffects",
+      "target:opponentLeader",
+      "target:opponentCharacters",
+      "cardinality:all",
+      "duration:thisTurn",
+      "composition:sequence",
+    ]),
+  );
+});
+
+it("parses Activate Main negation for selected Leader then selected Character attack restriction", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] If your Leader has the {Blackbeard Pirates} type and this Character was played on this turn, negate the effect of up to 1 of your opponent's Leader during this turn. Then, negate the effect of up to 1 of your opponent's Characters and that Character cannot attack until the end of your opponent's next turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      condition: {
+        type: "and",
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zone: "leaderArea",
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["leader"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "invalidateEffects",
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zone: "characterArea",
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "invalidateEffects",
+                    duration: {
+                      type: "untilEndOfNextTurn",
+                      player: "opponent",
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "cannotAttack",
+                    duration: {
+                      type: "untilEndOfNextTurn",
+                      player: "opponent",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "composition:conditionAnd",
+      "instruction:invalidateEffects",
+      "target:opponentLeader",
+      "target:opponentCharacters",
+      "instruction:preventActivation",
+      "duration:thisTurn",
+      "duration:opponentNextEndPhase",
+      "composition:selectThenApply",
+    ]),
+  );
+});

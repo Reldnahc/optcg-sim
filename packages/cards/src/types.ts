@@ -216,6 +216,7 @@ export type PrimitiveEvidence =
   | "condition:turnCount"
   | "condition:yourTurn"
   | "condition:opponentTurn"
+  | "condition:sourcePlayedThisTurn"
   | "position:top"
   | "target:thisCard"
   | "target:thisStage"

@@ -1,7 +1,10 @@
-import type { Effect, Target } from "@optcg/types";
+import type { Effect, SavedFieldObjectZone, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import { parseThisTurnDuration } from "../durations/index.js";
+import {
+  parseOpponentNextEndPhaseDuration,
+  parseThisTurnDuration,
+} from "../durations/index.js";
 import { parseNegativePowerModifier } from "../modifiers/index.js";
 import {
   parseOpponentCharactersTarget,
@@ -15,8 +18,12 @@ export const invalidateEffectsInstructionPrimitive = {
   primitiveId: "instruction:invalidateEffects",
   childPrimitiveIds: [
     "cardinality:upTo",
+    "cardinality:all",
+    "target:opponentLeader",
     "target:opponentCharacters",
+    "target:opponentLeaderOrCharacters",
     "duration:thisTurn",
+    "duration:opponentNextEndPhase",
     "composition:selectThenApply",
   ],
 } as const;
@@ -42,10 +49,18 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
     };
   }
 
-  const actionMatch = /^Negate the effect of\s+(?<rest>.*)$/i.exec(input.text);
+  const actionMatch = /^Negate the effects? of\s+(?<rest>.*)$/i.exec(
+    input.text,
+  );
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  const opponentLeaderAndAllCharacters =
+    parseOpponentLeaderAndAllCharactersInvalidateEffects(actionRest);
+  if (opponentLeaderAndAllCharacters !== undefined) {
+    return opponentLeaderAndAllCharacters;
   }
 
   const cardinality = parseUpToCardinality({ text: actionRest });
@@ -53,11 +68,42 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
+  const opponentLeader = parseOpponentLeaderTarget(cardinality.rest);
+  if (opponentLeader !== undefined) {
+    const combined = parseOptionalFollowupEffects(opponentLeader.rest);
+    if (combined === undefined) {
+      return undefined;
+    }
+    return {
+      effect: selectThenApplyInvalidateEffects(
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+        opponentLeader.filter,
+        combined.duration,
+        {
+          zones: ["leaderArea"],
+          ...(combined.followupEffects === undefined
+            ? {}
+            : { followupEffects: combined.followupEffects }),
+        },
+      ),
+      evidence: [
+        "instruction:invalidateEffects",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...opponentLeader.evidence,
+        ...combined.evidence,
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const leaderOrCharacter = parseOpponentLeaderOrCharacterCardsTarget({
     text: cardinality.rest,
   });
   if (leaderOrCharacter?.target?.type === "chooseFromZones") {
-    const combined = parseOptionalThatCardPowerModifier(leaderOrCharacter.rest);
+    const combined = parseOptionalFollowupEffects(leaderOrCharacter.rest);
     if (combined === undefined) {
       return undefined;
     }
@@ -71,9 +117,12 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
         combined.duration,
         {
           zones: ["leaderArea", "characterArea"],
-          ...(combined.powerModifier === undefined
+          ...(combined.followupPowerModifier === undefined
             ? {}
-            : { followupPowerModifier: combined.powerModifier }),
+            : { followupPowerModifier: combined.followupPowerModifier }),
+          ...(combined.followupEffects === undefined
+            ? {}
+            : { followupEffects: combined.followupEffects }),
         },
       ),
       evidence: [
@@ -93,8 +142,8 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const duration = parseThisTurnDuration({ text: target.rest });
-  if (duration?.duration === undefined) {
+  const combined = parseOptionalFollowupEffects(target.rest);
+  if (combined === undefined) {
     return undefined;
   }
 
@@ -103,20 +152,121 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
       cardinality.cardinality.min,
       cardinality.cardinality.max,
       target.filter ?? { categories: ["character"] },
-      duration.duration,
-      { zones: ["characterArea"] },
+      combined.duration,
+      {
+        zones: ["characterArea"],
+        ...(combined.followupEffects === undefined
+          ? {}
+          : { followupEffects: combined.followupEffects }),
+      },
     ),
     evidence: [
       "instruction:invalidateEffects",
       ...cardinality.evidence,
       "chooser:self:upTo",
       ...target.evidence,
-      ...duration.evidence,
+      ...combined.evidence,
       "composition:selectThenApply",
     ],
     rest: "",
   };
 };
+
+function parseOpponentLeaderAndAllCharactersInvalidateEffects(
+  text: string,
+): InstructionParseResult | undefined {
+  const match =
+    /^your opponent's Leader and all of (?:their|your opponent's) Characters?\s+(?<duration>.*)$/iu.exec(
+      text,
+    );
+  const durationText = match?.groups?.["duration"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+  const duration = parseThisTurnDuration({ text: durationText });
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "invalidateEffects",
+            target: opponentLeaderAllTarget(),
+            duration: duration.duration,
+          },
+        },
+        {
+          connector: "always",
+          effect: {
+            type: "invalidateEffects",
+            target: {
+              type: "all",
+              player: "opponent",
+              zone: "characterArea",
+              filter: { categories: ["character"] },
+            },
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:invalidateEffects",
+      "target:opponentLeader",
+      "player:opponent",
+      "zone:leaderArea",
+      "filter:category:leader",
+      "cardinality:all",
+      "target:opponentCharacters",
+      "zone:characterArea",
+      "filter:category:character",
+      ...duration.evidence,
+      "composition:sequence",
+    ],
+    rest: "",
+  };
+}
+
+function opponentLeaderAllTarget(): Extract<Target, { type: "all" }> {
+  return {
+    type: "all",
+    player: "opponent",
+    zone: "leaderArea",
+    filter: { categories: ["leader"] },
+  };
+}
+
+function parseOpponentLeaderTarget(text: string):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: NonNullable<
+        Extract<Target, { type: "choose" }>["request"]["filter"]
+      >;
+      readonly rest: string;
+    }
+  | undefined {
+  const match = /^of your opponent's Leader(?!\s+or\b)\b\s*(?<rest>.*)$/iu.exec(
+    text,
+  );
+  if (match === null) {
+    return undefined;
+  }
+  return {
+    evidence: [
+      "target:opponentLeader",
+      "player:opponent",
+      "zone:leaderArea",
+      "filter:category:leader",
+    ],
+    filter: { categories: ["leader"] },
+    rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
 
 function selectThenApplyInvalidateEffects(
   min: number,
@@ -124,9 +274,8 @@ function selectThenApplyInvalidateEffects(
   filter: TargetFilter,
   duration: Extract<Effect, { type: "invalidateEffects" }>["duration"],
   options: {
-    readonly zones:
-      | readonly ["characterArea"]
-      | readonly ["leaderArea", "characterArea"];
+    readonly zones: readonly [SavedFieldObjectZone, ...SavedFieldObjectZone[]];
+    readonly followupEffects?: readonly Effect[];
     readonly followupPowerModifier?: number;
   },
 ): Effect {
@@ -144,7 +293,7 @@ function selectThenApplyInvalidateEffects(
                 timing: "onResolution",
                 chooser: "self",
                 player: "opponent",
-                zone: "characterArea",
+                zone: options.zones[0],
                 min,
                 max,
                 allowFewerIfUnavailable: true,
@@ -174,6 +323,13 @@ function selectThenApplyInvalidateEffects(
     },
   ];
 
+  for (const followup of options.followupEffects ?? []) {
+    effects.push({
+      connector: "then",
+      effect: followup,
+    });
+  }
+
   if (options.followupPowerModifier !== undefined) {
     effects.push({
       connector: "then",
@@ -193,7 +349,7 @@ function selectThenApplyInvalidateEffects(
 }
 
 function selectedInvalidateEffectsTarget(
-  zones: readonly ["characterArea"] | readonly ["leaderArea", "characterArea"],
+  zones: readonly [SavedFieldObjectZone, ...SavedFieldObjectZone[]],
 ): Target {
   return {
     type: "savedFieldObject",
@@ -253,6 +409,63 @@ function parseOptionalThatCardPowerModifier(text: string):
   };
 }
 
+function parseOptionalFollowupEffects(text: string):
+  | {
+      readonly duration: Extract<
+        Effect,
+        { type: "invalidateEffects" }
+      >["duration"];
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly followupEffects?: readonly Effect[];
+      readonly followupPowerModifier?: number;
+    }
+  | undefined {
+  const powerModifier = parseOptionalThatCardPowerModifier(text);
+  if (powerModifier !== undefined) {
+    return {
+      duration: powerModifier.duration,
+      evidence: powerModifier.evidence,
+      ...(powerModifier.powerModifier === undefined
+        ? {}
+        : { followupPowerModifier: powerModifier.powerModifier }),
+    };
+  }
+
+  const cannotAttackMatch =
+    /^and that Character cannot attack\s+(?<duration>.*)$/iu.exec(text);
+  const cannotAttackDurationText = cannotAttackMatch?.groups?.["duration"];
+  if (cannotAttackDurationText === undefined) {
+    return undefined;
+  }
+  const duration =
+    parseOpponentNextEndPhaseDuration({ text: cannotAttackDurationText }) ??
+    parseThisTurnDuration({ text: cannotAttackDurationText });
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  return {
+    duration: duration.duration,
+    evidence: [
+      "instruction:preventActivation",
+      "reference:thatCharacter",
+      "target:thatCharacter",
+      ...duration.evidence,
+    ],
+    followupEffects: [
+      {
+        type: "cannotAttack",
+        target: selectedInvalidateEffectsTarget(["characterArea"]),
+        duration: duration.duration,
+      },
+    ],
+  };
+}
+
 type TargetFilter = NonNullable<
   Extract<Target, { type: "choose" }>["request"]["filter"]
 >;
+type InstructionParseResult = ReturnType<InstructionParser>;

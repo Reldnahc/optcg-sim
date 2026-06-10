@@ -162,6 +162,25 @@ const evaluateAttachedDonCount = (
   };
 };
 
+const evaluateSourcePlayedThisTurn = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): ConditionEvaluationResult => {
+  const source = findLiveSourceFieldCard(state, entry);
+  if (
+    source === undefined ||
+    source.cardId !== entry.source.cardId ||
+    source.controller !== entry.source.playerId ||
+    source.zone.zone !== "characterArea"
+  ) {
+    return { supported: false };
+  }
+  return {
+    supported: true,
+    passed: source.turnPlayed === state.turn.globalTurn,
+  };
+};
+
 const resolveConditionPlayer = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -743,6 +762,8 @@ const evaluateCondition = (
       };
     case "attachedDonCount":
       return evaluateAttachedDonCount(state, entry, condition);
+    case "sourcePlayedThisTurn":
+      return evaluateSourcePlayedThisTurn(state, entry);
     case "leaderColorCount":
       return evaluateLeaderColorCount(state, entry, condition);
     case "handCount":
@@ -867,8 +888,9 @@ const evaluateCondition = (
     case "attackTarget":
     case "donCount":
     case "cardState":
-    case "sourceStillInZone":
     case "eventPayload":
+      return { supported: false };
+    case "sourceStillInZone":
       return { supported: false };
     default:
       return { supported: false };
@@ -891,6 +913,8 @@ export const isSupportedQueuedEffectConditionShape = (
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op)
       );
+    case "sourcePlayedThisTurn":
+      return true;
     case "leaderColorCount":
     case "handCount":
     case "lifeCount":
@@ -955,8 +979,9 @@ export const isSupportedQueuedEffectConditionShape = (
     case "attackTarget":
     case "donCount":
     case "cardState":
-    case "sourceStillInZone":
     case "eventPayload":
+      return false;
+    case "sourceStillInZone":
       return false;
     default:
       return false;
