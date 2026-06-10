@@ -357,7 +357,7 @@ test("single-card action option previews center inside the modal", async () => {
   );
   assert.match(
     styles,
-    /\.decision-card-grid\.is-single-card\s*\{[^}]*--decision-single-card-height:\s*min\(58vh,\s*calc\(var\(--card-height\) \* 2\)\);[^}]*justify-content:\s*center;/u,
+    /\.decision-card-grid\.is-single-card\s*\{[^}]*--decision-single-card-height:\s*min\(\s*calc\(var\(--card-height\) \* 2\),\s*calc\(\s*100vh - \(var\(--modal-viewport-gutter\) \* 2\) -\s*\(var\(--modal-padding\) \* 2\) - \(var\(--modal-gap\) \* 6\)\s*\)\s*\);[^}]*justify-content:\s*center;/u,
   );
   assert.match(
     styles,
@@ -539,7 +539,7 @@ test("decision modal card grids reserve enough width for five card choices", asy
 
   assert.match(
     styles,
-    /\.decision-card-grid\s*\{[^}]*min-width:\s*min\(calc\(100vw - 96px\),\s*calc\(\(var\(--card-width\) \* 5\) \+ 32px\)\);/u,
+    /\.decision-card-grid\s*\{[^}]*--decision-card-grid-width:\s*calc\(\(var\(--card-width\) \* 5\) \+ \(var\(--modal-gap\) \* 4\)\);[^}]*min-width:\s*min\(\s*calc\(\s*100vw - \(var\(--modal-viewport-gutter\) \* 2\) -\s*\(var\(--modal-padding\) \* 2\)\s*\),\s*var\(--decision-card-grid-width\)\s*\);/u,
   );
 });
 

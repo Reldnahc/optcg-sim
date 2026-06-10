@@ -69,10 +69,17 @@ describe("modal frame", () => {
     assert.match(styles, /\.modal-frame\s*\{[^}]*left:\s*50%;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*width:\s*min\(520px,\s*calc\(100vw - 32px\)\);/u,
+      /\.modal-frame\s*\{[^}]*--modal-viewport-gutter:\s*clamp\(16px,\s*calc\(var\(--card-height\) \/ 4\),\s*48px\);[^}]*--modal-padding:\s*clamp\(12px,\s*calc\(var\(--card-height\) \/ 8\),\s*24px\);[^}]*--modal-gap:\s*clamp\(8px,\s*calc\(var\(--card-height\) \/ 14\),\s*16px\);/u,
+    );
+    assert.match(
+      styles,
+      /\.modal-frame\s*\{[^}]*width:\s*min\(\s*var\(--modal-compact-width\),\s*calc\(100vw - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*height:\s*auto;/u);
-    assert.match(styles, /\.modal-frame\s*\{[^}]*max-height:\s*82vh;/u);
+    assert.match(
+      styles,
+      /\.modal-frame\s*\{[^}]*max-height:\s*calc\(100vh - \(var\(--modal-viewport-gutter\) \* 2\)\);/u,
+    );
     assert.match(styles, /\.modal-frame\s*\{[^}]*overflow:\s*auto;/u);
     assert.match(
       styles,
@@ -83,7 +90,7 @@ describe("modal frame", () => {
     assert.match(styles, /\.modal-frame\s*\{[^}]*flex-direction:\s*column;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*border:\s*1px solid #f4eee7;/u,
+      /\.modal-frame\s*\{[^}]*gap:\s*var\(--modal-gap\);[^}]*border:\s*var\(--card-outline-thin\) solid #f4eee7;[^}]*border-radius:\s*var\(--card-corner-radius\);[^}]*padding:\s*var\(--modal-padding\);/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*box-shadow:/u);
   });
@@ -93,11 +100,11 @@ describe("modal frame", () => {
 
     assert.match(
       styles,
-      /\.modal-frame-card-decision\s*\{[^}]*width:\s*min\(calc\(\(var\(--card-width\) \* 5\) \+ 96px\),\s*calc\(100vw - 32px\)\);/u,
+      /\.modal-frame-card-decision\s*\{[^}]*width:\s*min\(\s*calc\(\(var\(--card-width\) \* 5\) \+ var\(--modal-card-decision-inline-extra\)\),\s*calc\(100vw - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
     );
     assert.match(
       styles,
-      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(calc\(\(var\(--card-height\) \* 2\) \+ 132px\),\s*82vh\);/u,
+      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(\s*var\(--modal-card-decision-min-block\),\s*calc\(100vh - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
     );
   });
 
@@ -110,7 +117,7 @@ describe("modal frame", () => {
     );
     assert.match(
       styles,
-      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*max-height:\s*34px;/u,
+      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*max-height:\s*var\(--modal-action-height\);/u,
     );
     assert.match(
       styles,

@@ -10,18 +10,35 @@
 }
 
 .decision-card-grid {
+  --decision-card-grid-width: calc(
+    (var(--card-width) * 5) + (var(--modal-gap) * 4)
+  );
+
   display: flex;
   flex-wrap: wrap;
-  min-width: min(calc(100vw - 96px), calc((var(--card-width) * 5) + 32px));
-  gap: 8px;
+  min-width: min(
+    calc(
+      100vw - (var(--modal-viewport-gutter) * 2) - (var(--modal-padding) * 2)
+    ),
+    var(--decision-card-grid-width)
+  );
+  gap: var(--modal-gap);
 }
 
 .decision-card-grid.is-single-card {
-  --decision-single-card-height: min(58vh, calc(var(--card-height) * 2));
+  --decision-single-card-height: min(
+    calc(var(--card-height) * 2),
+    calc(
+      100vh - (var(--modal-viewport-gutter) * 2) - (var(--modal-padding) * 2) -
+        (var(--modal-gap) * 6)
+    )
+  );
 
   min-width: min(
-    calc(100vw - 96px),
-    calc((var(--decision-single-card-height) * 5 / 7) + 32px)
+    calc(
+      100vw - (var(--modal-viewport-gutter) * 2) - (var(--modal-padding) * 2)
+    ),
+    calc((var(--decision-single-card-height) * 5 / 7) + (var(--modal-gap) * 2))
   );
   justify-content: center;
 }
@@ -152,7 +169,7 @@
 }
 
 .decision-order-hint {
-  max-width: 420px;
+  max-width: var(--decision-card-grid-width);
   margin: 0;
   color: rgba(255, 255, 255, 0.78);
   font-size: 0.82rem;
