@@ -38,9 +38,13 @@ export const calculateHandOverlap = ({
 export interface HandRowProps {
   label: string;
   cards: readonly ClientCardModel[];
+  cardsClassName?: string | undefined;
   overflowDirection: HandOverflowDirection;
   presentationZoneKey?: string | undefined;
   selectedCardInstanceId?: string | undefined;
+  selectionOrderLabel?:
+    | ((card: ClientCardModel, index: number) => string)
+    | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
@@ -64,9 +68,11 @@ export interface HandRowProps {
 export const HandRow = ({
   label,
   cards,
+  cardsClassName,
   overflowDirection,
   presentationZoneKey,
   selectedCardInstanceId,
+  selectionOrderLabel,
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
   selectedDonInstanceIds = [],
@@ -133,6 +139,7 @@ export const HandRow = ({
     layout.edgePacked ? "is-edge-packed" : "",
     layout.laneExtension > 0 ? "is-using-outside-lane" : "",
     layout.overlap > 0 ? "is-overlapping" : "",
+    cardsClassName,
   ]
     .filter(Boolean)
     .join(" ");
@@ -150,7 +157,7 @@ export const HandRow = ({
       data-presentation-zone={presentationZoneKey}
     >
       <div ref={cardsRef} className={handCardsClassName} style={handStyle}>
-        {cards.map((card) => {
+        {cards.map((card, index) => {
           const instanceId = String(card.instanceId);
           const actions = cardActions?.(instanceId) ?? [];
           const placeholderBefore = cardReorder.placeholderBefore(instanceId);
@@ -162,6 +169,7 @@ export const HandRow = ({
               ) : null}
               <CardTile
                 card={card}
+                selectionOrderLabel={selectionOrderLabel?.(card, index)}
                 selected={
                   selectedCardInstanceId === instanceId ||
                   decisionSelectedInstanceIds.includes(instanceId)

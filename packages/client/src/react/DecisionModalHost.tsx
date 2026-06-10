@@ -1,13 +1,10 @@
-import { Fragment } from "react";
-
 import type { CardRef, InstanceId } from "@optcg/types";
 
 import type { DecisionModalModel } from "../interactions/decision-modal.js";
 import type { ClientCardModel } from "../view-model.js";
-import { CardTile } from "./CardTile.js";
+import { HandRow } from "./HandRow.js";
 import { ModalFrame } from "./ModalFrame.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
-import { useCardReorderPreview } from "./useCardReorderPreview.js";
 
 export interface DecisionModalHostProps {
   model?: DecisionModalModel | undefined;
@@ -108,19 +105,6 @@ export const DecisionModalHost = ({
           return [decisionClientCard(card, display, cardModel)];
         })
       : [];
-  const orderReorder = useCardReorderPreview(
-    orderedCards,
-    model?.kind === "orderCards" && !disabled
-      ? (draggedInstanceId, targetInstanceId, placement) => {
-          onMoveOrderedCard(
-            draggedInstanceId as InstanceId,
-            targetInstanceId as InstanceId,
-            placement,
-          );
-        }
-      : undefined,
-  );
-
   if (model === undefined) {
     return null;
   }
@@ -216,32 +200,26 @@ export const DecisionModalHost = ({
               </button>
             </div>
           ) : null}
-          <div className="hand-cards decision-order-card-grid">
-            {orderedCards.map((card, index) => {
-              const instanceId = String(card.instanceId);
-              return (
-                <Fragment key={instanceId}>
-                  {orderReorder.placeholderBefore(instanceId) ? (
-                    <div className="hand-drag-placeholder" aria-hidden="true" />
-                  ) : null}
-                  <CardTile
-                    card={card}
-                    selectionOrderLabel={String(index + 1)}
-                    disabled={disabled}
-                    reorderable={!disabled}
-                    onPreviewMoveNear={orderReorder.onPreviewMoveNear}
-                    onMoveNear={orderReorder.onMoveNear}
-                    onReorderCancel={orderReorder.onReorderCancel}
-                    reorderDragStrategy="translate"
-                    onHover={onPreviewCard}
-                  />
-                  {orderReorder.placeholderAfter(instanceId) ? (
-                    <div className="hand-drag-placeholder" aria-hidden="true" />
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </div>
+          <HandRow
+            label="Deck order"
+            cards={orderedCards}
+            cardsClassName="decision-order-card-grid"
+            overflowDirection="right"
+            selectionOrderLabel={(_card, index) => String(index + 1)}
+            actionDisabled={disabled}
+            onCardPreview={onPreviewCard}
+            onMoveCard={
+              disabled
+                ? undefined
+                : (draggedInstanceId, targetInstanceId, placement) => {
+                    onMoveOrderedCard(
+                      draggedInstanceId as InstanceId,
+                      targetInstanceId as InstanceId,
+                      placement,
+                    );
+                  }
+            }
+          />
         </>
       ) : null}
       {model.kind === "orderTriggers" ? (
