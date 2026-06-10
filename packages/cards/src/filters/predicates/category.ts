@@ -1,6 +1,7 @@
 import type { CardColor, CardFilter } from "@optcg/types";
 
 import type { PredicateParser } from "./types.js";
+import type { CardFilterPredicateParseResult } from "./types.js";
 
 export const parseColorPredicate: PredicateParser = (text, current) => {
   const match =
@@ -57,16 +58,14 @@ export const parseRestedCharacterPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match = /^rested Characters?\b\s*(?<rest>.*)$/i.exec(text);
-  if (match === null) {
-    return undefined;
-  }
+  return parseFieldStateCharacterPredicate(text, current, "rested");
+};
 
-  return {
-    filter: { ...current, categories: ["character"], state: "rested" },
-    evidence: ["filter:state:rested", "filter:category:character"],
-    rest: match.groups?.["rest"] ?? "",
-  };
+export const parseActiveCharacterPredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  return parseFieldStateCharacterPredicate(text, current, "active");
 };
 
 const categoryResult = (
@@ -78,3 +77,23 @@ const categoryResult = (
   evidence: [`filter:category:${category}`] as const,
   rest,
 });
+
+const parseFieldStateCharacterPredicate = (
+  text: string,
+  current: CardFilter,
+  state: "active" | "rested",
+): CardFilterPredicateParseResult | undefined => {
+  const match = new RegExp(
+    `^${state} Characters?\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, categories: ["character"], state },
+    evidence: [`filter:state:${state}`, "filter:category:character"],
+    rest: match.groups?.["rest"] ?? "",
+  };
+};

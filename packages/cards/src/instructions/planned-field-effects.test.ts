@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   preventOpponentCharactersRefreshPrimitive,
   preventOpponentCharactersRestPrimitive,
+  preventOpponentCharactersAttackPrimitive,
   preventThatCharacterRefreshPrimitive,
+  parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -52,6 +54,15 @@ describe("planned field-effect instruction parsers", () => {
         "target:opponentCharacters",
         "protectionProcess:rest",
         "duration:opponentNextEndPhase",
+      ],
+    });
+    expect(preventOpponentCharactersAttackPrimitive).toEqual({
+      primitiveId: "instruction:preventActivation",
+      childPrimitiveIds: [
+        "cardinality:upTo",
+        "target:opponentCharacters",
+        "duration:opponentNextEndPhase",
+        "duration:thisTurn",
       ],
     });
     expect(yourLeaderPowerOpponentNextEndPrimitive).toEqual({
@@ -377,6 +388,56 @@ describe("planned field-effect instruction parsers", () => {
         "condition:comparator:lte",
         "condition:threshold:positiveInteger",
         "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses opponent active Character attack restrictions with this-turn duration", () => {
+    expect(
+      parsePreventOpponentCharactersAttackInstruction({
+        text: "up to 1 of your opponent's active Characters cannot attack during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:thatCharacter",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  state: "active",
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "cannotAttack",
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:state:active",
+        "filter:category:character",
+        "duration:thisTurn",
+        "composition:selectThenApply",
       ],
       rest: "",
     });

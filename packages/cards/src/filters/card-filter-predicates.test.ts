@@ -128,6 +128,31 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses active Character predicates as reusable field-state filters", () => {
+    expect(
+      parseCardFilterPredicates(
+        {
+          text: "active Characters with 5000 power or less",
+        },
+        { powerSemantics: "current" },
+      ),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        state: "active",
+        currentPower: { max: 5000 },
+      },
+      evidence: [
+        "filter:state:active",
+        "filter:category:character",
+        "filter:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses quoted type-including text and comma-separated current power predicates", () => {
     expect(
       parseCardFilterPredicates(

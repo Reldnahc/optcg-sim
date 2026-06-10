@@ -168,6 +168,7 @@ export type PrimitiveEvidence =
   | "filter:category:leader"
   | "filter:category:event"
   | "filter:category:don"
+  | "filter:state:active"
   | "filter:state:rested"
   | "filter:state:attached"
   | "filter:effectEntryPoint"

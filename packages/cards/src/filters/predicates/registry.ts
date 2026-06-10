@@ -1,4 +1,5 @@
 import {
+  parseActiveCharacterPredicate,
   parseCharacterCategoryPredicate,
   parseColorPredicate,
   parseEventCategoryPredicate,
@@ -52,6 +53,7 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseAttributeCardPredicate,
   parseAttributeCategoryPredicate,
   parseAttributeOnlyPredicate,
+  parseActiveCharacterPredicate,
   parseRestedCharacterPredicate,
   parseEventCategoryPredicate,
   parseStageCategoryPredicate,
