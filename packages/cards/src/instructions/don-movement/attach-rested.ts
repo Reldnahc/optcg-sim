@@ -6,6 +6,11 @@ import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 import { donAttachSelection, donAttachTarget } from "./shared.js";
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
+  const decomposed = parseDonAttachmentInstruction(input);
+  if (decomposed !== undefined) {
+    return decomposed;
+  }
+
   const ownerRelative = parseOwnerRelativeDonAttachmentInstruction(input);
   if (ownerRelative !== undefined) {
     return ownerRelative;
@@ -26,6 +31,244 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
     return undefined;
   }
   return parseAttachRestedDonToTarget(quantityText, targetText);
+};
+
+type DonAttachSource = {
+  readonly evidence: readonly PrimitiveEvidence[];
+  readonly player: "self" | "opponent" | "anyPlayer";
+  readonly sourceState?: "rested";
+  readonly targetOwner?: "selectedDonOwner";
+};
+
+type DonAttachTarget = {
+  readonly evidence: readonly PrimitiveEvidence[];
+  readonly filter: CardFilter;
+  readonly player: "self" | "opponent" | "anyPlayer";
+  readonly requestZone:
+    | { readonly zone: "characterArea" }
+    | { readonly zones: ["leaderArea", "characterArea"] };
+  readonly savedTargetZone:
+    | { readonly zone: "characterArea" }
+    | { readonly zones: ["leaderArea", "characterArea"] };
+  readonly targetOwner?: "selectedDonOwner";
+};
+
+const parseDonAttachmentInstruction: InstructionParser = (input) => {
+  const match =
+    /^give (?<quantity>up to [1-9]\d*) (?:(?<opponentSource>of your opponent's) )?(?<rested>rested )?DON!! cards?(?: from (?<sourceZone>your opponent's|your|its owner's) cost area)? to (?<target>.+)$/iu.exec(
+      input.text,
+    );
+  const quantityText = match?.groups?.["quantity"];
+  const targetText = match?.groups?.["target"];
+  if (quantityText === undefined || targetText === undefined) {
+    return undefined;
+  }
+  const source = parseDonAttachSource({
+    opponentSource: match?.groups?.["opponentSource"],
+    rested: match?.groups?.["rested"],
+    sourceZone: match?.groups?.["sourceZone"],
+    targetText,
+  });
+  if (source === undefined) {
+    return undefined;
+  }
+  const quantity = parseUpToCardinality({ text: quantityText });
+  if (quantity === undefined || quantity.rest.length > 0) {
+    return undefined;
+  }
+  const target = parseDonAttachmentTarget(targetText, source.targetOwner);
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const sourceFilter: CardFilter =
+    source.sourceState === undefined
+      ? { categories: ["don"] }
+      : { categories: ["don"], state: source.sourceState };
+  const sourceSelection =
+    source.player === "self"
+      ? {
+          type: "selectCards" as const,
+          zone: "costArea" as const,
+          player: source.player,
+          chooser: "self" as const,
+          min: quantity.cardinality.min,
+          max: quantity.cardinality.max,
+          filter: sourceFilter,
+          saveAs: donAttachSelection,
+          visibility: "bothPlayers" as const,
+        }
+      : {
+          type: "selectTargets" as const,
+          request: {
+            timing: "onResolution" as const,
+            chooser: "self" as const,
+            zone: "costArea" as const,
+            player: source.player,
+            filter: sourceFilter,
+            min: quantity.cardinality.min,
+            max: quantity.cardinality.max,
+            allowFewerIfUnavailable: true,
+            visibility: "public" as const,
+          },
+        };
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id:
+            source.player === "self" && source.sourceState === "rested"
+              ? "select:rested-don"
+              : "select:don-to-attach",
+          connector: "always",
+          saveResultAs: donAttachSelection,
+          effect: sourceSelection,
+        },
+        {
+          id: "select:don-attach-target",
+          connector: "ifYouDo",
+          saveResultAs: donAttachTarget,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: target.player,
+              ...target.requestZone,
+              filter: target.filter,
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          id: "attach:selected-don",
+          connector: "then",
+          effect: {
+            type: "attachSelectedDon",
+            selection: donAttachSelection,
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: donAttachTarget,
+              },
+              ...target.savedTargetZone,
+              player: target.player,
+              filter: target.filter,
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+            ...(source.sourceState === undefined
+              ? {}
+              : { sourceState: source.sourceState }),
+            ...(target.targetOwner === undefined
+              ? {}
+              : { targetOwner: target.targetOwner }),
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:attachDon",
+      ...quantity.evidence,
+      "chooser:self:upTo",
+      "zone:costArea",
+      "filter:category:don",
+      source.player === "self"
+        ? "instruction:selectCards"
+        : "instruction:selectTargets",
+      ...(source.sourceState === undefined
+        ? []
+        : (["filter:state:rested"] as const)),
+      ...(source.player === "opponent"
+        ? (["player:opponent"] as const)
+        : source.player === "self"
+          ? (["player:self"] as const)
+          : []),
+      ...source.evidence,
+      ...target.evidence,
+      ...(target.targetOwner === undefined
+        ? []
+        : (["reference:ownerOfSelected"] as const)),
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
+
+const parseDonAttachSource = (input: {
+  readonly opponentSource: string | undefined;
+  readonly rested: string | undefined;
+  readonly sourceZone: string | undefined;
+  readonly targetText: string;
+}): DonAttachSource | undefined => {
+  const sourceZone = input.sourceZone?.toLowerCase();
+  const ownerRelative =
+    sourceZone === "its owner's" || /^its owner's /iu.test(input.targetText);
+  const player = ownerRelative
+    ? "anyPlayer"
+    : input.opponentSource !== undefined || sourceZone === "your opponent's"
+      ? "opponent"
+      : "self";
+  const sourceState = input.rested === undefined ? undefined : "rested";
+  if (sourceState === undefined && sourceZone === undefined) {
+    return undefined;
+  }
+  return {
+    evidence: ownerRelative ? ["reference:ownerOfSelected"] : [],
+    player,
+    ...(sourceState === undefined ? {} : { sourceState }),
+    ...(ownerRelative ? { targetOwner: "selectedDonOwner" as const } : {}),
+  };
+};
+
+const parseDonAttachmentTarget = (
+  targetText: string,
+  sourceTargetOwner: "selectedDonOwner" | undefined,
+): DonAttachTarget | undefined => {
+  if (/^its owner's Leader or 1 of their Characters\.?$/iu.test(targetText)) {
+    const zoneTarget = {
+      zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
+    };
+    return {
+      evidence: [
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      filter: { categories: ["leader", "character"] },
+      player: "anyPlayer",
+      requestZone: zoneTarget,
+      savedTargetZone: zoneTarget,
+      targetOwner: "selectedDonOwner",
+    };
+  }
+  if (/^1 of your opponent's Characters\.?$/iu.test(targetText)) {
+    return {
+      evidence: ["zone:characterArea", "filter:category:character"],
+      filter: { categories: ["character"] },
+      player: "opponent",
+      requestZone: { zone: "characterArea" },
+      savedTargetZone: { zone: "characterArea" },
+    };
+  }
+  const selfTarget = parseRestedDonAttachmentTarget(targetText);
+  if (selfTarget === undefined) {
+    return undefined;
+  }
+  return {
+    ...selfTarget,
+    player: "self",
+    ...(sourceTargetOwner === undefined
+      ? {}
+      : { targetOwner: sourceTargetOwner }),
+  };
 };
 
 const parseOwnerRelativeDonAttachmentInstruction: InstructionParser = (
