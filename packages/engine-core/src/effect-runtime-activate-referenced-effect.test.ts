@@ -5,6 +5,7 @@ import type {
   EffectBlock,
   EffectDefinition,
   Effect,
+  EffectQueueEntry,
   InstanceId,
 } from "@optcg/types";
 
@@ -21,6 +22,7 @@ import {
   passCounterStep,
   setupAttackState,
 } from "./battle/test-fixtures.js";
+import { queueReferencedMainEffectFromTrigger } from "./effect-runtime-activate-referenced-effect.js";
 
 const supportedLifeTriggerDefinition = (
   cardId: ReturnType<typeof toCardId>,
@@ -290,6 +292,96 @@ test("activated life trigger can activate this card's supported On K.O. effect",
         JSON.stringify(event.payload).includes(
           `${String(lifeCardId)}:on-ko-draw`,
         ),
+    ),
+    true,
+  );
+});
+
+test("non-trigger auto entries can activate a referenced supported entrypoint", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source character");
+  const cardId = source.cardId;
+  const activatorId =
+    `${String(cardId)}:on-play-activate-main` as EffectBlock["id"];
+  const referencedId = `${String(cardId)}:main-draw` as EffectBlock["id"];
+  const definition = effectDefinition(cardId, { type: "onPlay" });
+  definition.effects = [
+    {
+      id: activatorId,
+      category: "auto",
+      trigger: { type: "onPlay" },
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "activateReferencedEffect",
+        source: { type: "triggerCard" },
+        trigger: { type: "main" },
+      },
+    },
+    {
+      id: referencedId,
+      category: "auto",
+      trigger: { type: "main" },
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+  ];
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    cost: 1,
+    power: 5000,
+  });
+  state.effectQueue = [
+    {
+      id: "queue-entry:referenced-on-play" as EffectQueueEntry["id"],
+      state: "pending",
+      timingWindowId:
+        "timing-window:referenced-on-play" as EffectQueueEntry["timingWindowId"],
+      generation: 1,
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: {
+        instanceId: source.instanceId,
+        cardId,
+        ownerId: source.owner,
+        controllerId: source.controller,
+        zone: source.zone,
+        category: "character",
+        colors: [],
+        keywords: [],
+        power: 5000,
+      },
+      effectBlockId: activatorId,
+      orderingGroup: "turnPlayer",
+      createdAtEventSeq: 4,
+      queuedAtStateSeq: 7 as EffectQueueEntry["queuedAtStateSeq"],
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "referenced-on-play-test" },
+    },
+  ];
+
+  const result = queueReferencedMainEffectFromTrigger(
+    state,
+    must(state.effectQueue[0], "queued activator"),
+    () => ({ ok: true, definition }),
+  );
+  const queued = must(result, "referenced queue result");
+
+  assert.equal(
+    queued.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        JSON.stringify(event.payload).includes(String(referencedId)),
     ),
     true,
   );

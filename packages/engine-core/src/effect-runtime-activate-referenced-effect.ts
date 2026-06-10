@@ -11,7 +11,10 @@ import {
   appendEvent,
   toStateSeq,
 } from "./action-results.js";
-import { autoRuntimeEntryAdapterForTriggerType } from "./effect-runtime-block-support.js";
+import {
+  autoRuntimeEntryAdapterForTriggerType,
+  triggerContainsType,
+} from "./effect-runtime-block-support.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import type { ResolveImplementedDslEffectDefinition } from "./effect-runtime-queue/target-decisions.js";
 import { effectQueueEntryPresentationForEffectBlock } from "./runtime/effect-presentation.js";
@@ -20,10 +23,20 @@ type ReferencedActivationEffectBlock = EffectDefinition["effects"][number] & {
   readonly effect: Extract<
     EffectDefinition["effects"][number]["effect"],
     { type: "activateReferencedEffect" }
-  >;
+  > & { readonly trigger: SupportedReferencedTrigger };
 };
 
-const isSupportedReferencedTriggerType = (trigger: Trigger): boolean =>
+type SupportedReferencedTrigger = Exclude<Trigger, { type: "anyOf" }>;
+
+const isSupportedReferencedTriggerType = (
+  trigger: Trigger,
+): trigger is SupportedReferencedTrigger =>
+  trigger.type !== "anyOf" &&
+  autoRuntimeEntryAdapterForTriggerType(trigger.type) !== undefined;
+
+const isSupportedReferencedActivationEntryTrigger = (
+  trigger: Trigger,
+): trigger is SupportedReferencedTrigger =>
   trigger.type !== "anyOf" &&
   autoRuntimeEntryAdapterForTriggerType(trigger.type) !== undefined;
 
@@ -33,7 +46,7 @@ const isSupportedActivateReferencedEntryTrigger = (
 ): effect is ReferencedActivationEffectBlock =>
   effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
   effect.category === "auto" &&
-  effect.trigger.type === "trigger" &&
+  isSupportedReferencedActivationEntryTrigger(effect.trigger) &&
   effect.optional !== true &&
   effect.oncePerTurn !== true &&
   effect.conditionTiming === undefined &&
@@ -79,7 +92,7 @@ const resolveReferencedEffects = (
     if (
       effect.id !== triggerEffect.id &&
       isSupportedReferencedEffectBlock(effect) &&
-      effect.trigger.type === triggerEffect.effect.trigger.type
+      triggerContainsType(effect.trigger, triggerEffect.effect.trigger.type)
     ) {
       supportedReferencedEffects.push(effect);
     }
