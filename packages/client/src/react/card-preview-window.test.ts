@@ -136,6 +136,22 @@ describe("card preview window", () => {
     );
     assert.match(
       styles,
+      /\.card-preview-content\s*\{[^}]*container-type:\s*size;/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-content\s*\{[^}]*--card-preview-copy-font-size:\s*clamp\([^}]*cqw[^}]*cqh/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-text\s*\{[^}]*font-size:\s*var\(--card-preview-copy-font-size\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-preview-text h2\s*\{[^}]*font-size:\s*var\(--card-preview-title-font-size\);/u,
+    );
+    assert.match(
+      styles,
       /\.card-preview-control-bar\s*\{[^}]*min-height:\s*var\(--card-preview-control-height\);/u,
     );
     assert.match(

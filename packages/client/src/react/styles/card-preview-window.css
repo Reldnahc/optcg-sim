@@ -18,8 +18,29 @@
   --card-preview-panel-padding-inline: clamp(9px, calc(var(--card-height) / 14), 16px);
   --card-preview-control-height: clamp(26px, calc(var(--card-height) / 6.6), 34px);
   --card-preview-button-height: clamp(22px, calc(var(--card-height) / 8.5), 28px);
+  --card-preview-copy-font-size: clamp(
+    11px,
+    min(calc(var(--card-height) / 12.5), calc(2.2cqw + 0.55cqh)),
+    16px
+  );
+  --card-preview-title-font-size: clamp(
+    15px,
+    min(calc(var(--card-height) / 8), calc(3cqw + 0.8cqh)),
+    24px
+  );
+  --card-preview-label-font-size: clamp(
+    9px,
+    min(calc(var(--card-height) / 16), calc(1.7cqw + 0.35cqh)),
+    12px
+  );
+  --card-preview-control-font-size: clamp(
+    11px,
+    min(calc(var(--card-height) / 13.5), calc(1.9cqw + 0.45cqh)),
+    14px
+  );
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+  container-type: size;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -69,6 +90,7 @@
   border: 1px solid rgba(244, 238, 231, 0.55);
   background: #5f5956;
   padding: var(--floating-window-body-padding);
+  font-size: var(--card-preview-copy-font-size);
   text-align: center;
 }
 
@@ -114,7 +136,8 @@
   padding: var(--card-preview-panel-padding-block)
     var(--card-preview-panel-padding-inline)
     var(--card-preview-panel-padding-inline);
-  font-size: var(--floating-window-small-font-size);
+  font-size: var(--card-preview-copy-font-size);
+  line-height: 1.28;
 }
 
 .card-preview-text h2,
@@ -128,7 +151,7 @@
 }
 
 .card-preview-text h2 {
-  font-size: clamp(16px, calc(var(--card-height) / 8.5), 22px);
+  font-size: var(--card-preview-title-font-size);
   line-height: 1.1;
 }
 
@@ -156,7 +179,7 @@
 
 .card-preview-metadata dt {
   color: rgba(255, 255, 255, 0.62);
-  font-size: clamp(10px, calc(var(--card-height) / 16), 12px);
+  font-size: var(--card-preview-label-font-size);
   text-transform: uppercase;
 }
 
@@ -174,6 +197,7 @@
   background: rgba(14, 16, 19, 0.96);
   padding: calc(var(--floating-window-body-padding) * 0.2)
     calc(var(--floating-window-body-padding) * 0.55);
+  font-size: var(--card-preview-control-font-size);
 }
 
 .card-preview-control-bar button {
