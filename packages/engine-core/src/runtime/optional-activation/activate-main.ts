@@ -48,6 +48,7 @@ import {
 import { isSupportedTrashFromHandUntilCountBody } from "../primitives/trash-from-hand-until.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import {
+  isSupportedDamageEffect,
   isSupportedDrawBody,
   isSupportedWinGameBody,
 } from "../primitives/execute.js";
@@ -86,6 +87,7 @@ const isSupportedActivateMainPrimitiveBody = (
   isSupportedTrashFromHandBody(effect.effect) ||
   isSupportedTrashFromHandUntilCountBody(effect.effect) ||
   isSupportedPlaceTopDeckCardsEffect(effect.effect) ||
+  isSupportedDamageEffect(effect.effect) ||
   isSupportedWinGameBody(effect.effect) ||
   isSupportedMoveCardsEffect(effect.effect);
 

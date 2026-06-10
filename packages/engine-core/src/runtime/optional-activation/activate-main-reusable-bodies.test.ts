@@ -8,7 +8,24 @@ import {
   toCardId,
   toEffectId,
 } from "../../action-dispatcher-test-support.js";
-import { addExtraDeckCard, must, p1 } from "../../action-test-fixtures.js";
+import {
+  addExtraDeckCard,
+  must,
+  p1,
+  p2,
+  resolvedCard,
+} from "../../action-test-fixtures.js";
+
+const installOpponentTopLifeMetadata = (
+  state: ReturnType<typeof makeMainPhaseLegalActionState>,
+) => {
+  const opponent = must(state.players[p2], "p2");
+  const topLife = must(opponent.life[0], "p2 top life").card;
+  state.cardManifest.cards[topLife.cardId] = resolvedCard({
+    cardId: topLife.cardId,
+    category: "character",
+  });
+};
 
 test("activate main supports reusable moveCards body without draw-specific admission", () => {
   const state = makeMainPhaseLegalActionState();
@@ -624,4 +641,106 @@ test("optional activate main prompts before resolving reusable winGame body", ()
 
   assert.equal(accepted.errors, undefined);
   assert.deepEqual(accepted.state.status, { type: "completed", winner: p1 });
+});
+
+test("activate main supports reusable damage body", () => {
+  const state = makeMainPhaseLegalActionState();
+  installOpponentTopLifeMetadata(state);
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-leader-damage-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-leader-damage",
+    effectId,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "damage",
+    target: "leader",
+    player: "opponent",
+    count: 1,
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "damageDealt"),
+    true,
+  );
+  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+});
+
+test("optional activate main prompts before resolving reusable damage body", () => {
+  const state = makeMainPhaseLegalActionState();
+  installOpponentTopLifeMetadata(state);
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-optional-damage-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-damage",
+    effectId,
+    optional: true,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "damage",
+    target: "leader",
+    player: "opponent",
+    count: 1,
+  };
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const optionalDecision = must(
+    prompted.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    accepted.events.some((event) => event.type === "damageDealt"),
+    true,
+  );
+  assert.equal(accepted.state.pendingDecision?.type, "confirmLifeTrigger");
 });
