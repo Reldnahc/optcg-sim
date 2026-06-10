@@ -19,6 +19,7 @@ import type {
   AccountLoadout,
   AccountSimHandoffBatchResult,
 } from "../account-client.js";
+import { allowsLocalRawDeckSubmissions } from "../sim-environment.js";
 import type { ValidatedLobbyLoadout } from "../transport.js";
 import type {
   ClientActionModel,
@@ -99,10 +100,24 @@ const attachLoadoutValidation = (
   });
 };
 
+const uncheckedLocalLoadouts = (
+  loadouts: readonly AccountLoadout[],
+): readonly AccountLoadout[] =>
+  loadouts.map((loadout) => ({
+    ...loadout,
+    validation: { status: "unchecked", errors: [] },
+  }));
+
 export const useMatchClient = ({
   accountSessionToken,
   quickPayActivateMainCosts = false,
 }: UseMatchClientOptions): MatchClientUi => {
+  const localRawDeckSubmissionsAllowed = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      allowsLocalRawDeckSubmissions(window.location),
+    [],
+  );
   const controller = useMemo(
     () => createController({ accountSessionToken }),
     [accountSessionToken],
@@ -116,6 +131,10 @@ export const useMatchClient = ({
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const [accountLoadoutsError, setAccountLoadoutsError] = useState<string>();
+  const [
+    accountLoadoutValidationRequired,
+    setAccountLoadoutValidationRequired,
+  ] = useState(!localRawDeckSubmissionsAllowed);
   const accountLoadoutsRequestId = useRef(0);
   const [selectedCardInstanceId, setSelectedCardInstanceId] =
     useState<string>();
@@ -221,6 +240,7 @@ export const useMatchClient = ({
       setAccountLoadouts([]);
       setAccountLoadoutsStatus("idle");
       setAccountLoadoutsError(undefined);
+      setAccountLoadoutValidationRequired(!localRawDeckSubmissionsAllowed);
       return;
     }
     const requestId = accountLoadoutsRequestId.current + 1;
@@ -232,6 +252,13 @@ export const useMatchClient = ({
       .listLoadouts()
       .then(async (loadouts) => {
         if (accountLoadoutsRequestId.current !== requestId) {
+          return;
+        }
+        const validationRequired = !localRawDeckSubmissionsAllowed;
+        setAccountLoadoutValidationRequired(validationRequired);
+        if (!validationRequired) {
+          setAccountLoadouts(uncheckedLocalLoadouts(loadouts));
+          setAccountLoadoutsStatus("ready");
           return;
         }
         const handoffs = await accountClient.createSimHandoffs({
@@ -267,7 +294,7 @@ export const useMatchClient = ({
           error instanceof Error ? error.message : String(error),
         );
       });
-  }, [accountClient, clientState, controller]);
+  }, [accountClient, clientState, controller, localRawDeckSubmissionsAllowed]);
 
   useEffect(() => {
     if (!isLobbyClientState(clientState)) {
@@ -291,13 +318,31 @@ export const useMatchClient = ({
       }
       setActionInFlight(true);
       try {
-        const handoffToken = await accountClient.createSimHandoff({
-          loadoutId,
-          lobbyId: clientState.lobbyId,
-        });
-        const result = await controller.submitLobbyLoadoutHandoff({
-          handoffToken,
-        });
+        const selectedLoadout = accountLoadouts.find(
+          (loadout) => loadout.id === loadoutId,
+        );
+        if (
+          !accountLoadoutValidationRequired &&
+          selectedLoadout === undefined
+        ) {
+          setErrors(["Cannot submit a deck before choosing a loadout."]);
+          return;
+        }
+        const result = accountLoadoutValidationRequired
+          ? await accountClient
+              .createSimHandoff({
+                loadoutId,
+                lobbyId: clientState.lobbyId,
+              })
+              .then((handoffToken) =>
+                controller.submitLobbyLoadoutHandoff({
+                  handoffToken,
+                }),
+              )
+          : await controller.submitLobbyDeck({
+              deckHash: selectedLoadout?.deckHash ?? "",
+              donDeckCount: 10,
+            });
         if (
           isMatchClientState(result) ||
           isFirstPlayerSetupClientState(result)
@@ -314,7 +359,13 @@ export const useMatchClient = ({
         setActionInFlight(false);
       }
     },
-    [accountClient, clientState, controller],
+    [
+      accountClient,
+      accountLoadoutValidationRequired,
+      accountLoadouts,
+      clientState,
+      controller,
+    ],
   );
 
   const resetInteractionState = useCallback((): void => {
@@ -695,6 +746,7 @@ export const useMatchClient = ({
       accountLoadouts,
       accountLoadoutsStatus,
       ...(accountLoadoutsError === undefined ? {} : { accountLoadoutsError }),
+      accountLoadoutValidationRequired,
       actionInFlight,
       errors: visibleErrors(errors),
     },

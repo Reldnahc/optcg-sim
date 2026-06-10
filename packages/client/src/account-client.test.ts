@@ -153,6 +153,7 @@ describe("Poneglyph account client", () => {
       {
         id: "loadout-1",
         name: "Enel",
+        deckHash: "deck-hash",
         folderId: "folder-1",
         folderName: "Ranked",
         favorite: true,
@@ -165,6 +166,7 @@ describe("Poneglyph account client", () => {
       {
         id: "loadout-2",
         name: "Unfiled Luffy",
+        deckHash: "deck-hash-2",
         folderId: null,
         folderName: null,
         favorite: false,

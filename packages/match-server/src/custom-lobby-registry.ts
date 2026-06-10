@@ -6,6 +6,7 @@ import {
   createDevMatchSetupFromDeckSubmissions,
   defaultDevDeckFormatId,
   validateReadyDevDeckSubmission,
+  validateReadyDevDeckSubmissions,
 } from "./default-dev-manifest.js";
 import {
   decodeDeckHashSubmission,
@@ -431,14 +432,19 @@ export const createCustomLobbyRegistry = async (
         return "lobbyNotFound";
       }
       const formatId = lobbySettings(lobby).formatId;
-      const loadouts = [];
-      for (const result of handoffs) {
+      const loadouts: ValidatedCustomLobbyLoadout[] = [];
+      const pendingSubmissions: Array<{
+        readonly index: number;
+        readonly loadoutId: string;
+        readonly submission: ReadyDeckSubmission;
+      }> = [];
+      for (const [index, result] of handoffs.entries()) {
         if (result.status === "rejected") {
-          loadouts.push({
+          loadouts[index] = {
             loadoutId: null,
             status: "unverified" as const,
             errors: [result.error],
-          });
+          };
           continue;
         }
         const { handoff } = result;
@@ -446,11 +452,11 @@ export const createCustomLobbyRegistry = async (
           handoff.claims.lobby_id !== null &&
           handoff.claims.lobby_id !== lobbyId
         ) {
-          loadouts.push({
+          loadouts[index] = {
             loadoutId: handoff.resolvedLoadout.loadoutId,
             status: "unverified" as const,
             errors: ["Sim handoff token is not authorized for this lobby."],
-          });
+          };
           continue;
         }
         let submission;
@@ -463,29 +469,56 @@ export const createCustomLobbyRegistry = async (
               : { codec: options.deckHashCodec }),
           });
         } catch {
-          loadouts.push({
+          loadouts[index] = {
             loadoutId: handoff.resolvedLoadout.loadoutId,
             status: "unplayable" as const,
             errors: ["Resolved loadout is invalid."],
-          });
+          };
           continue;
         }
-        if (
-          submission.status !== "ready" ||
-          !(await validateReadySubmission(submission, formatId))
-        ) {
-          loadouts.push({
+        if (submission.status !== "ready") {
+          loadouts[index] = {
             loadoutId: handoff.resolvedLoadout.loadoutId,
             status: "unplayable" as const,
             errors: ["Resolved loadout is invalid."],
-          });
+          };
           continue;
         }
-        loadouts.push({
+        pendingSubmissions.push({
+          index,
           loadoutId: handoff.resolvedLoadout.loadoutId,
-          status: "playable" as const,
-          errors: [],
+          submission,
         });
+      }
+      const validationResults = await validateReadyDevDeckSubmissions({
+        submissions: pendingSubmissions.map((pending) => pending.submission),
+        createdAt: devLobbyCreatedAt,
+        formatId,
+        ...(options.fetchCard === undefined
+          ? {}
+          : { fetchCard: options.fetchCard }),
+        ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
+        ...(options.redisUrl === undefined
+          ? {}
+          : { redisUrl: options.redisUrl }),
+        ...(options.redisMode === undefined
+          ? {}
+          : { redisMode: options.redisMode }),
+      });
+      for (const [resultIndex, pending] of pendingSubmissions.entries()) {
+        const validation = validationResults[resultIndex];
+        loadouts[pending.index] =
+          validation?.valid === true
+            ? {
+                loadoutId: pending.loadoutId,
+                status: "playable" as const,
+                errors: [],
+              }
+            : {
+                loadoutId: pending.loadoutId,
+                status: "unplayable" as const,
+                errors: ["Resolved loadout is invalid."],
+              };
       }
       return { data: { loadouts } };
     },

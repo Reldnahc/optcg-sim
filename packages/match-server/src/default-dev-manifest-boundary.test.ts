@@ -16,6 +16,7 @@ import {
   defaultDevDonCounts,
   defaultDevEffectDefinitionsVersion,
   resolveDevDonCounts,
+  validateReadyDevDeckSubmissions,
   validateDevDeckSubmissionVariants,
   validateAndAdaptDevDecklist,
   type DevDeckCardEntry,
@@ -293,6 +294,46 @@ describe("default dev manifest boundary", () => {
       "OP13-082",
       "OP13-082",
     ]);
+  });
+
+  test("batch validates ready deck submissions with one shared card fetch", async () => {
+    const requests: string[][] = [];
+    const fixtureFetch = createDefaultDevFixtureFetch();
+    const fetchCard: ReturnType<typeof createDefaultDevFixtureFetch> = (
+      url,
+      init,
+    ) => {
+      const body = JSON.parse(init?.body ?? "{}") as {
+        card_numbers?: string[];
+      };
+      requests.push(body.card_numbers ?? []);
+      return fixtureFetch(url, init);
+    };
+
+    const results = await validateReadyDevDeckSubmissions({
+      submissions: [
+        readySubmission("OP13-079" as CardId, [
+          { cardId: "OP13-080" as CardId, count: 50 },
+        ]),
+        readySubmission("OP13-079" as CardId, [
+          { cardId: "OP13-080" as CardId, count: 50 },
+        ]),
+      ],
+      createdAt: "2026-05-04T00:00:00.000Z",
+      fetchCard,
+    });
+
+    assert.deepEqual(
+      results.map((result) => result.valid),
+      [true, true],
+    );
+    assert.equal(requests.length, 1);
+    const [request] = requests;
+    if (request === undefined) {
+      throw new Error("Expected one batch card request.");
+    }
+    assert.equal(request.includes("OP13-079"), true);
+    assert.equal(request.includes("OP13-080"), true);
   });
 
   test("creates the default dev setup without local deck hash files", async () => {

@@ -444,6 +444,9 @@ export const MatchApp = ({
             loadouts={client.state.accountLoadouts}
             loadoutsStatus={client.state.accountLoadoutsStatus}
             loadoutsError={client.state.accountLoadoutsError}
+            requirePlayableValidation={
+              client.state.accountLoadoutValidationRequired
+            }
             onRefreshLoadouts={client.refreshAccountLoadouts}
             onSubmitLoadout={client.submitLobbyLoadout}
           />

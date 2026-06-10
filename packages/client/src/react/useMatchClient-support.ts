@@ -52,6 +52,7 @@ export interface MatchClientUiState {
   accountLoadouts: readonly AccountLoadout[];
   accountLoadoutsStatus: "idle" | "loading" | "ready" | "error";
   accountLoadoutsError?: string | undefined;
+  accountLoadoutValidationRequired: boolean;
   actionInFlight: boolean;
   errors: string[];
 }

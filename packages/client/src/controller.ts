@@ -70,6 +70,10 @@ export interface MatchClientController {
   submitLobbyLoadoutHandoff: (input: {
     handoffToken: string;
   }) => Promise<MatchClientSessionState>;
+  submitLobbyDeck: (input: {
+    deckHash: string;
+    donDeckCount: number;
+  }) => Promise<MatchClientSessionState>;
   validateLobbyLoadouts: (input: {
     handoffTokens: readonly string[];
   }) => Promise<ValidatedLobbyLoadouts>;
@@ -287,6 +291,21 @@ export const createMatchClientController = ({
             sessionStore.loadClaimedSeat()?.sessionToken ??
             currentLobbyState.seat.sessionToken,
         },
+        lobby,
+      });
+    },
+    async submitLobbyDeck(input) {
+      if (currentLobbyState === undefined) {
+        throw new Error("Cannot submit a deck before joining a lobby.");
+      }
+      const lobby = await transport.submitLobbyDeck({
+        lobbyId: currentLobbyState.lobbyId,
+        sessionToken: currentLobbyState.seat.sessionToken,
+        deckHash: input.deckHash,
+        donDeckCount: input.donDeckCount,
+      });
+      return claimMatchIfReady({
+        ...currentLobbyState,
         lobby,
       });
     },

@@ -12,6 +12,7 @@ export interface LobbyDeckPanelProps {
   loadouts: readonly AccountLoadout[];
   loadoutsStatus: "idle" | "loading" | "ready" | "error";
   loadoutsError?: string | undefined;
+  requirePlayableValidation?: boolean | undefined;
   onRefreshLoadouts: () => void;
   onSubmitLoadout: (loadoutId: string) => Promise<void>;
 }
@@ -22,6 +23,7 @@ export const LobbyDeckPanel = ({
   loadouts,
   loadoutsStatus,
   loadoutsError,
+  requirePlayableValidation = true,
   onRefreshLoadouts,
   onSubmitLoadout,
 }: LobbyDeckPanelProps): React.JSX.Element => {
@@ -43,6 +45,7 @@ export const LobbyDeckPanel = ({
   );
   const pickerLocked = selfDeckStatus === "ready";
   const selectedLoadoutPlayable =
+    !requirePlayableValidation ||
     selectedLoadout?.validation?.status === "playable";
   const canSubmit =
     selectedLoadoutExists &&
@@ -80,6 +83,7 @@ export const LobbyDeckPanel = ({
               disabled={disabled || loadoutsStatus !== "ready"}
               locked={pickerLocked}
               loadouts={visibleLoadouts}
+              requirePlayableValidation={requirePlayableValidation}
               onChange={setSelectedLoadoutId}
             />
           </div>
@@ -91,7 +95,9 @@ export const LobbyDeckPanel = ({
           {loadoutsStatus === "ready" && loadouts.length === 0 ? (
             <p>No account loadouts are available.</p>
           ) : null}
-          {loadoutsStatus === "ready" && loadouts.length > 0 ? (
+          {requirePlayableValidation &&
+          loadoutsStatus === "ready" &&
+          loadouts.length > 0 ? (
             <label className="deck-loadout-filter">
               <input
                 type="checkbox"

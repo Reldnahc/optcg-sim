@@ -45,6 +45,18 @@ export interface ValidateReadyDevDeckSubmissionInput extends Omit<
   readonly submission: ReadyDeckSubmission;
 }
 
+export interface ValidateReadyDevDeckSubmissionsInput extends Omit<
+  ValidateReadyDevDeckSubmissionInput,
+  "submission"
+> {
+  readonly submissions: readonly ReadyDeckSubmission[];
+}
+
+export interface ReadyDeckSubmissionValidationResult {
+  readonly valid: boolean;
+  readonly error?: string;
+}
+
 export interface DevDonCounts {
   readonly firstPlayer: number;
   readonly secondPlayer: number;
@@ -285,6 +297,106 @@ export const validateDevDeckSubmissionVariants = (
 };
 
 export const validateReadyDevDeckSubmission = async (
+  input: ValidateReadyDevDeckSubmissionInput,
+): Promise<void> => {
+  const [result] = await validateReadyDevDeckSubmissions({
+    ...input,
+    submissions: [input.submission],
+  });
+  if (result?.valid !== true) {
+    throw new Error(result?.error ?? "Dev decklist failed validation.");
+  }
+};
+
+export const validateReadyDevDeckSubmissions = async (
+  input: ValidateReadyDevDeckSubmissionsInput,
+): Promise<readonly ReadyDeckSubmissionValidationResult[]> => {
+  const decklists = input.submissions.map((submission) =>
+    createDevDecklistFromSubmission(submission),
+  );
+  if (decklists.length === 0) {
+    return [];
+  }
+  try {
+    const devDonCount = Math.max(
+      ...decklists.map((decklist) => decklist.donDeckCount),
+    );
+    const cardManifest = await buildDevManifestFromCardIds(
+      createDevManifestCardIds(...decklists),
+      {
+        matchId: "validation-only" as DevMatchSetup["matchId"],
+        firstPlayerId: "p1" as PlayerId,
+        playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+        createdAt: input.createdAt,
+        ...(input.fetchCard === undefined
+          ? {}
+          : { fetchCard: input.fetchCard }),
+        ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+        ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
+        ...(input.redisMode === undefined
+          ? {}
+          : { redisMode: input.redisMode }),
+      },
+      devDonCount,
+    );
+    const redisConfig = resolveRedisConfig({
+      redisUrl: input.redisUrl,
+      redisMode: input.redisMode,
+    });
+    const validationCache =
+      input.fetchCard === undefined && redisConfig.redisUrl !== undefined
+        ? await createRedisCardDataCache({
+            url: redisConfig.redisUrl,
+          })
+        : undefined;
+    return await Promise.all(
+      decklists.map(async (decklist) => {
+        try {
+          validateDevDeckSubmissionVariants(decklist, cardManifest);
+          const adaptedDecklist = await validateAndAdaptDevDecklist({
+            decklist,
+            cardManifest,
+            ...(input.formatId === undefined
+              ? {}
+              : { formatId: input.formatId }),
+            ...(validationCache === undefined ? {} : { validationCache }),
+          });
+          createDevPlayerSetupFromDecklist(
+            "p1" as PlayerId,
+            adaptedDecklist,
+            cardManifest,
+            createDevDonDeckCardIds(adaptedDecklist.donDeckCount),
+          );
+          return { valid: true };
+        } catch (error: unknown) {
+          return {
+            valid: false,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }),
+    );
+  } catch {
+    return await Promise.all(
+      input.submissions.map(async (submission) => {
+        try {
+          await validateReadyDevDeckSubmissionUnbatched({
+            ...input,
+            submission,
+          });
+          return { valid: true };
+        } catch (error: unknown) {
+          return {
+            valid: false,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }),
+    );
+  }
+};
+
+const validateReadyDevDeckSubmissionUnbatched = async (
   input: ValidateReadyDevDeckSubmissionInput,
 ): Promise<void> => {
   const decklist = createDevDecklistFromSubmission(input.submission);

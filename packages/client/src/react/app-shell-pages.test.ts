@@ -14,6 +14,7 @@ const loadouts: readonly AccountLoadout[] = [
   {
     id: "loadout-1",
     name: "Enel Yellow",
+    deckHash: "enel-yellow-hash",
     folderId: "folder-1",
     folderName: "Ranked",
     favorite: true,

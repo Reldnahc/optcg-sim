@@ -43,6 +43,7 @@ const loadouts: readonly AccountLoadout[] = [
   {
     id: "loadout-1",
     name: "Enel Yellow",
+    deckHash: "enel-yellow-hash",
     folderId: "folder-1",
     folderName: "Ranked",
     favorite: true,
@@ -55,6 +56,7 @@ const loadouts: readonly AccountLoadout[] = [
   {
     id: "loadout-2",
     name: "Luffy Life",
+    deckHash: "luffy-life-hash",
     folderId: null,
     folderName: null,
     favorite: false,
@@ -185,6 +187,35 @@ describe("lobby deck panel", () => {
     assert.match(html, /Hide illegal decks/u);
     assert.match(html, /Resolved loadout is invalid\./u);
     assert.match(html, /deck-loadout-option[^>]*disabled=""[\s\S]*Luffy Life/u);
+  });
+
+  test("allows unchecked local loadouts when validation is not required", () => {
+    const uncheckedLoadouts: readonly AccountLoadout[] = loadouts.map(
+      (loadout) => ({
+        ...loadout,
+        validation: { status: "unchecked", errors: [] },
+      }),
+    );
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts: uncheckedLoadouts,
+        loadoutsStatus: "ready",
+        requirePlayableValidation: false,
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.doesNotMatch(html, /Hide illegal decks/u);
+    assert.doesNotMatch(
+      html,
+      /deck-loadout-option[^>]*disabled=""[\s\S]*Enel Yellow/u,
+    );
+    assert.doesNotMatch(
+      html,
+      /<button class="deck-loadout-submit-button" type="submit" disabled="">Submit/u,
+    );
   });
 
   test("renders loading deck status in the deck action row", () => {
@@ -437,7 +468,7 @@ describe("lobby deck panel", () => {
 
     assert.match(
       panelSource,
-      /selectedLoadout\?\.validation\?\.status === "playable"/u,
+      /!requirePlayableValidation \|\|\s*selectedLoadout\?\.validation\?\.status === "playable"/u,
     );
     assert.match(pickerSource, /requirePlayableValidation = true/u);
     assert.match(

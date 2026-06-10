@@ -4,6 +4,7 @@ import type { DeckCollection, DeckLibraryFolder } from "optcg-auth-client";
 export interface AccountLoadout {
   readonly id: string;
   readonly name: string;
+  readonly deckHash: string;
   readonly folderId: string | null;
   readonly folderName: string | null;
   readonly favorite: boolean;
@@ -68,9 +69,13 @@ const normalizeLibraryDeck = (
   if (value.loadout_id === null) {
     throw new TypeError("Deck collection is missing a sim loadout id.");
   }
+  if (value.deck_hash === null) {
+    throw new TypeError("Deck collection is missing a deck hash.");
+  }
   return {
     id: value.loadout_id,
     name: value.name,
+    deckHash: value.deck_hash,
     folderId: value.folder_id,
     folderName: folder?.name ?? null,
     favorite: value.favorite,
@@ -96,7 +101,12 @@ const poneglyphCardStockImageUrl = (
 const playableDeckCollections = (
   decks: readonly DeckCollection[],
 ): DeckCollection[] =>
-  decks.filter((deck) => deck.kind === "deck" && deck.loadout_id !== null);
+  decks.filter(
+    (deck) =>
+      deck.kind === "deck" &&
+      deck.loadout_id !== null &&
+      deck.deck_hash !== null,
+  );
 
 interface BatchHandoffResponse {
   readonly data: {
