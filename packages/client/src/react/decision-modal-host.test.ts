@@ -398,11 +398,7 @@ test("return-to-deck order modal renders card images with deck order badges", ()
 
   assert.match(markup, /decision-order-card-grid/u);
   assert.match(markup, /modal-frame-card-decision/u);
-  assert.match(markup, /hand-row/u);
-  assert.match(
-    markup,
-    /hand-cards[^"]*hand-cards-overlap-right[^"]*decision-order-card-grid/u,
-  );
+  assert.match(markup, /hand-cards decision-order-card-grid/u);
   assert.match(markup, /decision-order-hint/u);
   assert.equal(markup.includes("top-card.png"), true);
   assert.equal(markup.includes("bottom-card.png"), true);
@@ -482,24 +478,24 @@ test("fixed top order modal has no top-or-bottom destination control", () => {
   assert.doesNotMatch(markup, /decision-placement-choice/u);
 });
 
-test("return-to-deck order modal shares HandRow reorder instead of custom drag", async () => {
+test("return-to-deck order modal shares CardTile reorder instead of custom drag", async () => {
   const [source, styles] = await Promise.all([
     readFile(join(sourceDirectory, "DecisionModalHost.tsx"), "utf8"),
     readFile(join(sourceDirectory, "styles", "decision-modal.css"), "utf8"),
   ]);
 
-  assert.match(source, /HandRow/u);
-  assert.match(source, /cardsClassName="decision-order-card-grid"/u);
-  assert.match(source, /selectionOrderLabel=\{/u);
-  assert.match(source, /onMoveCard=\{/u);
-  assert.match(source, /onCardPreview=\{onPreviewCard\}/u);
+  assert.match(source, /CardTile/u);
+  assert.match(source, /useCardReorderPreview/u);
+  assert.match(source, /onPreviewMoveNear/u);
+  assert.match(source, /onMoveNear/u);
+  assert.match(source, /reorderDragStrategy="translate"/u);
+  assert.match(source, /className="hand-cards decision-order-card-grid"/u);
   assert.doesNotMatch(source, /decision-order-card-slot/u);
   assert.doesNotMatch(styles, /\.decision-order-card-grid\s*\{[^}]*gap:/u);
   assert.doesNotMatch(
     styles,
     /\.decision-order-card-grid\s*\{[^}]*justify-content:/u,
   );
-  assert.doesNotMatch(source, /useCardReorderPreview/u);
   assert.doesNotMatch(source, /PointerReorderDrag/u);
   assert.doesNotMatch(source, /data-decision-order-instance-id/u);
   assert.doesNotMatch(source, /reorderPlacementFromPointer/u);
@@ -524,7 +520,7 @@ test("decision modal card surfaces pass hover callbacks to card preview", async 
     source,
     /cardModel\?: \(\(card: CardRef\) => ClientCardModel\) \| undefined/u,
   );
-  assert.match(source, /onCardPreview=\{onPreviewCard\}/u);
+  assert.match(source, /onHover=\{onPreviewCard\}/u);
   assert.match(source, /decisionClientCard\(/u);
   assert.match(source, /cardModel\?\.\(card\)/u);
   assert.doesNotMatch(source, /onHover=\{\(\) => undefined\}/u);
