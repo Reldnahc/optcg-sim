@@ -143,7 +143,7 @@ export const defaultDevDonCounts: DevDonCounts = {
   secondPlayer: 10,
 };
 
-export const defaultDevEffectDefinitionsVersion = "generated-dev-v8";
+export const defaultDevEffectDefinitionsVersion = "generated-dev-v9";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v3";
 export const defaultDevDeckFormatId = "sandbox-open";
 const defaultDevCatalogVersionsTtlMs = 60_000;
