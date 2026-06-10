@@ -228,4 +228,157 @@ describe("opponent attack effect line parser", () => {
       ]),
     );
   });
+
+  it("parses opponent-attack DON cost into selected attack retargeting", () => {
+    const result = parseCardEffectLine(
+      "[On Your Opponent's Attack] [Once Per Turn] DON!! \u22121: Select your Leader or 1 of your {Donquixote Pirates} type Characters. Change the attack target to the selected card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onOpponentAttack" },
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "returnDon",
+                  count: 1,
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "targetSelection:change-attack-target",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "self",
+                        zones: ["leaderArea", "characterArea"],
+                        min: 1,
+                        max: 1,
+                        filter: {
+                          anyOf: [
+                            { categories: ["leader"] },
+                            {
+                              categories: ["character"],
+                              typesAny: ["Donquixote Pirates"],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "changeAttackTarget",
+                      target: { type: "savedFieldObject" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onOpponentAttack",
+        "marker:oncePerTurn",
+        "cost:returnDon",
+        "composition:selectThenApply",
+        "instruction:changeAttackTarget",
+        "target:yourLeaderOrCharacters",
+        "filter:anyOf",
+        "filter:type",
+      ]),
+    );
+  });
+
+  it("parses filtered hand-trash cost into reusable selected attack retargeting", () => {
+    const result = parseCardEffectLine(
+      "[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card with a [Trigger] from your hand: Change the target of that attack to this Leader or to one of your {Blackbeard Pirates} type Character cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onOpponentAttack" },
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 1,
+                  chooser: "self",
+                  filter: {
+                    effectEntryPoint: {
+                      mode: "with",
+                      trigger: { type: "trigger" },
+                    },
+                  },
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "self",
+                        zones: ["leaderArea", "characterArea"],
+                        min: 1,
+                        max: 1,
+                        filter: {
+                          anyOf: [
+                            { categories: ["leader"] },
+                            {
+                              categories: ["character"],
+                              typesAny: ["Blackbeard Pirates"],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "changeAttackTarget",
+                      target: { type: "savedFieldObject" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
 });

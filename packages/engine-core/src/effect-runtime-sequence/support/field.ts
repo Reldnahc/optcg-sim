@@ -37,6 +37,12 @@ export type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
   destination: "deckBottom" | "hand";
 };
+export type ChangeAttackTargetEffect = Extract<
+  Effect,
+  { type: "changeAttackTarget" }
+> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
 
 export const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
@@ -156,3 +162,10 @@ export const isSupportedActivateSegment = (
       effect.target.player === "self" &&
       effect.target.zone === "characterArea" &&
       isSupportedPublicFieldTargetFilter(effect.target.filter)));
+
+export const isSupportedChangeAttackTargetSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ChangeAttackTargetEffect =>
+  effect.type === "changeAttackTarget" &&
+  isSupportedSavedLeaderOrCharacterTarget(effect.target) &&
+  effect.target.binding.family === "selectedTargets";

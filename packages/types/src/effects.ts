@@ -923,6 +923,7 @@ export type Effect =
       target: Target;
       duration: Duration;
     }
+  | { type: "changeAttackTarget"; target: Target }
   | { type: "cannotBeAttacked"; target: Target; duration: Duration }
   | {
       type: "cannotBeBlockedBy";

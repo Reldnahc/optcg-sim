@@ -52,12 +52,14 @@ import {
 import {
   isSupportedActivateSegment,
   isSupportedBounceSegment,
+  isSupportedChangeAttackTargetSegment,
   isSupportedKoSegment,
   isSupportedRestSegment,
   isSupportedSequenceTargetRequest,
   isSupportedTrashSegment,
   type ActivateEffect,
   type BounceEffect,
+  type ChangeAttackTargetEffect,
   type KoEffect,
   type RestEffect,
   type TrashEffect,
@@ -107,6 +109,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | ActivateSelectedEventEffect
     | RestEffect
     | ActivateEffect
+    | ChangeAttackTargetEffect
     | SavedTargetContinuousEffect
     | ConditionalContinuousEffect
     | ConditionalSequenceEffect
@@ -357,6 +360,9 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedActivateSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedChangeAttackTargetSegment(segment.effect)) {
         return true;
       }
       if (isSupportedSavedTargetContinuousSegment(segment.effect)) {

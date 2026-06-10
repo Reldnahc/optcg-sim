@@ -120,6 +120,54 @@ const optionalTrashSelfThenSetDonActiveSequence = (): Extract<
   ],
 });
 
+const selectLeaderOrCharacterThenRetargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select-new-attack-target",
+      connector: "always",
+      saveResultAs: "targetSelection:change-attack-target",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea"],
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+          filter: {
+            categories: ["leader", "character"],
+          },
+        },
+      },
+    },
+    {
+      id: "change-attack-target",
+      connector: "then",
+      effect: {
+        type: "changeAttackTarget",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "targetSelection:change-attack-target",
+          },
+          zones: ["leaderArea", "characterArea"],
+          player: "self",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+  ],
+});
+
 const optionalFilteredHandTrashThenSetBasePowerSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -404,6 +452,91 @@ test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or
   assert.equal(declined.state.pendingDecision?.type, "selectCards");
   assert.equal(must(declined.state.players[p2], "declined p2").trash.length, 0);
   assert.deepEqual(declined.state.continuousEffects, []);
+});
+
+test("defender On Your Opponent's Attack selected target can become current attack target", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p2State.characters[0], "opponent attack source");
+  const newTarget = {
+    ...must(p2State.hand[0], "new attack target"),
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p2,
+      slot: "character" as const,
+      index: 1,
+    },
+    state: "active" as const,
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  p2State.characters = [...p2State.characters, newTarget];
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = withOnOpponentAttackDrawEffect(
+    state,
+    source,
+    "def-on-opponent-attack-change-target",
+  );
+  const effect = must(definition.effects[0], "On Opponent Attack effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-opponent-attack-change-target": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: selectLeaderOrCharacterThenRetargetSequence(),
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "selectTargets");
+  assert.equal(opened.state.pendingDecision.playerId, p2);
+
+  const targeted = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: opened.state.pendingDecision.id,
+    response: {
+      type: "targets",
+      targets: [
+        {
+          instanceId: newTarget.instanceId,
+          cardId: newTarget.cardId,
+          playerId: p2,
+          zone: newTarget.zone,
+        },
+      ],
+    },
+  });
+
+  assert.equal(targeted.errors, undefined);
+  assert.equal(
+    targeted.state.battle?.currentTarget.instanceId,
+    newTarget.instanceId,
+  );
+  assert.equal(targeted.state.battle.currentTarget.cardId, newTarget.cardId);
+  assert.equal(targeted.state.battle.step, "counter");
+  assert.equal(targeted.state.pendingDecision?.type, "selectCards");
 });
 
 test("defender On Your Opponent's Attack trash-self sequence resumes battle after selecting DON", () => {

@@ -18,6 +18,7 @@ import {
 } from "./frame-decisions.js";
 import {
   applySavedFieldObjectActivateSequenceSegment,
+  applySavedFieldObjectChangeAttackTargetSequenceSegment,
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,
   applySavedFieldObjectRestrictionSequenceSegment,
@@ -371,6 +372,27 @@ export const applyFieldMutationSequenceSegment = (params: {
       ledgers: activated.ledgers,
       ok: true,
       state: activated.state,
+    };
+  }
+
+  if (segment.effect.type === "changeAttackTarget") {
+    const changedTarget =
+      applySavedFieldObjectChangeAttackTargetSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers,
+        segment,
+        segmentKey,
+        state,
+      });
+    return {
+      events,
+      handled: true,
+      kind: "continue",
+      ledgers: changedTarget.ledgers,
+      ok: true,
+      state: changedTarget.state,
     };
   }
 

@@ -37,7 +37,7 @@ export const parseCharacterCategoryPredicate: PredicateParser = (
 };
 
 export const parseStageCategoryPredicate: PredicateParser = (text, current) => {
-  const match = /^Stages?\b\s*(?<rest>.*)$/i.exec(text);
+  const match = /^Stages?(?: cards?)?\b\s*(?<rest>.*)$/i.exec(text);
   if (match === null) {
     return undefined;
   }
@@ -52,6 +52,20 @@ export const parseEventCategoryPredicate: PredicateParser = (text, current) => {
   }
 
   return categoryResult(current, "event", match.groups?.["rest"] ?? "");
+};
+
+export const parseGenericCardPredicate: PredicateParser = (text, current) => {
+  const match = /^cards?\b\s*(?<rest>.*)$/i.exec(text);
+  if (match === null) {
+    return undefined;
+  }
+  const rest = match.groups?.["rest"] ?? "";
+
+  return {
+    filter: current,
+    evidence: startsAdditionalFilterPredicate(rest) ? [] : ["filter:any"],
+    rest,
+  };
 };
 
 export const parseRestedCharacterPredicate: PredicateParser = (
@@ -77,6 +91,9 @@ const categoryResult = (
   evidence: [`filter:category:${category}`] as const,
   rest,
 });
+
+const startsAdditionalFilterPredicate = (rest: string): boolean =>
+  /^(?:,?\s*(?:with|and)\b|other than\b)/i.test(rest.trim());
 
 const parseFieldStateCharacterPredicate = (
   text: string,

@@ -1,6 +1,7 @@
 export { restFieldObjects } from "./saved-field-object/field-object-state.js";
 export {
   applySavedFieldObjectActivateSequenceSegment,
+  applySavedFieldObjectChangeAttackTargetSequenceSegment,
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,
   applySavedFieldObjectRestrictionSequenceSegment,

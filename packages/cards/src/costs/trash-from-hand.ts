@@ -33,8 +33,8 @@ export const trashFromHandCostPrimitive: PrimitivePatternDefinition<CostParseRes
 export const parseTrashFromHandCost = (
   input: Parameters<typeof parsePrimitivePattern<CostParseResult>>[0],
 ): CostParseResult | undefined =>
-  parseFilteredTrashFromHandCost(input) ??
-  parsePrimitivePattern(input, trashFromHandCostPrimitive);
+  parsePrimitivePattern(input, trashFromHandCostPrimitive) ??
+  parseFilteredTrashFromHandCost(input);
 
 const parseFilteredTrashFromHandCost = (
   input: Parameters<typeof parsePrimitivePattern<CostParseResult>>[0],

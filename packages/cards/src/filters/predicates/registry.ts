@@ -3,6 +3,7 @@ import {
   parseCharacterCategoryPredicate,
   parseColorPredicate,
   parseEventCategoryPredicate,
+  parseGenericCardPredicate,
   parseRestedCharacterPredicate,
   parseStageCategoryPredicate,
 } from "./category.js";
@@ -58,6 +59,7 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseEventCategoryPredicate,
   parseStageCategoryPredicate,
   parseCharacterCategoryPredicate,
+  parseGenericCardPredicate,
   parsePowerPredicate,
   parseEffectEntryPointPresencePredicate,
   parseEffectEntryPointPredicate,

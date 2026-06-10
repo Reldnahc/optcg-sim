@@ -15,6 +15,7 @@ export {
   restOpponentCharactersOrDonCardsPrimitive,
   restOpponentCharactersPrimitive,
   restOpponentLeaderOrCharactersPrimitive,
+  selectedAttackRetargetExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
   yourLeaderPowerOpponentNextEndPrimitive,
 } from "./planned-field-effects/index.js";

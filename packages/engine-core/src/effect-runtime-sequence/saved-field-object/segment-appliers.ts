@@ -440,6 +440,73 @@ export const applySavedFieldObjectActivateSequenceSegment = (params: {
   };
 };
 
+export const applySavedFieldObjectChangeAttackTargetSequenceSegment = (params: {
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SupportedSequenceSegment;
+  segmentKey: (segment: SupportedSequenceSegment, index: number) => string;
+  state: GameState;
+}): {
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  if (params.segment.effect.type !== "changeAttackTarget") {
+    return { ledgers: params.ledgers, state: params.state };
+  }
+  const resolvedSavedTarget = resolveSavedFieldObjectKoSelection({
+    controllerId: params.entry.controllerId,
+    savedReferences: params.ledgers.savedReferences,
+    state: params.state,
+    target: params.segment.effect.target,
+  });
+  const selectedTarget = resolvedSavedTarget.ok
+    ? resolvedSavedTarget.selectedTargets[0]
+    : undefined;
+  if (selectedTarget === undefined || params.state.battle === undefined) {
+    return {
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+
+  const nextState = {
+    ...params.state,
+    battle: {
+      ...params.state.battle,
+      currentTarget: selectedTarget,
+    },
+    seq: toStateSeq(params.state.seq + 1),
+  };
+
+  return {
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: true,
+          selectedTargets: [selectedTarget],
+        },
+      },
+    },
+    state: nextState,
+  };
+};
+
 export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
   entry: EffectQueueEntry;

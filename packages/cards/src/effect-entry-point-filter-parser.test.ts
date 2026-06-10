@@ -2,6 +2,22 @@ import { expect, it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 import { supportedEntryPoints } from "./entry-point-definitions.js";
+import { parseCardFilterPredicates } from "./filters/index.js";
+
+it("parses generic card filters with effect-entry-point predicates", () => {
+  expect(
+    parseCardFilterPredicates({ text: "card with a [Trigger]" }),
+  ).toMatchObject({
+    filter: {
+      effectEntryPoint: {
+        mode: "with",
+        trigger: { type: "trigger" },
+      },
+    },
+    evidence: ["filter:effectEntryPoint", "filter:effectEntryPoint:with"],
+    rest: "",
+  });
+});
 
 it("parses with/without effect-entry-point filters for every supported bracket entry point", () => {
   for (const entryPoint of supportedEntryPoints) {

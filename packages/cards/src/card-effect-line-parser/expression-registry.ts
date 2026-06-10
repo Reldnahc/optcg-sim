@@ -47,7 +47,10 @@ import {
   syntheticInstructionSegmentParser,
   trailingConditionalExpressionSegmentParser,
 } from "../segments/index.js";
-import { selectPowerThenPreventBlockerActivationExpressionParser } from "../instructions/index.js";
+import {
+  selectedAttackRetargetExpressionParser,
+  selectPowerThenPreventBlockerActivationExpressionParser,
+} from "../instructions/index.js";
 import type { ParseInput } from "../types.js";
 import {
   conditionParsers,
@@ -118,6 +121,7 @@ const costedExpressions = [
   lookPlayFromTopExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
+  selectedAttackRetargetExpressionParser,
   conditionalCostedBodyExpressionParser,
   singleInstructionExpressionParser,
   generalExpressionParser,
@@ -217,12 +221,7 @@ export const defaultRegistry = {
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,
-      expressions: [
-        lookPlayFromTopExpressionParser,
-        searchRevealExpressionParser,
-        singleInstructionExpressionParser,
-        generalExpressionParser,
-      ],
+      expressions: costedExpressions,
     }),
     optionalCostedEffectExpressionParser({
       instructions: instructionParsers,
@@ -230,6 +229,7 @@ export const defaultRegistry = {
     }),
     playStageFromDeckExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
+    selectedAttackRetargetExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
     lookPlayFromTopExpressionParser,
     revealTopPlayRestedExpressionParser,
