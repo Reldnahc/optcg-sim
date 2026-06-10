@@ -217,12 +217,13 @@ describe("hand layout", () => {
     assert.equal(markup.match(/is-selectable/gu)?.length, 2);
   });
 
-  test("selectable hand card styling uses inset emphasis for overlapping cards", async () => {
+  test("selectable hand card styling uses isolated blue inset emphasis for overlapping cards", async () => {
     const styles = await readFile(cardStylesPath, "utf8");
 
+    assert.match(styles, /\.card-tile\s*\{[^}]*isolation:\s*isolate;/u);
     assert.match(
       styles,
-      /\.card-tile\.is-selectable\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 2px rgba\(255,\s*220,\s*98,\s*0\.62\);/u,
+      /\.card-tile\.is-selectable\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 2px rgba\(68,\s*216,\s*255,\s*0\.72\);/u,
     );
     assert.match(
       styles,

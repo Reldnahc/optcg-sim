@@ -106,6 +106,7 @@
   padding: 0;
   background: transparent;
   cursor: pointer;
+  isolation: isolate;
 }
 
 .card-tile::after {
@@ -173,7 +174,7 @@
 }
 
 .card-tile.is-selectable {
-  --card-selectable-glow: inset 0 0 0 2px rgba(255, 220, 98, 0.62);
+  --card-selectable-glow: inset 0 0 0 2px rgba(68, 216, 255, 0.72);
 }
 
 .card-tile:hover:not(:disabled) {
