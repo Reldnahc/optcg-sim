@@ -17,109 +17,21 @@ import { isSupportedMoveCardsEffect } from "./effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "./effect-runtime-top-deck-placement.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence/support.js";
 import { isSupportedTrashFromHandUntilCountBody } from "./runtime/primitives/trash-from-hand-until.js";
+import {
+  autoRuntimeEntryAdapterForTriggerType,
+  triggerContainsType,
+  type AutoRuntimeEntryAdapter,
+} from "./effect-runtime-entry-adapters.js";
+
+export {
+  autoRuntimeEntryAdapterForBlock,
+  autoRuntimeEntryAdapterForTriggerType,
+  autoRuntimeEntryAdaptersForBlock,
+  triggerContainsType,
+} from "./effect-runtime-entry-adapters.js";
+export type { AutoRuntimeEntryAdapter } from "./effect-runtime-entry-adapters.js";
 
 type EffectBlock = EffectDefinition["effects"][number];
-type AutoRuntimeTriggerType = Exclude<Trigger["type"], "anyOf">;
-
-export interface AutoRuntimeEntryAdapter {
-  readonly category: "auto";
-  readonly sourcePresencePolicies: readonly SourcePresencePolicy[];
-  readonly triggerType: AutoRuntimeTriggerType;
-}
-
-const autoAdapter = (
-  triggerType: AutoRuntimeEntryAdapter["triggerType"],
-  sourcePresencePolicies: readonly SourcePresencePolicy[],
-): AutoRuntimeEntryAdapter => ({
-  category: "auto",
-  sourcePresencePolicies,
-  triggerType,
-});
-
-export const autoRuntimeEntryAdapterForTriggerType = (
-  triggerType: AutoRuntimeTriggerType,
-): AutoRuntimeEntryAdapter | undefined => {
-  if (triggerType === "onPlay") {
-    return autoAdapter("onPlay", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "whenAttacking") {
-    return autoAdapter("whenAttacking", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "onOpponentAttack") {
-    return autoAdapter("onOpponentAttack", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "onKO") {
-    return autoAdapter("onKO", [
-      "resolveFromDestinationZone",
-      "resolveFromLastKnownInformation",
-    ]);
-  }
-  if (triggerType === "endOfYourTurn") {
-    return autoAdapter("endOfYourTurn", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "main") {
-    return autoAdapter("main", [
-      "noSourceRequired",
-      "resolveFromDestinationZone",
-    ]);
-  }
-  if (triggerType === "trigger") {
-    return autoAdapter("trigger", ["noSourceRequired"]);
-  }
-  if (triggerType === "counter") {
-    return autoAdapter("counter", ["resolveFromDestinationZone"]);
-  }
-  if (triggerType === "lifeRemoved") {
-    return autoAdapter("lifeRemoved", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "damageDealt") {
-    return autoAdapter("damageDealt", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "fieldRemoved") {
-    return autoAdapter("fieldRemoved", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "cardPlayed") {
-    return autoAdapter("cardPlayed", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "handTrashedByEffect") {
-    return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
-  }
-  if (triggerType === "opponentActivated") {
-    return autoAdapter("opponentActivated", ["mustRemainInSameZone"]);
-  }
-  return undefined;
-};
-
-const triggerTypes = (trigger: Trigger): readonly AutoRuntimeTriggerType[] =>
-  trigger.type === "anyOf"
-    ? trigger.triggers.flatMap(triggerTypes)
-    : [trigger.type];
-
-export const triggerContainsType = (
-  trigger: Trigger,
-  triggerType: AutoRuntimeTriggerType,
-): boolean => triggerTypes(trigger).includes(triggerType);
-
-export const autoRuntimeEntryAdaptersForBlock = (
-  block: EffectBlock,
-): readonly AutoRuntimeEntryAdapter[] => {
-  if (block.sourcePresencePolicy === undefined) {
-    return [];
-  }
-  const adapters = triggerTypes(block.trigger).map((triggerType) =>
-    autoRuntimeEntryAdapterForTriggerType(triggerType),
-  );
-  return adapters.every(
-    (adapter): adapter is AutoRuntimeEntryAdapter => adapter !== undefined,
-  )
-    ? adapters
-    : [];
-};
-
-export const autoRuntimeEntryAdapterForBlock = (
-  block: EffectBlock,
-): AutoRuntimeEntryAdapter | undefined =>
-  autoRuntimeEntryAdaptersForBlock(block)[0];
 
 const isSupportedDrawUpToBody = (
   effect: Effect,
@@ -259,7 +171,10 @@ const isSupportedNonOptionalBody = (
 
 const isSupportedOptionalBody = (
   block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
-): boolean => isSupportedDrawBody(block.effect);
+  adapter: AutoRuntimeEntryAdapter,
+): boolean =>
+  adapter.supportsOptionalActivation !== false &&
+  isSupportedDrawBody(block.effect);
 
 export const isSupportedAutoRuntimeEffectBlock = (
   block: EffectBlock,
@@ -269,7 +184,7 @@ export const isSupportedAutoRuntimeEffectBlock = (
     return false;
   }
   if (block.optional === true) {
-    return isSupportedOptionalBody(block);
+    return isSupportedOptionalBody(block, adapter);
   }
   return isSupportedNonOptionalBody(block, adapter);
 };

@@ -22,6 +22,7 @@ import {
   getOpponentId,
   reindexZoneCards,
 } from "../../actions/state.js";
+import { autoRuntimeEntryAdaptersForBlock } from "../../effect-runtime-entry-adapters.js";
 
 export type DrawExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -282,67 +283,36 @@ const hasSupportedDrawEffectEnvelope = (
   return isSupportedDrawBody(effect.effect);
 };
 
-const isSupportedRequiredDrawEntryPoint = (
+const isSupportedAutoRuntimeDrawEntryPoint = (
   effect: DrawEffectBlock,
+  options: { readonly optionalActivation?: boolean } = {},
 ): boolean => {
-  const sourcePresencePolicy = effect.sourcePresencePolicy;
-  if (
-    effect.trigger.type === "onPlay" ||
-    effect.trigger.type === "whenAttacking" ||
-    effect.trigger.type === "onOpponentAttack" ||
-    effect.trigger.type === "damageDealt" ||
-    effect.trigger.type === "fieldRemoved" ||
-    effect.trigger.type === "custom"
-  ) {
-    return true;
-  }
-  if (effect.trigger.type === "anyOf") {
-    return effect.trigger.triggers.some((trigger) =>
-      isSupportedRequiredDrawEntryPoint({ ...effect, trigger }),
-    );
-  }
-  if (effect.trigger.type === "onKO") {
-    return (
-      sourcePresencePolicy === "resolveFromDestinationZone" ||
-      sourcePresencePolicy === "resolveFromLastKnownInformation"
-    );
-  }
-  if (effect.trigger.type === "main") {
-    return sourcePresencePolicy === "resolveFromDestinationZone";
-  }
-  if (effect.trigger.type === "trigger") {
-    return (
-      effect.optional === undefined &&
-      effect.oncePerTurn !== false &&
-      (sourcePresencePolicy === "resolveFromLastKnownInformation" ||
-        sourcePresencePolicy === "noSourceRequired")
-    );
-  }
-  return false;
+  const adapters = autoRuntimeEntryAdaptersForBlock(effect);
+  return (
+    adapters.length > 0 &&
+    adapters.every(
+      (adapter) =>
+        adapter.sourcePresencePolicies.includes(effect.sourcePresencePolicy) &&
+        (options.optionalActivation !== true ||
+          adapter.supportsOptionalActivation !== false),
+    )
+  );
 };
 
-const isSupportedOptionalDrawEntryPoint = (
+const isSupportedEffectResolvedCustomDrawEntryPoint = (
   effect: DrawEffectBlock,
-): boolean => {
-  const sourcePresencePolicy = effect.sourcePresencePolicy;
-  if (
-    effect.trigger.type === "onPlay" ||
-    effect.trigger.type === "whenAttacking" ||
-    effect.trigger.type === "onOpponentAttack"
-  ) {
-    return sourcePresencePolicy === "mustRemainInSameZone";
-  }
-  if (effect.trigger.type === "onKO") {
-    return (
-      sourcePresencePolicy === "resolveFromDestinationZone" ||
-      sourcePresencePolicy === "resolveFromLastKnownInformation"
-    );
-  }
-  if (effect.trigger.type === "main") {
-    return sourcePresencePolicy === "resolveFromDestinationZone";
-  }
-  return false;
-};
+  eventName: string,
+): boolean =>
+  effect.trigger.type === "custom" &&
+  effect.trigger.event === eventName &&
+  effect.sourcePresencePolicy === "mustRemainInSameZone";
+
+const isSupportedQueuedCustomDrawEntryPoint = (
+  effect: DrawEffectBlock,
+): boolean =>
+  effect.trigger.type === "custom" &&
+  (effect.sourcePresencePolicy === "mustRemainInSameZone" ||
+    effect.sourcePresencePolicy === "noSourceRequired");
 
 export const isSupportedEffectResolvedCustomDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -358,7 +328,7 @@ export const isSupportedEffectResolvedCustomDrawEffect = (
     optional: "required",
     allowOncePerTurn: true,
   }) &&
-  isSupportedRequiredDrawEntryPoint(effect);
+  isSupportedEffectResolvedCustomDrawEntryPoint(effect, eventName);
 
 export const isSupportedQueuedDrawEffectBlock = (
   effect: EffectDefinition["effects"][number],
@@ -369,7 +339,9 @@ export const isSupportedQueuedDrawEffectBlock = (
   hasSupportedDrawEffectEnvelope(effect, {
     optional: "required",
     allowOncePerTurn: true,
-  }) && isSupportedRequiredDrawEntryPoint(effect);
+  }) &&
+  (isSupportedAutoRuntimeDrawEntryPoint(effect) ||
+    isSupportedQueuedCustomDrawEntryPoint(effect));
 
 export const isSupportedQueuedOptionalDrawEffectBlock = (
   effect: EffectDefinition["effects"][number],
@@ -380,4 +352,5 @@ export const isSupportedQueuedOptionalDrawEffectBlock = (
   hasSupportedDrawEffectEnvelope(effect, {
     optional: "optional",
     allowOncePerTurn: true,
-  }) && isSupportedOptionalDrawEntryPoint(effect);
+  }) &&
+  isSupportedAutoRuntimeDrawEntryPoint(effect, { optionalActivation: true });

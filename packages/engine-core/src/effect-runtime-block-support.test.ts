@@ -4,9 +4,11 @@ import { test } from "vitest";
 import type { EffectDefinition, SourcePresencePolicy } from "@optcg/types";
 
 import {
+  autoRuntimeEntryAdapterForTriggerType,
   isSupportedAutoRuntimeEffectBlock,
   type AutoRuntimeEntryAdapter,
 } from "./effect-runtime-block-support.js";
+import { isSupportedQueuedDrawEffectBlock } from "./runtime/primitives/execute.js";
 
 type EffectBlock = EffectDefinition["effects"][number];
 
@@ -64,6 +66,20 @@ test("auto runtime admission accepts a supported body primitive through differen
     ),
     true,
   );
+});
+
+test("queued draw support follows reusable auto entry adapters", () => {
+  const triggerType = "endOfYourTurn";
+  const adapter = autoRuntimeEntryAdapterForTriggerType(triggerType);
+  assert.ok(adapter !== undefined);
+  const block = autoBlock({
+    effect: { type: "draw", count: 1, player: "self" },
+    sourcePresencePolicy: "mustRemainInSameZone",
+    trigger: { type: triggerType },
+  });
+
+  assert.equal(isSupportedAutoRuntimeEffectBlock(block, adapter), true);
+  assert.equal(isSupportedQueuedDrawEffectBlock(block), true);
 });
 
 test("auto runtime admission composes supported conditions with supported body primitives", () => {
