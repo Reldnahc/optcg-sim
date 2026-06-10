@@ -197,6 +197,7 @@ const isSupportedSequenceContinuousSegment = (
 const isSupportedConditionalSegment = (
   effect: SequenceSegmentEffect,
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
+  options: SequenceSupportOptions,
 ): effect is ConditionalEffect => {
   if (
     effect.type !== "conditional" ||
@@ -213,87 +214,17 @@ const isSupportedConditionalSegment = (
   if (flattenedThen === null) {
     return false;
   }
-  const supportState = emptySequenceSupportState();
-  return flattenedThen.effects.every((segment, index) => {
-    if (index === 0 && segment.connector !== "always") {
-      return false;
-    }
-    if (segment.optional === true) {
-      return false;
-    }
-    if (segment.effect.type === "selectTargets") {
-      if (!isSupportedSequenceTargetRequest(segment.effect.request)) {
-        return false;
-      }
-      if (
-        segment.saveResultAs !== undefined &&
-        requestSelectsDonFromCostArea(segment.effect.request)
-      ) {
-        supportState.savedSelectedCards.set(segment.saveResultAs, "don");
-      }
-      return true;
-    }
-    if (segment.effect.type === "selectAllTargets") {
-      return isSupportedSelectAllTargetsRequest(segment.effect.request);
-    }
-    if (isSupportedKoSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedBounceSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedTrashSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedDrawSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedTrashFromHandSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedMoveCardsSegment(segment.effect)) {
-      return true;
-    }
-    if (isSupportedReturnDonSegment(segment.effect)) {
-      return true;
-    }
-    if (
-      isSupportedSequenceContinuousSegment(segment.effect, sourcePresencePolicy)
-    ) {
-      return true;
-    }
-    if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
-      const kind = savedSelectedCardsKindForSelectCardsSegment(segment.effect);
-      if (kind === undefined) {
-        return false;
-      }
-      supportState.savedSelectedCards.set(String(segment.effect.saveAs), kind);
-      return true;
-    }
-    if (segment.effect.type === "moveSelected") {
-      return isSupportedMoveSelectedSegment(
-        segment.effect,
-        savedSelectedCardsKind(supportState, segment.effect.selection),
-        hasSavedSelectionSet(supportState, segment.effect.from),
-      );
-    }
-    if (isSupportedActivateSegment(segment.effect)) {
-      return true;
-    }
-    if (segment.effect.type === "playSelected") {
-      const kind = savedSelectedCardsKind(
-        supportState,
-        segment.effect.selection,
-      );
-      return (
-        segment.effect.ignoreCost === true &&
-        (segment.effect.enterRested === undefined ||
-          typeof segment.effect.enterRested === "boolean") &&
-        (kind === "hand" || kind === "trash" || kind === "set")
-      );
-    }
-    return false;
-  });
+  return isSupportedSequenceBlock(
+    toSyntheticQueueEntry(sourcePresencePolicy),
+    {
+      id: "effect:conditional-child" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy,
+      effect: flattenedThen,
+    },
+    { ...options, requirePositiveDrawCount: false },
+  );
 };
 
 const isSupportedDelayedSegment = (
@@ -518,6 +449,7 @@ export const toSupportedSequenceBlock = (
         isSupportedConditionalSegment(
           segment.effect,
           entry.sourcePresencePolicy,
+          options,
         )
       ) {
         supportState.hasPendingDecisionSegment = true;
