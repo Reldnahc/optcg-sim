@@ -110,7 +110,16 @@ export const applyAttachDon = (
       character.instanceId === action.target.instanceId &&
       targetMatchesCard(action.target, character),
   );
-  if (!isLeaderTarget && targetCharacterIndex < 0) {
+  const targetCharacter =
+    targetCharacterIndex >= 0
+      ? player.characters[targetCharacterIndex]
+      : undefined;
+  let exactTarget: CardRef;
+  if (isLeaderTarget) {
+    exactTarget = toCardRef(player.leader, turnPlayerId);
+  } else if (targetCharacter !== undefined) {
+    exactTarget = toCardRef(targetCharacter, turnPlayerId);
+  } else {
     return illegalAction(
       state,
       "attachDon target must be turn player's leader or character.",
@@ -121,7 +130,7 @@ export const applyAttachDon = (
     sourcePlayerId: turnPlayerId,
     sourceState: "active",
     state,
-    target: action.target,
+    target: exactTarget,
   });
   if (!attached.ok) {
     return illegalAction(state, attached.reason);
