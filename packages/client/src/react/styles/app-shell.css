@@ -8,10 +8,27 @@
       (var(--playmat-border-width) * 2) + (var(--playmat-grid-gap) * 6)
   );
   --playmat-row-height: calc((100vh - var(--playmat-vertical-chrome)) / 6);
-  --card-height: calc(var(--playmat-row-height) - 14px);
+  --desktop-card-min-height: 86px;
+  --desktop-card-max-height: 240px;
+  --card-height: clamp(
+    var(--desktop-card-min-height),
+    calc(var(--playmat-row-height) - 14px),
+    var(--desktop-card-max-height)
+  );
   --card-width: calc(var(--card-height) / 1.4);
   --card-zone-width: calc(var(--card-width) + 14px);
   --playmat-wide-zone-width: calc(var(--card-width) * 1.6);
+  --card-corner-radius: calc(var(--card-height) / 14);
+  --card-glow-size: calc(var(--card-height) / 7);
+  --card-outline-heavy: calc(var(--card-height) / 22);
+  --card-outline-medium: calc(var(--card-height) / 24);
+  --card-outline-thin: calc(var(--card-height) / 42);
+  --card-inset-tight: calc(var(--card-height) / 42);
+  --card-inset-medium: calc(var(--card-height) / 24);
+  --card-badge-radius: calc(var(--card-height) / 47);
+  --card-badge-font-size: calc(var(--card-height) / 14);
+  --card-status-font-size: calc(var(--card-height) / 13);
+  --card-order-badge-size: calc(var(--card-height) / 8.5);
 
   position: relative;
   display: grid;

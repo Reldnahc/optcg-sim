@@ -552,7 +552,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes("rush"), true);
     assert.match(
       styles,
-      /\.power-delta,\s*\.cost-delta,\s*\.keyword-badge\s*\{[^}]*border-radius:\s*3px;[^}]*padding:\s*2px 4px;[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);[^}]*font-size:\s*12px;[^}]*font-weight:\s*800;/u,
+      /\.power-delta,\s*\.cost-delta,\s*\.keyword-badge\s*\{[^}]*border-radius:\s*var\(--card-badge-radius\);[^}]*padding:\s*calc\(var\(--card-height\) \/ 70\) calc\(var\(--card-height\) \/ 35\);[^}]*background:\s*rgba\(12,\s*12,\s*12,\s*0\.78\);[^}]*font-size:\s*var\(--card-status-font-size\);[^}]*font-weight:\s*800;/u,
     );
     assert.match(
       styles,
@@ -595,9 +595,14 @@ describe("card action menu", () => {
       "utf8",
     );
 
-    assert.match(styles, /\.power-delta\s*\{[^}]*right:\s*2px;/u);
-    assert.match(styles, /\.power-delta\s*\{[^}]*top:\s*12px;/u);
-    assert.equal(/\.power-delta\s*\{[^}]*left:\s*2px;/u.test(styles), false);
+    assert.match(
+      styles,
+      /\.power-delta\s*\{[^}]*top:\s*calc\(var\(--card-height\) \/ 12\);[^}]*right:\s*var\(--card-inset-tight\);/u,
+    );
+    assert.equal(
+      /\.power-delta\s*\{[^}]*left:\s*var\(--card-inset-tight\);/u.test(styles),
+      false,
+    );
   });
 
   test("cost delta badge sits near the top-left cost area", async () => {
@@ -606,9 +611,14 @@ describe("card action menu", () => {
       "utf8",
     );
 
-    assert.match(styles, /\.cost-delta\s*\{[^}]*left:\s*2px;/u);
-    assert.match(styles, /\.cost-delta\s*\{[^}]*top:\s*12px;/u);
-    assert.equal(/\.cost-delta\s*\{[^}]*right:\s*2px;/u.test(styles), false);
+    assert.match(
+      styles,
+      /\.cost-delta\s*\{[^}]*top:\s*calc\(var\(--card-height\) \/ 12\);[^}]*left:\s*var\(--card-inset-tight\);/u,
+    );
+    assert.equal(
+      /\.cost-delta\s*\{[^}]*right:\s*var\(--card-inset-tight\);/u.test(styles),
+      false,
+    );
   });
 
   test("selected cost-area DON cards use the selected card styling", () => {
@@ -631,15 +641,15 @@ describe("card action menu", () => {
   });
 
   test("card styling removes the default border while state feedback hugs the tile", async () => {
-    const styles = await readFile(
-      join(sourceDirectory, "styles", "card.css"),
-      "utf8",
-    );
+    const [styles, appShellStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "card.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+    ]);
 
     assert.match(styles, /\.card-face\s*\{[^}]*border:\s*0;/u);
     assert.match(
-      styles,
-      /\.card-tile-shell\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 22\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
+      appShellStyles,
+      /\.match-app\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 22\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
     );
     assert.match(
       styles,

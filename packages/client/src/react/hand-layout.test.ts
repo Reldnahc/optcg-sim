@@ -418,6 +418,14 @@ describe("hand layout", () => {
   test("hand CSS uses the full lane and overlaps without shrinking or wrapping", async () => {
     const styles = await readFile(appShellStylesPath, "utf8");
 
+    assert.match(
+      styles,
+      /\.match-app\s*\{[^}]*--desktop-card-min-height:\s*86px;[^}]*--desktop-card-max-height:\s*240px;[^}]*--card-height:\s*clamp\(\s*var\(--desktop-card-min-height\),\s*calc\(var\(--playmat-row-height\) - 14px\),\s*var\(--desktop-card-max-height\)\s*\);/u,
+    );
+    assert.match(
+      styles,
+      /\.match-app\s*\{[^}]*--card-badge-font-size:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-status-font-size:\s*calc\(var\(--card-height\) \/ 13\);[^}]*--card-order-badge-size:\s*calc\(var\(--card-height\) \/ 8\.5\);/u,
+    );
     assert.match(styles, /\.hand-row\s*\{[^}]*justify-content:\s*center;/u);
     assert.match(styles, /\.hand-cards\s*\{[^}]*flex-wrap:\s*nowrap;/u);
     assert.match(styles, /\.hand-cards\s*\{[^}]*width:\s*100%;/u);

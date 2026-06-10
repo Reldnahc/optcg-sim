@@ -71,7 +71,7 @@
 
 .decision-choice.decision-card-choice.is-selected
   :where(.decision-card-face, .decision-card-placeholder) {
-  outline: 3px solid #ffdc62;
+  outline: var(--card-outline-medium) solid #ffdc62;
   outline-offset: 0;
 }
 
@@ -97,8 +97,8 @@
 .decision-choice.decision-card-choice:hover:not(:disabled)
   :where(.decision-card-face, .decision-card-placeholder) {
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 10px rgba(255, 255, 255, 0.72);
+    0 0 0 var(--card-outline-thin) rgba(255, 255, 255, 0.95),
+    0 0 var(--card-glow-size) rgba(255, 255, 255, 0.72);
 }
 
 .decision-order-badge {
@@ -125,7 +125,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--card-corner-radius);
   object-fit: cover;
 }
 
@@ -134,11 +134,11 @@
   width: 100%;
   height: 100%;
   place-items: center;
-  border: 2px solid #f4eee7;
-  border-radius: 6px;
-  padding: 8px;
+  border: var(--card-outline-thin) solid #f4eee7;
+  border-radius: var(--card-corner-radius);
+  padding: var(--card-inset-medium);
   background: #615d5b;
-  font-size: 0.7rem;
+  font-size: calc(var(--card-height) / 13);
 }
 
 .decision-order-list {

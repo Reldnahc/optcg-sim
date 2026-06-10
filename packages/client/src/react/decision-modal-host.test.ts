@@ -555,7 +555,7 @@ test("decision modal selectable cards use board-card pointer and hover affordanc
   );
   assert.match(
     styles,
-    /\.decision-choice\.decision-card-choice:hover:not\(:disabled\)\s+:where\(\.decision-card-face,\s*\.decision-card-placeholder\)\s*\{[^}]*box-shadow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.95\),\s*0 0 10px rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+    /\.decision-choice\.decision-card-choice:hover:not\(:disabled\)\s+:where\(\.decision-card-face,\s*\.decision-card-placeholder\)\s*\{[^}]*box-shadow:\s*0 0 0 var\(--card-outline-thin\) rgba\(255,\s*255,\s*255,\s*0\.95\),\s*0 0 var\(--card-glow-size\) rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
   );
 });
 
@@ -571,7 +571,7 @@ test("decision modal selected cards use the board-card selected highlight", asyn
   );
   assert.match(
     styles,
-    /\.decision-choice\.decision-card-choice\.is-selected\s+:where\(\.decision-card-face,\s*\.decision-card-placeholder\)\s*\{[^}]*outline:\s*3px solid #ffdc62;[^}]*outline-offset:\s*0;/u,
+    /\.decision-choice\.decision-card-choice\.is-selected\s+:where\(\.decision-card-face,\s*\.decision-card-placeholder\)\s*\{[^}]*outline:\s*var\(--card-outline-medium\) solid #ffdc62;[^}]*outline-offset:\s*0;/u,
   );
 });
 
@@ -581,10 +581,13 @@ test("decision modal card surfaces use the board-card rounded mask", async () =>
     "utf8",
   );
 
-  assert.match(styles, /\.decision-card-face\s*\{[^}]*border-radius:\s*6px;/u);
   assert.match(
     styles,
-    /\.decision-card-placeholder\s*\{[^}]*border-radius:\s*6px;/u,
+    /\.decision-card-face\s*\{[^}]*border-radius:\s*var\(--card-corner-radius\);/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-card-placeholder\s*\{[^}]*border:\s*var\(--card-outline-thin\) solid #f4eee7;[^}]*border-radius:\s*var\(--card-corner-radius\);[^}]*padding:\s*var\(--card-inset-medium\);/u,
   );
 });
 
