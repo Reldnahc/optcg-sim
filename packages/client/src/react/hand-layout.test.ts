@@ -222,7 +222,11 @@ describe("hand layout", () => {
 
     assert.match(
       styles,
-      /\.card-tile\.is-selectable \.card-face\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 2px rgba\(255,\s*220,\s*98,\s*0\.62\);/u,
+      /\.card-tile\.is-selectable\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 2px rgba\(255,\s*220,\s*98,\s*0\.62\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile::after\s*\{[^}]*box-shadow:\s*[^}]*var\(--card-selectable-glow\)/u,
     );
   });
 

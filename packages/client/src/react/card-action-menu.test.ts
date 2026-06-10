@@ -630,7 +630,7 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-tile[^"]*is-selected/u);
   });
 
-  test("card styling removes the default border while selected feedback hugs the face", async () => {
+  test("card styling removes the default border while state feedback hugs the tile", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "card.css"),
       "utf8",
@@ -639,7 +639,11 @@ describe("card action menu", () => {
     assert.match(styles, /\.card-face\s*\{[^}]*border:\s*0;/u);
     assert.match(
       styles,
-      /\.card-tile\.is-selected \.card-face\s*\{[^}]*--card-selected-glow:\s*inset 0 0 0 3px #ffdc62;/u,
+      /\.card-tile::after\s*\{[^}]*inset:\s*0;[^}]*box-shadow:\s*[^}]*var\(--card-selected-glow\);/u,
+    );
+    assert.match(
+      styles,
+      /\.card-tile\.is-selected\s*\{[^}]*--card-selected-glow:\s*inset 0 0 0 3px #ffdc62;/u,
     );
     assert.equal(/\.card-face\s*\{[^}]*border:\s*[12]px/u.test(styles), false);
   });
@@ -652,11 +656,11 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.card-tile:hover:not\(:disabled\) \.card-face\s*\{[^}]*--card-hover-glow:\s*inset 0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.95\),\s*0 0 10px\s+rgba\(255,\s*255,\s*255,\s*0\.56\);/u,
+      /\.card-tile:hover:not\(:disabled\)\s*\{[^}]*--card-hover-glow:\s*inset 0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.95\),\s*inset 0 0 10px\s+rgba\(255,\s*255,\s*255,\s*0\.56\);/u,
     );
     assert.match(
       styles,
-      /\.card-tile\.is-active \.card-face\s*\{[^}]*--card-active-glow:\s*inset 0 0 0 3px rgba\(89,\s*255,\s*143,\s*0\.98\),\s*0 0 12px\s+rgba\(89,\s*255,\s*143,\s*0\.56\);/u,
+      /\.card-tile\.is-active\s*\{[^}]*--card-active-glow:\s*inset 0 0 0 3px rgba\(89,\s*255,\s*143,\s*0\.98\),\s*inset 0 0 12px\s+rgba\(89,\s*255,\s*143,\s*0\.56\);/u,
     );
   });
 
@@ -668,9 +672,9 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.card-tile\.is-pending-choice \.card-face\s*\{[^}]*--card-pending-glow:\s*inset 0 0 0 3px rgba\(68,\s*216,\s*255,\s*0\.98\),\s*0 0 12px rgba\(68,\s*216,\s*255,\s*0\.56\);/u,
+      /\.card-tile\.is-pending-choice\s*\{[^}]*--card-pending-glow:\s*inset 0 0 0 3px rgba\(68,\s*216,\s*255,\s*0\.98\),\s*inset 0 0 12px rgba\(68,\s*216,\s*255,\s*0\.56\);/u,
     );
-    assert.equal(/\.card-tile\.is-pending-choice::after/u.test(styles), false);
+    assert.match(styles, /\.card-tile::after/u);
   });
 
   test("active card state is rendered independently from selection", () => {
