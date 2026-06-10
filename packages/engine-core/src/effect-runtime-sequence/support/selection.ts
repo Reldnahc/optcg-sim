@@ -19,6 +19,7 @@ export type PlaceSetRemainderEffect = Extract<
   Effect,
   { type: "placeSetRemainder" }
 >;
+export type SavedSelectedCardsKind = "hand" | "trash" | "don" | "set";
 
 const zoneNames = new Set<string>([
   "hand",
@@ -36,66 +37,93 @@ const zoneNames = new Set<string>([
 const isSelectionSetSource = (source: MoveSelectedEffect["from"]): boolean =>
   !zoneNames.has(source);
 
+export const savedSelectedCardsKindForSelectCardsSegment = (
+  effect: SequenceSegmentEffect,
+): SavedSelectedCardsKind | undefined => {
+  if (
+    effect.type !== "selectCards" ||
+    !isSupportedHandSelectionCardFilter(effect.filter) ||
+    !Number.isInteger(effect.min) ||
+    !Number.isInteger(effect.max) ||
+    effect.min < 0 ||
+    effect.max < effect.min
+  ) {
+    return undefined;
+  }
+  if (
+    effect.zone === "hand" &&
+    effect.player === effect.chooser &&
+    (effect.player === "self" || effect.player === "opponent") &&
+    effect.visibility === "chooserOnly"
+  ) {
+    return "hand";
+  }
+  if (
+    effect.zone === "trash" &&
+    effect.player === "self" &&
+    effect.chooser === "self" &&
+    effect.visibility === "bothPlayers"
+  ) {
+    return "trash";
+  }
+  if (
+    effect.zone === "costArea" &&
+    (effect.player === "self" || effect.player === "opponent") &&
+    effect.chooser === "self" &&
+    effect.visibility === "bothPlayers"
+  ) {
+    return "don";
+  }
+  return undefined;
+};
+
 export const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SelectCardsEffect =>
-  effect.type === "selectCards" &&
-  isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min &&
-  ((effect.zone === "hand" &&
-    effect.player === effect.chooser &&
-    (effect.player === "self" || effect.player === "opponent") &&
-    effect.visibility === "chooserOnly" &&
-    String(effect.saveAs).startsWith("handSelection:")) ||
-    (effect.zone === "trash" &&
-      effect.player === "self" &&
-      effect.chooser === "self" &&
-      effect.visibility === "bothPlayers" &&
-      String(effect.saveAs).startsWith("trashSelection:")) ||
-    (effect.zone === "costArea" &&
-      effect.player === "self" &&
-      effect.chooser === "self" &&
-      effect.visibility === "bothPlayers" &&
-      String(effect.saveAs).startsWith("donSelection:")));
+  savedSelectedCardsKindForSelectCardsSegment(effect) !== undefined;
 
 export const isSupportedMoveSelectedSegment = (
   effect: SequenceSegmentEffect,
+  selectionKind?: SavedSelectedCardsKind,
+  hasSourceSet = false,
 ): effect is MoveSelectedEffect =>
   effect.type === "moveSelected" &&
   ((effect.from === "trash" &&
     effect.to === "hand" &&
     effect.position === undefined &&
     effect.destinationFaceUp === undefined &&
-    String(effect.selection).startsWith("trashSelection:")) ||
+    selectionKind === "trash") ||
     (effect.from === "trash" &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
-      String(effect.selection).startsWith("trashSelection:")) ||
+      selectionKind === "trash") ||
     (effect.from === "hand" &&
       effect.to === "deck" &&
       (effect.position === "top" ||
         effect.position === "bottom" ||
         effect.position === "topOrBottom") &&
       effect.destinationFaceUp === undefined &&
-      String(effect.selection).startsWith("handSelection:")) ||
+      selectionKind === "hand") ||
     (isSelectionSetSource(effect.from) &&
       effect.to === "hand" &&
       effect.position === undefined &&
-      effect.destinationFaceUp === undefined) ||
+      effect.destinationFaceUp === undefined &&
+      selectionKind === "set" &&
+      hasSourceSet) ||
     (isSelectionSetSource(effect.from) &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
       (effect.destinationFaceUp === undefined ||
-        typeof effect.destinationFaceUp === "boolean")));
+        typeof effect.destinationFaceUp === "boolean") &&
+      selectionKind === "set" &&
+      hasSourceSet));
 
 export const isSupportedAttachSelectedDonSegment = (
   effect: SequenceSegmentEffect,
+  selectionKind?: SavedSelectedCardsKind,
 ): effect is AttachSelectedDonEffect =>
   effect.type === "attachSelectedDon" &&
-  String(effect.selection).startsWith("donSelection:") &&
+  selectionKind === "don" &&
   effect.target.type === "savedFieldObject" &&
   (effect.target.player === "self" ||
     effect.target.player === "opponent" ||

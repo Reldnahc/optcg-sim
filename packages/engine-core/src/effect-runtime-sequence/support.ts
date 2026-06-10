@@ -44,12 +44,14 @@ import {
   isSupportedSelectFromSetSegment,
   isSupportedSequenceSelectCardsSegment,
   isSupportedMoveSelectedSegment,
+  savedSelectedCardsKindForSelectCardsSegment,
   type AttachSelectedDonEffect,
   type MoveSelectedEffect,
   type PlaceSetRemainderEffect,
   type PlaySourceEffect,
   type RevealSelectedEffect,
   type RevealTopEffect,
+  type SavedSelectedCardsKind,
   type SelectFromSetEffect,
 } from "./support/selection.js";
 import {
@@ -133,6 +135,46 @@ export interface SequenceSupportOptions {
   requirePositiveDrawCount?: boolean;
 }
 
+interface SequenceSupportState {
+  hasPendingDecisionSegment: boolean;
+  savedSelectedCards: Map<string, SavedSelectedCardsKind>;
+  savedSelectionSets: Set<string>;
+}
+
+const emptySequenceSupportState = (): SequenceSupportState => ({
+  hasPendingDecisionSegment: false,
+  savedSelectedCards: new Map(),
+  savedSelectionSets: new Set(),
+});
+
+const savedSelectedCardsKind = (
+  state: SequenceSupportState,
+  selection: unknown,
+): SavedSelectedCardsKind | undefined =>
+  state.savedSelectedCards.get(String(selection));
+
+const hasSavedSelectionSet = (
+  state: SequenceSupportState,
+  selectionSet: unknown,
+): boolean => state.savedSelectionSets.has(String(selectionSet));
+
+const requestSelectsDonFromCostArea = (
+  request: SelectTargetsEffect["request"],
+): boolean => {
+  const zones = "zones" in request ? request.zones : [request.zone];
+  return (
+    request.chooser === "self" &&
+    (request.player === "self" ||
+      request.player === "opponent" ||
+      request.player === "anyPlayer") &&
+    zones.length > 0 &&
+    zones.every((zone) => zone === "costArea") &&
+    request.visibility === "public" &&
+    request.filter?.categories?.length === 1 &&
+    request.filter.categories[0] === "don"
+  );
+};
+
 const isSupportedSelectAllTargetsRequest = (
   request: SelectAllTargetsEffect["request"],
 ): boolean =>
@@ -171,7 +213,7 @@ const isSupportedConditionalSegment = (
   if (flattenedThen === null) {
     return false;
   }
-  const selectFromSetSelections = new Set<string>();
+  const supportState = emptySequenceSupportState();
   return flattenedThen.effects.every((segment, index) => {
     if (index === 0 && segment.connector !== "always") {
       return false;
@@ -180,7 +222,16 @@ const isSupportedConditionalSegment = (
       return false;
     }
     if (segment.effect.type === "selectTargets") {
-      return isSupportedSequenceTargetRequest(segment.effect.request);
+      if (!isSupportedSequenceTargetRequest(segment.effect.request)) {
+        return false;
+      }
+      if (
+        segment.saveResultAs !== undefined &&
+        requestSelectsDonFromCostArea(segment.effect.request)
+      ) {
+        supportState.savedSelectedCards.set(segment.saveResultAs, "don");
+      }
+      return true;
     }
     if (segment.effect.type === "selectAllTargets") {
       return isSupportedSelectAllTargetsRequest(segment.effect.request);
@@ -212,24 +263,33 @@ const isSupportedConditionalSegment = (
       return true;
     }
     if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
-      selectFromSetSelections.add(String(segment.effect.saveAs));
+      const kind = savedSelectedCardsKindForSelectCardsSegment(segment.effect);
+      if (kind === undefined) {
+        return false;
+      }
+      supportState.savedSelectedCards.set(String(segment.effect.saveAs), kind);
       return true;
     }
-    if (isSupportedMoveSelectedSegment(segment.effect)) {
-      return true;
+    if (segment.effect.type === "moveSelected") {
+      return isSupportedMoveSelectedSegment(
+        segment.effect,
+        savedSelectedCardsKind(supportState, segment.effect.selection),
+        hasSavedSelectionSet(supportState, segment.effect.from),
+      );
     }
     if (isSupportedActivateSegment(segment.effect)) {
       return true;
     }
     if (segment.effect.type === "playSelected") {
+      const kind = savedSelectedCardsKind(
+        supportState,
+        segment.effect.selection,
+      );
       return (
         segment.effect.ignoreCost === true &&
         (segment.effect.enterRested === undefined ||
           typeof segment.effect.enterRested === "boolean") &&
-        (selectFromSetSelections.has(String(segment.effect.selection)) ||
-          String(segment.effect.selection).startsWith("handSelection:") ||
-          String(segment.effect.selection).startsWith("trashSelection:") ||
-          String(segment.effect.selection).startsWith("revealSelection:"))
+        (kind === "hand" || kind === "trash" || kind === "set")
       );
     }
     return false;
@@ -282,10 +342,7 @@ export const toSupportedSequenceBlock = (
     return undefined;
   }
 
-  const supportState = {
-    hasPendingDecisionSegment: false,
-    selectFromSetSelections: new Set<string>(),
-  };
+  const supportState = emptySequenceSupportState();
   const allSegmentsSupported = flattenedBlock.effect.effects.every(
     (segment, index) => {
       if (index === 0 && segment.connector !== "always") {
@@ -339,17 +396,30 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedRevealTopSegment(segment.effect)) {
+        supportState.savedSelectionSets.add(String(segment.effect.saveAs));
         return true;
       }
       if (isSupportedSelectFromSetSegment(segment.effect)) {
+        if (!hasSavedSelectionSet(supportState, segment.effect.set)) {
+          return false;
+        }
         supportState.hasPendingDecisionSegment = true;
-        supportState.selectFromSetSelections.add(String(segment.effect.saveAs));
+        supportState.savedSelectedCards.set(
+          String(segment.effect.saveAs),
+          "set",
+        );
         return true;
       }
       if (isSupportedRevealSelectedSegment(segment.effect)) {
-        return true;
+        return (
+          savedSelectedCardsKind(supportState, segment.effect.selection) !==
+          undefined
+        );
       }
       if (isSupportedPlaceSetRemainderSegment(segment.effect)) {
+        if (!hasSavedSelectionSet(supportState, segment.effect.set)) {
+          return false;
+        }
         if (
           segment.effect.order === "chooser" &&
           segment.effect.position !== "bottom"
@@ -363,14 +433,31 @@ export const toSupportedSequenceBlock = (
         return isSupportedDelayedSegment(segment.effect, options);
       }
       if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
+        const kind = savedSelectedCardsKindForSelectCardsSegment(
+          segment.effect,
+        );
+        if (kind === undefined) {
+          return false;
+        }
+        supportState.savedSelectedCards.set(
+          String(segment.effect.saveAs),
+          kind,
+        );
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
-      if (isSupportedMoveSelectedSegment(segment.effect)) {
-        return true;
+      if (segment.effect.type === "moveSelected") {
+        return isSupportedMoveSelectedSegment(
+          segment.effect,
+          savedSelectedCardsKind(supportState, segment.effect.selection),
+          hasSavedSelectionSet(supportState, segment.effect.from),
+        );
       }
-      if (isSupportedAttachSelectedDonSegment(segment.effect)) {
-        return true;
+      if (segment.effect.type === "attachSelectedDon") {
+        return isSupportedAttachSelectedDonSegment(
+          segment.effect,
+          savedSelectedCardsKind(supportState, segment.effect.selection),
+        );
       }
       if (isSupportedTrashSegment(segment.effect)) {
         return true;
@@ -393,6 +480,12 @@ export const toSupportedSequenceBlock = (
         const request = segment.effect.request;
         if (!isSupportedSequenceTargetRequest(request)) {
           return false;
+        }
+        if (
+          segment.saveResultAs !== undefined &&
+          requestSelectsDonFromCostArea(request)
+        ) {
+          supportState.savedSelectedCards.set(segment.saveResultAs, "don");
         }
         supportState.hasPendingDecisionSegment = true;
         return true;
@@ -441,23 +534,23 @@ export const toSupportedSequenceBlock = (
         );
       }
       if (segment.effect.type === "playSelected") {
+        const kind = savedSelectedCardsKind(
+          supportState,
+          segment.effect.selection,
+        );
         return (
           segment.effect.ignoreCost === true &&
           (segment.effect.enterRested === undefined ||
             typeof segment.effect.enterRested === "boolean") &&
-          (supportState.selectFromSetSelections.has(
-            String(segment.effect.selection),
-          ) ||
-            String(segment.effect.selection).startsWith("handSelection:") ||
-            String(segment.effect.selection).startsWith("trashSelection:") ||
-            String(segment.effect.selection).startsWith("revealSelection:"))
+          (kind === "hand" || kind === "trash" || kind === "set")
         );
       }
       if (segment.effect.type === "activateSelectedEvent") {
         return (
           segment.effect.ignoreCost &&
           segment.effect.trigger.type === "main" &&
-          String(segment.effect.selection).startsWith("handSelection:")
+          savedSelectedCardsKind(supportState, segment.effect.selection) ===
+            "hand"
         );
       }
       if (isSupportedPlaySourceSegment(segment.effect)) {

@@ -141,6 +141,75 @@ test("sequence support accepts self-target field activation segments", () => {
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts moveSelected by produced selection evidence instead of id prefix", () => {
+  const savedSelection = "selected-trash-card" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "selectCards",
+            player: "self",
+            zone: "trash",
+            chooser: "self",
+            visibility: "bothPlayers",
+            min: 0,
+            max: 1,
+            filter: { categories: ["character"] },
+            saveAs: savedSelection,
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "moveSelected",
+            selection: savedSelection,
+            from: "trash",
+            to: "hand",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support rejects unproduced selection ids even when their text has a known prefix", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "moveSelected",
+            selection: "trashSelection:unproduced" as SelectionId,
+            from: "trash",
+            to: "hand",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), false);
+});
+
 test("sequence support accepts selected field-object trash consumers", () => {
   const effectBlock: EffectDefinition["effects"][number] = {
     id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
