@@ -3,6 +3,7 @@ import type {
   EffectQueueEntry,
   EngineEvent,
   GameState,
+  SavedFieldObjectReference,
   SequenceSegmentResult,
 } from "@optcg/types";
 
@@ -33,6 +34,7 @@ import {
   applyMoveCardsSegment,
   applyNoOpReturnDonSegment,
   applyRevealTopSequenceSegment,
+  saveReference,
   shouldAttemptSegment,
 } from "../segments.js";
 import { type SupportedSequenceSegment } from "../support.js";
@@ -40,6 +42,7 @@ import { applyRuntimePlaySource } from "../../play-card/core.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
 import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
 import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
+import { resolvePublicTargetCandidatesForRequest } from "../../selection/candidates.js";
 import {
   conditionalThenSequencePath,
   conditionalThenSingleEffectPath,
@@ -502,6 +505,63 @@ export const continueNoDecisionSegments = (
       nextState = revealed.state;
       nextLedgers = revealed.ledgers;
       events.push(...revealed.events);
+      continue;
+    }
+    if (segment.effect.type === "selectAllTargets") {
+      const request = {
+        ...segment.effect.request,
+        min: 0,
+        max: 0,
+        allowFewerIfUnavailable: false,
+      };
+      const candidates = resolvePublicTargetCandidatesForRequest(
+        nextState,
+        request,
+        { sourceControllerId: entry.controllerId },
+      );
+      if (!candidates.ok) {
+        return { ok: false };
+      }
+      const selectedTargets = candidates.candidates.map(
+        (candidate) => candidate.card,
+      );
+      const saveResultAs = segment.saveResultAs;
+      const savedTargets =
+        saveResultAs === undefined
+          ? []
+          : selectedTargets.map(
+              (object, objectIndex): SavedFieldObjectReference => ({
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs,
+                  objectIndex,
+                  ...(segment.id === undefined
+                    ? {}
+                    : { sourceSegmentId: segment.id }),
+                },
+                capturedAtStateSeq: nextState.seq,
+                object,
+                visibility: "public",
+              }),
+            );
+      nextLedgers = {
+        savedReferences:
+          segment.saveResultAs === undefined
+            ? nextLedgers.savedReferences
+            : saveReference(nextLedgers.savedReferences, segment, {
+                kind: "selectedTargets",
+                targets: savedTargets,
+              }),
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [ledgerKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            selectedTargets,
+          },
+        },
+      };
       continue;
     }
     if (segment.effect.type === "selectTargets") {

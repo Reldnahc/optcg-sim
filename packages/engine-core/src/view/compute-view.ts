@@ -26,6 +26,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 };
 
 interface ComputeViewOptions {
+  ignoreAttackCosts?: boolean;
   supportStatusPolicy?: "throw" | "ignore";
   unsupportedCombatKeywordPolicy?: "throw" | "ignore";
 }
@@ -116,6 +117,23 @@ const hasRestriction = (
   return false;
 };
 
+export const attackTrashCostCountForCard = (
+  state: GameState,
+  card: CardInstance,
+): number => {
+  let count = 0;
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
+    if (effect.modifier.layer !== "restriction") continue;
+    if (effect.modifier.operation.type !== "attackCost") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
+    count += effect.modifier.operation.cost.count;
+  }
+  return count;
+};
+
 const restrictionLabel = (restriction: string): string | undefined => {
   switch (restriction) {
     case "cannotAttack":
@@ -139,11 +157,15 @@ const continuousRestrictionLabelsForCard = (
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
     if (effect.modifier.layer !== "restriction") continue;
-    if (effect.modifier.operation.type !== "restriction") continue;
     if (!durationIsActive(state, effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
-    const label = restrictionLabel(effect.modifier.operation.restriction);
+    const label =
+      effect.modifier.operation.type === "attackCost"
+        ? `attack-cost-trash-${String(effect.modifier.operation.cost.count)}`
+        : effect.modifier.operation.type === "restriction"
+          ? restrictionLabel(effect.modifier.operation.restriction)
+          : undefined;
     if (label !== undefined && !restrictions.includes(label)) {
       restrictions.push(label);
     }
@@ -223,6 +245,7 @@ const canAttackNow = (
   state: GameState,
   card: CardInstance,
   keywords: readonly Keyword[],
+  options: ComputeViewOptions = {},
 ): boolean => {
   if (card.controller !== state.turn.turnPlayerId) return false;
   if (state.turn.phase !== "main") return false;
@@ -230,6 +253,15 @@ const canAttackNow = (
   if (card.state !== "active") return false;
   if (!isLeaderOrCharacter(card)) return false;
   if (hasRestriction(state, card, "cannotAttack")) return false;
+  const attackTrashCost = options.ignoreAttackCosts
+    ? 0
+    : attackTrashCostCountForCard(state, card);
+  if (attackTrashCost > 0) {
+    const player = state.players[card.controller];
+    if (player === undefined || player.hand.length < attackTrashCost) {
+      return false;
+    }
+  }
 
   const turnCount = state.turn.playerTurnCounts[card.controller];
   if (turnCount === 1) return false;
@@ -271,7 +303,7 @@ const legalTargetsForAttacker = (
 ): InstanceId[] => {
   const metadata = resolveCombatMetadata(state, attacker, options);
   const attackerKeywords = computedKeywordsForCard(state, attacker, metadata);
-  if (!canAttackNow(state, attacker, attackerKeywords)) return [];
+  if (!canAttackNow(state, attacker, attackerKeywords, options)) return [];
   const opponentId = (Object.keys(state.players) as PlayerId[]).find(
     (playerId) => playerId !== attacker.controller,
   );
@@ -375,7 +407,7 @@ const computeCardView = (
         }),
     keywords,
     restrictions,
-    canAttack: canAttackNow(state, card, keywords),
+    canAttack: canAttackNow(state, card, keywords, options),
     canBlock: canBlockNow(state, card, keywords),
     cannotBeAttacked: false,
     protectedFrom: fieldRemovalProtections.protections,

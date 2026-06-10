@@ -175,6 +175,11 @@ export interface SelectCardsDecision extends BaseDecision {
     trashFromHand?: {
       triggerSource: "effect" | "cost";
     };
+    attackCost?: {
+      attacker: CardRef;
+      target: CardRef;
+      cost: { type: "trashFromHand"; count: number };
+    };
   };
 }
 

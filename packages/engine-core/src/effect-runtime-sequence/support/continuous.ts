@@ -25,6 +25,7 @@ export type DirectContinuousEffect = Extract<
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
+      | "attackCost"
       | "cannotBlock"
       | "preventBlockerActivation";
   }
@@ -40,6 +41,7 @@ export type ConditionalContinuousEffect = Extract<
     | Extract<Effect, { type: "invalidateEffects" }>
     | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
+    | Extract<Effect, { type: "attackCost" }>
     | Extract<Effect, { type: "cannotBlock" }>
     | Extract<Effect, { type: "preventBlockerActivation" }>;
 };
@@ -47,6 +49,7 @@ export type SavedTargetContinuousEffect = (
   | Extract<Effect, { type: "modifyPower" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
+  | Extract<Effect, { type: "attackCost" }>
   | Extract<Effect, { type: "cannotBlock" }>
   | Extract<Effect, { type: "preventBlockerActivation" }>
   | Extract<Effect, { type: "invalidateEffects" }>
@@ -71,6 +74,7 @@ export const isSourceDependentContinuousSegment = (
   if (
     effect.type !== "modifyPower" &&
     effect.type !== "cannotAttack" &&
+    effect.type !== "attackCost" &&
     effect.type !== "setBasePower" &&
     effect.type !== "cannotBlock" &&
     effect.type !== "preventBlockerActivation"
@@ -89,6 +93,7 @@ export const isSupportedSavedTargetContinuousSegment = (
   (effect.type === "modifyPower" ||
     effect.type === "cannotBecomeActive" ||
     effect.type === "cannotAttack" ||
+    effect.type === "attackCost" ||
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
     effect.type === "invalidateEffects") &&

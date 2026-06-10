@@ -42,6 +42,8 @@ export type Trigger =
   | { type: "endOfYourTurn" }
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
+  | { type: "anyOf"; triggers: Trigger[] }
+  | { type: "damageDealt"; players: PlayerRef[] }
   | { type: "lifeRemoved"; players: PlayerRef[] }
   | {
       type: "fieldRemoved";
@@ -134,6 +136,7 @@ export type Condition =
   | { type: "hasCardInZone"; zone: Zone; player: PlayerRef; filter: CardFilter }
   | { type: "attackTarget"; targetType: "leader" | "character" | "any" }
   | { type: "cardState"; target: Target; state: "active" | "rested" }
+  | { type: "sourcePlayedThisTurn" }
   | { type: "sourceStillInZone" }
   | { type: "eventPayload"; path: string; op: Comparator; value: unknown }
   | { type: "and"; conditions: Condition[] }
@@ -368,6 +371,14 @@ export type DynamicNumberValue =
       zone: "characterArea";
       filter: CardFilter;
       multiplier: number;
+    }
+  | {
+      type: "countMatchingZoneCards";
+      player: PlayerRef;
+      zone: "trash";
+      filter?: CardFilter;
+      per: number;
+      multiplier: number;
     };
 
 export type SnapshotNumberValue = {
@@ -400,9 +411,11 @@ export interface CardFilter {
   colorsAny?: CardColor[];
   colorsAll?: CardColor[];
   typesAny?: string[];
+  typesIncludeAny?: string[];
   typesAll?: string[];
   attributesAny?: Attribute[];
   attributesAll?: Attribute[];
+  baseCost?: { op: Comparator; value: number } | { min?: number; max?: number };
   cost?: { op: Comparator; value: number } | { min?: number; max?: number };
   power?: { op: Comparator; value: number } | { min?: number; max?: number };
   currentPower?:
@@ -603,8 +616,16 @@ export interface SelectTargetsEffect {
   request: SelectedTargetsRequest | MultiZoneTargetRequest;
 }
 
+export interface SelectAllTargetsEffect {
+  type: "selectAllTargets";
+  request: Omit<
+    SelectedTargetsRequest,
+    "min" | "max" | "allowFewerIfUnavailable"
+  >;
+}
+
 export interface SelectTargetsProducerSegment extends SequencedEffect {
-  effect: SelectTargetsEffect;
+  effect: SelectTargetsEffect | SelectAllTargetsEffect;
   saveResultAs: string;
 }
 
@@ -693,6 +714,8 @@ export type EffectDslProtection =
   | EffectDslFieldRemovalProtection
   | EffectDslRestProtection;
 
+export type AttackTrashCost = { type: "trashFromHand"; count: number };
+
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
@@ -755,6 +778,7 @@ export type Effect =
     }
   | SelectCardsEffect
   | SelectTargetsEffect
+  | SelectAllTargetsEffect
   | {
       type: "moveSelected";
       selection: SelectionId;
@@ -848,7 +872,7 @@ export type Effect =
       type: "modifyCost";
       filter?: CardFilter;
       target?: Target;
-      value: number;
+      value: number | DynamicNumberValue;
       duration: Duration;
       player: PlayerRef;
       sourceZone?: Zone;
@@ -906,12 +930,19 @@ export type Effect =
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }
+  | {
+      type: "attackCost";
+      target: Target;
+      cost: AttackTrashCost;
+      duration: Duration;
+    }
   | { type: "cannotBlock"; target: Target; duration: Duration }
   | {
       type: "preventBlockerActivation";
       target: Target;
       duration: Duration;
     }
+  | { type: "changeAttackTarget"; target: Target }
   | { type: "cannotBeAttacked"; target: Target; duration: Duration }
   | {
       type: "cannotBeBlockedBy";

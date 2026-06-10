@@ -523,6 +523,7 @@ export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
     params.segment.effect.type !== "modifyPower" &&
     params.segment.effect.type !== "cannotBecomeActive" &&
     params.segment.effect.type !== "cannotAttack" &&
+    params.segment.effect.type !== "attackCost" &&
     params.segment.effect.type !== "cannotBlock" &&
     params.segment.effect.type !== "preventBlockerActivation" &&
     params.segment.effect.type !== "invalidateEffects"

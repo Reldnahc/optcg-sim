@@ -4,6 +4,7 @@ import type {
   EffectQueueEntry,
   ActivateSelectedEventEffect,
   PlaySelectedEffect,
+  SelectAllTargetsEffect,
   SelectTargetsEffect,
   SelectCardsEffect,
   Trigger,
@@ -106,6 +107,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | DirectContinuousEffect
     | TrashEffect
     | SelectTargetsEffect
+    | SelectAllTargetsEffect
     | PlaySelectedEffect
     | ActivateSelectedEventEffect
     | RestEffect
@@ -127,6 +129,16 @@ export interface SequenceSupportOptions {
   allowSavedReferences?: boolean;
   requirePositiveDrawCount?: boolean;
 }
+
+const isSupportedSelectAllTargetsRequest = (
+  request: SelectAllTargetsEffect["request"],
+): boolean =>
+  isSupportedSequenceTargetRequest({
+    ...request,
+    min: 0,
+    max: 0,
+    allowFewerIfUnavailable: false,
+  });
 
 const isSupportedConditionalSegment = (
   effect: SequenceSegmentEffect,
@@ -155,6 +167,9 @@ const isSupportedConditionalSegment = (
     }
     if (segment.effect.type === "selectTargets") {
       return isSupportedSequenceTargetRequest(segment.effect.request);
+    }
+    if (segment.effect.type === "selectAllTargets") {
+      return isSupportedSelectAllTargetsRequest(segment.effect.request);
     }
     if (isSupportedKoSegment(segment.effect)) {
       return true;
@@ -350,6 +365,9 @@ export const toSupportedSequenceBlock = (
         }
         supportState.hasPendingDecisionSegment = true;
         return true;
+      }
+      if (segment.effect.type === "selectAllTargets") {
+        return isSupportedSelectAllTargetsRequest(segment.effect.request);
       }
       if (isSupportedRestSegment(segment.effect)) {
         if (

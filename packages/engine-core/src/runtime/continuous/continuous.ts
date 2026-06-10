@@ -130,6 +130,13 @@ const mapEffectToModifier = (
       operation: { type: "restriction", restriction: "cannotPlay" },
     };
   }
+  if (effect.type === "attackCost") {
+    return {
+      layer: "restriction",
+      target,
+      operation: { type: "attackCost", cost: effect.cost },
+    };
+  }
   if (effect.type === "invalidateEffects") {
     return {
       layer: "effectInvalidation",
@@ -677,6 +684,7 @@ const effectToDerivedModifier = (
   }
   if (
     effect.type === "cannotAttack" ||
+    effect.type === "attackCost" ||
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
     effect.type === "cannotBecomeActive"
@@ -692,7 +700,10 @@ const effectToDerivedModifier = (
     return {
       layer: "restriction",
       target: effect.target,
-      operation: { type: "restriction", restriction: effect.type },
+      operation:
+        effect.type === "attackCost"
+          ? { type: "attackCost", cost: effect.cost }
+          : { type: "restriction", restriction: effect.type },
     };
   }
   if (effect.type !== "giveProtection") {
@@ -952,6 +963,7 @@ const durationForDerivedEffect = (effect: Effect): Duration => {
     effect.type === "modifyCost" ||
     effect.type === "protectFromKO" ||
     effect.type === "cannotAttack" ||
+    effect.type === "attackCost" ||
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
     effect.type === "cannotBecomeActive" ||

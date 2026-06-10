@@ -3,6 +3,10 @@ export {
   preventOpponentCharactersAttackPrimitive,
 } from "./attack-restriction.js";
 export {
+  selectedOpponentCharactersAttackCostExpressionParser,
+  selectedOpponentCharactersAttackCostPrimitive,
+} from "./attack-cost.js";
+export {
   parseYourLeaderPowerOpponentNextEndInstruction,
   yourLeaderPowerOpponentNextEndPrimitive,
 } from "./leader-power.js";

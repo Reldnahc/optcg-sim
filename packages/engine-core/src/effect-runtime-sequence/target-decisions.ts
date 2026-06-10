@@ -32,6 +32,7 @@ type ContinuousResolvedEffect = Extract<
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
+      | "attackCost"
       | "cannotBlock"
       | "preventBlockerActivation";
   }
@@ -54,6 +55,7 @@ export const isContinuousResolvedEffect = (
   effect.type === "invalidateEffects" ||
   effect.type === "cannotBecomeActive" ||
   effect.type === "cannotAttack" ||
+  effect.type === "attackCost" ||
   effect.type === "cannotBlock" ||
   effect.type === "preventBlockerActivation";
 

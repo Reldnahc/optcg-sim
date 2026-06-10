@@ -17,6 +17,7 @@ export type ContinuousQueueEffect = Extract<
       | "protectFromKO"
       | "cannotBecomeActive"
       | "cannotAttack"
+      | "attackCost"
       | "cannotBlock"
       | "preventBlockerActivation";
   }

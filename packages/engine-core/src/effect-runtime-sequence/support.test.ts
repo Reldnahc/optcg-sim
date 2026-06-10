@@ -156,6 +156,58 @@ test("sequence support accepts selected field-object trash consumers", () => {
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts select-all targets followed by attack trash cost", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: "selected:attack-cost-targets",
+          effect: {
+            type: "selectAllTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              filter: { categories: ["character"] },
+              visibility: "public",
+            },
+          } as never,
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "attackCost",
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: "selected:attack-cost-targets",
+              },
+              zone: "characterArea",
+              player: "opponent",
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+            cost: { type: "trashFromHand", count: 2 },
+            duration: { type: "untilEndOfNextTurn", player: "opponent" },
+          } as never,
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts hand play followed by reusable play restriction", () => {
   const selection = "handSelection:play-from-hand" as HandSelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {

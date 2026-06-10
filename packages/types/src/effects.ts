@@ -616,8 +616,16 @@ export interface SelectTargetsEffect {
   request: SelectedTargetsRequest | MultiZoneTargetRequest;
 }
 
+export interface SelectAllTargetsEffect {
+  type: "selectAllTargets";
+  request: Omit<
+    SelectedTargetsRequest,
+    "min" | "max" | "allowFewerIfUnavailable"
+  >;
+}
+
 export interface SelectTargetsProducerSegment extends SequencedEffect {
-  effect: SelectTargetsEffect;
+  effect: SelectTargetsEffect | SelectAllTargetsEffect;
   saveResultAs: string;
 }
 
@@ -706,6 +714,8 @@ export type EffectDslProtection =
   | EffectDslFieldRemovalProtection
   | EffectDslRestProtection;
 
+export type AttackTrashCost = { type: "trashFromHand"; count: number };
+
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
@@ -768,6 +778,7 @@ export type Effect =
     }
   | SelectCardsEffect
   | SelectTargetsEffect
+  | SelectAllTargetsEffect
   | {
       type: "moveSelected";
       selection: SelectionId;
@@ -919,6 +930,12 @@ export type Effect =
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }
+  | {
+      type: "attackCost";
+      target: Target;
+      cost: AttackTrashCost;
+      duration: Duration;
+    }
   | { type: "cannotBlock"; target: Target; duration: Duration }
   | {
       type: "preventBlockerActivation";

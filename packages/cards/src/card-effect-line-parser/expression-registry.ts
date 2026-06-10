@@ -50,6 +50,7 @@ import {
   trailingConditionalExpressionSegmentParser,
 } from "../segments/index.js";
 import {
+  selectedOpponentCharactersAttackCostExpressionParser,
   selectedAttackRetargetExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
 } from "../instructions/index.js";
@@ -129,6 +130,7 @@ const costedExpressions = [
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
+  selectedOpponentCharactersAttackCostExpressionParser,
   conditionalCostedBodyExpressionParser,
   singleInstructionExpressionParser,
   generalExpressionParser,
@@ -227,6 +229,7 @@ export const defaultRegistry = {
       expressions: [
         lookPlayFromTopExpressionParser,
         searchRevealExpressionParser,
+        selectedOpponentCharactersAttackCostExpressionParser,
         generalExpressionParser,
       ],
     }),
@@ -241,6 +244,7 @@ export const defaultRegistry = {
     playStageFromDeckExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
     selectedAttackRetargetExpressionParser,
+    selectedOpponentCharactersAttackCostExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
     lookPlayFromTopExpressionParser,
     revealTopPlayRestedExpressionParser,

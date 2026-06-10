@@ -1,12 +1,14 @@
 import type {
   Action,
   CardInstance,
+  CardRef,
   EngineError,
   EngineEvent,
   EngineResult,
   GameState,
   LegalAction,
   PlayerId,
+  SelectCardsDecision,
 } from "@optcg/types";
 
 import {
@@ -14,6 +16,7 @@ import {
   createEvent,
   illegalAction,
   rebaseEvents,
+  toDecisionId,
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
@@ -39,7 +42,10 @@ import {
   createCounterStepPassDecision,
   getCounterStepDecisionLegalActions,
 } from "./counter-actions.js";
-import { computeView } from "../view/compute-view.js";
+import {
+  attackTrashCostCountForCard,
+  computeView,
+} from "../view/compute-view.js";
 import {
   detectPendingRuntimeWork,
   processEffectRuntime,
@@ -47,6 +53,7 @@ import {
 import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
+import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 
 export { applyUseCounter };
 export {
@@ -109,9 +116,149 @@ export const getDeclareAttackLegalActions = (
   }
 };
 
+const isCardRef = (value: unknown): value is CardRef => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate["instanceId"] === "string" &&
+    typeof candidate["cardId"] === "string" &&
+    typeof candidate["playerId"] === "string"
+  );
+};
+
+const cardRefMatches = (left: CardRef, right: CardRef): boolean =>
+  left.instanceId === right.instanceId &&
+  left.cardId === right.cardId &&
+  left.playerId === right.playerId;
+
+const hasDuplicateInstanceIds = (cards: readonly CardRef[]): boolean =>
+  new Set(cards.map((card) => card.instanceId)).size !== cards.length;
+
+const isAttackCostDecision = (
+  decision: NonNullable<GameState["pendingDecision"]>,
+): decision is SelectCardsDecision =>
+  decision.type === "selectCards" &&
+  String(decision.id).startsWith("decision:selectCards:attack-cost:") &&
+  decision.runtime?.attackCost !== undefined &&
+  decision.request.timing === "onResolution" &&
+  decision.request.zone === "hand" &&
+  decision.request.min === decision.request.max &&
+  decision.request.min > 0 &&
+  decision.request.visibility === "privateToChooser" &&
+  decision.visibility.type === "private" &&
+  decision.visibility.playerId === decision.playerId;
+
+export const getAttackCostDecisionLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    !isAttackCostDecision(decision) ||
+    decision.playerId !== playerId
+  ) {
+    return [];
+  }
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "cards",
+        cards: decision.candidates
+          .slice(0, decision.request.min)
+          .map((candidate) => candidate.card),
+      },
+    },
+  ];
+};
+
+const createAttackCostDecision = (
+  state: GameState,
+  attacker: { card: CardInstance; playerId: PlayerId },
+  target: { card: CardInstance; playerId: PlayerId },
+  count: number,
+): EngineResult => {
+  const player = state.players[attacker.playerId];
+  if (player === undefined || player.hand.length < count) {
+    return illegalAction(state, "declareAttack attack cost cannot be paid.");
+  }
+  const visibility = { type: "private", playerId: attacker.playerId } as const;
+  const decision: SelectCardsDecision = {
+    id: toDecisionId(
+      `decision:selectCards:attack-cost:${String(state.actionSeq + 1)}:${String(attacker.card.instanceId)}:${String(target.card.instanceId)}`,
+    ),
+    type: "selectCards",
+    playerId: attacker.playerId,
+    prompt: "Trash cards from hand to attack.",
+    causedBy: { type: "ruleProcess", name: "attack-cost" },
+    visibility,
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "self",
+      zone: "hand",
+      min: count,
+      max: count,
+      allowFewerIfUnavailable: false,
+      visibility: "privateToChooser",
+    },
+    candidates: player.hand.map((card) => ({
+      card: toCardRef(card, attacker.playerId),
+      visibility,
+    })),
+    runtime: {
+      attackCost: {
+        attacker: toCardRef(attacker.card, attacker.playerId),
+        target: toCardRef(target.card, target.playerId),
+        cost: { type: "trashFromHand", count },
+      },
+    },
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    visibility,
+  );
+  const created = events[0];
+  if (created !== undefined) {
+    created.causedBy = decision.causedBy;
+  }
+  return toEngineResult(
+    {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq + 1,
+      pendingDecision: decision,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    events,
+  );
+};
+
+type DeclareAttackOptions = {
+  readonly ignoreAttackCosts?: boolean;
+};
+
 export const applyDeclareAttack = (
   state: GameState,
   action: Extract<Action, { type: "declareAttack" }>,
+): EngineResult => applyDeclareAttackInternal(state, action);
+
+const applyDeclareAttackInternal = (
+  state: GameState,
+  action: Extract<Action, { type: "declareAttack" }>,
+  options: DeclareAttackOptions = {},
 ): EngineResult => {
   if (!isMatchActive(state)) {
     return illegalAction(
@@ -157,7 +304,9 @@ export const applyDeclareAttack = (
   let legalTargets: readonly CardInstance["instanceId"][];
   let attackerHasDoubleAttack = false;
   try {
-    const computed = computeView(state);
+    const computed = computeView(state, {
+      ignoreAttackCosts: options.ignoreAttackCosts === true,
+    });
     attackerHasDoubleAttack =
       computed.cards[attacker.card.instanceId]?.keywords.includes(
         "doubleAttack",
@@ -174,6 +323,12 @@ export const applyDeclareAttack = (
       state,
       "declareAttack target is not legal for attacker.",
     );
+  }
+  if (options.ignoreAttackCosts !== true) {
+    const attackTrashCost = attackTrashCostCountForCard(state, attacker.card);
+    if (attackTrashCost > 0) {
+      return createAttackCostDecision(state, attacker, target, attackTrashCost);
+    }
   }
   if (detectPendingRuntimeWork(state) !== undefined) {
     return illegalAction(
@@ -478,6 +633,107 @@ export const getBattleDecisionLegalActions = (
     ...getCounterStepDecisionLegalActions(state, playerId),
     ...getBlockStepDecisionLegalActions(state, playerId),
   ];
+};
+
+export const applyAttackCostDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || !isAttackCostDecision(decision)) {
+    return null;
+  }
+  const fail = (reason: string): EngineResult =>
+    toEngineResult(state, [], [{ type: "invalidDecisionResponse", reason }]);
+  if (decision.id !== action.decisionId) {
+    return fail("Decision id does not match current attack cost decision.");
+  }
+  if (action.response.type !== "cards") {
+    return fail("Response type must be cards for attack cost choices.");
+  }
+
+  const responseCards = (action.response as { cards?: unknown }).cards;
+  if (!Array.isArray(responseCards) || !responseCards.every(isCardRef)) {
+    return fail("Response cards must be CardRef values.");
+  }
+  if (responseCards.length !== decision.request.min) {
+    return fail("Selected card count must match attack cost count.");
+  }
+  if (hasDuplicateInstanceIds(responseCards)) {
+    return fail("Selected cards must not contain duplicates.");
+  }
+
+  const player = state.players[decision.playerId];
+  if (player === undefined) {
+    return fail("Attack cost player does not exist.");
+  }
+  const selectedCards: CardInstance[] = [];
+  for (const ref of responseCards) {
+    const current = player.hand.find((card) =>
+      cardRefMatches(ref, toCardRef(card, decision.playerId)),
+    );
+    if (current === undefined) {
+      return fail("Selected cards must be active cards in hand.");
+    }
+    selectedCards.push(current);
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: action.response.type,
+      selectedCount: responseCards.length,
+    },
+    decision.visibility,
+  );
+  const resolved = events[0];
+  if (resolved !== undefined) {
+    resolved.causedBy = { type: "decision", decisionId: decision.id };
+  }
+
+  const moved = moveConcreteCardsToTrash(state, events, selectedCards, {
+    cardMovedPayloadShape: "publicZoneNames",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    causedBy: { type: "decision", decisionId: decision.id },
+    clearAttachedDon: true,
+    emitCardTrashed: true,
+    playerId: decision.playerId,
+    reason: "trashFromHand",
+    sourceZone: "hand",
+  });
+
+  const nextState: GameState = {
+    ...moved.state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+
+  const runtime = decision.runtime?.attackCost;
+  if (runtime === undefined) {
+    return fail("Attack cost decision is missing runtime metadata.");
+  }
+  const attack = applyDeclareAttackInternal(
+    nextState,
+    {
+      type: "declareAttack",
+      attacker: runtime.attacker,
+      target: runtime.target,
+    },
+    { ignoreAttackCosts: true },
+  );
+  return {
+    ...attack,
+    events: [...events, ...attack.events],
+  };
 };
 
 export const applyBattleDecisionResponse = (

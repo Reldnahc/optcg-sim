@@ -50,6 +50,7 @@ export {
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   selectedAttackRetargetExpressionParser,
+  selectedOpponentCharactersAttackCostExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
 } from "./planned-field-effects.js";
 export {

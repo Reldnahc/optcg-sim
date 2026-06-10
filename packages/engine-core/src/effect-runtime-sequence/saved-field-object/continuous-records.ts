@@ -34,6 +34,7 @@ export const continuousRecordForSavedObject = (
     segment.effect.type !== "modifyPower" &&
     segment.effect.type !== "cannotBecomeActive" &&
     segment.effect.type !== "cannotAttack" &&
+    segment.effect.type !== "attackCost" &&
     segment.effect.type !== "cannotBlock" &&
     segment.effect.type !== "preventBlockerActivation" &&
     segment.effect.type !== "invalidateEffects"
@@ -92,8 +93,12 @@ export const continuousRecordForSavedObject = (
       layer: "restriction",
       target: exactTargetForSavedObject(entry, target, state, objectIndex),
       operation: {
-        type: "restriction",
-        restriction: segment.effect.type,
+        ...(segment.effect.type === "attackCost"
+          ? { type: "attackCost" as const, cost: segment.effect.cost }
+          : {
+              type: "restriction" as const,
+              restriction: segment.effect.type,
+            }),
       },
     },
     duration: segment.effect.duration,

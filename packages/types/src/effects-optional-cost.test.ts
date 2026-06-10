@@ -319,6 +319,7 @@ test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped"
   const topLevelChooseOnePayCost: Effect = {
     // @ts-expect-error choose-one payCost remains scoped to sequence segments.
     type: "payCost",
+    // @ts-expect-error payCost cost does not satisfy top-level attack-cost effect cost.
     cost: optionalChooseOneTrashCost,
   };
   const optionalChooseOnePayCostDecision: OptionalPayCostDecision = {
@@ -388,6 +389,7 @@ test("TYP-009A payCost is not authorable as a top-level effect", () => {
   const topLevelPayCostEffect: Effect = {
     // @ts-expect-error payCost is only authorable as a sequence segment effect.
     type: "payCost",
+    // @ts-expect-error payCost cost does not satisfy top-level attack-cost effect cost.
     cost: optionalReturnDonCost,
   };
   const topLevelPayCostBlock: EffectBlock = {
@@ -397,6 +399,7 @@ test("TYP-009A payCost is not authorable as a top-level effect", () => {
     effect: {
       // @ts-expect-error payCost is only authorable inside sequence segments.
       type: "payCost",
+      // @ts-expect-error payCost cost does not satisfy top-level attack-cost effect cost.
       cost: optionalReturnDonCost,
     },
   };

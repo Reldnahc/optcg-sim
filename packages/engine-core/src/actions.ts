@@ -17,10 +17,12 @@ import {
 import { isMatchActive } from "./actions/state.js";
 import {
   applyBattleDecisionResponse,
+  applyAttackCostDecisionResponse,
   continueAttackTimingDecisionResultIfReady,
   applyDeclareAttack,
   applyUseCounter,
   getBattleDecisionLegalActions,
+  getAttackCostDecisionLegalActions,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle/actions.js";
@@ -179,6 +181,7 @@ export const getLegalActions = (
     actions.push(...getOptionalActivationLegalActions(state, playerId));
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
+    actions.push(...getAttackCostDecisionLegalActions(state, playerId));
     actions.push(...getChooseReplacementLegalActions(state, playerId));
     actions.push(...getChooseEffectOptionLegalActions(state, playerId));
     actions.push(...getChooseQuantityLegalActions(state, playerId));
@@ -507,6 +510,10 @@ const applyRespondToDecision = (
       state,
       sequenceSelectCards,
     );
+  }
+  const attackCost = applyAttackCostDecisionResponse(state, action);
+  if (attackCost !== null) {
+    return attackCost;
   }
   if (isHandSelectionSelectCardsDecision(decision)) {
     const handSelection = applySupportedHandSelectionChoiceResponse(

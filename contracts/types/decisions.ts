@@ -175,6 +175,11 @@ export interface SelectCardsDecision extends BaseDecision {
     trashFromHand?: {
       triggerSource: "effect" | "cost";
     };
+    attackCost?: {
+      attacker: CardRef;
+      target: CardRef;
+      cost: { type: "trashFromHand"; count: number };
+    };
   };
 }
 
@@ -186,7 +191,7 @@ export interface ChooseEffectOptionDecision extends BaseDecision {
 export interface ConfirmLifeTriggerDecision extends BaseDecision {
   type: "confirmLifeTrigger";
   card: CardRef;
-  options: ["activateTrigger", "addToHand"];
+  options: Array<"activateTrigger" | "addToHand">;
 }
 
 export interface OrderCardsDecision extends BaseDecision {

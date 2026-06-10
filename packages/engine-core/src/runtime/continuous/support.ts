@@ -291,6 +291,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "protectFromKO" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
+    effect.type !== "attackCost" &&
     effect.type !== "cannotBlock" &&
     effect.type !== "preventBlockerActivation"
   ) {
@@ -367,6 +368,12 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "giveProtection" &&
     effect.type !== "protectFromKO" &&
     !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (
+    effect.type === "attackCost" &&
+    (!Number.isSafeInteger(effect.cost.count) || effect.cost.count <= 0)
   ) {
     return false;
   }

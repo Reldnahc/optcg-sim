@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, GameState, PlayerId } from "@optcg/types";
+import type {
+  ContinuousEffectRecord,
+  EffectDefinition,
+  GameState,
+  PlayerId,
+} from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import {
@@ -160,6 +165,51 @@ const installWhenAttackingConditionalPowerReduction = (
       sourceTextHash: definition.metadata.sourceTextHash,
     },
   });
+};
+
+const installAttackTrashCostRestriction = (
+  state: ReturnType<typeof setupAttackState>,
+  target: ReturnType<typeof cardRef>,
+): void => {
+  const p2State = must(state.players[p2], "p2");
+  const source = p2State.leader;
+  const record: ContinuousEffectRecord = {
+    id: "attack-cost-trash-two",
+    source: cardRef(source, p2),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      power: 5000,
+      keywords: [],
+    },
+    controller: p2,
+    modifier: {
+      layer: "restriction",
+      target: {
+        type: "exactCard",
+        card: target,
+        createdAtStateSeq: state.seq,
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:attack-cost-targets",
+          objectIndex: 0,
+        },
+      },
+      operation: {
+        type: "attackCost",
+        cost: { type: "trashFromHand", count: 2 },
+      } as never,
+    },
+    duration: { type: "untilEndOfNextTurn", player: "opponent" },
+    createdBy: { type: "ruleProcess", name: "attack-cost-test" },
+    createdAtStateSeq: state.seq,
+  };
+  state.continuousEffects.push(record);
 };
 
 const installWhenAttackingTopDeckPlacement = (
@@ -522,6 +572,60 @@ test("counter-step pass decision opens even when defender has no legal counters"
         action.response.type === "cards" &&
         action.response.cards.length === 0,
     ),
+    true,
+  );
+});
+
+test("attack trash cost opens a hand selection before attack timing resolves", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  installAttackTrashCostRestriction(state, cardRef(attacker, p1));
+
+  const selectedCards = p1State.hand
+    .slice(0, 2)
+    .map((card) => cardRef(card, p1));
+  const beforeHand = p1State.hand.length;
+  const beforeTrash = p1State.trash.length;
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.battle, undefined);
+  assert.equal(
+    opened.events.some((event) => event.type === "attackDeclared"),
+    false,
+  );
+  const decision = must(opened.state.pendingDecision, "attack cost decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.prompt, "Trash cards from hand to attack.");
+  assert.equal(decision.request.zone, "hand");
+  assert.equal(decision.request.min, 2);
+  assert.equal(decision.request.max, 2);
+
+  const paid = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: selectedCards },
+  });
+
+  assert.equal(paid.errors, undefined);
+  const afterP1 = must(paid.state.players[p1], "p1 after payment");
+  assert.equal(afterP1.hand.length, beforeHand - 2);
+  assert.equal(afterP1.trash.length, beforeTrash + 2);
+  assert.equal(paid.state.battle?.attacker.instanceId, attacker.instanceId);
+  assert.equal(
+    paid.events.some((event) => event.type === "decisionResolved"),
+    true,
+  );
+  assert.equal(
+    paid.events.some((event) => event.type === "attackDeclared"),
     true,
   );
 });

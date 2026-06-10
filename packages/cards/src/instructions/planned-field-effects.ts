@@ -15,6 +15,8 @@ export {
   restOpponentCharactersOrDonCardsPrimitive,
   restOpponentCharactersPrimitive,
   restOpponentLeaderOrCharactersPrimitive,
+  selectedOpponentCharactersAttackCostExpressionParser,
+  selectedOpponentCharactersAttackCostPrimitive,
   selectedAttackRetargetExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
   yourLeaderPowerOpponentNextEndPrimitive,

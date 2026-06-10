@@ -24,6 +24,7 @@ import type {
 } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
 import type {
+  AttackTrashCost,
   CardFilter,
   Condition,
   Duration,
@@ -176,6 +177,7 @@ export type ModifierOperation =
       restriction: string;
       sourceCategories?: CardCategory[];
     }
+  | { type: "attackCost"; cost: AttackTrashCost }
   | { type: "protection"; protection: Protection };
 
 export interface Modifier {

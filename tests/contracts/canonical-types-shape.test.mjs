@@ -269,7 +269,11 @@ test("TYP-010 canonical selectedTargets producer contracts stay explicit and non
   );
   assert.match(
     canonicalTypes,
-    /export interface SelectTargetsProducerSegment\s+extends\s+SequencedEffect\s*{[\s\S]*?\beffect:\s*SelectTargetsEffect;[\s\S]*?\bsaveResultAs:\s*string;[\s\S]*?}/m,
+    /export interface SelectAllTargetsEffect\s*{[\s\S]*?\btype:\s*"selectAllTargets";[\s\S]*?\brequest:\s*Omit<[\s\S]*?SelectedTargetsRequest,[\s\S]*?"min"\s*\|\s*"max"\s*\|\s*"allowFewerIfUnavailable"[\s\S]*?>;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SelectTargetsProducerSegment\s+extends\s+SequencedEffect\s*{[\s\S]*?\beffect:\s*SelectTargetsEffect\s*\|\s*SelectAllTargetsEffect;[\s\S]*?\bsaveResultAs:\s*string;[\s\S]*?}/m,
   );
 });
 
