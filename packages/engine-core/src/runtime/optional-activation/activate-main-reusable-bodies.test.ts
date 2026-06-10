@@ -224,3 +224,108 @@ test("optional activate main prompts before resolving reusable drawUpTo body", (
     "chooseQuantity",
   );
 });
+
+test("activate main supports reusable top-deck placement body", () => {
+  const state = makeMainPhaseLegalActionState();
+  addExtraDeckCard(state, p1);
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-leader-top-deck-placement-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-leader-top-deck-placement",
+    effectId,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "placeTopDeckCards",
+    player: "self",
+    count: 1,
+    destination: "topOrBottom",
+    order: "ownerChoice",
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const decision = must(result.state.pendingDecision, "order decision");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "orderCards");
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: must(result.state.effectQueue[0], "queue entry").id,
+    effectId,
+  });
+});
+
+test("optional activate main prompts before resolving reusable top-deck placement body", () => {
+  const state = makeMainPhaseLegalActionState();
+  addExtraDeckCard(state, p1);
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-optional-top-deck-placement-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-top-deck-placement",
+    effectId,
+    optional: true,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "placeTopDeckCards",
+    player: "self",
+    count: 1,
+    destination: "topOrBottom",
+    order: "ownerChoice",
+  };
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const optionalDecision = must(
+    prompted.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    must(accepted.state.pendingDecision, "order decision").type,
+    "orderCards",
+  );
+});

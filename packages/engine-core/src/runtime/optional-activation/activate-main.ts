@@ -42,6 +42,7 @@ import {
 } from "../../rules/once-per-turn.js";
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
 import { isSupportedDrawUpToBody } from "../../effect-runtime-reusable-body-support.js";
+import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import { isSupportedDrawBody } from "../primitives/draw.js";
 
 export { isScopedActivateMainQueueEntry };
@@ -75,6 +76,7 @@ const isSupportedActivateMainPrimitiveBody = (
 ): boolean =>
   isSupportedDrawBody(effect.effect) ||
   isSupportedDrawUpToBody(effect.effect) ||
+  isSupportedPlaceTopDeckCardsEffect(effect.effect) ||
   isSupportedMoveCardsEffect(effect.effect);
 
 export const isSupportedActivateMainRuntimeEffectBlock = (

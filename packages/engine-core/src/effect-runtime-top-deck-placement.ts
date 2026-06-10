@@ -22,6 +22,7 @@ import {
 } from "./action-results.js";
 import { reorderDeckSlice, zonesEqual } from "./actions/state.js";
 import { resolvePlayerId } from "./runtime/primitives/execute.js";
+import { isScopedActivateMainQueueEntry } from "./runtime/optional-activation/activate-main-support.js";
 
 type PlaceTopDeckCardsEffect = Extract<Effect, { type: "placeTopDeckCards" }>;
 
@@ -70,13 +71,12 @@ export const isSupportedPlaceTopDeckCardsEffect = (
   );
 };
 
-export const isSupportedPlaceTopDeckCardsEffectBlock = (
+const hasSupportedPlaceTopDeckCardsEnvelope = (
   block: EffectDefinition["effects"][number],
 ): block is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: PlaceTopDeckCardsEffect;
 } =>
-  block.category === "auto" &&
   block.optional !== true &&
   block.cost === undefined &&
   block.conditionTiming === undefined &&
@@ -84,13 +84,33 @@ export const isSupportedPlaceTopDeckCardsEffectBlock = (
   block.sourcePresencePolicy !== undefined &&
   isSupportedPlaceTopDeckCardsEffect(block.effect);
 
+export const isSupportedPlaceTopDeckCardsEffectBlock = (
+  block: EffectDefinition["effects"][number],
+): block is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: PlaceTopDeckCardsEffect;
+} => block.category === "auto" && hasSupportedPlaceTopDeckCardsEnvelope(block);
+
+const isSupportedActivateMainPlaceTopDeckCardsEffectBlock = (
+  block: EffectDefinition["effects"][number],
+): block is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: PlaceTopDeckCardsEffect;
+} =>
+  block.category === "activate" &&
+  block.trigger.type === "activateMain" &&
+  block.sourcePresencePolicy === "mustRemainInSameZone" &&
+  hasSupportedPlaceTopDeckCardsEnvelope(block);
+
 export const resolveQueuedPlaceTopDeckCardsEffect = (
   effect: EffectDefinition["effects"][number] | undefined,
   entry: EffectQueueEntry,
 ): PlaceTopDeckCardsEffect | undefined =>
   effect !== undefined &&
   effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
-  isSupportedPlaceTopDeckCardsEffectBlock(effect)
+  (isSupportedPlaceTopDeckCardsEffectBlock(effect) ||
+    (isScopedActivateMainQueueEntry(entry) &&
+      isSupportedActivateMainPlaceTopDeckCardsEffectBlock(effect)))
     ? effect.effect
     : undefined;
 
