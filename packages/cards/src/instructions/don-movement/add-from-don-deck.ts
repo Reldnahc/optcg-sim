@@ -1,15 +1,27 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
-import type { InstructionParser } from "../../types.js";
+import type { InstructionParser, InstructionParseResult } from "../../types.js";
 
-export const parseAddActiveDonFromDonDeckInstruction: InstructionParser = (
-  input,
-) => {
-  const match =
-    /^add (?<quantity>up to [1-9]\d*) DON!! card from your DON!! deck and set it as active\.?$/i.exec(
-      input.text,
-    );
+function parseAddDonFromDonDeckInstruction(
+  input: Parameters<InstructionParser>[0],
+  destinationState: "active" | "rested",
+): InstructionParseResult | undefined {
+  const destinationPattern =
+    destinationState === "active"
+      ? "set (?:it|them) as active"
+      : "rest (?:it|them)";
+  const match = new RegExp(
+    `^add (?<quantity>up to [1-9]\\d*) (?:(?<additional>additional) )?DON!! cards?(?: from your DON!! deck)? and ${destinationPattern}\\.?$`,
+    "i",
+  ).exec(input.text);
   const quantityText = match?.groups?.["quantity"];
   if (quantityText === undefined) {
+    return undefined;
+  }
+  const explicitlyFromDonDeck = input.text
+    .toLowerCase()
+    .includes(" from your don!! deck");
+  const isAdditional = match?.groups?.["additional"] !== undefined;
+  if (!explicitlyFromDonDeck && !isAdditional) {
     return undefined;
   }
   const quantity = parseUpToCardinality({ text: quantityText });
@@ -25,7 +37,7 @@ export const parseAddActiveDonFromDonDeckInstruction: InstructionParser = (
       from: { player: "self", zone: "donDeck", position: "top" },
       to: { player: "self", zone: "costArea" },
       order: "original",
-      destinationState: "active",
+      destinationState,
     },
     evidence: [
       "instruction:moveCards",
@@ -34,51 +46,22 @@ export const parseAddActiveDonFromDonDeckInstruction: InstructionParser = (
       "zone:donDeck",
       "position:top",
       "destination:costArea",
-      "state:active",
+      destinationState === "active" ? "state:active" : "state:rested",
       "filter:category:don",
       "order:original",
     ],
     rest: "",
   };
+}
+
+export const parseAddActiveDonFromDonDeckInstruction: InstructionParser = (
+  input,
+) => {
+  return parseAddDonFromDonDeckInstruction(input, "active");
 };
 
 export const parseAddRestedDonFromDonDeckInstruction: InstructionParser = (
   input,
 ) => {
-  const match =
-    /^add (?<quantity>up to [1-9]\d*) additional DON!! cards and rest them\.?$/i.exec(
-      input.text,
-    );
-  const quantityText = match?.groups?.["quantity"];
-  if (quantityText === undefined) {
-    return undefined;
-  }
-  const quantity = parseUpToCardinality({ text: quantityText });
-  if (quantity === undefined || quantity.rest.length > 0) {
-    return undefined;
-  }
-
-  return {
-    effect: {
-      type: "moveCards",
-      min: quantity.cardinality.min,
-      count: quantity.cardinality.max,
-      from: { player: "self", zone: "donDeck", position: "top" },
-      to: { player: "self", zone: "costArea" },
-      order: "original",
-      destinationState: "rested",
-    },
-    evidence: [
-      "instruction:moveCards",
-      ...quantity.evidence,
-      "player:self",
-      "zone:donDeck",
-      "position:top",
-      "destination:costArea",
-      "state:rested",
-      "filter:category:don",
-      "order:original",
-    ],
-    rest: "",
-  };
+  return parseAddDonFromDonDeckInstruction(input, "rested");
 };

@@ -46,6 +46,19 @@ describe("and connector parser", () => {
     });
   });
 
+  it("keeps singular and plural DON state continuations inside the same segment", () => {
+    expect(
+      parseAndConnector({
+        text: "Add up to 1 additional DON!! card and rest it.",
+      }),
+    ).toBeUndefined();
+    expect(
+      parseAndConnector({
+        text: "Add up to 2 DON!! cards from your DON!! deck and set them as active.",
+      }),
+    ).toBeUndefined();
+  });
+
   it("does not authorize support unless split segments parse independently", () => {
     expect(
       parseExpression("A and UNKNOWN.", {
