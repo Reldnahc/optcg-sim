@@ -22,7 +22,7 @@ import {
 } from "../../action-results.js";
 import { zonesEqual } from "../../actions/state.js";
 import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
-import { isSupportedEffectResolvedCustomDrawEffect } from "../primitives/execute.js";
+import { isSupportedEffectResolvedCustomEffect } from "../../effect-runtime-custom-trigger-support.js";
 import type {
   BattleKOTriggerCandidate,
   DetectBattleKOTriggerCandidatesResult,
@@ -347,7 +347,7 @@ export const createKOTriggerQueueing = (
         return toEngineResult(state, [], [lookup.error]);
       }
       const matching = lookup.definition.effects.filter((effect) =>
-        isSupportedEffectResolvedCustomDrawEffect(effect, eventName),
+        isSupportedEffectResolvedCustomEffect(effect, eventName),
       );
       if (matching.length === 0) {
         continue;

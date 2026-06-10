@@ -163,6 +163,55 @@ const installEffectResolvedDrawFollowUp = (
   return must(definition.effects[0], "follow-up effect");
 };
 
+const installEffectResolvedDeckTopTrashFollowUp = (
+  state: ReturnType<typeof setupAttackState>,
+  eventName: string,
+) => {
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p2State.characters[0], "follow-up source");
+  const sourceCardId = toCardId("double-attack-move-follow-up-source");
+  const sourceWithCardId = { ...source, cardId: sourceCardId };
+  p2State.characters[0] = sourceWithCardId;
+  const definition = effectDefinition(
+    sourceCardId,
+    {
+      type: "custom",
+      event: eventName,
+    },
+    {
+      type: "moveCards",
+      count: 1,
+      from: { player: "self", zone: "deck", position: "top" },
+      to: { player: "self", zone: "trash" },
+      order: "original",
+    },
+  );
+  state.cardManifest.cards[sourceCardId] = {
+    ...resolvedCard({
+      cardId: sourceCardId,
+      category: "character",
+      power: 1000,
+    }),
+    support: {
+      cardId: sourceCardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-double-attack-move-follow-up",
+      tested: true,
+      rulesVersion: definition.metadata.rulesVersion,
+      cardDataVersion: "fixture",
+      sourceTextHash: definition.metadata.sourceTextHash,
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...(state.cardManifest.effectDefinitions ?? {}),
+    "def-double-attack-move-follow-up": definition,
+  };
+  return must(definition.effects[0], "moveCards follow-up effect");
+};
+
 const installSupportedDoubleAttackLeader = (
   state: ReturnType<typeof setupAttackState>,
 ) => {
@@ -656,6 +705,87 @@ test("Double Attack defers Life Trigger effectResolved follow-up until all damag
   assert.notEqual(secondDamageIndex, -1);
   assert.notEqual(followUpResolvedIndex, -1);
   assert.equal(followUpQueuedIndex < secondDamageIndex, true);
+  assert.equal(finalDamageEventIndex < followUpResolvedIndex, true);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("Double Attack defers reusable non-draw Life Trigger follow-up bodies", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
+  const firstLifeEffectId = must(firstLife.effectId, "first life effect id");
+  const opened = resolveBattleAfterCounterPass(state);
+  assert.equal(opened.errors, undefined);
+  const followUp = installEffectResolvedDeckTopTrashFollowUp(
+    opened.state,
+    `effectResolved:${String(firstLifeEffectId)}`,
+  );
+  const openedP2 = must(opened.state.players[p2], "opened p2");
+  const lifeDrawRefill = must(openedP2.hand[0], "life draw refill");
+  const trashedByFollowUp = must(openedP2.hand[1], "follow-up trash refill");
+  opened.state.players[p2] = {
+    ...openedP2,
+    hand: openedP2.hand.slice(2).map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p2, slot: "hand", index },
+    })),
+    deck: [
+      {
+        ...lifeDrawRefill,
+        zone: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
+      },
+      {
+        ...trashedByFollowUp,
+        zone: { zone: "deck", playerId: p2, slot: "deck", index: 1 },
+      },
+    ],
+  };
+  const firstDecision = must(
+    opened.state.pendingDecision,
+    "first life trigger decision",
+  );
+
+  const result = resolveNoTriggerLifeDamageDecisions(
+    applyAction(opened.state, {
+      type: "respondToDecision",
+      decisionId: firstDecision.id,
+      response: { type: "lifeTrigger", choice: "activateTrigger" },
+    }),
+  );
+
+  assert.equal(result.errors, undefined);
+  assertAcceptedHash(result);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(result.state.deferredTriggers, []);
+  assert.equal(
+    must(result.state.players[p2], "result p2").trash.some(
+      (card) => card.instanceId === trashedByFollowUp.instanceId,
+    ),
+    true,
+  );
+
+  const followUpQueuedIndex = result.events.findIndex(
+    (event) =>
+      event.type === "effectQueued" &&
+      (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+        followUp.id,
+  );
+  const finalDamageEventIndex = Math.max(
+    ...result.events
+      .map((event, index) =>
+        event.type === "damageDealt" || event.type === "lifeTaken" ? index : -1,
+      )
+      .filter((index) => index >= 0),
+  );
+  const followUpResolvedIndex = result.events.findIndex(
+    (event) =>
+      event.type === "effectResolved" &&
+      (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+        followUp.id,
+  );
+
+  assert.notEqual(followUpQueuedIndex, -1);
+  assert.notEqual(followUpResolvedIndex, -1);
   assert.equal(finalDamageEventIndex < followUpResolvedIndex, true);
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });

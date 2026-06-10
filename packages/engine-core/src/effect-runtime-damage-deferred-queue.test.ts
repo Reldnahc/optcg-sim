@@ -30,6 +30,27 @@ const deferredDrawEffect = (
   return must(definition.effects[0], "deferred draw effect");
 };
 
+const deferredDeckTopTrashEffect = (
+  eventName: string,
+): EffectDefinition["effects"][number] => {
+  const cardId = toCardId("deferred-move-follow-up-source");
+  const definition = effectDefinition(
+    cardId,
+    {
+      type: "custom",
+      event: eventName,
+    },
+    {
+      type: "moveCards",
+      count: 1,
+      from: { player: "self", zone: "deck", position: "top" },
+      to: { player: "self", zone: "trash" },
+      order: "original",
+    },
+  );
+  return must(definition.effects[0], "deferred moveCards effect");
+};
+
 const publicFieldDeferredEntry = (params: {
   readonly queueEntryId: string;
   readonly timingWindowId: string;
@@ -132,6 +153,41 @@ test("damage deferred queue support uses structured life-trigger origin instead 
     true,
   );
   assert.equal(hasExactDamageDeferredQueue(forgedState, resolveEffect), false);
+});
+
+test("damage deferred queue support accepts reusable non-draw follow-up bodies", () => {
+  const supportedEntry = publicFieldDeferredEntry({
+    queueEntryId: "queue-entry:deferred-move-follow-up",
+    timingWindowId: "timing-window:deferred-move-follow-up",
+    causedByQueueEntryId: "queue-entry:deferred-move-life-trigger",
+    queueOrigin: { type: "lifeTrigger" },
+  });
+  const state = createActiveState();
+  state.effectQueue = [supportedEntry];
+  state.deferredTriggers = [
+    {
+      timingWindowId: supportedEntry.timingWindowId,
+      generation: supportedEntry.generation,
+      triggerIds: [String(supportedEntry.id)],
+      releasePolicy: "afterCurrentProcess",
+    },
+  ];
+
+  assert.equal(
+    hasExactDamageDeferredQueue(state, () =>
+      deferredDeckTopTrashEffect(
+        `effectResolved:${String(
+          (
+            supportedEntry.causedBy as Extract<
+              EffectQueueEntry["causedBy"],
+              { type: "effect" }
+            >
+          ).effectId,
+        )}`,
+      ),
+    ),
+    true,
+  );
 });
 
 const lifeTriggerCleanupEntry = (params: {

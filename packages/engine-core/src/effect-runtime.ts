@@ -18,7 +18,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/processing.js";
-import { isSupportedEffectResolvedCustomDrawEffect } from "./runtime/primitives/execute.js";
+import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence/frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";
 import { queueDelayedEndOfTurnEffects } from "./runtime/trigger-queueing/delayed-effects.js";
@@ -262,7 +262,7 @@ const isSupportedDamageDeferredEffectQueueEntry = (
   return (
     effect !== undefined &&
     effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
-    isSupportedEffectResolvedCustomDrawEffect(
+    isSupportedEffectResolvedCustomEffect(
       effect,
       `effectResolved:${String(entry.causedBy.effectId)}`,
     )

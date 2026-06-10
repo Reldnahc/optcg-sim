@@ -3,7 +3,6 @@ export {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   isSupportedDrawBody,
-  isSupportedEffectResolvedCustomDrawEffect,
   isSupportedQueuedDrawEffectBlock,
   isSupportedQueuedOptionalDrawEffectBlock,
   resolvePlayerId,

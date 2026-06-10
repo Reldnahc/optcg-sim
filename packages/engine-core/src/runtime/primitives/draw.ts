@@ -295,36 +295,12 @@ const isSupportedAutoRuntimeDrawEntryPoint = (
   );
 };
 
-const isSupportedEffectResolvedCustomDrawEntryPoint = (
-  effect: DrawEffectBlock,
-  eventName: string,
-): boolean =>
-  effect.trigger.type === "custom" &&
-  effect.trigger.event === eventName &&
-  effect.sourcePresencePolicy === "mustRemainInSameZone";
-
 const isSupportedQueuedCustomDrawEntryPoint = (
   effect: DrawEffectBlock,
 ): boolean =>
   effect.trigger.type === "custom" &&
   (effect.sourcePresencePolicy === "mustRemainInSameZone" ||
     effect.sourcePresencePolicy === "noSourceRequired");
-
-export const isSupportedEffectResolvedCustomDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-  eventName: string,
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} =>
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  effect.trigger.type === "custom" &&
-  effect.trigger.event === eventName &&
-  hasSupportedDrawEffectEnvelope(effect, {
-    optional: "required",
-    allowOncePerTurn: true,
-  }) &&
-  isSupportedEffectResolvedCustomDrawEntryPoint(effect, eventName);
 
 export const isSupportedQueuedDrawEffectBlock = (
   effect: EffectDefinition["effects"][number],

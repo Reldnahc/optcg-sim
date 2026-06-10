@@ -12,10 +12,8 @@ import {
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
 } from "./battle/test-fixtures.js";
-import {
-  isSupportedEffectResolvedCustomDrawEffect,
-  isSupportedQueuedDrawEffectBlock,
-} from "./runtime/primitives/execute.js";
+import { isSupportedQueuedDrawEffectBlock } from "./runtime/primitives/execute.js";
+import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
 import {
   applyAction,
   createActiveState,
@@ -340,7 +338,7 @@ test("non-optional once-per-turn onKO draw block is queue-supported", () => {
 
 test("non-optional once-per-turn no-choice custom effect-resolved draw shape is queue-supported", () => {
   assert.equal(
-    isSupportedEffectResolvedCustomDrawEffect(
+    isSupportedEffectResolvedCustomEffect(
       oncePerTurnNoChoiceDrawEffect(
         { type: "custom", event: "effectResolved" },
         "mustRemainInSameZone",

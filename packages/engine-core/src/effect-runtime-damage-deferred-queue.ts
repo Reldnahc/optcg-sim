@@ -4,7 +4,7 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { isSupportedEffectResolvedCustomDrawEffect } from "./runtime/primitives/execute.js";
+import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
 import { isLifeTriggerQueueEntry } from "./life-trigger/queue-origin.js";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
@@ -52,7 +52,7 @@ const isSupportedDamageDeferredEffectQueueEntry = (
   return (
     effect !== undefined &&
     effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
-    isSupportedEffectResolvedCustomDrawEffect(
+    isSupportedEffectResolvedCustomEffect(
       effect,
       `effectResolved:${String(entry.causedBy.effectId)}`,
     )
