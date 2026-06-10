@@ -52,6 +52,14 @@ const syntheticEntry = (): EffectQueueEntry => ({
   causedBy: { type: "ruleProcess", name: "sequence-support-test" },
 });
 
+const activateMainEntry = (): EffectQueueEntry => ({
+  ...syntheticEntry(),
+  id: "queue-entry:activate-main:sequence-support-test:source:effect" as EffectQueueEntry["id"],
+  timingWindowId:
+    "timing-window:activate-main:sequence-support-test" as EffectQueueEntry["timingWindowId"],
+  causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
+});
+
 test("sequence support accepts targeted keyword grants filtered by reusable effect entry point", () => {
   const effectBlock: EffectDefinition["effects"][number] = {
     id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
@@ -226,6 +234,83 @@ test("sequence support accepts conditional bodies with continuous target decisio
   };
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts conditional playSelected after optional self-trash costs", () => {
+  const selection = "trashSelection:play" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "activate",
+    trigger: { type: "activateMain" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "trashSelf",
+              optional: true,
+              filter: { categories: ["character"], cost: { min: 20 } },
+            },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "fieldCount",
+              player: "self",
+              filter: { categories: ["don"] },
+              op: "gte",
+              value: 9,
+            },
+            then: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: selection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "trash",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      names: ["Kouzuki Momonosuke"],
+                      cost: { op: "eq", value: 9 },
+                    },
+                    saveAs: selection,
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "playSelected",
+                    selection,
+                    ignoreCost: true,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(
+    isSupportedSequenceBlock(activateMainEntry(), effectBlock),
+    true,
+  );
 });
 
 test("sequence support accepts select-all targets followed by attack trash cost", () => {

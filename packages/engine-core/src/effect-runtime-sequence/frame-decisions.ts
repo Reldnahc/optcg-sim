@@ -454,6 +454,21 @@ const fieldTrashCandidates = (
   ...(player.stage === undefined ? [] : [player.stage]),
 ];
 
+const trashableSourceMatchesFilter = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (!isSupportedHandSelectionCardFilter(filter)) {
+    return false;
+  }
+  const source = findTrashableSource(state, entry);
+  return (
+    source !== undefined &&
+    cardMatchesHandSelectionFilter(state, entry.controllerId, source, filter)
+  );
+};
+
 const chooseOneOptionId = (
   option: { type: "trashFromHand" | "trashFromField" },
   index: number,
@@ -557,6 +572,19 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "trashSelf") {
+      const causedBy = decision.causedBy;
+      const entry =
+        causedBy.type === "effect" && "queueEntryId" in causedBy
+          ? state.effectQueue.find(
+              (candidate) => candidate.id === causedBy.queueEntryId,
+            )
+          : undefined;
+      if (
+        entry === undefined ||
+        !trashableSourceMatchesFilter(state, entry, option.filter)
+      ) {
+        continue;
+      }
       legalPayments.push({
         type: "respondToDecision",
         decisionId: decision.id,
@@ -772,10 +800,11 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "trashSelf") {
-    if (findTrashableSource(state, entry) !== undefined) {
+    if (trashableSourceMatchesFilter(state, entry, cost.filter)) {
       paymentOptions.push({
         id: "trashSelf",
         type: "trashSelf",
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       });
     }
     return paymentOptions;

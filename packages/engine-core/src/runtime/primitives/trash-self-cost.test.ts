@@ -47,6 +47,33 @@ const trashSelfThenDrawSequence = (): Extract<
   ],
 });
 
+const filteredTrashSelfThenDrawSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-filtered-trash-self",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "trashSelf",
+          optional: true,
+          filter: { categories: ["character"], cost: { min: 20 } },
+        },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "draw-if-paid",
+      connector: "ifYouDo",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+  ],
+});
+
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
     ...card,
@@ -57,11 +84,13 @@ const setupDefinition = (
   state: GameState,
   source: CardInstance,
   effect: Effect,
+  options: { readonly sourceCost?: number } = {},
 ): EffectDefinition => {
   const effectDefinitionId = "def-trash-self-cost";
   const supportCard = resolvedCard({
     cardId: source.cardId,
     category: "character",
+    ...(options.sourceCost === undefined ? {} : { cost: options.sourceCost }),
     power: 5000,
     support: {
       status: "implemented-dsl",
@@ -140,6 +169,44 @@ const trashSelfQueueState = (): GameState => {
   return state;
 };
 
+const filteredTrashSelfQueueState = (sourceCost: number): GameState => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  setupDefinition(state, source, filteredTrashSelfThenDrawSequence(), {
+    sourceCost,
+  });
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId(
+        `queue-entry-filtered-trash-self-${String(sourceCost)}`,
+      ),
+      timingWindowId: toTimingWindowId(
+        `window-filtered-trash-self-${String(sourceCost)}`,
+      ),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: toEffectId("effect-trash-self-cost"),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "trash-self-cost-test" },
+    },
+  ];
+  return state;
+};
+
 test("optional trashSelf cost trashes the source through field movement and resumes dependent effects", () => {
   const state = trashSelfQueueState();
   const beforeSource = must(state.effectQueue[0]?.source, "source ref");
@@ -178,4 +245,22 @@ test("optional trashSelf cost trashes the source through field movement and resu
   assert.equal(afterP1.trash[0]?.instanceId, beforeSource.instanceId);
   assert.equal(afterP1.hand.length, beforeHandCount + 1);
   assert.equal(afterP1.deck.length, beforeDeckCount - 1);
+});
+
+test("optional filtered trashSelf cost is payable only when the source matches the reusable filter", () => {
+  const eligible = processEffectRuntime(filteredTrashSelfQueueState(20));
+  const eligibleDecision = must(
+    eligible.state.pendingDecision,
+    "eligible trash self decision",
+  );
+  assert.equal(eligible.errors, undefined);
+  assert.equal(eligibleDecision.type, "payCost");
+  assert.deepEqual(
+    eligibleDecision.paymentOptions.map((option) => option.type),
+    ["trashSelf"],
+  );
+
+  const ineligible = processEffectRuntime(filteredTrashSelfQueueState(19));
+  assert.equal(ineligible.errors, undefined);
+  assert.equal(ineligible.state.pendingDecision, undefined);
 });

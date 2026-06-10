@@ -14,4 +14,27 @@ describe("trash self cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses reusable predicates on trash this Character costs", () => {
+    const result = parseTrashSelfCost({
+      text: "trash this Character with a cost of 20 or more",
+    });
+
+    expect(result).toEqual({
+      cost: {
+        type: "trashSelf",
+        optional: true,
+        filter: { categories: ["character"], cost: { min: 20 } },
+      },
+      evidence: [
+        "cost:trashSelf",
+        "target:thisCharacter",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
 });

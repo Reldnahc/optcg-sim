@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardFilter,
   CardRef,
   DecisionId,
   EngineEvent,
@@ -9,6 +10,10 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent } from "../../action-results.js";
+import {
+  cardMatchesHandSelectionFilter,
+  isSupportedHandSelectionCardFilter,
+} from "../../actions/state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 
 const findTrashableSourceCard = (
@@ -38,6 +43,7 @@ const findTrashableSourceCard = (
 export const applyTrashSelfPayment = (params: {
   readonly decisionId: DecisionId;
   readonly events: EngineEvent[];
+  readonly filter?: CardFilter;
   readonly player: PlayerState;
   readonly playerId: PlayerId;
   readonly source: CardRef;
@@ -45,6 +51,17 @@ export const applyTrashSelfPayment = (params: {
 }): PlayerState | null => {
   const trashable = findTrashableSourceCard(params.player, params.source);
   if (trashable === null) {
+    return null;
+  }
+  if (
+    !isSupportedHandSelectionCardFilter(params.filter) ||
+    !cardMatchesHandSelectionFilter(
+      params.state,
+      params.playerId,
+      trashable.card,
+      params.filter,
+    )
+  ) {
     return null;
   }
   const movement = moveConcreteCardsToTrash(

@@ -109,7 +109,11 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
     case "restSelf":
       return { type: "restSelf", optional: true };
     case "trashSelf":
-      return { type: "trashSelf", optional: true };
+      return {
+        type: "trashSelf",
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        optional: true,
+      };
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
     case "trashFromHand":
@@ -153,7 +157,10 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
     case "restSelf":
       return { type: "restSelf" };
     case "trashSelf":
-      return { type: "trashSelf" };
+      return {
+        type: "trashSelf",
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      };
     case "turnLifeFaceUp":
       return {
         type: "turnLifeFaceUp",

@@ -632,6 +632,9 @@ export const applyOptionalActivationDecisionResponse = (
         const trashed = applyTrashSelfPayment({
           decisionId: decision.id,
           events,
+          ...(selectedOption.filter === undefined
+            ? {}
+            : { filter: selectedOption.filter }),
           player,
           playerId: decision.playerId,
           source,

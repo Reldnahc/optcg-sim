@@ -58,7 +58,7 @@ export const isSupportedPayCostSegment = (
     );
   }
   if (cost.type === "trashSelf") {
-    return true;
+    return isSupportedHandSelectionCardFilter(cost.filter);
   }
   if (cost.type === "turnLifeFaceUp") {
     return (

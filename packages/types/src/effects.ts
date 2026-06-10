@@ -199,7 +199,7 @@ export type Cost =
       duration: Duration;
       optional?: boolean;
     }
-  | { type: "trashSelf" }
+  | { type: "trashSelf"; filter?: CardFilter }
   | {
       type: "discard";
       count: number;
@@ -272,7 +272,7 @@ export type OptionalCost =
     }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
-  | { type: "trashSelf"; optional: true }
+  | { type: "trashSelf"; filter?: CardFilter; optional: true }
   | {
       type: "modifyPower";
       target: Target;

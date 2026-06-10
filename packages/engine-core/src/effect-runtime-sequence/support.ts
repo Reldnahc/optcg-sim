@@ -168,6 +168,7 @@ const isSupportedConditionalSegment = (
   if (flattenedThen === null) {
     return false;
   }
+  const selectFromSetSelections = new Set<string>();
   return flattenedThen.effects.every((segment, index) => {
     if (index === 0 && segment.connector !== "always") {
       return false;
@@ -208,6 +209,7 @@ const isSupportedConditionalSegment = (
       return true;
     }
     if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
+      selectFromSetSelections.add(String(segment.effect.saveAs));
       return true;
     }
     if (isSupportedMoveSelectedSegment(segment.effect)) {
@@ -215,6 +217,17 @@ const isSupportedConditionalSegment = (
     }
     if (isSupportedActivateSegment(segment.effect)) {
       return true;
+    }
+    if (segment.effect.type === "playSelected") {
+      return (
+        segment.effect.ignoreCost === true &&
+        (segment.effect.enterRested === undefined ||
+          typeof segment.effect.enterRested === "boolean") &&
+        (selectFromSetSelections.has(String(segment.effect.selection)) ||
+          String(segment.effect.selection).startsWith("handSelection:") ||
+          String(segment.effect.selection).startsWith("trashSelection:") ||
+          String(segment.effect.selection).startsWith("revealSelection:"))
+      );
     }
     return false;
   });

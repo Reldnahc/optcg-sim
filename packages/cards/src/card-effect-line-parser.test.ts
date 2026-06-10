@@ -734,6 +734,90 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("parses Activate Main filtered self-trash cost before conditional play from trash", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] You may trash this Character with a cost of 20 or more: If you have 9 or more DON!! cards on your field, play up to 1 [Kouzuki Momonosuke] with a cost of 9 from your trash.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashSelf",
+                  optional: true,
+                  filter: {
+                    categories: ["character"],
+                    cost: { min: 20 },
+                  },
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "fieldCount",
+                  player: "self",
+                  filter: { categories: ["don"] },
+                  op: "gte",
+                  value: 9,
+                },
+                then: {
+                  type: "sequence",
+                  effects: [
+                    {
+                      connector: "always",
+                      effect: {
+                        type: "selectCards",
+                        zone: "trash",
+                        player: "self",
+                        chooser: "self",
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          names: ["Kouzuki Momonosuke"],
+                          cost: { op: "eq", value: 9 },
+                        },
+                      },
+                    },
+                    {
+                      connector: "ifPossible",
+                      effect: {
+                        type: "playSelected",
+                        ignoreCost: true,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "composition:optionalCostedEffect",
+        "cost:trashSelf",
+        "filter:cost",
+        "condition:donFieldCount",
+        "instruction:playSelected",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
+
   it("parses conditional continuous set-base-power from reusable condition and target primitives", () => {
     const result = parseCardEffectLine(
       "[Your Turn] If you have 10 or more cards in your trash, set the base power of all of your {Five Elders} type Characters to 7000.",

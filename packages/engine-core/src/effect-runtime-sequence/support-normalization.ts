@@ -13,7 +13,7 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
     case "restSelf":
       return { type: "restSelf", optional: true };
     case "trashSelf":
-      return { type: "trashSelf", optional: true };
+      return { ...cost, optional: true };
     case "restDon":
       return { ...cost, optional: true };
     case "attachDon":
