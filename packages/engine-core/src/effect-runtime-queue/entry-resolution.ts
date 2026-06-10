@@ -35,7 +35,7 @@ import {
   executeNoChoiceEffectPrimitive,
   executeWinGamePrimitive,
   isSupportedDamageEffect,
-  isSupportedQueuedWinGameEffect,
+  isSupportedQueuedWinGameEffectForEntry,
 } from "../runtime/primitives/execute.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
 import {
@@ -242,7 +242,10 @@ export const createQueueEntryResolver = (
         queuedEffectForBodyResolution !== undefined &&
         queuedEffectForBodyResolution.sourcePresencePolicy ===
           selected.sourcePresencePolicy &&
-        isSupportedQueuedWinGameEffect(queuedEffectForBodyResolution)
+        isSupportedQueuedWinGameEffectForEntry(
+          queuedEffectForBodyResolution,
+          selected,
+        )
           ? queuedEffectForBodyResolution.effect
           : undefined;
       const damageEffect =

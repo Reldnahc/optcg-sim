@@ -430,3 +430,95 @@ test("optional activate main prompts before resolving reusable trashFromHand bod
     "selectCards",
   );
 });
+
+test("activate main supports reusable winGame body", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-leader-win-game-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-leader-win-game",
+    effectId,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "winGame",
+    player: "self",
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.status, { type: "completed", winner: p1 });
+  assert.equal(
+    result.events.some((event) => event.type === "gameEnded"),
+    true,
+  );
+});
+
+test("optional activate main prompts before resolving reusable winGame body", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-optional-win-game-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-win-game",
+    effectId,
+    optional: true,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "winGame",
+    player: "self",
+  };
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const optionalDecision = must(
+    prompted.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.deepEqual(accepted.state.status, { type: "completed", winner: p1 });
+});

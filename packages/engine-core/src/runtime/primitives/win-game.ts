@@ -14,6 +14,7 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { resolvePlayerId } from "./draw.js";
+import { isScopedActivateMainQueueEntry } from "../optional-activation/activate-main-support.js";
 
 type WinGameExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -37,13 +38,12 @@ export const isSupportedWinGameBody = (
 ): effect is Extract<Effect, { type: "winGame" }> =>
   effect.type === "winGame" && effect.player === "self";
 
-export const isSupportedQueuedWinGameEffect = (
+const hasSupportedWinGameEffectEnvelope = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Extract<Effect, { type: "winGame" }>;
 } =>
-  effect.category === "auto" &&
   effect.optional !== true &&
   effect.oncePerTurn !== true &&
   effect.cost === undefined &&
@@ -51,6 +51,26 @@ export const isSupportedQueuedWinGameEffect = (
   effect.failurePolicy === undefined &&
   effect.sourcePresencePolicy === "mustRemainInSameZone" &&
   isSupportedWinGameBody(effect.effect);
+
+export const isSupportedQueuedWinGameEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "winGame" }>;
+} => effect.category === "auto" && hasSupportedWinGameEffectEnvelope(effect);
+
+export const isSupportedQueuedWinGameEffectForEntry = (
+  effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "winGame" }>;
+} =>
+  isSupportedQueuedWinGameEffect(effect) ||
+  (isScopedActivateMainQueueEntry(entry) &&
+    effect.category === "activate" &&
+    effect.trigger.type === "activateMain" &&
+    hasSupportedWinGameEffectEnvelope(effect));
 
 export const executeWinGamePrimitive = (
   state: GameState,
