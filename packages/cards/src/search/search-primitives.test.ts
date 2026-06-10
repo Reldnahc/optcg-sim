@@ -128,6 +128,27 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses plural revealed cards with plural hand destination before rest-bottom composition", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 2 {Navy} type cards, add them to your hand and place the rest at the bottom of your deck in any order.",
+      }),
+    ).toEqual({
+      filter: { typesAny: ["Navy"] },
+      min: 0,
+      max: 2,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:type",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses disjunctive named-or-category search filters independently from reveal wording", () => {
     expect(
       parseSearchSelectionToHand({

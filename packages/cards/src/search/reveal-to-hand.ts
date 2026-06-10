@@ -124,7 +124,7 @@ export function parseSearchSelectionToHand(
   }
 
   const destinationMatch =
-    /^\s*,?\s*(?:and add it to your hand|add it to your hand|to your hand)(?<separator>\.|,|\s+and)\s+(?<rest>.+)$/i.exec(
+    /^\s*,?\s*(?:and add (?:it|them) to your hand|add (?:it|them) to your hand|to your hand)(?<separator>\.|,|\s+and)\s+(?<rest>.+)$/i.exec(
       filter.rest,
     );
   const separator = destinationMatch?.groups?.["separator"];

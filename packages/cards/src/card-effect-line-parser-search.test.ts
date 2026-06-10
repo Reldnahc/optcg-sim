@@ -407,6 +407,89 @@ describe("card effect line parser search effects", () => {
     );
   });
 
+  it("parses plural public top-of-deck type search with trailing hand trash", () => {
+    const result = parseCardEffectLine(
+      "[Main] Look at 5 cards from the top of your deck; reveal up to 2 {Navy} type cards, add them to your hand and place the rest at the bottom of your deck in any order. Then, trash 1 card from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 5,
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                min: 0,
+                max: 2,
+                filter: { typesAny: ["Navy"] },
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                to: "hand",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "trashFromHand",
+                player: "self",
+                chooser: "self",
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:revealSelected",
+        "instruction:moveSelected",
+        "instruction:placeSetRemainder",
+        "instruction:trashFromHand",
+        "filter:type",
+        "destination:hand",
+        "remaining:bottomDeck",
+      ]),
+    );
+  });
+
   it("parses costed private top-of-deck search with trailing trash compositionally", () => {
     const result = parseCardEffectLine(
       "[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",

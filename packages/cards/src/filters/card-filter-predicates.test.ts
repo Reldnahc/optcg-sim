@@ -326,4 +326,12 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses plural generic type cards as reusable type filter data", () => {
+    expect(parseCardFilterPredicates({ text: "{Navy} type cards" })).toEqual({
+      filter: { typesAny: ["Navy"] },
+      evidence: ["filter:type"],
+      rest: "",
+    });
+  });
 });

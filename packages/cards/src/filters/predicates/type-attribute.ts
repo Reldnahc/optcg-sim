@@ -147,7 +147,7 @@ export const parseGenericTypeCardPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match = /^(?<type>\{[^}]+\}) type card\b\s*(?<rest>.*)$/i.exec(text);
+  const match = /^(?<type>\{[^}]+\}) type cards?\b\s*(?<rest>.*)$/i.exec(text);
   const typeName = parseBraceName(match?.groups?.["type"] ?? "");
   if (typeName === undefined) {
     return undefined;
