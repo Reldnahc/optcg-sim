@@ -329,3 +329,104 @@ test("optional activate main prompts before resolving reusable top-deck placemen
     "orderCards",
   );
 });
+
+test("activate main supports reusable trashFromHand body through selection", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-leader-trash-from-hand-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-leader-trash-from-hand",
+    effectId,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "trashFromHand",
+    player: "self",
+    chooser: "self",
+    count: 1,
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const decision = must(result.state.pendingDecision, "selection decision");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: must(result.state.effectQueue[0], "queue entry").id,
+    effectId,
+  });
+});
+
+test("optional activate main prompts before resolving reusable trashFromHand body", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-optional-trash-from-hand-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-trash-from-hand",
+    effectId,
+    optional: true,
+  });
+  must(definition.effects[0], "activate main effect").effect = {
+    type: "trashFromHand",
+    player: "self",
+    chooser: "self",
+    count: 1,
+  };
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  const optionalDecision = must(
+    prompted.state.pendingDecision,
+    "optional decision",
+  );
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(
+    must(accepted.state.pendingDecision, "selection decision").type,
+    "selectCards",
+  );
+});

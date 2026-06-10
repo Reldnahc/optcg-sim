@@ -32,7 +32,7 @@ const isSupportedPlaySourceBody = (
   effect.source.type === "triggerCard" &&
   effect.ignoreCost === true;
 
-const isSupportedTrashFromHandBody = (
+export const isSupportedTrashFromHandBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "trashFromHand" }> =>
   effect.type === "trashFromHand" &&

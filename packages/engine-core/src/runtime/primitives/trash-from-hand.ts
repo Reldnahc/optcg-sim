@@ -23,6 +23,7 @@ import { toCardRef, zonesEqual } from "../../actions/state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import { resolvePlayerId } from "./draw.js";
 import { resumeSequenceFrameAfterTrashFromHand } from "../../effect-runtime-sequence/frames.js";
+import { isScopedActivateMainQueueEntry } from "../optional-activation/activate-main-support.js";
 
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type TrashFromHandTriggerSource = "effect" | "cost";
@@ -180,13 +181,12 @@ const validateSupportedTrashFromHandEffect = (
   return { chooserId, ok: true, playerId };
 };
 
-export const isSupportedQueuedTrashFromHandEffect = (
+const hasSupportedTrashFromHandEffectEnvelope = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: TrashFromHandEffect;
 } =>
-  effect.category === "auto" &&
   effect.optional !== true &&
   effect.oncePerTurn !== true &&
   effect.cost === undefined &&
@@ -198,6 +198,27 @@ export const isSupportedQueuedTrashFromHandEffect = (
   effect.effect.filter === undefined &&
   Number.isInteger(effect.effect.count) &&
   effect.effect.count > 0;
+
+export const isSupportedQueuedTrashFromHandEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: TrashFromHandEffect;
+} =>
+  effect.category === "auto" && hasSupportedTrashFromHandEffectEnvelope(effect);
+
+export const isSupportedActivateMainTrashFromHandEffect = (
+  effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: TrashFromHandEffect;
+} =>
+  isScopedActivateMainQueueEntry(entry) &&
+  effect.category === "activate" &&
+  effect.trigger.type === "activateMain" &&
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  hasSupportedTrashFromHandEffectEnvelope(effect);
 
 export const createSupportedTrashFromHandChoiceDecision = (
   state: GameState,

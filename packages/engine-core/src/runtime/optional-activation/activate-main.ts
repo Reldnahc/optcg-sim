@@ -41,7 +41,10 @@ import {
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
-import { isSupportedDrawUpToBody } from "../../effect-runtime-reusable-body-support.js";
+import {
+  isSupportedDrawUpToBody,
+  isSupportedTrashFromHandBody,
+} from "../../effect-runtime-reusable-body-support.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import { isSupportedDrawBody } from "../primitives/draw.js";
 
@@ -76,6 +79,7 @@ const isSupportedActivateMainPrimitiveBody = (
 ): boolean =>
   isSupportedDrawBody(effect.effect) ||
   isSupportedDrawUpToBody(effect.effect) ||
+  isSupportedTrashFromHandBody(effect.effect) ||
   isSupportedPlaceTopDeckCardsEffect(effect.effect) ||
   isSupportedMoveCardsEffect(effect.effect);
 

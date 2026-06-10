@@ -5,7 +5,10 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { isSupportedQueuedTrashFromHandEffect } from "../runtime/primitives/trash-from-hand.js";
+import {
+  isSupportedActivateMainTrashFromHandEffect,
+  isSupportedQueuedTrashFromHandEffect,
+} from "../runtime/primitives/trash-from-hand.js";
 import {
   isSupportedQueuedTrashFromHandUntilCountEffect,
   resolveTrashFromHandUntilCount,
@@ -27,15 +30,20 @@ export const resolveQueuedTrashFromHandDecision = (
   state: GameState,
   entry: EffectQueueEntry,
   resolveQueuedEffectDefinition: ResolveQueuedEffectDefinition,
+  resolvedEffectBlock?: EffectDefinition["effects"][number],
 ): QueuedTrashFromHandDecisionResolution | undefined => {
-  const match = resolveQueuedEffectDefinition(state, entry);
+  const match =
+    resolvedEffectBlock ?? resolveQueuedEffectDefinition(state, entry);
   if (
     match === undefined ||
     match.sourcePresencePolicy !== entry.sourcePresencePolicy
   ) {
     return undefined;
   }
-  if (isSupportedQueuedTrashFromHandEffect(match)) {
+  if (
+    isSupportedQueuedTrashFromHandEffect(match) ||
+    isSupportedActivateMainTrashFromHandEffect(match, entry)
+  ) {
     return { kind: "decision", effect: match.effect };
   }
   if (isSupportedQueuedTrashFromHandUntilCountEffect(match)) {

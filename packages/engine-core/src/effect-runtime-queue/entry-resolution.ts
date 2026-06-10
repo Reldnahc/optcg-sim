@@ -205,6 +205,7 @@ export const createQueueEntryResolver = (
         nextState,
         selected,
         queuedEffectResolvers.resolveQueuedEffectDefinition,
+        queuedEffectForBodyResolution,
       );
       if (trashFromHandDecision?.kind === "unsupported") {
         return unsupportedEffectQueueResult(originalState);
