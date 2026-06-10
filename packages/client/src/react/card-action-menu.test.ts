@@ -639,7 +639,7 @@ describe("card action menu", () => {
     assert.match(styles, /\.card-face\s*\{[^}]*border:\s*0;/u);
     assert.match(
       styles,
-      /\.card-tile-shell\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 16\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
+      /\.card-tile-shell\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 22\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
     );
     assert.match(
       styles,

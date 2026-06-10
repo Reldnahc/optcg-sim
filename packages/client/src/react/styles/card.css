@@ -1,7 +1,7 @@
 .card-tile-shell {
   --card-corner-radius: calc(var(--card-height) / 14);
   --card-glow-size: calc(var(--card-height) / 7);
-  --card-outline-heavy: calc(var(--card-height) / 16);
+  --card-outline-heavy: calc(var(--card-height) / 22);
   --card-outline-medium: calc(var(--card-height) / 24);
   --card-outline-thin: calc(var(--card-height) / 42);
 
