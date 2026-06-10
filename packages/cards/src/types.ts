@@ -180,6 +180,7 @@ export type PrimitiveEvidence =
   | "value:basePower:snapshotCurrentPower"
   | "value:dynamic:selectedCardCost"
   | "value:dynamic:distinctFieldNames"
+  | "value:dynamic:matchingZoneCards"
   | "filter:any"
   | "destination:hand"
   | "destination:ownerHand"

@@ -1,6 +1,7 @@
 import type {
   CardFilter,
   Duration,
+  DynamicNumberValue,
   Effect,
   Keyword,
   Target,
@@ -173,23 +174,6 @@ const isSupportedCostModifierFilter = (
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
-export const isSupportedCostModifierEffect = (
-  effect: Extract<Effect, { type: "modifyCost" }>,
-): boolean =>
-  effect.player === "self" &&
-  Number.isSafeInteger(effect.value) &&
-  effect.value !== 0 &&
-  isSupportedDuration(effect.duration) &&
-  ((effect.sourceZone === "hand" &&
-    effect.value < 0 &&
-    ((effect.target?.type === "self" && effect.filter === undefined) ||
-      (effect.target === undefined &&
-        isSupportedCostModifierFilter(effect.filter)))) ||
-    (effect.sourceZone === undefined &&
-      effect.target !== undefined &&
-      effect.filter === undefined &&
-      isSupportedTarget(effect.target)));
-
 const isSupportedPlayRestrictionFilter = (
   filter: CardFilter | undefined,
 ): boolean =>
@@ -205,8 +189,8 @@ const isSupportedPlayRestrictionFilter = (
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
-const isSupportedPowerValue = (
-  value: Extract<Effect, { type: "modifyPower" }>["value"],
+const isSupportedModifierValue = (
+  value: number | DynamicNumberValue,
 ): boolean =>
   (typeof value === "number" && Number.isSafeInteger(value)) ||
   (typeof value === "object" &&
@@ -217,7 +201,33 @@ const isSupportedPowerValue = (
         value.player === "self" &&
         value.filter.custom === "differentNames" &&
         Number.isSafeInteger(value.multiplier) &&
-        value.multiplier > 0)));
+        value.multiplier > 0) ||
+      (value.type === "countMatchingZoneCards" &&
+        (value.player === "self" || value.player === "opponent") &&
+        Number.isSafeInteger(value.per) &&
+        value.per > 0 &&
+        Number.isSafeInteger(value.multiplier) &&
+        value.multiplier !== 0 &&
+        (value.filter === undefined ||
+          Object.keys(value.filter).every((key) => key === "categories")))));
+
+export const isSupportedCostModifierEffect = (
+  effect: Extract<Effect, { type: "modifyCost" }>,
+): boolean =>
+  effect.player === "self" &&
+  isSupportedModifierValue(effect.value) &&
+  !(typeof effect.value === "number" && effect.value === 0) &&
+  isSupportedDuration(effect.duration) &&
+  ((effect.sourceZone === "hand" &&
+    typeof effect.value === "number" &&
+    effect.value < 0 &&
+    ((effect.target?.type === "self" && effect.filter === undefined) ||
+      (effect.target === undefined &&
+        isSupportedCostModifierFilter(effect.filter)))) ||
+    (effect.sourceZone === undefined &&
+      effect.target !== undefined &&
+      effect.filter === undefined &&
+      isSupportedTarget(effect.target)));
 
 const isSupportedBasePowerValue = (
   value: Extract<Effect, { type: "setBasePower" }>["value"],
@@ -289,7 +299,7 @@ export const isSupportedContinuousQueueEffect = (
   if (!isSupportedDuration(effect.duration)) return false;
   if (
     effect.type === "modifyPower" &&
-    (!isSupportedPowerValue(effect.value) ||
+    (!isSupportedModifierValue(effect.value) ||
       (effect.target.type !== "myLeader" && !isSupportedTarget(effect.target)))
   ) {
     return false;

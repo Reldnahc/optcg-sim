@@ -35,6 +35,7 @@ import {
 } from "../../replacement/field-removal-protection-shape.js";
 import {
   resolveBasePowerValue,
+  resolveDynamicNumberValue,
   resolvePowerValue,
   type ContinuousResolutionContext,
 } from "./value-resolution.js";
@@ -83,10 +84,14 @@ const mapEffectToModifier = (
     };
   }
   if (effect.type === "modifyCost") {
+    const value = resolveDynamicNumberValue(state, effect.value, context);
+    if (value === null) {
+      return null;
+    }
     return {
       layer: "costAdd",
       target,
-      operation: { type: "addCost", value: effect.value },
+      operation: { type: "addCost", value },
     };
   }
   if (effect.type === "setBasePower") {
@@ -369,11 +374,20 @@ const isSupportedPowerEffectValue = (
   if (value.type === "sumSelectedCardCosts") {
     return Number.isSafeInteger(value.multiplier) && value.multiplier > 0;
   }
+  if (value.type === "countDistinctMatchingFieldNames") {
+    return (
+      value.player === "self" &&
+      Number.isSafeInteger(value.multiplier) &&
+      value.multiplier > 0 &&
+      value.filter.custom === "differentNames"
+    );
+  }
   return (
     value.player === "self" &&
+    Number.isSafeInteger(value.per) &&
+    value.per > 0 &&
     Number.isSafeInteger(value.multiplier) &&
-    value.multiplier > 0 &&
-    value.filter.custom === "differentNames"
+    value.multiplier !== 0
   );
 };
 
@@ -399,6 +413,9 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
           effect.target.player === "self" &&
           isSupportedBasePowerSetFilter(effect.target.filter)))
     );
+  }
+  if (effect.type === "modifyCost") {
+    return isSupportedCostModifierEffect(effect);
   }
   try {
     return (
@@ -593,10 +610,18 @@ const effectToDerivedModifier = (
         unsupportedDerivedMessage("unsupported cost modifier shape"),
       );
     }
+    const value = resolveDynamicNumberValue(state, effect.value, {
+      controllerId: source.playerId,
+    });
+    if (value === null) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported dynamic cost value"),
+      );
+    }
     return {
       layer: "costAdd",
       target: costModifierTargetForEffect(effect),
-      operation: { type: "addCost", value: effect.value },
+      operation: { type: "addCost", value },
     };
   }
   if (effect.type === "modifyCounter") {

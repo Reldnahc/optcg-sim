@@ -64,6 +64,36 @@ export const parseLeaderNameCondition: ConditionParser = (
     };
   }
 
+  const typeIncludesMatch =
+    /^your Leader's type includes\s+(?:"(?<quotedType>[^"]+)"|(?<bareType>.+))$/i.exec(
+      input.text,
+    );
+  const includedType = (
+    typeIncludesMatch?.groups?.["quotedType"] ??
+    typeIncludesMatch?.groups?.["bareType"]
+  )?.trim();
+  if (includedType !== undefined && includedType.length > 0) {
+    return {
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          typesIncludeAny: [includedType],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:type",
+      ],
+      rest: "",
+    };
+  }
+
   const subjectMatch = /^your Leader (?:is|has the)\s+(?<predicate>.+)$/i.exec(
     input.text,
   );

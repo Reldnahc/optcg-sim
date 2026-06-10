@@ -369,6 +369,14 @@ export type DynamicNumberValue =
       zone: "characterArea";
       filter: CardFilter;
       multiplier: number;
+    }
+  | {
+      type: "countMatchingZoneCards";
+      player: PlayerRef;
+      zone: "trash";
+      filter?: CardFilter;
+      per: number;
+      multiplier: number;
     };
 
 export type SnapshotNumberValue = {
@@ -851,7 +859,7 @@ export type Effect =
       type: "modifyCost";
       filter?: CardFilter;
       target?: Target;
-      value: number;
+      value: number | DynamicNumberValue;
       duration: Duration;
       player: PlayerRef;
       sourceZone?: Zone;

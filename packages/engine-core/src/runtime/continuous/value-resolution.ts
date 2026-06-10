@@ -2,6 +2,7 @@ import type {
   CardFilter,
   CardInstance,
   CardRef,
+  DynamicNumberValue,
   Effect,
   EffectExecutionFrame,
   EffectQueueEntry,
@@ -99,9 +100,39 @@ const countDistinctMatchingFieldNames = (
   return names.size * value.multiplier;
 };
 
-export const resolvePowerValue = (
+const countMatchingZoneCards = (
   state: GameState,
-  value: Extract<Effect, { type: "modifyPower" }>["value"],
+  controllerId: PlayerId,
+  value: Extract<DynamicNumberValue, { type: "countMatchingZoneCards" }>,
+): number | null => {
+  if (value.player !== "self" && value.player !== "opponent") {
+    return null;
+  }
+  if (
+    !Number.isSafeInteger(value.per) ||
+    value.per <= 0 ||
+    !Number.isSafeInteger(value.multiplier)
+  ) {
+    return null;
+  }
+  const playerId = resolvePlayerRef(state, controllerId, value.player);
+  const player = playerId === null ? undefined : state.players[playerId];
+  if (player === undefined) {
+    return null;
+  }
+  const filter = value.filter;
+  const matchingCount =
+    filter === undefined
+      ? player.trash.length
+      : player.trash.filter((card) =>
+          cardMatchesBasicFilter(state, card, filter),
+        ).length;
+  return Math.floor(matchingCount / value.per) * value.multiplier;
+};
+
+export const resolveDynamicNumberValue = (
+  state: GameState,
+  value: number | DynamicNumberValue,
   context: ContinuousResolutionContext | undefined,
 ): number | null => {
   if (typeof value === "number") {
@@ -112,6 +143,12 @@ export const resolvePowerValue = (
     return controllerId === undefined
       ? null
       : countDistinctMatchingFieldNames(state, controllerId, value);
+  }
+  if (value.type === "countMatchingZoneCards") {
+    const controllerId = context?.controllerId;
+    return controllerId === undefined
+      ? null
+      : countMatchingZoneCards(state, controllerId, value);
   }
   const reference = context?.savedReferences?.[value.selection];
   if (reference?.kind !== "selectedCards") {
@@ -127,6 +164,12 @@ export const resolvePowerValue = (
   }
   return totalCost * value.multiplier;
 };
+
+export const resolvePowerValue = (
+  state: GameState,
+  value: Extract<Effect, { type: "modifyPower" }>["value"],
+  context: ContinuousResolutionContext | undefined,
+): number | null => resolveDynamicNumberValue(state, value, context);
 
 const cardRefForSnapshotTarget = (
   state: GameState,

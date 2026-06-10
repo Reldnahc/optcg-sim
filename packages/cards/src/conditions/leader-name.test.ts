@@ -98,6 +98,29 @@ describe("leader name condition parser", () => {
     });
   });
 
+  it("parses leader type-includes wording as a reusable type substring filter", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: 'your Leader\'s type includes "CP"',
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], typesIncludeAny: ["CP"] },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:type",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses OR leader identity as reusable name filter alternatives", () => {
     expect(
       parseLeaderNameCondition({

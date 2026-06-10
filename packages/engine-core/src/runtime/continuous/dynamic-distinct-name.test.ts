@@ -28,7 +28,7 @@ const must = <T>(value: T | undefined, label: string): T => {
 
 const resolvedCard = (params: {
   cardId: CardId;
-  category: "leader" | "character" | "don";
+  category: "leader" | "character" | "event" | "don";
   power?: number;
 }): ResolvedCard => {
   const base = {
@@ -145,6 +145,21 @@ const withCharacter = (
   attachedDon: [],
 });
 
+const withTrashCard = (
+  playerId: PlayerId,
+  cardId: CardId,
+  index: number,
+): CardInstance => ({
+  instanceId:
+    `${playerId}:trash:${String(index)}:${cardId}` as CardInstance["instanceId"],
+  cardId,
+  owner: playerId,
+  controller: playerId,
+  zone: { zone: "trash", playerId, index },
+  state: "active",
+  attachedDon: [],
+});
+
 const reviewedPermanentDefinition = (cardId: CardId): EffectDefinition => ({
   cardId,
   implementationStatus: "implemented-dsl",
@@ -215,4 +230,88 @@ test("derived DSL dynamic power counts distinct matching field names", () => {
   const view = computeView(state);
 
   assert.equal(view.cards[source.instanceId]?.currentPower, 4000);
+});
+
+test("derived DSL dynamic trash batches can modify power and cost", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("trash-batch-source"), 0);
+  p1State.characters = [source];
+  p1State.trash = Array.from({ length: 12 }, (_, index) =>
+    withTrashCard(p1, toCardId("trash-card"), index),
+  );
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedCard({
+      cardId: source.cardId,
+      category: "character",
+      power: 1000,
+    }),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:trash-batches",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.cards[toCardId("trash-card")] = resolvedCard({
+    cardId: toCardId("trash-card"),
+    category: "event",
+  });
+  state.cardManifest.effectDefinitions = {
+    "def:perm:trash-batches": {
+      ...reviewedPermanentDefinition(source.cardId),
+      effects: [
+        {
+          id: "perm:trash-batches" as EffectDefinition["effects"][number]["id"],
+          category: "permanent",
+          trigger: { type: "permanent" },
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "modifyPower",
+                  target: { type: "self" },
+                  value: {
+                    type: "countMatchingZoneCards",
+                    player: "self",
+                    zone: "trash",
+                    per: 5,
+                    multiplier: 1000,
+                  },
+                  duration: { type: "whileSourceOnField" },
+                },
+              },
+              {
+                connector: "always",
+                effect: {
+                  type: "modifyCost",
+                  player: "self",
+                  target: { type: "self" },
+                  value: {
+                    type: "countMatchingZoneCards",
+                    player: "self",
+                    zone: "trash",
+                    per: 5,
+                    multiplier: 2,
+                  },
+                  duration: { type: "whileSourceOnField" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const view = computeView(state);
+
+  assert.equal(view.cards[source.instanceId]?.currentPower, 3000);
+  assert.equal(view.cards[source.instanceId]?.currentCost, 5);
 });
