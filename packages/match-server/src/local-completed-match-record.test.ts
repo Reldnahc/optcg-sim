@@ -10,6 +10,7 @@ import {
 } from "./local-match.js";
 import type { CardId, MatchId } from "@optcg/types";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
+import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 const readySubmission = (
@@ -62,6 +63,7 @@ describe("local completed match record mapping", () => {
     const setup = await createPremadeDevMatchSetup({
       matchId: "11111111-1111-1111-1111-111111111111" as MatchId,
       lobbyId: "lobby-1",
+      fetchCard: createDefaultDevFixtureFetch(),
     });
     const match = createLocalDevMatch(setup);
     match.state.status = { type: "completed", winner: setup.playerOrder[0] };
