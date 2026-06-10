@@ -1,6 +1,5 @@
 import type {
   CardInstance,
-  EngineEvent,
   GameState,
   OptionalPayCostDecision,
   PaymentResponse,
@@ -11,11 +10,12 @@ import type {
   TargetRequest,
 } from "@optcg/types";
 
-import { appendEvent } from "../../action-results.js";
 import {
   cardMatchesHandSelectionFilter,
   getOpponentId,
+  toCardRef,
 } from "../../actions/state.js";
+import { applyDonAttachment } from "../primitives/don-attachment.js";
 
 export type AttachDonPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
@@ -35,7 +35,7 @@ type ApplyAttachDonPaymentResult =
           PaymentResponse["selectedCardInstanceIds"]
         >;
       };
-      events: EngineEvent[];
+      events: readonly GameState["eventJournal"][number][];
       players: GameState["players"];
     }
   | { ok: false; reason: string };
@@ -216,63 +216,25 @@ export function applyAttachDonCostPayment(params: {
     params.playerId,
     params.selectedOption,
   ).find((candidate) => candidate.instanceId === selectedTargetId);
-  if (target === undefined) {
+  if (target === undefined || target.zone.playerId === undefined) {
     return { ok: false, reason: "Payment DON!! attachment target is invalid." };
   }
-  const selectedDonSet = new Set(selectedDon);
-  const targetPlayerId = target.zone.playerId;
-  if (targetPlayerId === undefined) {
-    return { ok: false, reason: "Payment DON!! attachment target is invalid." };
-  }
-  const targetPlayer = params.state.players[targetPlayerId];
-  if (targetPlayer === undefined) {
-    return { ok: false, reason: "Payment DON!! attachment target is invalid." };
-  }
-  const targetsLeader = targetPlayer.leader.instanceId === target.instanceId;
-  const updatedTargetPlayer: PlayerState = {
-    ...targetPlayer,
-    leader: targetsLeader
-      ? {
-          ...targetPlayer.leader,
-          attachedDon: [...targetPlayer.leader.attachedDon, ...selectedDon],
-        }
-      : targetPlayer.leader,
-    characters: targetPlayer.characters.map((card) =>
-      card.instanceId === target.instanceId
-        ? { ...card, attachedDon: [...card.attachedDon, ...selectedDon] }
-        : card,
-    ),
-  };
-  const sourceBase =
-    sourcePlayerId === targetPlayerId ? updatedTargetPlayer : sourcePlayer;
-  const updatedSourcePlayer: PlayerState = {
-    ...sourceBase,
-    costArea: sourcePlayer.costArea.map((card) => {
-      if (!selectedDonSet.has(card.instanceId)) {
-        return card;
-      }
-      const attached = { ...card };
-      delete attached.state;
-      return attached;
-    }),
-  };
-  const events: EngineEvent[] = [];
-  for (const donId of selectedDon) {
-    appendEvent(
-      params.state,
-      events,
-      "donAttached",
-      {
-        playerId: sourcePlayerId,
-        donInstanceId: donId,
-        targetInstanceId: target.instanceId,
-      },
-      { type: "replayOnly" },
-    );
-    const attached = events[events.length - 1];
-    if (attached !== undefined) {
-      attached.causedBy = { type: "decision", decisionId: params.decisionId };
-    }
+  const attached = applyDonAttachment({
+    causedBy: { type: "decision", decisionId: params.decisionId },
+    selectedDonInstanceIds: selectedDon,
+    sourcePlayerId,
+    sourceState: params.selectedOption.sourceState,
+    state: params.state,
+    target: toCardRef(target, target.zone.playerId),
+  });
+  if (!attached.ok) {
+    return {
+      ok: false,
+      reason:
+        attached.reason === "DON!! attachment target is invalid."
+          ? "Payment DON!! attachment target is invalid."
+          : "Payment DON!! attachment source is invalid.",
+    };
   }
   return {
     ok: true,
@@ -282,15 +244,7 @@ export function applyAttachDonCostPayment(params: {
       selectedDonInstanceIds: selectedDon,
       selectedCardInstanceIds: selectedTargets,
     },
-    events,
-    players: {
-      ...params.state.players,
-      ...(sourcePlayerId === targetPlayerId
-        ? { [sourcePlayerId]: updatedSourcePlayer }
-        : {
-            [sourcePlayerId]: updatedSourcePlayer,
-            [targetPlayerId]: updatedTargetPlayer,
-          }),
-    },
+    events: attached.events,
+    players: attached.players,
   };
 }

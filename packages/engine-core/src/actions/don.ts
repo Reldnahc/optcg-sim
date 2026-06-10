@@ -1,6 +1,5 @@
 import type {
   Action,
-  CardInstance,
   CardRef,
   EngineEvent,
   EngineResult,
@@ -16,6 +15,7 @@ import {
   toStateSeq,
 } from "../action-results.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
+import { applyDonAttachment } from "../runtime/primitives/don-attachment.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { isMatchActive, targetMatchesCard, toCardRef } from "./state.js";
 
@@ -116,54 +116,24 @@ export const applyAttachDon = (
       "attachDon target must be turn player's leader or character.",
     );
   }
-  const nextLeader = isLeaderTarget
-    ? {
-        ...player.leader,
-        attachedDon: [...player.leader.attachedDon, donor.instanceId],
-      }
-    : player.leader;
-  const nextCharacters = player.characters.map((character, index) =>
-    index === targetCharacterIndex
-      ? {
-          ...character,
-          attachedDon: [...character.attachedDon, donor.instanceId],
-        }
-      : character,
-  );
-
-  const updatedDon: CardInstance = { ...donor };
-  delete updatedDon.state;
-  const nextCostArea = player.costArea.map((card, index) =>
-    index === donIndex ? updatedDon : card,
-  );
+  const attached = applyDonAttachment({
+    selectedDonInstanceIds: [donor.instanceId],
+    sourcePlayerId: turnPlayerId,
+    sourceState: "active",
+    state,
+    target: action.target,
+  });
+  if (!attached.ok) {
+    return illegalAction(state, attached.reason);
+  }
 
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    players: {
-      ...state.players,
-      [turnPlayerId]: {
-        ...player,
-        leader: nextLeader,
-        characters: nextCharacters,
-        costArea: nextCostArea,
-      },
-    },
+    players: attached.players,
   };
-  const events: EngineEvent[] = [
-    createEvent(
-      state,
-      1,
-      "donAttached",
-      {
-        playerId: turnPlayerId,
-        donInstanceId: donor.instanceId,
-        targetInstanceId: action.target.instanceId,
-      },
-      { type: "replayOnly" },
-    ),
-  ];
+  const events: EngineEvent[] = [...attached.events];
   const nextWithRules = applyRuleProcessingCheckpoint({
     state: nextState,
     events,
