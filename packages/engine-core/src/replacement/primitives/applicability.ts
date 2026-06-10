@@ -17,8 +17,6 @@ import {
   resolvePublicTargetCandidatesForRequest,
 } from "../../selection/candidates.js";
 import { cardRefsEqual } from "../field-removal-targets.js";
-import { supportedOwnerDeckBottomInstead } from "../instead-effects.js";
-import { findCardByInstanceId } from "./source-lookup.js";
 import {
   isSupportedKoSelfInsteadEffect,
   isSupportedModifyLeaderPowerInsteadEffect,
@@ -27,7 +25,9 @@ import {
   isSupportedReturnDonInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
-} from "./support-shapes.js";
+  supportedOwnerDeckBottomInstead,
+} from "../instead-effects.js";
+import { findCardByInstanceId } from "./source-lookup.js";
 import type {
   LocatedReplacementSource,
   SupportedReplacementEffectBlock,

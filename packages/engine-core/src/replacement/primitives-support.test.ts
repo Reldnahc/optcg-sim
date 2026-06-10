@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
 import type {
@@ -9,6 +12,11 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedReplacementEffectBlock } from "./primitives.js";
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../..",
+);
 
 const toEffectId = (value: string): EffectId => value as EffectId;
 
@@ -162,4 +170,30 @@ test("owner deck-bottom replacement support follows flattened sequence primitive
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support-shapes delegates instead primitive checks", async () => {
+  const content = await readFile(
+    path.join(
+      repoRoot,
+      "packages/engine-core/src/replacement/primitives/support-shapes.ts",
+    ),
+    "utf8",
+  );
+
+  assert.equal(
+    content.includes("isSupportedHandSelectionCardFilter"),
+    false,
+    "support-shapes must not duplicate trash-from-hand filter support",
+  );
+  assert.equal(
+    content.includes('effect.type === "rest" &&'),
+    false,
+    "support-shapes must not duplicate rest instead primitive support",
+  );
+  assert.equal(
+    content.includes('effect.type === "returnDon" &&'),
+    false,
+    "support-shapes must not duplicate return DON instead primitive support",
+  );
 });

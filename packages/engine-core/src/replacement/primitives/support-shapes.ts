@@ -1,8 +1,16 @@
 import type { Effect, EffectDefinition, Target } from "@optcg/types";
 
-import { isSupportedHandSelectionCardFilter } from "../../actions/state.js";
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
-import { isSupportedOwnerDeckBottomInsteadEffect } from "../instead-effects.js";
+import {
+  isSupportedKoSelfInsteadEffect,
+  isSupportedModifyLeaderPowerInsteadEffect,
+  isSupportedOwnerDeckBottomInsteadEffect,
+  isSupportedRestOwnCardsInsteadEffect,
+  isSupportedRestSelfInsteadEffect,
+  isSupportedReturnDonInsteadEffect,
+  isSupportedTrashFromHandInsteadEffect,
+  isSupportedTrashSelfInsteadEffect,
+} from "../instead-effects.js";
 import type { SupportedReplacementEffectBlock } from "./types.js";
 
 const isSelfTarget = (
@@ -54,76 +62,6 @@ export const isSupportedOpponentFieldRemovalLifeReplacementEffect = (
   effect.effect.when.target.zone === "characterArea" &&
   effect.effect.when.target.player === "self" &&
   isSupportedLifeTopToHandEffect(effect.effect.instead);
-
-export const isSupportedRestOwnCardsInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "rest" }> & {
-  target: Extract<Target, { type: "chooseFromZones" }>;
-} =>
-  effect.type === "rest" &&
-  effect.target.type === "chooseFromZones" &&
-  effect.target.request.timing === "onResolution" &&
-  effect.target.request.chooser === "self" &&
-  effect.target.request.player === "self" &&
-  effect.target.request.zones.length > 0 &&
-  effect.target.request.zones.every(
-    (zone) =>
-      zone === "leaderArea" ||
-      zone === "characterArea" ||
-      zone === "stageArea" ||
-      zone === "costArea",
-  ) &&
-  effect.target.request.filter === undefined &&
-  Number.isInteger(effect.target.request.min) &&
-  Number.isInteger(effect.target.request.max) &&
-  effect.target.request.min > 0 &&
-  effect.target.request.min === effect.target.request.max &&
-  !effect.target.request.allowFewerIfUnavailable &&
-  effect.target.request.visibility === "public";
-
-export const isSupportedRestSelfInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "rest" }> & {
-  target: Extract<Target, { type: "self" }>;
-} => effect.type === "rest" && isSelfTarget(effect.target);
-
-export const isSupportedTrashFromHandInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "trashFromHand" }> =>
-  effect.type === "trashFromHand" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
-  isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0;
-
-export const isSupportedReturnDonInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "returnDon" }> =>
-  effect.type === "returnDon" &&
-  effect.player === "self" &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0;
-
-export const isSupportedModifyLeaderPowerInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "modifyPower" }> =>
-  effect.type === "modifyPower" &&
-  effect.target.type === "myLeader" &&
-  typeof effect.value === "number" &&
-  effect.duration.type === "thisTurn";
-
-export const isSupportedTrashSelfInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "trash" }> & {
-  target: Extract<Effect, { type: "trash" }>["target"] & { type: "self" };
-} => effect.type === "trash" && isSelfTarget(effect.target);
-
-export const isSupportedKoSelfInsteadEffect = (
-  effect: Effect,
-): effect is Extract<Effect, { type: "ko" }> & {
-  target: Extract<Effect, { type: "ko" }>["target"] & { type: "self" };
-} => effect.type === "ko" && isSelfTarget(effect.target);
 
 export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
