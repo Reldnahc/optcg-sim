@@ -29,6 +29,7 @@ import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
 } from "../runtime/continuous/continuous.js";
+import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 import {
   executeSelectedTargetEffectPrimitive,
@@ -132,25 +133,9 @@ const isEffectQueueCausality = (
 ): causedBy is Extract<CausalityRef, { type: "effect" }> =>
   causedBy.type === "effect";
 
-const isFieldZoneForActivateMain = (
-  zone: CardRef["zone"],
-): zone is NonNullable<CardRef["zone"]> =>
-  zone?.zone === "leaderArea" ||
-  zone?.zone === "characterArea" ||
-  zone?.zone === "stageArea";
-
 const isScopedActivateMainTargetQueueEntry = (
   entry: EffectQueueEntry,
-): boolean =>
-  entry.causedBy.type === "ruleProcess" &&
-  entry.causedBy.name === "effectRuntime:activateMain" &&
-  String(entry.id).startsWith("queue-entry:activate-main:") &&
-  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
-  entry.generation === 0 &&
-  entry.triggerEventId === undefined &&
-  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
-  isFieldZoneForActivateMain(entry.source.zone) &&
-  isFieldZoneForActivateMain(entry.sourceSnapshot.zone);
+): boolean => isScopedActivateMainQueueEntry(entry);
 
 export const isSupportedTargetChoiceEffectShape = (
   effect: EffectDefinition["effects"][number],

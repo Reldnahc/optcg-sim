@@ -33,30 +33,16 @@ import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 import {
+  isFieldZoneForActivateMain,
+  isScopedActivateMainQueueEntry,
+} from "./activate-main-support.js";
+import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
 import { isSupportedDrawBody } from "../primitives/draw.js";
 
-const isFieldZoneForActivateMain = (
-  zone: CardRef["zone"],
-): zone is NonNullable<CardRef["zone"]> =>
-  zone?.zone === "leaderArea" ||
-  zone?.zone === "characterArea" ||
-  zone?.zone === "stageArea";
-
-export const isScopedActivateMainQueueEntry = (
-  entry: EffectQueueEntry,
-): boolean =>
-  entry.causedBy.type === "ruleProcess" &&
-  entry.causedBy.name === "effectRuntime:activateMain" &&
-  String(entry.id).startsWith("queue-entry:activate-main:") &&
-  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
-  entry.generation === 0 &&
-  entry.triggerEventId === undefined &&
-  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
-  isFieldZoneForActivateMain(entry.source.zone) &&
-  isFieldZoneForActivateMain(entry.sourceSnapshot.zone);
+export { isScopedActivateMainQueueEntry };
 
 type ActivateMainSource = CardRef & { zone: NonNullable<CardRef["zone"]> };
 
@@ -163,6 +149,7 @@ const createActivateMainQueueEntry = (params: {
     state: "pending",
     timingWindowId:
       `timing-window:activate-main:${String(params.state.seq + 1)}` as EffectQueueEntry["timingWindowId"],
+    queueOrigin: { type: "activateMain" },
     generation: 0,
     controllerId: params.source.controllerId,
     source: entrySource,

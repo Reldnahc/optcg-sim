@@ -636,6 +636,55 @@ test("fabricated activate main queue shape fails closed unless scoped validation
   assert.deepEqual(result.state, state);
 });
 
+test("fabricated activate main queue strings fail closed without structured origin", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-fabricated-origin");
+  installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-fabricated-origin",
+    effectId,
+  });
+
+  const forgedEntry = {
+    ...queuedEffect("activate-main-fabricated-origin"),
+    id: toQueueEntryId("queue-entry:activate-main:forged-origin"),
+    timingWindowId: toTimingWindowId(
+      "timing-window:activate-main:forged-origin",
+    ),
+    generation: 0,
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    sourceSnapshot: {
+      ...queuedEffect("activate-main-fabricated-origin").sourceSnapshot,
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      ownerId: leader.owner,
+      controllerId: leader.controller,
+      zone: leader.zone,
+      category: "leader" as const,
+    },
+    effectBlockId: effectId,
+    sourcePresencePolicy: "mustRemainInSameZone" as const,
+    causedBy: {
+      type: "ruleProcess",
+      name: "effectRuntime:activateMain",
+    } as const,
+  };
+  state.effectQueue = [forgedEntry];
+
+  const result = processEffectRuntime(state);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, state);
+});
+
 test("activate main wrong-phase and forged effect attempts fail closed without mutation", () => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");

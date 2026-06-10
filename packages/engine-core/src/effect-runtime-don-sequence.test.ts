@@ -332,6 +332,7 @@ const setupDefinition = (
       ...queueDrawForP1(),
       id: toQueueEntryId("queue-entry:activate-main:don-sequence"),
       timingWindowId: toTimingWindowId("timing-window:activate-main:don"),
+      queueOrigin: { type: "activateMain" },
       generation: 0,
       controllerId: p1,
       source: {

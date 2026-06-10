@@ -20,6 +20,7 @@ import {
   toSyntheticQueueEntry,
 } from "./support-normalization.js";
 import { isScopedActivatedReactionQueueEntry } from "../runtime/optional-activation/event-reaction-support.js";
+import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
 import {
   isSupportedDrawSegment,
   isSupportedDrawUpToSegment,
@@ -235,24 +236,6 @@ const isSupportedConditionalSegment = (
   });
 };
 
-const isActivateMainAreaZone = (
-  zone: EffectQueueEntry["source"]["zone"],
-): zone is NonNullable<EffectQueueEntry["source"]["zone"]> =>
-  zone?.zone === "leaderArea" ||
-  zone?.zone === "characterArea" ||
-  zone?.zone === "stageArea";
-
-const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
-  entry.causedBy.type === "ruleProcess" &&
-  entry.causedBy.name === "effectRuntime:activateMain" &&
-  String(entry.id).startsWith("queue-entry:activate-main:") &&
-  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
-  entry.generation === 0 &&
-  entry.triggerEventId === undefined &&
-  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
-  isActivateMainAreaZone(entry.source.zone) &&
-  isActivateMainAreaZone(entry.sourceSnapshot.zone);
-
 const isSupportedDelayedSegment = (
   effect: DelayedEffect,
   options: SequenceSupportOptions,
@@ -281,7 +264,7 @@ export const toSupportedSequenceBlock = (
     flattenedBlock?.category === "auto" ||
     (flattenedBlock?.category === "activate" &&
       flattenedBlock.trigger.type === "activateMain" &&
-      isScopedActivateMainSequenceEntry(entry)) ||
+      isScopedActivateMainQueueEntry(entry)) ||
     (flattenedBlock?.category === "activate" &&
       isScopedActivatedReactionQueueEntry(entry));
 

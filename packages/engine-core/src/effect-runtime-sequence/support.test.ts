@@ -57,6 +57,7 @@ const activateMainEntry = (): EffectQueueEntry => ({
   id: "queue-entry:activate-main:sequence-support-test:source:effect" as EffectQueueEntry["id"],
   timingWindowId:
     "timing-window:activate-main:sequence-support-test" as EffectQueueEntry["timingWindowId"],
+  queueOrigin: { type: "activateMain" },
   causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
 });
 

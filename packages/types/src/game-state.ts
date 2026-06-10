@@ -111,6 +111,7 @@ export interface EffectQueueEntry {
   id: QueueEntryId;
   state: "pending" | "resolving" | "resolved" | "cancelled";
   timingWindowId: TimingWindowId;
+  queueOrigin?: EffectQueueOrigin;
   generation: number;
   controllerId: PlayerId;
   source: CardRef;
@@ -125,6 +126,10 @@ export interface EffectQueueEntry {
   causedBy: CausalityRef;
   presentation?: ActiveEffectTextPresentation;
 }
+
+export type EffectQueueOrigin =
+  | { type: "activateMain" }
+  | { type: "activatedReaction" };
 
 export interface DelayedEffectRecord {
   id: string;

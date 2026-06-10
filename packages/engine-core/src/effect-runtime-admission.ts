@@ -152,6 +152,7 @@ const activateMainProbeQueueEntry: EffectQueueEntry = {
   state: "pending",
   timingWindowId:
     "timing-window:activate-main:probe" as EffectQueueEntry["timingWindowId"],
+  queueOrigin: { type: "activateMain" },
   generation: 0,
   controllerId: probePlayerId,
   source: {

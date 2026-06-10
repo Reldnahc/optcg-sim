@@ -393,6 +393,7 @@ const createActivatedReactionQueueEntry = (params: {
     state: "pending",
     timingWindowId:
       `timing-window:activated-reaction:${String(params.triggerEvent.id)}:${params.effectBlock.trigger.type}` as EffectQueueEntry["timingWindowId"],
+    queueOrigin: { type: "activatedReaction" },
     generation: 0,
     controllerId: params.source.controller,
     source: entrySource,
@@ -757,6 +758,7 @@ const syntheticActivatedReactionQueueEntry: EffectQueueEntry = {
   state: "pending",
   timingWindowId:
     "timing-window:activated-reaction:probe:trigger" as EffectQueueEntry["timingWindowId"],
+  queueOrigin: { type: "activatedReaction" },
   generation: 0,
   controllerId: probePlayerId,
   source: {

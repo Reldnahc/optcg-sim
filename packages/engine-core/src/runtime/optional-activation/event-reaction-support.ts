@@ -12,12 +12,7 @@ const isFieldZoneForActivatedReaction = (
 export const isScopedActivatedReactionQueueEntry = (
   entry: EffectQueueEntry,
 ): boolean =>
-  entry.causedBy.type === "ruleProcess" &&
-  entry.causedBy.name === activatedReactionQueueingName &&
-  String(entry.id).startsWith("queue-entry:activated-reaction:") &&
-  String(entry.timingWindowId).startsWith(
-    "timing-window:activated-reaction:",
-  ) &&
+  entry.queueOrigin?.type === "activatedReaction" &&
   entry.generation === 0 &&
   entry.triggerEventId !== undefined &&
   entry.sourcePresencePolicy === "mustRemainInSameZone" &&
