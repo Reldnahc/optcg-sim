@@ -20,6 +20,7 @@ export const preventThatCharacterRefreshPrimitive = {
   childPrimitiveIds: [
     "reference:thatCharacter",
     "duration:opponentNextRefreshPhase",
+    "duration:thisTurn",
   ],
 } as const;
 
@@ -31,6 +32,7 @@ export const preventOpponentCharactersRefreshPrimitive = {
     "target:opponentCharacters",
     "target:opponentRestedCards",
     "duration:opponentNextRefreshPhase",
+    "duration:thisTurn",
   ],
 } as const;
 
@@ -60,9 +62,10 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
     return undefined;
   }
 
-  const duration = parseOpponentNextRefreshPhaseDuration({
-    text: durationText,
-  });
+  const duration =
+    parseOpponentNextRefreshPhaseDuration({
+      text: durationText,
+    }) ?? parseThisTurnDuration({ text: durationText });
   if (
     duration === undefined ||
     duration.duration === undefined ||
@@ -100,9 +103,10 @@ export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser
       return undefined;
     }
 
-    const duration = parseOpponentNextRefreshPhaseDuration({
-      text: durationText,
-    });
+    const duration =
+      parseOpponentNextRefreshPhaseDuration({
+        text: durationText,
+      }) ?? parseThisTurnDuration({ text: durationText });
     if (
       duration === undefined ||
       duration.duration === undefined ||

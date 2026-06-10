@@ -17,7 +17,7 @@ import {
   processEffectRuntime,
 } from "../effect-runtime.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
-import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
+import { canBecomeActive } from "../runtime/continuous/state-transition-guards.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 
@@ -271,25 +271,11 @@ const isFirstPlayerFirstTurn = (
 ): boolean =>
   state.turn.globalTurn === 1 && state.turn.playerTurnCounts[playerId] === 1;
 
-const cannotBecomeActiveDuringRefresh = (
-  state: GameState,
-  card: CardInstance,
-): boolean =>
-  state.continuousEffects.some(
-    (effect) =>
-      effect.modifier.layer === "restriction" &&
-      effect.modifier.operation.type === "restriction" &&
-      effect.modifier.operation.restriction === "cannotBecomeActive" &&
-      cardMatchesContinuousModifierTarget(state, card, effect),
-  );
-
 const readyCardForRefresh = (
   state: GameState,
   card: CardInstance,
 ): CardInstance =>
-  cannotBecomeActiveDuringRefresh(state, card)
-    ? card
-    : { ...card, state: "active" };
+  canBecomeActive(state, card) ? { ...card, state: "active" } : card;
 
 const readyPlayerCards = (
   state: GameState,

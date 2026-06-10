@@ -16,6 +16,7 @@ import {
   continuousEffectConditionPasses,
   durationIsActive,
 } from "../../view/compute-view-continuous.js";
+import { canBecomeActive } from "../../runtime/continuous/state-transition-guards.js";
 
 const refsEqual = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -224,6 +225,9 @@ export const activateFieldObject = (
       zone: player.leader.zone,
     })
   ) {
+    if (!canBecomeActive(state, player.leader)) {
+      return { changed: false, state };
+    }
     return {
       changed: player.leader.state !== "active",
       state: {
@@ -247,6 +251,9 @@ export const activateFieldObject = (
       ) {
         return card;
       }
+      if (!canBecomeActive(state, card)) {
+        return card;
+      }
       changed = card.state !== "active";
       return { ...card, state: "active" as const };
     });
@@ -268,6 +275,9 @@ export const activateFieldObject = (
         card.instanceId !== target.instanceId ||
         card.cardId !== target.cardId
       ) {
+        return card;
+      }
+      if (!canBecomeActive(state, card)) {
         return card;
       }
       changed = card.state !== "active";

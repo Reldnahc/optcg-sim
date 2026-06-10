@@ -35,6 +35,7 @@ describe("planned field-effect instruction parsers", () => {
       childPrimitiveIds: [
         "reference:thatCharacter",
         "duration:opponentNextRefreshPhase",
+        "duration:thisTurn",
       ],
     });
     expect(preventOpponentCharactersRefreshPrimitive).toEqual({
@@ -45,6 +46,7 @@ describe("planned field-effect instruction parsers", () => {
         "target:opponentCharacters",
         "target:opponentRestedCards",
         "duration:opponentNextRefreshPhase",
+        "duration:thisTurn",
       ],
     });
     expect(preventOpponentCharactersRestPrimitive).toEqual({
@@ -304,6 +306,44 @@ describe("planned field-effect instruction parsers", () => {
         "condition:comparator:lte",
         "condition:threshold:positiveInteger",
         "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses direct opponent Character refresh locks during this turn", () => {
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "up to 1 of your opponent's rested Characters will not become active during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "choose",
+          request: {
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              state: "rested",
+            },
+          },
+        },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:state:rested",
+        "filter:category:character",
+        "duration:thisTurn",
       ],
       rest: "",
     });
