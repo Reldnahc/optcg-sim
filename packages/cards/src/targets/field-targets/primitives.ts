@@ -3,6 +3,11 @@ export const opponentCharactersTargetPrimitive = {
   matches: [{ id: "of-your-opponents-characters" }],
 } as const;
 
+export const opponentCardsTargetPrimitive = {
+  primitiveId: "target:opponentCards",
+  matches: [{ id: "of-your-opponents-cards" }],
+} as const;
+
 export const opponentStagesTargetPrimitive = {
   primitiveId: "target:opponentStages",
   matches: [{ id: "of-your-opponents-stages" }],

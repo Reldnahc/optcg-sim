@@ -14,6 +14,45 @@ export function parseOpponentCharactersTarget(
   return target;
 }
 
+export function parseOpponentCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match = /^of your opponent's cards?\b\s*(?<rest>.*)$/i.exec(input.text);
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: { categories: ["leader", "character", "stage", "don"] },
+      },
+    },
+    evidence: [
+      "target:opponentCards",
+      "player:opponent",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "zone:stageArea",
+      "zone:costArea",
+      "filter:category:leader",
+      "filter:category:character",
+      "filter:category:stage",
+      "filter:category:don",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
+
 export function parseOpponentFieldTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {

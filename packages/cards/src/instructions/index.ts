@@ -46,6 +46,7 @@ export {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,
   parseRestOpponentCharactersInstruction,

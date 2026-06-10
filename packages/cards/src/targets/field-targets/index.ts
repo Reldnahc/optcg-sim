@@ -1,4 +1,5 @@
 export {
+  opponentCardsTargetPrimitive,
   opponentCharactersOrDonCardsTargetPrimitive,
   opponentCharactersTargetPrimitive,
   opponentLeaderOrCharactersTargetPrimitive,
@@ -9,6 +10,7 @@ export {
   yourNamedCardsTargetPrimitive,
 } from "./primitives.js";
 export {
+  parseOpponentCardsTarget,
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,

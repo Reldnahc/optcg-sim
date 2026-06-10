@@ -1,8 +1,10 @@
 export {
+  opponentCardsTargetPrimitive,
   opponentCharactersOrDonCardsTargetPrimitive,
   opponentCharactersTargetPrimitive,
   opponentLeaderOrCharactersTargetPrimitive,
   opponentStagesTargetPrimitive,
+  parseOpponentCardsTarget,
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,

@@ -10,9 +10,11 @@ import {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
+  restOpponentCardsPrimitive,
   restOpponentCharactersOrDonCardsPrimitive,
   restOpponentCharactersPrimitive,
   yourLeaderPowerOpponentNextEndPrimitive,
@@ -23,6 +25,10 @@ describe("planned field-effect instruction parsers", () => {
     expect(restOpponentCharactersPrimitive).toEqual({
       primitiveId: "instruction:rest",
       childPrimitiveIds: ["cardinality:upTo", "target:opponentCharacters"],
+    });
+    expect(restOpponentCardsPrimitive).toEqual({
+      primitiveId: "instruction:rest",
+      childPrimitiveIds: ["cardinality:upTo", "target:opponentCards"],
     });
     expect(restOpponentCharactersOrDonCardsPrimitive).toEqual({
       primitiveId: "instruction:rest",
@@ -112,6 +118,49 @@ describe("planned field-effect instruction parsers", () => {
         "zone:characterArea",
         "zone:costArea",
         "filter:category:character",
+        "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses rest opponent public field cards as a reusable field-card target selection", () => {
+    expect(
+      parseRestOpponentCardsInstruction({
+        text: "Rest up to 1 of your opponent's cards.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+            filter: { categories: ["leader", "character", "stage", "don"] },
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:opponentCards",
+        "player:opponent",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "zone:stageArea",
+        "zone:costArea",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:category:stage",
         "filter:category:don",
       ],
       rest: "",

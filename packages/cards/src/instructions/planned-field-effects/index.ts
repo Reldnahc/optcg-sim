@@ -19,9 +19,11 @@ export {
   preventThatCharacterRefreshPrimitive,
 } from "./refresh-lock.js";
 export {
+  parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,
+  restOpponentCardsPrimitive,
   restOpponentCharactersOrDonCardsPrimitive,
   restOpponentCharactersPrimitive,
   restOpponentLeaderOrCharactersPrimitive,

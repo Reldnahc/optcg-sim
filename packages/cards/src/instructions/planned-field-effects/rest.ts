@@ -1,5 +1,6 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
+  parseOpponentCardsTarget,
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
@@ -13,6 +14,11 @@ import {
 export const restOpponentCharactersPrimitive = {
   primitiveId: "instruction:rest",
   childPrimitiveIds: ["cardinality:upTo", "target:opponentCharacters"],
+} as const;
+
+export const restOpponentCardsPrimitive = {
+  primitiveId: "instruction:rest",
+  childPrimitiveIds: ["cardinality:upTo", "target:opponentCards"],
 } as const;
 
 export const restOpponentLeaderOrCharactersPrimitive = {
@@ -136,6 +142,49 @@ export const parseRestOpponentCharactersOrDonCardsInstruction: InstructionParser
       rest: "",
     };
   };
+
+export const parseRestOpponentCardsInstruction: InstructionParser = (input) => {
+  const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
+  if (actionRest === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: actionRest });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = parseOpponentCardsTarget({ text: cardinality.rest });
+  if (
+    target === undefined ||
+    target.target?.type !== "chooseFromZones" ||
+    (target.rest.length > 0 && target.rest !== ".")
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "rest",
+      target: {
+        type: "chooseFromZones",
+        request: {
+          ...target.target.request,
+          min: cardinality.cardinality.min,
+          max: cardinality.cardinality.max,
+          allowFewerIfUnavailable: true,
+        },
+      },
+    },
+    evidence: [
+      "instruction:rest",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+    ],
+    rest: "",
+  };
+};
 
 export const parseRestOpponentLeaderOrCharactersInstruction: InstructionParser =
   (input) => {

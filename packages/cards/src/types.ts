@@ -231,6 +231,7 @@ export type PrimitiveEvidence =
   | "target:thisStage"
   | "target:opponentCharacters"
   | "target:opponentCharactersOrDonCards"
+  | "target:opponentCards"
   | "target:opponentDonCards"
   | "target:opponentLeader"
   | "target:opponentLeaderOrCharacters"

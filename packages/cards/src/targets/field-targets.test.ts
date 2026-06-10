@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  opponentCardsTargetPrimitive,
   opponentCharactersTargetPrimitive,
   opponentLeaderOrCharactersTargetPrimitive,
+  parseOpponentCardsTarget,
   parseOpponentCharactersTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
   parseCompoundYourCharactersTarget,
@@ -19,6 +21,10 @@ describe("field target parsers", () => {
     expect(opponentCharactersTargetPrimitive).toEqual({
       primitiveId: "target:opponentCharacters",
       matches: [{ id: "of-your-opponents-characters" }],
+    });
+    expect(opponentCardsTargetPrimitive).toEqual({
+      primitiveId: "target:opponentCards",
+      matches: [{ id: "of-your-opponents-cards" }],
     });
     expect(opponentLeaderOrCharactersTargetPrimitive).toEqual({
       primitiveId: "target:opponentLeaderOrCharacters",
@@ -79,6 +85,42 @@ describe("field target parsers", () => {
         "player:opponent",
         "filter:category:leader",
         "filter:category:character",
+      ],
+      rest: ".",
+    });
+  });
+
+  it("parses opponent public field cards target", () => {
+    expect(
+      parseOpponentCardsTarget({
+        text: "of your opponent's cards.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["leader", "character", "stage", "don"] },
+        },
+      },
+      evidence: [
+        "target:opponentCards",
+        "player:opponent",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "zone:stageArea",
+        "zone:costArea",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:category:stage",
+        "filter:category:don",
       ],
       rest: ".",
     });
