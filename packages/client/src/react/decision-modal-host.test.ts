@@ -488,7 +488,7 @@ test("return-to-deck order modal shares CardTile reorder instead of custom drag"
   assert.match(source, /useCardReorderPreview/u);
   assert.match(source, /onPreviewMoveNear/u);
   assert.match(source, /onMoveNear/u);
-  assert.match(source, /reorderDragStrategy="translate"/u);
+  assert.doesNotMatch(source, /reorderDragStrategy="translate"/u);
   assert.match(source, /className="hand-cards decision-order-card-grid"/u);
   assert.doesNotMatch(source, /decision-order-card-slot/u);
   assert.doesNotMatch(styles, /\.decision-order-card-grid\s*\{[^}]*gap:/u);
