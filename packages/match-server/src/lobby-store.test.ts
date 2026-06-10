@@ -53,6 +53,7 @@ class FakeRedis implements RedisLike {
 
 const lobby = (): CustomLobbyState => ({
   lobbyId: "lobby-test",
+  settings: { formatId: "Standard" },
   seats: createDefaultLobbySeats(),
 });
 

@@ -22,6 +22,7 @@ interface CreateDefaultDevMatchSetupInput {
   readonly firstPlayerId: PlayerId;
   readonly playerOrder: readonly [PlayerId, PlayerId];
   readonly createdAt: string;
+  readonly formatId?: string;
   readonly lobbyId?: string;
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
@@ -124,6 +125,7 @@ export const defaultDevDonCounts: DevDonCounts = {
 
 export const defaultDevEffectDefinitionsVersion = "generated-dev-v7";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v3";
+export const defaultDevDeckFormatId = "sandbox-open";
 
 const defaultDevLeader: DevDeckCardEntry = {
   cardId: "OP13-079" as CardId,
@@ -211,18 +213,20 @@ const createExplicitDevDonDeckSubmission = (
 export const validateAndAdaptDevDecklist = async ({
   decklist,
   cardManifest,
+  formatId = defaultDevDeckFormatId,
   validationCache,
 }: {
   readonly decklist: DevDecklist;
   readonly cardManifest: Awaited<
     ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
   >;
+  readonly formatId?: string;
   readonly validationCache?: Awaited<
     ReturnType<typeof createRedisCardDataCache>
   >;
 }): Promise<DevDecklist> => {
   const validation = await validateDeckLoadout({
-    formatId: "sandbox-open",
+    formatId,
     mainDeck: {
       source: "deckHash",
       hash: "dev-decklist",
@@ -309,6 +313,7 @@ export const validateReadyDevDeckSubmission = async (
   const adaptedDecklist = await validateAndAdaptDevDecklist({
     decklist,
     cardManifest,
+    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
     ...(validationCache === undefined ? {} : { validationCache }),
   });
   createDevPlayerSetupFromDecklist(
@@ -435,11 +440,13 @@ const createValidatedDevMatchSetupFromDecklists = async ({
   const adaptedFirstPlayerDecklist = await validateAndAdaptDevDecklist({
     decklist: firstPlayerDecklist,
     cardManifest,
+    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
     ...(validationCache === undefined ? {} : { validationCache }),
   });
   const adaptedSecondPlayerDecklist = await validateAndAdaptDevDecklist({
     decklist: secondPlayerDecklist,
     cardManifest,
+    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
     ...(validationCache === undefined ? {} : { validationCache }),
   });
   return createDevMatchSetupFromDecklists({

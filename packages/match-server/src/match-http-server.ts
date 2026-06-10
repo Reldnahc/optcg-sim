@@ -11,6 +11,7 @@ import {
   type CreatedCustomLobbyResponse,
   type CustomLobbyRegistry,
 } from "./custom-lobby-registry.js";
+import type { CustomLobbySettings } from "./lobby-store.js";
 import { isDevMatchSetup } from "./local-match.js";
 import type { AuthContext, AuthProvider } from "./dev-auth.js";
 import { createDevAuthProvider, parseDevSessionToken } from "./dev-auth.js";
@@ -80,11 +81,32 @@ interface RematchRequest {
   playerId?: unknown;
 }
 
+interface CreateLobbyRequest {
+  settings?: unknown;
+}
+
 export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
   close: () => Promise<void>;
   url: () => string;
 }
+
+const parseCreateLobbySettings = (
+  body: unknown,
+): Partial<CustomLobbySettings> | "invalid" => {
+  const requestBody: CreateLobbyRequest = isRecord(body) ? body : {};
+  if (requestBody.settings === undefined) {
+    return {};
+  }
+  if (!isRecord(requestBody.settings)) {
+    return "invalid";
+  }
+  const formatId = requestBody.settings["formatId"];
+  if (typeof formatId !== "string" || formatId.trim().length === 0) {
+    return "invalid";
+  }
+  return { formatId: formatId.trim() };
+};
 
 const handleApiRequest = async (
   request: IncomingMessage,
@@ -111,7 +133,14 @@ const handleApiRequest = async (
     return;
   }
   if (request.method === "POST" && pathname === "/api/lobbies") {
-    sendJson(response, 201, await lobbyRegistry.createLobby());
+    const settings = parseCreateLobbySettings(await readRequestJson(request));
+    if (settings === "invalid") {
+      sendJson(response, 400, {
+        errors: ["Lobby format id must be a non-empty string."],
+      });
+      return;
+    }
+    sendJson(response, 201, await lobbyRegistry.createLobby(settings));
     return;
   }
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(pathname);

@@ -2,7 +2,11 @@ import type {
   MatchClientController,
   MatchClientSessionState,
 } from "../controller.js";
-import { lobbyIdFromPath, matchIdFromUrl } from "./useMatchClient-support.js";
+import {
+  lobbyFormatIdFromUrl,
+  lobbyIdFromPath,
+  matchIdFromUrl,
+} from "./useMatchClient-support.js";
 
 export const loadInitialMatchClientState = async (
   controller: MatchClientController,
@@ -23,5 +27,10 @@ export const loadInitialMatchClientState = async (
   if (urlLobbyId !== undefined) {
     return await controller.joinCustomLobby({ lobbyId: urlLobbyId });
   }
-  return await controller.startCustomLobby();
+  const lobbyFormatId = lobbyFormatIdFromUrl();
+  return await controller.startCustomLobby(
+    lobbyFormatId === undefined
+      ? undefined
+      : { settings: { formatId: lobbyFormatId } },
+  );
 };

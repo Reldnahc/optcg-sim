@@ -31,6 +31,17 @@ const anythingGoesFormat: PoneglyphFormat = {
   banCount: 0,
 };
 
+const anythingGoesFormatId = "sandbox-open";
+
+const lobbyFormatIdForSelection = (formatName: string): string =>
+  formatName === anythingGoesFormat.name ? anythingGoesFormatId : formatName;
+
+const privateLobbyHref = (formatName: string): string => {
+  const url = new URL(appRoutePath("match"), "http://localhost");
+  url.searchParams.set("lobbyFormat", lobbyFormatIdForSelection(formatName));
+  return `${url.pathname}${url.search}`;
+};
+
 export interface DashboardPageViewProps {
   readonly mode: PlayMode;
   readonly formats: readonly PoneglyphFormat[];
@@ -190,7 +201,10 @@ export const DashboardPageView = ({
 
         <div className="play-selector-actions">
           {mode === "privateLobby" ? (
-            <a className="shell-card-action" href={appRoutePath("match")}>
+            <a
+              className="shell-card-action"
+              href={privateLobbyHref(selectedFormatName)}
+            >
               Make Lobby
             </a>
           ) : (

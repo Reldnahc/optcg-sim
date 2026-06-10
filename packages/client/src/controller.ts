@@ -11,6 +11,7 @@ import type {
   ClientSessionStore,
 } from "./session.js";
 import type {
+  CreateCustomLobbyInput,
   FirstPlayerChoiceValue,
   FirstPlayerChoiceView,
   LiveLobbyConnection,
@@ -60,7 +61,9 @@ export type MatchClientSessionState =
   | MatchClientState;
 
 export interface MatchClientController {
-  startCustomLobby: () => Promise<MatchClientSessionState>;
+  startCustomLobby: (
+    input?: CreateCustomLobbyInput,
+  ) => Promise<MatchClientSessionState>;
   joinCustomLobby: (input: {
     lobbyId: string;
   }) => Promise<MatchClientSessionState>;
@@ -235,8 +238,8 @@ export const createMatchClientController = ({
   };
 
   return {
-    async startCustomLobby() {
-      const lobby = await transport.createLobby();
+    async startCustomLobby(input = {}) {
+      const lobby = await transport.createLobby(input);
       const joinedLobby = await transport.joinLobby({
         lobbyId: lobby.lobbyId,
         sessionToken: accountSessionToken,

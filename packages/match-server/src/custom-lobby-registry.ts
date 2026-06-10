@@ -4,6 +4,7 @@ import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDevMatchSetupFromDeckSubmissions,
+  defaultDevDeckFormatId,
   validateReadyDevDeckSubmission,
 } from "./default-dev-manifest.js";
 import {
@@ -23,6 +24,7 @@ import {
   createMemoryLobbyStore,
   createRedisClientForLobbyStore,
   createRedisLobbyStore,
+  type CustomLobbySettings,
   type LobbyStore,
   type CustomLobbySeatState,
   type CustomLobbyState,
@@ -36,6 +38,7 @@ import type {
 
 export interface CreatedCustomLobbyResponse {
   lobbyId: string;
+  settings: CustomLobbySettings;
   seats: Record<
     string,
     {
@@ -61,7 +64,9 @@ export interface ValidatedCustomLobbyLoadoutsResponse {
 }
 
 export interface CustomLobbyRegistry {
-  createLobby: () => Promise<CreatedCustomLobbyResponse>;
+  createLobby: (
+    settings?: Partial<CustomLobbySettings>,
+  ) => Promise<CreatedCustomLobbyResponse>;
   joinLobby: (
     lobbyId: string,
     auth: AuthContext | undefined,
@@ -141,10 +146,18 @@ const authFromHandoff = (handoff: VerifiedSimHandoff): AuthContext => ({
   },
 });
 
+const defaultLobbySettings = (): CustomLobbySettings => ({
+  formatId: defaultDevDeckFormatId,
+});
+
+const lobbySettings = (lobby: CustomLobbyState): CustomLobbySettings =>
+  lobby.settings ?? defaultLobbySettings();
+
 const lobbyResponse = (
   lobby: CustomLobbyState,
 ): CreatedCustomLobbyResponse => ({
   lobbyId: lobby.lobbyId,
+  settings: lobbySettings(lobby),
   seats: Object.fromEntries(
     Object.entries(lobby.seats).map(([key, seat]) => [
       key,
@@ -216,11 +229,13 @@ export const createCustomLobbyRegistry = async (
   };
   const validateReadySubmission = async (
     submission: ReadyDeckSubmission,
+    formatId: string,
   ): Promise<boolean> => {
     try {
       await validateReadyDevDeckSubmission({
         submission,
         createdAt: devLobbyCreatedAt,
+        formatId,
         ...(options.fetchCard === undefined
           ? {}
           : { fetchCard: options.fetchCard }),
@@ -265,6 +280,7 @@ export const createCustomLobbyRegistry = async (
         createdAt: devLobbyCreatedAt,
         firstPlayer: first,
         secondPlayer: second,
+        formatId: lobbySettings(lobby).formatId,
         ...(options.fetchCard === undefined
           ? {}
           : { fetchCard: options.fetchCard }),
@@ -287,9 +303,13 @@ export const createCustomLobbyRegistry = async (
   };
 
   return {
-    createLobby() {
+    createLobby(settings) {
       const lobby: CustomLobbyState = {
         lobbyId: lobbyStore.createLobbyId(),
+        settings:
+          settings?.formatId === undefined
+            ? defaultLobbySettings()
+            : { formatId: settings.formatId },
         seats: createDefaultLobbySeats(),
       };
       return lobbyStore.createLobby(lobby).then(lobbyResponse);
@@ -332,13 +352,18 @@ export const createCustomLobbyRegistry = async (
       if (submission.status !== "ready") {
         return "invalidDeck";
       }
-      if (!(await validateReadySubmission(submission))) {
-        return "invalidDeck";
-      }
       return lobbyStore.updateLobby(lobbyId, async (lobby) => {
         const seat = findSeatForAuth(lobby, auth);
         if (seat === undefined) {
           return "seatNotFound";
+        }
+        if (
+          !(await validateReadySubmission(
+            submission,
+            lobbySettings(lobby).formatId,
+          ))
+        ) {
+          return "invalidDeck";
         }
         seat.deckSubmission = submission;
         await ensureMatchWhenReady(lobby);
@@ -359,20 +384,25 @@ export const createCustomLobbyRegistry = async (
       if (submission.status !== "ready") {
         return "invalidDeck";
       }
-      if (!(await validateReadySubmission(submission))) {
-        return "invalidDeck";
-      }
       return lobbyStore.updateLobby(lobbyId, async (lobby) => {
         const auth = authFromHandoff(handoff);
-        const seat = claimOpenSeat(lobby, auth);
-        if (seat === "full") {
-          return "full";
-        }
         if (
           handoff.claims.lobby_id !== null &&
           handoff.claims.lobby_id !== lobbyId
         ) {
           return "seatNotFound";
+        }
+        if (
+          !(await validateReadySubmission(
+            submission,
+            lobbySettings(lobby).formatId,
+          ))
+        ) {
+          return "invalidDeck";
+        }
+        const seat = claimOpenSeat(lobby, auth);
+        if (seat === "full") {
+          return "full";
         }
         if (
           handoff.claims.seat_id !== null &&
@@ -400,6 +430,7 @@ export const createCustomLobbyRegistry = async (
       if (lobby === undefined) {
         return "lobbyNotFound";
       }
+      const formatId = lobbySettings(lobby).formatId;
       const loadouts = [];
       for (const result of handoffs) {
         if (result.status === "rejected") {
@@ -441,7 +472,7 @@ export const createCustomLobbyRegistry = async (
         }
         if (
           submission.status !== "ready" ||
-          !(await validateReadySubmission(submission))
+          !(await validateReadySubmission(submission, formatId))
         ) {
           loadouts.push({
             loadoutId: handoff.resolvedLoadout.loadoutId,
@@ -491,6 +522,7 @@ export const createCustomLobbyRegistry = async (
       const playerOrder = twoPlayerOrder(seed.playerOrder);
       const lobby: CustomLobbyState = {
         lobbyId: `rematch-${lobbyStore.createLobbyId()}`,
+        settings: defaultLobbySettings(),
         seats: Object.fromEntries(
           Object.entries(seed.seats).map(([key, seat]) => [
             key,

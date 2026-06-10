@@ -101,6 +101,12 @@ export const lobbyIdFromPath = (): string | undefined => {
   return undefined;
 };
 
+export const lobbyFormatIdFromUrl = (): string | undefined => {
+  const value = new URL(window.location.href).searchParams.get("lobbyFormat");
+  const trimmed = value?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? undefined : trimmed;
+};
+
 export const setMatchLocation = (matchId: MatchId): void => {
   const url = new URL(window.location.href);
   url.searchParams.delete("lobbyId");

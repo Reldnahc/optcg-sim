@@ -11,6 +11,7 @@ import type { SimHandoffVerifier, VerifiedSimHandoff } from "./sim-handoff.js";
 
 interface CreatedCustomLobbyBody {
   lobbyId?: string;
+  settings?: { formatId?: string };
   matchId?: string;
   seat?: { playerId?: string; sessionToken?: string };
   sessionToken?: string;
@@ -126,9 +127,16 @@ const createHandoffMatchHttpServer = async (
 
 const createCustomLobby = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
+  settings?: { formatId: string },
 ): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
     method: "POST",
+    ...(settings === undefined
+      ? {}
+      : {
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ settings }),
+        }),
   });
   assert.equal(response.status, 201);
   return (await response.json()) as CreatedCustomLobbyBody;
@@ -268,6 +276,47 @@ const openSocket = async (url: string): Promise<TestSocket> =>
   });
 
 describe("dev HTTP lobby deck submissions", () => {
+  test("creates custom lobbies with format settings", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const lobby = await createCustomLobby(server, { formatId: "Standard" });
+
+      assert.equal(lobby.settings?.formatId, "Standard");
+      if (lobby.lobbyId === undefined) {
+        throw new Error("Expected created lobby id.");
+      }
+      const response = await fetch(
+        `${server.url()}/api/lobbies/${lobby.lobbyId}`,
+      );
+      assert.equal(response.status, 200);
+      const loaded = (await response.json()) as CreatedCustomLobbyBody;
+      assert.equal(loaded.settings?.formatId, "Standard");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("rejects malformed custom lobby settings", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/api/lobbies`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ settings: { formatId: " " } }),
+      });
+      const body = (await response.json()) as { errors?: string[] };
+
+      assert.equal(response.status, 400);
+      assert.deepEqual(body.errors, [
+        "Lobby format id must be a non-empty string.",
+      ]);
+    } finally {
+      await server.close();
+    }
+  });
+
   test("validates account loadout tokens without claiming a lobby seat", async () => {
     const verifiedTokens: string[] = [];
     const decodedHashes: string[] = [];

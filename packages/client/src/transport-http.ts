@@ -59,8 +59,11 @@ export const createDevHttpMatchTransport = ({
   };
 
   return {
-    async createLobby() {
-      return postJson<CustomLobby>(`${root}/api/lobbies`, {});
+    async createLobby(input = {}) {
+      return postJson<CustomLobby>(
+        `${root}/api/lobbies`,
+        input.settings === undefined ? {} : { settings: input.settings },
+      );
     },
     async joinLobby(input) {
       return postJson<JoinedCustomLobby>(

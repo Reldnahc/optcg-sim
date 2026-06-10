@@ -15,9 +15,14 @@ export interface CustomLobbySeatState {
   verifiedHandoff?: VerifiedSimHandoff;
 }
 
+export interface CustomLobbySettings {
+  readonly formatId: string;
+}
+
 export interface CustomLobbyState {
   readonly lobbyId: string;
   readonly seats: Record<string, CustomLobbySeatState>;
+  settings?: CustomLobbySettings;
   firstPlayerChoice?: FirstPlayerChoiceState;
   playerOrder?: readonly [PlayerId, PlayerId];
   matchId?: MatchId;
@@ -64,6 +69,14 @@ const parseLobby = (value: string): CustomLobbyState => {
   return {
     lobbyId: parsed["lobbyId"],
     seats: parsed["seats"] as CustomLobbyState["seats"],
+    ...(isRecord(parsed["settings"]) &&
+    typeof parsed["settings"]["formatId"] === "string"
+      ? {
+          settings: {
+            formatId: parsed["settings"]["formatId"],
+          },
+        }
+      : {}),
     ...(parsed["firstPlayerChoice"] === undefined
       ? {}
       : {

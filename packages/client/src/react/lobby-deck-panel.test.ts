@@ -23,6 +23,7 @@ const lobbyState = ({
   },
   lobby: {
     lobbyId: "lobby-1",
+    settings: { formatId: "sandbox-open" },
     seats: {
       p1: {
         playerId: "p1" as PlayerId,

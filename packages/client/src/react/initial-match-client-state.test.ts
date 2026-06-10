@@ -1,8 +1,9 @@
 import { strict as assert } from "node:assert";
-import { afterEach, test } from "vitest";
+import { afterEach, beforeEach, test } from "vitest";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
+import type { CreateCustomLobbyInput } from "../transport.js";
 import type { MatchClientController } from "../controller.js";
 import { loadInitialMatchClientState } from "./initial-match-client-state.js";
 
@@ -25,13 +26,15 @@ const testWindow: TestWindow = {
   },
 };
 
-Object.defineProperty(globalThis, "window", {
-  configurable: true,
-  value: testWindow,
+beforeEach(() => {
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: testWindow,
+  });
+  testWindow.history.replaceState({}, "", "http://localhost/");
 });
 
 afterEach(() => {
-  testWindow.history.replaceState({}, "", "http://localhost/");
   if (originalWindow !== undefined) {
     Object.defineProperty(globalThis, "window", {
       configurable: true,
@@ -44,12 +47,28 @@ afterEach(() => {
 
 const fakeController = (): MatchClientController & {
   joinedByAccount: MatchId[];
+  startedLobbies: CreateCustomLobbyInput[];
 } => {
   const joinedByAccount: MatchId[] = [];
+  const startedLobbies: CreateCustomLobbyInput[] = [];
   return {
     joinedByAccount,
-    startCustomLobby() {
-      throw new Error("startCustomLobby was not expected.");
+    startedLobbies,
+    startCustomLobby(input = {}) {
+      startedLobbies.push(input);
+      return Promise.resolve({
+        lobbyId: "lobby-1",
+        seat: {
+          lobbyId: "lobby-1",
+          playerId: "p1" as PlayerId,
+          sessionToken: "user:u:s",
+        },
+        lobby: {
+          lobbyId: "lobby-1",
+          settings: { formatId: input.settings?.formatId ?? "sandbox-open" },
+          seats: {},
+        },
+      });
     },
     joinCustomLobby() {
       throw new Error("joinCustomLobby was not expected.");
@@ -124,4 +143,16 @@ test("initial direct match URL resolves the current account seat without local b
     throw new Error("Expected a match state.");
   }
   assert.equal(state.matchId, "match-1");
+});
+
+test("initial match route passes selected lobby format to lobby creation", async () => {
+  testWindow.history.replaceState({}, "", "/match?lobbyFormat=Standard");
+  const controller = fakeController();
+
+  const state = await loadInitialMatchClientState(controller);
+
+  assert.deepEqual(controller.startedLobbies, [
+    { settings: { formatId: "Standard" } },
+  ]);
+  assert.equal("lobbyId" in state, true);
 });

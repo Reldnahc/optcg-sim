@@ -41,6 +41,7 @@ describe("dev HTTP match transport", () => {
     const recorder = createRecordingFetch((request) =>
       responseJson({
         lobbyId: "lobby-1",
+        settings: { formatId: "sandbox-open" },
         seat: { playerId: "p1" },
         seats: {
           p1: {
@@ -62,7 +63,7 @@ describe("dev HTTP match transport", () => {
       fetch: recorder.fetch,
     });
 
-    await transport.createLobby();
+    await transport.createLobby({ settings: { formatId: "Standard" } });
     const joined = await transport.joinLobby({
       lobbyId: "lobby-1",
       sessionToken: "user:user-1:session-1",
@@ -80,6 +81,10 @@ describe("dev HTTP match transport", () => {
       ],
     );
     assert.equal(
+      recorder.requests[0]?.init?.body,
+      JSON.stringify({ settings: { formatId: "Standard" } }),
+    );
+    assert.equal(
       new Headers(recorder.requests[1]?.init?.headers).get(
         "x-optcg-session-token",
       ),
@@ -91,6 +96,7 @@ describe("dev HTTP match transport", () => {
     const recorder = createRecordingFetch(() =>
       responseJson({
         lobbyId: "lobby-1",
+        settings: { formatId: "sandbox-open" },
         seats: {
           p1: {
             playerId: "p1",
@@ -139,6 +145,7 @@ describe("dev HTTP match transport", () => {
     const recorder = createRecordingFetch(() =>
       responseJson({
         lobbyId: "lobby-1",
+        settings: { formatId: "sandbox-open" },
         seat: { playerId: "p1", sessionToken: "user:u:s" },
         seats: {
           p1: {

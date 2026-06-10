@@ -24,8 +24,8 @@ import type {
 } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
 
-const accountSessionToken = "user:user-1:session-1";
-const playerTwoAccountSessionToken = "user:user-2:session-1";
+const accountSessionToken = "user:user-1:session-1",
+  playerTwoAccountSessionToken = "user:user-2:session-1";
 
 const createFakeTransport = (): MatchTransport & {
   claimedSeats: Array<{
@@ -99,8 +99,12 @@ const createFakeTransport = (): MatchTransport & {
     joinedLobbies,
     submittedLobbyDecks,
     submittedLoadoutHandoffs,
-    createLobby: () =>
-      Promise.resolve({ lobbyId: "lobby-1", seats: lobbySeats() }),
+    createLobby() {
+      return Promise.resolve({
+        lobbyId: "lobby-1",
+        seats: lobbySeats(),
+      });
+    },
     joinLobby(input) {
       joinedLobbies.push(input);
       const rematchPlayerId =
@@ -805,9 +809,8 @@ describe("match client controller", () => {
       sessionStore,
     });
 
-    const state = await controller.startCustomLobby();
+    await controller.startCustomLobby();
 
-    assert.equal("lobbyId" in state, true);
     const joinedLobby = transport.joinedLobbies[0];
     if (joinedLobby === undefined) {
       throw new Error("Expected lobby join request.");

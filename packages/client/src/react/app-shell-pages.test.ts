@@ -40,6 +40,7 @@ describe("client app shell pages", () => {
     assert.match(html, /Ranked Queue/u);
     assert.match(html, /Anything Goes/u);
     assert.match(html, /Make Lobby/u);
+    assert.match(html, /href="\/match\?lobbyFormat=sandbox-open"/u);
     assert.match(
       html,
       /<a class="deck-editor-link" href="https:\/\/poneglyph\.one\/decks" target="_blank" rel="noreferrer">Open deck editor<\/a>/u,
