@@ -17,7 +17,7 @@ import {
   resolvePublicTargetCandidatesForRequest,
 } from "../../selection/candidates.js";
 import { cardRefsEqual } from "../field-removal-targets.js";
-import { isSupportedOwnerDeckBottomInsteadEffect } from "../instead-effects.js";
+import { supportedOwnerDeckBottomInstead } from "../instead-effects.js";
 import { findCardByInstanceId } from "./source-lookup.js";
 import {
   isSupportedKoSelfInsteadEffect,
@@ -178,17 +178,17 @@ const canPayOpponentFieldRemovalReplacementCost = (
       source.ref.zone?.zone === "characterArea"
     );
   }
-  if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
-    const request = instead.effects[0]?.effect;
-    if (request?.type !== "selectTargets") {
-      return false;
-    }
+  const ownerDeckBottom = supportedOwnerDeckBottomInstead(instead);
+  if (ownerDeckBottom !== undefined) {
     const candidates = resolvePublicTargetCandidatesForRequest(
       state,
-      request.request,
+      ownerDeckBottom.request,
       { sourceControllerId: source.card.controller },
     );
-    return candidates.ok && candidates.candidates.length >= request.request.min;
+    return (
+      candidates.ok &&
+      candidates.candidates.length >= ownerDeckBottom.request.min
+    );
   }
   return false;
 };

@@ -2,10 +2,18 @@ import type { Effect, Target } from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "../actions/state.js";
 import { isSupportedLifeTopToHandEffect } from "../effect-runtime-move-cards.js";
+import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
 import type { SelectedTargetKoReplacementCandidate } from "./primitives.js";
 
 type ReplacementInstead =
   SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"];
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+type SelectTargetsEffect = Extract<Effect, { type: "selectTargets" }>;
+
+interface SupportedOwnerDeckBottomInstead {
+  readonly count: number;
+  readonly request: SelectTargetsEffect["request"];
+}
 
 export const plural = (
   count: number,
@@ -91,14 +99,18 @@ export const isSupportedKoSelfInsteadEffect = (
   >;
 } => effect.type === "ko" && effect.target.type === "self";
 
-export const isSupportedOwnerDeckBottomInsteadEffect = (
+export const supportedOwnerDeckBottomInstead = (
   effect: Effect,
-): effect is Extract<Effect, { type: "sequence" }> => {
-  if (effect.type !== "sequence" || effect.effects.length !== 2) {
-    return false;
+): SupportedOwnerDeckBottomInstead | undefined => {
+  if (effect.type !== "sequence") {
+    return undefined;
   }
-  const select = effect.effects[0];
-  const bounce = effect.effects[1];
+  const flattened = flattenSequenceEffect(effect);
+  if (flattened === null || flattened.effects.length !== 2) {
+    return undefined;
+  }
+  const select = flattened.effects[0];
+  const bounce = flattened.effects[1];
   if (
     select?.connector !== "always" ||
     select.saveResultAs === undefined ||
@@ -108,13 +120,13 @@ export const isSupportedOwnerDeckBottomInsteadEffect = (
     bounce.effect.destination !== "deckBottom" ||
     bounce.effect.target.type !== "savedFieldObject"
   ) {
-    return false;
+    return undefined;
   }
   const request = select.effect.request;
   if (!("zone" in request)) {
-    return false;
+    return undefined;
   }
-  return (
+  const supported =
     request.timing === "onResolution" &&
     request.chooser === "self" &&
     request.player === "self" &&
@@ -127,9 +139,14 @@ export const isSupportedOwnerDeckBottomInsteadEffect = (
     bounce.effect.target.binding.family === "selectedTargets" &&
     bounce.effect.target.binding.saveResultAs === select.saveResultAs &&
     bounce.effect.target.zone === "characterArea" &&
-    bounce.effect.target.player === "self"
-  );
+    bounce.effect.target.player === "self";
+  return supported ? { count: request.min, request } : undefined;
 };
+
+export const isSupportedOwnerDeckBottomInsteadEffect = (
+  effect: Effect,
+): effect is SequenceEffect =>
+  supportedOwnerDeckBottomInstead(effect) !== undefined;
 
 export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
@@ -196,9 +213,7 @@ export const replacementOptionLabel = (
     return "K.O. this Character instead";
   }
   if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
-    const selectEffect = instead.effects[0]?.effect;
-    const count =
-      selectEffect?.type === "selectTargets" ? selectEffect.request.min : 1;
+    const count = supportedOwnerDeckBottomInstead(instead)?.count ?? 1;
     return `Place ${String(count)} Character ${plural(
       count,
       "",

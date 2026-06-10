@@ -27,7 +27,7 @@ import {
   isCausalityRef,
   replacementProcessFromStoredPayload,
 } from "./field-removal-targets.js";
-import { isSupportedOwnerDeckBottomInsteadEffect } from "./instead-effects.js";
+import { supportedOwnerDeckBottomInstead } from "./instead-effects.js";
 import type { SelectedTargetKoReplacementCandidate } from "./primitives.js";
 import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
@@ -265,21 +265,18 @@ export const createReplacementOwnerDeckBottomDecision = (
   candidate: SelectedTargetKoReplacementCandidate,
 ): SelectTargetsDecision | undefined => {
   const instead = candidate.replacementEffect.instead;
-  if (!isSupportedOwnerDeckBottomInsteadEffect(instead)) {
-    return undefined;
-  }
-  const selectEffect = instead.effects[0]?.effect;
-  if (selectEffect?.type !== "selectTargets") {
+  const supported = supportedOwnerDeckBottomInstead(instead);
+  if (supported === undefined) {
     return undefined;
   }
   const candidates = resolvePublicTargetCandidatesForRequest(
     state,
-    selectEffect.request,
+    supported.request,
     { sourceControllerId: candidate.controllerId },
   );
   if (
     !candidates.ok ||
-    candidates.candidates.length < selectEffect.request.min ||
+    candidates.candidates.length < supported.request.min ||
     state.players[candidate.controllerId] === undefined
   ) {
     return undefined;
@@ -290,10 +287,10 @@ export const createReplacementOwnerDeckBottomDecision = (
     ),
     type: "selectTargets",
     playerId: candidate.controllerId,
-    prompt: `Place ${String(selectEffect.request.min)} Character at the bottom of the owner's deck instead.`,
+    prompt: `Place ${String(supported.request.min)} Character at the bottom of the owner's deck instead.`,
     causedBy: { type: "replacement", replacementId: candidate.id },
     visibility: { type: "public" },
-    request: selectEffect.request,
+    request: supported.request,
     candidates: candidates.candidates,
   };
 };

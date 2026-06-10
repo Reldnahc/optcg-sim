@@ -42,6 +42,61 @@ const returnDonInstead = (): Extract<Effect, { type: "returnDon" }> => ({
   player: "self",
 });
 
+const ownerDeckBottomPair = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      saveResultAs: "selected-owner-bottom",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+          filter: { categories: ["character"] },
+        },
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "bounce",
+        destination: "deckBottom",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected-owner-bottom",
+          },
+          zone: "characterArea",
+          player: "self",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+  ],
+});
+
+const nestedOwnerDeckBottomInstead = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: ownerDeckBottomPair(),
+    },
+  ],
+});
+
 const replacementBlock = (
   id: string,
   when: ReplacementTrigger,
@@ -97,4 +152,14 @@ test("replacement support admits the same move-zone trigger with multiple instea
     blocks.map((block) => isSupportedReplacementEffectBlock(block)),
     [true, true],
   );
+});
+
+test("owner deck-bottom replacement support follows flattened sequence primitives", () => {
+  const block = replacementBlock(
+    "replacement-owner-bottom-nested-sequence",
+    wouldMoveFromCharacterArea(),
+    nestedOwnerDeckBottomInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
 });
