@@ -11,8 +11,8 @@ import {
 describe("client app routes", () => {
   test("maps public shell paths to route ids", () => {
     assert.equal(appRouteFromPath("/").id, "dashboard");
-    assert.equal(appRouteFromPath("/play").id, "play");
-    assert.equal(appRouteFromPath("/lobbies").id, "lobbies");
+    assert.equal(appRouteFromPath("/play").id, "notFound");
+    assert.equal(appRouteFromPath("/lobbies").id, "notFound");
     assert.equal(appRouteFromPath("/decks").id, "notFound");
     assert.equal(appRouteFromPath("/profile").id, "notFound");
     assert.equal(appRouteFromPath("/match").id, "match");
@@ -46,20 +46,17 @@ describe("client app routes", () => {
 
   test("builds canonical app paths", () => {
     assert.equal(appRoutePath("dashboard"), "/");
-    assert.equal(appRoutePath("play"), "/play");
-    assert.equal(appRoutePath("lobbies"), "/lobbies");
     assert.equal(appRoutePath("match"), "/match");
   });
 
   test("separates shell routes from the match-board route", () => {
     assert.equal(isShellRoute("dashboard"), true);
-    assert.equal(isShellRoute("play"), true);
     assert.equal(isShellRoute("lobbies"), true);
     assert.equal(isShellRoute("notFound"), true);
     assert.equal(isShellRoute("match"), false);
     assert.deepEqual(
       appRoutes.map((route) => route.id),
-      ["dashboard", "play", "lobbies", "match"],
+      ["dashboard", "match"],
     );
   });
 });

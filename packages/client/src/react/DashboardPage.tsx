@@ -4,21 +4,15 @@ import { ShellPageCard } from "./ShellPageCard.js";
 export const DashboardPage = (): React.JSX.Element => (
   <section className="shell-page">
     <div className="shell-page-heading">
-      <h1>Dashboard</h1>
-      <p>Choose a play flow or join a custom lobby.</p>
+      <h1>Poneglyph Sim</h1>
+      <p>Create a lobby or manage your account deck loadouts.</p>
     </div>
     <div className="shell-card-grid">
       <ShellPageCard
-        title="Play"
-        description="Enter queue flows or launch a development match."
-        href={appRoutePath("play")}
-        label="Go to Play"
-      />
-      <ShellPageCard
-        title="Custom Lobbies"
-        description="Create or join custom games with account-backed lobby seats."
-        href={appRoutePath("lobbies")}
-        label="Open Lobbies"
+        title="Make Lobby"
+        description="Create a shareable lobby link and pick account deck loadouts."
+        href={appRoutePath("match")}
+        label="Make Lobby"
       />
       <ShellPageCard
         title="Deck editor"

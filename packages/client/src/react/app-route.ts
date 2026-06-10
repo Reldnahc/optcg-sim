@@ -1,12 +1,7 @@
-export type AppRouteId =
-  | "dashboard"
-  | "play"
-  | "lobbies"
-  | "match"
-  | "notFound";
+export type AppRouteId = "dashboard" | "lobbies" | "match" | "notFound";
 
 export interface AppRouteDefinition {
-  id: Exclude<AppRouteId, "notFound">;
+  id: Exclude<AppRouteId, "lobbies" | "notFound">;
   path: string;
   label: string;
 }
@@ -19,8 +14,6 @@ export interface AppRouteState {
 
 export const appRoutes = [
   { id: "dashboard", path: "/", label: "Home" },
-  { id: "play", path: "/play", label: "Play" },
-  { id: "lobbies", path: "/lobbies", label: "Lobbies" },
   { id: "match", path: "/match", label: "Match" },
 ] as const satisfies readonly AppRouteDefinition[];
 
@@ -53,7 +46,9 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
   };
 };
 
-export const appRoutePath = (id: Exclude<AppRouteId, "notFound">): string => {
+export const appRoutePath = (
+  id: Exclude<AppRouteId, "lobbies" | "notFound">,
+): string => {
   const route = appRoutes.find((candidate) => candidate.id === id);
   if (route === undefined) {
     throw new Error(`Unknown app route ${id}.`);

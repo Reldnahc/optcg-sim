@@ -10,8 +10,6 @@ const shellFiles = [
   "AppRoot.tsx",
   "AppShell.tsx",
   "DashboardPage.tsx",
-  "PlayPage.tsx",
-  "LobbiesPage.tsx",
   "NotFoundPage.tsx",
   "ShellPageCard.tsx",
   "app-route.ts",

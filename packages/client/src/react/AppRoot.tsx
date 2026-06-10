@@ -2,10 +2,8 @@ import { AuthGate } from "./AuthGate.js";
 import { AppShell } from "./AppShell.js";
 import { appRouteFromPath } from "./app-route.js";
 import { DashboardPage } from "./DashboardPage.js";
-import { LobbiesPage } from "./LobbiesPage.js";
 import { MatchApp } from "./MatchApp.js";
 import { NotFoundPage } from "./NotFoundPage.js";
-import { PlayPage } from "./PlayPage.js";
 import { simAuthSessionToken, useSimAuth } from "./use-sim-auth.js";
 
 export interface AppRootProps {
@@ -36,10 +34,6 @@ export const AppRootContent = ({
   const page =
     route.id === "dashboard" ? (
       <DashboardPage />
-    ) : route.id === "play" ? (
-      <PlayPage />
-    ) : route.id === "lobbies" ? (
-      <LobbiesPage />
     ) : (
       <NotFoundPage path={route.path} />
     );

@@ -11,18 +11,19 @@ describe("client app root", () => {
       createElement(AppRootContent, { path: "/" }),
     );
 
-    assert.match(html, /Dashboard/u);
-    assert.match(html, /Go to Play/u);
+    assert.match(html, /Poneglyph Sim/u);
+    assert.match(html, /Make Lobby/u);
+    assert.doesNotMatch(html, /Go to Play/u);
   });
 
-  test("renders each shell route", () => {
+  test("does not expose removed play and lobby shell routes", () => {
     assert.match(
       renderToStaticMarkup(createElement(AppRootContent, { path: "/play" })),
-      /Ranked Queue/u,
+      /Page not found/u,
     );
     assert.match(
       renderToStaticMarkup(createElement(AppRootContent, { path: "/lobbies" })),
-      /Create Custom Lobby/u,
+      /Page not found/u,
     );
   });
 
@@ -69,7 +70,7 @@ describe("client app root", () => {
 
     assert.match(html, /data-app-route="match"/u);
     assert.match(html, /data-testid="lobby-surface"/u);
-    assert.doesNotMatch(html, /Create Custom Lobby/u);
+    assert.doesNotMatch(html, /Make Lobby/u);
   });
 
   test("gates the routed app while account session is unresolved", () => {
