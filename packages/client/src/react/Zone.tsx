@@ -6,6 +6,7 @@ import {
   calculateCardRowLayout,
   type CardRowLayout,
 } from "./card-row-layout.js";
+import { cardIsSelectable } from "./card-selectable.js";
 import { CardTile } from "./CardTile.js";
 
 export interface ZoneProps {
@@ -171,6 +172,7 @@ export const Zone = ({
                 );
               }
               const instanceId = String(card.instanceId);
+              const actions = cardActions?.(instanceId) ?? [];
               return (
                 <div key={instanceId} className="zone-card-slot">
                   <CardTile
@@ -182,9 +184,10 @@ export const Zone = ({
                     pendingChoice={pendingChoiceInstanceIds.includes(
                       instanceId,
                     )}
+                    selectable={cardIsSelectable(actions)}
                     selectedDonInstanceIds={selectedDonInstanceIds}
                     active={activeCardInstanceIds.includes(instanceId)}
-                    actions={cardActions?.(instanceId) ?? []}
+                    actions={actions}
                     disabled={actionDisabled}
                     onAction={onCardAction}
                     onAttachedDonClick={onCardClick}
@@ -232,6 +235,7 @@ export const Zone = ({
               })
             : visibleCards.map((card) => {
                 const instanceId = String(card.instanceId);
+                const actions = cardActions?.(instanceId) ?? [];
                 return (
                   <CardTile
                     key={instanceId}
@@ -243,9 +247,10 @@ export const Zone = ({
                     pendingChoice={pendingChoiceInstanceIds.includes(
                       instanceId,
                     )}
+                    selectable={cardIsSelectable(actions)}
                     selectedDonInstanceIds={selectedDonInstanceIds}
                     active={activeCardInstanceIds.includes(instanceId)}
-                    actions={cardActions?.(instanceId) ?? []}
+                    actions={actions}
                     disabled={actionDisabled}
                     onAction={onCardAction}
                     onAttachedDonClick={onCardClick}

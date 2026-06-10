@@ -106,6 +106,7 @@
   --card-active-glow: 0 0 0 0 transparent;
   --card-hover-glow: 0 0 0 0 transparent;
   --card-pending-glow: 0 0 0 0 transparent;
+  --card-selectable-glow: 0 0 0 0 transparent;
   --card-selected-glow: 0 0 0 0 transparent;
 
   display: grid;
@@ -117,7 +118,7 @@
   object-fit: cover;
   box-shadow:
     var(--card-active-glow), var(--card-hover-glow), var(--card-pending-glow),
-    var(--card-selected-glow);
+    var(--card-selectable-glow), var(--card-selected-glow);
   color: #ffffff;
   background: #615d5b;
   font-size: 9px;
@@ -160,6 +161,10 @@
 
 .card-tile.is-selected .card-face {
   --card-selected-glow: inset 0 0 0 3px #ffdc62;
+}
+
+.card-tile.is-selectable .card-face {
+  --card-selectable-glow: inset 0 0 0 2px rgba(255, 220, 98, 0.62);
 }
 
 .card-tile:hover:not(:disabled) .card-face {

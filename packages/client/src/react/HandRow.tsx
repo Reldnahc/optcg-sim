@@ -6,6 +6,7 @@ import {
   calculateCardRowLayout,
   type CardRowLayout,
 } from "./card-row-layout.js";
+import { cardIsSelectable } from "./card-selectable.js";
 import { CardTile } from "./CardTile.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import { useCardReorderPreview } from "./useCardReorderPreview.js";
@@ -151,6 +152,7 @@ export const HandRow = ({
       <div ref={cardsRef} className={handCardsClassName} style={handStyle}>
         {cards.map((card) => {
           const instanceId = String(card.instanceId);
+          const actions = cardActions?.(instanceId) ?? [];
           const placeholderBefore = cardReorder.placeholderBefore(instanceId);
           const placeholderAfter = cardReorder.placeholderAfter(instanceId);
           return (
@@ -165,9 +167,10 @@ export const HandRow = ({
                   decisionSelectedInstanceIds.includes(instanceId)
                 }
                 pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
+                selectable={cardIsSelectable(actions)}
                 selectedDonInstanceIds={selectedDonInstanceIds}
                 active={activeCardInstanceIds.includes(instanceId)}
-                actions={cardActions?.(instanceId) ?? []}
+                actions={actions}
                 disabled={actionDisabled}
                 onAction={onCardAction}
                 onAttachedDonClick={onCardClick}

@@ -199,6 +199,33 @@ describe("hand layout", () => {
     );
   });
 
+  test("playable and counterable hand cards are visually selectable", () => {
+    const actionsByCard: Record<string, readonly ClientActionModel[]> = {
+      "hand-1": [{ index: 1, type: "playCard", label: "Play" }],
+      "hand-2": [{ index: 2, type: "useCounter", label: "Counter" }],
+    };
+
+    const markup = renderToStaticMarkup(
+      createElement(HandRow, {
+        label: "Player hand",
+        cards: [card(1), card(2), card(3)],
+        overflowDirection: "left",
+        cardActions: (instanceId: string) => actionsByCard[instanceId] ?? [],
+      }),
+    );
+
+    assert.equal(markup.match(/is-selectable/gu)?.length, 2);
+  });
+
+  test("selectable hand card styling uses inset emphasis for overlapping cards", async () => {
+    const styles = await readFile(cardStylesPath, "utf8");
+
+    assert.match(
+      styles,
+      /\.card-tile\.is-selectable \.card-face\s*\{[^}]*--card-selectable-glow:\s*inset 0 0 0 2px rgba\(255,\s*220,\s*98,\s*0\.62\);/u,
+    );
+  });
+
   test("hand card drag applies a page-level grabbing cursor while hit testing ignores the dragged card", async () => {
     const [source, styles] = await Promise.all([
       readFile(join(sourceDirectory, "CardTile.tsx"), "utf8"),
