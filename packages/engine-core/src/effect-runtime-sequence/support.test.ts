@@ -6,6 +6,7 @@ import type {
   EffectQueueEntry,
   HandSelectionId,
   SelectionId,
+  SelectionSetId,
 } from "@optcg/types";
 
 import { isSupportedSequenceBlock } from "./support.js";
@@ -252,6 +253,143 @@ test("sequence support accepts opponent hand selection moved to deck bottom", ()
             from: "hand",
             to: "deck",
             position: "bottom",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts looked-set selection moved to Life top before bottoming remainder", () => {
+  const lookedSet = "set:looked-life-candidates" as SelectionSetId;
+  const selection = "revealSelection:life" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "revealTop",
+            player: "self",
+            zone: "deck",
+            count: 3,
+            saveAs: lookedSet,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "selectFromSet",
+            set: lookedSet,
+            chooser: "self",
+            min: 0,
+            max: 1,
+            filter: {},
+            saveAs: selection,
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: lookedSet,
+            to: "life",
+            position: "top",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "placeSetRemainder",
+            set: lookedSet,
+            owner: "self",
+            destination: "deck",
+            position: "bottom",
+            order: "chooser",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts looked-set selection moved to Life bottom face-up", () => {
+  const lookedSet = "set:looked-life-candidates" as SelectionSetId;
+  const selection = "revealSelection:life" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "revealTop",
+            player: "self",
+            zone: "deck",
+            count: 5,
+            saveAs: lookedSet,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "selectFromSet",
+            set: lookedSet,
+            chooser: "self",
+            min: 0,
+            max: 1,
+            filter: { typesAny: ["Blackbeard Pirates"] },
+            saveAs: selection,
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "revealSelected",
+            selection,
+            visibility: "bothPlayers",
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: lookedSet,
+            to: "life",
+            position: "bottom",
+            destinationFaceUp: true,
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "placeSetRemainder",
+            set: lookedSet,
+            owner: "self",
+            destination: "deck",
+            position: "bottom",
+            order: "chooser",
           },
         },
       ],

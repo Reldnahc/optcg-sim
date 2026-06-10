@@ -133,6 +133,36 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for looked-set Life placement and deck-bottom remainder", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] Look at 3 cards from the top of your deck; add up to 1 card to the top of your Life cards. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
+  it("reports support for revealed filtered looked-set Life placement face-up", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Blackbeard Pirates} type card and add it to the top of your Life cards face-up. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
+  it("reports support for hidden filtered looked-set bottom-Life placement", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] Look at 4 cards from the top of your deck; add up to 1 Character card with a cost of 4 or less to the bottom of your Life cards. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+  });
+
   it("reports engine runtime support for DON return into conditional opponent hand trash", async () => {
     const report = await createSupportProbeReport({
       text: "[On Play] DON!! \u22121 (You may return the specified number of DON!! cards from your field to your DON!! deck.): If your opponent has 7 or more cards in their hand, trash 2 cards from your opponent's hand.",

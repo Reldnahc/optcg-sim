@@ -185,6 +185,7 @@ export type PrimitiveEvidence =
   | "destination:deck"
   | "destination:trash"
   | "destination:life"
+  | "destination:faceUp"
   | "destination:stageArea"
   | "destination:costArea"
   | "deckRestriction:ignored"

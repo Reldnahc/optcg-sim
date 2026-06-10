@@ -81,6 +81,243 @@ describe("card effect line parser search effects", () => {
     );
   });
 
+  it("parses top-of-deck looked-set Life placement as decomposed move primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 3 cards from the top of your deck; add up to 1 card to the top of your Life cards. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 3,
+                saveAs: "set:look-play",
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:look-play",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {},
+                saveAs: "revealSelection:life",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "revealSelection:life",
+                from: "set:look-play",
+                to: "life",
+                position: "top",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:look-play",
+                owner: "self",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "look:topDeck",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:moveSelected",
+        "instruction:placeSetRemainder",
+        "cardinality:upTo",
+        "destination:life",
+        "position:top",
+        "remaining:bottomDeck",
+      ]),
+    );
+  });
+
+  it("parses revealed filtered looked-set Life placement as public selected move evidence", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Blackbeard Pirates} type card and add it to the top of your Life cards face-up. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 5,
+                saveAs: "set:look-play",
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:look-play",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: { typesAny: ["Blackbeard Pirates"] },
+                saveAs: "revealSelection:life",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                selection: "revealSelection:life",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "revealSelection:life",
+                from: "set:look-play",
+                to: "life",
+                position: "top",
+                destinationFaceUp: true,
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:look-play",
+                owner: "self",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:revealSelected",
+        "instruction:moveSelected",
+        "filter:type",
+        "reveal:bothPlayers",
+        "destination:life",
+        "position:top",
+        "destination:faceUp",
+      ]),
+    );
+  });
+
+  it("parses hidden filtered looked-set placement to bottom of Life as move data", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 4 cards from the top of your deck; add up to 1 Character card with a cost of 4 or less to the bottom of your Life cards. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 4,
+                saveAs: "set:look-play",
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:look-play",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: { categories: ["character"], cost: { max: 4 } },
+                saveAs: "revealSelection:life",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "revealSelection:life",
+                from: "set:look-play",
+                to: "life",
+                position: "bottom",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:look-play",
+                owner: "self",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:moveSelected",
+        "filter:category:character",
+        "filter:cost",
+        "reveal:chooserOnly",
+        "destination:life",
+        "position:bottom",
+      ]),
+    );
+  });
+
   it("parses public top-of-deck type search reveal as decomposed looked-set primitives", () => {
     const result = parseCardEffectLine(
       "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",

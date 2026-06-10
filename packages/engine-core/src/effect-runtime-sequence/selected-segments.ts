@@ -21,7 +21,10 @@ import {
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
-import { applyTrashToLifeSelectedCardMoveSegment } from "./selected-trash-to-life.js";
+import {
+  applySetToLifeSelectedCardMoveSegment,
+  applyTrashToLifeSelectedCardMoveSegment,
+} from "./selected-trash-to-life.js";
 import {
   applySetToHandSelectedCardMoveSegment,
   applyTrashToHandSelectedCardMoveSegment,
@@ -407,6 +410,13 @@ export const applySelectedCardMoveSegment = (
     params.effect.destinationFaceUp === undefined
   ) {
     return applySetToHandSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    isSelectionSetSource(params.effect.from) &&
+    params.effect.to === "life" &&
+    (params.effect.position === "top" || params.effect.position === "bottom")
+  ) {
+    return applySetToLifeSelectedCardMoveSegment(params, selected);
   }
   return { ok: false };
 };

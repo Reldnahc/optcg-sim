@@ -84,7 +84,12 @@ export const isSupportedMoveSelectedSegment = (
     (isSelectionSetSource(effect.from) &&
       effect.to === "hand" &&
       effect.position === undefined &&
-      effect.destinationFaceUp === undefined));
+      effect.destinationFaceUp === undefined) ||
+    (isSelectionSetSource(effect.from) &&
+      effect.to === "life" &&
+      (effect.position === "top" || effect.position === "bottom") &&
+      (effect.destinationFaceUp === undefined ||
+        typeof effect.destinationFaceUp === "boolean")));
 
 export const isSupportedAttachSelectedDonSegment = (
   effect: SequenceSegmentEffect,
