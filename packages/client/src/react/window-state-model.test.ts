@@ -7,10 +7,27 @@ import {
   floatingWindowStateAfterActivation,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
+  normalizeFloatingWindowRectsForViewport,
   type FloatingWindowRectState,
 } from "./window-state-model.js";
 
 describe("floating window state model", () => {
+  test("normalizes stale saved floating window rects for the current viewport", () => {
+    assert.deepEqual(
+      normalizeFloatingWindowRectsForViewport({
+        viewport: { width: 900, height: 620 },
+        rects: {
+          "card-preview": { x: 820, y: 600, width: 1200, height: 900 },
+          settings: { x: -120, y: -80, width: 100, height: 80 },
+        },
+      }),
+      {
+        "card-preview": { x: 0, y: 0, width: 900, height: 620 },
+        settings: { x: 0, y: 0, width: 190, height: 110 },
+      },
+    );
+  });
+
   test("closing a docked window preserves its dock membership for reopen", () => {
     const current: FloatingWindowRectState = {
       scope: "match-1",

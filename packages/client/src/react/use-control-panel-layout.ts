@@ -10,6 +10,7 @@ import {
   controlRailWidthFromDrag,
   defaultControlDockHeight,
   defaultControlRailWidth,
+  normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
 } from "./control-panel-layout.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
@@ -75,6 +76,16 @@ const defaultControlDockHeightForCurrentViewport = (): number =>
         viewportHeight: window.innerHeight,
       });
 
+const controlPanelHeightForCurrentViewport = (): number => {
+  const controlsPanelRect = elementRect(".controls-panel");
+  if (controlsPanelRect !== undefined) {
+    return controlsPanelRect.height;
+  }
+  return typeof window === "undefined"
+    ? defaultControlDockHeight
+    : Math.max(defaultControlDockHeight, window.innerHeight - 16);
+};
+
 export const useControlPanelLayout = ({
   layoutStore,
 }: UseControlPanelLayoutInput = {}): ControlPanelLayoutController => {
@@ -88,12 +99,33 @@ export const useControlPanelLayout = ({
 
   useEffect(() => {
     const layout = layoutStore?.loadControlPanelLayout();
-    setControlRailWidth(
-      layout?.controlRailWidth ?? defaultControlRailWidthForCurrentViewport(),
-    );
-    setControlDockHeight(
-      layout?.controlDockHeight ?? defaultControlDockHeightForCurrentViewport(),
-    );
+    if (typeof window === "undefined") {
+      setControlRailWidth(layout?.controlRailWidth ?? defaultControlRailWidth);
+      setControlDockHeight(
+        layout?.controlDockHeight ?? defaultControlDockHeight,
+      );
+      return;
+    }
+    const normalizedLayout = normalizeControlPanelLayoutForViewport({
+      layout: layout ?? {},
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      playmatRight: playmatRightEdge(
+        layout?.controlRailWidth ?? defaultControlRailWidthForCurrentViewport(),
+      ),
+      controlPanelHeight: controlPanelHeightForCurrentViewport(),
+    });
+    setControlRailWidth(normalizedLayout.controlRailWidth);
+    setControlDockHeight(normalizedLayout.controlDockHeight);
+    if (
+      layout !== undefined &&
+      (layout.controlRailWidth !== undefined ||
+        layout.controlDockHeight !== undefined) &&
+      (layout.controlRailWidth !== normalizedLayout.controlRailWidth ||
+        layout.controlDockHeight !== normalizedLayout.controlDockHeight)
+    ) {
+      layoutStore?.saveControlPanelLayout(normalizedLayout);
+    }
   }, [layoutStore]);
 
   const resolveControlDockSnap = useCallback(

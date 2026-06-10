@@ -81,6 +81,24 @@ export interface ControlRailWidthInput {
   playmatRight: number;
 }
 
+export interface ControlPanelLayoutInput {
+  controlRailWidth?: number | undefined;
+  controlDockHeight?: number | undefined;
+}
+
+export interface NormalizedControlPanelLayout {
+  controlRailWidth: number;
+  controlDockHeight: number;
+}
+
+export interface ControlPanelLayoutViewportInput {
+  layout: ControlPanelLayoutInput;
+  viewportWidth: number;
+  viewportHeight: number;
+  playmatRight: number;
+  controlPanelHeight: number;
+}
+
 export const maxControlRailWidth = ({
   viewportWidth,
   playmatRight,
@@ -159,6 +177,28 @@ export const controlDockHeightFromDrag = ({
     requestedHeight: startHeight + startClientY - currentClientY,
     controlPanelHeight,
   });
+
+export const normalizeControlPanelLayoutForViewport = ({
+  layout,
+  viewportWidth,
+  viewportHeight,
+  playmatRight,
+  controlPanelHeight,
+}: ControlPanelLayoutViewportInput): NormalizedControlPanelLayout => ({
+  controlRailWidth: clampControlRailWidth({
+    requestedWidth:
+      layout.controlRailWidth ??
+      defaultControlRailWidthForViewport({ viewportWidth, viewportHeight }),
+    viewportWidth,
+    playmatRight,
+  }),
+  controlDockHeight: clampControlDockHeight({
+    requestedHeight:
+      layout.controlDockHeight ??
+      defaultControlDockHeightForViewport({ viewportWidth, viewportHeight }),
+    controlPanelHeight,
+  }),
+});
 
 export const controlDockSlotRect = ({
   dockRect,

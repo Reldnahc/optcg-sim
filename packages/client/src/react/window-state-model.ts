@@ -1,4 +1,4 @@
-import type { WindowRect } from "./FloatingWindow.js";
+import type { WindowRect, WindowViewport } from "./FloatingWindow.js";
 import { moveIdNear, type ReorderPlacement } from "./drag-reorder.js";
 
 export interface RevealWindowState {
@@ -15,6 +15,11 @@ export interface FloatingWindowRectState {
   floatingWindowZOrder: string[];
 }
 
+export interface WindowMinSize {
+  minWidth: number;
+  minHeight: number;
+}
+
 export const emptyRevealWindowState: RevealWindowState = {
   dismissed: new Set(),
   minimized: new Set(),
@@ -26,6 +31,68 @@ export const emptyFloatingWindowRectState: FloatingWindowRectState = {
   dockedWindowIds: new Set(),
   floatingWindowZOrder: [],
 };
+
+export const floatingWindowMinSizeForKey = (
+  windowKey: string,
+): WindowMinSize => {
+  switch (windowKey) {
+    case "card-preview":
+      return { minWidth: 190, minHeight: 150 };
+    case "action-log":
+      return { minWidth: 210, minHeight: 150 };
+    case "settings":
+      return { minWidth: 190, minHeight: 110 };
+    case "info-window":
+      return { minWidth: 220, minHeight: 140 };
+    default:
+      return { minWidth: 220, minHeight: 140 };
+  }
+};
+
+export const normalizeFloatingWindowRectForViewport = ({
+  rect,
+  viewport,
+  minWidth,
+  minHeight,
+}: {
+  rect: WindowRect;
+  viewport: WindowViewport;
+  minWidth: number;
+  minHeight: number;
+}): WindowRect => {
+  const width = Math.min(Math.max(minWidth, rect.width), viewport.width);
+  const height = Math.min(Math.max(minHeight, rect.height), viewport.height);
+  return {
+    x: Math.min(Math.max(0, rect.x), Math.max(0, viewport.width - width)),
+    y: Math.min(Math.max(0, rect.y), Math.max(0, viewport.height - height)),
+    width,
+    height,
+  };
+};
+
+export const normalizeFloatingWindowRectsForViewport = ({
+  rects,
+  viewport,
+  minSizeForWindow = floatingWindowMinSizeForKey,
+}: {
+  rects: Readonly<Record<string, WindowRect>>;
+  viewport: WindowViewport;
+  minSizeForWindow?: ((windowKey: string) => WindowMinSize) | undefined;
+}): Record<string, WindowRect> =>
+  Object.fromEntries(
+    Object.entries(rects).map(([windowKey, rect]) => {
+      const minSize = minSizeForWindow(windowKey);
+      return [
+        windowKey,
+        normalizeFloatingWindowRectForViewport({
+          rect,
+          viewport,
+          minWidth: minSize.minWidth,
+          minHeight: minSize.minHeight,
+        }),
+      ];
+    }),
+  );
 
 const scopedFloatingWindowState = ({
   current,

@@ -13,6 +13,7 @@ import {
   defaultControlRailWidthForViewport,
   defaultControlRailWidth,
   desktopCardHeightForViewport,
+  normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
   resizeDockedWindowRects,
 } from "./control-panel-layout.js";
@@ -79,6 +80,42 @@ describe("control panel layout", () => {
         playmatRight: 980,
       }),
       444,
+    );
+  });
+
+  test("normalizes stale saved control panel sizes for the current viewport", () => {
+    assert.deepEqual(
+      normalizeControlPanelLayoutForViewport({
+        layout: {
+          controlRailWidth: 900,
+          controlDockHeight: 900,
+        },
+        viewportWidth: 1180,
+        viewportHeight: 720,
+        playmatRight: 920,
+        controlPanelHeight: 520,
+      }),
+      {
+        controlRailWidth: 244,
+        controlDockHeight: 360,
+      },
+    );
+
+    assert.deepEqual(
+      normalizeControlPanelLayoutForViewport({
+        layout: {
+          controlRailWidth: 120,
+          controlDockHeight: 80,
+        },
+        viewportWidth: 1180,
+        viewportHeight: 720,
+        playmatRight: 920,
+        controlPanelHeight: 520,
+      }),
+      {
+        controlRailWidth: 220,
+        controlDockHeight: 180,
+      },
     );
   });
 

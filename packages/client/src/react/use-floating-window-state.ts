@@ -10,6 +10,7 @@ import {
   floatingWindowStateAfterFloatingGroupOpen,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
+  normalizeFloatingWindowRectsForViewport,
   type FloatingWindowRectState,
 } from "./window-state-model.js";
 import type { RevealWindowStateStore } from "./window-state-store.js";
@@ -49,6 +50,36 @@ export interface FloatingWindowStateController {
   ) => void;
   updateDockedWindowRects: (dockRect: WindowRect) => void;
 }
+
+const currentViewport = ():
+  | {
+      width: number;
+      height: number;
+    }
+  | undefined =>
+  typeof window === "undefined"
+    ? undefined
+    : { width: window.innerWidth, height: window.innerHeight };
+
+const windowRectsEqual = (
+  left: Readonly<Record<string, WindowRect>>,
+  right: Readonly<Record<string, WindowRect>>,
+): boolean => {
+  const leftEntries = Object.entries(left);
+  if (leftEntries.length !== Object.keys(right).length) {
+    return false;
+  }
+  return leftEntries.every(([windowKey, leftRect]) => {
+    const rightRect = right[windowKey];
+    return (
+      rightRect !== undefined &&
+      leftRect.x === rightRect.x &&
+      leftRect.y === rightRect.y &&
+      leftRect.width === rightRect.width &&
+      leftRect.height === rightRect.height
+    );
+  });
+};
 
 export const useFloatingWindowState = ({
   matchScope,
@@ -91,9 +122,21 @@ export const useFloatingWindowState = ({
     }
     const openWindowIds = revealWindowStateStore.loadOpenWindowIds();
     const dockedWindowIds = revealWindowStateStore.loadDockedWindowIds();
+    const storedRects = revealWindowStateStore.loadWindowRects();
+    const viewport = currentViewport();
+    const rects =
+      viewport === undefined
+        ? storedRects
+        : normalizeFloatingWindowRectsForViewport({
+            rects: storedRects,
+            viewport,
+          });
+    if (viewport !== undefined && !windowRectsEqual(storedRects, rects)) {
+      revealWindowStateStore.saveWindowRects(rects);
+    }
     setFloatingWindowRects({
       scope: matchScope,
-      rects: revealWindowStateStore.loadWindowRects(),
+      rects,
       openWindowIds,
       dockedWindowIds,
       floatingWindowZOrder: [...openWindowIds].filter(
