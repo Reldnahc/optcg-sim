@@ -140,7 +140,7 @@ describe("playmat structure", () => {
 
     assert.match(
       appShellStyles,
-      /--card-height:\s*calc\(var\(--playmat-row-height\)\s*-\s*14px\);/,
+      /--card-height:\s*clamp\(\s*var\(--desktop-card-min-height\),\s*calc\(var\(--playmat-row-height\)\s*-\s*14px\),\s*var\(--desktop-card-max-height\)\s*\);/,
     );
     assert.match(
       appShellStyles,
@@ -196,8 +196,18 @@ describe("playmat structure", () => {
       controlsStyles,
       /\.control-rail\s*\{[^}]*position:\s*absolute;/u,
     );
-    assert.match(controlsStyles, /\.control-rail\s*\{[^}]*right:\s*8px;/u);
-    assert.match(controlsStyles, /\.control-rail\s*\{[^}]*width:\s*260px;/u);
+    assert.match(
+      controlsStyles,
+      /\.control-rail\s*\{[^}]*--control-rail-default-width:\s*clamp\(/u,
+    );
+    assert.match(
+      controlsStyles,
+      /\.control-rail\s*\{[^}]*right:\s*var\(--control-rail-gap\);/u,
+    );
+    assert.match(
+      controlsStyles,
+      /\.control-rail\s*\{[^}]*width:\s*var\(--control-rail-default-width\);/u,
+    );
   });
 
   test("effect spotlight is hosted in the empty hand rail lane", async () => {

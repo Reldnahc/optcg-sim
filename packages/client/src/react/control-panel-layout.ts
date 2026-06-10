@@ -9,6 +9,72 @@ export const defaultControlDockHeight = 320;
 export const minControlDockHeight = 180;
 export const controlDockVerticalReservedSpace = 160;
 
+const desktopCardMinHeight = 86;
+const desktopCardMaxHeight = 240;
+const desktopCardViewportHeightRatio = 0.135;
+const desktopCardViewportWidthRatio = 0.12;
+const controlRailDefaultMinWidth = 248;
+const controlRailDefaultMaxWidth = 380;
+const controlDockDefaultMinHeight = 260;
+const controlDockDefaultMaxHeight = 460;
+
+const clampNumber = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
+
+export const desktopCardHeightForViewport = ({
+  viewportWidth,
+  viewportHeight,
+}: {
+  viewportWidth: number;
+  viewportHeight: number;
+}): number =>
+  clampNumber(
+    Math.min(
+      viewportHeight * desktopCardViewportHeightRatio,
+      viewportWidth * desktopCardViewportWidthRatio,
+    ),
+    desktopCardMinHeight,
+    desktopCardMaxHeight,
+  );
+
+export const defaultControlRailWidthForViewport = ({
+  viewportWidth,
+  viewportHeight,
+}: {
+  viewportWidth: number;
+  viewportHeight: number;
+}): number => {
+  const cardWidth =
+    desktopCardHeightForViewport({ viewportWidth, viewportHeight }) / 1.4;
+  return Math.round(
+    clampNumber(
+      cardWidth * 2.7,
+      controlRailDefaultMinWidth,
+      controlRailDefaultMaxWidth,
+    ),
+  );
+};
+
+export const defaultControlDockHeightForViewport = ({
+  viewportWidth,
+  viewportHeight,
+}: {
+  viewportWidth: number;
+  viewportHeight: number;
+}): number => {
+  const cardHeight = desktopCardHeightForViewport({
+    viewportWidth,
+    viewportHeight,
+  });
+  return Math.round(
+    clampNumber(
+      cardHeight * 2.15,
+      controlDockDefaultMinHeight,
+      controlDockDefaultMaxHeight,
+    ),
+  );
+};
+
 export interface ControlRailWidthInput {
   requestedWidth: number;
   viewportWidth: number;

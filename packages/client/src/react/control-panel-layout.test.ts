@@ -8,8 +8,11 @@ import {
   controlDockHeightFromDrag,
   controlDockSlotRect,
   controlRailWidthFromDrag,
+  defaultControlDockHeightForViewport,
   defaultControlDockHeight,
+  defaultControlRailWidthForViewport,
   defaultControlRailWidth,
+  desktopCardHeightForViewport,
   resolveControlDockSnapRect,
   resizeDockedWindowRects,
 } from "./control-panel-layout.js";
@@ -17,6 +20,44 @@ import {
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 describe("control panel layout", () => {
+  test("derives default control dimensions from the desktop card scale", () => {
+    assert.equal(
+      desktopCardHeightForViewport({
+        viewportWidth: 1024,
+        viewportHeight: 720,
+      }),
+      97.2,
+    );
+    assert.equal(
+      defaultControlRailWidthForViewport({
+        viewportWidth: 1024,
+        viewportHeight: 720,
+      }),
+      248,
+    );
+    assert.equal(
+      defaultControlDockHeightForViewport({
+        viewportWidth: 1024,
+        viewportHeight: 720,
+      }),
+      260,
+    );
+    assert.equal(
+      defaultControlRailWidthForViewport({
+        viewportWidth: 2560,
+        viewportHeight: 1440,
+      }),
+      375,
+    );
+    assert.equal(
+      defaultControlDockHeightForViewport({
+        viewportWidth: 2560,
+        viewportHeight: 1440,
+      }),
+      418,
+    );
+  });
+
   test("resizes the rail from the left edge without crossing the playmat", () => {
     assert.equal(
       controlRailWidthFromDrag({

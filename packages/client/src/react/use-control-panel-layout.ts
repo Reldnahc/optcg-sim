@@ -5,6 +5,8 @@ import type { WindowRect } from "./FloatingWindow.js";
 import {
   controlDockHeightFromDrag,
   controlDockSlotRect,
+  defaultControlDockHeightForViewport,
+  defaultControlRailWidthForViewport,
   controlRailWidthFromDrag,
   defaultControlDockHeight,
   defaultControlRailWidth,
@@ -57,21 +59,41 @@ const playmatRightEdge = (fallbackRailWidth: number): number => {
   );
 };
 
+const defaultControlRailWidthForCurrentViewport = (): number =>
+  typeof window === "undefined"
+    ? defaultControlRailWidth
+    : defaultControlRailWidthForViewport({
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      });
+
+const defaultControlDockHeightForCurrentViewport = (): number =>
+  typeof window === "undefined"
+    ? defaultControlDockHeight
+    : defaultControlDockHeightForViewport({
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      });
+
 export const useControlPanelLayout = ({
   layoutStore,
 }: UseControlPanelLayoutInput = {}): ControlPanelLayoutController => {
-  const [controlRailWidth, setControlRailWidth] = useState(
-    defaultControlRailWidth,
+  const [controlRailWidth, setControlRailWidth] = useState(() =>
+    defaultControlRailWidthForCurrentViewport(),
   );
-  const [controlDockHeight, setControlDockHeight] = useState(
-    defaultControlDockHeight,
+  const [controlDockHeight, setControlDockHeight] = useState(() =>
+    defaultControlDockHeightForCurrentViewport(),
   );
   const [controlDockActive, setControlDockActive] = useState(false);
 
   useEffect(() => {
     const layout = layoutStore?.loadControlPanelLayout();
-    setControlRailWidth(layout?.controlRailWidth ?? defaultControlRailWidth);
-    setControlDockHeight(layout?.controlDockHeight ?? defaultControlDockHeight);
+    setControlRailWidth(
+      layout?.controlRailWidth ?? defaultControlRailWidthForCurrentViewport(),
+    );
+    setControlDockHeight(
+      layout?.controlDockHeight ?? defaultControlDockHeightForCurrentViewport(),
+    );
   }, [layoutStore]);
 
   const resolveControlDockSnap = useCallback(
