@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { GameState, PublicSelectCardsDecision } from "@optcg/types";
+
 import type { EffectQueueEntry } from "../../effect-runtime-queue/test-support.js";
 import { filterStateForPlayer } from "../../view/filter-state-for-player.js";
 import {
@@ -19,7 +21,11 @@ import {
   toSourceSnapshot,
 } from "../../effect-runtime-queue/test-support.js";
 
-test("queued conditioned supported set selection pauses for private choice and then resolves", () => {
+const createConditionedSetSelectionState = (): {
+  originalTail: NonNullable<GameState["players"][typeof p1]>["deck"];
+  selectedDeck: NonNullable<GameState["players"][typeof p1]>["deck"][number];
+  state: GameState;
+} => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1");
   while (p1State.deck.length < 5) {
@@ -161,6 +167,25 @@ test("queued conditioned supported set selection pauses for private choice and t
   };
   state.effectQueue = [queueEntry];
 
+  return { originalTail, selectedDeck, state };
+};
+
+const publicSelectionDecision = (
+  state: GameState,
+): PublicSelectCardsDecision => {
+  const decision = must(
+    filterStateForPlayer(state, p1).pendingDecision,
+    "public pending decision",
+  );
+  assert.equal(decision.type, "selectCards");
+  return decision;
+};
+
+test("queued conditioned supported set selection pauses for private choice and then resolves", () => {
+  const { originalTail, selectedDeck, state } =
+    createConditionedSetSelectionState();
+  const p1State = must(state.players[p1], "p1");
+
   const created = processEffectRuntime(state);
   assert.equal(created.errors, undefined);
   assert.deepEqual(
@@ -224,5 +249,55 @@ test("queued conditioned supported set selection pauses for private choice and t
       String(must(p1State.deck[1], "hidden").cardId),
     ),
     false,
+  );
+});
+
+test("queued set search still asks to order the remainder after a public-view selection response", () => {
+  const { selectedDeck, state } = createConditionedSetSelectionState();
+
+  const created = processEffectRuntime(state);
+  assert.equal(created.errors, undefined);
+  const publicDecision = publicSelectionDecision(created.state);
+  const selected = must(
+    publicDecision.candidates.find(
+      (candidate) => candidate.card.instanceId === selectedDeck.instanceId,
+    ),
+    "public candidate",
+  ).card;
+
+  const applied = applyAction(created.state, {
+    type: "respondToDecision",
+    decisionId: publicDecision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+
+  assert.equal(applied.errors, undefined);
+  assert.equal(
+    filterStateForPlayer(applied.state, p1).pendingDecision?.type,
+    "orderCards",
+  );
+});
+
+test("queued set search still asks to order the full remainder when no card is selected", () => {
+  const { state } = createConditionedSetSelectionState();
+
+  const created = processEffectRuntime(state);
+  assert.equal(created.errors, undefined);
+  const publicDecision = publicSelectionDecision(created.state);
+
+  const applied = applyAction(created.state, {
+    type: "respondToDecision",
+    decisionId: publicDecision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(applied.errors, undefined);
+  assert.deepEqual(
+    applied.events.map((event) => event.type),
+    ["decisionCreated"],
+  );
+  assert.equal(
+    filterStateForPlayer(applied.state, p1).pendingDecision?.type,
+    "orderCards",
   );
 });
