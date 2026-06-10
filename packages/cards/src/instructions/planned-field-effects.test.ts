@@ -54,6 +54,7 @@ describe("planned field-effect instruction parsers", () => {
         "target:opponentCharacters",
         "protectionProcess:rest",
         "duration:opponentNextEndPhase",
+        "duration:thisTurn",
       ],
     });
     expect(preventOpponentCharactersAttackPrimitive).toEqual({
@@ -508,6 +509,48 @@ describe("planned field-effect instruction parsers", () => {
         "filter:nameNot",
         "protectionProcess:rest",
         "duration:opponentNextEndPhase",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses direct opponent Character rest protection during this turn", () => {
+    expect(
+      parsePreventOpponentCharactersRestInstruction({
+        text: "Up to 1 of your opponent's Characters cannot be rested during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "giveProtection",
+        target: {
+          type: "choose",
+          request: {
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+            },
+          },
+        },
+        protection: {
+          process: "rest",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+        },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:giveProtection",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "protectionProcess:rest",
+        "duration:thisTurn",
       ],
       rest: "",
     });
