@@ -4,6 +4,7 @@ import type { CardId, PoneglyphCardDetail, ResolvedCard } from "@optcg/types";
 
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
+  fetchDevPoneglyphCatalogSnapshot,
   type DevPoneglyphFetch,
   parseDevCardIdList,
 } from "./dev-manifest.js";
@@ -173,3 +174,53 @@ const manifestCard = (
   }
   return card;
 };
+
+describe("dev manifest catalog snapshot", () => {
+  test("derives card data version from Poneglyph catalog metadata", async () => {
+    const responseFor = (name: string) =>
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              card_number: "OP01-001",
+              name,
+              effect: "[On Play] Draw 1 card.",
+            },
+            {
+              card_number: "OP01-002",
+              name: "Vanilla",
+              effect: null,
+            },
+          ],
+          pagination: { has_more: false },
+        }),
+        { status: 200 },
+      );
+
+    const first = await fetchDevPoneglyphCatalogSnapshot({
+      baseUrl: "https://api.example",
+      fetch: () => Promise.resolve(responseFor("Monkey.D.Luffy")),
+      versions: {
+        effectDefinitionsVersion: "effects-v2",
+      },
+    });
+    const second = await fetchDevPoneglyphCatalogSnapshot({
+      baseUrl: "https://api.example",
+      fetch: () => Promise.resolve(responseFor("Monkey D. Luffy")),
+      versions: {
+        effectDefinitionsVersion: "effects-v2",
+      },
+    });
+
+    assert.deepEqual(first.cardIds, ["OP01-001", "OP01-002"]);
+    assert.equal(first.versions.effectDefinitionsVersion, "effects-v2");
+    assert.match(
+      first.versions.cardDataVersion,
+      /^poneglyph-search-[a-f0-9]{16}$/u,
+    );
+    assert.notEqual(
+      first.versions.cardDataVersion,
+      second.versions.cardDataVersion,
+    );
+  });
+});

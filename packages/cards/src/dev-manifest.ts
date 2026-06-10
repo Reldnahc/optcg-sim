@@ -1,5 +1,8 @@
 import type { CardId, MatchCardManifest } from "@optcg/types";
-import { defaultPoneglyphSimCardCacheVersions } from "optcg-card-cache";
+import {
+  defaultPoneglyphSimCardCacheVersions,
+  fetchPoneglyphCardCatalogSnapshot,
+} from "optcg-card-cache";
 
 import {
   createCardRepository,
@@ -27,7 +30,7 @@ export interface BuildDevMatchCardManifestFromPoneglyphIdsRequest {
   readonly runtimeSupportEvaluator?: RuntimeSupportEvaluator;
 }
 
-interface DevManifestVersions {
+export interface DevManifestVersions {
   readonly cardDataVersion: string;
   readonly effectDefinitionsVersion: string;
   readonly customHandlerVersion: string;
@@ -41,6 +44,39 @@ export const defaultDevManifestVersions: DevManifestVersions = {
   customHandlerVersion: "none",
   banlistVersion: "none",
   rulesVersion: "dev-rules",
+};
+
+export interface FetchDevPoneglyphCatalogSnapshotInput {
+  readonly baseUrl?: string;
+  readonly fetch?: typeof fetch;
+  readonly pageSize?: number;
+  readonly versions?: Partial<DevManifestVersions>;
+}
+
+export interface DevPoneglyphCatalogSnapshot {
+  readonly cardIds: readonly CardId[];
+  readonly versions: DevManifestVersions;
+}
+
+export const fetchDevPoneglyphCatalogSnapshot = async ({
+  baseUrl,
+  fetch,
+  pageSize,
+  versions,
+}: FetchDevPoneglyphCatalogSnapshotInput = {}): Promise<DevPoneglyphCatalogSnapshot> => {
+  const snapshot = await fetchPoneglyphCardCatalogSnapshot({
+    ...(baseUrl === undefined ? {} : { baseUrl }),
+    ...(fetch === undefined ? {} : { fetch }),
+    ...(pageSize === undefined ? {} : { pageSize }),
+  });
+  return {
+    cardIds: snapshot.cardIds as readonly CardId[],
+    versions: {
+      ...defaultDevManifestVersions,
+      ...versions,
+      cardDataVersion: snapshot.cardDataVersion,
+    },
+  };
 };
 
 export const parseDevCardIdList = (text: string): CardId[] => {

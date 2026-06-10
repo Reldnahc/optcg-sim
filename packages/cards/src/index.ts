@@ -23,6 +23,7 @@ export {
 export {
   buildDevMatchCardManifestFromPoneglyphIds,
   defaultDevManifestVersions,
+  fetchDevPoneglyphCatalogSnapshot,
   parseDevCardIdList,
 } from "./dev-manifest.js";
 export { createParserSupportCertificate } from "./materialization/support-certificate.js";
@@ -46,7 +47,10 @@ export type {
 } from "./redis-card-cache.js";
 export type {
   BuildDevMatchCardManifestFromPoneglyphIdsRequest,
+  DevManifestVersions,
   DevPoneglyphFetch,
+  DevPoneglyphCatalogSnapshot,
+  FetchDevPoneglyphCatalogSnapshotInput,
   DevPoneglyphFetchResponse,
 } from "./dev-manifest.js";
 export type {

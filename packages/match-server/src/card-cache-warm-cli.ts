@@ -1,11 +1,11 @@
 import {
   createPoneglyphHttpClient,
   createRedisCardDataCache,
-  defaultDevManifestVersions,
+  fetchDevPoneglyphCatalogSnapshot,
 } from "@optcg/cards";
 import { createRuntimeSupportedCardRepository } from "@optcg/card-support";
 import type { CardId } from "@optcg/types";
-import { fetchPoneglyphCardCatalogIds, warmCardCache } from "optcg-card-cache";
+import { warmCardCache } from "optcg-card-cache";
 
 const defaultBatchSize = 40;
 const defaultDelayMs = 300;
@@ -40,7 +40,10 @@ const readConfig = (): WarmCliConfig => {
 const run = async (): Promise<void> => {
   const config = readConfig();
   const cache = await createRedisCardDataCache({ url: config.redisUrl });
-  const versions = defaultDevManifestVersions;
+  const catalog = await fetchDevPoneglyphCatalogSnapshot({
+    baseUrl: config.poneglyphBaseUrl,
+  });
+  const versions = catalog.versions;
   const repository = createRuntimeSupportedCardRepository({
     cache,
     poneglyphClient: createPoneglyphHttpClient({
@@ -48,11 +51,8 @@ const run = async (): Promise<void> => {
     }),
     versions,
   });
-  const cardIds = await fetchPoneglyphCardCatalogIds({
-    baseUrl: config.poneglyphBaseUrl,
-  });
   const result = await warmCardCache({
-    cardIds,
+    cardIds: catalog.cardIds,
     versions,
     cache,
     batchSize: config.batchSize,

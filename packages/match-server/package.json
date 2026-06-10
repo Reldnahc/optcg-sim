@@ -21,7 +21,7 @@
     "@optcg/cards": "workspace:*",
     "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*",
-    "optcg-card-cache": "0.1.2",
+    "optcg-card-cache": "0.1.3",
     "optcg-db": "^0.4.40",
     "optcg-deck-hash": "^0.1.4",
     "redis": "5.12.1"

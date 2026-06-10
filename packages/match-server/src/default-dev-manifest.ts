@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { createRedisCardDataCache } from "@optcg/cards";
+import {
+  createRedisCardDataCache,
+  fetchDevPoneglyphCatalogSnapshot,
+} from "@optcg/cards";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
   type DevPoneglyphFetch,
@@ -339,14 +342,25 @@ const buildDevManifestFromCardIds = async (
           url: redisConfig.redisUrl,
         })
       : undefined;
+  const versions =
+    input.fetchCard === undefined
+      ? (
+          await fetchDevPoneglyphCatalogSnapshot({
+            ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+            versions: {
+              effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+            },
+          })
+        ).versions
+      : {
+          cardDataVersion: "live-poneglyph-dev-v1",
+          effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+        };
   return await buildDevMatchCardManifestFromPoneglyphIds({
     cardIds,
     createdAt: input.createdAt,
     devDonCount,
-    versions: {
-      cardDataVersion: "live-poneglyph-dev-v1",
-      effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
-    },
+    versions,
     ...(cache === undefined ? {} : { cache }),
     ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
     ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
