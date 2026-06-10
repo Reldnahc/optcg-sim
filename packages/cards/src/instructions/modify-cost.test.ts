@@ -72,4 +72,43 @@ describe("modify cost instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses named field card targets for targeted positive cost modifiers", () => {
+    expect(
+      parseTargetedModifyCostInstruction({
+        text: "up to 1 of your [Kouzuki Momonosuke] gains +20 cost during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            filter: { names: ["Kouzuki Momonosuke"] },
+          },
+        },
+        value: 20,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyCost",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourNamedCards",
+        "player:self",
+        "filter:name",
+        "modifier:positiveCost",
+        "count:positiveInteger",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
 });

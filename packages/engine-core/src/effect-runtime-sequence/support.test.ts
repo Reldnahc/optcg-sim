@@ -156,6 +156,78 @@ test("sequence support accepts selected field-object trash consumers", () => {
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts conditional bodies with continuous target decisions", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "payCost",
+            cost: { type: "trashSelf", optional: true },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "hasCardInZone",
+              player: "self",
+              zone: "leaderArea",
+              filter: {
+                categories: ["leader"],
+                typesAny: ["Land of Wano"],
+              },
+            },
+            then: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: { type: "draw", player: "self", count: 1 },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "modifyCost",
+                    player: "self",
+                    target: {
+                      type: "choose",
+                      request: {
+                        timing: "onResolution",
+                        chooser: "self",
+                        player: "self",
+                        zone: "characterArea",
+                        min: 0,
+                        max: 1,
+                        allowFewerIfUnavailable: true,
+                        visibility: "public",
+                        filter: { categories: ["character"] },
+                      },
+                    },
+                    value: 20,
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts select-all targets followed by attack trash cost", () => {
   const effectBlock: EffectDefinition["effects"][number] = {
     id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],

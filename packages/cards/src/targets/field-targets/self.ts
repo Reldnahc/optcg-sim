@@ -88,9 +88,10 @@ export function parseYourLeaderOrCharacterCardsTarget(
 export function parseYourNamedCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
-  const match = /^of your \[(?<name>[^\]]+)\] cards?\b\s*(?<rest>.*)$/i.exec(
-    input.text,
-  );
+  const match =
+    /^of your \[(?<name>[^\]]+)\](?:\s+cards?\b)?\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
   const nameText = match?.groups?.["name"]?.trim();
   if (nameText === undefined || nameText.length === 0) {
     return undefined;

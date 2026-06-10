@@ -140,8 +140,18 @@ const isSupportedSelectAllTargetsRequest = (
     allowFewerIfUnavailable: false,
   });
 
+const isSupportedSequenceContinuousSegment = (
+  effect: SequenceSegmentEffect,
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
+): effect is DirectContinuousEffect =>
+  effect.type !== "payCost" &&
+  isSupportedContinuousQueueEffect(effect) &&
+  (sourcePresencePolicy === "mustRemainInSameZone" ||
+    !isSourceDependentContinuousSegment(effect));
+
 const isSupportedConditionalSegment = (
   effect: SequenceSegmentEffect,
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
 ): effect is ConditionalEffect => {
   if (
     effect.type !== "conditional" ||
@@ -190,6 +200,11 @@ const isSupportedConditionalSegment = (
       return true;
     }
     if (isSupportedReturnDonSegment(segment.effect)) {
+      return true;
+    }
+    if (
+      isSupportedSequenceContinuousSegment(segment.effect, sourcePresencePolicy)
+    ) {
       return true;
     }
     if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
@@ -343,13 +358,12 @@ export const toSupportedSequenceBlock = (
       if (isSupportedTrashSegment(segment.effect)) {
         return true;
       }
-      if (isSupportedContinuousQueueEffect(segment.effect)) {
-        if (
-          flattenedBlock.sourcePresencePolicy !== "mustRemainInSameZone" &&
-          isSourceDependentContinuousSegment(segment.effect)
-        ) {
-          return false;
-        }
+      if (
+        isSupportedSequenceContinuousSegment(
+          segment.effect,
+          entry.sourcePresencePolicy,
+        )
+      ) {
         if (
           "target" in segment.effect &&
           segment.effect.target.type === "choose"
@@ -390,7 +404,12 @@ export const toSupportedSequenceBlock = (
       if (isSupportedConditionalContinuousSegment(segment.effect)) {
         return true;
       }
-      if (isSupportedConditionalSegment(segment.effect)) {
+      if (
+        isSupportedConditionalSegment(
+          segment.effect,
+          entry.sourcePresencePolicy,
+        )
+      ) {
         supportState.hasPendingDecisionSegment = true;
         return true;
       }

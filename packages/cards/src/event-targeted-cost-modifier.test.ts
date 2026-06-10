@@ -145,6 +145,82 @@ describe("event targeted cost modifier parser", () => {
     );
   });
 
+  it("parses optional trash conditional draw and named field-card cost gain", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may trash this Character: If your Leader has the {Land of Wano} type, draw 1 card and up to 1 of your [Kouzuki Momonosuke] gains +20 cost during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "trashSelf", optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "hasCardInZone",
+                  player: "self",
+                  zone: "leaderArea",
+                  filter: {
+                    categories: ["leader"],
+                    typesAny: ["Land of Wano"],
+                  },
+                },
+                then: {
+                  type: "sequence",
+                  effects: [
+                    {
+                      connector: "always",
+                      effect: { type: "draw", player: "self", count: 1 },
+                    },
+                    {
+                      connector: "then",
+                      effect: {
+                        type: "modifyCost",
+                        target: {
+                          type: "chooseFromZones",
+                          request: {
+                            player: "self",
+                            zones: ["leaderArea", "characterArea"],
+                            filter: { names: ["Kouzuki Momonosuke"] },
+                          },
+                        },
+                        value: 20,
+                        duration: { type: "thisTurn" },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:optionalCostedEffect",
+        "cost:trashSelf",
+        "condition:leaderIdentity",
+        "instruction:draw",
+        "target:yourNamedCards",
+        "instruction:modifyCost",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses turn-windowed all own Character cost gain as reusable modifyCost", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] All of your Characters gain +1 cost.",

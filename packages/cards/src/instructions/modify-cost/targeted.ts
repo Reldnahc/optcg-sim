@@ -3,7 +3,10 @@ import {
   parseOpponentNextEndPhaseDuration,
   parseThisTurnDuration,
 } from "../../durations/index.js";
-import { parseYourCharactersTarget } from "../../targets/index.js";
+import {
+  parseYourCharactersTarget,
+  parseYourNamedCardsTarget,
+} from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { parsePositiveCostModifier } from "./shared.js";
 
@@ -15,10 +18,10 @@ export const parseTargetedModifyCostInstruction: InstructionParser = (
     return undefined;
   }
 
-  const target = parseYourCharactersTarget({ text: cardinality.rest });
-  if (target?.target === undefined) {
-    return undefined;
-  }
+  const target =
+    parseYourCharactersTarget({ text: cardinality.rest }) ??
+    parseYourNamedCardsTarget({ text: cardinality.rest });
+  if (target?.target === undefined) return undefined;
 
   const modifierText = /^gains\s+(?<rest>.*)$/i.exec(target.rest)?.groups?.[
     "rest"
