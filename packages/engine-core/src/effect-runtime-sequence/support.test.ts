@@ -106,6 +106,40 @@ test("sequence support accepts targeted keyword grants filtered by reusable effe
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts self-target field activation segments", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "endOfYourTurn" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "activate",
+            target: { type: "self" },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "giveKeyword",
+            target: { type: "self" },
+            keyword: "blocker",
+            duration: { type: "untilEndOfNextTurn", player: "opponent" },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts selected field-object trash consumers", () => {
   const effectBlock: EffectDefinition["effects"][number] = {
     id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],

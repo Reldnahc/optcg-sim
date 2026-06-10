@@ -24,7 +24,13 @@ export type RestEffect = Extract<Effect, { type: "rest" }> & {
   >;
 };
 export type ActivateEffect = Extract<Effect, { type: "activate" }> & {
-  target: Extract<Target, { type: "savedFieldObject" }>;
+  target: Extract<
+    Target,
+    | { type: "savedFieldObject" }
+    | { type: "myLeader" }
+    | { type: "all" }
+    | { type: "self" }
+  >;
 };
 export type SavedFieldObjectKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
@@ -158,6 +164,7 @@ export const isSupportedActivateSegment = (
     effect.target.filter === undefined &&
     effect.target.binding.family === "selectedTargets") ||
     effect.target.type === "myLeader" ||
+    effect.target.type === "self" ||
     (effect.target.type === "all" &&
       effect.target.player === "self" &&
       effect.target.zone === "characterArea" &&

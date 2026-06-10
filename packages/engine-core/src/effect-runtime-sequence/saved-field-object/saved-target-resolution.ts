@@ -25,6 +25,22 @@ export const resolveActivateTargets = (
       ? { ok: true, selectedTargets: [...resolved.selectedTargets] }
       : { ok: false };
   }
+  if (target.type === "self") {
+    if (entry.source.zone === undefined) {
+      return { ok: false };
+    }
+    return {
+      ok: true,
+      selectedTargets: [
+        {
+          instanceId: entry.source.instanceId,
+          cardId: entry.source.cardId,
+          playerId: entry.source.playerId,
+          zone: entry.source.zone,
+        },
+      ],
+    };
+  }
   const player = state.players[entry.controllerId];
   if (player === undefined) {
     return { ok: false };
