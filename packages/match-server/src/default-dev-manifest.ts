@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import {
   createRedisCardDataCache,
   fetchDevPoneglyphCatalogSnapshot,
+  type CardDataCache,
+  type DevManifestVersions,
 } from "@optcg/cards";
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
@@ -15,6 +17,7 @@ import {
 } from "./deck-submission.js";
 import {
   validateDeckLoadout,
+  type DeckValidationCachePort,
   type ExplicitDonDeckSubmission,
 } from "./deck-validation.js";
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
@@ -31,6 +34,8 @@ interface CreateDefaultDevMatchSetupInput {
   readonly baseUrl?: string;
   readonly redisUrl?: string;
   readonly redisMode?: RedisMode;
+  readonly cardDataCache?: CardDataCache;
+  readonly validationCache?: DeckValidationCachePort;
 }
 
 export interface CreateDevMatchSetupFromDeckSubmissionsInput extends CreateDefaultDevMatchSetupInput {
@@ -141,6 +146,16 @@ export const defaultDevDonCounts: DevDonCounts = {
 export const defaultDevEffectDefinitionsVersion = "generated-dev-v8";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v3";
 export const defaultDevDeckFormatId = "sandbox-open";
+const defaultDevCatalogVersionsTtlMs = 60_000;
+
+let cachedLiveDevCatalogVersions:
+  | {
+      readonly baseUrl: string | undefined;
+      readonly effectDefinitionsVersion: string;
+      readonly expiresAtMs: number;
+      readonly versions: DevManifestVersions;
+    }
+  | undefined;
 
 const defaultDevLeader: DevDeckCardEntry = {
   cardId: "OP13-079" as CardId,
@@ -236,9 +251,7 @@ export const validateAndAdaptDevDecklist = async ({
     ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
   >;
   readonly formatId?: string;
-  readonly validationCache?: Awaited<
-    ReturnType<typeof createRedisCardDataCache>
-  >;
+  readonly validationCache?: DeckValidationCachePort;
 }): Promise<DevDecklist> => {
   const validation = await validateDeckLoadout({
     formatId,
@@ -336,19 +349,17 @@ export const validateReadyDevDeckSubmissions = async (
         ...(input.redisMode === undefined
           ? {}
           : { redisMode: input.redisMode }),
+        ...(input.cardDataCache === undefined
+          ? {}
+          : { cardDataCache: input.cardDataCache }),
+        ...(input.validationCache === undefined
+          ? {}
+          : { validationCache: input.validationCache }),
       },
       devDonCount,
     );
-    const redisConfig = resolveRedisConfig({
-      redisUrl: input.redisUrl,
-      redisMode: input.redisMode,
-    });
     const validationCache =
-      input.fetchCard === undefined && redisConfig.redisUrl !== undefined
-        ? await createRedisCardDataCache({
-            url: redisConfig.redisUrl,
-          })
-        : undefined;
+      input.validationCache ?? (await createRequestScopedRedisCache(input));
     return await Promise.all(
       decklists.map(async (decklist) => {
         try {
@@ -411,19 +422,17 @@ const validateReadyDevDeckSubmissionUnbatched = async (
       ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
       ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
       ...(input.redisMode === undefined ? {} : { redisMode: input.redisMode }),
+      ...(input.cardDataCache === undefined
+        ? {}
+        : { cardDataCache: input.cardDataCache }),
+      ...(input.validationCache === undefined
+        ? {}
+        : { validationCache: input.validationCache }),
     },
     decklist.donDeckCount,
   );
-  const redisConfig = resolveRedisConfig({
-    redisUrl: input.redisUrl,
-    redisMode: input.redisMode,
-  });
   const validationCache =
-    input.fetchCard === undefined && redisConfig.redisUrl !== undefined
-      ? await createRedisCardDataCache({
-          url: redisConfig.redisUrl,
-        })
-      : undefined;
+    input.validationCache ?? (await createRequestScopedRedisCache(input));
   validateDevDeckSubmissionVariants(decklist, cardManifest);
   const adaptedDecklist = await validateAndAdaptDevDecklist({
     decklist,
@@ -444,26 +453,11 @@ const buildDevManifestFromCardIds = async (
   input: CreateDefaultDevMatchSetupInput,
   devDonCount: number,
 ) => {
-  const redisConfig = resolveRedisConfig({
-    redisUrl: input.redisUrl,
-    redisMode: input.redisMode,
-  });
   const cache =
-    input.fetchCard === undefined && redisConfig.redisUrl !== undefined
-      ? await createRedisCardDataCache({
-          url: redisConfig.redisUrl,
-        })
-      : undefined;
+    input.cardDataCache ?? (await createRequestScopedRedisCache(input));
   const versions =
     input.fetchCard === undefined
-      ? (
-          await fetchDevPoneglyphCatalogSnapshot({
-            ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
-            versions: {
-              effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
-            },
-          })
-        ).versions
+      ? await resolveLiveDevCatalogVersions(input)
       : {
           cardDataVersion: "live-poneglyph-dev-v1",
           effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
@@ -477,6 +471,50 @@ const buildDevManifestFromCardIds = async (
     ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
     ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
   });
+};
+
+const createRequestScopedRedisCache = async (
+  input: Pick<
+    CreateDefaultDevMatchSetupInput,
+    "fetchCard" | "redisMode" | "redisUrl"
+  >,
+): Promise<CardDataCache | undefined> => {
+  const redisConfig = resolveRedisConfig({
+    redisUrl: input.redisUrl,
+    redisMode: input.redisMode,
+  });
+  return input.fetchCard === undefined && redisConfig.redisUrl !== undefined
+    ? await createRedisCardDataCache({ url: redisConfig.redisUrl })
+    : undefined;
+};
+
+const resolveLiveDevCatalogVersions = async (
+  input: Pick<CreateDefaultDevMatchSetupInput, "baseUrl">,
+): Promise<DevManifestVersions> => {
+  const now = Date.now();
+  if (
+    cachedLiveDevCatalogVersions !== undefined &&
+    cachedLiveDevCatalogVersions.baseUrl === input.baseUrl &&
+    cachedLiveDevCatalogVersions.effectDefinitionsVersion ===
+      defaultDevEffectDefinitionsVersion &&
+    cachedLiveDevCatalogVersions.expiresAtMs > now
+  ) {
+    return cachedLiveDevCatalogVersions.versions;
+  }
+
+  const snapshot = await fetchDevPoneglyphCatalogSnapshot({
+    ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+    versions: {
+      effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+    },
+  });
+  cachedLiveDevCatalogVersions = {
+    baseUrl: input.baseUrl,
+    effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+    expiresAtMs: now + defaultDevCatalogVersionsTtlMs,
+    versions: snapshot.versions,
+  };
+  return snapshot.versions;
 };
 
 const createDevMatchSetupFromDecklists = ({
@@ -551,16 +589,8 @@ const createValidatedDevMatchSetupFromDecklists = async ({
     input,
     devDonCount,
   );
-  const redisConfig = resolveRedisConfig({
-    redisUrl: input.redisUrl,
-    redisMode: input.redisMode,
-  });
   const validationCache =
-    input.fetchCard === undefined && redisConfig.redisUrl !== undefined
-      ? await createRedisCardDataCache({
-          url: redisConfig.redisUrl,
-        })
-      : undefined;
+    input.validationCache ?? (await createRequestScopedRedisCache(input));
   validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
   validateDevDeckSubmissionVariants(secondPlayerDecklist, cardManifest);
   const adaptedFirstPlayerDecklist = await validateAndAdaptDevDecklist({

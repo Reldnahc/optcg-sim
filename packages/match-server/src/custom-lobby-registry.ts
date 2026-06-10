@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { createRedisCardDataCache, type CardDataCache } from "@optcg/cards";
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
@@ -207,6 +208,14 @@ export const createCustomLobbyRegistry = async (
 ): Promise<CustomLobbyRegistry> => {
   const lobbyStore = await createLobbyStore(options);
   const deckHashCodec = options.deckHashCodec ?? createPoneglyphDeckHashCodec();
+  const redisConfig = resolveRedisConfig({
+    redisUrl: options.redisUrl,
+    redisMode: options.redisMode,
+  });
+  const sharedCardDataCache: CardDataCache | undefined =
+    options.fetchCard === undefined && redisConfig.redisUrl !== undefined
+      ? await createRedisCardDataCache({ url: redisConfig.redisUrl })
+      : undefined;
   const findSeatForAuth = (
     lobby: CustomLobbyState,
     auth: AuthContext,
@@ -259,6 +268,12 @@ export const createCustomLobbyRegistry = async (
         ...(options.redisMode === undefined
           ? {}
           : { redisMode: options.redisMode }),
+        ...(sharedCardDataCache === undefined
+          ? {}
+          : {
+              cardDataCache: sharedCardDataCache,
+              validationCache: sharedCardDataCache,
+            }),
       });
       return true;
     } catch {
@@ -286,6 +301,12 @@ export const createCustomLobbyRegistry = async (
       ...(options.redisMode === undefined
         ? {}
         : { redisMode: options.redisMode }),
+      ...(sharedCardDataCache === undefined
+        ? {}
+        : {
+            cardDataCache: sharedCardDataCache,
+            validationCache: sharedCardDataCache,
+          }),
     });
     for (const [resultIndex, pending] of pendingSubmissions.entries()) {
       const validation = validationResults[resultIndex];
@@ -342,6 +363,12 @@ export const createCustomLobbyRegistry = async (
         ...(options.redisMode === undefined
           ? {}
           : { redisMode: options.redisMode }),
+        ...(sharedCardDataCache === undefined
+          ? {}
+          : {
+              cardDataCache: sharedCardDataCache,
+              validationCache: sharedCardDataCache,
+            }),
       }),
       {
         ...(lobby.firstPlayerChoice === undefined
