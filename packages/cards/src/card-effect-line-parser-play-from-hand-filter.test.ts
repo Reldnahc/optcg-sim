@@ -131,3 +131,111 @@ it("parses exact DON conditional play followed by opponent life movement", () =>
     ]),
   );
 });
+
+it("parses conditional play followed by sentence-form optional Life cost and if-you-do power gain", () => {
+  const result = parseCardEffectLine(
+    `[Main] If your Leader's type includes "Whitebeard Pirates", play up to 1 [Edward.Newgate] from your hand. Then, you may add 1 card from the top or bottom of your Life cards to your hand. If you do, up to 1 of your Leader gains +2000 power until the end of your opponent's next turn.`,
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          typesIncludeAny: ["Whitebeard Pirates"],
+        },
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: { names: ["Edward.Newgate"] },
+                  },
+                },
+                {
+                  effect: {
+                    type: "playSelected",
+                    selection: "handSelection:play-from-hand",
+                    ignoreCost: true,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "payCost",
+                    cost: {
+                      type: "moveCards",
+                      count: 1,
+                      chooser: "self",
+                      optional: true,
+                      from: {
+                        player: "self",
+                        zone: "life",
+                        position: "topOrBottom",
+                      },
+                      to: { player: "self", zone: "hand" },
+                      order: "chooserChoice",
+                    },
+                  },
+                },
+                {
+                  connector: "ifYouDo",
+                  effect: {
+                    type: "modifyPower",
+                    target: { type: "myLeader" },
+                    value: 2000,
+                    duration: {
+                      type: "untilEndOfNextTurn",
+                      player: "opponent",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "condition:leaderIdentity",
+      "filter:type",
+      "instruction:playSelected",
+      "filter:name",
+      "composition:optionalCostedEffect",
+      "cost:moveCards",
+      "zone:life",
+      "position:top",
+      "position:bottom",
+      "destination:hand",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "duration:opponentNextEndPhase",
+    ]),
+  );
+});

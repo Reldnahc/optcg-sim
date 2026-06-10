@@ -2,14 +2,15 @@ import type { ConnectorParser } from "../types.js";
 import { splitSourceByDelimiter } from "../source-slices.js";
 
 export const parseSentenceConnector: ConnectorParser = (input) => {
+  const sentenceDelimiter = /\.(?!\s+If you do,)\s+(?=[A-Z])/u;
   const split =
     input.source === undefined
       ? undefined
-      : splitSourceByDelimiter(input.source, /\.\s+(?=[A-Z])/u, "sentence");
+      : splitSourceByDelimiter(input.source, sentenceDelimiter, "sentence");
   const segments =
     split?.segments.map((segment) => segment.text) ??
     input.text
-      .split(/\.\s+(?=[A-Z])/u)
+      .split(sentenceDelimiter)
       .map((segment) => segment.trim())
       .filter((segment) => segment.length > 0);
 

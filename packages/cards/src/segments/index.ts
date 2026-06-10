@@ -4,7 +4,10 @@ export {
 } from "./conditional-continuous.js";
 export { chooseOneExpressionParser } from "./choose-one.js";
 export { costedEffectExpressionParser } from "./costed-effect.js";
-export { optionalCostedEffectExpressionParser } from "./optional-costed-effect.js";
+export {
+  optionalCostedEffectExpressionParser,
+  optionalCostedEffectSegmentParser,
+} from "./optional-costed-effect.js";
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export { replacementInsteadExpressionParser } from "./replacement-effect.js";
 export {

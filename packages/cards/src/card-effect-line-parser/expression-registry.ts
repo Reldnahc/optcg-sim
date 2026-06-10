@@ -39,6 +39,7 @@ import {
   lookPlayFromTopExpressionParser,
   opponentEventOrBlockerActivatedExpressionParser,
   optionalCostedEffectExpressionParser,
+  optionalCostedEffectSegmentParser,
   playStageFromDeckExpressionParser,
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
@@ -74,10 +75,14 @@ const singleInstructionExpressionParser = (input: ParseInput) => {
   };
 };
 
-const generalExpressionParser = (input: ParseInput) =>
-  parseExpression(input, {
+function generalExpressionParser(input: ParseInput) {
+  return parseExpression(input, {
     connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
     segments: [
+      optionalCostedEffectSegmentParser({
+        instructions: instructionParsers,
+        expressions: costedExpressions,
+      }),
       conditionalExpressionSegmentParser({
         conditions: conditionParsers,
         connectors: [parseAndConnector],
@@ -95,6 +100,7 @@ const generalExpressionParser = (input: ParseInput) =>
       syntheticInstructionSegmentParser(instructionParsers),
     ],
   });
+}
 
 const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
   if (/\.\s+Then,\s+/u.test(input.text)) {
@@ -221,6 +227,7 @@ export const defaultRegistry = {
       expressions: [
         lookPlayFromTopExpressionParser,
         searchRevealExpressionParser,
+        generalExpressionParser,
       ],
     }),
     costedEffectExpressionParser({

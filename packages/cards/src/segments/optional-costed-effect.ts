@@ -8,6 +8,7 @@ import type {
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
+  SegmentParser,
 } from "../types.js";
 import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
@@ -69,6 +70,29 @@ export function optionalCostedEffectExpressionParser(options: {
   };
 }
 
+export function optionalCostedEffectSegmentParser(options: {
+  readonly instructions: readonly InstructionParser[];
+  readonly expressions?: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): SegmentParser {
+  const expressionParser = optionalCostedEffectExpressionParser(options);
+  return (input) => {
+    const parsed = expressionParser(input);
+    if (parsed === undefined || parsed.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: parsed.effect,
+      evidence: parsed.evidence,
+      ...(parsed.presentationSpans === undefined
+        ? {}
+        : { presentationSpans: parsed.presentationSpans }),
+    };
+  };
+}
+
 type OptionalCostSequenceWithSource = OptionalCostSequenceParseResult & {
   readonly presentationSpans?: ExpressionParseResult["presentationSpans"];
   readonly restSource?: SourceSlice;
@@ -77,6 +101,11 @@ type OptionalCostSequenceWithSource = OptionalCostSequenceParseResult & {
 function parseOptionalCostSequenceFromOptionalText(
   input: ParseInput,
 ): OptionalCostSequenceWithSource | undefined {
+  const sentenceCost = parseOptionalCostSequenceFromIfYouDoSentence(input);
+  if (sentenceCost !== undefined) {
+    return sentenceCost;
+  }
+
   const separatorIndex = input.text.indexOf(":");
   if (separatorIndex < 0) {
     return undefined;
@@ -124,6 +153,33 @@ function parseOptionalCostSequenceFromOptionalText(
             end: input.source.end,
           }),
         }),
+  };
+}
+
+function parseOptionalCostSequenceFromIfYouDoSentence(
+  input: ParseInput,
+): OptionalCostSequenceWithSource | undefined {
+  const match = /^(?<cost>.+?)\.\s+If you do,\s+(?<body>.+)$/iu.exec(
+    input.text,
+  );
+  const costText = match?.groups?.["cost"]?.trim();
+  const bodyText = match?.groups?.["body"]?.trim();
+  if (
+    costText === undefined ||
+    bodyText === undefined ||
+    !hasOptionalCostMarker(costText)
+  ) {
+    return undefined;
+  }
+
+  const cost = parseOptionalCostSequence({ text: costText });
+  if (cost === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...cost,
+    rest: bodyText,
   };
 }
 

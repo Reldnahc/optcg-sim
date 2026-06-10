@@ -145,6 +145,62 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses sentence-form optional top-or-bottom Life to hand cost before an if-you-do body", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may add 1 card from the top or bottom of your Life cards to your hand. If you do, your Leader gains +2000 power until the end of your opponent's next turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "moveCards",
+                  count: 1,
+                  chooser: "self",
+                  optional: true,
+                  from: {
+                    player: "self",
+                    zone: "life",
+                    position: "topOrBottom",
+                  },
+                  to: { player: "self", zone: "hand" },
+                  order: "chooserChoice",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "modifyPower",
+                target: { type: "myLeader" },
+                value: 2000,
+                duration: { type: "untilEndOfNextTurn", player: "opponent" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:optionalCostedEffect",
+        "cost:moveCards",
+        "position:top",
+        "position:bottom",
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "duration:opponentNextEndPhase",
+      ]),
+    );
+  });
+
   it("parses optional turn-Life-face-up as its own reusable cost primitive", () => {
     const result = parseCardEffectLine(
       "[On Play] You may turn 1 card from the top of your Life cards face-up: Draw 1 card.",

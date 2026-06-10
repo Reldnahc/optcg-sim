@@ -19,11 +19,21 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
 
   const cardinality = parseUpToCardinality(input);
   if (cardinality !== undefined) {
-    const target =
+    const targetCandidates = [
+      parseYourLeaderTarget({
+        text: stripLeadingOf(cardinality.rest),
+      }),
       parseYourLeaderOrCharacterCardsTarget({
         text: cardinality.rest,
-      }) ?? parseYourNamedCardsTarget({ text: cardinality.rest });
-    if (target?.target !== undefined) {
+      }),
+      parseYourNamedCardsTarget({ text: cardinality.rest }),
+    ];
+
+    for (const target of targetCandidates) {
+      if (target?.target === undefined) {
+        continue;
+      }
+
       const parsed = parseGainsPositivePower(target.target, target.rest);
       if (parsed !== undefined) {
         return {
@@ -87,4 +97,8 @@ function parseThisLeaderTarget(text: string):
     rest,
     evidence: ["target:thisCard"],
   };
+}
+
+function stripLeadingOf(text: string): string {
+  return text.replace(/^of\s+/iu, "");
 }

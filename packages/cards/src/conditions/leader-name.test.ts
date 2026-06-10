@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { parseConditionExpression } from "../segments/composed-expression.js";
+import { parseLifeCountCondition } from "./life-count.js";
 import { parseLeaderNameCondition } from "./leader-name.js";
 
 describe("leader name condition parser", () => {
@@ -151,6 +153,36 @@ describe("leader name condition parser", () => {
         "filter:name",
       ],
       rest: "",
+    });
+  });
+
+  it("does not swallow following and-conditions into a quoted leader type", () => {
+    expect(
+      parseConditionExpression(
+        `your Leader's type includes "Whitebeard Pirates" and you have 2 or less Life cards`,
+        [parseLifeCountCondition, parseLeaderNameCondition],
+      ),
+    ).toMatchObject({
+      condition: {
+        type: "and",
+        conditions: [
+          {
+            type: "hasCardInZone",
+            zone: "leaderArea",
+            player: "self",
+            filter: {
+              categories: ["leader"],
+              typesIncludeAny: ["Whitebeard Pirates"],
+            },
+          },
+          {
+            type: "lifeCount",
+            player: "self",
+            op: "lte",
+            value: 2,
+          },
+        ],
+      },
     });
   });
 });

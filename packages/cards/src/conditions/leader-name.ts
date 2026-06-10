@@ -65,14 +65,19 @@ export const parseLeaderNameCondition: ConditionParser = (
   }
 
   const typeIncludesMatch =
-    /^your Leader's type includes\s+(?:"(?<quotedType>[^"]+)"|(?<bareType>.+))$/i.exec(
+    /^your Leader's type includes\s+"(?<quotedType>[^"]+)"$/i.exec(
       input.text,
-    );
+    ) ??
+    /^your Leader's type includes\s+(?<bareType>[^",.]+)$/i.exec(input.text);
   const includedType = (
     typeIncludesMatch?.groups?.["quotedType"] ??
     typeIncludesMatch?.groups?.["bareType"]
   )?.trim();
-  if (includedType !== undefined && includedType.length > 0) {
+  if (
+    includedType !== undefined &&
+    includedType.length > 0 &&
+    !/\band\b/iu.test(includedType)
+  ) {
     return {
       condition: {
         type: "hasCardInZone",
