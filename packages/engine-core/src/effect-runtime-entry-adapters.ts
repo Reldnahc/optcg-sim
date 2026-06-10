@@ -5,7 +5,7 @@ import type {
 } from "@optcg/types";
 
 type EffectBlock = EffectDefinition["effects"][number];
-type AutoRuntimeTriggerType = Exclude<Trigger["type"], "anyOf">;
+export type AutoRuntimeTriggerType = Exclude<Trigger["type"], "anyOf">;
 
 export interface AutoRuntimeEntryAdapter {
   readonly category: "auto";

@@ -768,3 +768,19 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     }
   }
 });
+
+test("block support delegates sequence trigger admission to entry adapters", async () => {
+  const content = await readFile(
+    path.join(
+      repoRoot,
+      "packages/engine-core/src/effect-runtime-block-support.ts",
+    ),
+    "utf8",
+  );
+
+  assert.equal(
+    content.includes("isQueuedAutoSequenceTriggerType"),
+    false,
+    "block support must not maintain a second sequence trigger whitelist",
+  );
+});

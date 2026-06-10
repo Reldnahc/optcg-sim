@@ -19,6 +19,7 @@ import {
   toSingleEffectSequence,
   toSyntheticQueueEntry,
 } from "./support-normalization.js";
+import type { AutoRuntimeTriggerType } from "../effect-runtime-entry-adapters.js";
 import { isScopedActivatedReactionQueueEntry } from "../runtime/optional-activation/event-reaction-support.js";
 import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
 import {
@@ -515,25 +516,9 @@ export const isSupportedSequenceBlock = (
 ): effectBlock is SupportedSequenceBlock =>
   toSupportedSequenceBlock(entry, effectBlock, options) !== undefined;
 
-type QueuedAutoSequenceTriggerType =
-  | "onPlay"
-  | "whenAttacking"
-  | "onKO"
-  | "onOpponentAttack"
-  | "endOfYourTurn"
-  | "main"
-  | "trigger"
-  | "counter"
-  | "lifeRemoved"
-  | "damageDealt"
-  | "fieldRemoved"
-  | "cardPlayed"
-  | "handTrashedByEffect"
-  | "opponentActivated";
-
 const sequenceTriggerContainsType = (
   trigger: Trigger,
-  triggerType: QueuedAutoSequenceTriggerType,
+  triggerType: AutoRuntimeTriggerType,
 ): boolean =>
   trigger.type === "anyOf"
     ? trigger.triggers.some((child) =>
@@ -543,7 +528,7 @@ const sequenceTriggerContainsType = (
 
 export const isSupportedQueuedAutoSequenceForEntryPoint = (
   effect: EffectDefinition["effects"][number],
-  triggerType: QueuedAutoSequenceTriggerType,
+  triggerType: AutoRuntimeTriggerType,
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions = {},
 ): effect is SupportedSequenceBlock =>

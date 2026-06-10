@@ -1,8 +1,4 @@
-import type {
-  EffectDefinition,
-  SourcePresencePolicy,
-  Trigger,
-} from "@optcg/types";
+import type { EffectDefinition, SourcePresencePolicy } from "@optcg/types";
 
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedContinuousQueueEffect } from "./runtime/continuous/continuous.js";
@@ -25,43 +21,10 @@ export type { AutoRuntimeEntryAdapter } from "./effect-runtime-entry-adapters.js
 
 type EffectBlock = EffectDefinition["effects"][number];
 
-const isQueuedAutoSequenceTriggerType = (
-  triggerType: Trigger["type"],
-): triggerType is
-  | "onPlay"
-  | "whenAttacking"
-  | "onKO"
-  | "onOpponentAttack"
-  | "endOfYourTurn"
-  | "main"
-  | "trigger"
-  | "counter"
-  | "lifeRemoved"
-  | "damageDealt"
-  | "fieldRemoved"
-  | "cardPlayed"
-  | "handTrashedByEffect"
-  | "opponentActivated" =>
-  triggerType === "onPlay" ||
-  triggerType === "whenAttacking" ||
-  triggerType === "onKO" ||
-  triggerType === "onOpponentAttack" ||
-  triggerType === "endOfYourTurn" ||
-  triggerType === "main" ||
-  triggerType === "trigger" ||
-  triggerType === "counter" ||
-  triggerType === "lifeRemoved" ||
-  triggerType === "damageDealt" ||
-  triggerType === "fieldRemoved" ||
-  triggerType === "cardPlayed" ||
-  triggerType === "handTrashedByEffect" ||
-  triggerType === "opponentActivated";
-
 const isSupportedSequenceBody = (
   block: EffectBlock,
   adapter: AutoRuntimeEntryAdapter,
 ): boolean =>
-  isQueuedAutoSequenceTriggerType(adapter.triggerType) &&
   block.sourcePresencePolicy !== undefined &&
   isSupportedQueuedAutoSequenceForEntryPoint(
     block,
