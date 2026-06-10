@@ -1,8 +1,10 @@
 import type {
+  CardRef,
   EffectDefinition,
   EffectExecutionFrame,
   EffectQueueEntry,
   GameState,
+  PlayerId,
 } from "@optcg/types";
 
 import { appendEffectResolvedForCompletedSequence } from "../frame-events.js";
@@ -10,6 +12,7 @@ import { entryWithCompletedSequencePresentation } from "../completed-presentatio
 import { continueNoDecisionSegments } from "../runner.js";
 import { replaceQueueEntry, resolvingEntryFor } from "../segments.js";
 import { toSupportedSequenceBlock } from "../support.js";
+import { findCardInstance } from "../../effect-runtime-trigger-source-lookup.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -25,6 +28,81 @@ import type {
   SequenceFrameDecisionResult,
   SequenceFrameResumeResult,
 } from "./types.js";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const fieldObjectFromCardPlayedTrigger = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): CardRef | undefined => {
+  if (entry.triggerEventId === undefined) {
+    return undefined;
+  }
+  const event = state.eventJournal.find(
+    (candidate) => candidate.id === entry.triggerEventId,
+  );
+  if (
+    event?.type !== "cardPlayed" ||
+    event.visibility.type !== "public" ||
+    !isRecord(event.payload)
+  ) {
+    return undefined;
+  }
+  const playerId = event.payload["playerId"];
+  const instanceId = event.payload["instanceId"];
+  const cardId = event.payload["cardId"];
+  if (
+    typeof playerId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string"
+  ) {
+    return undefined;
+  }
+  const card = findCardInstance(state, playerId as PlayerId, instanceId);
+  if (
+    card === undefined ||
+    card.cardId !== cardId ||
+    (card.zone.zone !== "leaderArea" &&
+      card.zone.zone !== "characterArea" &&
+      card.zone.zone !== "stageArea")
+  ) {
+    return undefined;
+  }
+  return {
+    instanceId: card.instanceId,
+    cardId: card.cardId,
+    playerId: playerId as PlayerId,
+    zone: card.zone,
+  };
+};
+
+const initialSavedReferences = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): SegmentLedgers["savedReferences"] => {
+  const object = fieldObjectFromCardPlayedTrigger(state, entry);
+  if (object === undefined) {
+    return {};
+  }
+  return {
+    "trigger:cardPlayed": {
+      kind: "producedObjects",
+      objects: [
+        {
+          binding: {
+            family: "producedObjects",
+            saveResultAs: "trigger:cardPlayed",
+            objectIndex: 0,
+          },
+          capturedAtStateSeq: state.seq,
+          object,
+          visibility: "public",
+        },
+      ],
+    },
+  };
+};
 
 export const createSupportedSequenceFrameDecision = (
   state: GameState,
@@ -59,7 +137,10 @@ export const createSupportedSequenceFrameDecision = (
 
   const resolvingEntry = resolvingEntryFor(entry);
   nextState = replaceQueueEntry(nextState, resolvingEntry);
-  const ledgers: SegmentLedgers = { savedReferences: {}, segmentResults: {} };
+  const ledgers: SegmentLedgers = {
+    savedReferences: initialSavedReferences(nextState, resolvingEntry),
+    segmentResults: {},
+  };
 
   const run = continueNoDecisionSegments(
     nextState,
@@ -129,7 +210,10 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
     resolvingEntry,
     supportedBlock.effect,
     params.startIndex,
-    { savedReferences: {}, segmentResults: params.completedSegmentResults },
+    {
+      savedReferences: initialSavedReferences(params.state, resolvingEntry),
+      segmentResults: params.completedSegmentResults,
+    },
     createUnsupportedTrashDecision,
     false,
   );

@@ -77,6 +77,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "fieldRemoved") {
     return autoAdapter("fieldRemoved", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "cardPlayed") {
+    return autoAdapter("cardPlayed", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "handTrashedByEffect") {
     return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
   }
@@ -181,6 +184,7 @@ const isQueuedAutoSequenceTriggerType = (
   | "lifeRemoved"
   | "damageDealt"
   | "fieldRemoved"
+  | "cardPlayed"
   | "handTrashedByEffect"
   | "opponentActivated" =>
   triggerType === "onPlay" ||
@@ -194,6 +198,7 @@ const isQueuedAutoSequenceTriggerType = (
   triggerType === "lifeRemoved" ||
   triggerType === "damageDealt" ||
   triggerType === "fieldRemoved" ||
+  triggerType === "cardPlayed" ||
   triggerType === "handTrashedByEffect" ||
   triggerType === "opponentActivated";
 

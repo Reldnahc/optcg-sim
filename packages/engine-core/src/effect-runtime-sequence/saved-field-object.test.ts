@@ -903,16 +903,31 @@ test("sequence resume fail-closes sourceSegmentId mismatch and invalid objectInd
   );
 });
 
-test("unsupported saved-field-object continuous target use remains unsupported/fail-closed", () => {
-  const unsupportedState = sequenceQueueState({
+test("saved-field-object keyword grants materialize as exact-card continuous records", () => {
+  const { state } = sequenceQueueState({
     type: "sequence",
     effects: [
       {
-        id: "unsupported-saved-target-keyword",
+        id: "save-target",
         connector: "always",
+        saveResultAs: "savedTarget",
+        effect: {
+          type: "selectAllTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            visibility: "public",
+          },
+        },
+      },
+      {
+        id: "keyword-saved-target",
+        connector: "then",
         effect: {
           type: "giveKeyword",
-          keyword: "blocker",
+          keyword: "rush",
           duration: { type: "thisTurn" },
           target: {
             type: "savedFieldObject",
@@ -925,12 +940,41 @@ test("unsupported saved-field-object continuous target use remains unsupported/f
         },
       },
     ],
-  }).state;
-  const before = structuredClone(unsupportedState);
-  const result = processEffectRuntime(unsupportedState);
-  assert.deepEqual(result.state, before);
-  assert.deepEqual(result.events, []);
-  assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
+  });
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "target"),
+    zone: "characterArea",
+  });
+  const entry = must(state.effectQueue[0], "entry");
+  const savedObject = {
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    playerId: p2,
+    zone: target.zone,
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.continuousEffects.length, 1);
+  const record = must(result.state.continuousEffects[0], "continuous record");
+  assert.deepEqual(record.modifier, {
+    layer: "keywordAdd",
+    target: {
+      type: "exactCard",
+      card: savedObject,
+      binding: {
+        family: "selectedTargets",
+        saveResultAs: String(entry.effectBlockId),
+        objectIndex: 0,
+      },
+      createdAtStateSeq: record.createdAtStateSeq,
+    },
+    operation: { type: "addKeyword", keyword: "rush" },
+  });
 });
 
 test("unsupported saved-field-object KO target shape outside supported field zones fails closed", () => {

@@ -288,6 +288,7 @@ export const placePlayedCardResult = (params: {
         instanceId: sourceCard.instanceId,
         cardId: sourceCard.cardId,
         category: supported.category,
+        sourceZone,
       },
       { type: "public" },
     );
@@ -470,6 +471,7 @@ export const placePlayedCardResult = (params: {
       instanceId: sourceCard.instanceId,
       cardId: sourceCard.cardId,
       category: supported.category,
+      sourceZone,
     },
     { type: "public" },
   );

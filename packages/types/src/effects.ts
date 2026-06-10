@@ -57,9 +57,11 @@ export type Trigger =
       type: "cardPlayed";
       player: PlayerRef;
       filter?: CardFilter;
+      sourceZone?: Zone;
       sourceFilter?: CardFilter;
       anyOf?: Array<{
         filter?: CardFilter;
+        sourceZone?: Zone;
         sourceFilter?: CardFilter;
       }>;
     }

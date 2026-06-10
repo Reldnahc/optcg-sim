@@ -269,13 +269,20 @@ const resolvedMatchesFilter = (
 
 const eventCardPayload = (
   event: EngineEvent,
-): { playerId?: PlayerId; cardId?: CardInstance["cardId"] } | undefined => {
+):
+  | {
+      playerId?: PlayerId;
+      cardId?: CardInstance["cardId"];
+      sourceZone?: CardInstance["zone"]["zone"];
+    }
+  | undefined => {
   if (typeof event.payload !== "object" || event.payload === null) {
     return undefined;
   }
   const payload = event.payload as {
     playerId?: PlayerId;
     cardId?: CardInstance["cardId"];
+    sourceZone?: CardInstance["zone"]["zone"];
   };
   return payload;
 };
@@ -502,6 +509,12 @@ const isActivatedCardPlayedEvent = (
   if (
     payload?.playerId === undefined ||
     !playerRefMatchesSource(state, source, trigger.player, payload.playerId)
+  ) {
+    return false;
+  }
+  if (
+    trigger.sourceZone !== undefined &&
+    payload.sourceZone !== trigger.sourceZone
   ) {
     return false;
   }

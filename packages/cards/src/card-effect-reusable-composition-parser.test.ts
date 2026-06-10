@@ -86,6 +86,56 @@ describe("card effect reusable parser compositions", () => {
     );
   });
 
+  it("parses implicit played-from-trash reactions with that-character keyword grants", () => {
+    const result = parseCardEffectLine(
+      "When a {Land of Wano} type Character card is played from your trash, that Character gains [Rush] during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "cardPlayed",
+          player: "self",
+          sourceZone: "trash",
+          filter: {
+            categories: ["character"],
+            typesAny: ["Land of Wano"],
+          },
+        },
+        effect: {
+          type: "giveKeyword",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "producedObjects",
+              saveResultAs: "trigger:cardPlayed",
+            },
+            zone: "characterArea",
+            player: "self",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+          keyword: "rush",
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:cardPlayed",
+        "zone:trash",
+        "filter:type",
+        "filter:category:character",
+        "reference:thatCharacter",
+        "target:thatCharacter",
+        "instruction:giveKeyword",
+        "keyword:anySupported",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses activated life-removed wording as an optional event reaction", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",

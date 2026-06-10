@@ -2,6 +2,7 @@ import {
   parseThisCharacterTarget,
   parseYourLeaderTarget,
 } from "../../../targets/index.js";
+import { parseThatCharacterReference } from "../../../references/index.js";
 import type { InstructionParseResult } from "../../../types.js";
 import type { ContinuousInstructionParser } from "../shared.js";
 import { parseKeywordAndPositivePowerGrant } from "./keyword-and-power.js";
@@ -21,6 +22,7 @@ export const thisCharacterKeywordGrantPrimitive = {
 export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionParser =
   (input, context) =>
     parseLeaderKeywordGrant(input, context) ??
+    parseThatCharacterKeywordGrant(input.text, context) ??
     parseNamedCardsAndSelfKeywordGrant(input.text, context) ??
     parseSelfKeywordGrant(input.text, context);
 
@@ -76,6 +78,40 @@ const parseSelfKeywordGrant = (
   return parseKeywordGrantForTarget({
     target: { type: "self" },
     targetEvidence: target.evidence,
+    text: keywordText,
+    context,
+  });
+};
+
+const parseThatCharacterKeywordGrant = (
+  text: string,
+  context: Parameters<ContinuousInstructionParser>[1],
+): InstructionParseResult | undefined => {
+  const reference = parseThatCharacterReference({ text });
+  if (reference === undefined) {
+    return undefined;
+  }
+
+  const keywordText = /^gains\s+(?<rest>.*)$/i.exec(reference.rest)?.groups?.[
+    "rest"
+  ];
+  if (keywordText === undefined) {
+    return undefined;
+  }
+
+  return parseKeywordGrantForTarget({
+    target: {
+      type: "savedFieldObject",
+      binding: {
+        family: "producedObjects",
+        saveResultAs: "trigger:cardPlayed",
+      },
+      zone: "characterArea",
+      player: "self",
+      visibility: "publicOnly",
+      onFailure: "failClosed",
+    },
+    targetEvidence: reference.evidence,
     text: keywordText,
     context,
   });

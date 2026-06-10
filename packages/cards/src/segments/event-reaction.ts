@@ -375,6 +375,29 @@ const implicitReactionPredicate = (
     };
   }
 
+  const yourTrashCardPlayed =
+    /^(?:a|your) (?<filter>.+? Character(?: card)?) is played from your trash$/iu.exec(
+      normalized,
+    );
+  const yourTrashPlayedFilter = yourTrashCardPlayed?.groups?.["filter"];
+  if (yourTrashPlayedFilter !== undefined) {
+    const parsed = parseCharacterFilter(yourTrashPlayedFilter);
+    return {
+      trigger: {
+        type: "cardPlayed",
+        player: "self",
+        sourceZone: "trash",
+        filter: parsed.filter,
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:self",
+        "zone:trash",
+        ...parsed.evidence,
+      ],
+    };
+  }
+
   return undefined;
 };
 

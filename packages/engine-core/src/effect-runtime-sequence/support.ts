@@ -492,6 +492,7 @@ type QueuedAutoSequenceTriggerType =
   | "lifeRemoved"
   | "damageDealt"
   | "fieldRemoved"
+  | "cardPlayed"
   | "handTrashedByEffect"
   | "opponentActivated";
 

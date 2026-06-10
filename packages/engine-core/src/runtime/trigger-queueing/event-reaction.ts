@@ -33,7 +33,7 @@ import type {
   EventReactionTriggerQueueingFailureReason,
 } from "./core.js";
 
-type EventReactionTriggerType = "damageDealt" | "fieldRemoved";
+type EventReactionTriggerType = "damageDealt" | "fieldRemoved" | "cardPlayed";
 
 const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
   new Set(
@@ -48,7 +48,8 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
       return typeof payload.triggerEventId === "string" &&
         typeof payload.timingWindowId === "string" &&
         (payload.timingWindowId.endsWith(":damageDealt") ||
-          payload.timingWindowId.endsWith(":fieldRemoved"))
+          payload.timingWindowId.endsWith(":fieldRemoved") ||
+          payload.timingWindowId.endsWith(":cardPlayed"))
         ? [payload.triggerEventId]
         : [];
     }),
@@ -184,6 +185,66 @@ const matchesFieldRemovedTrigger = (
   );
 };
 
+const matchesCardPlayedTrigger = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "cardPlayed" }>,
+  event: EngineEvent,
+): boolean => {
+  if (event.type !== "cardPlayed" || event.visibility.type !== "public") {
+    return false;
+  }
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const payload = event.payload;
+  if (trigger.sourceFilter !== undefined) {
+    return false;
+  }
+  const playerId = payload["playerId"];
+  if (
+    typeof playerId !== "string" ||
+    !playerRefMatchesSource(state, source, trigger.player, playerId as PlayerId)
+  ) {
+    return false;
+  }
+  if (
+    trigger.sourceZone !== undefined &&
+    payload["sourceZone"] !== trigger.sourceZone
+  ) {
+    return false;
+  }
+  const cardId = payload["cardId"];
+  const resolved =
+    typeof cardId === "string"
+      ? state.cardManifest.cards[cardId as CardId]
+      : undefined;
+  if (
+    trigger.filter !== undefined &&
+    !cardMatchesSearchFilter(resolved, trigger.filter)
+  ) {
+    return false;
+  }
+  if (trigger.anyOf === undefined) {
+    return true;
+  }
+  return trigger.anyOf.some((branch) => {
+    if (branch.sourceFilter !== undefined) {
+      return false;
+    }
+    if (
+      branch.sourceZone !== undefined &&
+      payload["sourceZone"] !== branch.sourceZone
+    ) {
+      return false;
+    }
+    return (
+      branch.filter === undefined ||
+      cardMatchesSearchFilter(resolved, branch.filter)
+    );
+  });
+};
+
 const matchingTriggerTypes = (
   state: GameState,
   source: CardInstance,
@@ -211,6 +272,12 @@ const matchingTriggerTypes = (
   ) {
     return ["fieldRemoved"];
   }
+  if (
+    trigger.type === "cardPlayed" &&
+    matchesCardPlayedTrigger(state, source, trigger, event)
+  ) {
+    return ["cardPlayed"];
+  }
   return [];
 };
 
@@ -236,7 +303,9 @@ export const createEventReactionTriggerQueueing = (
       (event) =>
         isRecentRuntimeEvent(state, event) &&
         !alreadyQueued.has(String(event.id)) &&
-        (event.type === "damageDealt" || event.type === "cardMoved"),
+        (event.type === "damageDealt" ||
+          event.type === "cardMoved" ||
+          event.type === "cardPlayed"),
     );
     if (reactionEvents.length === 0) {
       return undefined;
