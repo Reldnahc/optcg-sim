@@ -132,6 +132,7 @@ export type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
 };
 export interface SequenceSupportOptions {
   allowSavedReferences?: boolean;
+  allowInitialTrashFromHand?: boolean;
   requirePositiveDrawCount?: boolean;
 }
 
@@ -223,7 +224,11 @@ const isSupportedConditionalSegment = (
       sourcePresencePolicy,
       effect: flattenedThen,
     },
-    { ...options, requirePositiveDrawCount: false },
+    {
+      ...options,
+      allowInitialTrashFromHand: true,
+      requirePositiveDrawCount: false,
+    },
   );
 };
 
@@ -250,6 +255,7 @@ export const toSupportedSequenceBlock = (
 ): SupportedSequenceBlock | undefined => {
   const flattenedBlock = toFlattenedSequenceBlock(effectBlock);
   const allowSavedReferences = options.allowSavedReferences ?? true;
+  const allowInitialTrashFromHand = options.allowInitialTrashFromHand ?? false;
   const requirePositiveDrawCount = options.requirePositiveDrawCount ?? false;
   const isSupportedCategoryForEntry =
     flattenedBlock?.category === "auto" ||
@@ -303,7 +309,7 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedTrashFromHandSegment(segment.effect)) {
-        if (index === 0) {
+        if (index === 0 && !allowInitialTrashFromHand) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
