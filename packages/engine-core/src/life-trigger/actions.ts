@@ -39,6 +39,7 @@ import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-c
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "../effect-runtime-sequence/support.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
+import { lifeTriggerQueueOrigin } from "./queue-origin.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
   triggerText !== undefined && triggerText.trim().length > 0;
@@ -653,6 +654,7 @@ const applyActivatedTriggerResponse = (
       timingWindowId: `timing-window:life-trigger:${String(
         decision.id,
       )}` as EffectQueueEntry["timingWindowId"],
+      queueOrigin: lifeTriggerQueueOrigin,
       generation: 0,
       controllerId: decision.playerId,
       source,

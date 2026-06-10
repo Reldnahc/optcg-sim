@@ -24,6 +24,7 @@ import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/c
 import { queueDelayedEndOfTurnEffects } from "./runtime/trigger-queueing/delayed-effects.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime-definition-lookup.js";
+import { isLifeTriggerQueueEntry } from "./life-trigger/queue-origin.js";
 
 export {
   resolveImplementedDslEffectDefinition,
@@ -236,10 +237,7 @@ const isSupportedDamageDeferredEffectQueueEntry = (
 ): boolean => {
   if (
     entry.causedBy.type !== "effect" ||
-    !String(entry.causedBy.queueEntryId).startsWith(
-      "queue-entry:life-trigger:",
-    ) ||
-    !String(entry.timingWindowId).startsWith("timing-window:life-trigger:") ||
+    !isLifeTriggerQueueEntry(entry) ||
     entry.triggerEventId === undefined ||
     entry.generation <= 0 ||
     !isPublicFieldZone(entry.source.zone) ||

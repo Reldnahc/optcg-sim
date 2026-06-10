@@ -129,7 +129,8 @@ export interface EffectQueueEntry {
 
 export type EffectQueueOrigin =
   | { type: "activateMain" }
-  | { type: "activatedReaction" };
+  | { type: "activatedReaction" }
+  | { type: "lifeTrigger" };
 
 export interface DelayedEffectRecord {
   id: string;

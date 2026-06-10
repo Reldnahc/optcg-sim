@@ -6,6 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { toStateSeq } from "../action-results.js";
+import { isLifeTriggerQueueEntry } from "../life-trigger/queue-origin.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 
 const isLifeTriggerResolutionEntry = (
@@ -18,10 +19,7 @@ const isLifeTriggerResolutionEntry = (
   if (!isNoZoneSource) {
     return false;
   }
-  if (
-    !String(entry.id).startsWith("queue-entry:life-trigger:") ||
-    !String(entry.timingWindowId).startsWith("timing-window:life-trigger:")
-  ) {
+  if (!isLifeTriggerQueueEntry(entry)) {
     return false;
   }
   if (entry.causedBy.type !== "decision") {

@@ -41,6 +41,10 @@ import {
   activeEffectTextPresentationForEffectBlock,
   effectQueueEntryPresentationForEffectBlock,
 } from "../effect-presentation.js";
+import {
+  isLifeTriggerQueueEntry,
+  lifeTriggerQueueOrigin,
+} from "../../life-trigger/queue-origin.js";
 
 export const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
@@ -378,6 +382,9 @@ export const createKOTriggerQueueing = (
           id: queueId,
           state: "pending",
           timingWindowId: resolvedEntry.timingWindowId,
+          ...(isLifeTriggerQueueEntry(resolvedEntry)
+            ? { queueOrigin: lifeTriggerQueueOrigin }
+            : {}),
           generation: resolvedEntry.generation + 1,
           controllerId: source.controller,
           source: entrySource,
@@ -410,10 +417,7 @@ export const createKOTriggerQueueing = (
     const shouldDeferForDamageProcess =
       battle?.damageProcess?.type === "multipleDamage" &&
       battle.damageProcess.remainingDamagePoints > 0 &&
-      String(resolvedEntry.id).startsWith("queue-entry:life-trigger:") &&
-      String(resolvedEntry.timingWindowId).startsWith(
-        "timing-window:life-trigger:",
-      ) &&
+      isLifeTriggerQueueEntry(resolvedEntry) &&
       resolvedEntry.causedBy.type === "decision" &&
       (resolvedEntry.source.zone?.zone === "noZone" ||
         resolvedEntry.sourceSnapshot.zone.zone === "noZone");
