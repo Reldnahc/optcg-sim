@@ -33,6 +33,7 @@ import {
   releaseDamageDeferredEffectQueue,
   resolveImplementedDslEffectDefinition,
 } from "../effect-runtime.js";
+import { autoRuntimeEntryAdapterForTriggerType } from "../effect-runtime-block-support.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "../effect-runtime-sequence/support.js";
@@ -76,7 +77,7 @@ const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
   if (
     effect.type === "activateReferencedEffect" &&
     effect.source.type === "triggerCard" &&
-    (effect.trigger.type === "main" || effect.trigger.type === "onPlay")
+    autoRuntimeEntryAdapterForTriggerType(effect.trigger.type) !== undefined
   ) {
     return true;
   }

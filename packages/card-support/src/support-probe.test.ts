@@ -73,6 +73,19 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it("reports engine runtime support for trigger activating this card's On K.O. effect", async () => {
+    const report = await createSupportProbeReport({
+      text: "[Trigger] Activate this card's [On K.O.] effect.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+    expect(report.lines).toContain(
+      "- parser body:activateReferencedEffect spans span:body",
+    );
+  });
+
   it("reports engine runtime support for opponent-turn named-card base power", async () => {
     const report = await createSupportProbeReport({
       text: "[Opponent's Turn] All of your [Ohm] cards' base power and this Character's base power become 6000.",

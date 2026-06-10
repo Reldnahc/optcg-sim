@@ -122,3 +122,37 @@ test("auto runtime admission composes supported conditions with supported body p
     true,
   );
 });
+
+test("auto runtime admission accepts referenced non-continuous auto entry triggers", () => {
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect: {
+          type: "activateReferencedEffect",
+          source: { type: "triggerCard" },
+          trigger: { type: "onKO" },
+        },
+        sourcePresencePolicy: "noSourceRequired",
+        trigger: { type: "trigger" },
+      }),
+      autoAdapter("trigger", "noSourceRequired"),
+    ),
+    true,
+  );
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect: {
+          type: "activateReferencedEffect",
+          source: { type: "triggerCard" },
+          trigger: { type: "permanent" },
+        },
+        sourcePresencePolicy: "noSourceRequired",
+        trigger: { type: "trigger" },
+      }),
+      autoAdapter("trigger", "noSourceRequired"),
+    ),
+    false,
+  );
+});

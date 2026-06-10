@@ -11,6 +11,7 @@ import {
   appendEvent,
   toStateSeq,
 } from "./action-results.js";
+import { autoRuntimeEntryAdapterForTriggerType } from "./effect-runtime-block-support.js";
 import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 import type { ResolveImplementedDslEffectDefinition } from "./effect-runtime-queue/target-decisions.js";
 import { effectQueueEntryPresentationForEffectBlock } from "./runtime/effect-presentation.js";
@@ -22,10 +23,8 @@ type ReferencedActivationEffectBlock = EffectDefinition["effects"][number] & {
   >;
 };
 
-const isSupportedReferencedTriggerType = (
-  trigger: Trigger,
-): trigger is Extract<Trigger, { type: "main" | "onPlay" }> =>
-  trigger.type === "main" || trigger.type === "onPlay";
+const isSupportedReferencedTriggerType = (trigger: Trigger): boolean =>
+  autoRuntimeEntryAdapterForTriggerType(trigger.type) !== undefined;
 
 const isSupportedActivateReferencedEntryTrigger = (
   effect: EffectDefinition["effects"][number],
@@ -77,6 +76,7 @@ const resolveReferencedEffects = (
   })[] = [];
   for (const effect of lookup.definition.effects) {
     if (
+      effect.id !== triggerEffect.id &&
       isSupportedReferencedEffectBlock(effect) &&
       effect.trigger.type === triggerEffect.effect.trigger.type
     ) {

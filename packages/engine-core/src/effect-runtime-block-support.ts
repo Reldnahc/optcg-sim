@@ -25,6 +25,69 @@ export interface AutoRuntimeEntryAdapter {
   readonly triggerType: Trigger["type"];
 }
 
+const autoAdapter = (
+  triggerType: AutoRuntimeEntryAdapter["triggerType"],
+  sourcePresencePolicies: readonly SourcePresencePolicy[],
+): AutoRuntimeEntryAdapter => ({
+  category: "auto",
+  sourcePresencePolicies,
+  triggerType,
+});
+
+export const autoRuntimeEntryAdapterForTriggerType = (
+  triggerType: Trigger["type"],
+): AutoRuntimeEntryAdapter | undefined => {
+  if (triggerType === "onPlay") {
+    return autoAdapter("onPlay", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "whenAttacking") {
+    return autoAdapter("whenAttacking", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "onOpponentAttack") {
+    return autoAdapter("onOpponentAttack", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "onKO") {
+    return autoAdapter("onKO", [
+      "resolveFromDestinationZone",
+      "resolveFromLastKnownInformation",
+    ]);
+  }
+  if (triggerType === "endOfYourTurn") {
+    return autoAdapter("endOfYourTurn", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "main") {
+    return autoAdapter("main", [
+      "noSourceRequired",
+      "resolveFromDestinationZone",
+    ]);
+  }
+  if (triggerType === "trigger") {
+    return autoAdapter("trigger", ["noSourceRequired"]);
+  }
+  if (triggerType === "counter") {
+    return autoAdapter("counter", ["resolveFromDestinationZone"]);
+  }
+  if (triggerType === "lifeRemoved") {
+    return autoAdapter("lifeRemoved", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "handTrashedByEffect") {
+    return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "opponentActivated") {
+    return autoAdapter("opponentActivated", ["mustRemainInSameZone"]);
+  }
+  return undefined;
+};
+
+export const autoRuntimeEntryAdapterForBlock = (
+  block: EffectBlock,
+): AutoRuntimeEntryAdapter | undefined => {
+  if (block.sourcePresencePolicy === undefined) {
+    return undefined;
+  }
+  return autoRuntimeEntryAdapterForTriggerType(block.trigger.type);
+};
+
 const isSupportedDrawUpToBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "drawUpTo" }> =>
@@ -38,7 +101,7 @@ const isSupportedActivateReferencedEffectBody = (
 ): effect is Extract<Effect, { type: "activateReferencedEffect" }> =>
   effect.type === "activateReferencedEffect" &&
   effect.source.type === "triggerCard" &&
-  (effect.trigger.type === "main" || effect.trigger.type === "onPlay");
+  autoRuntimeEntryAdapterForTriggerType(effect.trigger.type) !== undefined;
 
 const isSupportedPlaySourceBody = (
   effect: Effect,

@@ -230,3 +230,67 @@ test("activated life trigger can activate this card's supported Main search effe
     true,
   );
 });
+
+test("activated life trigger can activate this card's supported On K.O. effect", () => {
+  const lifeCardId = toCardId("trigger-activate-on-ko-draw");
+  const triggerDefinition = supportedLifeTriggerDefinition(
+    lifeCardId,
+    {
+      type: "activateReferencedEffect",
+      source: { type: "triggerCard" },
+      trigger: { type: "onKO" },
+    },
+    "noSourceRequired",
+  );
+  const triggerEffect = must(
+    triggerDefinition.effects[0],
+    "activate referenced On K.O. trigger effect",
+  );
+  const definition: EffectDefinition = {
+    ...triggerDefinition,
+    effects: [
+      triggerEffect,
+      {
+        ...triggerEffect,
+        id: `${String(lifeCardId)}:on-ko-draw` as EffectBlock["id"],
+        trigger: { type: "onKO" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "draw",
+          player: "self",
+          count: 1,
+        },
+      },
+    ],
+  };
+  const { state, lifeInstanceId } = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-activate-on-ko-draw",
+    triggerText: "[Trigger] Activate this card's [On K.O.] effect.",
+    definition,
+  });
+  const decision = must(state.pendingDecision, "life trigger decision");
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.state.players[p2]?.trash.some(
+      (card) => card.instanceId === lifeInstanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        JSON.stringify(event.payload).includes(
+          `${String(lifeCardId)}:on-ko-draw`,
+        ),
+    ),
+    true,
+  );
+});

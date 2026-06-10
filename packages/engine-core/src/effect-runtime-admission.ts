@@ -9,8 +9,8 @@ import type {
 import { isSupportedActivateMainRuntimeEffectBlock } from "./runtime/optional-activation/activate-main.js";
 import { isSupportedActivatedReactionEffect } from "./runtime/optional-activation/event-reaction.js";
 import {
+  autoRuntimeEntryAdapterForBlock,
   isSupportedAutoRuntimeEffectBlock,
-  type AutoRuntimeEntryAdapter,
 } from "./effect-runtime-block-support.js";
 import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
 import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
@@ -36,7 +36,7 @@ export const evaluateEffectBlockRuntimeSupport = (
           );
     }
 
-    const adapter = autoAdapterFor(block);
+    const adapter = autoRuntimeEntryAdapterForBlock(block);
     if (adapter === undefined) {
       return unsupportedEnvelope(block);
     }
@@ -73,64 +73,6 @@ export const evaluateEffectBlockRuntimeSupport = (
 
   return unsupportedEnvelope(block);
 };
-
-const autoAdapterFor = (
-  block: EffectBlock,
-): AutoRuntimeEntryAdapter | undefined => {
-  if (block.sourcePresencePolicy === undefined) {
-    return undefined;
-  }
-
-  if (block.trigger.type === "onPlay") {
-    return autoAdapter("onPlay", ["mustRemainInSameZone"]);
-  }
-  if (block.trigger.type === "whenAttacking") {
-    return autoAdapter("whenAttacking", ["mustRemainInSameZone"]);
-  }
-  if (block.trigger.type === "onOpponentAttack") {
-    return autoAdapter("onOpponentAttack", ["mustRemainInSameZone"]);
-  }
-  if (block.trigger.type === "onKO") {
-    return autoAdapter("onKO", [
-      "resolveFromDestinationZone",
-      "resolveFromLastKnownInformation",
-    ]);
-  }
-  if (block.trigger.type === "endOfYourTurn") {
-    return autoAdapter("endOfYourTurn", ["mustRemainInSameZone"]);
-  }
-  if (block.trigger.type === "main") {
-    return autoAdapter("main", [
-      "noSourceRequired",
-      "resolveFromDestinationZone",
-    ]);
-  }
-  if (block.trigger.type === "trigger") {
-    return autoAdapter("trigger", ["noSourceRequired"]);
-  }
-  if (block.trigger.type === "counter") {
-    return autoAdapter("counter", ["resolveFromDestinationZone"]);
-  }
-  if (block.trigger.type === "lifeRemoved") {
-    return autoAdapter("lifeRemoved", ["mustRemainInSameZone"]);
-  }
-  if (block.trigger.type === "handTrashedByEffect") {
-    return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
-  }
-  if (block.trigger.type === "opponentActivated") {
-    return autoAdapter("opponentActivated", ["mustRemainInSameZone"]);
-  }
-  return undefined;
-};
-
-const autoAdapter = (
-  triggerType: AutoRuntimeEntryAdapter["triggerType"],
-  sourcePresencePolicies: readonly EffectQueueEntry["sourcePresencePolicy"][],
-): AutoRuntimeEntryAdapter => ({
-  category: "auto",
-  sourcePresencePolicies,
-  triggerType,
-});
 
 const supportedBlockReport = (block: EffectBlock): RuntimeSupportReport =>
   createRuntimeSupportReport([
