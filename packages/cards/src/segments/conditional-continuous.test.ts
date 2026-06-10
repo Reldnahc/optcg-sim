@@ -105,4 +105,33 @@ describe("conditional continuous expression parser", () => {
       },
     });
   });
+
+  it("keeps default-auto action entries conditional instead of treating them as permanent", () => {
+    const result = parser({
+      text: "If your opponent has a Character with 8000 power or more, this Character gains [Rush: Character] during this turn.",
+      entryPoint: {
+        type: "entryPoint",
+        trigger: { type: "main" },
+      },
+    });
+
+    expect(result).toMatchObject({
+      blockPatch: {
+        condition: {
+          type: "fieldCount",
+          player: "opponent",
+          op: "gte",
+          value: 1,
+          filter: {
+            categories: ["character"],
+          },
+        },
+      },
+      effect: {
+        type: "giveKeyword",
+        keyword: "rushCharacter",
+        duration: { type: "thisTurn" },
+      },
+    });
+  });
 });

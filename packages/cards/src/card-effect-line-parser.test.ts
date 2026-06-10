@@ -869,6 +869,54 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("keeps Main conditional set-base-power as an action block", () => {
+    const result = parseCardEffectLine(
+      "[Main] If you have 10 DON!! cards on your field, all of your [Prisoner of Impel Down] cards' base power becomes 7000 during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        condition: {
+          type: "fieldCount",
+          player: "self",
+          filter: { categories: ["don"] },
+          op: "eq",
+          value: 10,
+        },
+        effect: {
+          type: "setBasePower",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: {
+              categories: ["character"],
+              names: ["Prisoner of Impel Down"],
+            },
+          },
+          value: 7000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "expression:conditionalContinuous",
+        "condition:donFieldCount",
+        "condition:comparator:eq",
+        "instruction:setBasePower",
+        "cardinality:all",
+        "filter:name",
+        "filter:category:character",
+        "value:basePower:positiveInteger",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses optional single hand-trash cost into reusable selected-target K.O. composition", () => {
     const result = parseCardEffectLine(
       "[On Play] You may trash 1 card from your hand: K.O. up to 1 of your opponent's Characters with a base cost of 5 or less.",

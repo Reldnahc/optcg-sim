@@ -27,7 +27,7 @@ export function conditionalContinuousExpressionParser(options: {
     const { condition, thenText: bodyText } = parsed;
 
     const isPermanentEntry =
-      input.entryPoint?.category === undefined ||
+      input.entryPoint === undefined ||
       input.entryPoint.category === "permanent";
     const combinedCondition = combineConditions(
       input.entryPoint?.condition,
