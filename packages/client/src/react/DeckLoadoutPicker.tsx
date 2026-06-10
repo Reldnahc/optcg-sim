@@ -6,6 +6,7 @@ export interface DeckLoadoutPickerProps {
   readonly disabled?: boolean | undefined;
   readonly locked?: boolean | undefined;
   readonly loadouts: readonly AccountLoadout[];
+  readonly requirePlayableValidation?: boolean | undefined;
   readonly selectedLoadoutId: string;
   readonly onChange: (loadoutId: string) => void;
 }
@@ -89,8 +90,12 @@ const loadoutMeta = (loadout: AccountLoadout | undefined): string =>
             ]),
       ].join(" / ");
 
-const isSelectableLoadout = (loadout: AccountLoadout | undefined): boolean =>
-  loadout?.validation?.status === "playable";
+const isSelectableLoadout = (
+  loadout: AccountLoadout | undefined,
+  requirePlayableValidation: boolean,
+): boolean =>
+  loadout !== undefined &&
+  (!requirePlayableValidation || loadout.validation?.status === "playable");
 
 const LeaderCrop = ({
   loadout,
@@ -116,6 +121,7 @@ export const DeckLoadoutPicker = ({
   disabled = false,
   locked = false,
   loadouts,
+  requirePlayableValidation = true,
   selectedLoadoutId,
   onChange,
 }: DeckLoadoutPickerProps): React.JSX.Element => {
@@ -242,10 +248,20 @@ export const DeckLoadoutPicker = ({
                           } ${loadout.favorite ? "is-favorite" : ""}`}
                           type="button"
                           disabled={
-                            disabled || closed || !isSelectableLoadout(loadout)
+                            disabled ||
+                            closed ||
+                            !isSelectableLoadout(
+                              loadout,
+                              requirePlayableValidation,
+                            )
                           }
                           onClick={() => {
-                            if (!isSelectableLoadout(loadout)) {
+                            if (
+                              !isSelectableLoadout(
+                                loadout,
+                                requirePlayableValidation,
+                              )
+                            ) {
                               return;
                             }
                             onChange(loadout.id);

@@ -82,3 +82,130 @@
   background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.48);
 }
+
+.play-selector {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.play-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.play-mode-tab {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.play-mode-tab.is-active,
+.play-mode-tab:hover {
+  border-color: rgba(79, 211, 122, 0.78);
+  background: rgba(79, 211, 122, 0.12);
+  color: #ffffff;
+}
+
+.play-mode-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.play-selector-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.play-selector-field {
+  display: grid;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.play-selector-field select {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.9);
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.play-selector-status {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+}
+
+.queue-loadout-section {
+  display: grid;
+  gap: 12px;
+}
+
+.queue-loadout-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.queue-loadout-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 17px;
+}
+
+.queue-loadout-header p {
+  max-width: 620px;
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.play-selector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.play-selector-actions .shell-card-action {
+  border: 0;
+}
+
+@media (max-width: 720px) {
+  .play-mode-tabs,
+  .play-selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-loadout-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

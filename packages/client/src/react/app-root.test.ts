@@ -13,6 +13,7 @@ describe("client app root", () => {
 
     assert.match(html, /Poneglyph Sim/u);
     assert.match(html, /Make Lobby/u);
+    assert.match(html, /Private Lobby/u);
     assert.doesNotMatch(html, /Go to Play/u);
   });
 

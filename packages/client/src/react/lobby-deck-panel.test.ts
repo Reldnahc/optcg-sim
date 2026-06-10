@@ -7,6 +7,7 @@ import type { PlayerId } from "@optcg/types";
 
 import type { LobbyClientState } from "../controller.js";
 import type { AccountLoadout } from "../account-client.js";
+import { DeckLoadoutPicker } from "./DeckLoadoutPicker.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 
 const lobbyState = ({
@@ -437,9 +438,27 @@ describe("lobby deck panel", () => {
       panelSource,
       /selectedLoadout\?\.validation\?\.status === "playable"/u,
     );
+    assert.match(pickerSource, /requirePlayableValidation = true/u);
     assert.match(
       pickerSource,
-      /loadout\?\.validation\?\.status === "playable"/u,
+      /!requirePlayableValidation \|\| loadout\.validation\?\.status === "playable"/u,
+    );
+  });
+
+  test("deck loadout picker can be reused for disabled queue preselection", () => {
+    const html = renderToStaticMarkup(
+      createElement(DeckLoadoutPicker, {
+        loadouts,
+        requirePlayableValidation: false,
+        selectedLoadoutId: "loadout-1",
+        onChange: () => undefined,
+      }),
+    );
+
+    assert.match(html, /deck-loadout-option[\s\S]*Enel Yellow/u);
+    assert.doesNotMatch(
+      html,
+      /deck-loadout-option[^>]*disabled=""[\s\S]*Enel Yellow/u,
     );
   });
 });
