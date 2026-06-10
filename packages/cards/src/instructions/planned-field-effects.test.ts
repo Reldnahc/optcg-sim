@@ -6,6 +6,7 @@ import {
   preventOpponentCharactersAttackPrimitive,
   preventThatCharacterRefreshPrimitive,
   parsePreventOpponentCharactersAttackInstruction,
+  parsePreventOpponentCharactersBlockerActivationInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -478,6 +479,55 @@ describe("planned field-effect instruction parsers", () => {
         "filter:state:active",
         "filter:category:character",
         "duration:thisTurn",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses direct opponent Character Blocker activation restrictions", () => {
+    expect(
+      parsePreventOpponentCharactersBlockerActivationInstruction({
+        text: "Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:thatCharacter",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "preventBlockerActivation",
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:preventBlockerActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "duration:thisTurn",
+        "activation:blocker",
         "composition:selectThenApply",
       ],
       rest: "",

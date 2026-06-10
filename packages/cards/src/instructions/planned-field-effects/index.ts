@@ -27,6 +27,7 @@ export {
   restOpponentLeaderOrCharactersPrimitive,
 } from "./rest.js";
 export {
+  parsePreventOpponentCharactersBlockerActivationInstruction,
   preventSelectedAttackerBlockerActivationPrimitive,
   selectPowerThenPreventBlockerActivationExpressionParser,
 } from "./blocker-restriction.js";

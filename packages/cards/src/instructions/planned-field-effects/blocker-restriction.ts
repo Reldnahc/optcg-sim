@@ -4,8 +4,15 @@ import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseThisTurnDuration } from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import { sourceSpan } from "../../source-slices.js";
-import type { ExpressionParseResult, ParseInput } from "../../types.js";
+import { parseOpponentCharactersTarget } from "../../targets/index.js";
+import type {
+  ExpressionParseResult,
+  InstructionParser,
+  ParseInput,
+} from "../../types.js";
 import {
+  thatCharacterSavedTarget,
+  thatCharacterSelectionId,
   selectedBlockerRestrictedAttackerId,
   selectedBlockerRestrictedTarget,
 } from "./shared.js";
@@ -18,6 +25,80 @@ export const preventSelectedAttackerBlockerActivationPrimitive = {
     "activation:blocker",
   ],
 } as const;
+
+export const parsePreventOpponentCharactersBlockerActivationInstruction: InstructionParser =
+  (input) => {
+    const cardinality = parseUpToCardinality({ text: input.text });
+    if (cardinality === undefined) {
+      return undefined;
+    }
+
+    const target = parseOpponentCharactersTarget({ text: cardinality.rest });
+    if (target === undefined) {
+      return undefined;
+    }
+
+    const durationText = /^cannot activate \[Blocker\]\s+(?<rest>.*)$/i.exec(
+      target.rest,
+    )?.groups?.["rest"];
+    if (durationText === undefined) {
+      return undefined;
+    }
+
+    const duration = parseThisTurnDuration({ text: durationText });
+    if (
+      duration === undefined ||
+      duration.duration === undefined ||
+      duration.rest.length > 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:blocker-restricted-character",
+            connector: "always",
+            saveResultAs: thatCharacterSelectionId,
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                filter: target.filter ?? { categories: ["character"] },
+                min: cardinality.cardinality.min,
+                max: cardinality.cardinality.max,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "preventBlockerActivation",
+              target: thatCharacterSavedTarget,
+              duration: duration.duration,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:preventBlockerActivation",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...target.evidence,
+        ...duration.evidence,
+        "activation:blocker",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  };
 
 export const selectPowerThenPreventBlockerActivationExpressionParser = (
   input: ParseInput,

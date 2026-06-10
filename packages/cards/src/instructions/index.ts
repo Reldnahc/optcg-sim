@@ -42,6 +42,7 @@ export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export { parseSelectFromTrashChoiceInstruction } from "./select-from-trash-choice.js";
 export {
   parsePreventOpponentCharactersAttackInstruction,
+  parsePreventOpponentCharactersBlockerActivationInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,

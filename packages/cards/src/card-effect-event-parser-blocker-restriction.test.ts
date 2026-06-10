@@ -3,6 +3,81 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect event parser blocker restrictions", () => {
+  it("parses costed Activate Main opponent Character Blocker activation restriction", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] DON!! −1: Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "returnDon",
+                  count: 1,
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "selected:thatCharacter",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        timing: "onResolution",
+                        chooser: "self",
+                        player: "opponent",
+                        zone: "characterArea",
+                        min: 0,
+                        max: 1,
+                        allowFewerIfUnavailable: true,
+                        visibility: "public",
+                        filter: { categories: ["character"] },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "preventBlockerActivation",
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "marker:oncePerTurn",
+        "cost:returnDon",
+        "instruction:preventBlockerActivation",
+        "target:opponentCharacters",
+        "duration:thisTurn",
+        "activation:blocker",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
+
   it("parses Main Event selected attacker power and Blocker activation restriction as saved-target primitives", () => {
     const result = parseCardEffectLine(
       "[Main] Select up to 1 of your {The Seven Warlords of the Sea} type Leader or Character cards and that card gains +2000 power during this turn. Then, if the selected card attacks during this turn, your opponent cannot activate [Blocker].",
