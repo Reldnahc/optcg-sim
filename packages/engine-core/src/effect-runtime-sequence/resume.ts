@@ -65,6 +65,9 @@ export const findSequenceEffectBlock = (
   state: GameState,
   entry: EffectQueueEntry,
 ): EffectDefinition["effects"][number] | undefined => {
+  if (entry.effectBlockOverride !== undefined) {
+    return entry.effectBlockOverride;
+  }
   const card = state.cardManifest.cards[entry.source.cardId];
   const definitionId = card?.support.effectDefinitionId;
   if (

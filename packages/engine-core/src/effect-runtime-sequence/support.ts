@@ -81,6 +81,7 @@ import {
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
+type DelayedEffect = Extract<Effect, { type: "delayed" }>;
 type ConditionalSequenceEffect = Extract<Effect, { type: "conditional" }> & {
   then: SequenceEffect;
 };
@@ -117,6 +118,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | ConditionalContinuousEffect
     | ConditionalSequenceEffect
     | ConditionalEffect
+    | DelayedEffect
     | Extract<Effect, { type: "choice" }>
     | KoEffect;
 };
@@ -251,6 +253,22 @@ const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
   isActivateMainAreaZone(entry.source.zone) &&
   isActivateMainAreaZone(entry.sourceSnapshot.zone);
 
+const isSupportedDelayedSegment = (
+  effect: DelayedEffect,
+  options: SequenceSupportOptions,
+): boolean =>
+  isSupportedSequenceBlock(
+    toSyntheticQueueEntry("noSourceRequired"),
+    {
+      id: "effect:delayed-child" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "endOfYourTurn" },
+      sourcePresencePolicy: "noSourceRequired",
+      effect: effect.effect,
+    },
+    options,
+  );
+
 export const toSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
@@ -357,6 +375,9 @@ export const toSupportedSequenceBlock = (
         }
         supportState.hasPendingDecisionSegment = true;
         return true;
+      }
+      if (segment.effect.type === "delayed") {
+        return isSupportedDelayedSegment(segment.effect, options);
       }
       if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;

@@ -231,9 +231,12 @@ test("sequence resumes from trash-from-hand before accepting later rested DON ta
   const { state } = sequenceQueueState(drawTrashThenSelectRestedDonSequence());
   const p1State = must(state.players[p1], "p1");
   const source = must(p1State.characters[0], "source");
-  p1State.hand = p1State.hand.filter(
-    (card) => card.instanceId !== source.instanceId,
-  );
+  p1State.hand = p1State.hand
+    .filter((card) => card.instanceId !== source.instanceId)
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p1, slot: "hand", index },
+    }));
   const restedDon = must(p1State.donDeck[0], "rested don");
   p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
     ...card,
@@ -301,6 +304,86 @@ test("sequence resumes from trash-from-hand before accepting later rested DON ta
     (card) => card.instanceId === restedDon.instanceId,
   );
   assert.equal(afterDon?.state, "active");
+});
+
+test("delayed end-of-turn sequence schedules DON activation and selects DON at end of turn", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "delayed",
+          timing: { type: "endOfTurn", turn: "current" },
+          effect: selectRestedDonThenActivateSavedTargetSequence(5),
+        } as unknown as Effect,
+      },
+    ],
+  });
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source");
+  p1State.hand = p1State.hand
+    .filter((card) => card.instanceId !== source.instanceId)
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p1, slot: "hand", index },
+    }));
+  const don = must(p1State.donDeck[0], "DON");
+  p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = [
+    {
+      ...don,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  state.cardManifest.cards[don.cardId] = resolvedCard({
+    cardId: don.cardId,
+    category: "don",
+  });
+
+  const scheduled = processEffectRuntime(state);
+
+  assert.equal(scheduled.errors, undefined);
+  assert.equal(scheduled.state.pendingDecision, undefined);
+  assert.equal(scheduled.state.effectQueue.length, 0);
+  assert.equal(scheduled.state.players[p1]?.costArea[0]?.state, "active");
+  assert.equal(scheduled.state.delayedEffects?.length, 1);
+
+  const beforeEnd = scheduled.state;
+  beforeEnd.turn.phase = "main";
+  const beforeEndP1 = must(beforeEnd.players[p1], "before end p1");
+  beforeEndP1.costArea = beforeEndP1.costArea.map((card) =>
+    card.instanceId === don.instanceId ? { ...card, state: "rested" } : card,
+  );
+
+  const endTurn = applyAction(beforeEnd, { type: "endMainPhase" });
+
+  assert.equal(endTurn.errors, undefined);
+  const decision = must(endTurn.state.pendingDecision, "delayed DON decision");
+  assert.equal(decision.type, "selectTargets");
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    [don.instanceId],
+  );
+  assert.equal(endTurn.state.delayedEffects?.length ?? 0, 0);
+
+  const resolved = applyAction(endTurn.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "rested DON candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.players[p1]?.costArea[0]?.state, "active");
+  assert.equal(resolved.state.delayedEffects?.length ?? 0, 0);
 });
 
 const selectRestedCharacterThenActivateSavedTargetSequence = (): Extract<

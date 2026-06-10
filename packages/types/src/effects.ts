@@ -891,6 +891,11 @@ export type Effect =
   | { type: "rest"; target: Target }
   | { type: "activate"; target: Target }
   | {
+      type: "delayed";
+      timing: { type: "endOfTurn"; turn: "current" };
+      effect: Effect;
+    }
+  | {
       type: "giveKeyword";
       target: Target;
       keyword: Keyword;

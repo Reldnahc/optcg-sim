@@ -21,6 +21,7 @@ import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/proce
 import { isSupportedEffectResolvedCustomDrawEffect } from "./runtime/primitives/execute.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence/frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";
+import { queueDelayedEndOfTurnEffects } from "./runtime/trigger-queueing/delayed-effects.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime-definition-lookup.js";
 
@@ -403,6 +404,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromMainEvent = queueMainEventTriggers(state);
   if (queuedFromMainEvent !== undefined) {
     return queuedFromMainEvent;
+  }
+  const queuedFromDelayedEndOfTurn = queueDelayedEndOfTurnEffects(state);
+  if (queuedFromDelayedEndOfTurn !== undefined) {
+    return queuedFromDelayedEndOfTurn;
   }
   const queuedFromEndOfYourTurn = queueEndOfYourTurnTriggers(state);
   if (queuedFromEndOfYourTurn !== undefined) {

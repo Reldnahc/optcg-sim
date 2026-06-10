@@ -42,6 +42,7 @@ import { applyRuntimePlaySource } from "../../play-card/core.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
 import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
 import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
+import { scheduleDelayedEffectSequenceSegment } from "../delayed.js";
 import { resolvePublicTargetCandidatesForRequest } from "../../selection/candidates.js";
 import {
   conditionalThenSequencePath,
@@ -140,6 +141,21 @@ export const continueNoDecisionSegments = (
         ledgers: pausedLedgers,
         state: optionalDecision.state,
       });
+    }
+    if (segment.effect.type === "delayed") {
+      const delayed = scheduleDelayedEffectSequenceSegment({
+        effect: segment.effect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey(segment, index),
+        state: nextState,
+      });
+      nextState = delayed.state;
+      nextLedgers = delayed.ledgers;
+      continue;
     }
     if (segment.effect.type === "draw") {
       const drawn = applyDrawSegment(

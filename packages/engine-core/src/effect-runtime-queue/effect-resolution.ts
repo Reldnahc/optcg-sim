@@ -84,6 +84,9 @@ export const createQueuedEffectResolvers = (
     state: GameState,
     entry: EffectQueueEntry,
   ): EffectDefinition["effects"][number] | undefined => {
+    if (entry.effectBlockOverride !== undefined) {
+      return entry.effectBlockOverride;
+    }
     const resolved = state.cardManifest.cards[entry.source.cardId];
     if (resolved === undefined) {
       return undefined;

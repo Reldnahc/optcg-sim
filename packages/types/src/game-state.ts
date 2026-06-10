@@ -28,6 +28,7 @@ import type {
   CardFilter,
   Condition,
   Duration,
+  EffectDefinition,
   SavedFieldObjectTargetBinding,
   SourcePresencePolicy,
   Target,
@@ -90,6 +91,7 @@ export interface GameState {
   effectQueue: EffectQueueEntry[];
   effectExecutionFrames: EffectExecutionFrame[];
   deferredTriggers: DeferredTriggerBucket[];
+  delayedEffects?: DelayedEffectRecord[];
   continuousEffects: ContinuousEffectRecord[];
   replacementState: ReplacementProcessState[];
   revealedCards: RevealRecord[];
@@ -115,12 +117,24 @@ export interface EffectQueueEntry {
   sourceSnapshot: CardSnapshot;
   triggerEventId?: EngineEventId;
   effectBlockId: EffectId;
+  effectBlockOverride?: EffectDefinition["effects"][number];
   orderingGroup: "turnPlayer" | "nonTurnPlayer";
   createdAtEventSeq: number;
   queuedAtStateSeq: StateSeq;
   sourcePresencePolicy: SourcePresencePolicy;
   causedBy: CausalityRef;
   presentation?: ActiveEffectTextPresentation;
+}
+
+export interface DelayedEffectRecord {
+  id: string;
+  timing: { type: "endOfTurn"; turn: "current" };
+  controllerId: PlayerId;
+  source: CardRef;
+  sourceSnapshot: CardSnapshot;
+  effectBlock: EffectDefinition["effects"][number];
+  createdBy: CausalityRef;
+  createdAtStateSeq: StateSeq;
 }
 
 export interface EffectExecutionContext {

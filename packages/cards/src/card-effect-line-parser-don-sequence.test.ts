@@ -510,6 +510,106 @@ it("parses on-play DON activation followed by filtered play restriction", () => 
   );
 });
 
+it("parses delayed end-of-turn DON activation as timing around reusable activation body", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Set up to 5 of your DON!! cards as active at the end of this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "selectTargets",
+                request: {
+                  timing: "onResolution",
+                  chooser: "self",
+                  zone: "costArea",
+                  player: "self",
+                  min: 0,
+                  max: 5,
+                  filter: { categories: ["don"], state: "rested" },
+                },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "activate",
+                target: { type: "savedFieldObject" },
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:activate",
+      "target:yourDonCards",
+      "filter:category:don",
+      "filter:state:rested",
+      "state:active",
+      "duration:endOfTurn",
+      "composition:delayed",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
+it("parses delayed DON activation body under another entry point", () => {
+  const result = parseCardEffectLine(
+    "[When Attacking] Set up to 2 of your DON!! cards as active at the end of this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "whenAttacking" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectTargets",
+                request: { max: 2 },
+              },
+            },
+            {
+              effect: {
+                type: "activate",
+                target: { type: "savedFieldObject" },
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "duration:endOfTurn",
+      "composition:delayed",
+    ]),
+  );
+});
+
 it("parses main rest-DON cost with attached-DON condition and power reduction body", () => {
   const result = parseCardEffectLine(
     "[Main] You may rest 5 of your DON!! cards: If you have any DON!! cards given, give up to 1 of your opponent's Characters −8000 power during this turn.",
