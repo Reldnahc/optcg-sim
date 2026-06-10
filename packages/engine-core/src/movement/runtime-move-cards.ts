@@ -15,6 +15,7 @@ import { toEngineResult, toStateSeq } from "../action-results.js";
 import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
+import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
 
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 
@@ -154,18 +155,35 @@ export const isSupportedMoveCardsEffect = (
   isSupportedDeckTopToLifeTopEffect(effect) ||
   isSupportedEffectSourceTrashToHandEffect(effect);
 
-export const isSupportedMoveCardsEffectBlock = (
+const hasSupportedMoveCardsEffectEnvelope = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: MoveCardsEffect;
 } =>
-  effect.category === "auto" &&
   effect.optional !== true &&
   effect.cost === undefined &&
   effect.conditionTiming === undefined &&
   effect.failurePolicy === undefined &&
   isSupportedMoveCardsEffect(effect.effect);
+
+export const isSupportedMoveCardsEffectBlock = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: MoveCardsEffect;
+} => effect.category === "auto" && hasSupportedMoveCardsEffectEnvelope(effect);
+
+const isSupportedActivateMainMoveCardsEffectBlock = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: MoveCardsEffect;
+} =>
+  effect.category === "activate" &&
+  effect.trigger.type === "activateMain" &&
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  hasSupportedMoveCardsEffectEnvelope(effect);
 
 export const resolveSupportedQueuedMoveCardsEffect = (
   effect: EffectDefinition["effects"][number] | undefined,
@@ -173,7 +191,9 @@ export const resolveSupportedQueuedMoveCardsEffect = (
 ): MoveCardsEffect | undefined =>
   effect !== undefined &&
   effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
-  isSupportedMoveCardsEffectBlock(effect)
+  (isSupportedMoveCardsEffectBlock(effect) ||
+    (isScopedActivateMainQueueEntry(entry) &&
+      isSupportedActivateMainMoveCardsEffectBlock(effect)))
     ? effect.effect
     : undefined;
 

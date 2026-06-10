@@ -40,6 +40,7 @@ import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
+import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
 import { isSupportedDrawBody } from "../primitives/draw.js";
 
 export { isScopedActivateMainQueueEntry };
@@ -68,6 +69,12 @@ const isSupportedActivateMainContinuousBody = (
   isSupportedQueuedEffectConditionShape(effect.condition) &&
   isSupportedContinuousQueueEffect(effect.effect);
 
+const isSupportedActivateMainPrimitiveBody = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  isSupportedDrawBody(effect.effect) ||
+  isSupportedMoveCardsEffect(effect.effect);
+
 export const isSupportedActivateMainRuntimeEffectBlock = (
   effect: EffectDefinition["effects"][number],
 ): effect is ActivateMainRuntimeEffectBlock => {
@@ -75,10 +82,10 @@ export const isSupportedActivateMainRuntimeEffectBlock = (
     return false;
   }
   if (effect.optional === true) {
-    return isSupportedDrawBody(effect.effect);
+    return isSupportedActivateMainPrimitiveBody(effect);
   }
   return (
-    isSupportedDrawBody(effect.effect) ||
+    isSupportedActivateMainPrimitiveBody(effect) ||
     isSupportedActivateMainContinuousBody(effect)
   );
 };
