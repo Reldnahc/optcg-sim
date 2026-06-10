@@ -10,6 +10,7 @@ export const modifyPowerInstructionPrimitive = {
     "cardinality:upTo",
     "target:opponentCharacters",
     "target:yourNamedCards",
+    "target:yourCharacters",
     "target:yourLeaderOrCharacters",
     "target:yourLeader",
     "target:thisCharacter",
@@ -23,7 +24,7 @@ export const modifyPowerInstructionPrimitive = {
 } as const;
 
 export function parseGainsPositivePower(target: Target, text: string) {
-  const modifierText = /^gains\s+(?<rest>.*)$/i.exec(text)?.groups?.["rest"];
+  const modifierText = /^gains?\s+(?<rest>.*)$/i.exec(text)?.groups?.["rest"];
   if (modifierText === undefined) {
     return undefined;
   }

@@ -1,8 +1,9 @@
-import type { Target } from "@optcg/types";
+import type { Cardinality, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   parseThisCharacterTarget,
+  parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
@@ -26,6 +27,7 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
       parseYourLeaderOrCharacterCardsTarget({
         text: cardinality.rest,
       }),
+      parseYourCharactersTarget({ text: cardinality.rest }),
       parseYourNamedCardsTarget({ text: cardinality.rest }),
     ];
 
@@ -34,7 +36,10 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
         continue;
       }
 
-      const parsed = parseGainsPositivePower(target.target, target.rest);
+      const parsed = parseGainsPositivePower(
+        withCardinality(target.target, cardinality.cardinality),
+        target.rest,
+      );
       if (parsed !== undefined) {
         return {
           effect: parsed.effect,
@@ -101,4 +106,30 @@ function parseThisLeaderTarget(text: string):
 
 function stripLeadingOf(text: string): string {
   return text.replace(/^of\s+/iu, "");
+}
+
+function withCardinality(target: Target, cardinality: Cardinality): Target {
+  if (target.type === "choose") {
+    return {
+      ...target,
+      request: {
+        ...target.request,
+        min: cardinality.min,
+        max: cardinality.max,
+      },
+    };
+  }
+
+  if (target.type === "chooseFromZones") {
+    return {
+      ...target,
+      request: {
+        ...target.request,
+        min: cardinality.min,
+        max: cardinality.max,
+      },
+    };
+  }
+
+  return target;
 }

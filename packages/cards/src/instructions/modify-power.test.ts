@@ -14,6 +14,7 @@ describe("modify power instruction parser", () => {
         "cardinality:upTo",
         "target:opponentCharacters",
         "target:yourNamedCards",
+        "target:yourCharacters",
         "target:yourLeaderOrCharacters",
         "target:yourLeader",
         "target:thisCharacter",
@@ -238,6 +239,49 @@ describe("modify power instruction parser", () => {
         "target:yourLeaderOrCharacters",
         "player:self",
         "filter:category:leader",
+        "filter:category:character",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses positive power for typed self Character targets with parsed cardinality", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Up to 3 of your {Admiral} type Characters gain +2000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "choose",
+          request: {
+            chooser: "self",
+            player: "self",
+            zone: "characterArea",
+            min: 0,
+            max: 3,
+            allowFewerIfUnavailable: true,
+            filter: {
+              categories: ["character"],
+              typesAny: ["Admiral"],
+            },
+          },
+        },
+        value: 2000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
         "filter:category:character",
         "modifier:positivePower",
         "duration:thisTurn",
