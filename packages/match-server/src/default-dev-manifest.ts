@@ -22,6 +22,7 @@ import {
 } from "./deck-validation.js";
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
 import { resolveRedisConfig, type RedisMode } from "./redis-config.js";
+import { writeActiveSimCardCacheVersions } from "./sim-card-cache-versions.js";
 
 interface CreateDefaultDevMatchSetupInput {
   readonly matchId: DevMatchSetup["matchId"];
@@ -461,7 +462,11 @@ const buildDevManifestFromCardIds = async (
       : {
           cardDataVersion: "live-poneglyph-dev-v1",
           effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+          overlayVersion: "none",
         };
+  if (cache !== undefined && input.fetchCard === undefined) {
+    await writeActiveSimCardCacheVersions(cache, versions);
+  }
   return await buildDevMatchCardManifestFromPoneglyphIds({
     cardIds,
     createdAt: input.createdAt,

@@ -6,6 +6,7 @@ import {
 import { createRuntimeSupportedCardRepository } from "@optcg/card-support";
 import type { CardId } from "@optcg/types";
 import { warmCardCache } from "optcg-card-cache";
+import { writeActiveSimCardCacheVersions } from "./sim-card-cache-versions.js";
 
 const defaultBatchSize = 40;
 const defaultDelayMs = 300;
@@ -59,6 +60,7 @@ const run = async (): Promise<void> => {
     delayMs: config.delayMs,
     resolveCards: (ids) => repository.resolveCacheEntries(ids as CardId[]),
   });
+  await writeActiveSimCardCacheVersions(cache, versions);
 
   process.stdout.write(`${JSON.stringify({ data: result })}\n`);
 };
