@@ -15,6 +15,8 @@ import type {
 import {
   activeCardCostGlobalActions,
   applyActiveCardCostLifeChoiceCards,
+  buildGlobalActions,
+  CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   applyPendingDecisionLifeChoiceCards,
@@ -24,10 +26,15 @@ import {
   zoneClickVisibleInstanceIds,
 } from "./useMatchClient-support.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+import type { ClientVisibleAction } from "../transport.js";
 import type {
   OptionalCardCostChoice,
   OptionalCardCostGroup,
 } from "../interactions/payment-decision.js";
+
+type BuildGlobalActionsPlayerSnapshot = NonNullable<
+  Parameters<typeof buildGlobalActions>[0]["playerSnapshot"]
+>;
 
 const optionalChoice: OptionalCardCostChoice = {
   decisionId: "decision:return-don" as DecisionId,
@@ -132,6 +139,26 @@ const selectCardsDecision = (id: string): PublicSelectCardsDecision => ({
   max: 1,
   candidates: [],
   choices: [],
+});
+
+const counterPassDecision = (): PublicSelectCardsDecision => ({
+  ...selectCardsDecision("decision:counterStep:pass:attacker-1:7"),
+  prompt: "Use counter or end step.",
+  presentation: presentation("Use counter or end step."),
+  min: 0,
+  max: 0,
+  candidates: [],
+  choices: [],
+});
+
+const playerSnapshotWithActions = (
+  actions: ClientVisibleAction[],
+): BuildGlobalActionsPlayerSnapshot => ({
+  view: {
+    ...({} as PlayerView),
+    events: [],
+  },
+  actions,
 });
 
 const targetDecision = (
@@ -249,6 +276,56 @@ const activeSourceEvents = (decisionId: string): EngineEvent[] => [
 ];
 
 describe("match client support helpers", () => {
+  test("global zero-card counter decisions expose a direct End step fallback", () => {
+    const pendingDecision = counterPassDecision();
+
+    assert.deepEqual(
+      buildGlobalActions({
+        playerSnapshot: playerSnapshotWithActions([]),
+        attackTargetChoiceActive: false,
+        counterTargetChoiceActive: false,
+        activeCardCostGroup: undefined,
+        optionalCardCostChoice: undefined,
+        explicitCardCostChoiceActive: false,
+        selectedCardCostInstanceCount: 0,
+        selectedCardCostActionIndex: undefined,
+        pendingDecisionInteractionMode: "global",
+        pendingDecision,
+        activeDecisionDraft: undefined,
+      }),
+      [
+        {
+          index: CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
+          label: "End step",
+          type: "chooseNoDecisionCards",
+        },
+      ],
+    );
+  });
+
+  test("global zero-card counter decisions do not duplicate projected pass actions", () => {
+    const pendingDecision = counterPassDecision();
+
+    assert.deepEqual(
+      buildGlobalActions({
+        playerSnapshot: playerSnapshotWithActions([
+          { index: 4, type: "respondToDecision", label: "End step" },
+        ]),
+        attackTargetChoiceActive: false,
+        counterTargetChoiceActive: false,
+        activeCardCostGroup: undefined,
+        optionalCardCostChoice: undefined,
+        explicitCardCostChoiceActive: false,
+        selectedCardCostInstanceCount: 0,
+        selectedCardCostActionIndex: undefined,
+        pendingDecisionInteractionMode: "global",
+        pendingDecision,
+        activeDecisionDraft: undefined,
+      }),
+      [{ index: 4, label: "End step", type: "respondToDecision" }],
+    );
+  });
+
   test("active card-cost selections expose global confirm and clear actions", () => {
     assert.deepEqual(
       activeCardCostGlobalActions({

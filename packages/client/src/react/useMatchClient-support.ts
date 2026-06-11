@@ -14,6 +14,7 @@ import {
   createCollapsedCounterActions,
   cardCostGroupRequiresManualConfirm,
   cardCostPaymentLabel,
+  isDecisionModalSuppressed,
   selectedDonAttachmentMenuAction,
 } from "../index.js";
 import type {
@@ -479,16 +480,39 @@ export const chooseNoDecisionLabel = (
 ): string =>
   decision.type === "selectTargets" ? "Choose no target" : "Choose no card";
 
+export const CONFIRM_DECISION_SELECTION_ACTION_INDEX = -2;
+export const CLEAR_DECISION_SELECTION_ACTION_INDEX = -3;
+export const CHOOSE_NO_DECISION_CARDS_ACTION_INDEX = -4;
+
+const globalZeroSelectionDecisionAction = (
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined,
+): ClientActionModel | undefined => {
+  if (
+    pendingDecision === undefined ||
+    (pendingDecision.type !== "selectCards" &&
+      pendingDecision.type !== "selectTargets") ||
+    pendingDecision.min !== 0 ||
+    pendingDecision.max !== 0
+  ) {
+    return undefined;
+  }
+  return {
+    index: CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
+    label: isDecisionModalSuppressed(pendingDecision)
+      ? "End step"
+      : chooseNoDecisionLabel(pendingDecision),
+    type: "chooseNoDecisionCards",
+  };
+};
+
 export const quickPayActivateMainArmSurvivesDecision = (
   decision:
     | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
     | undefined,
 ): boolean =>
   decision?.type === "chooseOptionalActivation" || decision?.type === "payCost";
-
-export const CONFIRM_DECISION_SELECTION_ACTION_INDEX = -2;
-export const CLEAR_DECISION_SELECTION_ACTION_INDEX = -3;
-export const CHOOSE_NO_DECISION_CARDS_ACTION_INDEX = -4;
 
 export const activeCardCostGlobalActions = ({
   choice,
@@ -643,9 +667,19 @@ export const buildGlobalActions = ({
         ? {}
         : { responseKey: action.responseKey }),
     }));
+  const projectedActions =
+    pendingDecisionInteractionMode === "global" &&
+    !globalActions.some((action) => action.type === "respondToDecision")
+      ? [
+          ...globalActions,
+          ...[globalZeroSelectionDecisionAction(pendingDecision)].filter(
+            (action) => action !== undefined,
+          ),
+        ]
+      : globalActions;
   return pendingDecision?.type === "payCost"
-    ? (createCanonicalDonPaymentActions(globalActions) ?? globalActions)
-    : globalActions;
+    ? (createCanonicalDonPaymentActions(projectedActions) ?? projectedActions)
+    : projectedActions;
 };
 
 export const toggleCardCostSelectedInstanceId = (
