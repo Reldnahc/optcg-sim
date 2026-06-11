@@ -66,6 +66,7 @@ export type PrimitiveEvidence =
   | "expression:replacement"
   | "expression:choice"
   | "connector:then"
+  | "connector:ifPreviousSucceeded"
   | "connector:ifPreviousNotSucceeded"
   | "connector:sentence"
   | "connector:andOrdered"

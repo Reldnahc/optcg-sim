@@ -49,6 +49,7 @@ import {
   playStageFromDeckExpressionParser,
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
+  revealTopConditionalExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   selectedBasePowerSnapshotExpressionParser,
@@ -145,6 +146,10 @@ const costedExpressions = [
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
   lookPlayFromTopExpressionParser,
+  revealTopConditionalExpressionParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
@@ -181,6 +186,13 @@ export const defaultRegistry = {
       conditions: conditionParsers,
       expressions: [
         lookPlayFromTopExpressionParser,
+        revealTopConditionalExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
         opponentOptionalCostExpressionParser({
@@ -287,6 +299,10 @@ export const defaultRegistry = {
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
     lookPlayFromTopExpressionParser,
+    revealTopConditionalExpressionParser({
+      instructions: instructionParsers,
+      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+    }),
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     opponentOptionalCostExpressionParser({
