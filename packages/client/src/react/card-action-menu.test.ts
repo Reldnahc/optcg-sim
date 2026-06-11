@@ -328,18 +328,13 @@ describe("card action menu", () => {
     assert.match(markup, /control-tool-strip/u);
     assert.match(markup, /control-preview-slot/u);
     assert.match(markup, /card-preview-minimized-button/u);
-    assert.match(styles, /\.controls-panel\s*\{[^}]*position:\s*relative;/u);
     assert.match(
       styles,
-      /\.control-tool-strip\s*\{[^}]*position:\s*absolute;/u,
+      /\.control-tool-strip\s*\{[^}]*bottom:\s*var\(--control-panel-padding\);/u,
     );
     assert.match(
       styles,
-      /\.control-tool-strip\s*\{[\s\S]*bottom:\s*calc\([\s\S]*var\(--control-window-dock-height\)[\s\S]*var\(--control-panel-padding\)[\s\S]*\);/u,
-    );
-    assert.match(
-      styles,
-      /\.control-tool-strip\s*\{[^}]*left:\s*var\(--control-panel-padding\);/u,
+      /\.control-window-dock\s*\{[\s\S]*bottom:\s*calc\([\s\S]*var\(--control-icon-button-size\)[\s\S]*var\(--control-panel-padding\)[\s\S]*\);/u,
     );
   });
 

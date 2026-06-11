@@ -546,15 +546,13 @@
   padding-top: var(--control-panel-padding);
   padding-bottom: calc(
     var(--control-window-dock-height) + var(--control-icon-button-size) +
-      (var(--control-panel-padding) * 2)
+      (var(--control-panel-padding) * 3)
   );
 }
 
 .control-tool-strip {
   position: absolute;
-  bottom: calc(
-    var(--control-window-dock-height) + var(--control-panel-padding)
-  );
+  bottom: var(--control-panel-padding);
   left: var(--control-panel-padding);
   z-index: 1;
   display: flex;
@@ -689,7 +687,9 @@
 .control-window-dock {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: calc(
+    var(--control-icon-button-size) + (var(--control-panel-padding) * 2)
+  );
   left: 0;
   display: grid;
   height: var(--control-window-dock-height);
