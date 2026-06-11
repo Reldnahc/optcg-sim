@@ -84,8 +84,9 @@ describe("playmat structure", () => {
     );
     assert.match(
       appShellStyles,
-      /--match-surface-zone:\s*rgba\(0,\s*0,\s*0,\s*0\.18\);/u,
+      /--match-surface-zone:\s*rgba\(0,\s*0,\s*0,\s*var\(--zone-guide-background-alpha\)\);/u,
     );
+    assert.match(appShellStyles, /--zone-guide-background-alpha:\s*0\.18;/u);
     assert.match(
       appShellStyles,
       /--playmat-vertical-chrome:\s*calc\(\s*\(var\(--match-app-padding\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-board-padding\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-border-width\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*6\)\s*\);/,
@@ -479,7 +480,7 @@ describe("playmat structure", () => {
     assert.match(styles, /\.zone-cards\s*\{[^}]*min-width:\s*0;/u);
     assert.match(
       styles,
-      /\.zone\s*\{[^}]*border:\s*2px solid var\(--match-border-zone\);[^}]*background:\s*var\(--match-surface-zone\);/u,
+      /\.zone\s*\{[^}]*border:\s*2px solid rgba\(246,\s*232,\s*209,\s*var\(--zone-guide-border-alpha\)\);[^}]*background:\s*var\(--match-surface-zone\);/u,
     );
   });
 

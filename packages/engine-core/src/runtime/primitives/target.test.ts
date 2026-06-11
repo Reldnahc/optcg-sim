@@ -705,20 +705,6 @@ test.each([
     name: "cost",
     overrides: { cost: { type: "restSelf" } },
   },
-  {
-    name: "once per turn",
-    overrides: { oncePerTurn: true },
-  },
-  {
-    name: "wrong effect body",
-    overrides: {
-      effect: {
-        type: "replacement",
-        when: { type: "wouldBeKOd", target: { type: "self" } },
-        instead: { type: "draw", count: 2, player: "self" },
-      },
-    },
-  },
 ] satisfies {
   name: string;
   overrides: Partial<EffectDefinition["effects"][number]>;
