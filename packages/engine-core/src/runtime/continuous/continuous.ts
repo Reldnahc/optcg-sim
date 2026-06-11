@@ -408,6 +408,16 @@ const isSupportedPowerEffectValue = (
   );
 };
 
+const isSupportedPermanentBasePowerTarget = (
+  target: Extract<Effect, { type: "setBasePower" }>["target"],
+): boolean =>
+  target.type === "self" ||
+  target.type === "myLeader" ||
+  (target.type === "all" &&
+    target.zone === "characterArea" &&
+    target.player === "self" &&
+    isSupportedBasePowerSetFilter(target.filter));
+
 const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
   if (effect.type === "modifyPower") {
     return (
@@ -424,11 +434,7 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
       Number.isSafeInteger(effect.value) &&
       effect.value > 0 &&
       isSupportedBasePowerDuration(effect.duration) &&
-      (effect.target.type === "self" ||
-        (effect.target.type === "all" &&
-          effect.target.zone === "characterArea" &&
-          effect.target.player === "self" &&
-          isSupportedBasePowerSetFilter(effect.target.filter)))
+      isSupportedPermanentBasePowerTarget(effect.target)
     );
   }
   if (effect.type === "modifyCost") {
@@ -588,15 +594,7 @@ const effectToDerivedModifier = (
     };
   }
   if (effect.type === "setBasePower") {
-    if (
-      effect.target.type !== "self" &&
-      !(
-        effect.target.type === "all" &&
-        effect.target.zone === "characterArea" &&
-        effect.target.player === "self" &&
-        isSupportedBasePowerSetFilter(effect.target.filter)
-      )
-    ) {
+    if (!isSupportedPermanentBasePowerTarget(effect.target)) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported base-power target"),
       );

@@ -13,7 +13,7 @@ export const gameplayLinesFromTextParts = (
 export const gameplayLineSlicesFromTextParts = (
   parts: readonly (string | null | undefined)[],
 ): SourceSlice[] =>
-  groupChooseOneBlockSlices(
+  groupBulletBlockSlices(
     joinDetachedEffectHeaderSlices(
       parts.flatMap((text) => rangedNonReminderLines(text ?? "")),
     ),
@@ -83,7 +83,7 @@ const isDetachedEffectHeader = (line: string): boolean =>
   supportedEntryPoints.some((entryPoint) => entryPoint.text === line) ||
   line === "[Once Per Turn]";
 
-const groupChooseOneBlockSlices = (
+const groupBulletBlockSlices = (
   lines: readonly SourceSlice[],
 ): SourceSlice[] => {
   const grouped: SourceSlice[] = [];
@@ -95,7 +95,8 @@ const groupChooseOneBlockSlices = (
       break;
     }
 
-    if (!isChooseOneHeader(line.text)) {
+    const header = parseBulletBlockHeader(line.text);
+    if (header === undefined) {
       grouped.push(line);
       index += 1;
       continue;
@@ -112,7 +113,11 @@ const groupChooseOneBlockSlices = (
       index += 1;
     }
     const trailingLine = lines[index];
-    if (trailingLine !== undefined && /^then,/iu.test(trailingLine.text)) {
+    if (
+      header.includeTrailingThen &&
+      trailingLine !== undefined &&
+      /^then,/iu.test(trailingLine.text)
+    ) {
       block.push(trailingLine);
       index += 1;
     }
@@ -124,8 +129,21 @@ const groupChooseOneBlockSlices = (
   return grouped;
 };
 
-const isChooseOneHeader = (line: string): boolean =>
-  /chooses? one:\s*$/iu.test(line);
+const parseBulletBlockHeader = (
+  line: string,
+): { readonly includeTrailingThen: boolean } | undefined => {
+  if (/chooses? one:\s*$/iu.test(line)) {
+    return { includeTrailingThen: true };
+  }
+  if (
+    /^Apply each of the following effects based on the number of cards in your trash:\s*$/iu.test(
+      line,
+    )
+  ) {
+    return { includeTrailingThen: false };
+  }
+  return undefined;
+};
 
 const joinSlices = (
   slices: readonly SourceSlice[],

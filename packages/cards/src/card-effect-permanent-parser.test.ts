@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import {
+  parseCardEffectLine,
+  parseCardEffectLines,
+} from "./card-effect-line-parser.js";
 
 describe("permanent card effect line parser", () => {
   it("parses apply-each trash thresholds as independent continuous conditionals", () => {
@@ -114,6 +117,36 @@ describe("permanent card effect line parser", () => {
         "duration:whileConditionTrue",
       ]),
     );
+  });
+
+  it("parses apply-each trash thresholds after gameplay line grouping", () => {
+    const results = parseCardEffectLines(
+      [
+        "Apply each of the following effects based on the number of cards in your trash:",
+        "\u2022 If there are 10 or more cards, this Character's base power becomes 9000 and it gains +10 cost.",
+        "\u2022 If you have 20 or more cards, during your opponent's turn, your Leader's base power becomes 7000.",
+        "\u2022 If you have 30 or more cards, this Character gains +1000 power.",
+      ].join("\n"),
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "setBasePower", target: { type: "self" } } },
+            { effect: { type: "modifyCost", target: { type: "self" } } },
+            {
+              effect: { type: "setBasePower", target: { type: "myLeader" } },
+            },
+            { effect: { type: "modifyPower", target: { type: "self" } } },
+          ],
+        },
+      },
+    });
   });
 
   it("parses implicit permanent named-card and self keyword grants as reusable primitives", () => {

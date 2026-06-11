@@ -12,7 +12,10 @@ import type {
 } from "@optcg/types";
 
 import { computeView } from "../../view/compute-view.js";
-import { deriveImplementedDslPermanentContinuousEffects } from "./continuous.js";
+import {
+  deriveImplementedDslPermanentContinuousEffects,
+  isSupportedPermanentContinuousEffectBlock,
+} from "./continuous.js";
 import { createInitialState } from "../../setup/initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;
@@ -30,6 +33,7 @@ const must = <T>(value: T | undefined, label: string): T => {
 const resolvedCard = (params: {
   cardId: CardId;
   category: "leader" | "character" | "don";
+  cost?: number;
   power?: number;
   types?: string[];
 }): ResolvedCard => ({
@@ -50,6 +54,7 @@ const resolvedCard = (params: {
   errata: [],
   sourceTextHash: "source-hash",
   behaviorHash: "behavior-hash",
+  ...(params.cost === undefined ? {} : { cost: params.cost }),
   support: {
     cardId: params.cardId,
     status: "vanilla-confirmed",
@@ -84,6 +89,7 @@ const createManifest = (): MatchCardManifest => ({
     [toCardId("char-vanilla")]: resolvedCard({
       cardId: toCardId("char-vanilla"),
       category: "character",
+      cost: 3,
       power: 3000,
     }),
     [toCardId("char-straw-hat")]: resolvedCard({
@@ -309,6 +315,115 @@ test("setBasePower is generic over trash threshold, type, and target value", () 
   assert.equal(view.cards[heart.instanceId]?.basePower, 7000);
   assert.equal(view.cards[heart.instanceId]?.currentPower, 7000);
   assert.equal(view.cards[strawHat.instanceId]?.basePower, 1000);
+});
+
+test("setBasePower admits apply-each style conditioned self and leader sequence", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  addTrashMarkers(state, 30);
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p2;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 1;
+  state.turn.playerTurnCounts[p2] = 2;
+
+  const trash10 = {
+    type: "trashCount",
+    player: "self",
+    op: "gte",
+    value: 10,
+  } as const;
+  const trash20 = {
+    type: "trashCount",
+    player: "self",
+    op: "gte",
+    value: 20,
+  } as const;
+  const trash30 = {
+    type: "trashCount",
+    player: "self",
+    op: "gte",
+    value: 30,
+  } as const;
+  const definition: EffectDefinition = {
+    cardId: source.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "perm:apply-each-base-power" as EffectDefinition["effects"][number]["id"],
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "setBasePower",
+                target: { type: "self" },
+                value: 9000,
+                duration: { type: "whileConditionTrue", condition: trash10 },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "modifyCost",
+                player: "self",
+                target: { type: "self" },
+                value: 10,
+                duration: { type: "whileConditionTrue", condition: trash10 },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "setBasePower",
+                target: { type: "myLeader" },
+                value: 7000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "and",
+                    conditions: [trash20, { type: "opponentTurn" }],
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: { type: "self" },
+                value: 1000,
+                duration: { type: "whileConditionTrue", condition: trash30 },
+              },
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "source-hash",
+      rulesVersion: "r1",
+      effectDefinitionsVersion: "fixture",
+      tested: true,
+      reviewer: "reviewer",
+    },
+  };
+  installPermanentDslCandidate(state, source, definition);
+  const block = must(definition.effects[0], "permanent block");
+
+  assert.equal(isSupportedPermanentContinuousEffectBlock(block), true);
+  assert.equal(deriveImplementedDslPermanentContinuousEffects(state).length, 4);
+
+  const view = computeView(state);
+  assert.equal(view.cards[source.instanceId]?.basePower, 9000);
+  assert.equal(view.cards[source.instanceId]?.currentPower, 10000);
+  assert.equal(view.cards[source.instanceId]?.currentCost, 13);
+  assert.equal(view.cards[p1State.leader.instanceId]?.basePower, 7000);
 });
 
 test("setBasePower modifier disappears when trash condition fails or source leaves field", () => {
