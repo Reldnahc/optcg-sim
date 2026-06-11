@@ -784,3 +784,15 @@ test("block support delegates sequence trigger admission to entry adapters", asy
     "block support must not maintain a second sequence trigger whitelist",
   );
 });
+
+test("counter trailing sequence support uses flattened sequence segments", async () => {
+  const content = await readFile(
+    path.join(
+      repoRoot,
+      "packages/engine-core/src/battle/counter-event-trailing-sequence.ts",
+    ),
+    "utf8",
+  );
+
+  assert.equal(content.includes("effectBlock.effect.effects[0]"), false);
+});

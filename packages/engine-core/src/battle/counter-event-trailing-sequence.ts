@@ -8,6 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { continueSupportedSequenceFrameFromSegment } from "../effect-runtime-sequence/frames.js";
+import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
 import type { getSupportedCounterEventPower } from "./counter-event-support.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 
@@ -95,10 +96,18 @@ export const continueCounterEventTrailingSequence = (
   if (effectBlock === undefined) {
     return null;
   }
-  const firstSegment =
+  const sequence =
     effectBlock.effect.type === "sequence"
-      ? effectBlock.effect.effects[0]
-      : undefined;
+      ? flattenSequenceEffect(effectBlock.effect)
+      : null;
+  if (sequence === null) {
+    return null;
+  }
+  const flattenedEffectBlock = {
+    ...effectBlock,
+    effect: sequence,
+  };
+  const firstSegment = sequence.effects[0];
   if (
     firstSegment === undefined ||
     firstSegment.effect.type !== "modifyPower"
@@ -109,7 +118,7 @@ export const continueCounterEventTrailingSequence = (
     state,
     controllerId,
     source,
-    effectBlock,
+    flattenedEffectBlock,
   );
   const continued = continueSupportedSequenceFrameFromSegment({
     completedSegmentResults: {
@@ -123,7 +132,7 @@ export const continueCounterEventTrailingSequence = (
         playerDeclined: false,
       },
     },
-    effectBlock,
+    effectBlock: flattenedEffectBlock,
     entry,
     ...(resumePendingDecision === undefined ? {} : { resumePendingDecision }),
     startIndex: trailingSequence.startIndex,

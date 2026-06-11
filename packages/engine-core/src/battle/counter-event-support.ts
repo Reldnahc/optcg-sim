@@ -14,6 +14,7 @@ import type {
 
 import { reifyCardRef } from "../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
+import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 export interface SupportedCounterEventPower {
@@ -156,7 +157,11 @@ const counterPowerEffect = (
   if (effect.effect.type !== "sequence") {
     return null;
   }
-  const [first, second, ...rest] = effect.effect.effects;
+  const flattened = flattenSequenceEffect(effect.effect);
+  if (flattened === null) {
+    return null;
+  }
+  const [first, second, ...rest] = flattened.effects;
   if (
     first !== undefined &&
     first.connector === "always" &&
