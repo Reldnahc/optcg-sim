@@ -21,7 +21,7 @@
   --card-corner-radius: calc(var(--card-height) / 28);
   --card-glow-size: calc(var(--card-height) / 7);
   --card-outline-heavy: calc(var(--card-height) / 28);
-  --card-outline-medium: calc(var(--card-height) / 24);
+  --card-outline-medium: calc(var(--card-height) / 36);
   --card-outline-thin: calc(var(--card-height) / 42);
   --card-inset-tight: calc(var(--card-height) / 42);
   --card-inset-medium: calc(var(--card-height) / 24);
