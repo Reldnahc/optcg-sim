@@ -3,6 +3,119 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("permanent card effect line parser", () => {
+  it("parses apply-each trash thresholds as independent continuous conditionals", () => {
+    const result = parseCardEffectLine(
+      [
+        "Apply each of the following effects based on the number of cards in your trash:",
+        "• If there are 10 or more cards, this Character's base power becomes 9000 and it gains +10 cost.",
+        "• If you have 20 or more cards, during your opponent's turn, your Leader's base power becomes 7000.",
+        "• If you have 30 or more cards, this Character gains +1000 power.",
+      ].join("\n"),
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "setBasePower",
+                target: { type: "self" },
+                value: 9000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 10,
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "modifyCost",
+                target: { type: "self" },
+                value: 10,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 10,
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "setBasePower",
+                target: { type: "myLeader" },
+                value: 7000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "and",
+                    conditions: [
+                      {
+                        type: "trashCount",
+                        player: "self",
+                        op: "gte",
+                        value: 20,
+                      },
+                      { type: "opponentTurn" },
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: { type: "self" },
+                value: 1000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 30,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "composition:applyEach",
+        "expression:conditionalContinuous",
+        "composition:conditionAnd",
+        "condition:trashCount",
+        "condition:opponentTurn",
+        "instruction:setBasePower",
+        "instruction:modifyCost",
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "target:yourLeader",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses implicit permanent named-card and self keyword grants as reusable primitives", () => {
     const result = parseCardEffectLine(
       "All of your [Ohm] cards and this Character gain [Double Attack].",

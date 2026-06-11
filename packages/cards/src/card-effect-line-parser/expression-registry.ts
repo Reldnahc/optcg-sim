@@ -25,6 +25,7 @@ import {
 } from "../metadata-lines/index.js";
 import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
+  applyEachContinuousExpressionParser,
   chooseOneExpressionParser,
   activatedReactionExpressionParser,
   conditionalBlockExpressionParser,
@@ -217,6 +218,10 @@ export const defaultRegistry = {
         singleInstructionExpressionParser,
         generalExpressionParser,
       ],
+    }),
+    applyEachContinuousExpressionParser({
+      connectors: [parseAndConnector],
+      instructions: continuousInstructionParsers,
     }),
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,

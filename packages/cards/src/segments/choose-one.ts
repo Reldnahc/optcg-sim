@@ -14,6 +14,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { parseBulletListPayload } from "./bullet-list.js";
 
 interface ParsedChooseOneBody {
   readonly condition?: {
@@ -145,18 +146,18 @@ function parseChooseOneBody(
     return undefined;
   }
 
-  const payload = parseChoicePayload(bulletText);
-  if (payload === undefined || payload.labels.length < 2) {
+  const payload = parseBulletListPayload(bulletText);
+  if (payload === undefined || payload.items.length < 2) {
     return undefined;
   }
 
   return {
     ...(condition === undefined ? {} : { condition }),
-    options: payload.labels.map((label, index) => {
-      const parsed = parseOptionEffect(label, expressionParsers);
+    options: payload.items.map((item, index) => {
+      const parsed = parseOptionEffect(item, expressionParsers);
       return {
         id: `choice:${String(index + 1)}`,
-        label,
+        label: item,
         effect: parsed?.effect ?? {
           type: "custom",
           handler: "unsupported:chooseOneOption",
@@ -166,7 +167,7 @@ function parseChooseOneBody(
     ...(payload.trailingThen === undefined
       ? {}
       : { trailingThen: payload.trailingThen }),
-    evidence: payload.labels.map(() => "choice:option"),
+    evidence: payload.items.map(() => "choice:option"),
     presentationSpans: choicePresentationSpans(source),
   };
 }
@@ -205,43 +206,6 @@ function parseCondition(
       };
     }
   }
-  return undefined;
-}
-
-function parseChoicePayload(
-  text: string,
-):
-  | { readonly labels: readonly string[]; readonly trailingThen?: string }
-  | undefined {
-  const lines = text
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  const labels: string[] = [];
-  let index = 0;
-  while (index < lines.length) {
-    const line = lines[index];
-    if (line === undefined || !line.startsWith("\u2022")) {
-      break;
-    }
-    const label = line.slice(1).trim();
-    if (label.length === 0) {
-      return undefined;
-    }
-    labels.push(label);
-    index += 1;
-  }
-
-  const trailingLine = lines[index];
-  if (trailingLine === undefined) {
-    return { labels };
-  }
-
-  if (index === lines.length - 1 && /^then,/iu.test(trailingLine)) {
-    return { labels, trailingThen: trailingLine };
-  }
-
   return undefined;
 }
 

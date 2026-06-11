@@ -59,6 +59,7 @@ export type PrimitiveEvidence =
   | "composition:entryAlternatives"
   | "composition:replacementInstead"
   | "composition:chooseOne"
+  | "composition:applyEach"
   | "expression:sequence"
   | "expression:conditional"
   | "expression:conditionalContinuous"
