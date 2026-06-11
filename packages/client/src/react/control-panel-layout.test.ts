@@ -97,7 +97,7 @@ describe("control panel layout", () => {
       }),
       {
         controlRailWidth: 244,
-        controlDockHeight: 360,
+        controlDockHeight: 296,
       },
     );
 
@@ -150,7 +150,7 @@ describe("control panel layout", () => {
         currentClientY: 260,
         controlPanelHeight: 680,
       }),
-      520,
+      456,
     );
 
     assert.equal(

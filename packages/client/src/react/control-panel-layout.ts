@@ -8,6 +8,7 @@ export const controlRailPlaymatGap = 8;
 export const defaultControlDockHeight = 320;
 export const minControlDockHeight = 180;
 export const controlDockVerticalReservedSpace = 160;
+export const controlDockBottomToolReservedSpace = 64;
 
 const desktopCardMinHeight = 86;
 const desktopCardMaxHeight = 240;
@@ -147,7 +148,9 @@ export const maxControlDockHeight = ({
 }): number =>
   Math.max(
     minControlDockHeight,
-    controlPanelHeight - controlDockVerticalReservedSpace,
+    controlPanelHeight -
+      controlDockVerticalReservedSpace -
+      controlDockBottomToolReservedSpace,
   );
 
 export const clampControlDockHeight = ({
