@@ -2,7 +2,7 @@ import type { ClientActionModel } from "../view-model.js";
 import { primarySidebarActionPosition } from "./action-emphasis.js";
 
 export interface ActionMenuProps {
-  title: string;
+  title?: string | undefined;
   actions: readonly ClientActionModel[];
   disabled: boolean;
   onAction: (actionIndex: number) => void;
@@ -17,7 +17,7 @@ export const ActionMenu = ({
   const primaryActionPosition = primarySidebarActionPosition(actions);
   return actions.length === 0 ? null : (
     <section className="action-menu-panel">
-      <h2>{title}</h2>
+      {title === undefined || title.length === 0 ? null : <h2>{title}</h2>}
       <div className="action-list">
         {actions.map((action, position) => (
           <button

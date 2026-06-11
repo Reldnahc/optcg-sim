@@ -306,7 +306,7 @@ describe("card action menu", () => {
     assert.equal(styles.includes(".match-facts"), false);
   });
 
-  test("control rail renders preview control in the top-left controls panel slot", async () => {
+  test("control rail renders preview control in the lower controls panel slot", async () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {
         errors: [],
@@ -335,7 +335,7 @@ describe("card action menu", () => {
     );
     assert.match(
       styles,
-      /\.control-tool-strip\s*\{[^}]*top:\s*var\(--control-panel-padding\);/u,
+      /\.control-tool-strip\s*\{[\s\S]*bottom:\s*calc\([\s\S]*var\(--control-window-dock-height\)[\s\S]*var\(--control-panel-padding\)[\s\S]*\);/u,
     );
     assert.match(
       styles,
@@ -343,11 +343,11 @@ describe("card action menu", () => {
     );
   });
 
-  test("control rail orders icon controls before global actions", () => {
+  test("control rail places icon controls after global actions", () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {
         errors: [],
-        globalActions: [],
+        globalActions: [{ index: 12, type: "endMainPhase", label: "End turn" }],
         disabled: false,
         onAction: () => undefined,
         onNewMatch: () => undefined,
@@ -369,6 +369,7 @@ describe("card action menu", () => {
     );
 
     const positions = [
+      "End turn",
       'aria-label="Preview"',
       'aria-label="Log"',
       'aria-label="Settings"',
@@ -378,7 +379,7 @@ describe("card action menu", () => {
 
     assert.deepEqual(
       positions.map((position) => position >= 0),
-      [true, true, true, true, true],
+      [true, true, true, true, true, true],
     );
     assert.deepEqual(
       [...positions].sort((a, b) => a - b),
@@ -410,7 +411,7 @@ describe("card action menu", () => {
       }),
     );
 
-    assert.equal(actionMarkup.includes("Global actions"), true);
+    assert.equal(actionMarkup.includes("Global actions"), false);
     assert.equal(actionMarkup.includes("End turn"), true);
     assert.match(actionMarkup, /class="action-button is-primary"/u);
   });
@@ -948,7 +949,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes("Trash 1 card from hand"), true);
     assert.match(
       appShellStyles,
-      /\.decision-status-prompt\s*\{[^}]*bottom:\s*calc\(var\(--card-height\) \+ clamp\(24px,\s*calc\(var\(--card-height\) \/ 4\.75\),\s*44px\)\);[^}]*font-size:\s*clamp\(28px,\s*calc\(var\(--card-height\) \/ 4\.5\),\s*56px\);/u,
+      /\.decision-status-prompt\s*\{[\s\S]*bottom:\s*calc\([\s\S]*var\(--card-height\)[\s\S]*clamp\(24px,\s*calc\(var\(--card-height\) \/ 4\.75\),\s*44px\)[\s\S]*\);[\s\S]*font-size:\s*clamp\(28px,\s*calc\(var\(--card-height\) \/ 4\.5\),\s*56px\);/u,
     );
   });
 

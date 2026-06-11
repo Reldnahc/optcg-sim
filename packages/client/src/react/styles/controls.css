@@ -5,7 +5,11 @@
     calc(var(--card-width) * 2.7),
     380px
   );
-  --control-summary-height: clamp(104px, calc(var(--card-height) * 0.78), 142px);
+  --control-summary-height: clamp(
+    104px,
+    calc(var(--card-height) * 0.78),
+    142px
+  );
   --control-panel-padding: clamp(8px, calc(var(--card-height) / 16), 14px);
   --control-panel-radius: calc(var(--card-corner-radius) * 0.85);
   --control-title-gap: clamp(6px, calc(var(--card-height) / 20), 10px);
@@ -16,7 +20,11 @@
   --control-icon-size: calc(var(--control-icon-button-size) * 0.66);
   --control-action-height: clamp(30px, calc(var(--card-height) / 5), 38px);
   --control-dock-tab-height: clamp(26px, calc(var(--card-height) / 5.4), 34px);
-  --control-window-dock-height: clamp(260px, calc(var(--card-height) * 2.15), 460px);
+  --control-window-dock-height: clamp(
+    260px,
+    calc(var(--card-height) * 2.15),
+    460px
+  );
   --control-resize-hit-area: calc(var(--control-rail-gap) * 1.45);
   --control-dock-resize-hit-area: calc(var(--control-rail-gap) * 1.7);
   --control-grab-nub-width: calc(var(--control-dock-tab-height) * 0.58);
@@ -535,15 +543,18 @@
 .controls-panel {
   position: relative;
   overflow: auto;
-  padding-top: calc(var(--control-icon-button-size) + (var(--control-panel-padding) * 2));
+  padding-top: var(--control-panel-padding);
   padding-bottom: calc(
-    var(--control-window-dock-height) + var(--control-panel-padding)
+    var(--control-window-dock-height) + var(--control-icon-button-size) +
+      (var(--control-panel-padding) * 2)
   );
 }
 
 .control-tool-strip {
   position: absolute;
-  top: var(--control-panel-padding);
+  bottom: calc(
+    var(--control-window-dock-height) + var(--control-panel-padding)
+  );
   left: var(--control-panel-padding);
   z-index: 1;
   display: flex;
@@ -757,8 +768,12 @@
 
 .control-dock-window-grab-nub::before {
   position: absolute;
-  top: calc((var(--control-dock-tab-height) - var(--control-grab-dot-height)) / 2);
-  left: calc((var(--control-grab-nub-width) - var(--control-grab-dot-width)) / 2);
+  top: calc(
+    (var(--control-dock-tab-height) - var(--control-grab-dot-height)) / 2
+  );
+  left: calc(
+    (var(--control-grab-nub-width) - var(--control-grab-dot-width)) / 2
+  );
   width: var(--control-grab-dot-width);
   height: var(--control-grab-dot-height);
   border-left: var(--control-grab-dot-width) dotted rgba(255, 255, 255, 0.58);
