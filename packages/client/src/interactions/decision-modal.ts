@@ -128,6 +128,17 @@ export type DecisionModalModel = DecisionModalPresentationModel &
         canConfirm: true;
       }
     | {
+        kind: "chooseOne";
+        decisionId: DecisionId;
+        options: Array<{
+          actionIndex: number;
+          label: string;
+        }>;
+        declineActionIndex?: number;
+        declineLabel?: string;
+        canConfirm: true;
+      }
+    | {
         kind: "generic";
         decisionId: DecisionId;
         canConfirm: false;
@@ -386,6 +397,55 @@ const actionOptionModels = (
     });
   }
   return models;
+};
+
+const chooseOneOptionModels = (
+  decision: PublicPendingDecision,
+  actions: readonly ClientActionModel[],
+): {
+  options: Array<{ actionIndex: number; label: string }>;
+  declineActionIndex?: number;
+  declineLabel?: string;
+} => {
+  const responseActionsByKey = new Map<string, ClientActionModel>();
+  for (const action of actions) {
+    if (
+      action.type !== "respondToDecision" ||
+      action.responseKey === undefined
+    ) {
+      continue;
+    }
+    responseActionsByKey.set(action.responseKey, action);
+  }
+  const choices = decision.presentation.choices ?? [];
+  const optionModels = choices.flatMap((choice) => {
+    if (choice.responseKey === "decline") {
+      return [];
+    }
+    const action = responseActionsByKey.get(choice.responseKey);
+    if (action === undefined) {
+      return [];
+    }
+    return [
+      {
+        actionIndex: action.index,
+        label: choice.label,
+      },
+    ];
+  });
+  const declineAction = responseActionsByKey.get("decline");
+  const declineChoice = choices.find(
+    (choice) => choice.responseKey === "decline",
+  );
+  return {
+    options: optionModels,
+    ...(declineAction === undefined
+      ? {}
+      : {
+          declineActionIndex: declineAction.index,
+          declineLabel: declineChoice?.label ?? "Do nothing",
+        }),
+  };
 };
 
 const modalPresentation = (
@@ -769,6 +829,27 @@ export const createDecisionModalModel = (
       selectedOption: draft.option,
       canConfirm: true,
     };
+  }
+  if (decision.type === "chooseEffectOption") {
+    const chooseOneOptions = chooseOneOptionModels(decision, responseActions);
+    if (chooseOneOptions.options.length > 0) {
+      if (draft.decisionId !== decision.id || draft.kind !== "actionOptions") {
+        throw new Error("Decision draft is not an actionOptions draft.");
+      }
+      return {
+        ...modalPresentation(decision),
+        kind: "chooseOne",
+        decisionId: decision.id,
+        options: chooseOneOptions.options,
+        ...(chooseOneOptions.declineActionIndex === undefined
+          ? {}
+          : {
+              declineActionIndex: chooseOneOptions.declineActionIndex,
+              declineLabel: chooseOneOptions.declineLabel,
+            }),
+        canConfirm: true,
+      };
+    }
   }
   const actionOptions = actionOptionModels(decision, responseActions, {
     includePresentationCards: decision.type !== "confirmLifeTrigger",

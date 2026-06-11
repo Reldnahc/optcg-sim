@@ -187,6 +187,22 @@ export const publicDecisionPresentation = ({
       ...withPresentationContext(context),
     };
   }
+  if (pending.type === "chooseEffectOption") {
+    return {
+      title: "Choose one",
+      instruction: stripPeriod(pending.prompt),
+      ...withPresentationContext(context),
+      choices: [
+        ...pending.options.map((option) => ({
+          responseKey: option.id,
+          label: option.label ?? "Choose option",
+        })),
+        ...(pending.min === 0
+          ? [{ responseKey: "decline", label: "Do nothing" }]
+          : []),
+      ],
+    };
+  }
   if (pending.type === "payCost") {
     return {
       title: "Pay cost",

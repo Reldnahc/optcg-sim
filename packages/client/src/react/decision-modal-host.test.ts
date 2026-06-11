@@ -242,6 +242,45 @@ test("action option modals render one-click choices without a confirm action", (
   assert.doesNotMatch(markup, /decision-choice is-selected/u);
 });
 
+test("choose-one modals render custom one-click effect choices", () => {
+  const model: DecisionModalModel = {
+    ...presentation,
+    kind: "chooseOne",
+    decisionId: "decision-choose-one" as never,
+    options: [
+      { actionIndex: 10, label: "Draw 1 card." },
+      { actionIndex: 11, label: "Return 1 DON!! card." },
+    ],
+    declineActionIndex: 9,
+    declineLabel: "Do nothing",
+    canConfirm: true,
+  };
+
+  const markup = renderToStaticMarkup(
+    createElement(DecisionModalHost, {
+      model,
+      disabled: false,
+      onToggleCard: () => undefined,
+      onChooseTrigger: () => undefined,
+      onQuantity: () => undefined,
+      onOption: () => undefined,
+      onActionOption: () => undefined,
+      onMoveOrderedCard: () => undefined,
+      onPlacementDestination: () => undefined,
+      onConfirm: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /decision-choose-one-list/u);
+  assert.match(markup, /decision-choose-one-option/u);
+  assert.match(markup, />Draw 1 card\.<\/button>/u);
+  assert.match(markup, />Return 1 DON!! card\.<\/button>/u);
+  assert.match(markup, />Do nothing<\/button>/u);
+  assert.doesNotMatch(markup, /decision-option-list/u);
+  assert.doesNotMatch(markup, /primary-action/u);
+  assert.doesNotMatch(markup, /decision-choice is-selected/u);
+});
+
 test("action option modals can render replacement choices as source cards", () => {
   const model: DecisionModalModel = {
     ...presentation,
@@ -342,6 +381,26 @@ test("button-only decision options use pointer and hover feedback", async () => 
   assert.match(
     styles,
     /\.decision-option-list\s+\.decision-choice:hover:not\(:disabled\),\s*\.decision-option-list\s+\.decision-choice:focus-visible:not\(:disabled\)\s*\{[^}]*background:\s*var\(--match-surface-control-hover\);[^}]*box-shadow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.88\),\s*0 0 10px rgba\(255,\s*255,\s*255,\s*0\.42\);/u,
+  );
+});
+
+test("choose-one decision options use dedicated readable option styling", async () => {
+  const styles = await readFile(
+    join(sourceDirectory, "styles", "decision-modal.css"),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.decision-choose-one-list\s*\{[^}]*display:\s*grid;[^}]*gap:\s*var\(--modal-gap\);/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-choose-one-option\s*\{[^}]*font-size:\s*clamp\(/u,
+  );
+  assert.match(
+    styles,
+    /\.decision-choose-one-option:hover:not\(:disabled\),\s*\.decision-choose-one-option:focus-visible:not\(:disabled\)\s*\{[^}]*background:\s*var\(--match-surface-control-hover\);/u,
   );
 });
 

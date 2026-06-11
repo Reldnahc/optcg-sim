@@ -148,6 +148,41 @@ test("chooseReplacement projection includes visible replacement source cards", (
   ]);
 });
 
+test("chooseEffectOption projection includes effect option labels", () => {
+  const state = createActiveState();
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-effect-option"),
+    type: "chooseEffectOption",
+    playerId: p1,
+    prompt: "Choose one:",
+    causedBy: { type: "ruleProcess", name: "effectSequence" },
+    visibility: { type: "private", playerId: p1 },
+    min: 0,
+    max: 1,
+    options: [
+      {
+        id: "draw-card",
+        label: "Draw 1 card.",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+      {
+        id: "return-don",
+        label: "Return 1 DON!! card.",
+        effect: { type: "returnDon", player: "self", count: 1 },
+      },
+    ],
+  };
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.pendingDecision?.type, "chooseEffectOption");
+  assert.deepEqual(view.pendingDecision.presentation.choices, [
+    { responseKey: "draw-card", label: "Draw 1 card." },
+    { responseKey: "return-don", label: "Return 1 DON!! card." },
+    { responseKey: "decline", label: "Do nothing" },
+  ]);
+});
+
 test("counter-step pass decisions project a public default action choice", () => {
   const state = createActiveState();
   state.pendingDecision = {

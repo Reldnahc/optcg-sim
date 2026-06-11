@@ -59,6 +59,40 @@
   gap: 8px;
 }
 
+.decision-choose-one-list {
+  display: grid;
+  gap: var(--modal-gap);
+  width: min(520px, 76vw);
+  max-width: 100%;
+}
+
+.decision-choose-one-option {
+  border: 1px solid var(--match-border-strong);
+  border-radius: 6px;
+  color: var(--match-text);
+  background: var(--match-surface-control);
+  padding: 14px 16px;
+  text-align: left;
+  font-size: clamp(15px, calc(var(--card-height) / 9.5), 20px);
+  line-height: 1.35;
+}
+
+.decision-choose-one-option.is-decline {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.decision-choose-one-option:not(:disabled) {
+  cursor: pointer;
+}
+
+.decision-choose-one-option:hover:not(:disabled),
+.decision-choose-one-option:focus-visible:not(:disabled) {
+  background: var(--match-surface-control-hover);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.88),
+    0 0 10px rgba(255, 255, 255, 0.42);
+}
+
 .decision-choice,
 .decision-order-row {
   border: 1px solid var(--match-border-strong);

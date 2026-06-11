@@ -629,6 +629,98 @@ describe("headless decision modal models", () => {
     ]);
   });
 
+  test("choose-one effect decisions render effect options as a dedicated model", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "chooseEffectOption",
+      prompt: "Choose one:",
+      presentation: {
+        title: "Choose one",
+        instruction: "Choose one effect.",
+        choices: [
+          { responseKey: "draw-card", label: "Draw 1 card." },
+          { responseKey: "return-don", label: "Return 1 DON!! card." },
+          { responseKey: "decline", label: "Do nothing" },
+        ],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 9,
+        type: "respondToDecision",
+        label: "Raw decline",
+        responseKey: "decline",
+      },
+      {
+        index: 10,
+        type: "respondToDecision",
+        label: "Raw draw",
+        responseKey: "draw-card",
+      },
+      {
+        index: 11,
+        type: "respondToDecision",
+        label: "Raw return",
+        responseKey: "return-don",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.deepEqual(model, {
+      title: "Choose one",
+      instruction: "Choose one effect.",
+      prompt: "Choose one:",
+      kind: "chooseOne",
+      decisionId: decision.id,
+      options: [
+        { actionIndex: 10, label: "Draw 1 card." },
+        { actionIndex: 11, label: "Return 1 DON!! card." },
+      ],
+      declineActionIndex: 9,
+      declineLabel: "Do nothing",
+      canConfirm: true,
+    });
+  });
+
+  test("required choose-one effect decisions omit the decline action", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "chooseEffectOption",
+      prompt: "Choose one:",
+      presentation: {
+        title: "Choose one",
+        instruction: "Choose one effect.",
+        choices: [{ responseKey: "draw-card", label: "Draw 1 card." }],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 10,
+        type: "respondToDecision",
+        label: "Raw draw",
+        responseKey: "draw-card",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "chooseOne");
+    assert.equal(model.declineActionIndex, undefined);
+    assert.equal(model.declineLabel, undefined);
+    assert.deepEqual(model.options, [
+      { actionIndex: 10, label: "Draw 1 card." },
+    ]);
+  });
+
   test("default decision modal receives collapsed DON payment response actions", () => {
     const decision: PublicPendingDecision = {
       ...baseDecision,

@@ -134,7 +134,8 @@ export const DecisionModalHost = ({
   const renderConfirm =
     model.kind !== "binaryQuantity" &&
     model.kind !== "chooseOption" &&
-    model.kind !== "actionOptions";
+    model.kind !== "actionOptions" &&
+    model.kind !== "chooseOne";
   return (
     <ModalFrame title={model.title} className={decisionModalFrameClass(model)}>
       <div className="decision-modal-context">
@@ -339,6 +340,41 @@ export const DecisionModalHost = ({
               {option.label}
             </button>
           ))}
+        </div>
+      ) : null}
+      {model.kind === "chooseOne" ? (
+        <div className="decision-choose-one-list">
+          {model.options.map((option) => (
+            <button
+              key={option.actionIndex}
+              className="decision-choose-one-option"
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                (onSubmitActionOption ?? onActionOption)(option.actionIndex);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+          {(() => {
+            const declineActionIndex = model.declineActionIndex;
+            if (declineActionIndex === undefined) {
+              return null;
+            }
+            return (
+              <button
+                className="decision-choose-one-option is-decline"
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  (onSubmitActionOption ?? onActionOption)(declineActionIndex);
+                }}
+              >
+                {model.declineLabel ?? "Do nothing"}
+              </button>
+            );
+          })()}
         </div>
       ) : null}
       {model.kind === "actionOptions" ? (
