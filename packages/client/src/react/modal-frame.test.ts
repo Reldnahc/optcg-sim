@@ -67,6 +67,7 @@ describe("modal frame", () => {
 
     assert.match(styles, /\.modal-frame\s*\{[^}]*top:\s*50%;/u);
     assert.match(styles, /\.modal-frame\s*\{[^}]*left:\s*50%;/u);
+    assert.match(styles, /\.modal-frame\s*\{[^}]*box-sizing:\s*border-box;/u);
     assert.match(
       styles,
       /\.modal-frame\s*\{[^}]*--modal-viewport-gutter:\s*clamp\(16px,\s*calc\(var\(--card-height\) \/ 4\),\s*48px\);[^}]*--modal-padding:\s*clamp\(12px,\s*calc\(var\(--card-height\) \/ 8\),\s*24px\);[^}]*--modal-gap:\s*clamp\(8px,\s*calc\(var\(--card-height\) \/ 14\),\s*16px\);/u,
