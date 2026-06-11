@@ -139,6 +139,8 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       };
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
+    case "setLifeFaceUp":
+      return { ...cost, optional: true };
     case "trashFromHand":
       return {
         type: "trashFromHand",
@@ -208,6 +210,14 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         count: cost.count,
         player: cost.player,
         position: cost.position,
+      };
+    case "setLifeFaceUp":
+      return {
+        type: "setLifeFaceUp",
+        count: cost.count,
+        player: cost.player,
+        position: cost.position,
+        faceUp: cost.faceUp,
       };
     case "returnDon":
       return {

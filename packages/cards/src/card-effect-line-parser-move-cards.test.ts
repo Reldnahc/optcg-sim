@@ -248,6 +248,59 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses optional turn-Life-face-down cost before rested DON attachment", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] You may turn 1 card from the top of your Life cards face-down: Give up to 1 rested DON!! card to your Leader or 1 of your Characters.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "setLifeFaceUp",
+                  count: 1,
+                  player: "self",
+                  position: "top",
+                  faceUp: false,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  { effect: { type: "selectCards", zone: "costArea" } },
+                  { effect: { type: "selectTargets" } },
+                  { effect: { type: "attachSelectedDon" } },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "composition:optionalCostedEffect",
+        "cost:setLifeFaceUp",
+        "zone:life",
+        "position:top",
+        "destination:faceDown",
+        "instruction:attachDon",
+      ]),
+    );
+  });
+
   it("parses optional rest plus move-cards cost into opponent hand-count trash", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] You may rest this Character and place 2 cards from your trash at the bottom of your deck in any order: If your opponent has 6 or more cards in their hand, your opponent trashes 1 card from their hand.",

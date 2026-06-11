@@ -70,6 +70,11 @@ export const isSupportedPayCostSegment = (
       cost.player === "self" && Number.isInteger(cost.count) && cost.count > 0
     );
   }
+  if (cost.type === "setLifeFaceUp") {
+    return (
+      cost.player === "self" && Number.isInteger(cost.count) && cost.count > 0
+    );
+  }
   if (cost.type === "modifyPower") {
     return (
       cost.target.type === "myLeader" &&

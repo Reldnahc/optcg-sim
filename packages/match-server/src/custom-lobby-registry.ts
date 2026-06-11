@@ -38,6 +38,10 @@ import type {
   SimHandoffBatchVerificationResult,
   VerifiedSimHandoff,
 } from "./sim-handoff.js";
+import {
+  recordLobbyValidationTimingSpan,
+  type LobbyValidationTimingSpan,
+} from "./lobby-validation-timing-log.js";
 
 export interface CreatedCustomLobbyResponse {
   lobbyId: string;
@@ -70,6 +74,12 @@ export interface CustomLobbyDeckValidationInput {
   readonly loadoutId: string;
   readonly deckHash: string;
   readonly donDeckCount: number;
+}
+
+interface PendingDecodedSubmission {
+  readonly index: number;
+  readonly loadoutId: string;
+  readonly submission: ReadyDeckSubmission;
 }
 
 export interface CustomLobbyRegistry {
@@ -107,10 +117,12 @@ export interface CustomLobbyRegistry {
   validateLoadouts: (
     lobbyId: string,
     handoffs: readonly SimHandoffBatchVerificationResult[],
+    timingSpans?: LobbyValidationTimingSpan[],
   ) => Promise<ValidatedCustomLobbyLoadoutsResponse | "lobbyNotFound">;
   validateDecks: (
     lobbyId: string,
     decks: readonly CustomLobbyDeckValidationInput[],
+    timingSpans?: LobbyValidationTimingSpan[],
   ) => Promise<ValidatedCustomLobbyLoadoutsResponse | "lobbyNotFound">;
   getLobby: (
     lobbyId: string,
@@ -288,26 +300,39 @@ export const createCustomLobbyRegistry = async (
     }[],
     formatId: string,
     loadouts: ValidatedCustomLobbyLoadout[],
+    timingSpans?: LobbyValidationTimingSpan[],
   ): Promise<void> => {
-    const validationResults = await validateReadyDevDeckSubmissions({
-      submissions: pendingSubmissions.map((pending) => pending.submission),
-      createdAt: devLobbyCreatedAt,
-      formatId,
-      ...(options.fetchCard === undefined
-        ? {}
-        : { fetchCard: options.fetchCard }),
-      ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
-      ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
-      ...(options.redisMode === undefined
-        ? {}
-        : { redisMode: options.redisMode }),
-      ...(sharedCardDataCache === undefined
-        ? {}
-        : {
-            cardDataCache: sharedCardDataCache,
-            validationCache: sharedCardDataCache,
-          }),
-    });
+    const validate = async () =>
+      await validateReadyDevDeckSubmissions({
+        submissions: pendingSubmissions.map((pending) => pending.submission),
+        createdAt: devLobbyCreatedAt,
+        formatId,
+        ...(options.fetchCard === undefined
+          ? {}
+          : { fetchCard: options.fetchCard }),
+        ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
+        ...(options.redisUrl === undefined
+          ? {}
+          : { redisUrl: options.redisUrl }),
+        ...(options.redisMode === undefined
+          ? {}
+          : { redisMode: options.redisMode }),
+        ...(sharedCardDataCache === undefined
+          ? {}
+          : {
+              cardDataCache: sharedCardDataCache,
+              validationCache: sharedCardDataCache,
+            }),
+      });
+    const validationResults =
+      timingSpans === undefined
+        ? await validate()
+        : await recordLobbyValidationTimingSpan(
+            timingSpans,
+            "deck-validation",
+            validate,
+            { count: pendingSubmissions.length },
+          );
     for (const [resultIndex, pending] of pendingSubmissions.entries()) {
       const validation = validationResults[resultIndex];
       loadouts[pending.index] =
@@ -499,106 +524,156 @@ export const createCustomLobbyRegistry = async (
         };
       });
     },
-    async validateLoadouts(lobbyId, handoffs) {
-      const lobby = await lobbyStore.getLobby(lobbyId);
+    async validateLoadouts(lobbyId, handoffs, timingSpans) {
+      const lobby =
+        timingSpans === undefined
+          ? await lobbyStore.getLobby(lobbyId)
+          : await recordLobbyValidationTimingSpan(
+              timingSpans,
+              "lobby-load",
+              async () => await lobbyStore.getLobby(lobbyId),
+            );
       if (lobby === undefined) {
         return "lobbyNotFound";
       }
       const formatId = lobbySettings(lobby).formatId;
       const loadouts: ValidatedCustomLobbyLoadout[] = [];
-      const pendingSubmissions: Array<{
-        readonly index: number;
-        readonly loadoutId: string;
-        readonly submission: ReadyDeckSubmission;
-      }> = [];
-      for (const [index, result] of handoffs.entries()) {
-        if (result.status === "rejected") {
-          loadouts[index] = {
-            loadoutId: null,
-            status: "unverified" as const,
-            errors: [result.error],
-          };
-          continue;
-        }
-        const { handoff } = result;
-        if (
-          handoff.claims.lobby_id !== null &&
-          handoff.claims.lobby_id !== lobbyId
-        ) {
-          loadouts[index] = {
-            loadoutId: handoff.resolvedLoadout.loadoutId,
-            status: "unverified" as const,
-            errors: ["Sim handoff token is not authorized for this lobby."],
-          };
-          continue;
-        }
-        let submission;
-        try {
-          submission = await decodeDeckHashSubmission({
-            hash: handoff.resolvedLoadout.mainDeck.hash,
-            donDeckCount: handoff.resolvedLoadout.donDeck.count,
-            codec: deckHashCodec,
-          });
-        } catch {
-          loadouts[index] = {
-            loadoutId: handoff.resolvedLoadout.loadoutId,
-            status: "unplayable" as const,
-            errors: ["Resolved loadout is invalid."],
-          };
-          continue;
-        }
-        if (submission.status !== "ready") {
-          loadouts[index] = {
-            loadoutId: handoff.resolvedLoadout.loadoutId,
-            status: "unplayable" as const,
-            errors: ["Resolved loadout is invalid."],
-          };
-          continue;
-        }
-        pendingSubmissions.push({
-          index,
-          loadoutId: handoff.resolvedLoadout.loadoutId,
-          submission,
-        });
-      }
-      await validatePendingSubmissions(pendingSubmissions, formatId, loadouts);
+      const decodedSubmissions = await Promise.all(
+        handoffs.map(
+          async (
+            result,
+            index,
+          ): Promise<PendingDecodedSubmission | undefined> => {
+            if (result.status === "rejected") {
+              loadouts[index] = {
+                loadoutId: null,
+                status: "unverified" as const,
+                errors: [result.error],
+              };
+              return undefined;
+            }
+            const { handoff } = result;
+            if (
+              handoff.claims.lobby_id !== null &&
+              handoff.claims.lobby_id !== lobbyId
+            ) {
+              loadouts[index] = {
+                loadoutId: handoff.resolvedLoadout.loadoutId,
+                status: "unverified" as const,
+                errors: ["Sim handoff token is not authorized for this lobby."],
+              };
+              return undefined;
+            }
+            let submission;
+            try {
+              const decode = async () =>
+                await decodeDeckHashSubmission({
+                  hash: handoff.resolvedLoadout.mainDeck.hash,
+                  donDeckCount: handoff.resolvedLoadout.donDeck.count,
+                  codec: deckHashCodec,
+                });
+              submission =
+                timingSpans === undefined
+                  ? await decode()
+                  : await recordLobbyValidationTimingSpan(
+                      timingSpans,
+                      "deck-hash-decode",
+                      decode,
+                    );
+            } catch {
+              loadouts[index] = {
+                loadoutId: handoff.resolvedLoadout.loadoutId,
+                status: "unplayable" as const,
+                errors: ["Resolved loadout is invalid."],
+              };
+              return undefined;
+            }
+            if (submission.status !== "ready") {
+              loadouts[index] = {
+                loadoutId: handoff.resolvedLoadout.loadoutId,
+                status: "unplayable" as const,
+                errors: ["Resolved loadout is invalid."],
+              };
+              return undefined;
+            }
+            return {
+              index,
+              loadoutId: handoff.resolvedLoadout.loadoutId,
+              submission,
+            };
+          },
+        ),
+      );
+      const pendingSubmissions = decodedSubmissions.filter(
+        (submission): submission is PendingDecodedSubmission =>
+          submission !== undefined,
+      );
+      await validatePendingSubmissions(
+        pendingSubmissions,
+        formatId,
+        loadouts,
+        timingSpans,
+      );
       return { data: { loadouts } };
     },
-    async validateDecks(lobbyId, decks) {
-      const lobby = await lobbyStore.getLobby(lobbyId);
+    async validateDecks(lobbyId, decks, timingSpans) {
+      const lobby =
+        timingSpans === undefined
+          ? await lobbyStore.getLobby(lobbyId)
+          : await recordLobbyValidationTimingSpan(
+              timingSpans,
+              "lobby-load",
+              async () => await lobbyStore.getLobby(lobbyId),
+            );
       if (lobby === undefined) {
         return "lobbyNotFound";
       }
       const loadouts: ValidatedCustomLobbyLoadout[] = [];
-      const pendingSubmissions: Array<{
-        readonly index: number;
-        readonly loadoutId: string;
-        readonly submission: ReadyDeckSubmission;
-      }> = [];
-      for (const [index, deck] of decks.entries()) {
-        const submission = await decodeDeckHashSubmission({
-          hash: deck.deckHash,
-          donDeckCount: deck.donDeckCount,
-          codec: deckHashCodec,
-        });
-        if (submission.status !== "ready") {
-          loadouts[index] = {
-            loadoutId: deck.loadoutId,
-            status: "unplayable" as const,
-            errors: ["Deck hash is invalid."],
-          };
-          continue;
-        }
-        pendingSubmissions.push({
-          index,
-          loadoutId: deck.loadoutId,
-          submission,
-        });
-      }
+      const decodedSubmissions = await Promise.all(
+        decks.map(
+          async (
+            deck,
+            index,
+          ): Promise<PendingDecodedSubmission | undefined> => {
+            const decode = async () =>
+              await decodeDeckHashSubmission({
+                hash: deck.deckHash,
+                donDeckCount: deck.donDeckCount,
+                codec: deckHashCodec,
+              });
+            const submission =
+              timingSpans === undefined
+                ? await decode()
+                : await recordLobbyValidationTimingSpan(
+                    timingSpans,
+                    "deck-hash-decode",
+                    decode,
+                  );
+            if (submission.status !== "ready") {
+              loadouts[index] = {
+                loadoutId: deck.loadoutId,
+                status: "unplayable" as const,
+                errors: ["Deck hash is invalid."],
+              };
+              return undefined;
+            }
+            return {
+              index,
+              loadoutId: deck.loadoutId,
+              submission,
+            };
+          },
+        ),
+      );
+      const pendingSubmissions = decodedSubmissions.filter(
+        (submission): submission is PendingDecodedSubmission =>
+          submission !== undefined,
+      );
       await validatePendingSubmissions(
         pendingSubmissions,
         lobbySettings(lobby).formatId,
         loadouts,
+        timingSpans,
       );
       return { data: { loadouts } };
     },

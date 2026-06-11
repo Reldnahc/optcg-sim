@@ -31,6 +31,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { ...cost, optional: true };
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
+    case "setLifeFaceUp":
+      return { ...cost, optional: true };
     case "modifyPower":
       return { ...cost, optional: true };
     case "sequence":

@@ -594,6 +594,82 @@ test("optional turnLifeFaceUp cost flips Life public and resumes the sequence", 
   });
 });
 
+test("optional setLifeFaceUp cost can turn Life face-down and resumes the sequence", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        id: "turn-life-face-down",
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "setLifeFaceUp",
+            count: 1,
+            player: "self",
+            position: "top",
+            faceUp: false,
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "draw-if-paid",
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  });
+  const before = must(state.players[p1], "before p1");
+  const topLife = must(before.life[0], "top Life");
+  topLife.faceUp = true;
+  const beforeHandCount = before.hand.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "setLifeFaceUp");
+  assert.deepEqual(decision.paymentOptions, [
+    {
+      id: "setLifeFaceUp:top:false",
+      type: "setLifeFaceUp",
+      count: 1,
+      player: "self",
+      position: "top",
+      faceUp: false,
+    },
+  ]);
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "setLifeFaceUp:top:false",
+    },
+  });
+  const after = must(paid.state.players[p1], "after p1");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(must(after.life[0], "after top Life").faceUp, false);
+  assert.equal(
+    filterStateForPlayer(paid.state, p1).self.life.faceUpCards.length,
+    0,
+  );
+  assert.equal(
+    filterStateForPlayer(paid.state, p2).opponent.life.faceUpCards.length,
+    0,
+  );
+  assert.equal(after.hand.length, beforeHandCount + 1);
+  assert.deepEqual(
+    eventTypes(paid.events).filter(
+      (type) => type === "costPaid" || type === "cardDrawn",
+    ),
+    ["costPaid", "cardDrawn"],
+  );
+});
+
 test("optional returnDon may pay using attached DON and detaches host attachment", () => {
   const { state } = sequenceQueueState(optionalReturnDonThenPauseSequence());
   placeActiveDon(state);

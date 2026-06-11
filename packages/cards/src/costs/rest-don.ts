@@ -12,6 +12,7 @@ export type SequenceCostPrimitive =
   | Extract<OptionalCost, { type: "trashSelf" }>
   | Extract<OptionalCost, { type: "trashFromField" }>
   | Extract<OptionalCost, { type: "turnLifeFaceUp" }>
+  | Extract<OptionalCost, { type: "setLifeFaceUp" }>
   | Extract<OptionalCost, { type: "modifyPower" }>
   | Extract<OptionalCost, { type: "trashFromHand" }>
   | Extract<OptionalCost, { type: "revealFromHand" }>

@@ -13,6 +13,14 @@ export type TurnLifeFaceUpPaymentOption = Extract<
   PaymentOption,
   { type: "turnLifeFaceUp" }
 >;
+export type SetLifeFaceUpPaymentOption = Extract<
+  PaymentOption,
+  { type: "setLifeFaceUp" }
+>;
+
+type LifeFaceUpPaymentOption =
+  | TurnLifeFaceUpPaymentOption
+  | SetLifeFaceUpPaymentOption;
 
 export const applyTurnLifeFaceUpPayment = (params: {
   decisionId: NonNullable<GameState["pendingDecision"]>["id"];
@@ -20,6 +28,23 @@ export const applyTurnLifeFaceUpPayment = (params: {
   player: PlayerState;
   playerId: PlayerId;
   selectedOption: TurnLifeFaceUpPaymentOption;
+  state: GameState;
+}): PlayerState | null =>
+  applySetLifeFaceUpPayment({
+    ...params,
+    selectedOption: {
+      ...params.selectedOption,
+      type: "setLifeFaceUp",
+      faceUp: true,
+    },
+  });
+
+export const applySetLifeFaceUpPayment = (params: {
+  decisionId: NonNullable<GameState["pendingDecision"]>["id"];
+  events: EngineEvent[];
+  player: PlayerState;
+  playerId: PlayerId;
+  selectedOption: LifeFaceUpPaymentOption;
   state: GameState;
 }): PlayerState | null => {
   if (
@@ -38,7 +63,7 @@ export const applyTurnLifeFaceUpPayment = (params: {
   if (
     startIndex < 0 ||
     selected.length !== count ||
-    selected.some((lifeCard) => lifeCard.faceUp)
+    selected.some((lifeCard) => lifeCard.faceUp === targetFaceUp(params.selectedOption))
   ) {
     return null;
   }
@@ -46,29 +71,35 @@ export const applyTurnLifeFaceUpPayment = (params: {
   const selectedIndexes = new Set(
     selected.map((_, index) => startIndex + index),
   );
+  const faceUp = targetFaceUp(params.selectedOption);
   const nextLife = params.player.life.map((lifeCard, index) =>
-    selectedIndexes.has(index) ? { ...lifeCard, faceUp: true } : lifeCard,
+    selectedIndexes.has(index) ? { ...lifeCard, faceUp } : lifeCard,
   );
-  appendEvent(
-    params.state,
-    params.events,
-    "cardRevealed",
-    {
-      revealId: `reveal:life-face-up:${String(params.decisionId)}`,
-      cards: selected.map((lifeCard, offset) =>
-        toLifeCardRef(lifeCard.card, params.playerId, startIndex + offset),
-      ),
-      origin: "life",
-      reason: "turnLifeFaceUpCost",
-    },
-    { type: "public" },
-  );
-  const revealed = params.events[params.events.length - 1];
-  if (revealed !== undefined) {
-    revealed.causedBy = { type: "decision", decisionId: params.decisionId };
+  if (faceUp) {
+    appendEvent(
+      params.state,
+      params.events,
+      "cardRevealed",
+      {
+        revealId: `reveal:life-face-up:${String(params.decisionId)}`,
+        cards: selected.map((lifeCard, offset) =>
+          toLifeCardRef(lifeCard.card, params.playerId, startIndex + offset),
+        ),
+        origin: "life",
+        reason: "turnLifeFaceUpCost",
+      },
+      { type: "public" },
+    );
+    const revealed = params.events[params.events.length - 1];
+    if (revealed !== undefined) {
+      revealed.causedBy = { type: "decision", decisionId: params.decisionId };
+    }
   }
   return { ...params.player, life: nextLife };
 };
+
+const targetFaceUp = (option: LifeFaceUpPaymentOption): boolean =>
+  option.type === "turnLifeFaceUp" ? true : option.faceUp;
 
 const toLifeCardRef = (
   card: CardInstance,

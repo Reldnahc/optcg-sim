@@ -26,7 +26,6 @@ import {
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";
-import { applyTurnLifeFaceUpPayment } from "../../effect-runtime-life-face-up-cost.js";
 import { applyModifyPowerPayment } from "../primitives/modify-power-cost.js";
 import { applyRestFromFieldPaymentResponse } from "../costs/rest-from-field.js";
 import {
@@ -54,6 +53,10 @@ import {
 } from "../primitives/return-don.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../primitives/trash-from-hand.js";
 import { invalidDecision } from "../../engine-error-helpers.js";
+import {
+  applyLifeVisibilityPayment,
+  type LifeVisibilityCostPaidPayload,
+} from "./life-visibility-payment.js";
 
 const sameSource = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -134,6 +137,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "attachDon" &&
         decision.cost.type !== "moveCards" &&
         decision.cost.type !== "turnLifeFaceUp" &&
+        decision.cost.type !== "setLifeFaceUp" &&
         decision.cost.type !== "modifyPower" &&
         decision.cost.type !== "trashFromHand" &&
         decision.cost.type !== "trashFromField" &&
@@ -214,12 +218,7 @@ export const applyOptionalActivationDecisionResponse = (
               typeof action.response.selectedCardInstanceIds
             >;
           }
-        | {
-            playerId: PlayerId;
-            optionId: "turnLifeFaceUp";
-            count: number;
-            position: "top" | "bottom";
-          }
+        | LifeVisibilityCostPaidPayload
         | {
             playerId: PlayerId;
             optionId: "modifyPower";
@@ -295,39 +294,24 @@ export const applyOptionalActivationDecisionResponse = (
         nextPlayers = paid.players;
         events.push(...paid.events);
         costPaidPayload = paid.costPaidPayload;
-      } else if (selectedOption.type === "turnLifeFaceUp") {
-        if (
-          paymentResponse.selectedCardInstanceIds !== undefined ||
-          paymentResponse.selectedDonInstanceIds !== undefined
-        ) {
-          return toEngineResult(
-            state,
-            [],
-            invalidDecision("Payment Life face-up selection is invalid."),
-          );
-        }
-        const updated = applyTurnLifeFaceUpPayment({
+      } else if (
+        selectedOption.type === "turnLifeFaceUp" ||
+        selectedOption.type === "setLifeFaceUp"
+      ) {
+        const paid = applyLifeVisibilityPayment({
           decisionId: decision.id,
           events,
+          paymentResponse,
           player,
           playerId: decision.playerId,
           selectedOption,
           state,
         });
-        if (updated === null) {
-          return toEngineResult(
-            state,
-            [],
-            invalidDecision("Payment Life face-up selection is invalid."),
-          );
+        if (!paid.ok) {
+          return toEngineResult(state, [], invalidDecision(paid.message));
         }
-        nextPlayer = updated;
-        costPaidPayload = {
-          playerId: decision.playerId,
-          optionId: "turnLifeFaceUp",
-          count: selectedOption.count,
-          position: selectedOption.position,
-        };
+        nextPlayer = paid.player;
+        costPaidPayload = paid.costPaidPayload;
       } else if (selectedOption.type === "modifyPower") {
         const paidPowerCost = applyModifyPowerPayment({
           causedBy: decision.causedBy,

@@ -6,6 +6,12 @@ import type {
 } from "./custom-lobby-registry.js";
 import { sendJson } from "./http-response.js";
 import { isRecord, readRequestJson } from "./request-json.js";
+import {
+  recordLobbyValidationTimingSpan,
+  roundLobbyValidationTimingMs,
+  writeLobbyValidationTimingLog,
+  type LobbyValidationTimingSpan,
+} from "./lobby-validation-timing-log.js";
 import type {
   SimHandoffBatchVerificationResult,
   SimHandoffVerifier,
@@ -38,8 +44,14 @@ export const handleLobbyLoadoutValidationRequest = async ({
     });
   }
 
+  const startedAt = performance.now();
+  const timingSpans: LobbyValidationTimingSpan[] = [];
   const lobbyId = decodeURIComponent(route.groups?.["lobbyId"] ?? "");
-  const body = await readRequestJson(request);
+  const body = await recordLobbyValidationTimingSpan(
+    timingSpans,
+    "request-json",
+    async () => await readRequestJson(request),
+  );
   const handoffTokens = isRecord(body) ? body["handoffTokens"] : undefined;
   if (
     !Array.isArray(handoffTokens) ||
@@ -53,7 +65,12 @@ export const handleLobbyLoadoutValidationRequest = async ({
 
   let verified: readonly SimHandoffBatchVerificationResult[];
   try {
-    verified = await simHandoffVerifier.verifyBatch(handoffTokens);
+    verified = await recordLobbyValidationTimingSpan(
+      timingSpans,
+      "handoff-verify-batch",
+      async () => await simHandoffVerifier.verifyBatch(handoffTokens),
+      { count: handoffTokens.length },
+    );
   } catch (error: unknown) {
     sendJson(response, 401, {
       errors: [
@@ -65,12 +82,30 @@ export const handleLobbyLoadoutValidationRequest = async ({
     return true;
   }
 
-  const result = await lobbyRegistry.validateLoadouts(lobbyId, verified);
+  const result = await lobbyRegistry.validateLoadouts(
+    lobbyId,
+    verified,
+    timingSpans,
+  );
   if (result === "lobbyNotFound") {
     sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
+    writeLobbyValidationTimingLog({
+      route: "loadouts.validate",
+      lobbyId,
+      loadoutCount: handoffTokens.length,
+      spans: timingSpans,
+      totalMs: roundLobbyValidationTimingMs(performance.now() - startedAt),
+    });
     return true;
   }
   sendJson(response, 200, result);
+  writeLobbyValidationTimingLog({
+    route: "loadouts.validate",
+    lobbyId,
+    loadoutCount: handoffTokens.length,
+    spans: timingSpans,
+    totalMs: roundLobbyValidationTimingMs(performance.now() - startedAt),
+  });
   return true;
 };
 
@@ -99,8 +134,14 @@ const handleLobbyDeckValidationRequest = async ({
     return false;
   }
 
+  const startedAt = performance.now();
+  const timingSpans: LobbyValidationTimingSpan[] = [];
   const lobbyId = decodeURIComponent(route.groups?.["lobbyId"] ?? "");
-  const body = await readRequestJson(request);
+  const body = await recordLobbyValidationTimingSpan(
+    timingSpans,
+    "request-json",
+    async () => await readRequestJson(request),
+  );
   const decks = isRecord(body) ? body["decks"] : undefined;
   if (!Array.isArray(decks) || !decks.every(isDeckValidationInput)) {
     sendJson(response, 400, {
@@ -111,11 +152,25 @@ const handleLobbyDeckValidationRequest = async ({
     return true;
   }
 
-  const result = await lobbyRegistry.validateDecks(lobbyId, decks);
+  const result = await lobbyRegistry.validateDecks(lobbyId, decks, timingSpans);
   if (result === "lobbyNotFound") {
     sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
+    writeLobbyValidationTimingLog({
+      route: "decks.validate",
+      lobbyId,
+      loadoutCount: decks.length,
+      spans: timingSpans,
+      totalMs: roundLobbyValidationTimingMs(performance.now() - startedAt),
+    });
     return true;
   }
   sendJson(response, 200, result);
+  writeLobbyValidationTimingLog({
+    route: "decks.validate",
+    lobbyId,
+    loadoutCount: decks.length,
+    spans: timingSpans,
+    totalMs: roundLobbyValidationTimingMs(performance.now() - startedAt),
+  });
   return true;
 };

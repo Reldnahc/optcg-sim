@@ -240,6 +240,27 @@ const validateCustomLobbyDecks = async (
   return (await response.json()) as ValidatedLobbyLoadoutsBody;
 };
 
+const waitForMicrotasks = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
+const delayMs = async (ms: number): Promise<void> => {
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+};
+
+const waitForStartedDecode = async (
+  startedDecodes: readonly string[],
+): Promise<void> => {
+  for (let attempts = 0; attempts < 50; attempts += 1) {
+    if (startedDecodes.length > 0) {
+      return;
+    }
+    await delayMs(1);
+  }
+  throw new Error("Timed out waiting for deck hash decode to start.");
+};
+
 const lobbyWebSocketUrl = (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   lobbyId: string,
@@ -518,6 +539,59 @@ describe("dev HTTP lobby deck submissions", () => {
         },
       ]);
     } finally {
+      await server.close();
+    }
+  });
+
+  test("starts picker deck hash decodes concurrently during preflight", async () => {
+    const startedDecodes: string[] = [];
+    const resolveDecode = new Map<string, () => void>();
+    let validation: Promise<ValidatedLobbyLoadoutsBody> | undefined;
+    const server = await createMatchHttpServer({
+      setup: await createFixtureDevMatchSetup(),
+      fetchCard: createDefaultDevFixtureFetch(),
+      deckHashCodec: {
+        async decode(hash): Promise<DeckHashDeck> {
+          startedDecodes.push(hash);
+          await Promise.race([
+            new Promise<void>((resolve) => {
+              resolveDecode.set(hash, resolve);
+            }),
+            delayMs(200),
+          ]);
+          return {
+            leader: { card_number: "OP13-079", count: 1 },
+            main: [{ card_number: "OP13-080", count: 50 }],
+            don: null,
+          };
+        },
+      },
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createCustomLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      validation = validateCustomLobbyDecks(server, lobbyId, [
+        { loadoutId: "slow-a", deckHash: "slow-a", donDeckCount: 10 },
+        { loadoutId: "slow-b", deckHash: "slow-b", donDeckCount: 10 },
+      ]);
+      await waitForStartedDecode(startedDecodes);
+      await waitForMicrotasks();
+
+      assert.deepEqual(startedDecodes, ["slow-a", "slow-b"]);
+
+      resolveDecode.get("slow-a")?.();
+      resolveDecode.get("slow-b")?.();
+      await validation;
+    } finally {
+      for (const resolve of resolveDecode.values()) {
+        resolve();
+      }
+      await validation?.catch(() => undefined);
       await server.close();
     }
   });

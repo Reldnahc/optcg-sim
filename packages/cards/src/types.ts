@@ -138,6 +138,7 @@ export type PrimitiveEvidence =
   | "cost:attachDon"
   | "cost:returnDon"
   | "cost:turnLifeFaceUp"
+  | "cost:setLifeFaceUp"
   | "cost:chooseOne"
   | "choice:option"
   | "cost:trashSelf"

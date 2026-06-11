@@ -41,6 +41,13 @@ import {
   restFromFieldPaymentLegalActions,
   restFromFieldPaymentOption,
 } from "./rest-from-field-cost-options.js";
+import {
+  canSetLifeFaceUp,
+  setLifeFaceUpPaymentOption,
+  turnLifeFaceUpPaymentOption,
+  type SetLifeFaceUpPaymentOption,
+  type TurnLifeFaceUpPaymentOption,
+} from "./life-cost-options.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
@@ -50,35 +57,10 @@ const decisionCauseForEntry = (entry: EffectQueueEntry) =>
     effectId: entry.effectBlockId,
   }) as const;
 
-type TurnLifeFaceUpPaymentOption = Extract<
-  OptionalPayCostDecision["paymentOptions"][number],
-  { type: "turnLifeFaceUp" }
->;
 type ModifyPowerPaymentOption = Extract<
   OptionalPayCostDecision["paymentOptions"][number],
   { type: "modifyPower" }
 >;
-
-const canTurnLifeFaceUp = (
-  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
-  option: TurnLifeFaceUpPaymentOption,
-): boolean => {
-  if (
-    option.player !== "self" ||
-    !Number.isInteger(option.count) ||
-    option.count <= 0
-  ) {
-    return false;
-  }
-  const selected =
-    option.position === "top"
-      ? player.life.slice(0, option.count)
-      : player.life.slice(Math.max(0, player.life.length - option.count));
-  return (
-    selected.length === option.count &&
-    selected.every((lifeCard) => !lifeCard.faceUp)
-  );
-};
 
 const canPayModifyPowerCost = (
   player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
@@ -653,8 +635,8 @@ export const getSequencePayCostLegalActions = (
       );
       continue;
     }
-    if (option.type === "turnLifeFaceUp") {
-      if (canTurnLifeFaceUp(player, option)) {
+    if (option.type === "turnLifeFaceUp" || option.type === "setLifeFaceUp") {
+      if (canSetLifeFaceUp(player, option)) {
         legalPayments.push({
           type: "respondToDecision",
           decisionId: decision.id,
@@ -753,6 +735,7 @@ export const getSequenceOptionalPayCostOptions = (
         | "trashFromField"
         | "moveCards"
         | "turnLifeFaceUp"
+        | "setLifeFaceUp"
         | "modifyPower";
     }
   >
@@ -773,6 +756,7 @@ export const getSequenceOptionalPayCostOptions = (
           | "trashFromField"
           | "moveCards"
           | "turnLifeFaceUp"
+          | "setLifeFaceUp"
           | "modifyPower";
       }
     >
@@ -934,16 +918,20 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "turnLifeFaceUp") {
-    const option: TurnLifeFaceUpPaymentOption = {
-      id: `turnLifeFaceUp:${cost.position}`,
-      type: "turnLifeFaceUp",
-      count: cost.count,
-      player: cost.player,
-      position: cost.position,
-    };
+    const option: TurnLifeFaceUpPaymentOption = turnLifeFaceUpPaymentOption(cost);
     if (
       currentPlayer !== undefined &&
-      canTurnLifeFaceUp(currentPlayer, option)
+      canSetLifeFaceUp(currentPlayer, option)
+    ) {
+      paymentOptions.push(option);
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "setLifeFaceUp") {
+    const option: SetLifeFaceUpPaymentOption = setLifeFaceUpPaymentOption(cost);
+    if (
+      currentPlayer !== undefined &&
+      canSetLifeFaceUp(currentPlayer, option)
     ) {
       paymentOptions.push(option);
     }

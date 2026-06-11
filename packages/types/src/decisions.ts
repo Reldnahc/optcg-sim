@@ -45,6 +45,14 @@ export type PaymentOption =
       player: PlayerRef;
       position: "top" | "bottom";
     }
+  | {
+      id: string;
+      type: "setLifeFaceUp";
+      count: number;
+      player: PlayerRef;
+      position: "top" | "bottom";
+      faceUp: boolean;
+    }
   | { id: string; type: "restDon"; count: number }
   | {
       id: string;

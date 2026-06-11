@@ -112,6 +112,10 @@ const paymentOptionLabel = (
       return "Trash this card";
     case "turnLifeFaceUp":
       return `Turn ${lifePositionLabel(option.position)} face-up`;
+    case "setLifeFaceUp":
+      return `Turn ${lifePositionLabel(option.position)} ${
+        option.faceUp ? "face-up" : "face-down"
+      }`;
     case "restDon":
       return `Rest ${countLabel(selectedDonCount || option.count, "DON!!", "DON!!")}`;
     case "attachDon":

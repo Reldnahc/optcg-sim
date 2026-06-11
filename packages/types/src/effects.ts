@@ -16,6 +16,12 @@ import type {
   Keyword,
 } from "./card-metadata.js";
 import type { EffectTextPresentationRef } from "./effect-presentation.js";
+import type {
+  OptionalSetLifeFaceUpCost,
+  OptionalTurnLifeFaceUpCost,
+  SetLifeFaceUpCost,
+  TurnLifeFaceUpCost,
+} from "./effect-costs.js";
 
 export type FailurePolicy =
   | "doAsMuchAsPossible"
@@ -183,12 +189,8 @@ export type Cost =
       optional?: boolean;
     }
   | { type: "restSelf"; optional?: boolean }
-  | {
-      type: "turnLifeFaceUp";
-      count: number;
-      player: PlayerRef;
-      position: "top" | "bottom";
-    }
+  | TurnLifeFaceUpCost
+  | SetLifeFaceUpCost
   // prettier-ignore
   | { type: "trashFromHand"; count: number; maxCount?: number | "available"; filter?: CardFilter; chooser: PlayerRef }
   | {
@@ -317,13 +319,8 @@ export type OptionalCost =
       duration: Duration;
       optional: true;
     }
-  | {
-      type: "turnLifeFaceUp";
-      count: number;
-      player: PlayerRef;
-      position: "top" | "bottom";
-      optional: true;
-    }
+  | OptionalTurnLifeFaceUpCost
+  | OptionalSetLifeFaceUpCost
   | OptionalTrashFromHandCost
   | OptionalRevealFromHandCost
   | OptionalMoveCardsCost
