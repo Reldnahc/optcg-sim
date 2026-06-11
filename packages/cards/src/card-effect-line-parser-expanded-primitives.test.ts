@@ -449,4 +449,101 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
       ]),
     );
   });
+
+  it("parses variable hand-trash paid-count power under multiple attack timings", () => {
+    const lines = [
+      "[When Attacking] You may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+      "[On Your Opponent's Attack] You may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+    ];
+
+    for (const line of lines) {
+      const result = parseCardEffectLine(line);
+
+      expect(result).toMatchObject({
+        block: {
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                saveResultAs: "paidCost:trashFromHand",
+                effect: {
+                  type: "payCost",
+                  cost: {
+                    type: "trashFromHand",
+                    count: 0,
+                    maxCount: "available",
+                    chooser: "self",
+                    filter: { categories: ["event", "stage"] },
+                    optional: true,
+                  },
+                },
+              },
+              {
+                connector: "ifYouDo",
+                effect: {
+                  type: "modifyPower",
+                  target: { type: "self" },
+                  value: {
+                    type: "paidCostCardCount",
+                    cost: "paidCost:trashFromHand",
+                    multiplier: 1000,
+                  },
+                  duration: { type: "thisBattle" },
+                },
+              },
+            ],
+          },
+        },
+      });
+      expect(result?.evidence).toEqual(
+        expect.arrayContaining([
+          "cost:trashFromHand",
+          "count:anyNumber",
+          "filter:category:event",
+          "filter:category:stage",
+          "instruction:modifyPower",
+          "value:dynamic:paidCostCardCount",
+          "duration:thisBattle",
+        ]),
+      );
+    }
+  });
+
+  it("parses activated-this-turn Event conditions independently from draw bodies", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] If you have activated an Event with a base cost of 3 or more during this turn, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        oncePerTurn: true,
+        condition: {
+          type: "eventHistory",
+          event: "cardPlayed",
+          player: "self",
+          filter: {
+            categories: ["event"],
+            baseCost: { op: "gte", value: 3 },
+          },
+          window: "thisTurn",
+          op: "gte",
+          value: 1,
+        },
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:eventHistory",
+        "event:cardPlayed",
+        "filter:category:event",
+        "filter:baseCost",
+        "duration:thisTurn",
+        "instruction:draw",
+      ]),
+    );
+  });
 });

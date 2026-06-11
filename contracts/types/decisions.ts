@@ -55,7 +55,13 @@ export type PaymentOption =
       target: Target;
     }
   | { id: string; type: "returnDon"; count: number; sourceState?: "active" }
-  | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
+  | {
+      id: string;
+      type: "trashFromHand";
+      count: number;
+      maxCount?: number | "available";
+      filter?: CardFilter;
+    }
   | { id: string; type: "revealFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
   | {

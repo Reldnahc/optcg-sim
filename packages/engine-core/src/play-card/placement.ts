@@ -292,6 +292,7 @@ export const placePlayedCardResult = (params: {
         cardId: sourceCard.cardId,
         category: supported.category,
         sourceZone,
+        turnNumber: state.turn.globalTurn,
       },
       { type: "public" },
     );
@@ -480,6 +481,7 @@ export const placePlayedCardResult = (params: {
       cardId: sourceCard.cardId,
       category: supported.category,
       sourceZone,
+      turnNumber: state.turn.globalTurn,
     },
     { type: "public" },
   );

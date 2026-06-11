@@ -1,6 +1,7 @@
 import {
   parseDonFieldCountCondition,
   parseEitherPlayerLifeCountCondition,
+  parseEventHistoryCondition,
   parseFieldCardCountCondition,
   parseHandCountCondition,
   parseLeaderColorCountCondition,
@@ -137,6 +138,7 @@ export const conditionParsers = [
   parseRestedCardCountCondition,
   parseSelfFieldCountCondition,
   parseTrashCountCondition,
+  parseEventHistoryCondition,
   parseEitherPlayerLifeCountCondition,
   parseLifeCountDifferenceCondition,
   parseLifeCountTotalCondition,

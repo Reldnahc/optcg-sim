@@ -392,6 +392,13 @@ const isSupportedPowerEffectValue = (
       value.filter.custom === "differentNames"
     );
   }
+  if (value.type === "paidCostCardCount") {
+    return (
+      value.cost.length > 0 &&
+      Number.isSafeInteger(value.multiplier) &&
+      value.multiplier > 0
+    );
+  }
   return (
     value.player === "self" &&
     Number.isSafeInteger(value.per) &&

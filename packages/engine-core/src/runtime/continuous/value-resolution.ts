@@ -152,6 +152,13 @@ export const resolveDynamicNumberValue = (
       ? null
       : countMatchingZoneCards(state, controllerId, value);
   }
+  if (value.type === "paidCostCardCount") {
+    const reference = context?.savedReferences?.[value.cost];
+    if (reference?.kind !== "paidCost") {
+      return null;
+    }
+    return (reference.selectedCards?.length ?? 0) * value.multiplier;
+  }
   const reference = context?.savedReferences?.[value.selection];
   if (reference?.kind !== "selectedCards") {
     return null;

@@ -1,4 +1,5 @@
 export { parseDonFieldCountCondition } from "./don-field-count.js";
+export { parseEventHistoryCondition } from "./event-history.js";
 export { parseFieldCardCountCondition } from "./field-card-count.js";
 export { parseHandCountCondition } from "./hand-count.js";
 export { parseLeaderColorCountCondition } from "./leader-color-count.js";

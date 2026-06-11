@@ -204,6 +204,10 @@ const isSupportedModifierValue = (
     ((value.type === "sumSelectedCardCosts" &&
       Number.isSafeInteger(value.multiplier) &&
       value.multiplier > 0) ||
+      (value.type === "paidCostCardCount" &&
+        value.cost.length > 0 &&
+        Number.isSafeInteger(value.multiplier) &&
+        value.multiplier > 0) ||
       (value.type === "countDistinctMatchingFieldNames" &&
         value.player === "self" &&
         value.filter.custom === "differentNames" &&

@@ -1,4 +1,5 @@
 import type {
+  CardRef,
   ChooseOptionalActivationDecision,
   Effect,
   EngineEvent,
@@ -179,6 +180,7 @@ export const resumeSequenceFrameAfterOptionalCost = (
   decision: PayCostDecision | OptionalPayCostDecision,
   paidCost: boolean,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
+  paidCostSelectedCards: readonly CardRef[] = [],
 ): SequenceFrameResumeResult => {
   const context = getSupportedFrameContext(state, decision.id);
   if (!context.ok) {
@@ -214,6 +216,9 @@ export const resumeSequenceFrameAfterOptionalCost = (
       ? saveReference(frame.savedReferences, pausedSegment, {
           kind: "paidCost",
           paidCost: true,
+          ...(paidCostSelectedCards.length === 0
+            ? {}
+            : { selectedCards: [...paidCostSelectedCards] }),
         })
       : frame.savedReferences;
   return resumeSequenceFrameFromLedgers({

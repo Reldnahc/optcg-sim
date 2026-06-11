@@ -6,6 +6,12 @@ import { isSupportedSequenceContinuousDuration } from "./continuous.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
+type CountedCost = Extract<
+  Cost,
+  {
+    count: number;
+  }
+>;
 
 export type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 
@@ -89,9 +95,19 @@ export const isSupportedPayCostSegment = (
     (cost.type !== "moveCards" ||
       (isSupportedMoveCardsCostRoute(cost) &&
         isSupportedHandSelectionCardFilter(cost.filter))) &&
-    Number.isInteger(cost.count) &&
-    cost.count > 0
+    isSupportedCostCount(cost)
   );
+};
+
+const isSupportedCostCount = (cost: CountedCost): boolean => {
+  if (cost.type === "trashFromHand" && cost.maxCount !== undefined) {
+    return (
+      cost.maxCount === "available" &&
+      Number.isInteger(cost.count) &&
+      cost.count >= 0
+    );
+  }
+  return Number.isInteger(cost.count) && cost.count > 0;
 };
 
 const isSupportedMoveCardsCostRoute = (

@@ -9,10 +9,16 @@ import {
   parseYourNamedCardsTarget,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
+import { parsePaidCostCardCountPower } from "./dynamic-paid-cost.js";
 import { parseThisCharacterRevealedCostPower } from "./dynamic-revealed-cost.js";
 import { parseGainsPositivePower } from "./shared.js";
 
 export const parsePowerGainInstruction: InstructionParser = (input) => {
+  const paidCostCardCountPower = parsePaidCostCardCountPower(input);
+  if (paidCostCardCountPower !== undefined) {
+    return paidCostCardCountPower;
+  }
+
   const dynamicRevealedCostPower = parseThisCharacterRevealedCostPower(input);
   if (dynamicRevealedCostPower !== undefined) {
     return dynamicRevealedCostPower;

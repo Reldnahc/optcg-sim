@@ -485,6 +485,7 @@ export const applyRuntimeActivateSelectedEvent = (params: {
       instanceId: handCard.instanceId,
       cardId: handCard.cardId,
       category: supported.category,
+      turnNumber: state.turn.globalTurn,
     },
     { type: "public" },
   );

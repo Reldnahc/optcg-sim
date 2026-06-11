@@ -375,11 +375,11 @@
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "4347e21f9fff703d9ac247e0c3e7364cc4505d6369d5e471da223bcb8834ff71",
+            "fullStateHash": "92d65a78ca2bd042f7896bf467bbe2220d6b43aedae8849734366a01b7c8a346",
             "snapshotRef": "paid-character:action-2"
           }
         ],
-        "finalStateHash": "4347e21f9fff703d9ac247e0c3e7364cc4505d6369d5e471da223bcb8834ff71",
+        "finalStateHash": "92d65a78ca2bd042f7896bf467bbe2220d6b43aedae8849734366a01b7c8a346",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],
@@ -424,25 +424,25 @@
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "c10fca1ddeb2d9c0bdc928f8825c300a7ad77a8ead11972188c515872164b70e",
+            "fullStateHash": "72b2f05fb94721e8359b4cddb1b62d48ddd2ed12e92b0df5bbffd88f974075eb",
             "snapshotRef": "stage-replacement:action-2"
           },
           {
             "stateSeq": 6,
             "actionSeq": 5,
             "turnNumber": 3,
-            "fullStateHash": "56ce269e19e7c6655c6f093ddd26a181f437c6a30110c7f2998ccb2ce74030e9",
+            "fullStateHash": "19c02622e098447faf51a75d2fad69cd2909d7be04a641fd1fe0cfff1c1e5694",
             "snapshotRef": "stage-replacement:action-3"
           },
           {
             "stateSeq": 7,
             "actionSeq": 6,
             "turnNumber": 3,
-            "fullStateHash": "87e9e68a6a273f333392fe33b3e86f57010cc30760d297992e24cb7d8753b700",
+            "fullStateHash": "c7c2f51da4d48d17cbfd9b8b62c2eb32b1619a966184ee9556de5a9b86b78139",
             "snapshotRef": "stage-replacement:action-4"
           }
         ],
-        "finalStateHash": "87e9e68a6a273f333392fe33b3e86f57010cc30760d297992e24cb7d8753b700",
+        "finalStateHash": "c7c2f51da4d48d17cbfd9b8b62c2eb32b1619a966184ee9556de5a9b86b78139",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],
@@ -501,11 +501,11 @@
             "stateSeq": 6,
             "actionSeq": 5,
             "turnNumber": 3,
-            "fullStateHash": "a6f50b5d14cc6fd4e8fde09442a215be4ddd53100032264324fbba1a9aa3d99a",
+            "fullStateHash": "723462ae7b80c3687f97e41b42703880efe9519ab61a705da77c900366563440",
             "snapshotRef": "character-overflow:action-3"
           }
         ],
-        "finalStateHash": "a6f50b5d14cc6fd4e8fde09442a215be4ddd53100032264324fbba1a9aa3d99a",
+        "finalStateHash": "723462ae7b80c3687f97e41b42703880efe9519ab61a705da77c900366563440",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],
@@ -555,11 +555,11 @@
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "c74317f832ce1174e4679b774d3a49afbb428c0ffe9b7547899859003ba9b487",
+            "fullStateHash": "23f71b9aa7a9b81effac49e0067702a48e8cca2b822906b76a8e8aa6a814cdf5",
             "snapshotRef": "paid-event:action-2"
           }
         ],
-        "finalStateHash": "c74317f832ce1174e4679b774d3a49afbb428c0ffe9b7547899859003ba9b487",
+        "finalStateHash": "23f71b9aa7a9b81effac49e0067702a48e8cca2b822906b76a8e8aa6a814cdf5",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],

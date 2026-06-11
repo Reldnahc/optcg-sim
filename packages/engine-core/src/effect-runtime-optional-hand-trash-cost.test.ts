@@ -124,6 +124,46 @@ const optionalHandTrashThenNestedFilteredKoSequence = (
   };
 };
 
+const optionalVariableHandTrashThenPowerSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> =>
+  ({
+    type: "sequence",
+    effects: [
+      {
+        id: "variable-trash-from-hand-cost",
+        connector: "always",
+        saveResultAs: "paidCost:trashFromHand",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "trashFromHand",
+            count: 0,
+            maxCount: "available",
+            chooser: "self",
+            filter: { categories: ["event", "stage"] },
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "power-for-paid-trash",
+        connector: "ifYouDo",
+        effect: {
+          type: "modifyPower",
+          target: { type: "self" },
+          value: {
+            type: "paidCostCardCount",
+            cost: "paidCost:trashFromHand",
+            multiplier: 1000,
+          },
+          duration: { type: "thisBattle" },
+        },
+      },
+    ],
+  }) as unknown as Extract<Effect, { type: "sequence" }>;
+
 const reindexHand = (
   cards: readonly CardInstance[],
   playerId = p1,
@@ -332,6 +372,14 @@ test("optional hand-trash cost payment records paidCost true and runs filtered s
   assert.deepEqual(frame.savedReferences["paidOptionalCost"], {
     kind: "paidCost",
     paidCost: true,
+    selectedCards: [
+      {
+        instanceId: paymentCard.instanceId,
+        cardId: paymentCard.cardId,
+        playerId: p1,
+        zone: paymentCard.zone,
+      },
+    ],
   });
   assert.equal(
     afterPaymentP1.hand.some(
@@ -401,6 +449,124 @@ test("optional hand-trash cost payment records paidCost true and runs filtered s
     ["decisionResolved", "cardKOd", "effectResolved"],
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("variable hand-trash cost records selected paid cards for dynamic power values", () => {
+  const { state } = sequenceQueueState(
+    optionalVariableHandTrashThenPowerSequence(),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event payment");
+  const stageCard = must(p1State.hand[1], "stage payment");
+  const characterCard = must(p1State.hand[2], "nonmatching payment");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 2,
+  });
+  state.cardManifest.cards[stageCard.cardId] = resolvedCard({
+    cardId: stageCard.cardId,
+    category: "stage",
+    cost: 1,
+  });
+  state.cardManifest.cards[characterCard.cardId] = resolvedCard({
+    cardId: characterCard.cardId,
+    category: "character",
+    cost: 1,
+    power: 1000,
+  });
+
+  const paused = processEffectRuntime(state);
+  const paymentDecision = must(paused.state.pendingDecision, "pay cost");
+  assert.equal(paymentDecision.type, "payCost");
+  assert.deepEqual(paymentDecision.paymentOptions, [
+    {
+      id: "trashFromHand",
+      type: "trashFromHand",
+      count: 0,
+      maxCount: "available",
+      filter: { categories: ["event", "stage"] },
+    },
+  ]);
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: paymentDecision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [eventCard.instanceId, stageCard.instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision, undefined);
+  assert.equal(paid.state.effectExecutionFrames.length, 0);
+  assert.equal(
+    must(paid.state.players[p1], "after p1").trash.some(
+      (card) => card.instanceId === eventCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    must(paid.state.players[p1], "after p1").trash.some(
+      (card) => card.instanceId === stageCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    must(paid.state.players[p1], "after p1").hand.some(
+      (card) => card.instanceId === characterCard.instanceId,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    paid.state.continuousEffects.map((effect) => effect.modifier),
+    [
+      {
+        layer: "powerAdd",
+        target: { type: "self" },
+        operation: { type: "addPower", value: 2000 },
+      },
+    ],
+  );
+  assert.equal(paid.stateHash, hashCanonicalStateValue(paid.state));
+});
+
+test("variable hand-trash cost rejects nonmatching selected cards without mutation", () => {
+  const { state } = sequenceQueueState(
+    optionalVariableHandTrashThenPowerSequence(),
+  );
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event payment");
+  const characterCard = must(p1State.hand[1], "nonmatching payment");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+  });
+  state.cardManifest.cards[characterCard.cardId] = resolvedCard({
+    cardId: characterCard.cardId,
+    category: "character",
+    power: 1000,
+  });
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost");
+
+  const rejected = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [eventCard.instanceId, characterCard.instanceId],
+    },
+  });
+
+  assert.equal(
+    must(rejected.errors, "errors")[0]?.type,
+    "invalidDecisionResponse",
+  );
+  assert.deepEqual(rejected.state, paused.state);
 });
 
 test("optional hand-trash cost decline skips filtered target selection and saved-target KO", () => {

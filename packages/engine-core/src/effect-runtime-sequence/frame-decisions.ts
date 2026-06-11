@@ -860,6 +860,9 @@ export const getSequenceOptionalPayCostOptions = (
         id: cost.type,
         type: cost.type,
         count: cost.count,
+        ...(cost.type === "trashFromHand" && cost.maxCount !== undefined
+          ? { maxCount: cost.maxCount }
+          : {}),
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       });
     }

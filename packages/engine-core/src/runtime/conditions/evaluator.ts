@@ -24,6 +24,14 @@ import {
   evaluateHasCardInZone,
   isSupportedLeaderZoneFilter,
 } from "./leader-zone.js";
+import {
+  countMatchingEventHistory,
+  isSupportedEventHistoryCondition,
+} from "./event-history.js";
+import {
+  countTrashCardsMatchingFilter,
+  isSupportedTrashCountFilter,
+} from "./trash-count.js";
 
 interface ConditionEvaluationSuccess {
   supported: true;
@@ -549,33 +557,23 @@ const cardMatchesFilter = (
   return true;
 };
 
-const isSupportedTrashCountFilter = (filter: CardFilter): boolean => {
-  const keys = Object.keys(filter) as (keyof CardFilter)[];
-  return (
-    keys.every((key) => key === "categories") &&
-    Array.isArray(filter.categories) &&
-    filter.categories.length > 0 &&
-    filter.categories.every(
-      (category) =>
-        category === "character" ||
-        category === "event" ||
-        category === "stage" ||
-        category === "leader",
-    )
-  );
-};
-
-const countTrashCardsMatchingFilter = (
+const evaluateEventHistory = (
   state: GameState,
-  playerId: PlayerId,
-  filter: CardFilter,
-): number => {
-  const player = state.players[playerId];
-  if (player === undefined) {
-    return 0;
+  entry: EffectQueueEntry,
+  condition: Extract<Condition, { type: "eventHistory" }>,
+): ConditionEvaluationResult => {
+  if (!isSupportedEventHistoryCondition(condition)) {
+    return { supported: false };
   }
-  return player.trash.filter((card) => cardMatchesFilter(state, card, filter))
-    .length;
+  const playerId = resolveConditionPlayer(state, entry, condition.player);
+  if (playerId === undefined || state.players[playerId] === undefined) {
+    return { supported: false };
+  }
+  const count = countMatchingEventHistory(state, playerId, condition);
+  return {
+    supported: true,
+    passed: compare(condition.op, count, condition.value),
+  };
 };
 
 const isSupportedOnlyMatchingFieldCardsFilter = (
@@ -825,6 +823,8 @@ const evaluateCondition = (
             ? (state.players[playerId]?.trash.length ?? 0)
             : countTrashCardsMatchingFilter(state, playerId, condition.filter),
       );
+    case "eventHistory":
+      return evaluateEventHistory(state, entry, condition);
     case "fieldCount": {
       if (isSupportedDonFieldCountFilter(condition.filter)) {
         const stateFilter = condition.filter.state;
@@ -948,6 +948,11 @@ export const isSupportedQueuedEffectConditionShape = (
           isSupportedTrashCountFilter(condition.filter)) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
+        (condition.player === "self" || condition.player === "opponent")
+      );
+    case "eventHistory":
+      return (
+        isSupportedEventHistoryCondition(condition) &&
         (condition.player === "self" || condition.player === "opponent")
       );
     case "fieldCount":

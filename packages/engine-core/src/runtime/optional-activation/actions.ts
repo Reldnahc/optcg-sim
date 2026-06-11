@@ -151,6 +151,7 @@ export const applyOptionalActivationDecisionResponse = (
     let nextPlayer = player;
     let nextPlayers: GameState["players"] | undefined;
     let nextContinuousEffects = state.continuousEffects;
+    let paidCostSelectedCards: CardRef[] = [];
     if (action.response.type === "payment") {
       const paymentResponse = action.response;
       const selectedOption = decision.paymentOptions.find(
@@ -424,6 +425,9 @@ export const applyOptionalActivationDecisionResponse = (
         if (revealed !== undefined) {
           revealed.causedBy = { type: "decision", decisionId: decision.id };
         }
+        paidCostSelectedCards = selectedCards.map((card) =>
+          toCardRef(card, decision.playerId),
+        );
         costPaidPayload = {
           playerId: decision.playerId,
           optionId: "revealFromHand",
@@ -454,9 +458,16 @@ export const applyOptionalActivationDecisionResponse = (
           );
         }
         const selected = paymentResponse.selectedCardInstanceIds;
+        const selectedCount = selected?.length;
+        const maxCount =
+          selectedOption.type === "trashFromHand"
+            ? selectedOption.maxCount
+            : undefined;
         if (
           selected === undefined ||
-          selected.length !== selectedOption.count
+          selectedCount === undefined ||
+          selectedCount < selectedOption.count ||
+          (typeof maxCount === "number" && selectedCount > maxCount)
         ) {
           return toEngineResult(
             state,
@@ -505,6 +516,9 @@ export const applyOptionalActivationDecisionResponse = (
           }
           selectedCards.push(card);
         }
+        paidCostSelectedCards = selectedCards.map((card) =>
+          toCardRef(card, decision.playerId),
+        );
         const returnedDonIds =
           selectedOption.type === "trashFromField"
             ? selectedCards.flatMap((card) => card.attachedDon)
@@ -623,6 +637,7 @@ export const applyOptionalActivationDecisionResponse = (
           );
         }
         nextPlayer = rested;
+        paidCostSelectedCards = [source];
         costPaidPayload = {
           playerId: decision.playerId,
           optionId: "restSelf",
@@ -672,6 +687,7 @@ export const applyOptionalActivationDecisionResponse = (
           );
         }
         nextPlayer = trashed;
+        paidCostSelectedCards = [source];
         costPaidPayload = {
           playerId: decision.playerId,
           optionId: "trashSelf",
@@ -815,6 +831,7 @@ export const applyOptionalActivationDecisionResponse = (
       decision,
       paidCost,
       createSupportedTrashFromHandChoiceDecision,
+      paidCostSelectedCards,
     );
     if (resumed === undefined) {
       return null;

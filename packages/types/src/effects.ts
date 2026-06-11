@@ -136,6 +136,8 @@ export type Condition =
       op: Comparator;
       value: number;
     }
+  // prettier-ignore
+  | { type: "eventHistory"; event: "cardPlayed"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
   | {
       type: "leaderColorCount";
       player: PlayerRef;
@@ -189,12 +191,8 @@ export type Cost =
       player: PlayerRef;
       position: "top" | "bottom";
     }
-  | {
-      type: "trashFromHand";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-    }
+  // prettier-ignore
+  | { type: "trashFromHand"; count: number; maxCount?: number | "available"; filter?: CardFilter; chooser: PlayerRef }
   | {
       type: "revealFromHand";
       count: number;
@@ -232,13 +230,8 @@ export type Cost =
   | { type: "sequence"; costs: Cost[]; optional?: boolean }
   | { type: "custom"; action: string };
 
-export type OptionalTrashFromHandCost = {
-  type: "trashFromHand";
-  count: number;
-  filter?: CardFilter;
-  chooser: PlayerRef;
-  optional: true;
-};
+// prettier-ignore
+export type OptionalTrashFromHandCost = { type: "trashFromHand"; count: number; maxCount?: number | "available"; filter?: CardFilter; chooser: PlayerRef; optional: true };
 
 export type OptionalRevealFromHandCost = {
   type: "revealFromHand";
@@ -400,6 +393,11 @@ export type DynamicNumberValue =
   | {
       type: "sumSelectedCardCosts";
       selection: SelectionSetId;
+      multiplier: number;
+    }
+  | {
+      type: "paidCostCardCount";
+      cost: string;
       multiplier: number;
     }
   | {
@@ -621,6 +619,7 @@ export interface SavedSelectedTargetsReference {
 export interface SavedPaidCostReference {
   kind: "paidCost";
   paidCost: true;
+  selectedCards?: CardRef[];
 }
 
 export interface SavedProducedObjectsReference {

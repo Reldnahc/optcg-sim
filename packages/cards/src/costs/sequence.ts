@@ -133,6 +133,7 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       return {
         type: "trashFromHand",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         chooser: cost.chooser,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
         optional: true,
@@ -204,6 +205,7 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
       return {
         type: "trashFromHand",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         chooser: cost.chooser,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       };

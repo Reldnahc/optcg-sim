@@ -1,3 +1,5 @@
+import type { Effect } from "@optcg/types";
+
 import {
   parseOptionalChooseOneTrashCost,
   parseOptionalCostSequence,
@@ -46,7 +48,7 @@ export function optionalCostedEffectExpressionParser(options: {
           {
             id: "cost:choose-one-trash",
             connector: "always",
-            saveResultAs: "paidCost",
+            saveResultAs: paidCostReferenceForBody(body.effect),
             effect: {
               type: "payCost",
               cost: cost.cost,
@@ -91,6 +93,35 @@ export function optionalCostedEffectSegmentParser(options: {
         : { presentationSpans: parsed.presentationSpans }),
     };
   };
+}
+
+function paidCostReferenceForBody(effect: Effect): string {
+  return findPaidCostReference(effect) ?? "paidCost";
+}
+
+function findPaidCostReference(effect: Effect): string | undefined {
+  if (
+    effect.type === "modifyPower" &&
+    typeof effect.value === "object" &&
+    effect.value.type === "paidCostCardCount"
+  ) {
+    return effect.value.cost;
+  }
+  if (effect.type === "sequence") {
+    for (const segment of effect.effects) {
+      if (segment.effect.type === "payCost") {
+        continue;
+      }
+      const reference = findPaidCostReference(segment.effect);
+      if (reference !== undefined) {
+        return reference;
+      }
+    }
+  }
+  if (effect.type === "conditional") {
+    return findPaidCostReference(effect.then);
+  }
+  return undefined;
 }
 
 type OptionalCostSequenceWithSource = OptionalCostSequenceParseResult & {
@@ -159,7 +190,7 @@ function parseOptionalCostSequenceFromOptionalText(
 function parseOptionalCostSequenceFromIfYouDoSentence(
   input: ParseInput,
 ): OptionalCostSequenceWithSource | undefined {
-  const match = /^(?<cost>.+?)\.\s+If you do,\s+(?<body>.+)$/iu.exec(
+  const match = /^(?<cost>.+?)\.\s+(?:(?:If you do),\s+)?(?<body>.+)$/iu.exec(
     input.text,
   );
   const costText = match?.groups?.["cost"]?.trim();
