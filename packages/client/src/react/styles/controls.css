@@ -607,6 +607,13 @@
   font-size: var(--control-small-font-size);
 }
 
+.action-button.is-primary {
+  min-height: clamp(40px, calc(var(--card-height) / 3.8), 56px);
+  background: var(--match-surface-control-active);
+  font-size: var(--control-body-font-size);
+  font-weight: 800;
+}
+
 .action-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;

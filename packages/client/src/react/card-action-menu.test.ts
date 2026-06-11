@@ -412,6 +412,54 @@ describe("card action menu", () => {
 
     assert.equal(actionMarkup.includes("Global actions"), true);
     assert.equal(actionMarkup.includes("End turn"), true);
+    assert.match(actionMarkup, /class="action-button is-primary"/u);
+  });
+
+  test("control rail marks positive multi-action decision buttons as primary", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [
+          {
+            index: 1,
+            type: "respondToDecision",
+            label: "Decline cost",
+            responseKey: "decline",
+          },
+          {
+            index: -2,
+            type: "confirmDecisionSelection",
+            label: "Confirm selection",
+          },
+          {
+            index: -3,
+            type: "clearDecisionSelection",
+            label: "Clear selection",
+          },
+        ],
+        disabled: false,
+        onAction: () => undefined,
+        onNewMatch: () => undefined,
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.match(markup, />Confirm selection<\/button>/u);
+    assert.match(
+      markup,
+      /class="action-button is-primary"[\s\S]*>Confirm selection<\/button>/u,
+    );
+    assert.doesNotMatch(
+      markup,
+      /class="action-button is-primary"[\s\S]*>Decline cost<\/button>/u,
+    );
+    assert.match(
+      styles,
+      /\.action-button\.is-primary\s*\{[^}]*background:\s*var\(--match-surface-control-active\);[^}]*font-size:\s*var\(--control-body-font-size\);/u,
+    );
   });
 
   test("concede icon uses dedicated red hover styles", async () => {

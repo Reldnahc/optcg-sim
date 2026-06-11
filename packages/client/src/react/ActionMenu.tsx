@@ -1,4 +1,5 @@
 import type { ClientActionModel } from "../view-model.js";
+import { primarySidebarActionPosition } from "./action-emphasis.js";
 
 export interface ActionMenuProps {
   title: string;
@@ -12,15 +13,21 @@ export const ActionMenu = ({
   actions,
   disabled,
   onAction,
-}: ActionMenuProps): React.JSX.Element | null =>
-  actions.length === 0 ? null : (
+}: ActionMenuProps): React.JSX.Element | null => {
+  const primaryActionPosition = primarySidebarActionPosition(actions);
+  return actions.length === 0 ? null : (
     <section className="action-menu-panel">
       <h2>{title}</h2>
       <div className="action-list">
-        {actions.map((action) => (
+        {actions.map((action, position) => (
           <button
-            key={action.index}
-            className="action-button"
+            key={`${String(action.index)}:${String(position)}`}
+            className={[
+              "action-button",
+              position === primaryActionPosition ? "is-primary" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             type="button"
             disabled={disabled}
             onClick={() => {
@@ -33,3 +40,4 @@ export const ActionMenu = ({
       </div>
     </section>
   );
+};
