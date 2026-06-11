@@ -83,6 +83,13 @@ const mapEffectToModifier = (
       operation: { type: "addKeyword", keyword: effect.keyword },
     };
   }
+  if (effect.type === "giveAttribute") {
+    return {
+      layer: "attributeAdd",
+      target,
+      operation: { type: "addAttribute", attribute: effect.attribute },
+    };
+  }
   if (effect.type === "modifyCost") {
     const value = resolveDynamicNumberValue(state, effect.value, context);
     if (value === null) {
@@ -607,6 +614,25 @@ const effectToDerivedModifier = (
       operation: { type: "addKeyword", keyword: effect.keyword },
     };
   }
+  if (effect.type === "giveAttribute") {
+    if (effect.target.type !== "self" && effect.target.type !== "myLeader") {
+      if (!(effect.target.type === "all" && isSupportedTarget(effect.target))) {
+        throw new TypeError(
+          unsupportedDerivedMessage("unsupported attribute target"),
+        );
+      }
+    }
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported attribute duration"),
+      );
+    }
+    return {
+      layer: "attributeAdd",
+      target: effect.target,
+      operation: { type: "addAttribute", attribute: effect.attribute },
+    };
+  }
   if (effect.type === "setBasePower") {
     if (!isSupportedPermanentBasePowerTarget(effect.target)) {
       throw new TypeError(
@@ -982,6 +1008,7 @@ const durationForDerivedEffect = (effect: Effect): Duration => {
   if (
     effect.type === "modifyPower" ||
     effect.type === "giveKeyword" ||
+    effect.type === "giveAttribute" ||
     effect.type === "setBasePower" ||
     effect.type === "modifyCost" ||
     effect.type === "protectFromKO" ||

@@ -36,6 +36,7 @@ type ContinuousResolvedEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "giveAttribute"
       | "setBasePower"
       | "modifyCost"
       | "invalidateEffects"
@@ -127,6 +128,7 @@ const isContinuousEffectWithChooseTarget = (
   return (
     (candidate.type === "modifyPower" ||
       candidate.type === "giveKeyword" ||
+      candidate.type === "giveAttribute" ||
       candidate.type === "modifyCost" ||
       candidate.type === "invalidateEffects" ||
       candidate.type === "cannotBecomeActive" ||

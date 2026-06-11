@@ -33,6 +33,7 @@ export const continuousRecordForSavedObject = (
   if (
     segment.effect.type !== "modifyPower" &&
     segment.effect.type !== "giveKeyword" &&
+    segment.effect.type !== "giveAttribute" &&
     segment.effect.type !== "cannotBecomeActive" &&
     segment.effect.type !== "cannotAttack" &&
     segment.effect.type !== "attackCost" &&
@@ -95,6 +96,29 @@ export const continuousRecordForSavedObject = (
         layer: "keywordAdd",
         target: exactTargetForSavedObject(entry, target, state, objectIndex),
         operation: { type: "addKeyword", keyword: segment.effect.keyword },
+      },
+      duration: segment.effect.duration,
+      createdBy: {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    };
+  }
+  if (segment.effect.type === "giveAttribute") {
+    return {
+      id: `continuous:${String(entry.id)}:${String(segment.id ?? objectIndex)}`,
+      source: entry.source,
+      sourceSnapshot: entry.sourceSnapshot,
+      controller: entry.controllerId,
+      modifier: {
+        layer: "attributeAdd",
+        target: exactTargetForSavedObject(entry, target, state, objectIndex),
+        operation: {
+          type: "addAttribute",
+          attribute: segment.effect.attribute,
+        },
       },
       duration: segment.effect.duration,
       createdBy: {

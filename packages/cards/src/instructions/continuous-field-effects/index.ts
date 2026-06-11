@@ -5,6 +5,7 @@ export {
 } from "./base-power.js";
 export { parseHandCounterSetInstruction } from "./counter.js";
 export {
+  parseTargetedKeywordAndAttributeGrantInstruction,
   parseTargetedKeywordGrantInstruction,
   parseThisCharacterKeywordGrantInstruction,
   thisCharacterKeywordGrantPrimitive,

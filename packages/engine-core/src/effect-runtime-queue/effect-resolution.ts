@@ -21,6 +21,7 @@ type ContinuousQueueEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "giveAttribute"
       | "setBasePower"
       | "modifyCost"
       | "modifyCounter"

@@ -7,6 +7,7 @@ export {
   parseHandCounterSetInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
+  parseTargetedKeywordAndAttributeGrantInstruction,
   parseTargetedKeywordGrantInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,

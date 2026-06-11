@@ -24,6 +24,7 @@ type ContinuousResolvedEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "giveAttribute"
       | "setBasePower"
       | "modifyCost"
       | "preventDraw"
@@ -47,6 +48,7 @@ export const isContinuousResolvedEffect = (
 ): effect is ContinuousResolvedEffect =>
   effect.type === "modifyPower" ||
   effect.type === "giveKeyword" ||
+  effect.type === "giveAttribute" ||
   effect.type === "setBasePower" ||
   effect.type === "modifyCost" ||
   effect.type === "preventDraw" ||

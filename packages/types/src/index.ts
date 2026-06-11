@@ -4,6 +4,7 @@ export type * from "./events.js";
 export type * from "./view.js";
 export type * from "./game-state.js";
 export type * from "./effects.js";
+export type * from "./effect-continuous.js";
 export type * from "./effect-costs.js";
 export type * from "./decisions.js";
 export type * from "./runtime.js";

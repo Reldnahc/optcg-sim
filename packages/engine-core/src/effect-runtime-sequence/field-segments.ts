@@ -498,6 +498,7 @@ export const applyFieldMutationSequenceSegment = (params: {
   if (
     (segment.effect.type === "modifyPower" ||
       segment.effect.type === "giveKeyword" ||
+      segment.effect.type === "giveAttribute" ||
       segment.effect.type === "cannotBecomeActive" ||
       segment.effect.type === "cannotAttack" ||
       segment.effect.type === "attackCost" ||

@@ -18,6 +18,7 @@ import type {
   CardCategory,
   CardSnapshot,
   CardSupportStatus,
+  Attribute,
   Keyword,
   MatchCardManifest,
   RuntimeVersionSet,
@@ -183,6 +184,7 @@ export type ModifierLayer =
   | "costAdd"
   | "effectInvalidation"
   | "keywordAdd"
+  | "attributeAdd"
   | "keywordRemove"
   | "restriction"
   | "protection";
@@ -195,6 +197,7 @@ export type ModifierOperation =
   | { type: "addCost"; value: number }
   | { type: "invalidateEffects" }
   | { type: "addKeyword"; keyword: Keyword }
+  | { type: "addAttribute"; attribute: Attribute }
   | { type: "removeKeyword"; keyword: Keyword }
   | {
       type: "restriction";

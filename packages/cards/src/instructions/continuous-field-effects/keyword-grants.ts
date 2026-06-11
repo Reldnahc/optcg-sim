@@ -1,5 +1,6 @@
 export {
   keywordSequence,
+  parseTargetedKeywordAndAttributeGrantInstruction,
   parseTargetedKeywordGrantInstruction,
   parseThisCharacterKeywordGrantInstruction,
   thisCharacterKeywordGrantPrimitive,

@@ -1,3 +1,4 @@
+export { parseTargetedKeywordAndAttributeGrantInstruction } from "./keyword-and-attribute.js";
 export {
   parseThisCharacterKeywordGrantInstruction,
   thisCharacterKeywordGrantPrimitive,

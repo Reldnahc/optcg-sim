@@ -7,8 +7,12 @@ import {
   createActiveState,
   p1,
   p2,
+  publicCharacterTargetRequest,
   queueDrawForP1,
   resolvedCard,
+  toCardId,
+  toInstanceId,
+  withCardInZone,
 } from "../../effect-runtime-queue/test-support.js";
 import {
   createContinuousRecordsForResolvedEffect,
@@ -37,6 +41,23 @@ const leaderKeywordEffect = (): Extract<Effect, { type: "giveKeyword" }> => ({
   target: { type: "myLeader" },
   keyword: "doubleAttack",
   duration: { type: "whileSourceOnField" },
+});
+
+const chosenAttributeEffect = (): Extract<
+  Effect,
+  { type: "giveAttribute" }
+> => ({
+  type: "giveAttribute",
+  target: {
+    type: "choose",
+    request: publicCharacterTargetRequest({
+      player: "self",
+      min: 0,
+      allowFewerIfUnavailable: true,
+    }),
+  },
+  attribute: "slash",
+  duration: { type: "thisTurn" },
 });
 
 const leaderBasePowerEffect = (): Extract<
@@ -141,6 +162,55 @@ test("continuous giveKeyword supports myLeader as an exact leader target", () =>
   assert.equal(record.modifier.target.card.instanceId, "p1:leader");
   assert.equal(record.modifier.operation.type, "addKeyword");
   assert.equal(record.modifier.operation.keyword, "doubleAttack");
+});
+
+test("continuous giveAttribute supports chosen public field targets", () => {
+  const state = createActiveState();
+  const target = withCardInZone({
+    state,
+    playerId: p1,
+    zone: "characterArea",
+    card: {
+      instanceId: toInstanceId("p1:character:attribute-target"),
+      cardId: toCardId("attribute-target"),
+      owner: p1,
+      controller: p1,
+      zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+      state: "active",
+      attachedDon: [],
+    },
+  });
+  const entry = { ...queueDrawForP1(), controllerId: p1 };
+  const effect = chosenAttributeEffect();
+
+  assert.equal(isSupportedContinuousQueueEffect(effect), true);
+  const records = createContinuousRecordsForResolvedEffect(
+    state,
+    entry,
+    effect,
+    [
+      {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: target.controller,
+        zone: target.zone,
+      },
+    ],
+  );
+
+  assert.ok(records !== null);
+  assert.equal(records.length, 1);
+  const record = records[0];
+  assert.ok(record !== undefined);
+  assert.equal(record.modifier.layer, "attributeAdd");
+  assert.equal(record.modifier.target.type, "exactCard");
+  assert.equal(
+    record.modifier.target.card.instanceId,
+    "p1:character:attribute-target",
+  );
+  assert.equal(record.modifier.operation.type, "addAttribute");
+  assert.equal(record.modifier.operation.attribute, "slash");
+  assert.equal(record.duration.type, "thisTurn");
 });
 
 test("continuous setBasePower supports myLeader as an exact leader target", () => {

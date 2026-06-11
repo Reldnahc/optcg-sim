@@ -22,6 +22,7 @@ import type {
   SetLifeFaceUpCost,
   TurnLifeFaceUpCost,
 } from "./effect-costs.js";
+import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
 
 export type FailurePolicy =
   | "doAsMuchAsPossible"
@@ -963,18 +964,7 @@ export type Effect =
       timing: { type: "endOfTurn"; turn: "current" };
       effect: Effect;
     }
-  | {
-      type: "giveKeyword";
-      target: Target;
-      keyword: Keyword;
-      duration: Duration;
-    }
-  | {
-      type: "removeKeyword";
-      target: Target;
-      keyword: Keyword;
-      duration: Duration;
-    }
+  | KeywordOrAttributeContinuousEffect
   | {
       type: "giveProtection";
       target: Target;

@@ -17,6 +17,7 @@ export type DirectContinuousEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "giveAttribute"
       | "setBasePower"
       | "modifyCost"
       | "modifyCounter"
@@ -49,6 +50,7 @@ export type ConditionalContinuousEffect = Extract<
 export type SavedTargetContinuousEffect = (
   | Extract<Effect, { type: "modifyPower" }>
   | Extract<Effect, { type: "giveKeyword" }>
+  | Extract<Effect, { type: "giveAttribute" }>
   | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
   | Extract<Effect, { type: "attackCost" }>
@@ -82,6 +84,7 @@ export const isSupportedSavedTargetContinuousSegment = (
 ): effect is SavedTargetContinuousEffect =>
   (effect.type === "modifyPower" ||
     effect.type === "giveKeyword" ||
+    effect.type === "giveAttribute" ||
     effect.type === "cannotBecomeActive" ||
     effect.type === "cannotAttack" ||
     effect.type === "attackCost" ||
@@ -90,6 +93,7 @@ export const isSupportedSavedTargetContinuousSegment = (
     effect.type === "invalidateEffects") &&
   (effect.type === "modifyPower" ||
   effect.type === "giveKeyword" ||
+  effect.type === "giveAttribute" ||
   effect.type === "preventBlockerActivation" ||
   effect.type === "invalidateEffects"
     ? isSupportedSavedLeaderOrCharacterTarget(effect.target)
