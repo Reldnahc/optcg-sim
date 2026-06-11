@@ -352,7 +352,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-loadout-selected:hover:not\(:disabled\),\s*\.deck-loadout-option:hover:not\(:disabled\),\s*\.deck-loadout-option\.is-selected\s*\{[^}]*border-color:\s*rgba\(255,\s*255,\s*255,\s*0\.72\);/u,
+      /\.deck-loadout-selected:hover:not\(:disabled\),\s*\.deck-loadout-option:hover:not\(:disabled\),\s*\.deck-loadout-option\.is-selected\s*\{[^}]*border-color:\s*var\(--match-border\);/u,
     );
     assert.doesNotMatch(
       styles,
@@ -360,7 +360,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-hash-form > \.deck-loadout-submit-button\s*\{[^}]*background:\s*#275f3e;/u,
+      /\.deck-hash-form > \.deck-loadout-submit-button\s*\{[^}]*background:\s*var\(--match-surface-control-active\);/u,
     );
   });
 
