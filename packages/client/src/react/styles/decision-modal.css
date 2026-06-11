@@ -16,12 +16,13 @@
 
   display: flex;
   flex-wrap: wrap;
-  min-width: min(
+  width: min(
     calc(
       100vw - (var(--modal-viewport-gutter) * 2) - (var(--modal-padding) * 2)
     ),
     var(--decision-card-grid-width)
   );
+  max-width: 100%;
   gap: var(--modal-gap);
 }
 

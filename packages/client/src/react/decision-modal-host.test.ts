@@ -555,8 +555,9 @@ test("decision modal card grids reserve enough width for five card choices", asy
   );
   assert.match(
     styles,
-    /\.decision-card-grid[\s\S]*min-width:\s*min\([\s\S]*var\(--decision-card-grid-width\)/u,
+    /\.decision-card-grid[\s\S]*width:\s*min\([\s\S]*var\(--decision-card-grid-width\)/u,
   );
+  assert.match(styles, /\.decision-card-grid\s*\{[^}]*max-width:\s*100%;/u);
 });
 
 test("decision modal selectable cards use board-card pointer and hover affordances", async () => {
