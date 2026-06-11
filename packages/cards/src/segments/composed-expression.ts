@@ -29,6 +29,9 @@ export function instructionExpressionSegmentParser(options: {
 
     return {
       effect: result.effect,
+      ...(result.saveResultAs === undefined
+        ? {}
+        : { saveResultAs: result.saveResultAs }),
       evidence: result.evidence,
     };
   };

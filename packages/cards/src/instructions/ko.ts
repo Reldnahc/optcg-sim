@@ -5,6 +5,7 @@ import {
   parseAllFieldTarget,
   parseOpponentFieldTarget,
 } from "../targets/index.js";
+import { chosenCharacterTarget } from "../conditions/selected-target-stat-comparison.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";
@@ -24,6 +25,21 @@ export const parseKoInstruction: InstructionParser = (input) => {
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  if (/^it\.?$/iu.test(actionRest)) {
+    return {
+      effect: {
+        type: "ko",
+        target: chosenCharacterTarget(),
+      },
+      evidence: [
+        "instruction:ko",
+        "target:selectedCharacter",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
   }
 
   const composed = parseComposedKoTargets(actionRest);

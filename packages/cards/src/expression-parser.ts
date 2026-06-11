@@ -61,6 +61,9 @@ export function parseExpression(
       ? undefined
       : {
           effect: only.effect,
+          ...(only.saveResultAs === undefined
+            ? {}
+            : { saveResultAs: only.saveResultAs }),
           evidence: only.evidence,
           rest: "",
           ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
@@ -87,6 +90,9 @@ export function parseExpression(
       effects: parsedSegments.map(
         (segment, index): SequencedEffect => ({
           connector: connectors[index] ?? "then",
+          ...(segment.saveResultAs === undefined
+            ? {}
+            : { saveResultAs: segment.saveResultAs }),
           effect: segment.effect,
         }),
       ),

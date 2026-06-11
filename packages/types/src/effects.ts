@@ -95,6 +95,8 @@ export type Trigger =
 export type Condition =
   | { type: "donCount"; target?: Target; min: number }
   | { type: "attachedDonCount"; target: Target; op: Comparator; value: number }
+  // prettier-ignore
+  | { type: "cardStatComparison"; target: Target; stat: CardStatComparison["stat"]; op: Comparator; value: number | DynamicNumberValue }
   | { type: "yourTurn" }
   | { type: "turnCount"; player: PlayerRef; op: Comparator; value: number }
   | { type: "opponentTurn" }

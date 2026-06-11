@@ -19,6 +19,9 @@ export function syntheticInstructionSegmentParser(
             : sourceSpan("span:body", "body", input.source, result.evidence);
         return {
           effect: result.effect,
+          ...(result.saveResultAs === undefined
+            ? {}
+            : { saveResultAs: result.saveResultAs }),
           evidence: result.evidence,
           ...(bodySpan === undefined && result.presentationSpans === undefined
             ? {}

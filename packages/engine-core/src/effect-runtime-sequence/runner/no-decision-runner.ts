@@ -840,6 +840,7 @@ export const continueNoDecisionSegments = (
         nextState,
         entry,
         segment.effect.if,
+        { savedReferences: nextLedgers.savedReferences },
       );
       if (!condition.supported) {
         return { ok: false };

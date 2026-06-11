@@ -33,6 +33,11 @@ import {
   isSupportedTrashCountFilter,
 } from "./trash-count.js";
 import { cardMatchesAnyName } from "../../card-name-matching.js";
+import {
+  evaluateCardStatComparison,
+  isSupportedCardStatComparisonCondition,
+  type ConditionEvaluationContext,
+} from "./card-stat-comparison.js";
 
 interface ConditionEvaluationSuccess {
   supported: true;
@@ -632,6 +637,7 @@ const evaluateCondition = (
   state: GameState,
   entry: EffectQueueEntry,
   condition: Condition,
+  context?: ConditionEvaluationContext,
 ): ConditionEvaluationResult => {
   switch (condition.type) {
     case "yourTurn":
@@ -646,6 +652,8 @@ const evaluateCondition = (
       };
     case "attachedDonCount":
       return evaluateAttachedDonCount(state, entry, condition);
+    case "cardStatComparison":
+      return evaluateCardStatComparison(state, entry, condition, context);
     case "sourcePlayedThisTurn":
       return evaluateSourcePlayedThisTurn(state, entry);
     case "leaderColorCount":
@@ -768,7 +776,7 @@ const evaluateCondition = (
     case "and": {
       let allPassed = true;
       for (const child of condition.conditions) {
-        const childResult = evaluateCondition(state, entry, child);
+        const childResult = evaluateCondition(state, entry, child, context);
         if (!childResult.supported) {
           return { supported: false };
         }
@@ -779,7 +787,7 @@ const evaluateCondition = (
     case "or": {
       let anyPassed = false;
       for (const child of condition.conditions) {
-        const childResult = evaluateCondition(state, entry, child);
+        const childResult = evaluateCondition(state, entry, child, context);
         if (!childResult.supported) {
           return { supported: false };
         }
@@ -788,7 +796,12 @@ const evaluateCondition = (
       return { supported: true, passed: anyPassed };
     }
     case "not": {
-      const childResult = evaluateCondition(state, entry, condition.condition);
+      const childResult = evaluateCondition(
+        state,
+        entry,
+        condition.condition,
+        context,
+      );
       if (!childResult.supported) {
         return { supported: false };
       }
@@ -823,6 +836,8 @@ export const isSupportedQueuedEffectConditionShape = (
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op)
       );
+    case "cardStatComparison":
+      return isSupportedCardStatComparisonCondition(condition);
     case "sourcePlayedThisTurn":
       return true;
     case "leaderColorCount":
@@ -913,9 +928,10 @@ export const evaluateQueuedEffectCondition = (
   state: GameState,
   entry: EffectQueueEntry,
   condition: Condition | undefined,
+  context?: ConditionEvaluationContext,
 ): ConditionEvaluationResult => {
   if (condition === undefined) {
     return { supported: true, passed: true };
   }
-  return evaluateCondition(state, entry, condition);
+  return evaluateCondition(state, entry, condition, context);
 };

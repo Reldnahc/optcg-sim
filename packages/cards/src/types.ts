@@ -85,12 +85,14 @@ export type PrimitiveEvidence =
   | "condition:lifeCountTotal"
   | "condition:donFieldCount"
   | "condition:attachedDonCount"
+  | "condition:cardStatComparison"
   | "condition:fieldCountDifference"
   | "condition:comparator:eq"
   | "condition:comparator:lte"
   | "condition:comparator:gte"
   | "condition:threshold:positiveInteger"
   | "condition:threshold:nonNegativeInteger"
+  | "condition:stat:cost"
   | "instruction:draw"
   | "instruction:preventDraw"
   | "instruction:preventDonActivation"
@@ -157,6 +159,7 @@ export type PrimitiveEvidence =
   | "composition:selectThenActivate"
   | "composition:selectThenApply"
   | "composition:selectThenMove"
+  | "composition:savedTargetCondition"
   | "composition:forEachSavedTarget"
   | "composition:sequence"
   | "composition:delayed"
@@ -351,6 +354,7 @@ export interface ParseInput {
 
 export interface ExpressionParseResult {
   readonly effect: Effect;
+  readonly saveResultAs?: string;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
   readonly presentationSpans?: readonly EffectTextSpan[];
@@ -386,6 +390,7 @@ export interface ConditionParseResult {
 
 export interface InstructionParseResult {
   readonly effect: Effect;
+  readonly saveResultAs?: string;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
   readonly presentationSpans?: readonly EffectTextSpan[];
@@ -410,6 +415,7 @@ export interface ConnectorParseResult {
 
 export interface SegmentParseResult {
   readonly effect: Effect;
+  readonly saveResultAs?: string;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly presentationSpans?: readonly EffectTextSpan[];
 }
