@@ -152,6 +152,78 @@ test("choice effect creates an effect option decision and resolves the selected 
   assert.equal(afterP1.deck.length, beforeDeck - 1);
 });
 
+test("optional choice effect decline clears the decision and resumes later independent segments", () => {
+  const state = setupChoiceState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "choice",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          options: [
+            {
+              id: "draw-zero",
+              label: "Draw 0 cards.",
+              effect: { type: "draw", player: "self", count: 0 },
+            },
+            {
+              id: "draw-two",
+              label: "Draw 2 cards.",
+              effect: { type: "draw", player: "self", count: 2 },
+            },
+          ],
+        },
+      },
+      {
+        connector: "always",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  });
+  const beforeHand = must(state.players[p1], "p1 before").hand.length;
+  const beforeDeck = must(state.players[p1], "p1 before").deck.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "choice decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseEffectOption");
+  assert.equal(decision.min, 0);
+  assert.deepEqual(decision.defaultResponse, { type: "effectOptionDeclined" });
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "effectOptionDeclined" },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+    ],
+  );
+  assert.deepEqual(resolved.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "chooseEffectOption",
+    playerId: p1,
+    responseType: "effectOptionDeclined",
+  });
+  const afterP1 = must(resolved.state.players[p1], "p1 after");
+  assert.equal(afterP1.hand.length, beforeHand + 1);
+  assert.equal(afterP1.deck.length, beforeDeck - 1);
+});
+
 test("choice option can pause for its own nested decision and resume", () => {
   const state = setupChoiceState(
     choiceEffect([
