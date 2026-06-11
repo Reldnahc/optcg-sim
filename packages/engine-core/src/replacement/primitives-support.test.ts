@@ -105,6 +105,23 @@ const nestedOwnerDeckBottomInstead = (): Extract<
   ],
 });
 
+const unsupportedPrefixedOwnerDeckBottomInstead = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: { type: "draw", count: 1, player: "self" },
+    },
+    {
+      connector: "then",
+      effect: ownerDeckBottomPair(),
+    },
+  ],
+});
+
 const replacementBlock = (
   id: string,
   when: ReplacementTrigger,
@@ -170,6 +187,16 @@ test("owner deck-bottom replacement support follows flattened sequence primitive
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("owner deck-bottom replacement fails closed when extra sequence behavior would be dropped", () => {
+  const block = replacementBlock(
+    "replacement-owner-bottom-extra-behavior",
+    wouldMoveFromCharacterArea(),
+    unsupportedPrefixedOwnerDeckBottomInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), false);
 });
 
 test("replacement support-shapes delegates instead primitive checks", async () => {
