@@ -7,6 +7,7 @@ import { createRuntimeSupportedCardRepository } from "@optcg/card-support";
 import type { CardId } from "@optcg/types";
 import { warmCardCache } from "optcg-card-cache";
 import { createClient } from "redis";
+import { defaultDevEffectDefinitionsVersion } from "./default-dev-manifest.js";
 import { writeActiveSimCardCacheVersions } from "./sim-card-cache-versions.js";
 
 const defaultBatchSize = 40;
@@ -47,6 +48,9 @@ const run = async (): Promise<void> => {
     const cache = createRedisCardDataCacheFromClient(redis);
     const catalog = await fetchDevPoneglyphCatalogSnapshot({
       baseUrl: config.poneglyphBaseUrl,
+      versions: {
+        effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+      },
     });
     const versions = catalog.versions;
     const repository = createRuntimeSupportedCardRepository({
