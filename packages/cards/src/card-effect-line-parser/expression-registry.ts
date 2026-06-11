@@ -20,6 +20,7 @@ import {
 } from "../markers/index.js";
 import {
   parseAnyCopiesOfThisCardRuleLine,
+  parseDeckOutLossTimingRuleLine,
   parseDonDeckSizeRuleLine,
   parseNameAliasesRuleLine,
 } from "../metadata-lines/index.js";
@@ -150,6 +151,7 @@ const costedExpressions = [
 export const defaultRegistry = {
   metadataLines: [
     parseAnyCopiesOfThisCardRuleLine,
+    parseDeckOutLossTimingRuleLine,
     parseDonDeckSizeRuleLine,
     parseNameAliasesRuleLine,
   ],

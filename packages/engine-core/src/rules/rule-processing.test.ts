@@ -49,3 +49,125 @@ test("terminal status is not overwritten by later rule-processing checks", () =>
     false,
   );
 });
+
+test("deck-out still loses immediately without a rule modifier", () => {
+  const state = setupAttackState();
+  must(state.players[p1], "p1").deck = [];
+  const events: EngineEvent[] = [];
+
+  const result = applyRuleProcessingCheckpoint({
+    state,
+    events,
+    phase: "main",
+    createEvent: (
+      seqOffset,
+      type,
+      payload,
+      visibility = { type: "public" },
+    ) => ({
+      id: toEngineEventId(
+        `event:${String(state.seq)}:${String(seqOffset)}:${type}`,
+      ),
+      seq: state.eventJournal.length + seqOffset,
+      type,
+      payload,
+      visibility,
+      causedBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: toStateSeq(state.seq + 1),
+    }),
+  });
+
+  assert.deepEqual(result.status, { type: "completed", winner: p2 });
+  assert.equal(
+    events.some((event) => event.type === "gameEnded"),
+    true,
+  );
+});
+
+test("deck-out loss modifier delays loss until end phase", () => {
+  const state = setupAttackState();
+  must(state.players[p1], "p1").deck = [];
+  state.ruleModifiers = [
+    { type: "deckOutLossTiming", playerId: p1, timing: "endOfTurn" },
+  ];
+  const events: EngineEvent[] = [];
+
+  const result = applyRuleProcessingCheckpoint({
+    state,
+    events,
+    phase: "main",
+    createEvent: (
+      seqOffset,
+      type,
+      payload,
+      visibility = { type: "public" },
+    ) => ({
+      id: toEngineEventId(
+        `event:${String(state.seq)}:${String(seqOffset)}:${type}`,
+      ),
+      seq: state.eventJournal.length + seqOffset,
+      type,
+      payload,
+      visibility,
+      causedBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: toStateSeq(state.seq + 1),
+    }),
+  });
+
+  assert.deepEqual(result.status, { type: "active" });
+  assert.deepEqual(result.pendingRuleLosses, [
+    {
+      type: "deckOut",
+      playerId: p1,
+      turn: state.turn.globalTurn,
+    },
+  ]);
+  assert.equal(
+    events.some((event) => event.type === "gameEnded"),
+    false,
+  );
+});
+
+test("delayed deck-out loss resolves at the end of that turn", () => {
+  const state = setupAttackState();
+  state.turn.phase = "end";
+  state.ruleModifiers = [
+    { type: "deckOutLossTiming", playerId: p1, timing: "endOfTurn" },
+  ];
+  state.pendingRuleLosses = [
+    {
+      type: "deckOut",
+      playerId: p1,
+      turn: state.turn.globalTurn,
+    },
+  ];
+  const events: EngineEvent[] = [];
+
+  const result = applyRuleProcessingCheckpoint({
+    state,
+    events,
+    phase: "end",
+    createEvent: (
+      seqOffset,
+      type,
+      payload,
+      visibility = { type: "public" },
+    ) => ({
+      id: toEngineEventId(
+        `event:${String(state.seq)}:${String(seqOffset)}:${type}`,
+      ),
+      seq: state.eventJournal.length + seqOffset,
+      type,
+      payload,
+      visibility,
+      causedBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: toStateSeq(state.seq + 1),
+    }),
+  });
+
+  assert.deepEqual(result.status, { type: "completed", winner: p2 });
+  assert.equal(
+    events.some((event) => event.type === "gameEnded"),
+    true,
+  );
+});

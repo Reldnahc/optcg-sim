@@ -218,6 +218,7 @@ export type PrimitiveEvidence =
   | "deckRestriction:eventCostGte"
   | "deckRestriction:donDeckSize"
   | "deckRestriction:anyCopiesOfThisCard"
+  | "ruleModifier:deckOutLossTiming"
   | "reveal:bothPlayers"
   | "reveal:chooserOnly"
   | "visibility:private"
@@ -454,6 +455,13 @@ export interface ParsedMetadataLine {
     | {
         readonly type: "nameAliases";
         readonly names: readonly string[];
+      }
+    | {
+        readonly type: "ruleModifier";
+        readonly modifier: {
+          readonly type: "deckOutLossTiming";
+          readonly timing: "endOfTurn";
+        };
       };
   readonly evidence: readonly PrimitiveEvidence[];
 }

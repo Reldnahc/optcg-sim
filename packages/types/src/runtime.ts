@@ -201,6 +201,22 @@ export interface DeferredTriggerBucket {
   releasePolicy: "afterCurrentProcess" | "afterDamageStep" | "nextWindow";
 }
 
+export interface DeckOutLossTimingRuleModifier {
+  type: "deckOutLossTiming";
+  playerId: PlayerId;
+  timing: "endOfTurn";
+}
+
+export type RuleModifier = DeckOutLossTimingRuleModifier;
+
+export interface PendingDeckOutRuleLoss {
+  type: "deckOut";
+  playerId: PlayerId;
+  turn: number;
+}
+
+export type PendingRuleLoss = PendingDeckOutRuleLoss;
+
 export type ProtectionFieldRemovalProcessFamily = "fieldRemoval";
 
 export type ProtectionFieldRemovalClassification =

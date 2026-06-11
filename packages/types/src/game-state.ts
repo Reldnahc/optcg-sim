@@ -42,11 +42,13 @@ import type {
   EffectExecutionFrame,
   LoopSignature,
   MatchStatus,
+  PendingRuleLoss,
   PlayerState,
   Protection,
   ReplacementProcessState,
   RevealRecord,
   RngState,
+  RuleModifier,
   SetupContinuationState,
   TimerState,
   TransientCardSet,
@@ -92,6 +94,8 @@ export interface GameState {
   effectExecutionFrames: EffectExecutionFrame[];
   deferredTriggers: DeferredTriggerBucket[];
   delayedEffects?: DelayedEffectRecord[];
+  ruleModifiers?: RuleModifier[];
+  pendingRuleLosses?: PendingRuleLoss[];
   continuousEffects: ContinuousEffectRecord[];
   replacementState: ReplacementProcessState[];
   revealedCards: RevealRecord[];

@@ -23,6 +23,19 @@ const opponentOf = (state: GameState, playerId: PlayerId): PlayerId | null => {
   return playerIds.find((candidate) => candidate !== playerId) ?? null;
 };
 
+const hasDelayedDeckOutLoss = (state: GameState, playerId: PlayerId): boolean =>
+  state.ruleModifiers?.some((modifier) => modifier.playerId === playerId) ===
+  true;
+
+const hasPendingDeckOutLoss = (
+  state: GameState,
+  playerId: PlayerId,
+  turn: number,
+): boolean =>
+  state.pendingRuleLosses?.some(
+    (loss) => loss.playerId === playerId && loss.turn === turn,
+  ) === true;
+
 const appendEvent = (
   events: EngineEvent[],
   createEvent: EventFactory,
@@ -52,16 +65,43 @@ export const applyRuleProcessingCheckpoint = ({
   }
 
   const losers = new Set<PlayerId>(immediateLosers);
+  const nextPendingRuleLosses = [...(state.pendingRuleLosses ?? [])];
   for (const [playerId, player] of Object.entries(state.players) as [
     PlayerId,
     GameState["players"][PlayerId],
   ][]) {
-    if (player.deck.length === 0) {
+    if (player.deck.length !== 0) {
+      continue;
+    }
+    if (!hasDelayedDeckOutLoss(state, playerId)) {
       losers.add(playerId);
+      continue;
+    }
+    if (phase === "end") {
+      losers.add(playerId);
+      continue;
+    }
+    if (!hasPendingDeckOutLoss(state, playerId, state.turn.globalTurn)) {
+      nextPendingRuleLosses.push({
+        type: "deckOut",
+        playerId,
+        turn: state.turn.globalTurn,
+      });
+    }
+  }
+  if (phase === "end") {
+    for (const loss of nextPendingRuleLosses) {
+      if (loss.turn === state.turn.globalTurn) {
+        losers.add(loss.playerId);
+      }
     }
   }
 
   if (losers.size === 0) {
+    const nextState =
+      nextPendingRuleLosses.length === (state.pendingRuleLosses?.length ?? 0)
+        ? state
+        : { ...state, pendingRuleLosses: nextPendingRuleLosses };
     appendEvent(
       events,
       createEvent,
@@ -69,7 +109,7 @@ export const applyRuleProcessingCheckpoint = ({
       { phase, result: "ok" },
       { type: "replayOnly" },
     );
-    return state;
+    return nextState;
   }
 
   const loserList = [...losers].sort();
