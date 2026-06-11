@@ -42,6 +42,8 @@ import {
   lifeRemovedReactionExpressionParser,
   lookPlayFromTopExpressionParser,
   opponentEventOrBlockerActivatedExpressionParser,
+  opponentOptionalCostExpressionParser,
+  opponentOptionalCostSegmentParser,
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
   playStageFromDeckExpressionParser,
@@ -97,6 +99,10 @@ function generalExpressionParser(input: ParseInput) {
         connectors: [parseAndConnector],
         instructions: instructionParsers,
       }),
+      opponentOptionalCostSegmentParser({
+        instructions: instructionParsers,
+        expressions: [singleInstructionExpressionParser],
+      }),
       trailingConditionalExpressionSegmentParser({
         conditions: conditionParsers,
         connectors: [parseAndConnector],
@@ -143,6 +149,10 @@ const costedExpressions = [
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
+  opponentOptionalCostExpressionParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   conditionalCostedBodyExpressionParser,
   singleInstructionExpressionParser,
   generalExpressionParser,
@@ -173,6 +183,13 @@ export const defaultRegistry = {
         lookPlayFromTopExpressionParser,
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
+        opponentOptionalCostExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
         singleInstructionExpressionParser,
         generalExpressionParser,
       ],
@@ -272,6 +289,10 @@ export const defaultRegistry = {
     lookPlayFromTopExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
+    opponentOptionalCostExpressionParser({
+      instructions: instructionParsers,
+      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+    }),
     singleInstructionExpressionParser,
     generalExpressionParser,
   ],

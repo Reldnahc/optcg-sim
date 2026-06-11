@@ -6,6 +6,10 @@ export { applyEachContinuousExpressionParser } from "./apply-each-continuous.js"
 export { chooseOneExpressionParser } from "./choose-one.js";
 export { costedEffectExpressionParser } from "./costed-effect.js";
 export {
+  opponentOptionalCostExpressionParser,
+  opponentOptionalCostSegmentParser,
+} from "./opponent-optional-cost.js";
+export {
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
 } from "./optional-costed-effect.js";

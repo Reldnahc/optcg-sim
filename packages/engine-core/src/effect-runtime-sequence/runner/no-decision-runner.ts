@@ -113,6 +113,7 @@ export const continueNoDecisionSegments = (
           ...nextLedgers.segmentResults,
           [ledgerKey(segment, index)]:
             segment.connector !== "then" &&
+            segment.connector !== "ifPreviousNotSucceeded" &&
             previousSegmentCompleted(
               nextLedgers.segmentResults,
               effect,

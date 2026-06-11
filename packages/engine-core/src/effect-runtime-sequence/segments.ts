@@ -510,6 +510,23 @@ export const previousSegmentCompleted = (
   return result !== undefined && result.attempted && result.succeeded;
 };
 
+const previousSegmentNotSucceeded = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  effect: SequenceEffect,
+  index: number,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+): boolean => {
+  const previous = effect.effects[index - 1];
+  if (previous === undefined) {
+    return false;
+  }
+  const result = segmentResults[segmentKey(previous, index - 1)];
+  return result !== undefined && result.attempted && !result.succeeded;
+};
+
 export const shouldAttemptSegment = (
   segmentResults: EffectExecutionFrame["segmentResults"],
   effect: SequenceEffect,
@@ -528,6 +545,14 @@ export const shouldAttemptSegment = (
   }
   if (segment.connector === "then") {
     return previousSegmentCompleted(segmentResults, effect, index, segmentKey);
+  }
+  if (segment.connector === "ifPreviousNotSucceeded") {
+    return previousSegmentNotSucceeded(
+      segmentResults,
+      effect,
+      index,
+      segmentKey,
+    );
   }
   return previousSegmentSucceeded(segmentResults, effect, index, segmentKey);
 };

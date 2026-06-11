@@ -538,6 +538,7 @@ export interface SequencedEffect {
     | "always"
     | "then"
     | "ifPreviousSucceeded"
+    | "ifPreviousNotSucceeded"
     | "ifYouDo"
     | "ifPossible";
   saveResultAs?: string;

@@ -49,6 +49,7 @@ import {
   type TurnLifeFaceUpPaymentOption,
 } from "./life-cost-options.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
+import { costDecisionPlayerId } from "./cost-decision-player.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -195,13 +196,14 @@ export const createPayCostDecisionForSequenceSegment = (
   index: number,
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = decisionCauseForEntry(entry);
-  const visibility = { type: "private", playerId: entry.controllerId } as const;
+  const playerId = costDecisionPlayerId(state, entry, cost);
+  const visibility = { type: "private", playerId } as const;
   const pendingDecision: OptionalPayCostDecision = {
     id: toDecisionId(
       `decision:payCost:sequence:${String(entry.id)}:${String(index)}`,
     ),
     type: "payCost",
-    playerId: entry.controllerId,
+    playerId,
     prompt: "Choose whether to pay this optional cost.",
     causedBy,
     visibility,
@@ -761,7 +763,8 @@ export const getSequenceOptionalPayCostOptions = (
       }
     >
   > = [];
-  const currentPlayer = state.players[entry.controllerId];
+  const paymentPlayerId = costDecisionPlayerId(state, entry, cost);
+  const currentPlayer = state.players[paymentPlayerId];
 
   if (cost.type === "restSelf") {
     if (findRestableSource(state, entry) !== undefined) {
@@ -783,7 +786,7 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "restDon") {
-    if (activeDonCount(state, entry.controllerId) >= cost.count) {
+    if (activeDonCount(state, paymentPlayerId) >= cost.count) {
       paymentOptions.push({
         id: "restDon",
         type: "restDon",
@@ -842,7 +845,7 @@ export const getSequenceOptionalPayCostOptions = (
       currentPlayer?.hand.filter((card) =>
         cardMatchesHandSelectionFilter(
           state,
-          entry.controllerId,
+          paymentPlayerId,
           card,
           cost.filter,
         ),
@@ -868,12 +871,7 @@ export const getSequenceOptionalPayCostOptions = (
       currentPlayer === undefined
         ? 0
         : fieldTrashCandidates(currentPlayer).filter((card) =>
-            fieldCardMatchesFilter(
-              state,
-              entry.controllerId,
-              card,
-              cost.filter,
-            ),
+            fieldCardMatchesFilter(state, paymentPlayerId, card, cost.filter),
           ).length;
     if (fieldMatchCount >= cost.count) {
       paymentOptions.push({
@@ -895,7 +893,7 @@ export const getSequenceOptionalPayCostOptions = (
           ? undefined
           : selectableMoveCardsCostIds(
               state,
-              entry.controllerId,
+              paymentPlayerId,
               currentPlayer,
               route,
             );
@@ -918,7 +916,8 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "turnLifeFaceUp") {
-    const option: TurnLifeFaceUpPaymentOption = turnLifeFaceUpPaymentOption(cost);
+    const option: TurnLifeFaceUpPaymentOption =
+      turnLifeFaceUpPaymentOption(cost);
     if (
       currentPlayer !== undefined &&
       canSetLifeFaceUp(currentPlayer, option)
@@ -972,7 +971,7 @@ export const getSequenceOptionalPayCostOptions = (
         currentPlayer?.hand.filter((card) =>
           cardMatchesHandSelectionFilter(
             state,
-            entry.controllerId,
+            paymentPlayerId,
             card,
             option.filter,
           ),
@@ -996,12 +995,7 @@ export const getSequenceOptionalPayCostOptions = (
       currentPlayer === undefined
         ? 0
         : fieldTrashCandidates(currentPlayer).filter((card) =>
-            fieldCardMatchesFilter(
-              state,
-              entry.controllerId,
-              card,
-              fieldFilter,
-            ),
+            fieldCardMatchesFilter(state, paymentPlayerId, card, fieldFilter),
           ).length;
     if (fieldMatchCount < option.count) {
       continue;

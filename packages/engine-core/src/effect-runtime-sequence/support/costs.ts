@@ -91,7 +91,7 @@ export const isSupportedPayCostSegment = (
       cost.type === "trashFromField" ||
       cost.type === "revealFromHand" ||
       cost.type === "moveCards") &&
-    (cost.chooser === undefined || cost.chooser === "self") &&
+    isSupportedCostChooser(cost) &&
     (cost.type !== "trashFromHand" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "trashFromField" ||
@@ -105,6 +105,25 @@ export const isSupportedPayCostSegment = (
         isSupportedHandSelectionCardFilter(cost.filter))) &&
     isSupportedCostCount(cost)
   );
+};
+
+const isSupportedCostChooser = (
+  cost: Exclude<Cost, { type: "chooseOne" }>,
+): boolean => {
+  if (cost.type === "returnDon") {
+    return (
+      cost.chooser === undefined ||
+      cost.chooser === "self" ||
+      cost.chooser === "opponent"
+    );
+  }
+  if (cost.type === "restDon") {
+    return cost.chooser === undefined || cost.chooser === "self";
+  }
+  if ("chooser" in cost) {
+    return cost.chooser === "self";
+  }
+  return true;
 };
 
 const isSupportedCostCount = (cost: CountedCost): boolean => {
