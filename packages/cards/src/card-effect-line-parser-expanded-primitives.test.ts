@@ -72,6 +72,45 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
     });
   });
 
+  it("parses mixed leader type-or-name condition before leader power modifier", () => {
+    const result = parseCardEffectLine(
+      "[On Play] If your Leader has the {Red-Haired Pirates} type or is [Uta], your Leader gains +2000 power until the end of your opponent's next End Phase.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        condition: {
+          type: "hasCardInZone",
+          zone: "leaderArea",
+          player: "self",
+          filter: {
+            categories: ["leader"],
+            anyOf: [{ typesAny: ["Red-Haired Pirates"] }, { names: ["Uta"] }],
+          },
+        },
+        effect: {
+          type: "modifyPower",
+          target: { type: "myLeader" },
+          value: 2000,
+          duration: { type: "untilEndOfNextTurn", player: "opponent" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:leaderIdentity",
+        "filter:anyOf",
+        "filter:type",
+        "filter:name",
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "duration:opponentNextEndPhase",
+      ]),
+    );
+  });
+
   it("parses turn-window leader keyword and power as independent continuous primitives", () => {
     const result = parseCardEffectLine(
       "[Your Turn] Your Leader gains [Double Attack] and +2000 power.",

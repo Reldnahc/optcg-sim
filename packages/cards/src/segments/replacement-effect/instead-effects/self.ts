@@ -37,13 +37,16 @@ export function parseKoSelfInstead(
   };
 }
 
-export function parseModifyLeaderPowerInstead(
+export function parseModifyPowerInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
-  const modifierText =
-    /^you may give your Leader (?<modifier>.+?) instead\.?$/iu.exec(text.trim())
-      ?.groups?.["modifier"];
-  if (modifierText === undefined) {
+  const match =
+    /^you may give (?<target>your Leader|this Character) (?<modifier>.+?) instead\.?$/iu.exec(
+      text.trim(),
+    );
+  const targetText = match?.groups?.["target"];
+  const modifierText = match?.groups?.["modifier"];
+  if (targetText === undefined || modifierText === undefined) {
     return undefined;
   }
 
@@ -62,13 +65,18 @@ export function parseModifyLeaderPowerInstead(
   return {
     effect: {
       type: "modifyPower",
-      target: { type: "myLeader" },
+      target:
+        targetText.toLowerCase() === "your leader"
+          ? { type: "myLeader" }
+          : { type: "self" },
       value: modifier.value,
       duration: duration.duration,
     },
     evidence: [
       "instruction:modifyPower",
-      "target:yourLeader",
+      targetText.toLowerCase() === "your leader"
+        ? "target:yourLeader"
+        : "target:thisCharacter",
       ...modifier.evidence,
       ...duration.evidence,
     ],

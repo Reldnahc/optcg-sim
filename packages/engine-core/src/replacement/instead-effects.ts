@@ -69,11 +69,11 @@ export const isSupportedReturnDonInsteadEffect = (
   Number.isInteger(effect.count) &&
   effect.count > 0;
 
-export const isSupportedModifyLeaderPowerInsteadEffect = (
+export const isSupportedModifyPowerInsteadEffect = (
   effect: ReplacementInstead,
 ): effect is Extract<ReplacementInstead, { type: "modifyPower" }> =>
   effect.type === "modifyPower" &&
-  effect.target.type === "myLeader" &&
+  (effect.target.type === "myLeader" || effect.target.type === "self") &&
   typeof effect.value === "number" &&
   effect.duration.type === "thisTurn";
 
@@ -156,7 +156,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedRestSelfInsteadEffect(effect) ||
   isSupportedTrashFromHandInsteadEffect(effect) ||
   isSupportedReturnDonInsteadEffect(effect) ||
-  isSupportedModifyLeaderPowerInsteadEffect(effect) ||
+  isSupportedModifyPowerInsteadEffect(effect) ||
   isSupportedTrashSelfInsteadEffect(effect) ||
   isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
@@ -203,8 +203,10 @@ export const replacementOptionLabel = (
       "cards",
     )} instead`;
   }
-  if (isSupportedModifyLeaderPowerInsteadEffect(instead)) {
-    return `Give your Leader ${String(Number(instead.value))} power instead`;
+  if (isSupportedModifyPowerInsteadEffect(instead)) {
+    const targetLabel =
+      instead.target.type === "myLeader" ? "your Leader" : "this Character";
+    return `Give ${targetLabel} ${String(Number(instead.value))} power instead`;
   }
   if (isSupportedTrashSelfInsteadEffect(instead)) {
     return "Trash this Character instead";

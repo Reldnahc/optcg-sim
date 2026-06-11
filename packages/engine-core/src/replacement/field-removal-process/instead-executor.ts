@@ -13,7 +13,7 @@ import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuo
 import { executeNoChoiceEffectPrimitive } from "../../runtime/primitives/draw.js";
 import {
   isSupportedKoSelfInsteadEffect,
-  isSupportedModifyLeaderPowerInsteadEffect,
+  isSupportedModifyPowerInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
 } from "../instead-effects.js";
@@ -45,7 +45,7 @@ export const executeReplacementInsteadEffect = (
     const rested = restFieldObjects(state, [source ?? entry.source]);
     return toEngineResult(rested.state, []);
   }
-  if (isSupportedModifyLeaderPowerInsteadEffect(effect)) {
+  if (isSupportedModifyPowerInsteadEffect(effect)) {
     const records = createContinuousRecordsForResolvedEffect(
       state,
       entry,

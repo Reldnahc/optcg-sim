@@ -1,4 +1,5 @@
 import { parseCardFilterPredicates } from "../filters/index.js";
+import type { CardFilter } from "@optcg/types";
 import type { ConditionParseResult, ConditionParser } from "../types.js";
 
 export const parseLeaderNameCondition: ConditionParser = (
@@ -112,7 +113,29 @@ export const parseLeaderNameCondition: ConditionParser = (
     { powerSemantics: "current" },
   );
   if (predicates === undefined || predicates.rest.length > 0) {
-    return undefined;
+    const mixedAlternative = parseMixedLeaderTypeOrNamePredicate(predicateText);
+    if (mixedAlternative === undefined) {
+      return undefined;
+    }
+    return {
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          ...mixedAlternative.filter,
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        ...mixedAlternative.evidence,
+      ],
+      rest: "",
+    };
   }
 
   return {
@@ -135,3 +158,36 @@ export const parseLeaderNameCondition: ConditionParser = (
     rest: "",
   };
 };
+
+function parseMixedLeaderTypeOrNamePredicate(text: string):
+  | {
+      readonly filter: Pick<CardFilter, "anyOf">;
+      readonly evidence: readonly [
+        "filter:anyOf",
+        "filter:type",
+        "filter:name",
+      ];
+    }
+  | undefined {
+  const match =
+    /^\{(?<type>[^}]+)\}\s+type\s+or\s+is\s+\[(?<name>[^\]]+)\]$/iu.exec(
+      text.trim(),
+    );
+  const typeName = match?.groups?.["type"]?.trim();
+  const cardName = match?.groups?.["name"]?.trim();
+  if (
+    typeName === undefined ||
+    typeName.length === 0 ||
+    cardName === undefined ||
+    cardName.length === 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      anyOf: [{ typesAny: [typeName] }, { names: [cardName] }],
+    },
+    evidence: ["filter:anyOf", "filter:type", "filter:name"],
+  };
+}

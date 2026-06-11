@@ -8,7 +8,7 @@ import type {
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
 import {
   isSupportedKoSelfInsteadEffect,
-  isSupportedModifyLeaderPowerInsteadEffect,
+  isSupportedModifyPowerInsteadEffect,
   isSupportedOwnerDeckBottomInsteadEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
@@ -83,6 +83,14 @@ const isSupportedSelfCharacterReplacementTarget = (target: Target): boolean =>
   target.player === "self" &&
   isSupportedCharacterReplacementTargetFilter(target.filter);
 
+const isSupportedSelfOrAllCharacterReplacementTarget = (
+  target: Target,
+): boolean =>
+  isSelfTarget(target) ||
+  (target.type === "all" &&
+    target.zone === "characterArea" &&
+    target.player === "self");
+
 const isSupportedReplacementEnvelope = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -148,7 +156,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedRestSelfInsteadEffect(effect) ||
   isSupportedTrashFromHandInsteadEffect(effect) ||
   isSupportedReturnDonInsteadEffect(effect) ||
-  isSupportedModifyLeaderPowerInsteadEffect(effect) ||
+  isSupportedModifyPowerInsteadEffect(effect) ||
   isSupportedTrashSelfInsteadEffect(effect) ||
   isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
@@ -179,16 +187,14 @@ export const isSupportedOpponentEffectFieldRemovalReplacementEffect = (
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
   effect.trigger.replacement.sourceKind === "cardEffect" &&
-  effect.trigger.replacement.target.type === "all" &&
-  effect.trigger.replacement.target.zone === "characterArea" &&
-  effect.trigger.replacement.target.player === "self" &&
-  effect.oncePerTurn === undefined &&
+  isSupportedSelfOrAllCharacterReplacementTarget(
+    effect.trigger.replacement.target,
+  ) &&
+  effect.oncePerTurn !== false &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
   effect.effect.when.sourceKind === "cardEffect" &&
-  effect.effect.when.target.type === "all" &&
-  effect.effect.when.target.zone === "characterArea" &&
-  effect.effect.when.target.player === "self" &&
+  isSupportedSelfOrAllCharacterReplacementTarget(effect.effect.when.target) &&
   isSupportedOpponentEffectFieldRemovalInsteadEffect(effect.effect.instead);
 
 export const isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect = (

@@ -413,6 +413,59 @@ test("fieldCount condition supports opponent current-power character presence", 
   );
 });
 
+test("fieldCount condition supports opponent printed-power character presence", () => {
+  const state = createActiveState();
+  const opponent = must(state.players[p2], "p2");
+  const bigCharacter = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(opponent.hand[0], "big character"),
+      cardId: toCardId("printed-power-opponent-character"),
+    },
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[bigCharacter.cardId] = resolvedCard({
+    cardId: bigCharacter.cardId,
+    category: "character",
+    power: 8000,
+  });
+
+  const condition: Extract<Condition, { type: "fieldCount" }> = {
+    type: "fieldCount",
+    player: "opponent",
+    filter: {
+      categories: ["character"],
+      power: { min: 8000 },
+    },
+    op: "gte",
+    value: 1,
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+  state.cardManifest.cards[bigCharacter.cardId] = resolvedCard({
+    cardId: bigCharacter.cardId,
+    category: "character",
+    power: 7000,
+  });
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});
+
 test("fieldCount condition supports no matching self characters by type and cost", () => {
   const state = createActiveState();
   const self = must(state.players[p1], "p1");

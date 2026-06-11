@@ -132,6 +132,34 @@ describe("leader name condition parser", () => {
     });
   });
 
+  it("parses mixed leader type-or-name alternatives through reusable anyOf filters", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your Leader has the {Red-Haired Pirates} type or is [Uta]",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          anyOf: [{ typesAny: ["Red-Haired Pirates"] }, { names: ["Uta"] }],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:anyOf",
+        "filter:type",
+        "filter:name",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses leader card-name includes as a reusable name filter", () => {
     expect(
       parseLeaderNameCondition({

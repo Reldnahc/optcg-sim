@@ -478,6 +478,38 @@ test("runtime admission accepts opponent field-removal replacement with reusable
   );
 });
 
+test("runtime admission accepts self field-removal replacement with reusable power modifier body", () => {
+  const when: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    target: { type: "self" },
+  };
+
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "replacement",
+        trigger: { type: "replacement", replacement: when },
+        oncePerTurn: true,
+        optional: true,
+        sourcePresencePolicy: "resolveFromLastKnownInformation",
+        effect: {
+          type: "replacement",
+          when,
+          instead: {
+            type: "modifyPower",
+            target: { type: "self" },
+            value: -2000,
+            duration: { type: "thisTurn" },
+          },
+        },
+      }),
+    ),
+  );
+});
+
 test("runtime admission accepts costed main sequences with conditional draw and this-turn power reduction", () => {
   assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(

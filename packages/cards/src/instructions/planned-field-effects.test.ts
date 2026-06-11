@@ -583,6 +583,59 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
+  it("parses opponent-owned Blocker activation wording into the same saved-target restriction", () => {
+    expect(
+      parsePreventOpponentCharactersBlockerActivationInstruction({
+        text: "Your opponent cannot activate up to 1 [Blocker] Character that has 4000 power or less during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:thatCharacter",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  currentPower: { max: 4000 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "preventBlockerActivation",
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:preventBlockerActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "duration:thisTurn",
+        "activation:blocker",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
   it("keeps all and up-to target selectors separate from the refresh-lock body primitive", () => {
     const choose = parsePreventOpponentCharactersRefreshInstruction({
       text: "up to 1 of your opponent's rested Characters will not become active in your opponent's next Refresh Phase.",

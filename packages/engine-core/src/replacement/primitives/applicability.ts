@@ -19,7 +19,7 @@ import {
 import { cardRefsEqual } from "../field-removal-targets.js";
 import {
   isSupportedKoSelfInsteadEffect,
-  isSupportedModifyLeaderPowerInsteadEffect,
+  isSupportedModifyPowerInsteadEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedReturnDonInsteadEffect,
@@ -60,7 +60,7 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
   }
   if (
     (target.type !== "wouldMoveZone" && target.type !== "wouldBeKOd") ||
-    target.target.type !== "all"
+    (target.target.type !== "all" && target.target.type !== "self")
   ) {
     return [];
   }
@@ -83,6 +83,12 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
   ) {
     return [];
   }
+  if (target.target.type === "self") {
+    return eligibleTargetLookups
+      .filter(({ ref }) => cardRefsEqual(ref, source.ref))
+      .map(({ ref }) => ref);
+  }
+
   const request = {
     timing: "onResolution",
     chooser: "self",
@@ -163,8 +169,14 @@ const canPayOpponentFieldRemovalReplacementCost = (
       player !== undefined && getReturnDonEligibleCount(player) >= instead.count
     );
   }
-  if (isSupportedModifyLeaderPowerInsteadEffect(instead)) {
-    return state.players[source.card.controller] !== undefined;
+  if (isSupportedModifyPowerInsteadEffect(instead)) {
+    if (instead.target.type === "myLeader") {
+      return state.players[source.card.controller] !== undefined;
+    }
+    return (
+      source.resolved.category === "character" &&
+      source.ref.zone?.zone === "characterArea"
+    );
   }
   if (isSupportedTrashSelfInsteadEffect(instead)) {
     return (

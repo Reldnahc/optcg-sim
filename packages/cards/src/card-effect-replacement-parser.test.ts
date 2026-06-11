@@ -559,6 +559,56 @@ describe("replacement effect parser", () => {
     }
   });
 
+  it("parses once-per-turn self field-removal replacement into reusable self power modifier instead primitives", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] If this Character would be removed from the field by your opponent's effect, you may give this Character -2000 power during this turn instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    const when = {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      target: { type: "self" },
+    } as const;
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      oncePerTurn: true,
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "modifyPower",
+          target: { type: "self" },
+          value: -2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    for (const evidence of [
+      "marker:oncePerTurn",
+      "entry:replacement",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "target:thisCharacter",
+      "instruction:modifyPower",
+      "modifier:negativePower",
+      "duration:thisTurn",
+      "composition:replacementInstead",
+      "composition:entryExpression",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses self K.O. replacement into filtered hand-trash instead primitives", () => {
     const characterResult = parseCardEffectLine(
       "If this Character would be K.O.'d, you may trash 1 Character card with a power of 6000 or less from your hand instead.",

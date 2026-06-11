@@ -11,9 +11,9 @@ import type {
 } from "@optcg/types";
 
 import {
-  cardMatchesAnyName,
-  cardMatchesNameContains,
-} from "../../card-name-matching.js";
+  cardMatchesCharacterFieldCountFilter,
+  isSupportedCharacterFieldCountFilter,
+} from "./field-count-character-filter.js";
 import {
   evaluateLifeCountDifference,
   evaluateLifeCountTotal,
@@ -45,10 +45,6 @@ interface ConditionEvaluationFailure {
 export type ConditionEvaluationResult =
   | ConditionEvaluationSuccess
   | ConditionEvaluationFailure;
-
-type NumericFilter =
-  | { op: Comparator; value: number }
-  | { min?: number; max?: number };
 
 const compare = (op: Comparator, left: number, right: number): boolean => {
   switch (op) {
@@ -96,43 +92,6 @@ const isFieldZone = (zone: CardInstance["zone"]["zone"]): boolean =>
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
-
-const hasSupportedNumericFilter = (
-  filter: NumericFilter | undefined,
-): boolean => {
-  if (filter === undefined) {
-    return true;
-  }
-  if ("op" in filter) {
-    return isComparator(filter.op) && Number.isFinite(filter.value);
-  }
-  return (
-    (filter.min === undefined || Number.isFinite(filter.min)) &&
-    (filter.max === undefined || Number.isFinite(filter.max)) &&
-    (filter.min === undefined ||
-      filter.max === undefined ||
-      filter.min <= filter.max)
-  );
-};
-
-const numericFilterMatches = (
-  value: number | undefined,
-  filter: NumericFilter,
-): boolean => {
-  if (value === undefined) {
-    return false;
-  }
-  if ("op" in filter) {
-    return compare(filter.op, value, filter.value);
-  }
-  if (filter.min !== undefined && value < filter.min) {
-    return false;
-  }
-  if (filter.max !== undefined && value > filter.max) {
-    return false;
-  }
-  return true;
-};
 
 const findLiveSourceFieldCard = (
   state: GameState,
@@ -281,79 +240,6 @@ const isSupportedDonFieldCountFilter = (
   return true;
 };
 
-const isSupportedCharacterFieldCountFilter = (
-  filter: CardFilter | undefined,
-): filter is Required<Pick<CardFilter, "categories">> & {
-  state?: "active" | "rested";
-  names?: string[];
-  typesAny?: string[];
-  typesIncludeAny?: string[];
-  baseCost?: NumericFilter;
-  cost?: NumericFilter;
-  currentPower?: NumericFilter;
-  excludeSelf?: boolean;
-  custom?: "differentNames";
-} => {
-  if (filter === undefined) {
-    return false;
-  }
-  const keys = Object.keys(filter) as (keyof CardFilter)[];
-  for (const key of keys) {
-    if (
-      key !== "categories" &&
-      key !== "state" &&
-      key !== "names" &&
-      key !== "typesAny" &&
-      key !== "typesIncludeAny" &&
-      key !== "baseCost" &&
-      key !== "cost" &&
-      key !== "currentPower" &&
-      key !== "excludeSelf" &&
-      key !== "custom"
-    ) {
-      return false;
-    }
-  }
-  if (
-    !Array.isArray(filter.categories) ||
-    filter.categories.length !== 1 ||
-    filter.categories[0] !== "character"
-  ) {
-    return false;
-  }
-  const stateValue = filter.state as unknown;
-  const namesValue = filter.names as unknown;
-  const typesValue = filter.typesAny as unknown;
-  const typesIncludeValue = filter.typesIncludeAny as unknown;
-  const costValue = filter.cost;
-  const baseCostValue = filter.baseCost;
-  const currentPowerValue = filter.currentPower;
-  const excludeSelfValue = filter.excludeSelf as unknown;
-  const customValue = filter.custom as unknown;
-  return (
-    (stateValue === undefined ||
-      stateValue === "active" ||
-      stateValue === "rested") &&
-    (namesValue === undefined ||
-      (Array.isArray(namesValue) &&
-        namesValue.length > 0 &&
-        namesValue.every((value) => typeof value === "string"))) &&
-    (typesValue === undefined ||
-      (Array.isArray(typesValue) &&
-        typesValue.length > 0 &&
-        typesValue.every((value) => typeof value === "string"))) &&
-    (typesIncludeValue === undefined ||
-      (Array.isArray(typesIncludeValue) &&
-        typesIncludeValue.length > 0 &&
-        typesIncludeValue.every((value) => typeof value === "string"))) &&
-    hasSupportedNumericFilter(costValue) &&
-    hasSupportedNumericFilter(baseCostValue) &&
-    hasSupportedNumericFilter(currentPowerValue) &&
-    (excludeSelfValue === undefined || excludeSelfValue === true) &&
-    (customValue === undefined || customValue === "differentNames")
-  );
-};
-
 const isSupportedPublicFieldStateCountFilter = (
   filter: CardFilter | undefined,
 ): filter is { state: "active" | "rested" } => {
@@ -446,13 +332,19 @@ const countPublicCharactersOnField = (
     if (
       filter.names === undefined &&
       filter.typesAny === undefined &&
+      filter.typesIncludeAny === undefined &&
       filter.baseCost === undefined &&
       filter.cost === undefined &&
+      filter.power === undefined &&
       filter.currentPower === undefined
     ) {
       return true;
     }
-    return cardMatchesFilter(state, card, filter);
+    const metadata = state.cardManifest.cards[card.cardId];
+    return (
+      metadata !== undefined &&
+      cardMatchesCharacterFieldCountFilter(metadata, card, filter)
+    );
   });
   if (filter.custom === "differentNames") {
     const distinctNames = new Set<string>();
@@ -488,73 +380,6 @@ const countPublicCardsOnFieldByState = (
     ...player.costArea.filter((card) => !attachedIds.has(card.instanceId)),
   ];
   return fieldCards.filter((card) => card.state === stateFilter).length;
-};
-
-const cardMatchesFilter = (
-  state: GameState,
-  card: CardInstance,
-  filter: CardFilter,
-): boolean => {
-  const metadata = state.cardManifest.cards[card.cardId];
-  if (metadata === undefined) {
-    return false;
-  }
-  if (
-    filter.categories !== undefined &&
-    !filter.categories.includes(metadata.category)
-  ) {
-    return false;
-  }
-  if (
-    filter.typesAny !== undefined &&
-    !filter.typesAny.some((typeName) => metadata.types.includes(typeName))
-  ) {
-    return false;
-  }
-  if (
-    filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((typeName) => typeName.includes(typeText)),
-    )
-  ) {
-    return false;
-  }
-  if (
-    filter.names !== undefined &&
-    !cardMatchesAnyName(metadata, filter.names)
-  ) {
-    return false;
-  }
-  if (
-    filter.nameContains !== undefined &&
-    !cardMatchesNameContains(metadata, filter.nameContains)
-  ) {
-    return false;
-  }
-  if (
-    filter.baseCost !== undefined &&
-    !numericFilterMatches(metadata.cost, filter.baseCost)
-  ) {
-    return false;
-  }
-  if (
-    filter.cost !== undefined &&
-    !numericFilterMatches(metadata.cost, filter.cost)
-  ) {
-    return false;
-  }
-  if (
-    filter.currentPower !== undefined &&
-    !numericFilterMatches(
-      metadata.power === undefined
-        ? undefined
-        : metadata.power + card.attachedDon.length * 1000,
-      filter.currentPower,
-    )
-  ) {
-    return false;
-  }
-  return true;
 };
 
 const evaluateEventHistory = (
@@ -618,9 +443,13 @@ const evaluateOnlyMatchingFieldCards = (
   }
   return {
     supported: true,
-    passed: player.characters.every((card) =>
-      cardMatchesFilter(state, card, condition.filter),
-    ),
+    passed: player.characters.every((card) => {
+      const metadata = state.cardManifest.cards[card.cardId];
+      return (
+        metadata !== undefined &&
+        cardMatchesCharacterFieldCountFilter(metadata, card, condition.filter)
+      );
+    }),
   };
 };
 

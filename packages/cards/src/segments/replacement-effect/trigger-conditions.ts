@@ -77,7 +77,7 @@ export function parseOpponentFieldRemovalReplacement(
   if (
     target === undefined ||
     target.rest.length > 0 ||
-    target.target.type !== "all"
+    (target.target.type !== "all" && target.target.type !== "self")
   ) {
     return undefined;
   }
@@ -89,7 +89,8 @@ export function parseOpponentFieldRemovalReplacement(
   return {
     when: {
       type: "wouldMoveZone",
-      from: target.target.zone,
+      from:
+        target.target.type === "self" ? "characterArea" : target.target.zone,
       ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
       sourceControllerRelation: "opponentControlled",
       target: target.target,

@@ -2,10 +2,12 @@ import type { CardCategory, Duration, Zone } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseThisTurnDuration } from "../../durations/index.js";
+import { parseCardFilterPredicates } from "../../filters/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import { sourceSpan } from "../../source-slices.js";
 import { parseOpponentCharactersTarget } from "../../targets/index.js";
 import type {
+  InstructionParseResult,
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
@@ -28,6 +30,11 @@ export const preventSelectedAttackerBlockerActivationPrimitive = {
 
 export const parsePreventOpponentCharactersBlockerActivationInstruction: InstructionParser =
   (input) => {
+    const opponentCannotActivate = parseOpponentCannotActivateBlocker(input);
+    if (opponentCannotActivate !== undefined) {
+      return opponentCannotActivate;
+    }
+
     const cardinality = parseUpToCardinality({ text: input.text });
     if (cardinality === undefined) {
       return undefined;
@@ -99,6 +106,98 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
       rest: "",
     };
   };
+
+function parseOpponentCannotActivateBlocker(
+  input: ParseInput,
+): InstructionParseResult | undefined {
+  const selectionText = /^Your opponent cannot activate\s+(?<rest>.+)$/iu.exec(
+    input.text,
+  )?.groups?.["rest"];
+  if (selectionText === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: selectionText });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const targetMatch =
+    /^\[Blocker\]\s+(?<predicate>.+?)\s+(?<duration>during this turn\.?)$/iu.exec(
+      cardinality.rest,
+    );
+  const predicateText = targetMatch?.groups?.["predicate"]
+    ?.replace(/\bthat has\b/iu, "with")
+    .trim();
+  const durationText = targetMatch?.groups?.["duration"];
+  if (predicateText === undefined || durationText === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates(
+    { text: predicateText },
+    { powerSemantics: "current" },
+  );
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+
+  const duration = parseThisTurnDuration({ text: durationText });
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:blocker-restricted-character",
+          connector: "always",
+          saveResultAs: thatCharacterSelectionId,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              filter: predicates.filter,
+              min: cardinality.cardinality.min,
+              max: cardinality.cardinality.max,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "preventBlockerActivation",
+            target: thatCharacterSavedTarget,
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:preventBlockerActivation",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      "player:opponent",
+      "target:opponentCharacters",
+      ...predicates.evidence,
+      ...duration.evidence,
+      "activation:blocker",
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
 
 export const selectPowerThenPreventBlockerActivationExpressionParser = (
   input: ParseInput,

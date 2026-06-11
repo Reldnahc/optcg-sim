@@ -2,7 +2,7 @@ import type { ReplacementInsteadParseResult } from "../shared.js";
 import { parseMoveToOwnerDeckBottomInstead } from "./move-to-owner-deck-bottom.js";
 import {
   parseKoSelfInstead,
-  parseModifyLeaderPowerInstead,
+  parseModifyPowerInstead,
   parseRestSelfInstead,
   parseTrashSelfInstead,
 } from "./self.js";
@@ -21,7 +21,7 @@ export function parseInsteadEffect(
     parseTrashFromHandInstead(text) ??
     parseKoSelfInstead(text) ??
     parseTrashSelfInstead(text) ??
-    parseModifyLeaderPowerInstead(text) ??
+    parseModifyPowerInstead(text) ??
     parseRestSelfInstead(text) ??
     parseRestCardsInstead(text)
   );
