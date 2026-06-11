@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardRef,
   CardId,
   CardInstance,
   Effect,
@@ -129,6 +130,49 @@ test("attackDeclared stale target zone rejects On Your Opponent's Attack queuein
       },
     },
   ]);
+  assert.deepEqual(result.state, before);
+});
+
+test("main runtime lets battle cleanup handle an attack target removed during When Attacking resolution", () => {
+  const { state } = opponentAttackQueueingState();
+  const p2State = must(state.players[p2], "p2");
+  const staleTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "stale attack target"),
+    zone: "characterArea",
+  });
+  const staleTargetRef: CardRef = {
+    instanceId: staleTarget.instanceId,
+    cardId: staleTarget.cardId,
+    playerId: p2,
+    zone: staleTarget.zone,
+  };
+  const battle = must(state.battle, "battle");
+  state.battle = {
+    ...battle,
+    originalTarget: staleTargetRef,
+    currentTarget: staleTargetRef,
+  };
+  const attackDeclared = must(state.eventJournal.at(-1), "attackDeclared");
+  const payload = attackDeclared.payload as {
+    attacker: CardRef;
+    target: CardRef;
+  };
+  attackDeclared.payload = {
+    ...payload,
+    target: staleTargetRef,
+  };
+  state.seq = (state.seq + 1) as typeof state.seq;
+  p2State.characters = p2State.characters.filter(
+    (character) => character.instanceId !== staleTarget.instanceId,
+  );
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
 });
 

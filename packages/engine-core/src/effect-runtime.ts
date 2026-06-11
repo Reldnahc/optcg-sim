@@ -17,6 +17,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 };
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { reifyCardRef } from "./actions/state.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/processing.js";
 import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence/frames.js";
@@ -340,6 +341,17 @@ const queueOnOpponentAttackTriggers =
 const queueEffectResolvedCustomTriggers =
   triggerQueueing.queueEffectResolvedCustomTriggers;
 
+const attackBattleParticipantsRemainPresent = (state: GameState): boolean => {
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "attack") {
+    return true;
+  }
+  return (
+    reifyCardRef(state, battle.attacker) !== null &&
+    reifyCardRef(state, battle.currentTarget) !== null
+  );
+};
+
 const queueProcessing = createEffectRuntimeQueueProcessing({
   resolveImplementedDslEffectDefinition,
   createUnsupportedPendingRuntimeWorkError: unsupportedPendingRuntimeWorkError,
@@ -415,9 +427,11 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   if (queuedFromWhenAttacking !== undefined) {
     return queuedFromWhenAttacking;
   }
-  const queuedFromOnOpponentAttack = queueOnOpponentAttackTriggers(state);
-  if (queuedFromOnOpponentAttack !== undefined) {
-    return queuedFromOnOpponentAttack;
+  if (attackBattleParticipantsRemainPresent(state)) {
+    const queuedFromOnOpponentAttack = queueOnOpponentAttackTriggers(state);
+    if (queuedFromOnOpponentAttack !== undefined) {
+      return queuedFromOnOpponentAttack;
+    }
   }
   const queuedFromLifeRemoved = queueLifeRemovedTriggers(state);
   if (queuedFromLifeRemoved !== undefined) {
