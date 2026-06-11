@@ -60,8 +60,8 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
   }
   if (
     effect.zone === "trash" &&
-    effect.player === effect.chooser &&
     (effect.player === "self" || effect.player === "opponent") &&
+    (effect.chooser === "self" || effect.chooser === "opponent") &&
     effect.visibility === "bothPlayers"
   ) {
     return "trash";

@@ -1,4 +1,4 @@
-import type { Effect, Target } from "@optcg/types";
+import type { Effect, SelectionId, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
@@ -6,10 +6,15 @@ import { parseOpponentCharactersTarget } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const ownerDeckBottomSelectionId = "selected:owner-deck-bottom";
+const ownerDeckBottomTrashSelectionId =
+  "trashSelection:owner-deck-bottom" as SelectionId;
 
 type CharacterFilter = NonNullable<
   Extract<Target, { type: "choose" }>["request"]["filter"]
 >;
+type CardFilter = NonNullable<
+  ReturnType<typeof parseCardFilterPredicates>
+>["filter"];
 
 const savedOwnerDeckBottomTarget = (player: "opponent" | "anyPlayer") =>
   ({
@@ -62,6 +67,44 @@ const selectThenPlaceAtOwnerDeckBottom = (
   ],
 });
 
+const selectTrashThenPlaceAtOwnerDeckBottom = (
+  player: "self" | "opponent",
+  min: number,
+  max: number,
+  filter?: CardFilter,
+): Effect => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select:trash-to-owner-deck-bottom",
+      connector: "always",
+      saveResultAs: ownerDeckBottomTrashSelectionId,
+      effect: {
+        type: "selectCards",
+        zone: "trash",
+        player,
+        chooser: "self",
+        min,
+        max,
+        ...(filter === undefined ? {} : { filter }),
+        saveAs: ownerDeckBottomTrashSelectionId,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      id: "move:selected-trash-to-owner-deck-bottom",
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection: ownerDeckBottomTrashSelectionId,
+        from: "trash",
+        to: "deck",
+        position: "bottom",
+      },
+    },
+  ],
+});
+
 const parseAnyCharacterTarget = (text: string) => {
   const predicates = parseCardFilterPredicates(
     { text },
@@ -99,6 +142,53 @@ const parseOwnerDeckBottomTarget = (text: string) => {
   return parseAnyCharacterTarget(text);
 };
 
+const normalizeTrashPredicateText = (text: string): string =>
+  text
+    .replace(/^of your opponent's\s+/iu, "")
+    .replace(/^your opponent's\s+/iu, "")
+    .replace(/^of your\s+/iu, "")
+    .replace(/^your\s+/iu, "");
+
+const parseTrashSource = (
+  text: string,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter?: CardFilter;
+      readonly player: "self" | "opponent";
+    }
+  | undefined => {
+  const sourceMatch =
+    /^(?<predicates>.+?) from (?<owner>your opponent's|your) trash$/iu.exec(
+      text.trim(),
+    );
+  const predicateText = sourceMatch?.groups?.["predicates"];
+  const owner = sourceMatch?.groups?.["owner"];
+  if (predicateText === undefined || owner === undefined) {
+    return undefined;
+  }
+
+  const player = owner === "your" ? "self" : "opponent";
+  const normalizedPredicateText = normalizeTrashPredicateText(predicateText);
+  if (/^cards?$/iu.test(normalizedPredicateText)) {
+    return {
+      evidence: ["filter:any"],
+      player,
+    };
+  }
+
+  const predicates = parseCardFilterPredicates({
+    text: normalizedPredicateText,
+  });
+  return predicates === undefined || predicates.rest.length > 0
+    ? undefined
+    : {
+        evidence: predicates.evidence,
+        filter: predicates.filter,
+        player,
+      };
+};
+
 export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   input,
 ) => {
@@ -114,6 +204,30 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   const cardinality = parseUpToCardinality({ text: selectionText });
   if (cardinality === undefined) {
     return undefined;
+  }
+
+  const trashSource = parseTrashSource(cardinality.rest);
+  if (trashSource !== undefined) {
+    return {
+      effect: selectTrashThenPlaceAtOwnerDeckBottom(
+        trashSource.player,
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+        trashSource.filter,
+      ),
+      evidence: [
+        "instruction:moveSelected",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        "zone:trash",
+        trashSource.player === "self" ? "player:self" : "player:opponent",
+        ...trashSource.evidence,
+        "destination:deck",
+        "position:bottom",
+        "composition:selectThenMove",
+      ],
+      rest: "",
+    };
   }
 
   const target = parseOwnerDeckBottomTarget(cardinality.rest);

@@ -216,4 +216,57 @@ describe("card effect line parser owner deck-bottom field movement", () => {
       }
     },
   );
+
+  it("parses public trash selection moved to the owner's deck bottom", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Place up to 1 card from your opponent's trash at the bottom of the owner's deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "trashSelection:owner-deck-bottom",
+              effect: {
+                type: "selectCards",
+                zone: "trash",
+                player: "opponent",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                saveAs: "trashSelection:owner-deck-bottom",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "moveSelected",
+                selection: "trashSelection:owner-deck-bottom",
+                from: "trash",
+                to: "deck",
+                position: "bottom",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:moveSelected",
+        "zone:trash",
+        "player:opponent",
+        "destination:deck",
+        "position:bottom",
+        "composition:selectThenMove",
+      ]),
+    );
+  });
 });

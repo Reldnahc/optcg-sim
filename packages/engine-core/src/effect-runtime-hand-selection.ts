@@ -56,8 +56,8 @@ const isSupportedSequenceTrashSelectCardsEffect = (
 ): effect is SequenceSelectCardsEffect =>
   effect.type === "selectCards" &&
   effect.zone === "trash" &&
-  effect.player === effect.chooser &&
   (effect.player === "self" || effect.player === "opponent") &&
+  (effect.chooser === "self" || effect.chooser === "opponent") &&
   effect.visibility === "bothPlayers" &&
   String(effect.saveAs).startsWith("trashSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
@@ -87,6 +87,15 @@ export const isSupportedSequenceSelectCardsEffect = (
   isSupportedSequenceHandSelectCardsEffect(effect) ||
   isSupportedSequenceTrashSelectCardsEffect(effect) ||
   isSupportedSequenceCostAreaSelectCardsEffect(effect);
+
+const isSupportedRelativePlayer = (
+  player: SelectCardsDecision["request"]["player"],
+): player is "self" | "opponent" => player === "self" || player === "opponent";
+
+const isSupportedRelativeChooser = (
+  chooser: SelectCardsDecision["request"]["chooser"],
+): chooser is "self" | "opponent" =>
+  chooser === "self" || chooser === "opponent";
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -118,23 +127,28 @@ const isSupportedSelectCardsDecision = (
   decision: SelectCardsDecision,
 ): boolean =>
   decision.request.timing === "onResolution" &&
-  decision.request.chooser === "self" &&
-  decision.request.player === "self" &&
+  isSupportedRelativeChooser(decision.request.chooser) &&
+  (decision.request.player === undefined ||
+    isSupportedRelativePlayer(decision.request.player)) &&
   decision.request.set === undefined &&
   isSupportedHandSelectionCardFilter(decision.request.filter) &&
   ((String(decision.id).startsWith(handDecisionIdPrefix) &&
     decision.request.zone === "hand" &&
+    decision.request.player === decision.request.chooser &&
     !decision.request.allowFewerIfUnavailable &&
     decision.request.visibility === "privateToChooser" &&
     decision.visibility.type === "private" &&
     decision.visibility.playerId === decision.playerId) ||
     (String(decision.id).startsWith(trashDecisionIdPrefix) &&
       decision.request.zone === "trash" &&
+      isSupportedRelativePlayer(decision.request.player) &&
       decision.request.allowFewerIfUnavailable &&
       decision.request.visibility === "public" &&
       decision.visibility.type === "public") ||
     (String(decision.id).startsWith(costAreaDecisionIdPrefix) &&
       decision.request.zone === "costArea" &&
+      decision.request.chooser === "self" &&
+      decision.request.player === "self" &&
       decision.request.allowFewerIfUnavailable &&
       decision.request.visibility === "public" &&
       decision.visibility.type === "public"));
@@ -177,35 +191,57 @@ export const isHandSelectionSelectCardsDecision = (
 ): decision is SelectCardsDecision =>
   decision.type === "selectCards" && isSupportedSelectCardsDecision(decision);
 
-const cardRefsInZone = (
+const cardsInPlayerZone = (
   state: GameState,
-  decision: SelectCardsDecision,
-): CardRef[] | null => {
-  const player = state.players[decision.playerId];
+  playerId: CardRef["playerId"],
+  zone: SelectCardsDecision["request"]["zone"],
+) => {
+  const player = state.players[playerId];
   if (player === undefined) {
     return null;
   }
-  const cards =
-    decision.request.zone === "hand"
-      ? player.hand
-      : decision.request.zone === "trash"
-        ? player.trash
-        : decision.request.zone === "costArea"
-          ? player.costArea
-          : undefined;
-  if (cards === undefined) {
-    return null;
-  }
-  return cards
-    .filter((card) =>
-      cardMatchesHandSelectionFilter(
+  return zone === "hand"
+    ? player.hand
+    : zone === "trash"
+      ? player.trash
+      : zone === "costArea"
+        ? player.costArea
+        : undefined;
+};
+
+const currentCandidateRefsForDecision = (
+  state: GameState,
+  decision: SelectCardsDecision,
+): CardRef[] | null => {
+  const currentRefs: CardRef[] = [];
+  for (const candidate of decision.candidates) {
+    const cards = cardsInPlayerZone(
+      state,
+      candidate.card.playerId,
+      decision.request.zone,
+    );
+    if (cards === null || cards === undefined) {
+      return null;
+    }
+    const current = cards.find(
+      (card) =>
+        card.instanceId === candidate.card.instanceId &&
+        card.cardId === candidate.card.cardId,
+    );
+    if (
+      current === undefined ||
+      !cardMatchesHandSelectionFilter(
         state,
-        decision.playerId,
-        card,
+        candidate.card.playerId,
+        current,
         decision.request.filter,
-      ),
-    )
-    .map((card) => toCardRef(card, decision.playerId));
+      )
+    ) {
+      return null;
+    }
+    currentRefs.push(toCardRef(current, candidate.card.playerId));
+  }
+  return currentRefs;
 };
 
 const candidateVisibilityForDecision = (
@@ -221,7 +257,7 @@ const hasCurrentCandidateEnvelope = (
   state: GameState,
   decision: SelectCardsDecision,
 ): boolean => {
-  const filteredCards = cardRefsInZone(state, decision);
+  const filteredCards = currentCandidateRefsForDecision(state, decision);
   if (filteredCards === null) {
     return false;
   }
@@ -248,7 +284,7 @@ const findCurrentCards = (
   decision: SelectCardsDecision,
   selected: readonly CardRef[],
 ): CardRef[] | null => {
-  const candidateRefs = cardRefsInZone(state, decision);
+  const candidateRefs = currentCandidateRefsForDecision(state, decision);
   if (candidateRefs === null) {
     return null;
   }
@@ -325,9 +361,16 @@ export const createSupportedHandSelectionChoiceDecision = (
       state,
     };
   }
-  const playerId = resolveEffectPlayerId(state, entry, effect.player);
-  const player = playerId === undefined ? undefined : state.players[playerId];
-  if (playerId === undefined || player === undefined) {
+  const zoneOwnerId = resolveEffectPlayerId(state, entry, effect.player);
+  const chooserId = resolveEffectPlayerId(state, entry, effect.chooser);
+  const zoneOwner =
+    zoneOwnerId === undefined ? undefined : state.players[zoneOwnerId];
+  if (
+    zoneOwnerId === undefined ||
+    chooserId === undefined ||
+    zoneOwner === undefined ||
+    state.players[chooserId] === undefined
+  ) {
     return {
       error: {
         type: "effectRuntimeError",
@@ -342,21 +385,21 @@ export const createSupportedHandSelectionChoiceDecision = (
 
   const cards =
     effect.zone === "hand"
-      ? player.hand
+      ? zoneOwner.hand
       : effect.zone === "trash"
-        ? player.trash
-        : player.costArea;
+        ? zoneOwner.trash
+        : zoneOwner.costArea;
   const candidateVisibility =
     effect.zone === "trash" || effect.zone === "costArea"
       ? { type: "public" as const }
-      : ({ type: "private" as const, playerId } as const);
+      : ({ type: "private" as const, playerId: chooserId } as const);
 
   const candidates = cards
     .filter((card) =>
-      cardMatchesHandSelectionFilter(state, playerId, card, resolvedFilter),
+      cardMatchesHandSelectionFilter(state, zoneOwnerId, card, resolvedFilter),
     )
     .map((card) => ({
-      card: toCardRef(card, playerId),
+      card: toCardRef(card, zoneOwnerId),
       visibility: candidateVisibility,
     }));
 
@@ -381,7 +424,7 @@ export const createSupportedHandSelectionChoiceDecision = (
   const visibility =
     effect.zone === "trash" || effect.zone === "costArea"
       ? ({ type: "public" } as const)
-      : ({ type: "private", playerId } as const);
+      : ({ type: "private", playerId: chooserId } as const);
   const idPrefix =
     effect.zone === "trash"
       ? trashDecisionIdPrefix
@@ -391,7 +434,7 @@ export const createSupportedHandSelectionChoiceDecision = (
   const pendingDecision: SelectCardsDecision = {
     id: toDecisionId(`${idPrefix}${String(entry.id)}:${String(segmentIndex)}`),
     type: "selectCards",
-    playerId,
+    playerId: chooserId,
     prompt:
       effect.zone === "trash"
         ? "Choose cards from trash."
@@ -402,8 +445,8 @@ export const createSupportedHandSelectionChoiceDecision = (
     visibility,
     request: {
       timing: "onResolution",
-      chooser: "self",
-      player: "self",
+      chooser: effect.chooser,
+      player: effect.player,
       zone: effect.zone,
       min: effect.min,
       max: effect.max,

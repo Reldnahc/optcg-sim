@@ -10,6 +10,7 @@ import type {
   EngineResult,
   GameState,
   HandSelectionId,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -705,6 +706,92 @@ test("private hand selection decision records selectedCards reference for later 
   });
   const p2View = filterStateForPlayer(resolved.state, p2);
   assert.equal(JSON.stringify(p2View).includes("handSelection:test"), false);
+});
+
+test("public trash selection lets the controller choose opponent trash for owner deck-bottom movement", () => {
+  const selection = "trashSelection:owner-deck-bottom" as SelectionId;
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        id: "select-opponent-trash",
+        connector: "always",
+        saveResultAs: selection,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "opponent",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          saveAs: selection,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        id: "move-selected-trash",
+        connector: "then",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: "trash",
+          to: "deck",
+          position: "bottom",
+        },
+      },
+    ],
+  });
+  const p2State = must(state.players[p2], "p2");
+  const trashSource = must(p2State.hand[0], "opponent trash source");
+  const trashCard = {
+    ...trashSource,
+    zone: {
+      zone: "trash" as const,
+      playerId: p2,
+      slot: "trash" as const,
+      index: 0,
+    },
+  };
+  p2State.hand = reindexHand(p2State.hand.slice(1), p2);
+  p2State.trash = [trashCard];
+  state.cardManifest.cards[trashCard.cardId] = resolvedCard({
+    cardId: trashCard.cardId,
+    category: "event",
+  });
+  const beforeDeckCount = p2State.deck.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "trash selection");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.request.zone, "trash");
+  assert.equal(decision.request.player, "opponent");
+  assert.equal(decision.request.chooser, "self");
+  assert.deepEqual(decision.visibility, { type: "public" });
+  const selected = must(
+    decision.candidates[0],
+    "opponent trash candidate",
+  ).card;
+  assert.equal(selected.playerId, p2);
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+  const afterP2 = must(resolved.state.players[p2], "after p2");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    afterP2.trash.some((card) => card.instanceId === trashCard.instanceId),
+    false,
+  );
+  assert.equal(afterP2.deck.length, beforeDeckCount + 1);
+  assert.equal(
+    must(afterP2.deck[afterP2.deck.length - 1], "deck bottom").instanceId,
+    trashCard.instanceId,
+  );
 });
 
 test("hand-selection decisions from separate sequence segments have unique deterministic ids", () => {
