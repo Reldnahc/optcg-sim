@@ -146,7 +146,7 @@
   z-index: 12;
   pointer-events: none;
   color: var(--match-accent-strong);
-  font-size: clamp(15px, calc(var(--card-height) / 7.25), 24px);
+  font-size: clamp(18px, calc(var(--card-height) / 6), 32px);
   font-weight: 800;
   line-height: 1.1;
   text-align: center;

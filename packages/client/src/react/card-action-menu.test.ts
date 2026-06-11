@@ -896,7 +896,7 @@ describe("card action menu", () => {
     assert.equal(markup.includes("Trash 1 card from hand"), true);
     assert.match(
       appShellStyles,
-      /\.decision-status-prompt\s*\{[^}]*bottom:\s*calc\(var\(--card-height\) \+ clamp\(16px,\s*calc\(var\(--card-height\) \/ 6\),\s*30px\)\);[^}]*font-size:\s*clamp\(15px,\s*calc\(var\(--card-height\) \/ 7\.25\),\s*24px\);/u,
+      /\.decision-status-prompt\s*\{[^}]*bottom:\s*calc\(var\(--card-height\) \+ clamp\(16px,\s*calc\(var\(--card-height\) \/ 6\),\s*30px\)\);[^}]*font-size:\s*clamp\(18px,\s*calc\(var\(--card-height\) \/ 6\),\s*32px\);/u,
     );
   });
 
