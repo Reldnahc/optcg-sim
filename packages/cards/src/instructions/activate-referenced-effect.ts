@@ -38,6 +38,7 @@ export const parseActivateReferencedEffectInstruction: InstructionParser = (
     evidence: [
       "instruction:activateReferencedEffect",
       "target:triggerCard",
+      "reference:effectEntryPoint",
       ...referenceEvidence,
     ],
     rest: "",

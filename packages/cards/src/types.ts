@@ -279,6 +279,7 @@ export type PrimitiveEvidence =
   | "replacementSource:cardEffect"
   | "condition:onlyMatchingFieldCards"
   | "instruction:activateReferencedEffect"
+  | "reference:effectEntryPoint"
   | "instruction:modifyCost"
   | "instruction:modifyCounter"
   | "reference:eventMain"

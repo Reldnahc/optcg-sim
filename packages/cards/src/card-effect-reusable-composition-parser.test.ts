@@ -18,6 +18,14 @@ describe("card effect reusable parser compositions", () => {
         },
       },
     });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:activateReferencedEffect",
+        "target:triggerCard",
+        "reference:effectEntryPoint",
+      ]),
+    );
+    expect(result?.evidence).not.toContain("reference:eventMain");
   });
 
   it("parses turn-windowed triggered effects as composed entry conditions", () => {
