@@ -86,6 +86,20 @@ const controlPanelHeightForCurrentViewport = (): number => {
     : Math.max(defaultControlDockHeight, window.innerHeight - 16);
 };
 
+const controlDockBottomReservedSpaceForCurrentLayout = (): number => {
+  const controlsPanelRect = elementRect(".controls-panel");
+  const dockRect = elementRect(".control-window-dock");
+  if (controlsPanelRect === undefined || dockRect === undefined) {
+    return 0;
+  }
+  return Math.max(
+    0,
+    controlsPanelRect.y +
+      controlsPanelRect.height -
+      (dockRect.y + dockRect.height),
+  );
+};
+
 export const useControlPanelLayout = ({
   layoutStore,
 }: UseControlPanelLayoutInput = {}): ControlPanelLayoutController => {
@@ -114,6 +128,8 @@ export const useControlPanelLayout = ({
         layout?.controlRailWidth ?? defaultControlRailWidthForCurrentViewport(),
       ),
       controlPanelHeight: controlPanelHeightForCurrentViewport(),
+      controlDockBottomReservedSpace:
+        controlDockBottomReservedSpaceForCurrentLayout(),
     });
     setControlRailWidth(normalizedLayout.controlRailWidth);
     setControlDockHeight(normalizedLayout.controlDockHeight);
@@ -204,6 +220,8 @@ export const useControlPanelLayout = ({
       if (controlsPanelRect === undefined) {
         return;
       }
+      const controlDockBottomReservedSpace =
+        controlDockBottomReservedSpaceForCurrentLayout();
       const startHeight = controlDockHeight;
       const startClientY = event.clientY;
       const move = (moveEvent: PointerEvent): void => {
@@ -212,6 +230,7 @@ export const useControlPanelLayout = ({
           startClientY,
           currentClientY: moveEvent.clientY,
           controlPanelHeight: controlsPanelRect.height,
+          controlDockBottomReservedSpace,
         });
         setControlDockHeight(nextHeight);
         layoutStore?.saveControlPanelLayout({

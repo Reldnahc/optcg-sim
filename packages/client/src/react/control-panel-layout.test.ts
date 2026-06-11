@@ -97,7 +97,7 @@ describe("control panel layout", () => {
       }),
       {
         controlRailWidth: 244,
-        controlDockHeight: 296,
+        controlDockHeight: 360,
       },
     );
 
@@ -150,7 +150,7 @@ describe("control panel layout", () => {
         currentClientY: 260,
         controlPanelHeight: 680,
       }),
-      456,
+      520,
     );
 
     assert.equal(
@@ -161,6 +161,29 @@ describe("control panel layout", () => {
         controlPanelHeight: 680,
       }),
       180,
+    );
+  });
+
+  test("uses the rendered bottom dock reserve when clamping dock height", () => {
+    assert.equal(
+      controlDockHeightFromDrag({
+        startHeight: defaultControlDockHeight,
+        startClientY: 620,
+        currentClientY: 260,
+        controlPanelHeight: 680,
+        controlDockBottomReservedSpace: 40,
+      }),
+      480,
+    );
+    assert.equal(
+      controlDockHeightFromDrag({
+        startHeight: defaultControlDockHeight,
+        startClientY: 620,
+        currentClientY: 260,
+        controlPanelHeight: 680,
+        controlDockBottomReservedSpace: 88,
+      }),
+      432,
     );
   });
 

@@ -454,7 +454,7 @@ describe("card action menu", () => {
     );
     assert.match(
       styles,
-      /\.action-button\.is-primary\s*\{[^}]*min-height:\s*clamp\(60px,\s*calc\(var\(--card-height\) \/ 2\.53\),\s*84px\);[^}]*color:\s*#171006;[^}]*background:\s*#ffd84d;[^}]*font-size:\s*clamp\(16px,\s*calc\(var\(--card-height\) \/ 8\.5\),\s*22px\);/u,
+      /\.action-button\.is-primary\s*\{[^}]*min-height:\s*clamp\(60px,\s*calc\(var\(--card-height\) \/ 2\.53\),\s*84px\);[^}]*background:\s*#ffd84d;[^}]*rgba\(184,\s*226,\s*255,\s*0\.58\);[^}]*font-size:\s*clamp\(20px,\s*calc\(var\(--card-height\) \/ 6\.8\),\s*28px\);/u,
     );
     assert.match(
       styles,

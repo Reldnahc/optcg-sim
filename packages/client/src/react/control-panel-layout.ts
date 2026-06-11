@@ -8,7 +8,6 @@ export const controlRailPlaymatGap = 8;
 export const defaultControlDockHeight = 320;
 export const minControlDockHeight = 180;
 export const controlDockVerticalReservedSpace = 160;
-export const controlDockBottomToolReservedSpace = 64;
 
 const desktopCardMinHeight = 86;
 const desktopCardMaxHeight = 240;
@@ -98,6 +97,7 @@ export interface ControlPanelLayoutViewportInput {
   viewportHeight: number;
   playmatRight: number;
   controlPanelHeight: number;
+  controlDockBottomReservedSpace?: number | undefined;
 }
 
 export const maxControlRailWidth = ({
@@ -143,26 +143,33 @@ export const controlRailWidthFromDrag = ({
 
 export const maxControlDockHeight = ({
   controlPanelHeight,
+  controlDockBottomReservedSpace = 0,
 }: {
   controlPanelHeight: number;
+  controlDockBottomReservedSpace?: number | undefined;
 }): number =>
   Math.max(
     minControlDockHeight,
     controlPanelHeight -
       controlDockVerticalReservedSpace -
-      controlDockBottomToolReservedSpace,
+      controlDockBottomReservedSpace,
   );
 
 export const clampControlDockHeight = ({
   requestedHeight,
   controlPanelHeight,
+  controlDockBottomReservedSpace,
 }: {
   requestedHeight: number;
   controlPanelHeight: number;
+  controlDockBottomReservedSpace?: number | undefined;
 }): number =>
   Math.min(
     Math.max(minControlDockHeight, requestedHeight),
-    maxControlDockHeight({ controlPanelHeight }),
+    maxControlDockHeight({
+      controlPanelHeight,
+      controlDockBottomReservedSpace,
+    }),
   );
 
 export const controlDockHeightFromDrag = ({
@@ -170,15 +177,18 @@ export const controlDockHeightFromDrag = ({
   startClientY,
   currentClientY,
   controlPanelHeight,
+  controlDockBottomReservedSpace,
 }: {
   startHeight: number;
   startClientY: number;
   currentClientY: number;
   controlPanelHeight: number;
+  controlDockBottomReservedSpace?: number | undefined;
 }): number =>
   clampControlDockHeight({
     requestedHeight: startHeight + startClientY - currentClientY,
     controlPanelHeight,
+    controlDockBottomReservedSpace,
   });
 
 export const normalizeControlPanelLayoutForViewport = ({
@@ -187,6 +197,7 @@ export const normalizeControlPanelLayoutForViewport = ({
   viewportHeight,
   playmatRight,
   controlPanelHeight,
+  controlDockBottomReservedSpace,
 }: ControlPanelLayoutViewportInput): NormalizedControlPanelLayout => ({
   controlRailWidth: clampControlRailWidth({
     requestedWidth:
@@ -200,6 +211,7 @@ export const normalizeControlPanelLayoutForViewport = ({
       layout.controlDockHeight ??
       defaultControlDockHeightForViewport({ viewportWidth, viewportHeight }),
     controlPanelHeight,
+    controlDockBottomReservedSpace,
   }),
 });
 
