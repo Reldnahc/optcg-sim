@@ -100,9 +100,8 @@ export const parseLeaderNameCondition: ConditionParser = (
     };
   }
 
-  const subjectMatch = /^your Leader (?:is|has the)\s+(?<predicate>.+)$/i.exec(
-    input.text,
-  );
+  const subjectMatch =
+    /^your Leader (?:is|has(?: the)?)\s+(?<predicate>.+)$/i.exec(input.text);
   const predicateText = subjectMatch?.groups?.["predicate"];
   if (predicateText === undefined) {
     return undefined;

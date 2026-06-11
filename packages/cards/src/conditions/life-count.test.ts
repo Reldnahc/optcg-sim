@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   lifeCountConditionPrimitive,
+  parseLifeCountDifferenceCondition,
   parseLifeCountCondition,
 } from "./life-count.js";
 
@@ -65,6 +66,30 @@ describe("life count condition parser", () => {
         op: "eq",
         value: 1,
       },
+    });
+  });
+
+  it("parses player-vs-opponent Life count comparisons as reusable operands", () => {
+    expect(
+      parseLifeCountDifferenceCondition({
+        text: "you have less Life cards than your opponent",
+      }),
+    ).toEqual({
+      condition: {
+        type: "lifeCountDifference",
+        minuend: { player: "opponent" },
+        subtrahend: { player: "self" },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:lifeCountDifference",
+        "player:opponent",
+        "player:self",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
     });
   });
 });

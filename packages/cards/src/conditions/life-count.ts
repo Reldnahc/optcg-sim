@@ -98,6 +98,28 @@ export const parseLifeCountDifferenceCondition: ConditionParser = (input) => {
     };
   }
 
+  const lessThanOpponentMatch =
+    /^you have less Life cards than your opponent$/iu.exec(input.text);
+  if (lessThanOpponentMatch !== null) {
+    return {
+      condition: {
+        type: "lifeCountDifference",
+        minuend: { player: "opponent" },
+        subtrahend: { player: "self" },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:lifeCountDifference",
+        "player:opponent",
+        "player:self",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    };
+  }
+
   return undefined;
 };
 

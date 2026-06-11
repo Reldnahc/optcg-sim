@@ -54,3 +54,43 @@ test("leader-zone hasCardInZone supports anyOf name filters", () => {
     { supported: true, passed: false },
   );
 });
+
+test("leader-zone hasCardInZone supports current-power filters", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  state.cardManifest.cards[self.leader.cardId] = {
+    ...resolvedCard({ cardId: self.leader.cardId, category: "leader" }),
+    power: 0,
+  };
+  const condition: Extract<Condition, { type: "hasCardInZone" }> = {
+    type: "hasCardInZone",
+    player: "self",
+    zone: "leaderArea",
+    filter: {
+      categories: ["leader"],
+      currentPower: { max: 0 },
+    },
+  };
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+
+  state.cardManifest.cards[self.leader.cardId] = {
+    ...must(state.cardManifest.cards[self.leader.cardId], "leader metadata"),
+    power: 5000,
+  };
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});

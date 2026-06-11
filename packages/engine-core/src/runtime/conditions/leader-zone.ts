@@ -1,10 +1,12 @@
 import type {
+  CardInstance,
   CardFilter,
   Condition,
   EffectQueueEntry,
   GameState,
   PlayerId,
   PlayerRef,
+  Comparator,
   ResolvedCard,
 } from "@optcg/types";
 
@@ -34,6 +36,8 @@ type SupportedLeaderZoneFilter = Required<Pick<CardFilter, "categories">> &
     | "attributesAny"
     | "names"
     | "nameContains"
+    | "power"
+    | "currentPower"
     | "anyOf"
   >;
 
@@ -45,6 +49,81 @@ type LeaderMetadata = ResolvedCard & {
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
+type NumericFilter =
+  | { op: Comparator; value: number }
+  | { min?: number; max?: number };
+
+const isComparator = (value: unknown): value is Comparator => {
+  switch (value) {
+    case "eq":
+    case "neq":
+    case "gt":
+    case "gte":
+    case "lt":
+    case "lte":
+      return true;
+    default:
+      return false;
+  }
+};
+
+const hasSupportedNumericFilter = (
+  filter: NumericFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if ("op" in filter) {
+    return isComparator(filter.op) && Number.isFinite(filter.value);
+  }
+  return (
+    (filter.min === undefined || Number.isFinite(filter.min)) &&
+    (filter.max === undefined || Number.isFinite(filter.max)) &&
+    (filter.min === undefined ||
+      filter.max === undefined ||
+      filter.min <= filter.max)
+  );
+};
+
+const compare = (op: Comparator, left: number, right: number): boolean => {
+  switch (op) {
+    case "eq":
+      return left === right;
+    case "neq":
+      return left !== right;
+    case "gt":
+      return left > right;
+    case "gte":
+      return left >= right;
+    case "lt":
+      return left < right;
+    case "lte":
+      return left <= right;
+  }
+};
+
+const numericFilterMatches = (
+  value: number | undefined,
+  filter: NumericFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if (value === undefined) {
+    return false;
+  }
+  if ("op" in filter) {
+    return compare(filter.op, value, filter.value);
+  }
+  if (filter.min !== undefined && value < filter.min) {
+    return false;
+  }
+  if (filter.max !== undefined && value > filter.max) {
+    return false;
+  }
+  return true;
+};
 
 const resolveConditionPlayer = (
   state: GameState,
@@ -101,6 +180,8 @@ export const isSupportedLeaderZoneFilter = (
       key !== "attributesAny" &&
       key !== "names" &&
       key !== "nameContains" &&
+      key !== "power" &&
+      key !== "currentPower" &&
       key !== "anyOf"
     ) {
       return false;
@@ -131,6 +212,8 @@ export const isSupportedLeaderZoneFilter = (
     filter.names.every((value) => typeof value === "string");
   const hasNameContains =
     typeof filter.nameContains === "string" && filter.nameContains.length > 0;
+  const hasPower = filter.power !== undefined;
+  const hasCurrentPower = filter.currentPower !== undefined;
   const hasAnyOf =
     Array.isArray(filter.anyOf) &&
     filter.anyOf.length > 0 &&
@@ -141,17 +224,22 @@ export const isSupportedLeaderZoneFilter = (
       }),
     );
   return (
-    hasTypes ||
-    hasTypesInclude ||
-    hasAttributes ||
-    hasNames ||
-    hasNameContains ||
-    hasAnyOf
+    hasSupportedNumericFilter(filter.power) &&
+    hasSupportedNumericFilter(filter.currentPower) &&
+    (hasTypes ||
+      hasTypesInclude ||
+      hasAttributes ||
+      hasNames ||
+      hasNameContains ||
+      hasPower ||
+      hasCurrentPower ||
+      hasAnyOf)
   );
 };
 
 const leaderMatchesFilter = (
   leader: LeaderMetadata,
+  leaderCard: CardInstance,
   filter: SupportedLeaderZoneFilter,
 ): boolean => {
   const typesMatch =
@@ -178,11 +266,20 @@ const leaderMatchesFilter = (
     filter.nameContains === undefined
       ? true
       : cardMatchesNameContains(leader, filter.nameContains);
+  const powerMatch = numericFilterMatches(leader.power, filter.power);
+  const currentPower =
+    leader.power === undefined
+      ? undefined
+      : leader.power + leaderCard.attachedDon.length * 1000;
+  const currentPowerMatch = numericFilterMatches(
+    currentPower,
+    filter.currentPower,
+  );
   const anyOfMatch =
     filter.anyOf === undefined
       ? true
       : filter.anyOf.some((branch) =>
-          leaderMatchesFilter(leader, {
+          leaderMatchesFilter(leader, leaderCard, {
             categories: ["leader"],
             ...branch,
           }),
@@ -193,6 +290,8 @@ const leaderMatchesFilter = (
     attributesMatch &&
     namesMatch &&
     nameContainsMatch &&
+    powerMatch &&
+    currentPowerMatch &&
     anyOfMatch
   );
 };
@@ -212,12 +311,13 @@ export const evaluateHasCardInZone = (
   if (playerId === undefined || state.players[playerId] === undefined) {
     return { supported: false };
   }
+  const player = state.players[playerId];
   const leader = readLeaderMetadata(state, playerId);
   if (leader === undefined) {
     return { supported: false };
   }
   return {
     supported: true,
-    passed: leaderMatchesFilter(leader, condition.filter),
+    passed: leaderMatchesFilter(leader, player.leader, condition.filter),
   };
 };
