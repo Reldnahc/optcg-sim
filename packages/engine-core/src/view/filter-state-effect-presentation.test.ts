@@ -505,6 +505,94 @@ test("player decision projection narrows choose-one prompts to the choice spans"
   });
 });
 
+test("player decision projection narrows decisions inside choose-one options to the selected option span", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  sourceCard.instanceId = toInstanceId("choice-option-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry: EffectQueueEntry = {
+    ...queuedEffect(source),
+    presentation: {
+      source,
+      textKind: "effect",
+      activeSpanIds: [
+        "span:choice",
+        "span:choice:0:option",
+        "span:choice:1:option",
+        "span:body:after-choice",
+      ] as EffectTextSpanId[],
+    },
+  };
+  const decisionId = toDecisionId("decision:selectTargets:choice-option:test");
+  const decisionCausedBy = {
+    type: "effect" as const,
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  };
+  state.effectQueue = [entry];
+  state.pendingDecision = {
+    id: decisionId,
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: decisionCausedBy,
+    visibility: { type: "public" },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "opponent",
+      zone: "characterArea",
+      min: 0,
+      max: 1,
+      allowFewerIfUnavailable: true,
+      filter: { categories: ["character"] },
+    },
+    candidates: [],
+  };
+  state.effectExecutionFrames = [
+    {
+      queueEntryId: entry.id,
+      effectBlockId: entry.effectBlockId,
+      effectPath: ["effect", "sequence", "0", "choice", "1", "sequence"],
+      nextSegmentIndex: 1,
+      segmentResults: {},
+      savedReferences: {},
+      transientSets: {},
+      pendingDecision: {
+        decisionId,
+        causedBy: decisionCausedBy,
+        createdAtStateSeq: state.seq,
+        resumeAtSegmentIndex: 0,
+      },
+    } satisfies EffectExecutionFrame,
+  ];
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
+    source,
+    textKind: "effect",
+    activeSpanIds: ["span:choice:1:option"],
+  });
+});
+
 test("player decision projection hides active effect text when the queued source is hidden", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2 state");
@@ -543,4 +631,56 @@ test("player decision projection hides active effect text when the queued source
   assert.equal(view.activeEffectText, undefined);
   assert.equal(view.pendingDecision?.presentation.activeEffectText, undefined);
   assert.equal(view.activeEffectSources, undefined);
+});
+
+test("player decision projection does not expose privately revealed source text to other players", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand[0], "private source card");
+  sourceCard.instanceId = toInstanceId("privately-revealed-source-instance");
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry = queuedEffect(source);
+  state.effectQueue = [entry];
+  state.revealedCards = [
+    {
+      id: "reveal:private-source:test",
+      cards: [source],
+      visibility: { type: "private", playerId: p1 },
+      origin: "custom",
+      createdAtStateSeq: state.seq,
+      cleanupPolicy: "none",
+    },
+  ];
+  state.pendingDecision = {
+    id: toDecisionId("decision:private-source-effect-presentation"),
+    type: "chooseQuantity",
+    playerId: p1,
+    prompt: "Choose how many cards to draw.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    },
+    visibility: { type: "private", playerId: p1 },
+    mode: "upTo",
+    min: 0,
+    max: 1,
+  };
+
+  const ownerView = filterStateForPlayer(state, p1);
+  const opponentView = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(ownerView.activeEffectText, entry.presentation);
+  assert.equal(opponentView.pendingDecision, undefined);
+  assert.equal(opponentView.activeEffectText, undefined);
+  assert.equal(opponentView.activeEffectSources, undefined);
 });

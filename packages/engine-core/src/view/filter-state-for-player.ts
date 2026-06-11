@@ -223,11 +223,13 @@ const toPublicDecision = (
   const source = publicDecisionSourceFromEffectQueue({
     state,
     pending,
+    playerId,
     visibleCards,
   });
   const activeEffectText = publicDecisionActiveEffectTextFromEffectQueue({
     state,
     pending,
+    playerId,
     visibleCards,
   });
   const presentation = publicDecisionPresentation({
@@ -693,6 +695,7 @@ export const filterStateForPlayer = (
     ? publicDecisionSourceFromEffectQueue({
         state,
         pending: state.pendingDecision,
+        playerId,
         visibleCards: visibleDecisionCards,
       })
     : undefined;
@@ -700,6 +703,7 @@ export const filterStateForPlayer = (
     ? publicDecisionActiveEffectTextFromEffectQueue({
         state,
         pending: state.pendingDecision,
+        playerId,
         visibleCards: visibleDecisionCards,
       })
     : undefined;

@@ -11,6 +11,7 @@ import type {
 import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
   activeSpanIdsForChoice,
+  activeSpanIdsForChoiceOptionIndex,
   activeSpanIdsForCost,
   activeSpanIdsForSearchRemaining,
   activeSpanIdsForSearchSelection,
@@ -25,10 +26,12 @@ export interface VisibleDecisionSourceCard {
 const visibleEffectQueueEntryForDecision = ({
   state,
   pending,
+  playerId,
   visibleCards,
 }: {
   state: GameState;
   pending: PendingDecision;
+  playerId: PlayerId;
   visibleCards: readonly VisibleDecisionSourceCard[];
 }): { entry: EffectQueueEntry; source: CardRef } | undefined => {
   const causedBy = pending.causedBy;
@@ -48,7 +51,7 @@ const visibleEffectQueueEntryForDecision = ({
   if (visible !== undefined) {
     return { entry, source: toCardRef(visible.card, visible.playerId) };
   }
-  if (!isRevealedSourceVisible(state, pending.playerId, entry.source)) {
+  if (!isRevealedSourceVisible(state, playerId, entry.source)) {
     return undefined;
   }
   return { entry, source: entry.source };
@@ -77,6 +80,7 @@ const isRevealedSourceVisible = (
 export const publicDecisionSourceFromEffectQueue = (params: {
   state: GameState;
   pending: PendingDecision;
+  playerId: PlayerId;
   visibleCards: readonly VisibleDecisionSourceCard[];
 }): CardRef | undefined => visibleEffectQueueEntryForDecision(params)?.source;
 
@@ -112,6 +116,31 @@ const topLevelSequenceIndexForDecision = (
     : undefined;
 };
 
+const choiceOptionIndexForDecision = (
+  state: GameState,
+  pending: PendingDecision,
+): number | undefined => {
+  const frame = state.effectExecutionFrames.find(
+    (candidate) =>
+      candidate.pendingDecision.decisionId === pending.id &&
+      (pending.causedBy.type !== "effect" ||
+        candidate.queueEntryId === pending.causedBy.queueEntryId),
+  );
+  if (frame === undefined) {
+    return undefined;
+  }
+  for (let index = frame.effectPath.length - 2; index >= 1; index -= 1) {
+    if (frame.effectPath[index] !== "choice") {
+      continue;
+    }
+    const optionIndex = Number(frame.effectPath[index + 1]);
+    return Number.isSafeInteger(optionIndex) && optionIndex >= 0
+      ? optionIndex
+      : undefined;
+  }
+  return undefined;
+};
+
 const narrowSequenceActiveSpanIds = (
   state: GameState,
   pending: PendingDecision,
@@ -121,6 +150,17 @@ const narrowSequenceActiveSpanIds = (
   return topLevelIndex === undefined
     ? undefined
     : activeSpanIdsForSequenceIndex(activeSpanIds, topLevelIndex);
+};
+
+const narrowChoiceOptionActiveSpanIds = (
+  state: GameState,
+  pending: PendingDecision,
+  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
+  const optionIndex = choiceOptionIndexForDecision(state, pending);
+  return optionIndex === undefined
+    ? undefined
+    : activeSpanIdsForChoiceOptionIndex(activeSpanIds, optionIndex);
 };
 
 const narrowPayCostActiveSpanIds = (
@@ -159,6 +199,7 @@ const narrowChoiceActiveSpanIds = (
 export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   state: GameState;
   pending: PendingDecision;
+  playerId: PlayerId;
   visibleCards: readonly VisibleDecisionSourceCard[];
 }): ActiveEffectTextPresentation | undefined => {
   const visible = visibleEffectQueueEntryForDecision(params);
@@ -177,6 +218,11 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
         visible.entry.presentation.activeSpanIds,
       ) ??
       narrowChoiceActiveSpanIds(
+        params.pending,
+        visible.entry.presentation.activeSpanIds,
+      ) ??
+      narrowChoiceOptionActiveSpanIds(
+        params.state,
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??
