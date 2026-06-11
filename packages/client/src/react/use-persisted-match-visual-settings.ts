@@ -8,6 +8,8 @@ const confirmAttachDonStorageKey = "optcg:client:confirm-attach-don";
 const confirmEndTurnStorageKey = "optcg:client:confirm-end-turn";
 const quickPayActivateMainCostsStorageKey =
   "optcg:client:quick-pay-activate-main-costs";
+const zoneBackgroundVisibilityStorageKey =
+  "optcg:client:zone-background-visibility";
 const zoneGuideVisibilityStorageKey = "optcg:client:zone-guide-visibility";
 
 const browserPersistentStorage = () =>
@@ -26,8 +28,10 @@ const loadConfirmAttachDon = (): boolean =>
 const loadConfirmEndTurn = (): boolean =>
   browserPersistentStorage()?.getItem(confirmEndTurnStorageKey) === "true";
 
-const clampZoneGuideVisibility = (value: number): number =>
-  Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 60;
+const clampVisibility = (value: number, fallback: number): number =>
+  Number.isFinite(value)
+    ? Math.min(100, Math.max(0, Math.round(value)))
+    : fallback;
 
 const loadZoneGuideVisibility = (): number => {
   const stored = browserPersistentStorage()?.getItem(
@@ -35,7 +39,16 @@ const loadZoneGuideVisibility = (): number => {
   );
   return stored === undefined || stored === null
     ? 60
-    : clampZoneGuideVisibility(Number.parseInt(stored, 10));
+    : clampVisibility(Number.parseInt(stored, 10), 60);
+};
+
+const loadZoneBackgroundVisibility = (): number => {
+  const stored = browserPersistentStorage()?.getItem(
+    zoneBackgroundVisibilityStorageKey,
+  );
+  return stored === undefined || stored === null
+    ? 18
+    : clampVisibility(Number.parseInt(stored, 10), 18);
 };
 
 export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
@@ -47,6 +60,9 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
   const [confirmEndTurn, setConfirmEndTurnState] = useState(loadConfirmEndTurn);
   const [quickPayActivateMainCosts, setQuickPayActivateMainCostsState] =
     useState(loadQuickPayActivateMainCosts);
+  const [zoneBackgroundVisibility, setZoneBackgroundVisibilityState] = useState(
+    loadZoneBackgroundVisibility,
+  );
   const [zoneGuideVisibility, setZoneGuideVisibilityState] = useState(
     loadZoneGuideVisibility,
   );
@@ -96,7 +112,7 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
   };
 
   const setZoneGuideVisibility = (value: number): void => {
-    const clampedValue = clampZoneGuideVisibility(value);
+    const clampedValue = clampVisibility(value, 60);
     setZoneGuideVisibilityState(clampedValue);
     const storage = browserPersistentStorage();
     if (storage === undefined) {
@@ -105,16 +121,28 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
     storage.setItem(zoneGuideVisibilityStorageKey, String(clampedValue));
   };
 
+  const setZoneBackgroundVisibility = (value: number): void => {
+    const clampedValue = clampVisibility(value, 18);
+    setZoneBackgroundVisibilityState(clampedValue);
+    const storage = browserPersistentStorage();
+    if (storage === undefined) {
+      return;
+    }
+    storage.setItem(zoneBackgroundVisibilityStorageKey, String(clampedValue));
+  };
+
   return {
     backgroundImageUrl,
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
+    zoneBackgroundVisibility,
     zoneGuideVisibility,
     setBackgroundImageUrl,
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
+    setZoneBackgroundVisibility,
     setZoneGuideVisibility,
   };
 };

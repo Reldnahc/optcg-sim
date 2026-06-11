@@ -87,7 +87,7 @@
   --match-surface-page: #101010;
   --match-surface-board: rgba(34, 34, 36, 0.92);
   --match-surface-window: rgba(13, 13, 14, 0.86);
-  --match-surface-zone: rgba(0, 0, 0, 0.18);
+  --match-surface-zone: rgba(0, 0, 0, var(--zone-guide-background-alpha));
   --match-surface-panel: rgba(24, 24, 25, 0.82);
   --match-surface-panel-raised: rgba(34, 34, 35, 0.88);
   --match-surface-control: rgba(42, 42, 44, 0.78);
@@ -100,6 +100,7 @@
   --match-border: rgba(246, 232, 209, 0.46);
   --match-border-zone: rgba(246, 232, 209, 0.28);
   --match-border-soft: rgba(246, 232, 209, 0.16);
+  --zone-guide-background-alpha: 0.18;
   --zone-guide-border-alpha: 0.28;
   --zone-guide-label-alpha: 0.61;
   --match-text: #fbf3df;

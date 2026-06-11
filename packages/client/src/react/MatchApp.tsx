@@ -403,10 +403,13 @@ export const MatchApp = ({
   ]);
 
   const zoneGuideStrength = visualSettings.zoneGuideVisibility / 100;
-  const zoneGuideBorderAlpha = 0.04 + zoneGuideStrength * 0.4;
-  const zoneGuideLabelAlpha = 0.18 + zoneGuideStrength * 0.72;
+  const zoneBackgroundStrength = visualSettings.zoneBackgroundVisibility / 100;
+  const zoneGuideBorderAlpha = zoneGuideStrength * 0.44;
+  const zoneGuideLabelAlpha = zoneGuideStrength * 0.9;
+  const zoneGuideBackgroundAlpha = zoneBackgroundStrength;
   const matchAppStyle = {
     "--zone-guide-border-alpha": zoneGuideBorderAlpha.toFixed(3),
+    "--zone-guide-background-alpha": zoneGuideBackgroundAlpha.toFixed(3),
     "--zone-guide-label-alpha": zoneGuideLabelAlpha.toFixed(3),
     ...(visualSettings.backgroundImageUrl.length === 0
       ? {}
@@ -416,7 +419,12 @@ export const MatchApp = ({
           )})`,
         }),
   } as CSSProperties &
-    Record<"--zone-guide-border-alpha" | "--zone-guide-label-alpha", string>;
+    Record<
+      | "--zone-guide-background-alpha"
+      | "--zone-guide-border-alpha"
+      | "--zone-guide-label-alpha",
+      string
+    >;
 
   return (
     <MatchVisualSettingsProvider value={visualSettings}>

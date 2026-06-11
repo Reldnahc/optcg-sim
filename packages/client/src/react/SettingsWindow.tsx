@@ -8,11 +8,13 @@ export interface MatchVisualSettings {
   readonly confirmAttachDon: boolean;
   readonly confirmEndTurn: boolean;
   readonly quickPayActivateMainCosts: boolean;
+  readonly zoneBackgroundVisibility: number;
   readonly zoneGuideVisibility: number;
   readonly setBackgroundImageUrl: (url: string) => void;
   readonly setConfirmAttachDon: (enabled: boolean) => void;
   readonly setConfirmEndTurn: (enabled: boolean) => void;
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
+  readonly setZoneBackgroundVisibility: (value: number) => void;
   readonly setZoneGuideVisibility: (value: number) => void;
 }
 
@@ -21,11 +23,13 @@ const noopVisualSettings: MatchVisualSettings = {
   confirmAttachDon: true,
   confirmEndTurn: false,
   quickPayActivateMainCosts: false,
+  zoneBackgroundVisibility: 18,
   zoneGuideVisibility: 60,
   setBackgroundImageUrl: () => undefined,
   setConfirmAttachDon: () => undefined,
   setConfirmEndTurn: () => undefined,
   setQuickPayActivateMainCosts: () => undefined,
+  setZoneBackgroundVisibility: () => undefined,
   setZoneGuideVisibility: () => undefined,
 };
 
@@ -62,11 +66,13 @@ export const SettingsContent = (): React.JSX.Element => {
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
+    zoneBackgroundVisibility,
     zoneGuideVisibility,
     setBackgroundImageUrl,
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
+    setZoneBackgroundVisibility,
     setZoneGuideVisibility,
   } = useMatchVisualSettings();
 
@@ -116,6 +122,19 @@ export const SettingsContent = (): React.JSX.Element => {
           value={zoneGuideVisibility}
           onChange={(event) => {
             setZoneGuideVisibility(event.currentTarget.valueAsNumber);
+          }}
+        />
+      </label>
+      <label className="settings-field">
+        <span>Zone background visibility</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={zoneBackgroundVisibility}
+          onChange={(event) => {
+            setZoneBackgroundVisibility(event.currentTarget.valueAsNumber);
           }}
         />
       </label>
