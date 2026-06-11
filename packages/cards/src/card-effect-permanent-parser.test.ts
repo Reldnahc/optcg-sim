@@ -532,4 +532,40 @@ describe("permanent card effect line parser", () => {
       ]),
     );
   });
+
+  it("parses durationless all-opponent power reduction as a permanent continuous modifier", () => {
+    const result = parseCardEffectLine(
+      "Give all of your opponent's Characters -1000 power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "opponent",
+            filter: { categories: ["character"] },
+          },
+          value: -1000,
+          duration: { type: "whileSourceOnField" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "instruction:modifyPower",
+        "cardinality:all",
+        "player:opponent",
+        "zone:characterArea",
+        "filter:category:character",
+        "modifier:negativePower",
+        "duration:whileSourceOnField",
+      ]),
+    );
+  });
 });

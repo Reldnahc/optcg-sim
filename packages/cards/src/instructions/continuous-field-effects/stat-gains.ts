@@ -6,12 +6,14 @@ import {
   parsePositivePowerModifier,
 } from "../../modifiers/index.js";
 import {
+  parseAllFieldTarget,
   parseThisCharacterTarget,
   parseYourLeaderTarget,
 } from "../../targets/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import {
   continuousDuration,
+  continuousDurationEvidence,
   type ContinuousInstructionParser,
 } from "./shared.js";
 
@@ -26,6 +28,11 @@ export const yourLeaderConditionalPowerPrimitive = {
 
 export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionParser =
   (input, context) => {
+    const allFieldStatGain = parseAllFieldStatGainInstruction(input, context);
+    if (allFieldStatGain !== undefined) {
+      return allFieldStatGain;
+    }
+
     const selfStatGain = parseThisCharacterStatGainInstruction(input, context);
     if (selfStatGain !== undefined) {
       return selfStatGain;
@@ -61,13 +68,54 @@ export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionPa
         "instruction:modifyPower",
         ...target.evidence,
         ...modifier.evidence,
-        context.condition === undefined
-          ? "duration:whileSourceOnField"
-          : "duration:whileConditionTrue",
+        continuousDurationEvidence(context.condition),
       ],
       rest: "",
     };
   };
+
+const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const targetText = /^give\s+(?<target>.+)$/iu.exec(input.text)?.groups?.[
+    "target"
+  ];
+  if (targetText === undefined) {
+    return undefined;
+  }
+
+  const target = parseAllFieldTarget({ text: targetText });
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const modifier =
+    parsePositivePowerModifier({ text: target.rest }) ??
+    parseNegativePowerModifier({ text: target.rest });
+  if (
+    modifier === undefined ||
+    (modifier.rest.length > 0 && modifier.rest !== ".")
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower",
+      target: target.target,
+      value: modifier.value,
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:modifyPower",
+      ...target.evidence,
+      ...modifier.evidence,
+      continuousDurationEvidence(context.condition),
+    ],
+    rest: "",
+  };
+};
 
 const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   input,
