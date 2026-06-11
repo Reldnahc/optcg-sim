@@ -796,3 +796,33 @@ test("counter trailing sequence support uses flattened sequence segments", async
 
   assert.equal(content.includes("effectBlock.effect.effects[0]"), false);
 });
+
+test("engine decoupling paths stay free of exact-shape authorization smells", async () => {
+  const sourceFiles = [
+    "packages/engine-core/src/effect-runtime-queue/entry-resolution.ts",
+    "packages/engine-core/src/effect-runtime-queue/effect-resolution.ts",
+    "packages/engine-core/src/effect-runtime-queue/target-decisions.ts",
+    "packages/engine-core/src/runtime/optional-activation/activate-main.ts",
+    "packages/engine-core/src/replacement/primitives/support-shapes.ts",
+    "packages/engine-core/src/replacement/instead-effects.ts",
+    "packages/engine-core/src/battle/counter-event-trailing-sequence.ts",
+  ];
+  const forbidden = [
+    /definition\.effects\.length\s*(?:[!=]==?\s*(?!0\b)\d+|[<>]=?\s*(?!0\b)\d+)/,
+    /lookup\.definition\.effects\.length\s*(?:[!=]==?\s*(?!0\b)\d+|[<>]=?\s*(?!0\b)\d+)/,
+    /effectBlock\.effect\.effects\[0\]/,
+    /template/i,
+    /allowlist/i,
+  ];
+
+  for (const relative of sourceFiles) {
+    const content = await readFile(path.join(repoRoot, relative), "utf8");
+    for (const pattern of forbidden) {
+      assert.equal(
+        pattern.test(content),
+        false,
+        `${relative} must not contain authorization smell ${String(pattern)}`,
+      );
+    }
+  }
+});
