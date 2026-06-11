@@ -107,15 +107,21 @@
 
 .connection-status {
   flex: 0 0 auto;
-  width: calc(var(--control-title-font-size) * 0.36);
-  height: calc(var(--control-title-font-size) * 0.36);
-  border: var(--card-outline-thin) solid rgba(0, 0, 0, 0.65);
+  width: calc(var(--control-title-font-size) * 0.44);
+  height: calc(var(--control-title-font-size) * 0.44);
+  border: max(1px, calc(var(--card-outline-thin) * 0.45)) solid
+    rgba(0, 0, 0, 0.72);
   border-radius: 50%;
-  box-shadow: 0 0 0 var(--card-outline-thin) rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 calc(var(--card-outline-thin) * 0.4)
+    rgba(246, 232, 209, 0.22);
+  transform: translateY(0.04em);
 }
 
 .connection-status.is-connected {
-  background: var(--match-accent-strong);
+  background: #28f27a;
+  box-shadow:
+    0 0 0 calc(var(--card-outline-thin) * 0.35) rgba(40, 242, 122, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .connection-status.is-disconnected {

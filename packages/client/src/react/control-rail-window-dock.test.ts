@@ -36,6 +36,22 @@ describe("control rail window dock", () => {
     );
   });
 
+  test("connection indicator uses a dedicated connected color", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.connection-status\s*\{[^}]*width:\s*calc\(var\(--control-title-font-size\) \* 0\.44\);[^}]*border:\s*max\(1px,\s*calc\(var\(--card-outline-thin\) \* 0\.45\)\) solid\s*rgba\(0,\s*0,\s*0,\s*0\.72\);[^}]*transform:\s*translateY\(0\.04em\);/u,
+    );
+    assert.match(
+      styles,
+      /\.connection-status\.is-connected\s*\{[^}]*background:\s*#28f27a;[^}]*box-shadow:\s*0 0 0 calc\(var\(--card-outline-thin\) \* 0\.35\) rgba\(40,\s*242,\s*122,\s*0\.34\),\s*inset 0 0 0 1px rgba\(255,\s*255,\s*255,\s*0\.28\);/u,
+    );
+  });
+
   test("renders docked windows as tabbed content inside the control rail", async () => {
     const props = {
       errors: [],
