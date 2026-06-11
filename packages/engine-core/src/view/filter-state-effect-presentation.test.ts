@@ -426,6 +426,85 @@ test("player decision projection narrows search remainder ordering to the search
   });
 });
 
+test("player decision projection narrows choose-one prompts to the choice spans", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  sourceCard.instanceId = toInstanceId("choice-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry: EffectQueueEntry = {
+    ...queuedEffect(source),
+    presentation: {
+      source,
+      textKind: "effect",
+      activeSpanIds: [
+        "span:body:condition",
+        "span:choice",
+        "span:choice:0:option",
+        "span:choice:1:option",
+        "span:body:after-choice",
+      ] as EffectTextSpanId[],
+    },
+  };
+  const decisionId = toDecisionId("decision:chooseEffectOption:test");
+  const decisionCausedBy = {
+    type: "effect" as const,
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  };
+  state.effectQueue = [entry];
+  state.pendingDecision = {
+    id: decisionId,
+    type: "chooseEffectOption",
+    playerId: p1,
+    prompt: "Choose one effect.",
+    causedBy: decisionCausedBy,
+    visibility: { type: "private", playerId: p1 },
+    min: 1,
+    max: 1,
+    options: [
+      {
+        id: "choice:1",
+        label: "Draw 1 card.",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+      {
+        id: "choice:2",
+        label: "Return 1 DON!! card.",
+        effect: { type: "returnDon", player: "self", count: 1 },
+      },
+    ],
+  };
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
+    source,
+    textKind: "effect",
+    activeSpanIds: [
+      "span:choice",
+      "span:choice:0:option",
+      "span:choice:1:option",
+    ],
+  });
+});
+
 test("player decision projection hides active effect text when the queued source is hidden", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2 state");

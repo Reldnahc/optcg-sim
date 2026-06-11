@@ -4,38 +4,68 @@ import type {
   EffectTextSpanId,
 } from "@optcg/types";
 
-import { activeSpanIdsForSequenceIndex } from "../runtime/effect-presentation.js";
+import {
+  activeSpanIdsForChoiceOptionIndex,
+  activeSpanIdsForSequenceIndex,
+} from "../runtime/effect-presentation.js";
 
 type RootChangedSegment = {
   index: number;
   key: string;
 };
 
+type ChoiceOptionChangedSegment = {
+  optionIndex: number;
+  key: string;
+};
+
+const choiceOptionSegmentKeyPattern =
+  /(?:^|\.)\d+\.choice\.(?<optionIndex>\d+)\.sequence:\d+$/u;
+
+const completedSegmentEntries = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+): Array<[string, EffectExecutionFrame["segmentResults"][string]]> =>
+  Object.entries(segmentResults).filter(
+    ([, result]) => result.attempted && result.succeeded && result.changedState,
+  );
+
 const rootChangedSegments = (
   segmentResults: EffectExecutionFrame["segmentResults"],
 ): RootChangedSegment[] =>
-  Object.entries(segmentResults)
-    .flatMap(([key, result]) => {
+  completedSegmentEntries(segmentResults)
+    .flatMap(([key]) => {
       const index = Number(key);
-      if (
-        !Number.isSafeInteger(index) ||
-        index < 0 ||
-        String(index) !== key ||
-        !result.attempted ||
-        !result.succeeded ||
-        !result.changedState
-      ) {
+      if (!Number.isSafeInteger(index) || index < 0 || String(index) !== key) {
         return [];
       }
       return [{ index, key }];
     })
     .sort((left, right) => left.index - right.index);
 
+const choiceOptionChangedSegments = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+): ChoiceOptionChangedSegment[] =>
+  completedSegmentEntries(segmentResults).flatMap(([key]) => {
+    const match = choiceOptionSegmentKeyPattern.exec(key);
+    const optionIndex = Number(match?.groups?.["optionIndex"]);
+    if (!Number.isSafeInteger(optionIndex) || optionIndex < 0) {
+      return [];
+    }
+    return [{ optionIndex, key }];
+  });
+
 const activeSpanIdsForRootSegment = (
   activeSpanIds: readonly EffectTextSpanId[],
   segment: RootChangedSegment,
 ): readonly EffectTextSpanId[] | undefined => {
   return activeSpanIdsForSequenceIndex(activeSpanIds, segment.key);
+};
+
+const activeSpanIdsForChoiceOptionSegment = (
+  activeSpanIds: readonly EffectTextSpanId[],
+  segment: ChoiceOptionChangedSegment,
+): readonly EffectTextSpanId[] | undefined => {
+  return activeSpanIdsForChoiceOptionIndex(activeSpanIds, segment.optionIndex);
 };
 
 const activeSpanIdsForRootSegments = (
@@ -48,6 +78,17 @@ const activeSpanIdsForRootSegments = (
   return narrowed.length === 0 ? undefined : narrowed;
 };
 
+const activeSpanIdsForChoiceOptionSegments = (
+  activeSpanIds: readonly EffectTextSpanId[],
+  segments: readonly ChoiceOptionChangedSegment[],
+): readonly EffectTextSpanId[] | undefined => {
+  const narrowed = segments.flatMap(
+    (segment) =>
+      activeSpanIdsForChoiceOptionSegment(activeSpanIds, segment) ?? [],
+  );
+  return narrowed.length === 0 ? undefined : narrowed;
+};
+
 export const entryWithCompletedSequencePresentation = (
   entry: EffectQueueEntry,
   segmentResults: EffectExecutionFrame["segmentResults"],
@@ -55,14 +96,19 @@ export const entryWithCompletedSequencePresentation = (
   if (entry.presentation === undefined) {
     return entry;
   }
-  const segments = rootChangedSegments(segmentResults);
+  const choiceOptionSegments = choiceOptionChangedSegments(segmentResults);
+  const rootSegments = rootChangedSegments(segmentResults);
   const activeSpanIds =
-    segments.length === 0
+    activeSpanIdsForChoiceOptionSegments(
+      entry.presentation.activeSpanIds,
+      choiceOptionSegments,
+    ) ??
+    (rootSegments.length === 0
       ? undefined
       : activeSpanIdsForRootSegments(
           entry.presentation.activeSpanIds,
-          segments,
-        );
+          rootSegments,
+        ));
   return activeSpanIds === undefined
     ? entry
     : {

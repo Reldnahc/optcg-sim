@@ -10,6 +10,7 @@ import type {
 
 import { toCardRef, zonesEqual } from "../actions/state.js";
 import {
+  activeSpanIdsForChoice,
   activeSpanIdsForCost,
   activeSpanIdsForSearchRemaining,
   activeSpanIdsForSearchSelection,
@@ -145,6 +146,16 @@ const narrowSearchActiveSpanIds = (
   return undefined;
 };
 
+const narrowChoiceActiveSpanIds = (
+  pending: PendingDecision,
+  activeSpanIds: ActiveEffectTextPresentation["activeSpanIds"],
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
+  if (pending.type !== "chooseEffectOption") {
+    return undefined;
+  }
+  return activeSpanIdsForChoice(activeSpanIds);
+};
+
 export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   state: GameState;
   pending: PendingDecision;
@@ -162,6 +173,10 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
         visible.entry.presentation.activeSpanIds,
       ) ??
       narrowSearchActiveSpanIds(
+        params.pending,
+        visible.entry.presentation.activeSpanIds,
+      ) ??
+      narrowChoiceActiveSpanIds(
         params.pending,
         visible.entry.presentation.activeSpanIds,
       ) ??

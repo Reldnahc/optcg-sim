@@ -9,6 +9,8 @@ import type {
   GameState,
 } from "@optcg/types";
 
+import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
+
 import {
   must,
   p1,
@@ -203,4 +205,45 @@ test("completed draw-then-prevent-draw sequence preserves both changed segment s
       activeSpanIds: ["span:sequence:0:body", "span:sequence:1:body"],
     },
   );
+});
+
+test("completed choose-one option narrows to the selected option span", () => {
+  const { state, played } = queueingState();
+  setupSequenceDefinition(state, played, drawThenPreventDraw());
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  const queuedEntry = must(queued.state.effectQueue[0], "queued effect");
+
+  const result = entryWithCompletedSequencePresentation(
+    {
+      ...queuedEntry,
+      presentation: {
+        source: queuedEntry.source,
+        textKind: "effect" as const,
+        activeSpanIds: [
+          "span:choice",
+          "span:choice:0:option",
+          "span:choice:1:option",
+          "span:body:after-choice",
+        ] as EffectTextSpanId[],
+      },
+    },
+    {
+      "effect.sequence.0.choice.1.sequence:0": {
+        attempted: true,
+        succeeded: true,
+        changedState: true,
+        selectedCards: [],
+        selectedTargets: [],
+        paidCost: false,
+        playerDeclined: false,
+      },
+    },
+  );
+
+  assert.deepEqual(result.presentation, {
+    source: queuedEntry.source,
+    textKind: "effect" as const,
+    activeSpanIds: ["span:choice:1:option"],
+  });
 });
