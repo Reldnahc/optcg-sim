@@ -855,3 +855,47 @@ test("getLegalActions exposes generic runtime payCost returnDon responses across
     false,
   );
 });
+
+test("getLegalActions exposes decline for optional effect-option decisions", () => {
+  const state = createActiveState();
+  state.pendingDecision = {
+    id: toDecisionId("decision:chooseEffectOption:optional"),
+    type: "chooseEffectOption",
+    playerId: p1,
+    prompt: "Choose one effect.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry-effect-option"),
+      effectId: toEffectId("effect-option"),
+    },
+    visibility: { type: "private", playerId: p1 },
+    min: 0,
+    max: 1,
+    defaultResponse: { type: "effectOptionDeclined" },
+    options: [
+      {
+        id: "option:draw",
+        label: "Draw.",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+      {
+        id: "option:returnDon",
+        label: "Return DON.",
+        effect: { type: "returnDon", count: 1, player: "self" },
+      },
+    ],
+  };
+
+  const responses = getLegalActions(state, p1)
+    .filter(
+      (action): action is Extract<Action, { type: "respondToDecision" }> =>
+        action.type === "respondToDecision",
+    )
+    .map((action) => action.response);
+
+  assert.deepEqual(responses, [
+    { type: "effectOptionDeclined" },
+    { type: "effectOption", optionId: "option:draw" },
+    { type: "effectOption", optionId: "option:returnDon" },
+  ]);
+});

@@ -41,6 +41,40 @@ export const parseTypeLeaderOrCharacterPredicate: PredicateParser = (
   };
 };
 
+export const parseTypeLeaderOrStagePredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match =
+    /^(?<type>\{[^}]+\}) type Leader or Stage cards?\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  const typeText = match?.groups?.["type"];
+  const restText = match?.groups?.["rest"];
+  if (typeText === undefined) {
+    return undefined;
+  }
+
+  const typeName = parseBraceName(typeText);
+  if (typeName === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      categories: ["leader", "stage"],
+      typesAny: [typeName],
+    },
+    evidence: [
+      "filter:type",
+      "filter:category:leader",
+      "filter:category:stage",
+    ],
+    rest: restText ?? "",
+  };
+};
+
 export const parseMultiTypeLeaderOrCharacterPredicate: PredicateParser = (
   text,
   current,

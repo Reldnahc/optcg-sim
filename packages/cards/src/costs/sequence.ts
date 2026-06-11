@@ -15,6 +15,7 @@ import { parseRestFromFieldCost } from "./rest-from-field.js";
 import { parseRestSelfCost } from "./rest-self.js";
 import { parseReturnDonSequenceCost } from "./return-don.js";
 import { parseTrashFromHandCost } from "./trash-from-hand.js";
+import { parseTrashFromFieldCost } from "./trash-from-field.js";
 import { parseTrashSelfCost } from "./trash-self.js";
 
 const costParsers = [
@@ -28,6 +29,7 @@ const costParsers = [
   parseModifyPowerCost,
   parseRevealFromHandCost,
   parseTurnLifeFaceUpCost,
+  parseTrashFromFieldCost,
   parseTrashFromHandCost,
 ] as const;
 
@@ -127,6 +129,14 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
         optional: true,
       };
+    case "trashFromField":
+      return {
+        type: "trashFromField",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        optional: true,
+      };
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
     case "trashFromHand":
@@ -183,6 +193,13 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
     case "trashSelf":
       return {
         type: "trashSelf",
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      };
+    case "trashFromField":
+      return {
+        type: "trashFromField",
+        count: cost.count,
+        chooser: cost.chooser,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       };
     case "turnLifeFaceUp":
@@ -243,7 +260,10 @@ function applyInheritedAction(
   text: string,
   inheritedAction: "rest" | undefined,
 ): string {
-  if (inheritedAction === undefined || /^(?:rest|trash|place)\b/i.test(text)) {
+  if (
+    inheritedAction === undefined ||
+    /^(?:rest|trash|place|reveal)\b/i.test(text)
+  ) {
     return text;
   }
 

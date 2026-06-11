@@ -75,12 +75,20 @@ const parseSelfKeywordGrant = (
     return undefined;
   }
 
-  return parseKeywordGrantForTarget({
-    target: { type: "self" },
-    targetEvidence: target.evidence,
-    text: keywordText,
-    context,
-  });
+  return (
+    parseKeywordGrantForTarget({
+      target: { type: "self" },
+      targetEvidence: target.evidence,
+      text: keywordText,
+      context,
+    }) ??
+    parseKeywordAndPositivePowerGrant({
+      target: { type: "self" },
+      targetEvidence: target.evidence,
+      text: keywordText,
+      context,
+    })
+  );
 };
 
 const parseThatCharacterKeywordGrant = (

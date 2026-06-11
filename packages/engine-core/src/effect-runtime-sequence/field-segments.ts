@@ -4,6 +4,7 @@ import type {
   EngineEvent,
   GameState,
   SequenceSegmentResult,
+  CardRef,
   Target,
 } from "@optcg/types";
 
@@ -23,6 +24,8 @@ import {
   applySavedFieldObjectRestSequenceSegment,
   applySavedFieldObjectRestrictionSequenceSegment,
   applySavedFieldObjectTrashSequenceSegment,
+  restFieldObjects,
+  restProtectionAttemptFromEntry,
 } from "./saved-field-object.js";
 import {
   applyAttachSelectedDonSequenceSegment,
@@ -32,6 +35,7 @@ import {
 import type { SegmentLedgers } from "./runner.js";
 import { restChooseTargetRequest } from "./target-decisions.js";
 import type { SupportedSequenceSegment } from "./support.js";
+import { getOpponentId } from "../actions/state.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type KoEffect = Extract<Effect, { type: "ko" }>;
@@ -334,6 +338,47 @@ export const applyFieldMutationSequenceSegment = (params: {
         kind: "paused",
         ok: true,
         state: paused.state,
+      };
+    }
+    if (segment.effect.target.type === "opponentLeader") {
+      const opponentId = getOpponentId(state, entry.controllerId);
+      if (opponentId === null) {
+        return { handled: true, ok: false };
+      }
+      const opponent = state.players[opponentId];
+      if (opponent === undefined) {
+        return { handled: true, ok: false };
+      }
+      const leaderRef: CardRef = {
+        instanceId: opponent.leader.instanceId,
+        cardId: opponent.leader.cardId,
+        playerId: opponentId,
+        zone: opponent.leader.zone,
+      };
+      const rested = restFieldObjects(
+        state,
+        [leaderRef],
+        restProtectionAttemptFromEntry(entry),
+      );
+      return {
+        events,
+        handled: true,
+        kind: "continue",
+        ledgers: {
+          ...ledgers,
+          segmentResults: {
+            ...ledgers.segmentResults,
+            [segmentKey(segment, index)]: {
+              ...emptySegmentResult(),
+              attempted: true,
+              succeeded: true,
+              changedState: rested.changed,
+              selectedTargets: [leaderRef],
+            },
+          },
+        },
+        ok: true,
+        state: rested.state,
       };
     }
     const rested = applySavedFieldObjectRestSequenceSegment({

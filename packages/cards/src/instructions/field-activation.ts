@@ -12,9 +12,19 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     return selfActivation;
   }
 
+  const leaderActivation = parseSetYourLeaderActive(input.text);
+  if (leaderActivation !== undefined) {
+    return leaderActivation;
+  }
+
   const massFieldActivation = parseSetLeaderAndCharactersActive(input.text);
   if (massFieldActivation !== undefined) {
     return massFieldActivation;
+  }
+
+  const allFilteredActivation = parseSetAllFilteredCharactersActive(input.text);
+  if (allFilteredActivation !== undefined) {
+    return allFilteredActivation;
   }
 
   const match = /^set (?<quantity>up to [1-9]\d* .+) as active\.?$/i.exec(
@@ -116,6 +126,73 @@ function parseSetThisCharacterActive(
       target: { type: "self" },
     },
     evidence: ["instruction:activate", "target:thisCharacter", "state:active"],
+    rest: "",
+  };
+}
+
+function parseSetAllFilteredCharactersActive(
+  text: string,
+): ReturnType<InstructionParser> {
+  const match = /^set all of your (?<target>.+) as active\.?$/i.exec(text);
+  const targetText = match?.groups?.["target"];
+  if (targetText === undefined) {
+    return undefined;
+  }
+
+  const parsedTarget = parseCardFilterPredicates(
+    { text: targetText },
+    { powerSemantics: "current" },
+  );
+  if (
+    parsedTarget === undefined ||
+    parsedTarget.rest.trim().length > 0 ||
+    !isCharacterFilter(parsedTarget.filter)
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "activate",
+      target: {
+        type: "all",
+        player: "self",
+        zone: "characterArea",
+        filter: parsedTarget.filter,
+      },
+    },
+    evidence: [
+      "instruction:activate",
+      "cardinality:all",
+      "player:self",
+      "zone:characterArea",
+      ...parsedTarget.evidence,
+      "state:active",
+    ],
+    rest: "",
+  };
+}
+
+function parseSetYourLeaderActive(text: string): ReturnType<InstructionParser> {
+  const match = /^set your Leader(?: \[(?<name>[^\]]+)\])? as active\.?$/i.exec(
+    text,
+  );
+  if (match === null) {
+    return undefined;
+  }
+  const name = match.groups?.["name"];
+
+  return {
+    effect: {
+      type: "activate",
+      target: { type: "myLeader" },
+    },
+    evidence: [
+      "instruction:activate",
+      "target:yourLeader",
+      ...(name === undefined ? [] : (["filter:name"] as const)),
+      "state:active",
+    ],
     rest: "",
   };
 }

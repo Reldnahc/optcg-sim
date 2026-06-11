@@ -190,7 +190,7 @@ export const countMatchingEventHistory = (
   condition: Extract<Condition, { type: "eventHistory" }>,
 ): number =>
   state.eventJournal.filter((event) => {
-    if (event.type !== "cardPlayed" || !isRecord(event.payload)) {
+    if (event.type !== condition.event || !isRecord(event.payload)) {
       return false;
     }
     if (event.payload["playerId"] !== playerId) {

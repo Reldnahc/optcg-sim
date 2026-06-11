@@ -20,7 +20,10 @@ export type TrashEffect = SavedFieldObjectTrashEffect | AllTargetTrashEffect;
 export type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<
     Target,
-    { type: "choose" | "chooseFromZones" | "savedFieldObject" }
+    | { type: "choose" }
+    | { type: "chooseFromZones" }
+    | { type: "opponentLeader" }
+    | { type: "savedFieldObject" }
   >;
 };
 export type ActivateEffect = Extract<Effect, { type: "activate" }> & {
@@ -147,7 +150,8 @@ export const isSupportedRestSegment = (
   effect: SequenceSegmentEffect,
 ): effect is RestEffect =>
   effect.type === "rest" &&
-  (isSupportedSavedFieldObjectKoTarget(effect.target) ||
+  (effect.target.type === "opponentLeader" ||
+    isSupportedSavedFieldObjectKoTarget(effect.target) ||
     ((effect.target.type === "choose" ||
       effect.target.type === "chooseFromZones") &&
       isSupportedSequenceTargetRequest(effect.target.request)));

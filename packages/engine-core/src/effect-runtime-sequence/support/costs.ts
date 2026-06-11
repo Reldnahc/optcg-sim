@@ -83,10 +83,13 @@ export const isSupportedPayCostSegment = (
       cost.type === "restFromField" ||
       cost.type === "returnDon" ||
       cost.type === "trashFromHand" ||
+      cost.type === "trashFromField" ||
       cost.type === "revealFromHand" ||
       cost.type === "moveCards") &&
     (cost.chooser === undefined || cost.chooser === "self") &&
     (cost.type !== "trashFromHand" ||
+      isSupportedHandSelectionCardFilter(cost.filter)) &&
+    (cost.type !== "trashFromField" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "revealFromHand" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&

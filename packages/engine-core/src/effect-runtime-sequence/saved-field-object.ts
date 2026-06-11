@@ -1,4 +1,7 @@
-export { restFieldObjects } from "./saved-field-object/field-object-state.js";
+export {
+  restFieldObjects,
+  restProtectionAttemptFromEntry,
+} from "./saved-field-object/field-object-state.js";
 export {
   applySavedFieldObjectActivateSequenceSegment,
   applySavedFieldObjectChangeAttackTargetSequenceSegment,

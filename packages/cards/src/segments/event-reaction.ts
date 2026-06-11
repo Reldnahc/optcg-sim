@@ -375,6 +375,30 @@ const implicitReactionPredicate = (
     };
   }
 
+  if (
+    normalized.toLowerCase() ===
+    "this character is k.o.'d by your opponent's effect"
+  ) {
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceController: "opponent",
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+      ],
+    };
+  }
+
   const yourTrashCardPlayed =
     /^(?:a|your) (?<filter>.+? Character(?: card)?) is played from your trash$/iu.exec(
       normalized,

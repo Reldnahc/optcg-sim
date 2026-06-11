@@ -1,6 +1,8 @@
-import type { Effect, Target } from "@optcg/types";
+import type { Cardinality, Effect, Target } from "@optcg/types";
 
+import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseAllFieldTarget } from "../../targets/index.js";
+import { parseYourLeaderOrCharacterCardsTarget } from "../../targets/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import {
   continuousDuration,
@@ -75,8 +77,48 @@ const parseBasePowerSubject = (
     };
   }
 
+  const cardinality = parseUpToCardinality({ text: normalizedText });
+  if (cardinality !== undefined) {
+    const targetText = cardinality.rest
+      .replace(/(?:'s|') base power$/iu, "")
+      .trim();
+    const parsedTarget = parseYourLeaderOrCharacterCardsTarget({
+      text: targetText,
+    });
+    if (parsedTarget?.target !== undefined && parsedTarget.rest.length === 0) {
+      return {
+        target: applyCardinality(parsedTarget.target, cardinality.cardinality),
+        evidence: [...cardinality.evidence, ...parsedTarget.evidence],
+      };
+    }
+  }
+
   return undefined;
 };
+
+function applyCardinality(target: Target, cardinality: Cardinality): Target {
+  if (target.type === "chooseFromZones") {
+    return {
+      ...target,
+      request: {
+        ...target.request,
+        min: cardinality.min,
+        max: cardinality.max,
+      },
+    };
+  }
+  if (target.type === "choose") {
+    return {
+      ...target,
+      request: {
+        ...target.request,
+        min: cardinality.min,
+        max: cardinality.max,
+      },
+    };
+  }
+  return target;
+}
 
 export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
   input,
@@ -160,7 +202,7 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
   context,
 ) => {
   const match =
-    /^(?<targets>.+?) becomes? the same as your opponent's Leader's power(?<durationText>.*)$/i.exec(
+    /^(?<targets>.+?) becomes? the same as your opponent's Leader(?:'s power)?(?<durationText>.*)$/i.exec(
       input.text,
     );
   const targetsText = match?.groups?.["targets"];

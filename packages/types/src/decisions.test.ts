@@ -165,8 +165,14 @@ test("TYP-001E decision and response contracts compile against canonical variant
     candidates: [cardSelectionCandidate],
   };
   const chooseEffectOption: ChooseEffectOptionDecision = {
-    ...baseDecision,
+    id: baseDecision.id,
     type: "chooseEffectOption",
+    playerId: baseDecision.playerId,
+    prompt: baseDecision.prompt,
+    causedBy: baseDecision.causedBy,
+    visibility: baseDecision.visibility,
+    min: 1,
+    max: 1,
     options: [
       {
         id: "effect-opt-1",

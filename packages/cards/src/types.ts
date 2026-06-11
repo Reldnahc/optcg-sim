@@ -33,6 +33,7 @@ export type PrimitiveEvidence =
   | "trigger:fieldRemoved"
   | "trigger:cardPlayed"
   | "event:cardPlayed"
+  | "event:cardKOd"
   | "trigger:cardRested"
   | "trigger:handTrashedByEffect"
   | "trigger:opponentActivated"

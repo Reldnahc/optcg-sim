@@ -36,6 +36,7 @@ type ContinuousResolvedEffect = Extract<
     type:
       | "modifyPower"
       | "giveKeyword"
+      | "setBasePower"
       | "modifyCost"
       | "invalidateEffects"
       | "cannotBecomeActive"

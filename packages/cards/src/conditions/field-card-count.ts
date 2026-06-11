@@ -1,4 +1,5 @@
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { parseLeadingCountComparison } from "./comparison.js";
 import type {
   ConditionParseResult,
   ConditionParser,
@@ -75,6 +76,86 @@ export const parseFieldCardCountCondition: ConditionParser = (
       ),
       rest: "",
     };
+  }
+
+  const selfNamedPresence = /^you have\s+(?<predicate>\[[^\]]+\].*)$/i.exec(
+    input.text,
+  );
+  const selfNamedPredicate = selfNamedPresence?.groups?.["predicate"];
+  if (selfNamedPredicate !== undefined) {
+    const predicates = parseFieldPredicates(selfNamedPredicate);
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: predicates.filter,
+        op: "gte",
+        value: 1,
+      },
+      evidence: fieldCountEvidence(
+        "self",
+        ["condition:comparator:gte", "condition:threshold:positiveInteger"],
+        predicates.evidence,
+      ),
+      rest: "",
+    };
+  }
+
+  const bareNamedPresence = /^(?<predicate>\[[^\]]+\].*)$/i.exec(input.text);
+  const bareNamedPredicate = bareNamedPresence?.groups?.["predicate"];
+  if (bareNamedPredicate !== undefined) {
+    const predicates = parseFieldPredicates(bareNamedPredicate);
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: predicates.filter,
+        op: "gte",
+        value: 1,
+      },
+      evidence: fieldCountEvidence(
+        "self",
+        ["condition:comparator:gte", "condition:threshold:positiveInteger"],
+        predicates.evidence,
+      ),
+      rest: "",
+    };
+  }
+
+  const comparedSelfPresence = /^you have\s+(?<comparison>.+)$/i.exec(
+    input.text,
+  );
+  const comparisonText = comparedSelfPresence?.groups?.["comparison"];
+  if (comparisonText !== undefined) {
+    const comparison = parseLeadingCountComparison({ text: comparisonText });
+    if (comparison !== undefined) {
+      const predicates = parseFieldPredicates(comparison.rest);
+      if (predicates !== undefined && predicates.rest.trim().length === 0) {
+        return {
+          condition: {
+            type: "fieldCount",
+            player: "self",
+            filter: predicates.filter,
+            op: comparison.op,
+            value: comparison.value,
+          },
+          evidence: fieldCountEvidence(
+            "self",
+            comparison.evidence,
+            predicates.evidence,
+          ),
+          rest: "",
+        };
+      }
+    }
   }
 
   const exactSelfPresence =

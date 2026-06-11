@@ -1,6 +1,35 @@
 import type { ConditionParser } from "../types.js";
 
 export const parseEventHistoryCondition: ConditionParser = (input) => {
+  const koMatch =
+    /^your opponent's (?<filter>Character(?: card)?s?) has been K\.O\.'d during this turn$/iu.exec(
+      input.text.trim(),
+    );
+  const koFilterText = koMatch?.groups?.["filter"];
+  if (koFilterText !== undefined) {
+    return {
+      condition: {
+        type: "eventHistory",
+        event: "cardKOd",
+        player: "opponent",
+        filter: { categories: ["character"] },
+        window: "thisTurn",
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:eventHistory",
+        "event:cardKOd",
+        "player:opponent",
+        "filter:category:character",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    };
+  }
+
   const match =
     /^you have activated an Event with a base cost of (?<cost>[1-9]\d*) or more during this turn$/iu.exec(
       input.text.trim(),

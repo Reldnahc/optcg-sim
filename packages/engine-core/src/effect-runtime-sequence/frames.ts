@@ -8,7 +8,10 @@ export {
   continueSupportedSequenceFrameFromSegment,
   createSupportedSequenceFrameDecision,
 } from "./frames/start.js";
-export { resumeSequenceFrameAfterEffectOption } from "./frames/effect-option.js";
+export {
+  resumeSequenceFrameAfterEffectOption,
+  resumeSequenceFrameAfterEffectOptionDecline,
+} from "./frames/effect-option.js";
 export {
   resumeSequenceFrameAfterHandSelection,
   resumeSequenceFrameAfterSelectTargets,

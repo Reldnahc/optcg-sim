@@ -12,8 +12,9 @@ export const choiceOptionSequences = (
   effect: ChoiceEffect,
 ): readonly SequenceEffect[] =>
   effect.chooser === "self" &&
-  effect.min === 1 &&
+  (effect.min === 0 || effect.min === 1) &&
   effect.max === 1 &&
+  effect.min <= effect.max &&
   effect.options.length >= 2
     ? effect.options.map((option) =>
         option.effect.type === "sequence"

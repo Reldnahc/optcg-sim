@@ -197,6 +197,8 @@ const responseLabel = (
         : "Decline effect";
     case "effectOption":
       return `Choose option ${action.response.optionId}`;
+    case "effectOptionDeclined":
+      return "Decline effect";
     case "lifeTrigger":
       return action.response.choice === "activateTrigger"
         ? "Activate trigger"

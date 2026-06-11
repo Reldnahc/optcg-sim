@@ -38,10 +38,6 @@ const setupLeaderBattleWithDamageCount = (
     });
     state.cardManifest.cards[attacker.cardId] = {
       ...doubleAttackCard,
-      support: {
-        ...doubleAttackCard.support,
-        status: "implemented-dsl",
-      },
       printedKeywords: ["doubleAttack"],
     };
   }
@@ -224,10 +220,6 @@ const installSupportedDoubleAttackLeader = (
   });
   state.cardManifest.cards[attacker.cardId] = {
     ...doubleAttackCard,
-    support: {
-      ...doubleAttackCard.support,
-      status: "implemented-dsl",
-    },
     printedKeywords: ["doubleAttack"],
   };
 };

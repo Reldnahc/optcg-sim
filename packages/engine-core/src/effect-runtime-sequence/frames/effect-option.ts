@@ -5,6 +5,7 @@ import type {
   EffectQueueEntry,
   EngineEvent,
   GameState,
+  SequenceSegmentResult,
 } from "@optcg/types";
 
 import { appendEvent, toStateSeq } from "../../action-results.js";
@@ -21,8 +22,11 @@ import {
 import { choiceOptionPath } from "../paths.js";
 import {
   createUnsupportedTrashDecision,
+  emptySegmentResult,
   findFrameQueueEntry,
   findSequenceEffectBlock,
+  getSupportedFrameContext,
+  segmentKey,
   sequenceRuntimeError,
 } from "./shared.js";
 import type {
@@ -169,6 +173,97 @@ export const resumeSequenceFrameAfterEffectOption = (
     : resumed.ok
       ? {
           events: [...events, ...run.events, ...resumed.events],
+          ok: true,
+          state: resumed.state,
+        }
+      : resumed;
+};
+
+export const resumeSequenceFrameAfterEffectOptionDecline = (
+  state: GameState,
+  decision: ChooseEffectOptionDecision,
+  createTrashDecision: CreateTrashFromHandSequenceDecision = createUnsupportedTrashDecision,
+): SequenceFrameResumeResult => {
+  const context = getSupportedFrameContext(state, decision.id);
+  if (!context.ok) {
+    return context.result;
+  }
+  const { entry, frame, supportedBlock } = context;
+  if (decision.min !== 0) {
+    return {
+      error: sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+  const sequence = resolveSequenceForPath(
+    supportedBlock.effect,
+    frame.effectPath,
+  );
+  const choiceIndex = frame.pendingDecision.resumeAtSegmentIndex;
+  const segment = sequence?.effects[choiceIndex];
+  if (segment === undefined || segment.effect.type !== "choice") {
+    return {
+      error: sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: "effectOptionDeclined",
+    },
+    decision.visibility,
+  );
+  const resolved = events[0];
+  if (resolved !== undefined) {
+    resolved.causedBy = { type: "decision", decisionId: decision.id };
+  }
+  const stateAfterDecision: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete stateAfterDecision.pendingDecision;
+
+  const declinedResult: SequenceSegmentResult = {
+    ...emptySegmentResult(),
+    attempted: true,
+    playerDeclined: true,
+  };
+  const resumed = resumeSequenceFrameFromLedgers({
+    createTrashDecision,
+    effectBlock: supportedBlock,
+    entry,
+    finalizeCompleted: true,
+    frame,
+    ledgers: {
+      savedReferences: frame.savedReferences,
+      segmentResults: {
+        ...frame.segmentResults,
+        [segmentKey(segment, choiceIndex)]: declinedResult,
+      },
+    },
+    state: stateAfterDecision,
+  });
+  return resumed === undefined
+    ? undefined
+    : resumed.ok
+      ? {
+          events: [...events, ...resumed.events],
           ok: true,
           state: resumed.state,
         }

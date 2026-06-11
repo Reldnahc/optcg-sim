@@ -2,6 +2,7 @@ import type {
   CardFilter,
   Effect,
   EffectDefinition,
+  ReplacementTrigger,
   Target,
 } from "@optcg/types";
 
@@ -148,6 +149,27 @@ export const isSupportedKoLifeTopToHandReplacementEffect = (
     effect.trigger.replacement.sourceControllerRelation &&
   isSupportedLifeTopToHandEffect(effect.effect.instead);
 
+const replacementKoSourcesMatch = (
+  trigger: Extract<ReplacementTrigger, { type: "wouldBeKOd" }>,
+  when: Extract<ReplacementTrigger, { type: "wouldBeKOd" }>,
+): boolean =>
+  when.sourceKind === trigger.sourceKind &&
+  when.sourceControllerRelation === trigger.sourceControllerRelation;
+
+export const isSupportedKoInsteadReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedReplacementEnvelope(effect) &&
+  effect.trigger.replacement.type === "wouldBeKOd" &&
+  isSupportedSelfOrAllCharacterReplacementTarget(
+    effect.trigger.replacement.target,
+  ) &&
+  effect.oncePerTurn !== false &&
+  effect.effect.when.type === "wouldBeKOd" &&
+  isSupportedSelfOrAllCharacterReplacementTarget(effect.effect.when.target) &&
+  replacementKoSourcesMatch(effect.trigger.replacement, effect.effect.when) &&
+  isSupportedOpponentEffectFieldRemovalInsteadEffect(effect.effect.instead);
+
 export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
 ): boolean =>
@@ -268,6 +290,7 @@ export const isSupportedReplacementEffect = (
   isSupportedSelfKoDrawReplacementEffect(effect) ||
   isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
   isSupportedKoLifeTopToHandReplacementEffect(effect) ||
+  isSupportedKoInsteadReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||

@@ -136,6 +136,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "turnLifeFaceUp" &&
         decision.cost.type !== "modifyPower" &&
         decision.cost.type !== "trashFromHand" &&
+        decision.cost.type !== "trashFromField" &&
         decision.cost.type !== "revealFromHand" &&
         decision.cost.type !== "chooseOne")
     ) {

@@ -195,6 +195,11 @@ export const parseRestOpponentLeaderOrCharactersInstruction: InstructionParser =
       return undefined;
     }
 
+    const exactLeader = parseExactOpponentLeaderTarget(actionRest);
+    if (exactLeader !== undefined) {
+      return exactLeader;
+    }
+
     const cardinality = parseUpToCardinality({ text: actionRest });
     if (cardinality === undefined) {
       return undefined;
@@ -233,3 +238,20 @@ export const parseRestOpponentLeaderOrCharactersInstruction: InstructionParser =
       rest: "",
     };
   };
+
+function parseExactOpponentLeaderTarget(
+  text: string,
+): ReturnType<InstructionParser> {
+  if (!/^your opponent's Leader\.?$/iu.test(text.trim())) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "rest",
+      target: { type: "opponentLeader" },
+    },
+    evidence: ["instruction:rest", "target:opponentLeader"],
+    rest: "",
+  };
+}

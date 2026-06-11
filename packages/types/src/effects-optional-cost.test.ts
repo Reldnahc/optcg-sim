@@ -281,7 +281,7 @@ test("SUP-003A optional choose-one field-trash alternatives stay self scoped and
   void unsupportedFieldZone;
 });
 
-test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped", () => {
+test("SUP-003A field-trash and choose-one cost authorability stay scoped", () => {
   const standaloneChooseOne: Cost = {
     // @ts-expect-error broad standalone Cost.chooseOne remains planned.
     type: "chooseOne",
@@ -291,11 +291,17 @@ test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped"
     optional: true,
   };
   const standaloneFieldTrash: Cost = {
-    // @ts-expect-error standalone non-optional Cost.trashFromField remains planned.
     type: "trashFromField",
     count: 1,
     chooser: "self",
     filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+  };
+  const optionalFieldTrash: OptionalCost = {
+    type: "trashFromField",
+    count: 1,
+    chooser: "self",
+    filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+    optional: true,
   };
   const optionalChooseOneTrashCost: OptionalCost = {
     type: "chooseOne",
@@ -316,6 +322,8 @@ test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped"
       },
     ],
   };
+  expect(standaloneFieldTrash.type).toBe("trashFromField");
+  expect(optionalFieldTrash.type).toBe("trashFromField");
   const topLevelChooseOnePayCost: Effect = {
     // @ts-expect-error choose-one payCost remains scoped to sequence segments.
     type: "payCost",

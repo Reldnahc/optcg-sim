@@ -8,7 +8,10 @@ import type {
 } from "@optcg/types";
 
 import { toEngineResult } from "../action-results.js";
-import { resumeSequenceFrameAfterEffectOption } from "../effect-runtime-sequence/frames.js";
+import {
+  resumeSequenceFrameAfterEffectOption,
+  resumeSequenceFrameAfterEffectOptionDecline,
+} from "../effect-runtime-sequence/frames.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
@@ -27,11 +30,21 @@ export const getChooseEffectOptionLegalActions = (
   ) {
     return [];
   }
-  return decision.options.map((option) => ({
-    type: "respondToDecision",
+  const optionActions = decision.options.map((option) => ({
+    type: "respondToDecision" as const,
     decisionId: decision.id,
-    response: { type: "effectOption", optionId: option.id },
+    response: { type: "effectOption" as const, optionId: option.id },
   }));
+  return decision.min === 0
+    ? [
+        {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response: { type: "effectOptionDeclined" },
+        },
+        ...optionActions,
+      ]
+    : optionActions;
 };
 
 export const applyChooseEffectOptionDecisionResponse = (
@@ -50,12 +63,37 @@ export const applyChooseEffectOptionDecisionResponse = (
       invalidDecision("Response must be an object for chooseEffectOption."),
     );
   }
-  if ((response as { type?: unknown }).type !== "effectOption") {
+  const responseType = (response as { type?: unknown }).type;
+  if (responseType === "effectOptionDeclined") {
+    if (decision.min !== 0) {
+      return toEngineResult(
+        state,
+        [],
+        invalidDecision("effectOptionDeclined requires an optional decision."),
+      );
+    }
+    const resumed = resumeSequenceFrameAfterEffectOptionDecline(
+      state,
+      decision,
+      createSupportedTrashFromHandChoiceDecision,
+    );
+    if (resumed === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        invalidDecision("chooseEffectOption decision is stale."),
+      );
+    }
+    return resumed.ok
+      ? toEngineResult(resumed.state, resumed.events)
+      : toEngineResult(state, [], [resumed.error]);
+  }
+  if (responseType !== "effectOption") {
     return toEngineResult(
       state,
       [],
       invalidDecision(
-        "Response type must be effectOption for chooseEffectOption.",
+        "Response type must be effectOption or effectOptionDeclined for chooseEffectOption.",
       ),
     );
   }

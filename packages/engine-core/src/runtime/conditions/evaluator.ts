@@ -32,6 +32,7 @@ import {
   countTrashCardsMatchingFilter,
   isSupportedTrashCountFilter,
 } from "./trash-count.js";
+import { cardMatchesAnyName } from "../../card-name-matching.js";
 
 interface ConditionEvaluationSuccess {
   supported: true;
@@ -254,6 +255,22 @@ const isSupportedPublicFieldStateCountFilter = (
   );
 };
 
+const isSupportedPublicFieldNameCountFilter = (
+  filter: CardFilter | undefined,
+): filter is { names: string[] } => {
+  if (filter === undefined) {
+    return false;
+  }
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return (
+    keys.length === 1 &&
+    keys[0] === "names" &&
+    Array.isArray(filter.names) &&
+    filter.names.length > 0 &&
+    filter.names.every((name) => typeof name === "string")
+  );
+};
+
 const countPublicDonOnField = (
   state: GameState,
   playerId: PlayerId,
@@ -380,6 +397,26 @@ const countPublicCardsOnFieldByState = (
     ...player.costArea.filter((card) => !attachedIds.has(card.instanceId)),
   ];
   return fieldCards.filter((card) => card.state === stateFilter).length;
+};
+
+const countPublicCardsOnFieldByName = (
+  state: GameState,
+  playerId: PlayerId,
+  names: readonly string[],
+): number => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return 0;
+  }
+  const fieldCards: CardInstance[] = [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+  ];
+  return fieldCards.filter((card) => {
+    const metadata = state.cardManifest.cards[card.cardId];
+    return metadata !== undefined && cardMatchesAnyName(metadata, names);
+  }).length;
 };
 
 const evaluateEventHistory = (
@@ -545,6 +582,16 @@ const countSupportedFieldOperand = (
       ),
     };
   }
+  if (isSupportedPublicFieldNameCountFilter(operand.filter)) {
+    return {
+      supported: true,
+      count: countPublicCardsOnFieldByName(
+        state,
+        playerId,
+        operand.filter.names,
+      ),
+    };
+  }
   return { supported: false };
 };
 
@@ -690,6 +737,17 @@ const evaluateCondition = (
             countPublicCardsOnFieldByState(state, playerId, stateFilter),
         );
       }
+      if (isSupportedPublicFieldNameCountFilter(condition.filter)) {
+        const names = condition.filter.names;
+        return evaluateCountCondition(
+          state,
+          entry,
+          condition.player,
+          condition.value,
+          condition.op,
+          (playerId) => countPublicCardsOnFieldByName(state, playerId, names),
+        );
+      }
       return { supported: false };
     }
     case "fieldCountDifference":
@@ -788,7 +846,8 @@ export const isSupportedQueuedEffectConditionShape = (
       return (
         (isSupportedDonFieldCountFilter(condition.filter) ||
           isSupportedCharacterFieldCountFilter(condition.filter) ||
-          isSupportedPublicFieldStateCountFilter(condition.filter)) &&
+          isSupportedPublicFieldStateCountFilter(condition.filter) ||
+          isSupportedPublicFieldNameCountFilter(condition.filter)) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
@@ -797,12 +856,12 @@ export const isSupportedQueuedEffectConditionShape = (
       return (
         (isSupportedDonFieldCountFilter(condition.minuend.filter) ||
           isSupportedCharacterFieldCountFilter(condition.minuend.filter) ||
-          isSupportedPublicFieldStateCountFilter(condition.minuend.filter)) &&
+          isSupportedPublicFieldStateCountFilter(condition.minuend.filter) ||
+          isSupportedPublicFieldNameCountFilter(condition.minuend.filter)) &&
         (isSupportedDonFieldCountFilter(condition.subtrahend.filter) ||
           isSupportedCharacterFieldCountFilter(condition.subtrahend.filter) ||
-          isSupportedPublicFieldStateCountFilter(
-            condition.subtrahend.filter,
-          )) &&
+          isSupportedPublicFieldStateCountFilter(condition.subtrahend.filter) ||
+          isSupportedPublicFieldNameCountFilter(condition.subtrahend.filter)) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.minuend.player === "self" ||

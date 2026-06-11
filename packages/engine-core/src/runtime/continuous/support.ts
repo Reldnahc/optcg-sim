@@ -332,6 +332,8 @@ export const isSupportedContinuousQueueEffect = (
       isSupportedDuration(effect.duration) &&
       (effect.target.type === "self" ||
         effect.target.type === "myLeader" ||
+        effect.target.type === "choose" ||
+        effect.target.type === "chooseFromZones" ||
         (effect.target.type === "all" &&
           effect.target.zone === "characterArea" &&
           (effect.target.player === "self" ||

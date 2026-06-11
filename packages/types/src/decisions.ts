@@ -117,6 +117,7 @@ export type DecisionResponse =
   | { type: "targets"; targets: CardRef[] }
   | { type: "cards"; cards: CardRef[] }
   | { type: "effectOption"; optionId: string }
+  | { type: "effectOptionDeclined" }
   | { type: "lifeTrigger"; choice: "activateTrigger" | "addToHand" }
   | { type: "replacement"; replacementId?: string }
   | { type: "mulligan"; keep: boolean }
@@ -198,7 +199,10 @@ export interface SelectCardsDecision extends BaseDecision {
 
 export interface ChooseEffectOptionDecision extends BaseDecision {
   type: "chooseEffectOption";
+  min: number;
+  max: number;
   options: EffectOption[];
+  defaultResponse?: { type: "effectOptionDeclined" };
 }
 
 export interface ConfirmLifeTriggerDecision extends BaseDecision {

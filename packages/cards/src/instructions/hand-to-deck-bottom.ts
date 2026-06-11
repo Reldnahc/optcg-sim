@@ -25,7 +25,7 @@ const deckPlacementEvidence = (
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const match =
-    /^(?:(?<player>your opponent|you) places?|place) (?<count>\d+) cards? from (?<possessive>their|your) hand at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
+    /^(?:(?<player>your opponent|you|they) places?|place) (?<count>\d+) cards? from (?<possessive>their|your) hand at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
@@ -49,7 +49,10 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   if (placement === undefined) {
     return undefined;
   }
-  const player = playerText === "your opponent" ? "opponent" : "self";
+  const player =
+    playerText === "your opponent" || playerText === "they"
+      ? "opponent"
+      : "self";
   const expectedPossessive = player === "opponent" ? "their" : "your";
   if (
     possessive !== expectedPossessive ||

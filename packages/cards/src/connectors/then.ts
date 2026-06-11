@@ -2,14 +2,15 @@ import type { ConnectorParser } from "../types.js";
 import { splitSourceByDelimiter } from "../source-slices.js";
 
 export const parseThenConnector: ConnectorParser = (input) => {
+  const thenPattern = /\s+Then,\s+|,\s+then\s+/u;
   const split =
     input.source === undefined
       ? undefined
-      : splitSourceByDelimiter(input.source, /\s+Then,\s+/u, "then");
+      : splitSourceByDelimiter(input.source, thenPattern, "then");
   const segments =
     split?.segments.map((segment) => segment.text) ??
     input.text
-      .split(/\s+Then,\s+/)
+      .split(thenPattern)
       .map((segment) => segment.trim())
       .filter((segment) => segment.length > 0);
 

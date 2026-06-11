@@ -44,6 +44,23 @@ const restSelfInstead = (): Extract<Effect, { type: "rest" }> => ({
   target: { type: "self" },
 });
 
+const restOwnCardsInstead = (): Extract<Effect, { type: "rest" }> => ({
+  type: "rest",
+  target: {
+    type: "chooseFromZones",
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "self",
+      zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+      min: 2,
+      max: 2,
+      allowFewerIfUnavailable: false,
+      visibility: "public",
+    },
+  },
+});
+
 const returnDonInstead = (): Extract<Effect, { type: "returnDon" }> => ({
   type: "returnDon",
   count: 1,
@@ -177,6 +194,16 @@ test("replacement support admits the same move-zone trigger with multiple instea
     blocks.map((block) => isSupportedReplacementEffectBlock(block)),
     [true, true],
   );
+});
+
+test("replacement support admits rest-own-cards instead under K.O. replacement triggers", () => {
+  const block = replacementBlock(
+    "replacement-ko-rest-own-cards",
+    wouldBeKodByCardEffect(),
+    restOwnCardsInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
 });
 
 test("owner deck-bottom replacement support follows flattened sequence primitives", () => {

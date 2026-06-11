@@ -374,7 +374,12 @@ export const createChooseEffectOptionDecisionForSequenceSegment = (
     prompt: "Choose one effect.",
     causedBy,
     visibility,
+    min: effect.min,
+    max: effect.max,
     options: effect.options,
+    ...(effect.min === 0
+      ? { defaultResponse: { type: "effectOptionDeclined" as const } }
+      : {}),
   };
   const events: EngineEvent[] = [];
   appendEvent(
@@ -863,6 +868,31 @@ export const getSequenceOptionalPayCostOptions = (
         ...(cost.type === "trashFromHand" && cost.maxCount !== undefined
           ? { maxCount: cost.maxCount }
           : {}),
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "trashFromField") {
+    if (!supportsChooseOneTrashFilter(cost.filter)) {
+      return paymentOptions;
+    }
+    const fieldMatchCount =
+      currentPlayer === undefined
+        ? 0
+        : fieldTrashCandidates(currentPlayer).filter((card) =>
+            fieldCardMatchesFilter(
+              state,
+              entry.controllerId,
+              card,
+              cost.filter,
+            ),
+          ).length;
+    if (fieldMatchCount >= cost.count) {
+      paymentOptions.push({
+        id: "trashFromField",
+        type: "trashFromField",
+        count: cost.count,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       });
     }

@@ -137,7 +137,7 @@ export type Condition =
       value: number;
     }
   // prettier-ignore
-  | { type: "eventHistory"; event: "cardPlayed"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
+  | { type: "eventHistory"; event: "cardPlayed" | "cardKOd"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
   | {
       type: "leaderColorCount";
       player: PlayerRef;
@@ -222,6 +222,13 @@ export type Cost =
     }
   | { type: "trashSelf"; filter?: CardFilter }
   | {
+      type: "trashFromField";
+      count: number;
+      filter?: CardFilter;
+      chooser: "self";
+      optional?: boolean;
+    }
+  | {
       type: "discard";
       count: number;
       filter?: CardFilter;
@@ -303,6 +310,7 @@ export type OptionalCost =
       optional: true;
     }
   | { type: "trashSelf"; filter?: CardFilter; optional: true }
+  | ScopedOptionalFieldTrashCost
   | {
       type: "modifyPower";
       target: Target;

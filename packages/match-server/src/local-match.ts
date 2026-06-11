@@ -183,6 +183,8 @@ const responseKeyForDecisionResponse = (
       return String(response.quantity);
     case "effectOption":
       return response.optionId;
+    case "effectOptionDeclined":
+      return "decline";
     case "mulligan":
       return response.keep ? "keep" : "mulligan";
     case "loopCount":

@@ -1,12 +1,21 @@
-import type { HandSelectionId } from "@optcg/types";
+import type { HandSelectionId, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { InstructionParser } from "../types.js";
 
 const handPlaySelection = "handSelection:play-from-hand" as HandSelectionId;
+const handOrTrashHandSelection =
+  "handSelection:play-from-hand-or-trash:hand" as HandSelectionId;
+const handOrTrashTrashSelection =
+  "trashSelection:play-from-hand-or-trash:trash" as SelectionId;
 
 export const parsePlayFromHandInstruction: InstructionParser = (input) => {
+  const handOrTrash = parsePlayFromHandOrTrashInstruction(input);
+  if (handOrTrash !== undefined) {
+    return handOrTrash;
+  }
+
   const playMatch = /^Play\s+(?<rest>.+)$/i.exec(input.text);
   const afterPlay = playMatch?.groups?.["rest"];
   if (afterPlay === undefined) {
@@ -68,6 +77,141 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+const parsePlayFromHandOrTrashInstruction: InstructionParser = (input) => {
+  const playMatch = /^Play\s+(?<rest>.+)$/i.exec(input.text);
+  const afterPlay = playMatch?.groups?.["rest"];
+  if (afterPlay === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: afterPlay });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const sourceMatch =
+    /^(?<predicates>.+) from your hand or trash(?<rested>\s+rested)?\.?$/i.exec(
+      cardinality.rest,
+    );
+  if (sourceMatch === null) {
+    return undefined;
+  }
+  const groups = sourceMatch.groups;
+  if (groups === undefined) {
+    return undefined;
+  }
+  const predicateText = groups["predicates"];
+  if (predicateText === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates({ text: predicateText });
+  if (predicates === undefined || predicates.rest.length > 0) {
+    return undefined;
+  }
+  const enterRested = groups["rested"] !== undefined;
+
+  return {
+    effect: {
+      type: "choice",
+      chooser: "self",
+      min: 0,
+      max: 1,
+      options: [
+        {
+          id: "choice:play-from-hand",
+          label: "Play from hand.",
+          effect: playSelectedFromZone({
+            selection: handOrTrashHandSelection,
+            zone: "hand",
+            visibility: "chooserOnly",
+            filter: predicates.filter,
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            enterRested,
+          }),
+        },
+        {
+          id: "choice:play-from-trash",
+          label: "Play from trash.",
+          effect: playSelectedFromZone({
+            selection: handOrTrashTrashSelection,
+            zone: "trash",
+            visibility: "bothPlayers",
+            filter: predicates.filter,
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            enterRested,
+          }),
+        },
+      ],
+    },
+    evidence: [
+      "instruction:playSelected",
+      ...cardinality.evidence,
+      "zone:hand",
+      "zone:trash",
+      "player:self",
+      "chooser:self:upTo",
+      ...predicates.evidence,
+      ...(enterRested ? ["state:rested" as const] : []),
+      "composition:selectThenPlay",
+      "composition:chooseOne",
+    ],
+    rest: "",
+  };
+};
+
+function playSelectedFromZone({
+  selection,
+  zone,
+  visibility,
+  filter,
+  min,
+  max,
+  enterRested,
+}: {
+  readonly selection: SelectionId;
+  readonly zone: "hand" | "trash";
+  readonly visibility: "chooserOnly" | "bothPlayers";
+  readonly filter: NonNullable<
+    ReturnType<typeof parseCardFilterPredicates>
+  >["filter"];
+  readonly min: number;
+  readonly max: number;
+  readonly enterRested: boolean;
+}) {
+  return {
+    type: "sequence" as const,
+    effects: [
+      {
+        connector: "always" as const,
+        saveResultAs: selection,
+        effect: {
+          type: "selectCards" as const,
+          zone,
+          player: "self" as const,
+          chooser: "self" as const,
+          min,
+          max,
+          filter,
+          saveAs: selection,
+          visibility,
+        },
+      },
+      {
+        connector: "ifPossible" as const,
+        effect: {
+          type: "playSelected" as const,
+          selection,
+          ignoreCost: true,
+          ...(enterRested ? { enterRested: true } : {}),
+        },
+      },
+    ],
+  };
+}
 
 function parsePlayFromHandSource(text: string):
   | {

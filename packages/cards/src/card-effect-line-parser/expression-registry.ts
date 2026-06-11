@@ -235,6 +235,7 @@ export const defaultRegistry = {
         lookPlayFromTopExpressionParser,
         searchRevealExpressionParser,
         selectedOpponentCharactersAttackCostExpressionParser,
+        singleInstructionExpressionParser,
         generalExpressionParser,
       ],
     }),
