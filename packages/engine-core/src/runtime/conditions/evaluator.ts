@@ -262,17 +262,17 @@ const isSupportedPublicFieldStateCountFilter = (
 
 const isSupportedPublicFieldNameCountFilter = (
   filter: CardFilter | undefined,
-): filter is { names: string[] } => {
+): filter is { names: string[]; excludeSelf?: true } => {
   if (filter === undefined) {
     return false;
   }
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   return (
-    keys.length === 1 &&
-    keys[0] === "names" &&
+    keys.every((key) => key === "names" || key === "excludeSelf") &&
     Array.isArray(filter.names) &&
     filter.names.length > 0 &&
-    filter.names.every((name) => typeof name === "string")
+    filter.names.every((name) => typeof name === "string") &&
+    (filter.excludeSelf === undefined || filter.excludeSelf)
   );
 };
 
@@ -406,8 +406,10 @@ const countPublicCardsOnFieldByState = (
 
 const countPublicCardsOnFieldByName = (
   state: GameState,
+  entry: EffectQueueEntry,
   playerId: PlayerId,
   names: readonly string[],
+  excludeSelf?: true,
 ): number => {
   const player = state.players[playerId];
   if (player === undefined) {
@@ -419,6 +421,9 @@ const countPublicCardsOnFieldByName = (
     ...(player.stage === undefined ? [] : [player.stage]),
   ];
   return fieldCards.filter((card) => {
+    if (excludeSelf === true && card.instanceId === entry.source.instanceId) {
+      return false;
+    }
     const metadata = state.cardManifest.cards[card.cardId];
     return metadata !== undefined && cardMatchesAnyName(metadata, names);
   }).length;
@@ -592,8 +597,10 @@ const countSupportedFieldOperand = (
       supported: true,
       count: countPublicCardsOnFieldByName(
         state,
+        entry,
         playerId,
         operand.filter.names,
+        operand.filter.excludeSelf,
       ),
     };
   }
@@ -755,14 +762,21 @@ const evaluateCondition = (
         );
       }
       if (isSupportedPublicFieldNameCountFilter(condition.filter)) {
-        const names = condition.filter.names;
+        const filter = condition.filter;
         return evaluateCountCondition(
           state,
           entry,
           condition.player,
           condition.value,
           condition.op,
-          (playerId) => countPublicCardsOnFieldByName(state, playerId, names),
+          (playerId) =>
+            countPublicCardsOnFieldByName(
+              state,
+              entry,
+              playerId,
+              filter.names,
+              filter.excludeSelf,
+            ),
         );
       }
       return { supported: false };

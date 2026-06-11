@@ -6,8 +6,30 @@ import type {
   PrimitiveEvidence,
 } from "../types.js";
 
-const parseFieldPredicates = (text: string) =>
-  parseCardFilterPredicates({ text }, { powerSemantics: "current" });
+const parseFieldPredicates = (text: string) => {
+  const parsed = parseCardFilterPredicates(
+    { text: normalizeFieldPredicateText(text) },
+    { powerSemantics: "current" },
+  );
+  if (
+    parsed === undefined ||
+    parsed.filter.categories !== undefined ||
+    parsed.filter.currentPower === undefined
+  ) {
+    return parsed;
+  }
+  return {
+    ...parsed,
+    filter: {
+      ...parsed.filter,
+      categories: ["character" as const],
+    },
+    evidence: [...parsed.evidence, "filter:category:character"] as const,
+  };
+};
+
+const normalizeFieldPredicateText = (text: string): string =>
+  text.replace(/\s+on your field\.?$/iu, "").trim();
 
 const fieldCountEvidence = (
   player: "self" | "opponent",

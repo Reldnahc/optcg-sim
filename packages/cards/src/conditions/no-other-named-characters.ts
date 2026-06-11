@@ -17,13 +17,45 @@ export const noOtherNamedCharactersConditionPrimitive = {
 export const parseNoOtherNamedCharactersCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
-  const match = /^you have no other\s+(?<predicate>.+)$/i.exec(input.text);
+  const match = /^(?:you have|there are) no other\s+(?<predicate>.+)$/i.exec(
+    input.text,
+  );
   const predicateText = match?.groups?.["predicate"];
   if (predicateText === undefined) {
     return undefined;
   }
 
   const predicates = parseCardFilterPredicates({ text: predicateText });
+  const namedCards =
+    predicates !== undefined &&
+    predicates.rest.length === 0 &&
+    predicates.filter.names !== undefined &&
+    predicates.filter.names.length > 0 &&
+    predicates.filter.categories === undefined;
+  if (namedCards) {
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          ...predicates.filter,
+          excludeSelf: true,
+        },
+        op: "eq",
+        value: 0,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "player:self",
+        "filter:name",
+        "filter:excludeSelf",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+      ],
+      rest: "",
+    };
+  }
+
   if (
     predicates === undefined ||
     predicates.rest.length > 0 ||
