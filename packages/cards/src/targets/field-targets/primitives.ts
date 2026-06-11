@@ -23,6 +23,11 @@ export const opponentCharactersOrDonCardsTargetPrimitive = {
   matches: [{ id: "of-your-opponents-characters-or-don-cards" }],
 } as const;
 
+export const opponentDonCardsTargetPrimitive = {
+  primitiveId: "target:opponentDonCards",
+  matches: [{ id: "of-your-opponents-don-cards" }],
+} as const;
+
 export const yourLeaderTargetPrimitive = {
   primitiveId: "target:yourLeader",
   matches: [{ id: "your-leader" }],

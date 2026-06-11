@@ -1,7 +1,6 @@
 import type {
   Condition,
   Effect,
-  EffectBlockCost,
   EffectOption,
   EffectTextSpan,
 } from "@optcg/types";
@@ -17,6 +16,7 @@ import type {
 import { parseBulletListPayload } from "./bullet-list.js";
 
 interface ParsedChooseOneBody {
+  readonly chooser: "self" | "opponent";
   readonly condition?: {
     readonly condition: Condition;
     readonly evidence: readonly PrimitiveEvidence[];
@@ -49,16 +49,15 @@ export function chooseOneExpressionParser(options: {
       return undefined;
     }
 
-    let costPatch: EffectBlockCost | undefined;
     let conditionPatch: Condition | undefined;
     const evidence: PrimitiveEvidence[] = [
       "expression:choice",
       "composition:chooseOne",
+      parsed.chooser === "opponent" ? "chooser:opponent" : "chooser:self",
       ...parsed.evidence,
     ];
 
     if (cost !== undefined) {
-      costPatch = { ...cost.cost, optional: false };
       evidence.push(...cost.evidence);
     }
 
@@ -66,15 +65,25 @@ export function chooseOneExpressionParser(options: {
       conditionPatch = parsed.condition.condition;
       evidence.push(...parsed.condition.evidence);
     }
+    const trailingThen =
+      parsed.trailingThen === undefined
+        ? undefined
+        : parseTrailingThenEffect(
+            parsed.trailingThen,
+            options.expressions ?? [],
+          );
+    if (trailingThen !== undefined) {
+      evidence.push(...trailingThen.evidence);
+    }
 
     const choiceEffect: Effect = {
       type: "choice",
-      chooser: "self",
+      chooser: parsed.chooser,
       min: 1,
       max: 1,
       options: parsed.options,
     };
-    const effect: Effect =
+    const choiceOrSequenceEffect: Effect =
       parsed.trailingThen === undefined
         ? choiceEffect
         : {
@@ -88,10 +97,31 @@ export function chooseOneExpressionParser(options: {
               {
                 id: "then",
                 connector: "then",
-                effect: {
+                effect: trailingThen?.effect ?? {
                   type: "custom",
                   handler: "unsupported:chooseOneThen",
                 },
+              },
+            ],
+          };
+    const effect: Effect =
+      cost === undefined
+        ? choiceOrSequenceEffect
+        : {
+            type: "sequence",
+            effects: [
+              {
+                id: "cost:return-don",
+                connector: "always",
+                effect: {
+                  type: "payCost",
+                  cost: { ...cost.cost, optional: true },
+                },
+              },
+              {
+                id: "body:after-cost",
+                connector: "ifYouDo",
+                effect: choiceOrSequenceEffect,
               },
             ],
           };
@@ -99,13 +129,15 @@ export function chooseOneExpressionParser(options: {
     if (parsed.trailingThen !== undefined) {
       evidence.push("connector:then", "expression:sequence");
     }
+    if (cost !== undefined) {
+      evidence.push("composition:costedEffect", "expression:sequence");
+    }
 
     return {
       effect,
       evidence,
       rest: "",
       blockPatch: {
-        ...(costPatch === undefined ? {} : { cost: costPatch }),
         ...(conditionPatch === undefined ? {} : { condition: conditionPatch }),
       },
       presentationSpans: [
@@ -126,10 +158,13 @@ function parseChooseOneBody(
 ): ParsedChooseOneBody | undefined {
   const normalized = text.trim();
   const conditional =
-    /^if (?<condition>.+?),\s*choose one:\s*(?<bullets>[\s\S]+)$/iu.exec(
+    /^if (?<condition>.+?),\s*(?<chooser>your opponent )?chooses? one:\s*(?<bullets>[\s\S]+)$/iu.exec(
       normalized,
     );
-  const direct = /^choose one:\s*(?<bullets>[\s\S]+)$/iu.exec(normalized);
+  const direct =
+    /^(?<chooser>your opponent )?chooses? one:\s*(?<bullets>[\s\S]+)$/iu.exec(
+      normalized,
+    );
 
   const bulletText =
     conditional?.groups?.["bullets"] ?? direct?.groups?.["bullets"];
@@ -138,6 +173,11 @@ function parseChooseOneBody(
   }
 
   const conditionText = conditional?.groups?.["condition"];
+  const chooser =
+    (conditional?.groups?.["chooser"] ?? direct?.groups?.["chooser"]) ===
+    undefined
+      ? "self"
+      : "opponent";
   const condition =
     conditionText === undefined
       ? undefined
@@ -152,6 +192,7 @@ function parseChooseOneBody(
   }
 
   return {
+    chooser,
     ...(condition === undefined ? {} : { condition }),
     options: payload.items.map((item, index) => {
       const parsed = parseOptionEffect(item, expressionParsers);
@@ -180,11 +221,29 @@ function parseOptionEffect(
 ): ExpressionParseResult | undefined {
   for (const parser of expressionParsers) {
     const parsed = parser({ text });
-    if (parsed !== undefined && parsed.rest.length === 0) {
+    if (
+      parsed !== undefined &&
+      parsed.rest.length === 0 &&
+      !isUnsupportedCustomEffect(parsed.effect)
+    ) {
       return parsed;
     }
   }
   return undefined;
+}
+
+function parseTrailingThenEffect(
+  text: string,
+  expressionParsers: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[],
+): ExpressionParseResult | undefined {
+  const body = text.replace(/^Then,\s*/iu, "").trim();
+  return parseOptionEffect(body, expressionParsers);
+}
+
+function isUnsupportedCustomEffect(effect: Effect): boolean {
+  return effect.type === "custom" && effect.handler.startsWith("unsupported:");
 }
 
 function parseCondition(

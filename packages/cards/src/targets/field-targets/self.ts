@@ -45,7 +45,7 @@ export function parseYourLeaderOrCharacterCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
   const typedMatch =
-    /^of your\s+(?<predicateText>.+?Leader or Character cards?)\b\s*(?<rest>.*)$/i.exec(
+    /^of your\s+(?<predicateText>.+?Leader or Character cards?\b.*)$/i.exec(
       input.text,
     );
   const typedPredicateText = typedMatch?.groups?.["predicateText"]?.trim();
@@ -54,7 +54,7 @@ export function parseYourLeaderOrCharacterCardsTarget(
       { text: typedPredicateText },
       { powerSemantics: "current" },
     );
-    if (predicates !== undefined && predicates.rest.trim().length === 0) {
+    if (predicates !== undefined) {
       return {
         target: {
           type: "chooseFromZones",
@@ -75,7 +75,7 @@ export function parseYourLeaderOrCharacterCardsTarget(
           "player:self",
           ...predicates.evidence,
         ],
-        rest: typedMatch?.groups?.["rest"]?.trim() ?? "",
+        rest: predicates.rest.trim(),
       };
     }
   }

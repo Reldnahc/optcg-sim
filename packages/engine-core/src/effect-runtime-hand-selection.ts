@@ -56,8 +56,8 @@ const isSupportedSequenceTrashSelectCardsEffect = (
 ): effect is SequenceSelectCardsEffect =>
   effect.type === "selectCards" &&
   effect.zone === "trash" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
+  effect.player === effect.chooser &&
+  (effect.player === "self" || effect.player === "opponent") &&
   effect.visibility === "bothPlayers" &&
   String(effect.saveAs).startsWith("trashSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&

@@ -25,6 +25,20 @@ Then, if you have a {Celestial Dragons} type Character, draw 1 card.`,
     ]);
   });
 
+  it("groups opponent-chooses-one headers and bullets", () => {
+    const lines = gameplayLinesFromTextParts([
+      `[On Play] You may trash 1 card from your hand: Your opponent chooses one:
+\u2022 Your opponent trashes 2 cards from their hand.
+\u2022 Trash 1 card from the top of your opponent's Life cards.`,
+    ]);
+
+    assert.deepEqual(lines, [
+      `[On Play] You may trash 1 card from your hand: Your opponent chooses one:
+\u2022 Your opponent trashes 2 cards from their hand.
+\u2022 Trash 1 card from the top of your opponent's Life cards.`,
+    ]);
+  });
+
   it("joins detached entry and marker lines to their following effect bodies", () => {
     const lines = gameplayLinesFromTextParts([
       `[On Play]

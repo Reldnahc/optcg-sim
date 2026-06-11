@@ -74,6 +74,27 @@ const unsupportedSequence = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const damageThenDrawSequence = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "effect-damage",
+      connector: "always",
+      effect: {
+        type: "damage",
+        target: "leader",
+        player: "opponent",
+        count: 1,
+      },
+    },
+    {
+      id: "draw-after-damage",
+      connector: "then",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+  ],
+});
+
 const optionalClauseThenPauseSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -468,6 +489,71 @@ const payWithFirstActiveDon = (state: GameState): EngineResult => {
 
 const eventTypes = (events: readonly EngineEvent[]): string[] =>
   events.map((event) => event.type);
+
+test("sequence damage segment pauses for life decision and resumes later segments", () => {
+  const { state } = sequenceQueueState(damageThenDrawSequence());
+  const beforeP1 = must(state.players[p1], "before p1");
+  const beforeP2 = must(state.players[p2], "before p2");
+  const beforeP1HandCount = beforeP1.hand.length;
+  const beforeP2HandCount = beforeP2.hand.length;
+  const beforeP2LifeCount = beforeP2.life.length;
+  const topLife = must(beforeP2.life[0], "p2 top life").card;
+  state.cardManifest.cards[topLife.cardId] = resolvedCard({
+    cardId: topLife.cardId,
+    category: "character",
+  });
+
+  const damaged = processEffectRuntime(state);
+  assert.equal(damaged.errors, undefined);
+  const decision = must(damaged.state.pendingDecision, "life decision");
+  const frame = must(damaged.state.effectExecutionFrames[0], "frame");
+
+  assert.equal(decision.type, "confirmLifeTrigger");
+  assert.equal(decision.playerId, p2);
+  assert.equal(frame.pendingDecision.resumeAtSegmentIndex, 0);
+  assert.equal(frame.nextSegmentIndex, 1);
+  assert.deepEqual(frame.segmentResults["0"], {
+    attempted: true,
+    succeeded: true,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.equal(
+    must(damaged.state.players[p2], "damaged p2").life.length,
+    beforeP2LifeCount - 1,
+  );
+
+  const resolved = applyAction(damaged.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(resolved.state.effectExecutionFrames, []);
+  assert.equal(
+    must(resolved.state.players[p1], "resolved p1").hand.length,
+    beforeP1HandCount + 1,
+  );
+  assert.equal(
+    must(resolved.state.players[p2], "resolved p2").hand.length,
+    beforeP2HandCount + 1,
+  );
+  const relevantEvents = eventTypes(resolved.events);
+  assert.ok(relevantEvents.indexOf("decisionResolved") >= 0);
+  assert.ok(
+    relevantEvents.indexOf("cardDrawn") >
+      relevantEvents.indexOf("decisionResolved"),
+  );
+  assert.ok(
+    relevantEvents.indexOf("effectResolved") >
+      relevantEvents.indexOf("cardDrawn"),
+  );
+});
 
 test("sequence pause stores a resumable execution frame with segment results and saved references", () => {
   const { state } = sequenceQueueState();

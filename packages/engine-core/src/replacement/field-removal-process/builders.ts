@@ -107,7 +107,15 @@ export const buildSelectedTargetsFieldRemovalKoReplacementProcess = (
 };
 
 export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
-  classification: "moveFromFieldToDeckBottom" | "moveFromFieldToHand";
+  classification:
+    | "moveFromFieldToDeckBottom"
+    | "moveFromFieldToHand"
+    | "moveFromFieldToLife";
+  destination?: {
+    zone: "life";
+    position: "top" | "bottom";
+    faceUp?: boolean;
+  };
   entry: EffectQueueEntry;
   target: CardRef;
   targetIndex: number;
@@ -123,6 +131,9 @@ export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
       sourceKind: "cardEffect",
       sourceControllerId: params.entry.controllerId,
     },
+    ...(params.destination === undefined
+      ? {}
+      : { fieldRemovalDestination: params.destination }),
   };
   return {
     id: `${params.entry.id}:moveZone:${params.target.instanceId}:${String(
@@ -145,7 +156,15 @@ export const buildSelectedTargetFieldRemovalMoveZoneReplacementProcess =
 
 export const buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess =
   (params: {
-    classification: "moveFromFieldToDeckBottom" | "moveFromFieldToHand";
+    classification:
+      | "moveFromFieldToDeckBottom"
+      | "moveFromFieldToHand"
+      | "moveFromFieldToLife";
+    destination?: {
+      zone: "life";
+      position: "top" | "bottom";
+      faceUp?: boolean;
+    };
     entry: EffectQueueEntry;
     targets: readonly CardRef[];
   }): ReplacementProcess => {
@@ -165,6 +184,9 @@ export const buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess =
         sourceKind: "cardEffect",
         sourceControllerId: params.entry.controllerId,
       },
+      ...(params.destination === undefined
+        ? {}
+        : { fieldRemovalDestination: params.destination }),
     };
     return {
       id:

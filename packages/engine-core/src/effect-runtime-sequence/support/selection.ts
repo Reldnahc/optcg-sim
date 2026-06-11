@@ -60,8 +60,8 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
   }
   if (
     effect.zone === "trash" &&
-    effect.player === "self" &&
-    effect.chooser === "self" &&
+    effect.player === effect.chooser &&
+    (effect.player === "self" || effect.player === "opponent") &&
     effect.visibility === "bothPlayers"
   ) {
     return "trash";
@@ -96,6 +96,11 @@ export const isSupportedMoveSelectedSegment = (
     (effect.from === "trash" &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
+      selectionKind === "trash") ||
+    (effect.from === "trash" &&
+      effect.to === "deck" &&
+      effect.position === "bottom" &&
+      effect.destinationFaceUp === undefined &&
       selectionKind === "trash") ||
     (effect.from === "hand" &&
       effect.to === "deck" &&

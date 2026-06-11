@@ -23,6 +23,7 @@ export type RestEffect = Extract<Effect, { type: "rest" }> & {
     | { type: "choose" }
     | { type: "chooseFromZones" }
     | { type: "opponentLeader" }
+    | { type: "self" }
     | { type: "savedFieldObject" }
   >;
 };
@@ -44,7 +45,7 @@ export type AllTargetKoEffect = Extract<Effect, { type: "ko" }> & {
 export type KoEffect = SavedFieldObjectKoEffect | AllTargetKoEffect;
 export type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
-  destination: "deckBottom" | "hand";
+  destination: "deckBottom" | "hand" | "lifeTop" | "lifeBottom";
 };
 export type ChangeAttackTargetEffect = Extract<
   Effect,
@@ -95,7 +96,12 @@ export const isSupportedBounceSegment = (
   effect: SequenceSegmentEffect,
 ): effect is BounceEffect =>
   effect.type === "bounce" &&
-  (effect.destination === "hand" || effect.destination === "deckBottom") &&
+  (effect.destination === "hand" ||
+    effect.destination === "deckBottom" ||
+    effect.destination === "lifeTop" ||
+    effect.destination === "lifeBottom") &&
+  (effect.destinationFaceUp === undefined ||
+    typeof effect.destinationFaceUp === "boolean") &&
   isSupportedSavedFieldObjectKoTarget(effect.target);
 
 export const isSupportedSequenceTargetRequest = (
@@ -151,6 +157,7 @@ export const isSupportedRestSegment = (
 ): effect is RestEffect =>
   effect.type === "rest" &&
   (effect.target.type === "opponentLeader" ||
+    effect.target.type === "self" ||
     isSupportedSavedFieldObjectKoTarget(effect.target) ||
     ((effect.target.type === "choose" ||
       effect.target.type === "chooseFromZones") &&
@@ -162,7 +169,8 @@ export const isSupportedActivateSegment = (
   effect.type === "activate" &&
   ((effect.target.type === "savedFieldObject" &&
     (effect.target.zone === "costArea" ||
-      effect.target.zone === "characterArea") &&
+      effect.target.zone === "characterArea" ||
+      isSupportedSavedLeaderOrCharacterTarget(effect.target)) &&
     (effect.target.player === "self" || effect.target.player === "opponent") &&
     effect.target.controller === undefined &&
     effect.target.filter === undefined &&

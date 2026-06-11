@@ -11,7 +11,7 @@ export const lifeCountConditionPrimitive: PrimitivePatternDefinition<ConditionPa
       {
         id: "player-has-exactly-n-life-cards",
         pattern:
-          /^(?<player>you have|your opponent has) (?<count>\d+) Life cards$/i,
+          /^(?<player>you have|your opponent has) (?<count>\d+) Life cards?$/i,
         build: (groups) => {
           const player =
             groups["player"]?.toLowerCase() === "your opponent has"

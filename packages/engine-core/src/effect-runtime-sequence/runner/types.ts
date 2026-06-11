@@ -9,6 +9,7 @@ import type {
 
 export type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 export type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
+export type DamageEffect = Extract<Effect, { type: "damage" }>;
 export type DrawEffect = Extract<Effect, { type: "draw" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;

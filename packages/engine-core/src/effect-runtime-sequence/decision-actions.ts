@@ -12,6 +12,7 @@ import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitive
 import { applyTopDeckPlacementDecisionResponse } from "../effect-runtime-top-deck-placement.js";
 import { applySelectedHandDeckPlacementDecisionResponse } from "./selected-segments.js";
 import { applyPlaceSetRemainderOrderResponse } from "./remainder.js";
+import { applyLifeReorderDecisionResponse } from "./life-state.js";
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -110,6 +111,38 @@ export const applyTopDeckPlacementSequenceAwareResponse = (
     return null;
   }
   return resumeSequenceAfterTopDeckPlacementResponse(state, result) ?? result;
+};
+
+export const applyLifeReorderSequenceAwareResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  const result = applyLifeReorderDecisionResponse(state, action);
+  if (result === null) {
+    return null;
+  }
+  if (
+    decision === undefined ||
+    decision.type !== "orderCards" ||
+    !hasSequenceFrameForDecision(state, decision.id) ||
+    result.errors !== undefined ||
+    result.state.pendingDecision !== undefined
+  ) {
+    return result;
+  }
+  const resumed = resumeSequenceFrameAfterTopDeckPlacement(
+    result.state,
+    decision.id,
+    createSupportedTrashFromHandChoiceDecision,
+  );
+  if (resumed === undefined) {
+    return result;
+  }
+  if (!resumed.ok) {
+    return toEngineResult(state, [], [resumed.error]);
+  }
+  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
 };
 
 export const applySelectedHandDeckPlacementSequenceAwareResponse = (

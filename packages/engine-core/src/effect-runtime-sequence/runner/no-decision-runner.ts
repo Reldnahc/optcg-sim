@@ -18,7 +18,6 @@ import { applyFieldMutationSequenceSegment } from "../field-segments.js";
 import {
   createChooseQuantityDecisionForSequenceSegment,
   createChooseEffectOptionDecisionForSequenceSegment,
-  createOptionalActivationDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
   createReturnDonDecisionForSequenceSegment,
   getSequenceOptionalPayCostOptions,
@@ -40,6 +39,7 @@ import {
 } from "../segments.js";
 import { type SupportedSequenceSegment } from "../support.js";
 import { applyRuntimePlaySource } from "../../play-card/core.js";
+import { executeDamagePrimitive } from "../../runtime/primitives/execute.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
 import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
 import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
@@ -60,6 +60,8 @@ import { emptySegmentResult } from "./results.js";
 import { getOpponentId } from "../../actions/state.js";
 import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.js";
 import { pauseSequenceForPendingDecision } from "./pause.js";
+import { applyLifeStateNoDecisionSegment } from "./life-state-segments.js";
+import { pauseForOptionalSequenceSegment } from "./optional-segment.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   DrawEffect,
@@ -129,31 +131,16 @@ export const continueNoDecisionSegments = (
       continue;
     }
     if (segment.optional === true) {
-      const partialResult: SequenceSegmentResult = {
-        ...emptySegmentResult(),
-        attempted: true,
-      };
-      const pausedLedgers: SegmentLedgers = {
-        ...nextLedgers,
-        segmentResults: {
-          ...nextLedgers.segmentResults,
-          [ledgerKey(segment, index)]: partialResult,
-        },
-      };
-      const optionalDecision =
-        createOptionalActivationDecisionForSequenceSegment(
-          nextState,
-          entry,
-          index,
-        );
-      return pauseSequenceForPendingDecision({
-        decisionEvents: optionalDecision.events,
+      return pauseForOptionalSequenceSegment({
+        effectPath,
+        emptySegmentResult,
         entry,
-        effectPath: [...effectPath],
         events,
         index,
-        ledgers: pausedLedgers,
-        state: optionalDecision.state,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey: ledgerKey,
+        state: nextState,
       });
     }
     if (segment.effect.type === "delayed") {
@@ -188,6 +175,38 @@ export const continueNoDecisionSegments = (
       nextState = drawn.state;
       nextLedgers = drawn.ledgers;
       events.push(...drawn.events);
+      continue;
+    }
+    if (segment.effect.type === "damage") {
+      const damaged = executeDamagePrimitive(nextState, entry, segment.effect);
+      if (damaged.errors !== undefined) {
+        return { ok: false };
+      }
+      nextState = damaged.state;
+      nextLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [ledgerKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: damaged.events.length > 0,
+          },
+        },
+      };
+      if (nextState.pendingDecision !== undefined) {
+        return pauseSequenceForPendingDecision({
+          decisionEvents: damaged.events,
+          entry,
+          effectPath: [...effectPath],
+          events,
+          index,
+          ledgers: nextLedgers,
+          state: nextState,
+        });
+      }
+      events.push(...damaged.events);
       continue;
     }
     if (segment.effect.type === "moveCards") {
@@ -336,6 +355,25 @@ export const continueNoDecisionSegments = (
       nextState = revealed.state;
       nextLedgers = revealed.ledgers;
       events.push(...revealed.events);
+      continue;
+    }
+    const lifeState = applyLifeStateNoDecisionSegment({
+      effectPath,
+      emptySegmentResult,
+      entry,
+      events,
+      index,
+      ledgers: nextLedgers,
+      segment,
+      segmentKey: ledgerKey,
+      state: nextState,
+    });
+    if (lifeState.handled) {
+      if (!lifeState.result.ok || lifeState.result.kind === "paused") {
+        return lifeState.result;
+      }
+      nextState = lifeState.result.state;
+      nextLedgers = lifeState.result.ledgers;
       continue;
     }
     if (segment.effect.type === "placeTopDeckCards") {

@@ -1,7 +1,6 @@
 import type {
   CardId,
   Comparator,
-  EffectId,
   PlayerRef,
   SelectionId,
   SelectionSetId,
@@ -14,7 +13,6 @@ import type {
   CardRef,
   CardCategory,
   CardColor,
-  CardSupportStatus,
   Keyword,
 } from "./card-metadata.js";
 import type { EffectTextPresentationRef } from "./effect-presentation.js";
@@ -331,8 +329,6 @@ export type OptionalCost =
   | OptionalMoveCardsCost
   | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
-
-export type EffectBlockCost = Exclude<Cost, OptionalChooseOneTrashCost>;
 
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";
@@ -798,6 +794,16 @@ export type Effect =
       to: Visibility;
     }
   | {
+      type: "reorderLife";
+      player: PlayerRef;
+      viewer: PlayerRef;
+    }
+  | {
+      type: "setLifeFaceUp";
+      player: PlayerRef;
+      faceUp: boolean;
+    }
+  | {
       type: "revealTop";
       player: PlayerRef;
       zone?: Zone;
@@ -864,7 +870,8 @@ export type Effect =
   | {
       type: "bounce";
       target: Target;
-      destination: "hand" | "deckTop" | "deckBottom";
+      destination: "hand" | "deckTop" | "deckBottom" | "lifeTop" | "lifeBottom";
+      destinationFaceUp?: boolean;
     }
   | { type: "trash"; target: Target }
   | { type: "ko"; target: Target }
@@ -1027,36 +1034,9 @@ export type Effect =
   | { type: "replacement"; when: ReplacementTrigger; instead: Effect }
   | { type: "custom"; handler: string };
 
-export interface EffectDefinitionMetadata {
-  sourceTextHash: string;
-  rulesVersion: string;
-  effectDefinitionsVersion: string;
-  tested: boolean;
-  reviewer?: string;
-  notes?: string;
-  generatedBy?: "manual" | "rule-parser" | "llm-assisted";
-  reviewedBy?: string;
-  reviewedAt?: string;
-}
-
-export interface EffectBlock {
-  id: EffectId;
-  category: EffectCategory;
-  trigger: Trigger;
-  condition?: Condition;
-  conditionTiming?: "activation" | "resolution" | "both";
-  cost?: EffectBlockCost;
-  optional?: boolean;
-  oncePerTurn?: boolean;
-  failurePolicy?: FailurePolicy;
-  sourcePresencePolicy?: SourcePresencePolicy;
-  presentation?: EffectTextPresentationRef;
-  effect: Effect;
-}
-
-export interface EffectDefinition {
-  cardId: CardId;
-  implementationStatus: CardSupportStatus;
-  effects: EffectBlock[];
-  metadata: EffectDefinitionMetadata;
-}
+export type {
+  EffectBlock,
+  EffectBlockCost,
+  EffectDefinition,
+  EffectDefinitionMetadata,
+} from "./effect-definition.js";

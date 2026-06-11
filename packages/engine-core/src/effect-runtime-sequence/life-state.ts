@@ -1,0 +1,265 @@
+import type {
+  Action,
+  CardRef,
+  Effect,
+  EffectQueueEntry,
+  EngineEvent,
+  EngineResult,
+  GameState,
+  LifeCard,
+  OrderCardsDecision,
+  PlayerId,
+  SequenceSegmentResult,
+} from "@optcg/types";
+
+import {
+  appendEvent,
+  toDecisionId,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
+import { getOpponentId } from "../actions/state.js";
+import type { SegmentLedgers } from "./runner.js";
+
+type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
+type SetLifeFaceUpEffect = Extract<Effect, { type: "setLifeFaceUp" }>;
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+
+const reindexLife = (
+  life: readonly LifeCard[],
+  playerId: PlayerId,
+): LifeCard[] =>
+  life.map((lifeCard, index) => ({
+    ...lifeCard,
+    card: {
+      ...lifeCard.card,
+      zone: { zone: "life", playerId, slot: "life", index },
+    },
+  }));
+
+const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
+
+const resolveEffectPlayer = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  player: ReorderLifeEffect["player"],
+) => {
+  if (player === "self") return entry.controllerId;
+  if (player === "opponent") return getOpponentId(state, entry.controllerId);
+  return null;
+};
+
+const lifeCardRef = (lifeCard: LifeCard, playerId: PlayerId): CardRef => ({
+  instanceId: lifeCard.card.instanceId,
+  cardId: lifeCard.card.cardId,
+  playerId,
+  zone: lifeCard.card.zone,
+});
+
+export const createLifeReorderDecisionForSequenceSegment = (params: {
+  effect: ReorderLifeEffect;
+  entry: EffectQueueEntry;
+  index: number;
+  state: GameState;
+}): { events: EngineEvent[]; ok: true; state: GameState } | { ok: false } => {
+  const targetPlayerId = resolveEffectPlayer(
+    params.state,
+    params.entry,
+    params.effect.player,
+  );
+  const viewerPlayerId = resolveEffectPlayer(
+    params.state,
+    params.entry,
+    params.effect.viewer,
+  );
+  const targetPlayer =
+    targetPlayerId === null ? undefined : params.state.players[targetPlayerId];
+  if (
+    targetPlayerId === null ||
+    viewerPlayerId === null ||
+    targetPlayer === undefined
+  ) {
+    return { ok: false };
+  }
+
+  const visibility = { type: "private", playerId: viewerPlayerId } as const;
+  const decision: OrderCardsDecision = {
+    id: toDecisionId(
+      `decision:orderCards:life-reorder:${String(params.entry.id)}:${String(params.index)}`,
+    ),
+    type: "orderCards",
+    playerId: viewerPlayerId,
+    prompt: "Place Life cards back in any order.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: params.entry.id,
+      effectId: params.entry.effectBlockId,
+    },
+    visibility,
+    cards: targetPlayer.life.map((lifeCard) =>
+      lifeCardRef(lifeCard, targetPlayerId),
+    ),
+    destination: "life",
+    defaultResponse: {
+      type: "orderedIds",
+      ids: targetPlayer.life.map((lifeCard) => lifeCard.card.instanceId),
+    },
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    params.state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    visibility,
+  );
+  const event = events[0];
+  if (event !== undefined) {
+    event.causedBy = decision.causedBy;
+  }
+  return {
+    events,
+    ok: true,
+    state: {
+      ...params.state,
+      seq: toStateSeq(params.state.seq + 1),
+      pendingDecision: decision,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
+
+export const applySetLifeFaceUpSequenceSegment = (params: {
+  effect: SetLifeFaceUpEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): { ledgers: SegmentLedgers; ok: true; state: GameState } | { ok: false } => {
+  const playerId =
+    params.effect.player === "self"
+      ? params.entry.controllerId
+      : getOpponentId(params.state, params.entry.controllerId);
+  const player = playerId === null ? undefined : params.state.players[playerId];
+  if (playerId === null || player === undefined) {
+    return { ok: false };
+  }
+  const nextLife = player.life.map((lifeCard) => ({
+    ...lifeCard,
+    faceUp: params.effect.faceUp,
+  }));
+  const changed = player.life.some(
+    (lifeCard) => lifeCard.faceUp !== params.effect.faceUp,
+  );
+  return {
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: changed,
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...params.state,
+      ...(changed ? { seq: toStateSeq(params.state.seq + 1) } : {}),
+      players: {
+        ...params.state.players,
+        [playerId]: { ...player, life: nextLife },
+      },
+    },
+  };
+};
+
+export const applyLifeReorderDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "orderCards" ||
+    !String(decision.id).startsWith("decision:orderCards:life-reorder:") ||
+    action.decisionId !== decision.id ||
+    action.response.type !== "orderedIds"
+  ) {
+    return null;
+  }
+  const targetPlayerId = decision.cards[0]?.playerId;
+  const targetPlayer =
+    targetPlayerId === undefined ? undefined : state.players[targetPlayerId];
+  if (targetPlayerId === undefined || targetPlayer === undefined) {
+    return null;
+  }
+  const expectedIds = new Set(
+    decision.cards.map((card) => String(card.instanceId)),
+  );
+  if (
+    action.response.ids.length !== expectedIds.size ||
+    action.response.ids.some((id) => !expectedIds.has(id))
+  ) {
+    return null;
+  }
+  const byId = new Map(
+    targetPlayer.life.map((lifeCard) => [
+      String(lifeCard.card.instanceId),
+      lifeCard,
+    ]),
+  );
+  const nextLife = reindexLife(
+    action.response.ids.map((id) => byId.get(id)).filter(isDefined),
+    targetPlayerId,
+  );
+  if (nextLife.length !== targetPlayer.life.length) {
+    return null;
+  }
+  const stateWithoutPendingDecision: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    players: {
+      ...state.players,
+      [targetPlayerId]: { ...targetPlayer, life: nextLife },
+    },
+  };
+  delete stateWithoutPendingDecision.pendingDecision;
+  const events: EngineEvent[] = [];
+  appendEvent(
+    stateWithoutPendingDecision,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: "orderedIds",
+    },
+    decision.visibility,
+  );
+  const event = events[0];
+  if (event !== undefined) {
+    event.causedBy = { type: "decision", decisionId: decision.id };
+  }
+  return toEngineResult(
+    {
+      ...stateWithoutPendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    events,
+  );
+};

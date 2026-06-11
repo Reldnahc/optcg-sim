@@ -25,15 +25,21 @@ import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/a
 import {
   isSupportedDrawSegment,
   isSupportedDrawUpToSegment,
+  isSupportedDamageSegment,
   isSupportedMoveCardsSegment,
   isSupportedPlaceTopDeckCardsSegment,
+  isSupportedReorderLifeSegment,
   isSupportedReturnDonSegment,
+  isSupportedSetLifeFaceUpSegment,
   isSupportedTrashFromHandSegment,
+  type DamageEffect,
   type DrawEffect,
   type DrawUpToEffect,
   type MoveCardsEffect,
   type PlaceTopDeckCardsEffect,
+  type ReorderLifeEffect,
   type ReturnDonEffect,
+  type SetLifeFaceUpEffect,
   type TrashFromHandEffect,
 } from "./support/basic.js";
 import {
@@ -95,8 +101,11 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
     | DrawUpToEffect
+    | DamageEffect
     | MoveCardsEffect
     | ReturnDonEffect
+    | ReorderLifeEffect
+    | SetLifeFaceUpEffect
     | TrashFromHandEffect
     | PlaceTopDeckCardsEffect
     | PayCostEffect
@@ -319,7 +328,17 @@ export const toSupportedSequenceBlock = (
       if (isSupportedMoveCardsSegment(segment.effect)) {
         return true;
       }
+      if (isSupportedDamageSegment(segment.effect)) {
+        return true;
+      }
       if (isSupportedReturnDonSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedReorderLifeSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedSetLifeFaceUpSegment(segment.effect)) {
         return true;
       }
       if (isSupportedPlaceTopDeckCardsSegment(segment.effect)) {
@@ -468,7 +487,7 @@ export const toSupportedSequenceBlock = (
           isSupportedSequenceBlock(
             entry,
             { ...flattenedBlock, effect },
-            options,
+            { ...options, allowInitialTrashFromHand: true },
           ),
         );
       }

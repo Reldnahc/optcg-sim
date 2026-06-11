@@ -2,7 +2,7 @@ import type { MarkerParser } from "../types.js";
 import { sourceSpan, trimSource } from "../source-slices.js";
 
 export const parseAttachedDonMarker: MarkerParser = (input) => {
-  const match = /^\[DON!!\s*x(?<count>[1-9]\d*)\]\s*(?<rest>.*)$/iu.exec(
+  const match = /^\[DON!!\s*x(?<count>[1-9]\d*)\]\s*(?<rest>[\s\S]*)$/iu.exec(
     input.text,
   );
   if (match === null) {

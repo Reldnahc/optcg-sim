@@ -18,10 +18,16 @@ export interface SelectedTargetKoReplacementPayload {
     processFamily: "fieldRemoval";
     classification:
       | "moveFromFieldToDeckBottom"
+      | "moveFromFieldToLife"
       | "moveFromFieldToHand"
       | "moveFromFieldToTrash";
     sourceKind: "battle" | "cardEffect";
     sourceControllerId: PlayerId;
+  };
+  fieldRemovalDestination?: {
+    zone: "life";
+    position: "top" | "bottom";
+    faceUp?: boolean;
   };
   battleContinuation?: {
     type: "endBattleAfterCharacterKoAttempt";

@@ -37,6 +37,49 @@ const assertRuntimeSupported = (
   assert.deepEqual(report.missing, []);
 };
 
+const supportedChoiceBody = (): Extract<Effect, { type: "choice" }> => ({
+  type: "choice",
+  chooser: "self",
+  min: 1,
+  max: 1,
+  options: [
+    {
+      id: "choice:trash",
+      label: "Your opponent trashes 1 card from their hand.",
+      effect: {
+        type: "trashFromHand",
+        player: "opponent",
+        chooser: "opponent",
+        count: 1,
+      },
+    },
+    {
+      id: "choice:cost",
+      label: "Give up to 1 of your opponent's Characters -3 cost.",
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character"] },
+          },
+        },
+        value: -3,
+        duration: { type: "thisTurn" },
+      },
+    },
+  ],
+});
+
 test("runtime admission reports reusable primitive records", () => {
   const report = evaluateEffectBlockRuntimeSupport(
     block({
@@ -118,6 +161,60 @@ test("runtime admission accepts reusable auto bodies through supported entry ada
   );
 });
 
+test("runtime admission accepts choice bodies through supported auto entry adapters", () => {
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect: supportedChoiceBody(),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+    ),
+  );
+
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect: supportedChoiceBody(),
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        trigger: { type: "onKO" },
+      }),
+    ),
+  );
+});
+
+test("runtime admission accepts pay-cost before choice as reusable sequence composition", () => {
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "cost:return-don",
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 3, optional: true },
+              },
+            },
+            {
+              id: "body:choice",
+              connector: "ifYouDo",
+              effect: supportedChoiceBody(),
+            },
+          ],
+        },
+      }),
+    ),
+  );
+});
+
 test("runtime admission accepts deck-top card movement as a reusable auto body", () => {
   const effect = {
     type: "moveCards",
@@ -177,6 +274,169 @@ test("runtime admission accepts effect damage as a reusable auto body", () => {
         effect,
         sourcePresencePolicy: "resolveFromDestinationZone",
         trigger: { type: "onKO" },
+      }),
+    ),
+  );
+});
+
+test("runtime admission accepts damage inside reusable sequence and choice composition", () => {
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "damage",
+                target: "leader",
+                player: "opponent",
+                count: 1,
+              },
+            },
+            {
+              connector: "then",
+              effect: { type: "draw", player: "self", count: 1 },
+            },
+          ],
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+    ),
+  );
+
+  const damageThenLifeToHand: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "conditional",
+          if: { type: "lifeCount", player: "opponent", op: "eq", value: 1 },
+          then: {
+            type: "damage",
+            target: "leader",
+            player: "opponent",
+            count: 1,
+          },
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "life", position: "top" },
+          to: { player: "self", zone: "hand" },
+          order: "original",
+        },
+      },
+    ],
+  };
+
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect: {
+          type: "choice",
+          chooser: "self",
+          min: 1,
+          max: 1,
+          options: [
+            {
+              id: "choice:draw",
+              label: "Draw 1 card.",
+              effect: { type: "draw", player: "self", count: 1 },
+            },
+            {
+              id: "choice:damage",
+              label: "Deal damage, then take life.",
+              effect: damageThenLifeToHand,
+            },
+          ],
+        },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        trigger: { type: "onKO" },
+      }),
+    ),
+  );
+});
+
+test("runtime admission accepts saved Leader-or-Character activation and self-rest segments", () => {
+  const selectionId = "targetSelection:set-field-active" as SelectionId;
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect: {
+          type: "choice",
+          chooser: "self",
+          min: 1,
+          max: 1,
+          options: [
+            {
+              id: "choice:activate",
+              label: "Set a Leader or Character active.",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: selectionId,
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        timing: "onResolution",
+                        chooser: "self",
+                        player: "self",
+                        zones: ["leaderArea", "characterArea"],
+                        min: 0,
+                        max: 1,
+                        allowFewerIfUnavailable: true,
+                        visibility: "public",
+                        filter: {
+                          categories: ["leader", "character"],
+                          cost: { max: 6 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "activate",
+                      target: {
+                        type: "savedFieldObject",
+                        binding: {
+                          family: "selectedTargets",
+                          saveResultAs: selectionId,
+                        },
+                        zones: ["leaderArea", "characterArea"],
+                        player: "self",
+                        visibility: "publicOnly",
+                        onFailure: "failClosed",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              id: "choice:rest",
+              label: "Rest this Character.",
+              effect: {
+                type: "rest",
+                target: { type: "self" },
+              },
+            },
+          ],
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
       }),
     ),
   );
@@ -571,6 +831,37 @@ test("runtime admission accepts costed main sequences with conditional draw and 
                   },
                 ],
               },
+            },
+          ],
+        },
+      }),
+    ),
+  );
+});
+
+test("runtime admission accepts activate-main choice through reusable sequence support", () => {
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "activate",
+        trigger: { type: "activateMain" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "cost:return-don",
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 2, optional: true },
+              },
+            },
+            {
+              id: "body:choice",
+              connector: "ifYouDo",
+              effect: supportedChoiceBody(),
             },
           ],
         },

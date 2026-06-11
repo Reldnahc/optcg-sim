@@ -790,6 +790,16 @@ export type Effect =
       to: Visibility;
     }
   | {
+      type: "reorderLife";
+      player: PlayerRef;
+      viewer: PlayerRef;
+    }
+  | {
+      type: "setLifeFaceUp";
+      player: PlayerRef;
+      faceUp: boolean;
+    }
+  | {
       type: "revealTop";
       player: PlayerRef;
       zone?: Zone;
@@ -856,7 +866,8 @@ export type Effect =
   | {
       type: "bounce";
       target: Target;
-      destination: "hand" | "deckTop" | "deckBottom";
+      destination: "hand" | "deckTop" | "deckBottom" | "lifeTop" | "lifeBottom";
+      destinationFaceUp?: boolean;
     }
   | { type: "trash"; target: Target }
   | { type: "ko"; target: Target }

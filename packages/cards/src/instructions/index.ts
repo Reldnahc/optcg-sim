@@ -14,6 +14,7 @@ export {
 export { parseDrawInstruction } from "./draw.js";
 export { parseDamageInstruction } from "./damage.js";
 export { parseHandToDeckBottomInstruction } from "./hand-to-deck-bottom.js";
+export { parsePlaceAtOwnerLifeInstruction } from "./field-to-life.js";
 export { parsePlaceAtOwnerDeckBottomInstruction } from "./owner-deck-bottom.js";
 export { parseSetFieldActiveInstruction } from "./field-activation.js";
 export {
@@ -25,6 +26,7 @@ export {
 export { parseInvalidateEffectsInstruction } from "./invalidate-effects.js";
 export { parseKoInstruction } from "./ko.js";
 export { parseLifeMovementInstruction } from "./life-movement.js";
+export { parseLifeStateInstruction } from "./life-state.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
 export {
   parseContinuousFieldModifyCostInstruction,
@@ -48,8 +50,10 @@ export {
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
+  parseRestOpponentDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,
   parseRestOpponentCharactersInstruction,
+  parseRestThisCharacterAndOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,

@@ -45,6 +45,7 @@ import { getReplacementDecisionLegalActions } from "./replacement/decision-actio
 import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement/rest-target-actions.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
+  resumeSequenceFrameAfterLifeTriggerDecision,
   resumeSequenceFrameAfterPlaySelectedOverflow,
   resumeSequenceFrameAfterReplacement,
 } from "./effect-runtime-sequence/frames.js";
@@ -58,6 +59,7 @@ import {
   getOptionalActivationLegalActions,
 } from "./runtime/optional-activation/actions.js";
 import {
+  applyLifeReorderSequenceAwareResponse,
   applySequenceSelectCardsChoiceResponse,
   applyPlaceSetRemainderSequenceAwareResponse,
   applySelectedHandDeckPlacementSequenceAwareResponse,
@@ -534,6 +536,28 @@ const applyRespondToDecision = (
   }
   const lifeTriggerResult = applyLifeTriggerDecisionResponse(state, action);
   if (lifeTriggerResult !== null) {
+    if (
+      lifeTriggerResult.errors === undefined &&
+      lifeTriggerResult.state.pendingDecision === undefined
+    ) {
+      const resumed = resumeSequenceFrameAfterLifeTriggerDecision(
+        lifeTriggerResult.state,
+        decision.id,
+        lifeTriggerResult.events,
+      );
+      if (resumed !== undefined) {
+        if (!resumed.ok) {
+          return toEngineResult(state, [], [resumed.error]);
+        }
+        return continueRuntimeAndAttackTimingAfterDecision(
+          state,
+          toEngineResult(resumed.state, [
+            ...lifeTriggerResult.events,
+            ...resumed.events,
+          ]),
+        );
+      }
+    }
     return lifeTriggerResult;
   }
   const replacementRestTargetResult =
@@ -585,6 +609,16 @@ const applyRespondToDecision = (
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       placeSetRemainderResult,
+    );
+  }
+  const lifeReorderResult = applyLifeReorderSequenceAwareResponse(
+    state,
+    action,
+  );
+  if (lifeReorderResult !== null) {
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      lifeReorderResult,
     );
   }
   const selectedHandDeckPlacementResult =

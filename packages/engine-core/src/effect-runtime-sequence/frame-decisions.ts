@@ -41,6 +41,7 @@ import {
   restFromFieldPaymentLegalActions,
   restFromFieldPaymentOption,
 } from "./rest-from-field-cost-options.js";
+import { resolvePlayerId } from "../runtime/primitives/execute.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -364,13 +365,15 @@ export const createChooseEffectOptionDecisionForSequenceSegment = (
   index: number,
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = decisionCauseForEntry(entry);
-  const visibility = { type: "private", playerId: entry.controllerId } as const;
+  const playerId = resolvePlayerId(state, entry, effect.chooser);
+  const decisionPlayerId = playerId ?? entry.controllerId;
+  const visibility = { type: "private", playerId: decisionPlayerId } as const;
   const pendingDecision: ChooseEffectOptionDecision = {
     id: toDecisionId(
       `decision:chooseEffectOption:sequence:${String(entry.id)}:${String(index)}`,
     ),
     type: "chooseEffectOption",
-    playerId: entry.controllerId,
+    playerId: decisionPlayerId,
     prompt: "Choose one effect.",
     causedBy,
     visibility,

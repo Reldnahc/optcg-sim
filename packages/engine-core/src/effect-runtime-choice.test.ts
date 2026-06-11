@@ -23,9 +23,10 @@ import {
 
 const choiceEffect = (
   options?: Extract<Effect, { type: "choice" }>["options"],
+  chooser: Extract<Effect, { type: "choice" }>["chooser"] = "self",
 ): Effect => ({
   type: "choice",
-  chooser: "self",
+  chooser,
   min: 1,
   max: 1,
   options: options ?? [
@@ -150,6 +151,40 @@ test("choice effect creates an effect option decision and resolves the selected 
   const afterP1 = must(resolved.state.players[p1], "p1 after");
   assert.equal(afterP1.hand.length, beforeHand + 1);
   assert.equal(afterP1.deck.length, beforeDeck - 1);
+});
+
+test("choice effect can give the option decision to the opponent", () => {
+  const state = setupChoiceState(choiceEffect(undefined, "opponent"));
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "choice decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseEffectOption");
+  assert.equal(decision.playerId, p2);
+  assert.deepEqual(
+    getLegalActions(paused.state, p1).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    getLegalActions(paused.state, p2).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "effectOption", optionId: "draw-zero" },
+      },
+      {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "effectOption", optionId: "draw-one" },
+      },
+    ],
+  );
 });
 
 test("optional choice effect decline clears the decision and resumes later independent segments", () => {

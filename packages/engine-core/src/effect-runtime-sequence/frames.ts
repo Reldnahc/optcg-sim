@@ -8,6 +8,7 @@ export {
   continueSupportedSequenceFrameFromSegment,
   createSupportedSequenceFrameDecision,
 } from "./frames/start.js";
+export { hasSequenceFrameForDecision } from "./frame-decisions.js";
 export {
   resumeSequenceFrameAfterEffectOption,
   resumeSequenceFrameAfterEffectOptionDecline,
@@ -18,6 +19,7 @@ export {
   resumeSequenceFrameAfterTrashFromHand,
 } from "./frames/selections.js";
 export { resumeSequenceFrameAfterTopDeckPlacement } from "./frames/search-and-placement.js";
+export { resumeSequenceFrameAfterLifeTriggerDecision } from "./frames/life-trigger.js";
 export {
   resumeSequenceFrameAfterOptionalActivation,
   resumeSequenceFrameAfterOptionalCost,

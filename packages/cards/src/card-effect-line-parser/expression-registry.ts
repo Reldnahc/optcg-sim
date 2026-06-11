@@ -128,6 +128,10 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
 };
 
 const costedExpressions = [
+  chooseOneExpressionParser({
+    conditions: conditionParsers,
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   lookPlayFromTopExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
@@ -162,6 +166,7 @@ export const defaultRegistry = {
         lookPlayFromTopExpressionParser,
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
+        singleInstructionExpressionParser,
         generalExpressionParser,
       ],
     }),

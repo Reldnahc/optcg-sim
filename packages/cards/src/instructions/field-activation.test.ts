@@ -62,4 +62,68 @@ describe("field activation instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses typed Leader or Character activation as a reusable saved target", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "Set up to 1 of your {East Blue} type Leader or Character cards with a cost of 6 or less as active.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: {
+                  categories: ["leader", "character"],
+                  typesAny: ["East Blue"],
+                  cost: { max: 6 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "filter:type",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
 });

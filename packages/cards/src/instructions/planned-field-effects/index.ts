@@ -22,11 +22,15 @@ export {
   parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
+  parseRestOpponentDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,
+  parseRestThisCharacterAndOpponentCharactersInstruction,
   restOpponentCardsPrimitive,
   restOpponentCharactersOrDonCardsPrimitive,
   restOpponentCharactersPrimitive,
+  restOpponentDonCardsPrimitive,
   restOpponentLeaderOrCharactersPrimitive,
+  restThisCharacterAndOpponentCharactersPrimitive,
 } from "./rest.js";
 export {
   parsePreventOpponentCharactersBlockerActivationInstruction,

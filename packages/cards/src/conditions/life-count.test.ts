@@ -54,5 +54,17 @@ describe("life count condition parser", () => {
       ],
       rest: "",
     });
+    expect(
+      parseLifeCountCondition({
+        text: "your opponent has 1 Life card",
+      }),
+    ).toMatchObject({
+      condition: {
+        type: "lifeCount",
+        player: "opponent",
+        op: "eq",
+        value: 1,
+      },
+    });
   });
 });

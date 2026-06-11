@@ -11,7 +11,7 @@ const toSingleEffectSequence = (effect: Effect): SequenceEffect => ({
 export const choiceOptionSequences = (
   effect: ChoiceEffect,
 ): readonly SequenceEffect[] =>
-  effect.chooser === "self" &&
+  (effect.chooser === "self" || effect.chooser === "opponent") &&
   (effect.min === 0 || effect.min === 1) &&
   effect.max === 1 &&
   effect.min <= effect.max &&

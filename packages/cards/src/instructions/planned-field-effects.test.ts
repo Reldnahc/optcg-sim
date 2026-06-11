@@ -13,10 +13,14 @@ import {
   parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,
   parseRestOpponentCharactersInstruction,
+  parseRestOpponentDonCardsInstruction,
+  parseRestThisCharacterAndOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   restOpponentCardsPrimitive,
   restOpponentCharactersOrDonCardsPrimitive,
   restOpponentCharactersPrimitive,
+  restOpponentDonCardsPrimitive,
+  restThisCharacterAndOpponentCharactersPrimitive,
   yourLeaderPowerOpponentNextEndPrimitive,
 } from "./planned-field-effects.js";
 
@@ -35,6 +39,19 @@ describe("planned field-effect instruction parsers", () => {
       childPrimitiveIds: [
         "cardinality:upTo",
         "target:opponentCharactersOrDonCards",
+      ],
+    });
+    expect(restOpponentDonCardsPrimitive).toEqual({
+      primitiveId: "instruction:rest",
+      childPrimitiveIds: ["cardinality:upTo", "target:opponentDonCards"],
+    });
+    expect(restThisCharacterAndOpponentCharactersPrimitive).toEqual({
+      primitiveId: "instruction:rest",
+      childPrimitiveIds: [
+        "target:thisCharacter",
+        "cardinality:upTo",
+        "target:opponentCharacters",
+        "composition:sequence",
       ],
     });
     expect(preventThatCharacterRefreshPrimitive).toEqual({
@@ -119,6 +136,110 @@ describe("planned field-effect instruction parsers", () => {
         "zone:costArea",
         "filter:category:character",
         "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses rest opponent DON cards as a reusable cost-area target selection", () => {
+    expect(
+      parseRestOpponentDonCardsInstruction({
+        text: "Rest up to 1 of your opponent's DON!! cards.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["costArea"],
+            filter: { categories: ["don"] },
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:opponentDonCards",
+        "player:opponent",
+        "zone:costArea",
+        "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses rest this Character and opponent Characters as reusable rest sequence", () => {
+    expect(
+      parseRestThisCharacterAndOpponentCharactersInstruction({
+        text: "Rest this Character and up to 1 of your opponent's Characters.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "rest",
+              target: { type: "self" },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: "selected:thatCharacter",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      player: "opponent",
+                      zone: "characterArea",
+                      min: 0,
+                      max: 1,
+                      allowFewerIfUnavailable: true,
+                      visibility: "public",
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "rest",
+                    target: { type: "savedFieldObject" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:rest",
+        "target:thisCharacter",
+        "instruction:rest",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "composition:sequence",
       ],
       rest: "",
     });

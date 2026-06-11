@@ -381,6 +381,60 @@ export const applyFieldMutationSequenceSegment = (params: {
         state: rested.state,
       };
     }
+    if (segment.effect.target.type === "self") {
+      const selfRef = entry.source.zone
+        ? {
+            instanceId: entry.source.instanceId,
+            cardId: entry.source.cardId,
+            playerId: entry.source.playerId,
+            zone: entry.source.zone,
+          }
+        : undefined;
+      if (selfRef === undefined) {
+        return {
+          events,
+          handled: true,
+          kind: "continue",
+          ledgers: {
+            ...ledgers,
+            segmentResults: {
+              ...ledgers.segmentResults,
+              [segmentKey(segment, index)]: {
+                ...emptySegmentResult(),
+                attempted: true,
+              },
+            },
+          },
+          ok: true,
+          state,
+        };
+      }
+      const rested = restFieldObjects(
+        state,
+        [selfRef],
+        restProtectionAttemptFromEntry(entry),
+      );
+      return {
+        events,
+        handled: true,
+        kind: "continue",
+        ledgers: {
+          ...ledgers,
+          segmentResults: {
+            ...ledgers.segmentResults,
+            [segmentKey(segment, index)]: {
+              ...emptySegmentResult(),
+              attempted: true,
+              succeeded: true,
+              changedState: rested.changed,
+              selectedTargets: [selfRef],
+            },
+          },
+        },
+        ok: true,
+        state: rested.state,
+      };
+    }
     const rested = applySavedFieldObjectRestSequenceSegment({
       emptySegmentResult,
       entry,

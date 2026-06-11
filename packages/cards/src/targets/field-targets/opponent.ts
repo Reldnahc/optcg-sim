@@ -53,6 +53,41 @@ export function parseOpponentCardsTarget(
   };
 }
 
+export function parseOpponentDonCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match = /^of your opponent's DON!! cards?\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["costArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: { categories: ["don"] },
+      },
+    },
+    evidence: [
+      "target:opponentDonCards",
+      "player:opponent",
+      "zone:costArea",
+      "filter:category:don",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
+
 export function parseOpponentFieldTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {

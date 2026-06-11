@@ -280,6 +280,31 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
     expect(result?.evidence).not.toContain("instruction:damage");
   });
 
+  it("parses exact opponent life top trash as movement, not damage", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Trash 1 card from the top of your opponent's Life cards.",
+    );
+
+    expect(blockEffect(result)).toMatchObject({
+      type: "moveCards",
+      count: 1,
+      from: { player: "opponent", zone: "life", position: "top" },
+      to: { player: "opponent", zone: "trash" },
+      order: "original",
+    });
+    expect(blockEffect(result)).not.toHaveProperty("min");
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:moveCards",
+        "player:opponent",
+        "zone:life",
+        "destination:trash",
+      ]),
+    );
+    expect(result?.evidence).not.toContain("cardinality:upTo");
+    expect(result?.evidence).not.toContain("instruction:damage");
+  });
+
   it("parses selected character current power as a base-power snapshot source", () => {
     const result = parseCardEffectLine(
       "[When Attacking] Select up to 1 of your opponent's Characters. This Character's base power becomes the same as the selected Character's power during this turn.",

@@ -14,6 +14,7 @@ import {
 } from "../concrete-card-movement.js";
 import { moveFieldCardToOwnerDeckBottom } from "../movement/field-to-deck.js";
 import { moveFieldCardToOwnerHand } from "../movement/field-to-hand.js";
+import { moveFieldCardToOwnerLife } from "../movement/field-to-life.js";
 import { applyFieldRemovalProtection } from "./field-removal-protection.js";
 import {
   fieldRemovalProcessTargets,
@@ -94,7 +95,15 @@ const findCardByInstanceId = (
 
 const fieldRemovalMoveDestination = (
   process: ReplacementProcess,
-): "deckBottom" | "hand" | null => {
+):
+  | { destination: "deckBottom" }
+  | { destination: "hand" }
+  | {
+      destination: "life";
+      faceUp?: boolean;
+      position: "top" | "bottom";
+    }
+  | null => {
   if (process.type !== "moveZone") {
     return null;
   }
@@ -112,10 +121,32 @@ const fieldRemovalMoveDestination = (
     "classification" in attempt
   ) {
     if (attempt.classification === "moveFromFieldToHand") {
-      return "hand";
+      return { destination: "hand" };
     }
     if (attempt.classification === "moveFromFieldToDeckBottom") {
-      return "deckBottom";
+      return { destination: "deckBottom" };
+    }
+    if (attempt.classification === "moveFromFieldToLife") {
+      const destination =
+        "fieldRemovalDestination" in payload
+          ? payload.fieldRemovalDestination
+          : undefined;
+      if (
+        typeof destination === "object" &&
+        destination !== null &&
+        "zone" in destination &&
+        destination.zone === "life" &&
+        "position" in destination &&
+        (destination.position === "top" || destination.position === "bottom")
+      ) {
+        return {
+          destination: "life",
+          position: destination.position,
+          ...("faceUp" in destination && typeof destination.faceUp === "boolean"
+            ? { faceUp: destination.faceUp }
+            : {}),
+        };
+      }
     }
   }
   return null;
@@ -158,7 +189,7 @@ const executeUnreplacedSingleMoveZoneProcess = (
     return { state };
   }
 
-  if (destination === "hand") {
+  if (destination.destination === "hand") {
     return moveFieldCardToOwnerHand({
       card: located.card,
       causedBy: process.causedBy,
@@ -166,6 +197,20 @@ const executeUnreplacedSingleMoveZoneProcess = (
       playerId: located.playerId,
       sourceZone: located.zone,
       state,
+    });
+  }
+  if (destination.destination === "life") {
+    return moveFieldCardToOwnerLife({
+      card: located.card,
+      causedBy: process.causedBy,
+      events,
+      playerId: located.playerId,
+      position: destination.position,
+      sourceZone: located.zone,
+      state,
+      ...(destination.faceUp === undefined
+        ? {}
+        : { faceUp: destination.faceUp }),
     });
   }
   return moveFieldCardToOwnerDeckBottom({

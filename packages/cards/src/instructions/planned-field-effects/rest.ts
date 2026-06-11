@@ -3,6 +3,7 @@ import {
   parseOpponentCardsTarget,
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
+  parseOpponentDonCardsTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
@@ -31,6 +32,21 @@ export const restOpponentCharactersOrDonCardsPrimitive = {
   childPrimitiveIds: [
     "cardinality:upTo",
     "target:opponentCharactersOrDonCards",
+  ],
+} as const;
+
+export const restOpponentDonCardsPrimitive = {
+  primitiveId: "instruction:rest",
+  childPrimitiveIds: ["cardinality:upTo", "target:opponentDonCards"],
+} as const;
+
+export const restThisCharacterAndOpponentCharactersPrimitive = {
+  primitiveId: "instruction:rest",
+  childPrimitiveIds: [
+    "target:thisCharacter",
+    "cardinality:upTo",
+    "target:opponentCharacters",
+    "composition:sequence",
   ],
 } as const;
 
@@ -95,6 +111,52 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
   };
 };
 
+export const parseRestThisCharacterAndOpponentCharactersInstruction: InstructionParser =
+  (input) => {
+    const match =
+      /^Rest this Character and (?<opponent>up to [1-9]\d* of your opponent's Characters?.*)$/iu.exec(
+        input.text,
+      );
+    const opponentText = match?.groups?.["opponent"];
+    if (opponentText === undefined) {
+      return undefined;
+    }
+    const opponentRest = parseRestOpponentCharactersInstruction({
+      text: `Rest ${opponentText}`,
+    });
+    if (opponentRest === undefined || opponentRest.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "rest:this-character",
+            connector: "always",
+            effect: {
+              type: "rest",
+              target: { type: "self" },
+            },
+          },
+          {
+            id: "rest:opponent-characters",
+            connector: "then",
+            effect: opponentRest.effect,
+          },
+        ],
+      },
+      evidence: [
+        "instruction:rest",
+        "target:thisCharacter",
+        ...opponentRest.evidence,
+        "composition:sequence",
+      ],
+      rest: "",
+    };
+  };
+
 export const parseRestOpponentCharactersOrDonCardsInstruction: InstructionParser =
   (input) => {
     const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.[
@@ -142,6 +204,51 @@ export const parseRestOpponentCharactersOrDonCardsInstruction: InstructionParser
       rest: "",
     };
   };
+
+export const parseRestOpponentDonCardsInstruction: InstructionParser = (
+  input,
+) => {
+  const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
+  if (actionRest === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: actionRest });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = parseOpponentDonCardsTarget({ text: cardinality.rest });
+  if (
+    target === undefined ||
+    target.target?.type !== "chooseFromZones" ||
+    (target.rest.length > 0 && target.rest !== ".")
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "rest",
+      target: {
+        type: "chooseFromZones",
+        request: {
+          ...target.target.request,
+          min: cardinality.cardinality.min,
+          max: cardinality.cardinality.max,
+          allowFewerIfUnavailable: true,
+        },
+      },
+    },
+    evidence: [
+      "instruction:rest",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+    ],
+    rest: "",
+  };
+};
 
 export const parseRestOpponentCardsInstruction: InstructionParser = (input) => {
   const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];

@@ -2,6 +2,7 @@ export {
   opponentCardsTargetPrimitive,
   opponentCharactersOrDonCardsTargetPrimitive,
   opponentCharactersTargetPrimitive,
+  opponentDonCardsTargetPrimitive,
   opponentLeaderOrCharactersTargetPrimitive,
   opponentStagesTargetPrimitive,
   yourCharactersTargetPrimitive,
@@ -13,6 +14,7 @@ export {
   parseOpponentCardsTarget,
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
+  parseOpponentDonCardsTarget,
   parseOpponentFieldTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
 } from "./opponent.js";

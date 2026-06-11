@@ -11,7 +11,6 @@ import type {
   OrderCardsDecision,
   SelectCardsDecision,
   SequenceSegmentResult,
-  Target,
 } from "@optcg/types";
 
 import {
@@ -19,9 +18,7 @@ import {
   reindexZoneCards,
 } from "../actions/state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
-import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { applyDonAttachment } from "../runtime/primitives/don-attachment.js";
-import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
 import {
   applySetToLifeSelectedCardMoveSegment,
   applyTrashToLifeSelectedCardMoveSegment,
@@ -35,10 +32,6 @@ type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
 type AttachSelectedDonEffect = Extract<Effect, { type: "attachSelectedDon" }>;
 type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
-type BounceEffect = Extract<Effect, { type: "bounce" }> & {
-  target: Extract<Target, { type: "savedFieldObject" }>;
-  destination: "deckBottom" | "hand";
-};
 type SegmentLedgers = {
   savedReferences: NonNullable<
     GameState["effectExecutionFrames"][number]
@@ -360,6 +353,13 @@ export const applySelectedCardMoveSegment = (
     return applyTrashToLifeSelectedCardMoveSegment(params, selected);
   }
   if (
+    params.effect.from === "trash" &&
+    params.effect.to === "deck" &&
+    params.effect.position === "bottom"
+  ) {
+    return applyTrashToDeckBottomSelectedCardMoveSegment(params, selected);
+  }
+  if (
     params.effect.from === "hand" &&
     params.effect.to === "deck" &&
     (params.effect.position === "top" ||
@@ -384,6 +384,109 @@ export const applySelectedCardMoveSegment = (
     return applySetToLifeSelectedCardMoveSegment(params, selected);
   }
   return { ok: false };
+};
+
+const applyTrashToDeckBottomSelectedCardMoveSegment = (
+  params: SelectedCardMoveSegmentParams,
+  selected: readonly CardRef[],
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      paused?: false;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const playerId = selectedRefsPlayerId(selected);
+  const player = playerId === null ? undefined : params.state.players[playerId];
+  if (playerId === null || player === undefined) {
+    return { ok: false };
+  }
+  const selectedIds = new Set(selected.map((card) => card.instanceId));
+  const movedCards: CardInstance[] = [];
+  for (const selectedCard of selected) {
+    const current = player.trash.find(
+      (card) =>
+        card.instanceId === selectedCard.instanceId &&
+        card.cardId === selectedCard.cardId,
+    );
+    if (current === undefined) {
+      return { ok: false };
+    }
+    movedCards.push(current);
+  }
+  const nextTrash = reindexZoneCards(
+    player.trash.filter((card) => !selectedIds.has(card.instanceId)),
+    "trash",
+    playerId,
+    "trash",
+  );
+  const nextDeck = reindexZoneCards(
+    [...player.deck, ...movedCards],
+    "deck",
+    playerId,
+    "deck",
+  );
+  const eventBaseState: GameState = {
+    ...params.state,
+    players: {
+      ...params.state.players,
+      [playerId]: {
+        ...player,
+        deck: nextDeck,
+        trash: nextTrash,
+      },
+    },
+  };
+  const events: EngineEvent[] = [];
+  for (const card of movedCards) {
+    const moved = nextDeck.find(
+      (candidate) => candidate.instanceId === card.instanceId,
+    );
+    appendEvent(
+      eventBaseState,
+      events,
+      "cardMoved",
+      {
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        from: card.zone,
+        to: moved?.zone,
+        reason: "effect",
+      },
+      { type: "public" },
+    );
+    const event = events[events.length - 1];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: params.entry.id,
+        effectId: params.entry.effectBlockId,
+      };
+    }
+  }
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: movedCards.length > 0,
+          selectedCards: [...selected],
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...eventBaseState,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
 };
 
 const applyHandToDeckSelectedCardMoveSegment = (
@@ -603,6 +706,8 @@ const isSelectedHandDeckPlacementDecision = (
   decision.type === "orderCards" &&
   String(decision.id).startsWith(selectedHandDeckPlacementDecisionPrefix);
 
+export { applyBounceSequenceSegment } from "./selected-bounce.js";
+
 export const applySelectedHandDeckPlacementDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -752,143 +857,4 @@ export const applySelectedHandDeckPlacementDecisionResponse = (
   };
   delete nextState.pendingDecision;
   return { events, ok: true, state: nextState };
-};
-
-export const applyBounceSequenceSegment = (params: {
-  effect: BounceEffect;
-  emptySegmentResult: () => SequenceSegmentResult;
-  entry: EffectQueueEntry;
-  index: number;
-  ledgers: SegmentLedgers;
-  segment: SequenceEffect["effects"][number];
-  segmentKey: (
-    segment: SequenceEffect["effects"][number],
-    index: number,
-  ) => string;
-  state: GameState;
-}):
-  | {
-      events: EngineEvent[];
-      ledgers: SegmentLedgers;
-      ok: true;
-      paused?: true;
-      state: GameState;
-    }
-  | { ok: false } => {
-  const selected =
-    params.ledgers.savedReferences[params.effect.target.binding.saveResultAs];
-  if (selected?.kind !== "selectedTargets") {
-    return { ok: false };
-  }
-  const classification =
-    params.effect.destination === "hand"
-      ? "moveFromFieldToHand"
-      : "moveFromFieldToDeckBottom";
-  let nextState = params.state;
-  const events: EngineEvent[] = [];
-  const resultKey = params.segmentKey(params.segment, params.index);
-  const priorAttemptedTargets =
-    params.ledgers.segmentResults[resultKey]?.selectedTargets ?? [];
-  const attemptedTargets: CardRef[] = [...priorAttemptedTargets];
-  const attemptedTargetIds = new Set(
-    priorAttemptedTargets.map((target) => target.instanceId),
-  );
-  const changedStateBeforePause =
-    params.ledgers.segmentResults[resultKey]?.changedState ?? false;
-  const processTargets: CardRef[] = [];
-  for (const selectedTarget of selected.targets) {
-    const target = selectedTarget.object;
-    if (attemptedTargetIds.has(target.instanceId)) {
-      continue;
-    }
-    const player = nextState.players[target.playerId];
-    const sourceZone = target.zone?.zone;
-    if (
-      player === undefined ||
-      (sourceZone !== "characterArea" && sourceZone !== "stageArea")
-    ) {
-      continue;
-    }
-    const card =
-      sourceZone === "characterArea"
-        ? player.characters.find(
-            (candidate) => candidate.instanceId === target.instanceId,
-          )
-        : player.stage?.instanceId === target.instanceId
-          ? player.stage
-          : undefined;
-    if (card === undefined) {
-      continue;
-    }
-    processTargets.push(target);
-  }
-  if (processTargets.length > 0) {
-    const process = buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess({
-      classification,
-      entry: params.entry,
-      targets: processTargets,
-    });
-    const resolved = executeSelectedTargetFieldRemovalReplacementProcess(
-      nextState,
-      events,
-      params.entry.effectBlockId,
-      process,
-    );
-    if ("error" in resolved) {
-      return { ok: false };
-    }
-    if (resolved.paused === true) {
-      attemptedTargets.push(...processTargets);
-      return {
-        events,
-        ledgers: {
-          ...params.ledgers,
-          segmentResults: {
-            ...params.ledgers.segmentResults,
-            [resultKey]: {
-              ...params.emptySegmentResult(),
-              attempted: true,
-              changedState: changedStateBeforePause || events.length > 0,
-              selectedTargets: attemptedTargets,
-            },
-          },
-        },
-        ok: true,
-        paused: true,
-        state: resolved.state,
-      };
-    }
-    nextState = resolved.state;
-    for (const target of processTargets) {
-      attemptedTargets.push(target);
-      attemptedTargetIds.add(target.instanceId);
-    }
-  }
-  return {
-    events,
-    ledgers: {
-      ...params.ledgers,
-      segmentResults: {
-        ...params.ledgers.segmentResults,
-        [resultKey]: {
-          ...params.emptySegmentResult(),
-          attempted: true,
-          succeeded: true,
-          changedState:
-            changedStateBeforePause ||
-            attemptedTargets.length > priorAttemptedTargets.length,
-          selectedTargets: attemptedTargets,
-        },
-      },
-    },
-    ok: true,
-    state: {
-      ...nextState,
-      seq:
-        attemptedTargets.length === priorAttemptedTargets.length
-          ? nextState.seq
-          : toStateSeq(nextState.seq + 1),
-      eventJournal: [...params.state.eventJournal, ...events],
-    },
-  };
 };

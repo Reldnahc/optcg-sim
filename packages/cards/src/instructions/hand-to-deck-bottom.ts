@@ -6,8 +6,13 @@ const opponentHandToDeckBottomSelection =
   "handSelection:opponent-hand-to-deck-bottom" as SelectionId;
 const selfHandToDeckPlacementSelection =
   "handSelection:self-hand-to-deck-placement" as SelectionId;
+const opponentTrashToDeckBottomSelection =
+  "trashSelection:opponent-trash-to-deck-bottom" as SelectionId;
+const selfTrashToDeckPlacementSelection =
+  "trashSelection:self-trash-to-deck-placement" as SelectionId;
 
 type DeckPlacement = "top" | "bottom" | "topOrBottom";
+type SourceZone = "hand" | "trash";
 
 const parseDeckPlacement = (text: string): DeckPlacement | undefined => {
   if (text === "top") return "top";
@@ -25,17 +30,19 @@ const deckPlacementEvidence = (
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const match =
-    /^(?:(?<player>your opponent|you|they) places?|place) (?<count>\d+) cards? from (?<possessive>their|your) hand at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
+    /^(?:(?<player>your opponent|you|they) places?|place) (?<count>\d+) cards? from (?<possessive>their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
   const playerText = match?.groups?.["player"]?.toLowerCase() ?? "you";
   const possessive = match?.groups?.["possessive"]?.toLowerCase();
+  const zoneText = match?.groups?.["zone"]?.toLowerCase();
   const deckPossessive = match?.groups?.["deckPossessive"]?.toLowerCase();
   const placementText = match?.groups?.["placement"]?.toLowerCase();
   if (
     countText === undefined ||
     possessive === undefined ||
+    zoneText === undefined ||
     deckPossessive === undefined ||
     placementText === undefined
   ) {
@@ -49,6 +56,10 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   if (placement === undefined) {
     return undefined;
   }
+  const zone = parseSourceZone(zoneText);
+  if (zone === undefined) {
+    return undefined;
+  }
   const player =
     playerText === "your opponent" || playerText === "they"
       ? "opponent"
@@ -60,10 +71,8 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   ) {
     return undefined;
   }
-  const selection =
-    player === "opponent"
-      ? opponentHandToDeckBottomSelection
-      : selfHandToDeckPlacementSelection;
+  const selection = selectionFor(player, zone);
+  const visibility = zone === "trash" ? "bothPlayers" : "chooserOnly";
 
   return {
     effect: {
@@ -74,13 +83,13 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
           saveResultAs: selection,
           effect: {
             type: "selectCards",
-            zone: "hand",
+            zone,
             player,
             chooser: player,
             min: count,
             max: count,
             saveAs: selection,
-            visibility: "chooserOnly",
+            visibility,
           },
         },
         {
@@ -88,7 +97,7 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
           effect: {
             type: "moveSelected",
             selection,
-            from: "hand",
+            from: zone,
             to: "deck",
             position: placement,
           },
@@ -99,7 +108,7 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
       "instruction:moveSelected",
       "cardinality:exact",
       "count:positiveInteger",
-      "zone:hand",
+      `zone:${zone}`,
       player === "opponent" ? "player:opponent" : "player:self",
       player === "opponent" ? "chooser:opponent" : "chooser:self",
       "zone:deck",
@@ -108,4 +117,25 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
     ],
     rest: "",
   };
+};
+
+const parseSourceZone = (text: string): SourceZone | undefined => {
+  if (text === "hand" || text === "trash") {
+    return text;
+  }
+  return undefined;
+};
+
+const selectionFor = (
+  player: "self" | "opponent",
+  zone: SourceZone,
+): SelectionId => {
+  if (zone === "trash") {
+    return player === "opponent"
+      ? opponentTrashToDeckBottomSelection
+      : selfTrashToDeckPlacementSelection;
+  }
+  return player === "opponent"
+    ? opponentHandToDeckBottomSelection
+    : selfHandToDeckPlacementSelection;
 };

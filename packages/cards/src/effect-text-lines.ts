@@ -125,7 +125,7 @@ const groupChooseOneBlockSlices = (
 };
 
 const isChooseOneHeader = (line: string): boolean =>
-  /choose one:\s*$/iu.test(line);
+  /chooses? one:\s*$/iu.test(line);
 
 const joinSlices = (
   slices: readonly SourceSlice[],

@@ -2,14 +2,18 @@ import type { Effect } from "@optcg/types";
 
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
+import { isSupportedDamageEffect } from "../../runtime/primitives/execute.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 
 export type DrawEffect = Extract<Effect, { type: "draw" }>;
 export type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
+export type DamageEffect = Extract<Effect, { type: "damage" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
+export type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
+export type SetLifeFaceUpEffect = Extract<Effect, { type: "setLifeFaceUp" }>;
 export type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 export type PlaceTopDeckCardsEffect = Extract<
   Effect,
@@ -47,6 +51,11 @@ export const isSupportedMoveCardsSegment = (
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" && isSupportedMoveCardsEffect(effect);
 
+export const isSupportedDamageSegment = (
+  effect: SequenceSegmentEffect,
+): effect is DamageEffect =>
+  effect.type === "damage" && isSupportedDamageEffect(effect);
+
 export const isSupportedReturnDonSegment = (
   effect: SequenceSegmentEffect,
 ): effect is ReturnDonEffect =>
@@ -54,6 +63,18 @@ export const isSupportedReturnDonSegment = (
   effect.player === "opponent" &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
+
+export const isSupportedReorderLifeSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ReorderLifeEffect =>
+  effect.type === "reorderLife" &&
+  effect.player === "opponent" &&
+  effect.viewer === "self";
+
+export const isSupportedSetLifeFaceUpSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SetLifeFaceUpEffect =>
+  effect.type === "setLifeFaceUp" && effect.player === "self" && !effect.faceUp;
 
 export const isSupportedPlaceTopDeckCardsSegment = (
   effect: SequenceSegmentEffect,

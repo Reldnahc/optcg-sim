@@ -26,7 +26,8 @@ export const resumeSequenceFrameAfterTopDeckPlacement = (
     supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
-    pausedSegment.effect.type !== "placeTopDeckCards"
+    (pausedSegment.effect.type !== "placeTopDeckCards" &&
+      pausedSegment.effect.type !== "reorderLife")
   ) {
     return {
       error: sequenceRuntimeError(

@@ -440,6 +440,15 @@ const continueDamageAfterLifeTriggerResponse = (
     return responseResult;
   }
   if (state.battle === undefined) {
+    const decisionId = state.pendingDecision?.id;
+    if (
+      decisionId !== undefined &&
+      state.effectExecutionFrames.some(
+        (frame) => frame.pendingDecision.decisionId === decisionId,
+      )
+    ) {
+      return responseResult;
+    }
     const releasedState = releaseDamageDeferredEffectQueue(
       responseResult.state,
     );

@@ -2,6 +2,7 @@ import type { CardFilter, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { parseYourLeaderOrCharacterCardsTarget } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
 const fieldActivationTarget = "targetSelection:set-field-active" as SelectionId;
@@ -39,6 +40,65 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
   if (quantity === undefined) {
     return undefined;
   }
+  const leaderOrCharacterTarget = parseYourLeaderOrCharacterCardsTarget({
+    text: quantity.rest,
+  });
+  if (
+    leaderOrCharacterTarget !== undefined &&
+    leaderOrCharacterTarget.target?.type === "chooseFromZones" &&
+    (leaderOrCharacterTarget.rest.length === 0 ||
+      leaderOrCharacterTarget.rest === ".")
+  ) {
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:field-to-activate",
+            connector: "always",
+            saveResultAs: fieldActivationTarget,
+            effect: {
+              type: "selectTargets",
+              request: {
+                ...leaderOrCharacterTarget.target.request,
+                min: quantity.cardinality.min,
+                max: quantity.cardinality.max,
+                allowFewerIfUnavailable: true,
+              },
+            },
+          },
+          {
+            id: "activate:selected-field",
+            connector: "then",
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: fieldActivationTarget,
+                },
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        ...quantity.evidence,
+        "chooser:self:upTo",
+        ...leaderOrCharacterTarget.evidence,
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const targetText = parseSelfCharacterTargetText(quantity.rest);
   if (targetText === undefined) {
     return undefined;

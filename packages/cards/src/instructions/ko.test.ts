@@ -100,4 +100,92 @@ describe("K.O. instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses K.O.-or-return as one selected target followed by reusable action choice", () => {
+    expect(
+      parseKoInstruction({
+        text: "K.O. up to 1 of your opponent's Characters with a cost of 6 or less, or return it to the owner's hand.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:ko-or-return-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 6 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "choice",
+              chooser: "self",
+              min: 1,
+              max: 1,
+              options: [
+                {
+                  effect: {
+                    type: "ko",
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "selectedTargets",
+                        saveResultAs: "selected:ko-or-return-target",
+                      },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "bounce",
+                    destination: "hand",
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "selectedTargets",
+                        saveResultAs: "selected:ko-or-return-target",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:ko",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "instruction:returnToOwnerHand",
+        "destination:ownerHand",
+        "composition:chooseOne",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
 });

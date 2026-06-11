@@ -9,9 +9,11 @@ import type {
 } from "@optcg/types";
 
 import {
+  applyAction,
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
@@ -198,6 +200,39 @@ const conditionalDraw = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const selfRest = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "rest-self",
+      connector: "always",
+      effect: { type: "rest", target: { type: "self" } },
+    },
+  ],
+});
+
+const reorderOpponentLife = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "reorder-opponent-life",
+      connector: "always",
+      effect: { type: "reorderLife", player: "opponent", viewer: "self" },
+    },
+  ],
+});
+
+const turnOwnLifeFaceDown = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "turn-life-face-down",
+      connector: "always",
+      effect: { type: "setLifeFaceUp", player: "self", faceUp: false },
+    },
+  ],
+});
+
 test("sequence runner executes draw through root, nested, and conditional composition doors", () => {
   const cases = [
     { effect: rootDraw(), name: "root", withTrash: false },
@@ -229,4 +264,80 @@ test("sequence runner executes draw through root, nested, and conditional compos
     );
     assert.equal(drawEvents.length, 1, testCase.name);
   }
+});
+
+test("sequence runner executes self-target rest through the reusable rest primitive", () => {
+  const state = sequenceQueueState(selfRest());
+  const beforeSource = must(
+    must(state.players[p1], "before p1").characters[0],
+    "source character",
+  );
+  assert.equal(beforeSource.state, "active");
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const afterSource = must(
+    must(resolved.state.players[p1], "after p1").characters.find(
+      (card) => card.instanceId === beforeSource.instanceId,
+    ),
+    "rested source character",
+  );
+  assert.equal(afterSource.state, "rested");
+});
+
+test("sequence runner reorders opponent Life through a private order decision", () => {
+  const state = sequenceQueueState(reorderOpponentLife());
+  const beforeP2 = must(state.players[p2], "before p2");
+  const originalIds = beforeP2.life.map((lifeCard) => lifeCard.card.instanceId);
+
+  const paused = processEffectRuntime(state);
+
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "Life order decision");
+  assert.equal(decision.type, "orderCards");
+  assert.equal(decision.playerId, p1);
+  assert.deepEqual(
+    decision.cards.map((card) => card.instanceId),
+    originalIds,
+  );
+
+  const orderedIds = [...originalIds].reverse();
+  const resolved = processEffectRuntime(
+    applyAction(paused.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "orderedIds", ids: orderedIds },
+    }).state,
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(
+    must(resolved.state.players[p2], "after p2").life.map(
+      (lifeCard) => lifeCard.card.instanceId,
+    ),
+    orderedIds,
+  );
+});
+
+test("sequence runner turns own Life cards face-down without a target whitelist", () => {
+  const state = sequenceQueueState(turnOwnLifeFaceDown());
+  const p1State = must(state.players[p1], "p1");
+  p1State.life = p1State.life.map((lifeCard) => ({
+    ...lifeCard,
+    faceUp: true,
+  }));
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(
+    must(resolved.state.players[p1], "after p1").life.every(
+      (lifeCard) => !lifeCard.faceUp,
+    ),
+    true,
+  );
 });

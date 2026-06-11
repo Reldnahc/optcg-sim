@@ -186,6 +186,94 @@ test("opponent hand selection moves chosen card to the bottom of opponent deck",
   );
 });
 
+test("opponent trash selection moves chosen cards to the bottom of opponent deck", () => {
+  const selection =
+    "trashSelection:opponent-trash-to-deck-bottom" as SelectionId;
+  const state = queueSequence({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        saveResultAs: selection,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "opponent",
+          chooser: "opponent",
+          min: 2,
+          max: 2,
+          saveAs: selection,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: "trash",
+          to: "deck",
+          position: "bottom",
+        },
+      },
+    ],
+  });
+  const opponent = must(state.players[p2], "p2");
+  opponent.trash = opponent.hand.slice(0, 3).map((card, index) => ({
+    ...card,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index },
+  }));
+  opponent.hand = reindexHand(opponent.hand.slice(3), p2);
+  const selected = [
+    must(opponent.trash[0], "first selected opponent trash card"),
+    must(opponent.trash[2], "second selected opponent trash card"),
+  ];
+  const originalDeckIds = opponent.deck.map((card) => card.instanceId);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p2);
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    opponent.trash.map((card) => card.instanceId),
+  );
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: selected.map((card) => ({
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        playerId: p2,
+        zone: card.zone,
+      })),
+    },
+  });
+  const resolvedOpponent = must(resolved.state.players[p2], "resolved p2");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.ok(
+    !resolvedOpponent.trash.some((card) =>
+      selected.some((moved) => moved.instanceId === card.instanceId),
+    ),
+  );
+  assert.deepEqual(
+    resolvedOpponent.deck.map((card) => card.instanceId),
+    [
+      ...originalDeckIds,
+      must(selected[0], "first moved card").instanceId,
+      must(selected[1], "second moved card").instanceId,
+    ],
+  );
+});
+
 test("self hand selection can be ordered onto the top of deck through an order decision", () => {
   const selection = "handSelection:self-hand-to-deck-placement" as SelectionId;
   const state = queueSequence({
