@@ -655,7 +655,7 @@ describe("card action menu", () => {
     assert.match(styles, /\.card-face\s*\{[^}]*border:\s*0;/u);
     assert.match(
       appShellStyles,
-      /\.match-app\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 14\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 22\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
+      /\.match-app\s*\{[^}]*--card-corner-radius:\s*calc\(var\(--card-height\) \/ 28\);[^}]*--card-outline-heavy:\s*calc\(var\(--card-height\) \/ 22\);[^}]*--card-outline-medium:\s*calc\(var\(--card-height\) \/ 24\);[^}]*--card-outline-thin:\s*calc\(var\(--card-height\) \/ 42\);/u,
     );
     assert.match(
       styles,
