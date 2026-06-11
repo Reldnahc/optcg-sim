@@ -19,6 +19,7 @@ const supportedRestriction = new Set([
 ]);
 
 const supportedFilterKeys = new Set<keyof CardFilter>([
+  "anyOf",
   "baseCost",
   "categories",
   "cost",
@@ -128,17 +129,23 @@ const isNonEmptyStringArray = (value: unknown): value is string[] =>
   value.length > 0 &&
   value.every((entry) => typeof entry === "string");
 
-const isSupportedAllFilter = (filter: CardFilter | undefined): boolean =>
-  filter === undefined ||
-  (Object.keys(filter).every((key) =>
-    supportedFilterKeys.has(key as keyof CardFilter),
-  ) &&
+const isSupportedAllFilter = (filter: CardFilter | undefined): boolean => {
+  if (filter === undefined) return true;
+  return (
+    Object.keys(filter).every((key) =>
+      supportedFilterKeys.has(key as keyof CardFilter),
+    ) &&
+    (filter.anyOf === undefined ||
+      (filter.anyOf.length > 0 && filter.anyOf.every(isSupportedAllFilter))) &&
+    (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
     hasSupportedNumericFilter(filter.baseCost) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power) &&
     (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
     (filter.typesIncludeAny === undefined ||
-      isNonEmptyStringArray(filter.typesIncludeAny)));
+      isNonEmptyStringArray(filter.typesIncludeAny))
+  );
+};
 
 export const isSupportedBasePowerSetFilter = (
   filter: CardFilter | undefined,

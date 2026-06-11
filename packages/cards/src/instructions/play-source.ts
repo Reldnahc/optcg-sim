@@ -1,20 +1,27 @@
 import type { InstructionParser } from "../types.js";
 
 export const parsePlaySourceInstruction: InstructionParser = (input) => {
-  if (
-    !/^Play this card\.?$/i.test(input.text) &&
-    !/^Play this Character card from your trash\.?$/i.test(input.text)
-  ) {
+  const match =
+    /^Play this (?:(?:Character )?card)(?: from your trash)?(?<rested> rested)?\.?$/i.exec(
+      input.text,
+    );
+  if (match === null) {
     return undefined;
   }
+  const enterRested = match.groups?.["rested"] !== undefined;
 
   return {
     effect: {
       type: "playSource",
       source: { type: "triggerCard" },
       ignoreCost: true,
+      ...(enterRested ? { enterRested: true } : {}),
     },
-    evidence: ["instruction:playSource", "target:triggerCard"],
+    evidence: [
+      "instruction:playSource",
+      "target:triggerCard",
+      ...(enterRested ? (["state:rested"] as const) : []),
+    ],
     rest: "",
   };
 };

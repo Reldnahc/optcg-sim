@@ -11,11 +11,13 @@ import {
   isSupportedKoSelfInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
   isSupportedOwnerDeckBottomInsteadEffect,
+  isSupportedReplacementInsteadSequenceEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedReturnDonInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
+  isSupportedDrawInsteadEffect,
 } from "../instead-effects.js";
 import type { SupportedReplacementEffectBlock } from "./types.js";
 
@@ -181,6 +183,8 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedModifyPowerInsteadEffect(effect) ||
   isSupportedTrashSelfInsteadEffect(effect) ||
   isSupportedKoSelfInsteadEffect(effect) ||
+  isSupportedDrawInsteadEffect(effect) ||
+  isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 export const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (

@@ -1,4 +1,4 @@
-import type { Target } from "@optcg/types";
+import type { CardFilter, Target } from "@optcg/types";
 
 import { parseAllCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
@@ -23,6 +23,25 @@ export function parseAllFieldTarget(
     return undefined;
   }
 
+  const namedCards = parseNamedCardsFilter(ownership.rest);
+  if (namedCards !== undefined) {
+    return {
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: ownership.player,
+        filter: namedCards.filter,
+      },
+      evidence: [
+        ...cardinality.evidence,
+        ...ownership.evidence,
+        "zone:characterArea",
+        ...namedCards.evidence,
+      ],
+      rest: namedCards.rest,
+    };
+  }
+
   const predicates = parseCardFilterPredicates(
     { text: ownership.rest },
     { powerSemantics: "current" },
@@ -45,6 +64,39 @@ export function parseAllFieldTarget(
       ...predicates.evidence,
     ],
     rest: predicates.rest,
+  };
+}
+
+function parseNamedCardsFilter(text: string):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+    }
+  | undefined {
+  const match =
+    /^(?<names>\[[^\]]+\](?:\s+and\s+\[[^\]]+\])+)\s+cards?\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+  const namesText = match.groups?.["names"];
+  if (namesText === undefined) {
+    return undefined;
+  }
+
+  const names = [...namesText.matchAll(/\[(?<name>[^\]]+)\]/giu)]
+    .map((nameMatch) => nameMatch.groups?.["name"]?.trim())
+    .filter((name): name is string => name !== undefined && name.length > 0);
+  if (names.length < 2) {
+    return undefined;
+  }
+
+  return {
+    filter: { anyOf: names.map((name) => ({ names: [name] })) },
+    evidence: ["filter:anyOf", ...names.map(() => "filter:name" as const)],
+    rest: match.groups?.["rest"]?.trim() ?? "",
   };
 }
 

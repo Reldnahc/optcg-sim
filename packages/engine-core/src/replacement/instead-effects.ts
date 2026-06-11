@@ -8,6 +8,7 @@ import type { SelectedTargetKoReplacementCandidate } from "./primitives.js";
 type ReplacementInstead =
   SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"];
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type SelectTargetsEffect = Extract<Effect, { type: "selectTargets" }>;
 
 interface SupportedOwnerDeckBottomInstead {
@@ -99,6 +100,46 @@ export const isSupportedKoSelfInsteadEffect = (
   >;
 } => effect.type === "ko" && effect.target.type === "self";
 
+export const isSupportedDrawInsteadEffect = (
+  effect: ReplacementInstead,
+): effect is Extract<ReplacementInstead, { type: "draw" }> =>
+  effect.type === "draw" &&
+  effect.player === "self" &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
+
+const isSupportedAtomicNoDecisionInsteadEffect = (
+  effect: SequenceSegmentEffect,
+): boolean =>
+  (effect.type === "moveCards" && isSupportedLifeTopToHandEffect(effect)) ||
+  (effect.type === "modifyPower" &&
+    isSupportedModifyPowerInsteadEffect(effect)) ||
+  (effect.type === "trash" && isSupportedTrashSelfInsteadEffect(effect)) ||
+  (effect.type === "ko" && isSupportedKoSelfInsteadEffect(effect)) ||
+  (effect.type === "draw" && isSupportedDrawInsteadEffect(effect));
+
+export const isSupportedReplacementInsteadSequenceEffect = (
+  effect: Effect,
+): effect is SequenceEffect => {
+  if (effect.type !== "sequence") {
+    return false;
+  }
+  const flattened = flattenSequenceEffect(effect);
+  return (
+    flattened !== null &&
+    flattened.effects.length > 0 &&
+    flattened.effects.every(
+      (segment, index) =>
+        (index === 0
+          ? segment.connector === "always"
+          : segment.connector === "then" || segment.connector === "always") &&
+        segment.optional !== true &&
+        segment.saveResultAs === undefined &&
+        isSupportedAtomicNoDecisionInsteadEffect(segment.effect),
+    )
+  );
+};
+
 export const supportedOwnerDeckBottomInstead = (
   effect: Effect,
 ): SupportedOwnerDeckBottomInstead | undefined => {
@@ -159,6 +200,8 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedModifyPowerInsteadEffect(effect) ||
   isSupportedTrashSelfInsteadEffect(effect) ||
   isSupportedKoSelfInsteadEffect(effect) ||
+  isSupportedDrawInsteadEffect(effect) ||
+  isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 export const replacementOptionLabel = (
@@ -213,6 +256,9 @@ export const replacementOptionLabel = (
   }
   if (isSupportedKoSelfInsteadEffect(instead)) {
     return "K.O. this Character instead";
+  }
+  if (isSupportedReplacementInsteadSequenceEffect(instead)) {
+    return "Apply replacement effects instead";
   }
   if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
     const count = supportedOwnerDeckBottomInstead(instead)?.count ?? 1;

@@ -1,5 +1,6 @@
 import type {
   EffectQueueEntry,
+  EngineResult,
   EngineError,
   EngineEvent,
   GameState,
@@ -7,6 +8,7 @@ import type {
 
 import { toEngineResult } from "../../action-results.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
+import { flattenSequenceEffect } from "../../effect-runtime-sequence/support-normalization.js";
 import { restFieldObjects } from "../../effect-runtime-sequence/saved-field-object.js";
 import { executeMoveCardsPrimitive } from "../../effect-runtime-move-cards.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
@@ -14,12 +16,16 @@ import { executeNoChoiceEffectPrimitive } from "../../runtime/primitives/draw.js
 import {
   isSupportedKoSelfInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
+  isSupportedReplacementInsteadSequenceEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
 } from "../instead-effects.js";
 import { executeKoSelfInsteadEffect } from "../ko-self-instead.js";
 import type { SelectedTargetKoReplacementCandidate } from "../primitives.js";
 import { currentPublicFieldRefForInstance } from "./source-snapshot.js";
+
+type ReplacementInsteadEffect =
+  SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"];
 
 export const acceptedReplacementError = (
   effectId: string,
@@ -33,8 +39,66 @@ export const acceptedReplacementError = (
 export const executeReplacementInsteadEffect = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"],
-) => {
+  effect: ReplacementInsteadEffect,
+): EngineResult => {
+  if (isSupportedReplacementInsteadSequenceEffect(effect)) {
+    const flattened = flattenSequenceEffect(effect);
+    if (flattened === null) {
+      return toEngineResult(
+        state,
+        [],
+        [
+          acceptedReplacementError(
+            entry.effectBlockId,
+            "unsupported-effect-shape",
+          ),
+        ],
+      );
+    }
+    let nextState = state;
+    const events: EngineEvent[] = [];
+    for (const segment of flattened.effects) {
+      if (segment.effect.type === "payCost") {
+        return toEngineResult(nextState, events, [
+          acceptedReplacementError(
+            entry.effectBlockId,
+            "unsupported-effect-shape",
+          ),
+        ]);
+      }
+      const executed = executeReplacementInsteadEffect(
+        nextState,
+        entry,
+        segment.effect,
+      );
+      if (executed.errors !== undefined) {
+        const [firstError, ...remainingErrors] = executed.errors;
+        return toEngineResult(
+          nextState,
+          events,
+          firstError === undefined
+            ? [
+                acceptedReplacementError(
+                  entry.effectBlockId,
+                  "unsupported-effect-shape",
+                ),
+              ]
+            : [firstError, ...remainingErrors],
+        );
+      }
+      if (executed.state.pendingDecision !== undefined) {
+        return toEngineResult(nextState, events, [
+          acceptedReplacementError(
+            entry.effectBlockId,
+            "unsupported-effect-shape",
+          ),
+        ]);
+      }
+      nextState = executed.state;
+      events.push(...executed.events);
+    }
+    return toEngineResult(nextState, events);
+  }
   if (effect.type === "moveCards") {
     return executeMoveCardsPrimitive(state, entry, effect, {
       incrementStateSeq: false,

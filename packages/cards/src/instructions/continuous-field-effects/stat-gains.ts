@@ -33,6 +33,11 @@ export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionPa
       return allFieldStatGain;
     }
 
+    const leaderStatGain = parseLeaderStatGainInstruction(input, context);
+    if (leaderStatGain !== undefined) {
+      return leaderStatGain;
+    }
+
     const selfStatGain = parseThisCharacterStatGainInstruction(input, context);
     if (selfStatGain !== undefined) {
       return selfStatGain;
@@ -74,13 +79,64 @@ export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionPa
     };
   };
 
+const parseLeaderStatGainInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const match =
+    /^give\s+(?<target>this Leader|your Leader)\s+(?<modifier>.+)$/iu.exec(
+      input.text,
+    );
+  const targetText = match?.groups?.["target"];
+  const modifierText = match?.groups?.["modifier"];
+  if (targetText === undefined || modifierText === undefined) {
+    return undefined;
+  }
+
+  const target = parseYourLeaderTarget({ text: targetText });
+  if (target?.target === undefined) {
+    return undefined;
+  }
+
+  const modifier =
+    parsePositivePowerModifier({ text: modifierText }) ??
+    parseNegativePowerModifier({ text: modifierText });
+  if (
+    modifier === undefined ||
+    (modifier.rest.length > 0 && modifier.rest !== ".")
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower",
+      target: target.target,
+      value: modifier.value,
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:modifyPower",
+      ...target.evidence,
+      ...modifier.evidence,
+      continuousDurationEvidence(context.condition),
+    ],
+    rest: "",
+  };
+};
+
 const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
-  const targetText = /^give\s+(?<target>.+)$/iu.exec(input.text)?.groups?.[
+  const directGain = /^(?<target>All of .+?) gains?\s+(?<modifier>.+)$/iu.exec(
+    input.text,
+  );
+  const giveTargetText = /^give\s+(?<target>.+)$/iu.exec(input.text)?.groups?.[
     "target"
   ];
+  const targetText = directGain?.groups?.["target"] ?? giveTargetText;
+  const modifierText = directGain?.groups?.["modifier"];
   if (targetText === undefined) {
     return undefined;
   }
@@ -91,8 +147,8 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
   }
 
   const modifier =
-    parsePositivePowerModifier({ text: target.rest }) ??
-    parseNegativePowerModifier({ text: target.rest });
+    parsePositivePowerModifier({ text: modifierText ?? target.rest }) ??
+    parseNegativePowerModifier({ text: modifierText ?? target.rest });
   if (
     modifier === undefined ||
     (modifier.rest.length > 0 && modifier.rest !== ".")

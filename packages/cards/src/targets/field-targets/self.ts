@@ -29,7 +29,7 @@ export function parseYourLeaderTarget(
     };
   }
 
-  const match = /^your Leader\b\s*(?<rest>.*)$/i.exec(input.text);
+  const match = /^(?:your|this) Leader\b\s*(?<rest>.*)$/i.exec(input.text);
   if (match === null) {
     return undefined;
   }

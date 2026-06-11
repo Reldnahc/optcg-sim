@@ -31,6 +31,12 @@ const cardMatchesAllFilter = (
   filter: CardFilter | undefined,
 ): boolean => {
   if (filter === undefined) return true;
+  if (
+    filter.anyOf !== undefined &&
+    !filter.anyOf.some((child) => cardMatchesAllFilter(state, card, child))
+  ) {
+    return false;
+  }
   const metadata = state.cardManifest.cards[card.cardId];
   if (metadata === undefined) return false;
   if (filter.state !== undefined && filter.state !== card.state) {
