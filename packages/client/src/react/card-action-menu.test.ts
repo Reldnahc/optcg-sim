@@ -875,7 +875,7 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*card-tile[^"]*is-active/u);
   });
 
-  test("board layout renders prominent pending decision prompt above hand", () => {
+  test("board layout renders prominent pending decision prompt above hand", async () => {
     const markup = renderToStaticMarkup(
       createElement(BoardLayout, {
         board: board(),
@@ -887,9 +887,17 @@ describe("card action menu", () => {
         onBackgroundClick: () => undefined,
       }),
     );
+    const appShellStyles = await readFile(
+      join(sourceDirectory, "styles", "app-shell.css"),
+      "utf8",
+    );
 
     assert.match(markup, /class="decision-status-prompt"/u);
     assert.equal(markup.includes("Trash 1 card from hand"), true);
+    assert.match(
+      appShellStyles,
+      /\.decision-status-prompt\s*\{[^}]*bottom:\s*calc\(var\(--card-height\) \+ clamp\(16px,\s*calc\(var\(--card-height\) \/ 6\),\s*30px\)\);[^}]*font-size:\s*clamp\(15px,\s*calc\(var\(--card-height\) \/ 7\.25\),\s*24px\);/u,
+    );
   });
 
   test("selected DON attachment is rendered as a selected-card menu action", () => {

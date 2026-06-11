@@ -141,12 +141,12 @@
 .decision-status-prompt {
   position: absolute;
   right: 0;
-  bottom: calc(var(--card-height) + 30px);
+  bottom: calc(var(--card-height) + clamp(16px, calc(var(--card-height) / 6), 30px));
   left: 0;
   z-index: 12;
   pointer-events: none;
   color: var(--match-accent-strong);
-  font-size: 24px;
+  font-size: clamp(15px, calc(var(--card-height) / 7.25), 24px);
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
