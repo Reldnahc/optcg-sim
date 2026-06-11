@@ -47,6 +47,7 @@ import {
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
   playStageFromDeckExpressionParser,
+  playedObjectKeywordGrantExpressionParser,
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
   revealTopConditionalExpressionParser,
@@ -154,6 +155,10 @@ const costedExpressions = [
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
+  playedObjectKeywordGrantExpressionParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser],
+  }),
   opponentOptionalCostExpressionParser({
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
@@ -195,6 +200,10 @@ export const defaultRegistry = {
         }),
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
+        playedObjectKeywordGrantExpressionParser({
+          instructions: instructionParsers,
+          expressions: [singleInstructionExpressionParser],
+        }),
         opponentOptionalCostExpressionParser({
           instructions: instructionParsers,
           expressions: [
@@ -280,6 +289,10 @@ export const defaultRegistry = {
       expressions: [
         lookPlayFromTopExpressionParser,
         searchRevealExpressionParser,
+        playedObjectKeywordGrantExpressionParser({
+          instructions: instructionParsers,
+          expressions: [singleInstructionExpressionParser],
+        }),
         selectedOpponentCharactersAttackCostExpressionParser,
         singleInstructionExpressionParser,
         generalExpressionParser,
@@ -305,6 +318,10 @@ export const defaultRegistry = {
     }),
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
+    playedObjectKeywordGrantExpressionParser({
+      instructions: instructionParsers,
+      expressions: [singleInstructionExpressionParser],
+    }),
     opponentOptionalCostExpressionParser({
       instructions: instructionParsers,
       expressions: [singleInstructionExpressionParser, generalExpressionParser],
