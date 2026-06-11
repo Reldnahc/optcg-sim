@@ -127,7 +127,13 @@ function parseTrashToHandSource(text: string):
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: predicateText });
+  const normalizedPredicateText = predicateText
+    .replace(/^of your\s+/iu, "")
+    .replace(/^your\s+/iu, "");
+
+  const predicates = parseCardFilterPredicates({
+    text: normalizedPredicateText,
+  });
   return predicates === undefined || predicates.rest.length > 0
     ? undefined
     : { filter: predicates.filter, evidence: predicates.evidence };
