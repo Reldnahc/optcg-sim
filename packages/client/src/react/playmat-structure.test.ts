@@ -80,11 +80,11 @@ describe("playmat structure", () => {
     assert.match(appShellStyles, /--playmat-grid-gap:\s*6px;/);
     assert.match(
       appShellStyles,
-      /--match-surface-board:\s*rgba\(10,\s*10,\s*11,\s*0\.82\);/u,
+      /--match-surface-board:\s*rgba\(34,\s*34,\s*36,\s*0\.92\);/u,
     );
     assert.match(
       appShellStyles,
-      /--match-surface-zone:\s*rgba\(0,\s*0,\s*0,\s*0\.28\);/u,
+      /--match-surface-zone:\s*rgba\(0,\s*0,\s*0,\s*0\.18\);/u,
     );
     assert.match(
       appShellStyles,
@@ -479,7 +479,7 @@ describe("playmat structure", () => {
     assert.match(styles, /\.zone-cards\s*\{[^}]*min-width:\s*0;/u);
     assert.match(
       styles,
-      /\.zone\s*\{[^}]*border:\s*2px solid var\(--match-border-soft\);[^}]*background:\s*var\(--match-surface-zone\);/u,
+      /\.zone\s*\{[^}]*border:\s*2px solid var\(--match-border-zone\);[^}]*background:\s*var\(--match-surface-zone\);/u,
     );
   });
 
