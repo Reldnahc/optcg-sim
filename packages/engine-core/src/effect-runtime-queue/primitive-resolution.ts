@@ -75,3 +75,8 @@ export const resolveQueuedPrimitiveBody = (
   }
   return undefined;
 };
+
+export const canResolvePrimitiveBodyForEntry = (
+  block: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
+): boolean => resolveQueuedPrimitiveBody(block, entry) !== undefined;

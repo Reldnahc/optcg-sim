@@ -744,3 +744,29 @@ test("optional activate main prompts before resolving reusable damage body", () 
   );
   assert.equal(accepted.state.pendingDecision?.type, "confirmLifeTrigger");
 });
+
+test("activate main admission delegates reusable primitive body support", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const repoRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../../..",
+  );
+  const content = await readFile(
+    path.join(
+      repoRoot,
+      "packages/engine-core/src/runtime/optional-activation/activate-main.ts",
+    ),
+    "utf8",
+  );
+
+  assert.equal(
+    content.includes("isSupportedDrawBody(effect.effect) ||"),
+    false,
+  );
+  assert.equal(
+    content.includes("isSupportedMoveCardsEffect(effect.effect)"),
+    false,
+  );
+});

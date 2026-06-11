@@ -30,6 +30,7 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "../../effect-runtime.js";
 import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
+import { canResolvePrimitiveBodyForEntry } from "../../effect-runtime-queue/primitive-resolution.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 import {
@@ -40,18 +41,6 @@ import {
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
-import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
-import {
-  isSupportedDrawUpToBody,
-  isSupportedTrashFromHandBody,
-} from "../../effect-runtime-reusable-body-support.js";
-import { isSupportedTrashFromHandUntilCountBody } from "../primitives/trash-from-hand-until.js";
-import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
-import {
-  isSupportedDamageEffect,
-  isSupportedDrawBody,
-  isSupportedWinGameBody,
-} from "../primitives/execute.js";
 
 export { isScopedActivateMainQueueEntry };
 
@@ -59,6 +48,49 @@ type ActivateMainSource = CardRef & { zone: NonNullable<CardRef["zone"]> };
 
 type ActivateMainRuntimeEffectBlock = EffectDefinition["effects"][number] & {
   sourcePresencePolicy: SourcePresencePolicy;
+};
+
+const activateMainPrimitiveProbeEntry: EffectQueueEntry = {
+  id: "queue-entry:activate-main:probe" as EffectQueueEntry["id"],
+  state: "pending",
+  timingWindowId:
+    "timing-window:activate-main:probe" as EffectQueueEntry["timingWindowId"],
+  queueOrigin: { type: "activateMain" },
+  generation: 0,
+  controllerId: "player-1" as PlayerId,
+  source: {
+    instanceId: "instance:activate-main:probe" as CardRef["instanceId"],
+    cardId: "card:activate-main:probe" as CardRef["cardId"],
+    playerId: "player-1" as PlayerId,
+    zone: {
+      zone: "leaderArea",
+      playerId: "player-1" as PlayerId,
+      slot: "leader",
+      index: 0,
+    },
+  },
+  sourceSnapshot: {
+    instanceId: "instance:activate-main:probe" as CardRef["instanceId"],
+    cardId: "card:activate-main:probe" as CardRef["cardId"],
+    ownerId: "player-1" as PlayerId,
+    controllerId: "player-1" as PlayerId,
+    zone: {
+      zone: "leaderArea",
+      playerId: "player-1" as PlayerId,
+      slot: "leader",
+      index: 0,
+    },
+    category: "leader",
+    colors: [],
+    keywords: [],
+  },
+  effectBlockId:
+    "effect:activate-main:probe" as EffectQueueEntry["effectBlockId"],
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: 0 as EffectQueueEntry["queuedAtStateSeq"],
+  sourcePresencePolicy: "mustRemainInSameZone",
+  causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
 };
 
 const hasSupportedActivateMainEnvelope = (
@@ -81,27 +113,25 @@ const isSupportedActivateMainContinuousBody = (
 
 const isSupportedActivateMainPrimitiveBody = (
   effect: EffectDefinition["effects"][number],
-): boolean =>
-  isSupportedDrawBody(effect.effect) ||
-  isSupportedDrawUpToBody(effect.effect) ||
-  isSupportedTrashFromHandBody(effect.effect) ||
-  isSupportedTrashFromHandUntilCountBody(effect.effect) ||
-  isSupportedPlaceTopDeckCardsEffect(effect.effect) ||
-  isSupportedDamageEffect(effect.effect) ||
-  isSupportedWinGameBody(effect.effect) ||
-  isSupportedMoveCardsEffect(effect.effect);
+  entry: EffectQueueEntry,
+): boolean => {
+  const primitiveSupportShape =
+    effect.optional === true ? { ...effect, optional: false as const } : effect;
+  return canResolvePrimitiveBodyForEntry(primitiveSupportShape, entry);
+};
 
 export const isSupportedActivateMainRuntimeEffectBlock = (
   effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry = activateMainPrimitiveProbeEntry,
 ): effect is ActivateMainRuntimeEffectBlock => {
   if (!hasSupportedActivateMainEnvelope(effect)) {
     return false;
   }
   if (effect.optional === true) {
-    return isSupportedActivateMainPrimitiveBody(effect);
+    return isSupportedActivateMainPrimitiveBody(effect, entry);
   }
   return (
-    isSupportedActivateMainPrimitiveBody(effect) ||
+    isSupportedActivateMainPrimitiveBody(effect, entry) ||
     isSupportedActivateMainContinuousBody(effect)
   );
 };
@@ -222,7 +252,7 @@ const findSupportedActivateMainEffects = (
       resolvedCard,
     });
     return (
-      isSupportedActivateMainRuntimeEffectBlock(effect) ||
+      isSupportedActivateMainRuntimeEffectBlock(effect, sequenceSupportEntry) ||
       (effect.trigger.type === "activateMain" &&
         isSupportedSequenceBlock(sequenceSupportEntry, effect))
     );
