@@ -6,6 +6,8 @@ import type {
   GameState,
 } from "@optcg/types";
 
+import { cardMatchesAnyName } from "../../card-name-matching.js";
+
 const cardMatchesRef = (card: CardInstance, ref: CardRef): boolean =>
   card.instanceId === ref.instanceId &&
   card.cardId === ref.cardId &&
@@ -56,7 +58,7 @@ const cardMatchesAllFilter = (
   }
   if (
     filter.names !== undefined &&
-    !filter.names.some((name) => metadata.name === name)
+    !cardMatchesAnyName(metadata, filter.names)
   ) {
     return false;
   }

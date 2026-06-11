@@ -187,6 +187,9 @@ const createRecord = (
     controller: entry.controllerId,
     modifier,
     duration: effect.duration,
+    ...(effect.type === "modifyCost" && effect.usageLimit !== undefined
+      ? { usageLimit: effect.usageLimit }
+      : {}),
     createdBy: {
       type: "effect",
       queueEntryId: entry.id,

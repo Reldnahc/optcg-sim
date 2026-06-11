@@ -8,6 +8,8 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import { cardMatchesAnyName } from "../card-name-matching.js";
+
 export type LocatedCombatCard = {
   card: CardInstance;
   playerId: PlayerId;
@@ -283,7 +285,7 @@ const cardMatchesBaseFilter = (
   ) {
     return false;
   }
-  if (filter.names !== undefined && !filter.names.includes(card.name)) {
+  if (filter.names !== undefined && !cardMatchesAnyName(card, filter.names)) {
     return false;
   }
   if (filter.cost !== undefined) {
@@ -352,7 +354,9 @@ const cardMatchesBaseFilter = (
   if (filter.currentPower !== undefined) {
     return false;
   }
-  return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
+  return !(
+    filter.nameNot !== undefined && cardMatchesAnyName(card, filter.nameNot)
+  );
 };
 
 const isSupportedEffectEntryPointFilter = (

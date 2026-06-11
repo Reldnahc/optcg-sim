@@ -23,6 +23,7 @@ export type SupportEvidenceFamily =
   | "player"
   | "chooser"
   | "duration"
+  | "usageLimit"
   | "modifier"
   | "replacement"
   | "reference"

@@ -40,6 +40,7 @@ const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
   "baseCost",
   "categories",
   "cost",
+  "names",
   "typesAny",
   "typesIncludeAny",
 ]);
@@ -175,7 +176,8 @@ const isSupportedCostModifierFilter = (
   (filter.categories === undefined ||
     filter.categories.every((category) => category === "character")) &&
   (isNonEmptyStringArray(filter.typesAny) ||
-    isNonEmptyStringArray(filter.typesIncludeAny)) &&
+    isNonEmptyStringArray(filter.typesIncludeAny) ||
+    isNonEmptyStringArray(filter.names)) &&
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
@@ -223,6 +225,9 @@ export const isSupportedCostModifierEffect = (
   isSupportedModifierValue(effect.value) &&
   !(typeof effect.value === "number" && effect.value === 0) &&
   isSupportedDuration(effect.duration) &&
+  (effect.usageLimit === undefined ||
+    (Number.isSafeInteger(effect.usageLimit.maxUses) &&
+      effect.usageLimit.maxUses > 0)) &&
   ((effect.sourceZone === "hand" &&
     typeof effect.value === "number" &&
     effect.value < 0 &&

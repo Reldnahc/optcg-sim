@@ -31,7 +31,13 @@ export interface PaymentSpec {
 
 export type PaymentOption =
   | { id: string; type: "restSelf" }
-  | { id: string; type: "trashSelf" }
+  | { id: string; type: "trashSelf"; filter?: CardFilter }
+  | {
+      id: string;
+      type: "restFromField";
+      count: number;
+      filter?: CardFilter;
+    }
   | {
       id: string;
       type: "turnLifeFaceUp";
@@ -44,10 +50,11 @@ export type PaymentOption =
       id: string;
       type: "attachDon";
       count: number;
+      sourcePlayer?: PlayerRef;
       sourceState: "active" | "rested";
       target: Target;
     }
-  | { id: string; type: "returnDon"; count: number }
+  | { id: string; type: "returnDon"; count: number; sourceState?: "active" }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "revealFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }

@@ -96,6 +96,19 @@ export type Condition =
   | { type: "opponentTurn" }
   | { type: "lifeCount"; player: PlayerRef; op: Comparator; value: number }
   | {
+      type: "lifeCountDifference";
+      minuend: { player: PlayerRef };
+      subtrahend: { player: PlayerRef };
+      op: Comparator;
+      value: number;
+    }
+  | {
+      type: "lifeCountTotal";
+      players: PlayerRef[];
+      op: Comparator;
+      value: number;
+    }
+  | {
       type: "fieldCount";
       player: PlayerRef;
       filter?: CardFilter;
@@ -898,6 +911,7 @@ export type Effect =
       target?: Target;
       value: number | DynamicNumberValue;
       duration: Duration;
+      usageLimit?: { type: "nextMatchingPlay"; maxUses: number };
       player: PlayerRef;
       sourceZone?: Zone;
     }

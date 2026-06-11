@@ -21,7 +21,10 @@ import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { getCharacterOverflowDecisionId } from "./legal-actions.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
-import type { SupportedPlayMetadata } from "./support.js";
+import {
+  consumeMatchingPlayCostModifiers,
+  type SupportedPlayMetadata,
+} from "./support.js";
 
 type ResolvePlayCardEffectRuntime = (
   previousState: GameState,
@@ -297,6 +300,11 @@ export const placePlayedCardResult = (params: {
       seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
       players: { ...state.players, [playerId]: nextPlayer },
+      continuousEffects: consumeMatchingPlayCostModifiers(
+        state,
+        playerId,
+        sourceCard,
+      ),
     };
     delete nextStateBase.pendingDecision;
     const nextState = applyRuleProcessingCheckpoint({
@@ -480,6 +488,11 @@ export const placePlayedCardResult = (params: {
     seq: toStateSeq(state.seq + 1),
     actionSeq: incrementActionSeq ? state.actionSeq + 1 : state.actionSeq,
     players: { ...state.players, [playerId]: nextPlayer },
+    continuousEffects: consumeMatchingPlayCostModifiers(
+      state,
+      playerId,
+      sourceCard,
+    ),
     revealedCards:
       sourceZone === "noZone"
         ? state.revealedCards.filter(

@@ -76,6 +76,8 @@ export type PrimitiveEvidence =
   | "condition:handCount"
   | "condition:trashCount"
   | "condition:lifeCount"
+  | "condition:lifeCountDifference"
+  | "condition:lifeCountTotal"
   | "condition:donFieldCount"
   | "condition:attachedDonCount"
   | "condition:fieldCountDifference"
@@ -252,6 +254,7 @@ export type PrimitiveEvidence =
   | "duration:whileSourceOnField"
   | "duration:thisBattle"
   | "duration:thisTurn"
+  | "usageLimit:nextMatchingPlay"
   | "duration:endOfTurn"
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
@@ -261,6 +264,7 @@ export type PrimitiveEvidence =
   | "modifier:positiveCost"
   | "modifier:positiveCounter"
   | "modifier:costReduction"
+  | "metadata:nameAliases"
   | "protectionProcess:fieldRemoval"
   | "protectionProcess:ko"
   | "protectionProcess:rest"
@@ -417,17 +421,22 @@ export interface ParsedRuntimeEffectLine {
 
 export interface ParsedMetadataLine {
   readonly kind: "metadata";
-  readonly metadata: {
-    readonly type: "deckRestriction";
-    readonly restriction:
-      | {
-          readonly type: "donDeckSize";
-          readonly count: number;
-        }
-      | {
-          readonly type: "anyCopiesOfThisCard";
-        };
-  };
+  readonly metadata:
+    | {
+        readonly type: "deckRestriction";
+        readonly restriction:
+          | {
+              readonly type: "donDeckSize";
+              readonly count: number;
+            }
+          | {
+              readonly type: "anyCopiesOfThisCard";
+            };
+      }
+    | {
+        readonly type: "nameAliases";
+        readonly names: readonly string[];
+      };
   readonly evidence: readonly PrimitiveEvidence[];
 }
 

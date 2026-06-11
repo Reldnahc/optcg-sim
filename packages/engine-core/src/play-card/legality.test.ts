@@ -113,6 +113,50 @@ const addHighCostCharacterPlayRestriction = (state: GameState): void => {
   } satisfies ContinuousEffectRecord);
 };
 
+const addNextMatchingPlayCostReduction = (
+  state: GameState,
+  value = -2,
+): void => {
+  const source = must(state.players[p1], "p1").leader;
+  state.continuousEffects.push({
+    id: "test:next-matching-play-cost-reduction",
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "leader",
+      colors: [],
+      keywords: [],
+    },
+    controller: p1,
+    duration: { type: "thisTurn" },
+    usageLimit: {
+      type: "nextMatchingPlay",
+      maxUses: 1,
+    },
+    createdBy: { type: "ruleProcess", name: "test" },
+    createdAtStateSeq: state.seq,
+    modifier: {
+      layer: "costAdd",
+      target: {
+        type: "allMatching",
+        zone: "hand",
+        player: "self",
+        filter: { names: ["Trafalgar Law"], cost: { min: 4 } },
+      },
+      operation: { type: "addCost", value },
+    },
+  } satisfies ContinuousEffectRecord);
+};
+
 const setActiveDonCount = (state: GameState, count: number): void => {
   const player = must(state.players[p1], "p1");
   const source = must([...player.costArea, ...player.donDeck][0], "DON source");
@@ -295,6 +339,38 @@ test("applyAction playCard rejects forged card instance references without mutat
 
   assert.equal(result.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(state), before);
+});
+
+test("next matching play cost modifier applies once and is consumed after a matching play", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const law = must(p1State.hand[0], "law");
+  p1State.characters = [];
+  state.cardManifest.cards[law.cardId] = resolvedCard({
+    cardId: law.cardId,
+    category: "character",
+    cost: 4,
+    power: 5000,
+  });
+  state.cardManifest.cards[law.cardId] = {
+    ...must(state.cardManifest.cards[law.cardId], "law metadata"),
+    name: "Trafalgar Law",
+  };
+  setActiveDonCount(state, 0);
+  addNextMatchingPlayCostReduction(state, -4);
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: law.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.state.continuousEffects.some(
+      (effect) => effect.id === "test:next-matching-play-cost-reduction",
+    ),
+    false,
+  );
 });
 
 test("applyAction playCard rejects nonzero cards without enough active DON!!", () => {

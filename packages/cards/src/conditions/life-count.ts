@@ -73,6 +73,64 @@ export const lifeCountConditionPrimitive: PrimitivePatternDefinition<ConditionPa
 export const parseLifeCountCondition: ConditionParser = (input) =>
   parsePrimitivePattern(input, lifeCountConditionPrimitive);
 
+export const parseLifeCountDifferenceCondition: ConditionParser = (input) => {
+  const equalOrLessMatch =
+    /^the number of your Life cards is equal to or less than the number of your opponent's Life cards$/iu.exec(
+      input.text,
+    );
+  if (equalOrLessMatch !== null) {
+    return {
+      condition: {
+        type: "lifeCountDifference",
+        minuend: { player: "opponent" },
+        subtrahend: { player: "self" },
+        op: "gte",
+        value: 0,
+      },
+      evidence: [
+        "condition:lifeCountDifference",
+        "player:opponent",
+        "player:self",
+        "condition:comparator:gte",
+        "condition:threshold:nonNegativeInteger",
+      ],
+      rest: "",
+    };
+  }
+
+  return undefined;
+};
+
+export const parseLifeCountTotalCondition: ConditionParser = (input) => {
+  const match =
+    /^you and your opponent have a total of (?<count>[1-9]\d*) or (?<direction>more|less) Life cards$/iu.exec(
+      input.text,
+    );
+  const countText = match?.groups?.["count"];
+  const direction = match?.groups?.["direction"]?.toLowerCase();
+  if (countText === undefined || direction === undefined) {
+    return undefined;
+  }
+  const op = direction === "more" ? "gte" : "lte";
+
+  return {
+    condition: {
+      type: "lifeCountTotal",
+      players: ["self", "opponent"],
+      op,
+      value: Number.parseInt(countText, 10),
+    },
+    evidence: [
+      "condition:lifeCountTotal",
+      "player:self",
+      "player:opponent",
+      op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
+      "condition:threshold:positiveInteger",
+    ],
+    rest: "",
+  };
+};
+
 export const parseEitherPlayerLifeCountCondition: ConditionParser = (input) => {
   const match =
     /^either you or your opponent has (?<count>\d+) Life cards$/iu.exec(

@@ -21,6 +21,7 @@ import {
 import {
   parseAnyCopiesOfThisCardRuleLine,
   parseDonDeckSizeRuleLine,
+  parseNameAliasesRuleLine,
 } from "../metadata-lines/index.js";
 import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
@@ -137,7 +138,11 @@ const costedExpressions = [
 ] as const;
 
 export const defaultRegistry = {
-  metadataLines: [parseAnyCopiesOfThisCardRuleLine, parseDonDeckSizeRuleLine],
+  metadataLines: [
+    parseAnyCopiesOfThisCardRuleLine,
+    parseDonDeckSizeRuleLine,
+    parseNameAliasesRuleLine,
+  ],
   entryPoints: [
     parseRulesStartOfGameEntryPoint,
     parseTurnWindowedEntryPoint,

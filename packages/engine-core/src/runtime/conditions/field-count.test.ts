@@ -109,7 +109,13 @@ const donFieldFilter = {
 const evaluateFieldCount = (
   condition: Extract<
     Condition,
-    { type: "fieldCount" | "fieldCountDifference" }
+    {
+      type:
+        | "fieldCount"
+        | "fieldCountDifference"
+        | "lifeCountDifference"
+        | "lifeCountTotal";
+    }
   >,
   counts: {
     selfCostArea: number;
@@ -135,6 +141,80 @@ const evaluateFieldCount = (
   });
   return evaluateQueuedEffectCondition(state, queueDrawForP1(), condition);
 };
+
+const setLifeCount = (
+  state: ReturnType<typeof createActiveState>,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = must(state.players[playerId], "player");
+  const source = player.deck[0] ?? player.leader;
+  player.life = Array.from({ length: count }, (_, index) => ({
+    card: {
+      ...source,
+      instanceId:
+        `${String(source.instanceId)}:life:${String(index)}` as CardInstance["instanceId"],
+      zone: { zone: "life", playerId, slot: "life", index },
+    },
+    faceUp: false,
+  }));
+  player.deck = player.deck.map((card, index) => ({
+    ...card,
+    zone: { zone: "deck", playerId, slot: "deck", index },
+  }));
+};
+
+test("lifeCountDifference compares reusable player life-count operands", () => {
+  const state = createActiveState();
+  setLifeCount(state, p1, 2);
+  setLifeCount(state, p2, 3);
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "lifeCountDifference",
+      minuend: { player: "opponent" },
+      subtrahend: { player: "self" },
+      op: "gte",
+      value: 0,
+    } as unknown as Condition),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "lifeCountDifference",
+      minuend: { player: "self" },
+      subtrahend: { player: "opponent" },
+      op: "gte",
+      value: 0,
+    } as unknown as Condition),
+    { supported: true, passed: false },
+  );
+});
+
+test("lifeCountTotal sums reusable player life-count operands", () => {
+  const state = createActiveState();
+  setLifeCount(state, p1, 2);
+  setLifeCount(state, p2, 3);
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "lifeCountTotal",
+      players: ["self", "opponent"],
+      op: "lte",
+      value: 5,
+    } as unknown as Condition),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "lifeCountTotal",
+      players: ["self", "opponent"],
+      op: "lt",
+      value: 5,
+    } as unknown as Condition),
+    { supported: true, passed: false },
+  );
+});
 
 const setupQueuedDrawWithCondition = (
   state: ReturnType<typeof createActiveState>,

@@ -57,9 +57,11 @@ export type Trigger =
       type: "cardPlayed";
       player: PlayerRef;
       filter?: CardFilter;
+      sourceZone?: Zone;
       sourceFilter?: CardFilter;
       anyOf?: Array<{
         filter?: CardFilter;
+        sourceZone?: Zone;
         sourceFilter?: CardFilter;
       }>;
     }
@@ -93,6 +95,19 @@ export type Condition =
   | { type: "turnCount"; player: PlayerRef; op: Comparator; value: number }
   | { type: "opponentTurn" }
   | { type: "lifeCount"; player: PlayerRef; op: Comparator; value: number }
+  | {
+      type: "lifeCountDifference";
+      minuend: { player: PlayerRef };
+      subtrahend: { player: PlayerRef };
+      op: Comparator;
+      value: number;
+    }
+  | {
+      type: "lifeCountTotal";
+      players: PlayerRef[];
+      op: Comparator;
+      value: number;
+    }
   | {
       type: "fieldCount";
       player: PlayerRef;
@@ -147,6 +162,13 @@ export type Condition =
 export type Cost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
   | {
+      type: "restFromField";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional?: boolean;
+    }
+  | {
       type: "attachDon";
       count: number;
       sourceState: "active" | "rested";
@@ -157,6 +179,7 @@ export type Cost =
       type: "returnDon";
       count: number;
       chooser?: PlayerRef;
+      sourceState?: "active";
       optional?: boolean;
     }
   | { type: "restSelf"; optional?: boolean }
@@ -199,7 +222,7 @@ export type Cost =
       duration: Duration;
       optional?: boolean;
     }
-  | { type: "trashSelf" }
+  | { type: "trashSelf"; filter?: CardFilter }
   | {
       type: "discard";
       count: number;
@@ -266,13 +289,27 @@ export type OptionalCost =
   | {
       type: "attachDon";
       count: number;
+      sourcePlayer?: PlayerRef;
       sourceState: "active" | "rested";
       target: Target;
       optional: true;
     }
-  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | {
+      type: "returnDon";
+      count: number;
+      chooser?: PlayerRef;
+      sourceState?: "active";
+      optional: true;
+    }
   | { type: "restSelf"; optional: true }
-  | { type: "trashSelf"; optional: true }
+  | {
+      type: "restFromField";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional: true;
+    }
+  | { type: "trashSelf"; filter?: CardFilter; optional: true }
   | {
       type: "modifyPower";
       target: Target;
@@ -874,6 +911,7 @@ export type Effect =
       target?: Target;
       value: number | DynamicNumberValue;
       duration: Duration;
+      usageLimit?: { type: "nextMatchingPlay"; maxUses: number };
       player: PlayerRef;
       sourceZone?: Zone;
     }
@@ -888,6 +926,11 @@ export type Effect =
   | { type: "setBaseCost"; target: Target; value: number; duration: Duration }
   | { type: "rest"; target: Target }
   | { type: "activate"; target: Target }
+  | {
+      type: "delayed";
+      timing: { type: "endOfTurn"; turn: "current" };
+      effect: Effect;
+    }
   | {
       type: "giveKeyword";
       target: Target;
@@ -908,7 +951,13 @@ export type Effect =
     }
   | { type: "addDon"; count: number; player: PlayerRef }
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
-  | { type: "attachSelectedDon"; selection: SelectionId; target: Target }
+  | {
+      type: "attachSelectedDon";
+      selection: SelectionId;
+      sourceState?: "active" | "rested";
+      target: Target;
+      targetOwner?: "selectedDonOwner";
+    }
   | { type: "returnDon"; count: number; player: PlayerRef }
   | { type: "winGame"; player: PlayerRef }
   | {

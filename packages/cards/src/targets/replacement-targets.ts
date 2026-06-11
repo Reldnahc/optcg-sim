@@ -35,7 +35,29 @@ export function parseYourFieldReplacementTarget(
     predicates === undefined ||
     (category !== "character" && category !== "stage")
   ) {
-    return undefined;
+    if (
+      predicates === undefined ||
+      predicates.filter.names === undefined ||
+      predicates.filter.names.length === 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: predicates.filter,
+      },
+      evidence: [
+        "player:self",
+        "target:yourCharacters",
+        "zone:characterArea",
+        ...predicates.evidence,
+      ],
+      rest: predicates.rest.trim(),
+    };
   }
 
   const zone: Zone = category === "stage" ? "stageArea" : "characterArea";

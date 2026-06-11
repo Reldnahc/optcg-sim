@@ -13,6 +13,7 @@ import type {
 } from "@optcg/types";
 
 import { getOpponentId, toCardRef } from "../actions/state.js";
+import { cardMatchesAnyName } from "../card-name-matching.js";
 import { computeView } from "../view/compute-view.js";
 
 export type TargetCandidateResolutionErrorReason =
@@ -319,10 +320,13 @@ const cardMatchesFilter = (
   ) {
     return false;
   }
-  if (filter.names !== undefined && !filter.names.includes(card.name)) {
+  if (filter.names !== undefined && !cardMatchesAnyName(card, filter.names)) {
     return false;
   }
-  if (filter.nameNot !== undefined && filter.nameNot.includes(card.name)) {
+  if (
+    filter.nameNot !== undefined &&
+    cardMatchesAnyName(card, filter.nameNot)
+  ) {
     return false;
   }
   if (filter.state !== undefined && instance.state !== filter.state) {

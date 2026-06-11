@@ -11,6 +11,16 @@ import type {
 } from "@optcg/types";
 
 import {
+  cardMatchesAnyName,
+  cardMatchesNameContains,
+} from "../../card-name-matching.js";
+import {
+  evaluateLifeCountDifference,
+  evaluateLifeCountTotal,
+  isSupportedLifeCountDifferenceCondition,
+  isSupportedLifeCountTotalCondition,
+} from "./life-count.js";
+import {
   evaluateHasCardInZone,
   isSupportedLeaderZoneFilter,
 } from "./leader-zone.js";
@@ -503,13 +513,13 @@ const cardMatchesFilter = (
   }
   if (
     filter.names !== undefined &&
-    !filter.names.some((name) => metadata.name === name)
+    !cardMatchesAnyName(metadata, filter.names)
   ) {
     return false;
   }
   if (
     filter.nameContains !== undefined &&
-    !metadata.name.includes(filter.nameContains)
+    !cardMatchesNameContains(metadata, filter.nameContains)
   ) {
     return false;
   }
@@ -784,6 +794,10 @@ const evaluateCondition = (
         condition.op,
         (playerId) => state.players[playerId]?.life.length ?? 0,
       );
+    case "lifeCountDifference":
+      return evaluateLifeCountDifference(state, entry, condition);
+    case "lifeCountTotal":
+      return evaluateLifeCountTotal(state, entry, condition);
     case "turnCount":
       return evaluateCountCondition(
         state,
@@ -924,6 +938,10 @@ export const isSupportedQueuedEffectConditionShape = (
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
       );
+    case "lifeCountDifference":
+      return isSupportedLifeCountDifferenceCondition(condition);
+    case "lifeCountTotal":
+      return isSupportedLifeCountTotalCondition(condition);
     case "trashCount":
       return (
         (condition.filter === undefined ||

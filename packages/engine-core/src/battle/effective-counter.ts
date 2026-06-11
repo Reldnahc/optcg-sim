@@ -5,6 +5,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
+import { cardMatchesAnyName } from "../card-name-matching.js";
 import {
   allContinuousEffects,
   durationIsActive,
@@ -67,7 +68,7 @@ const handCardMatchesCounterFilter = (
   }
   if (
     filter.names !== undefined &&
-    !filter.names.some((name) => metadata.name === name)
+    !cardMatchesAnyName(metadata, filter.names)
   ) {
     return false;
   }

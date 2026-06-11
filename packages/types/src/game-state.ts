@@ -214,6 +214,7 @@ export interface ContinuousEffectRecord {
   modifier: Modifier;
   duration: Duration;
   condition?: Condition;
+  usageLimit?: { type: "nextMatchingPlay"; maxUses: number };
   createdBy: CausalityRef;
   createdAtStateSeq: StateSeq;
 }

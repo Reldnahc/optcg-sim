@@ -90,6 +90,7 @@ export interface CardMetadata {
   cardId: CardId;
   source: MatchSource;
   name: string;
+  nameAliases?: string[];
   category: CardCategory;
   colors: CardColor[];
   cost?: number;
@@ -265,6 +266,7 @@ export interface ResolvedCard {
   cardId: CardId;
   language: string;
   name: string;
+  nameAliases?: string[];
   category: CardCategory;
   set: string;
   setName: string;

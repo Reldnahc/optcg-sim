@@ -12,6 +12,8 @@ import type {
   TargetSpec,
 } from "@optcg/types";
 
+import { cardMatchesAnyName } from "../../card-name-matching.js";
+
 export type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];
   controllerId?: PlayerId;
@@ -50,7 +52,7 @@ const cardMatchesBasicFilter = (
   }
   if (
     filter.names !== undefined &&
-    !filter.names.some((name) => metadata.name === name)
+    !cardMatchesAnyName(metadata, filter.names)
   ) {
     return false;
   }

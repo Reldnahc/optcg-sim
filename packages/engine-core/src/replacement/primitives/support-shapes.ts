@@ -1,4 +1,9 @@
-import type { Effect, EffectDefinition, Target } from "@optcg/types";
+import type {
+  CardFilter,
+  Effect,
+  EffectDefinition,
+  Target,
+} from "@optcg/types";
 
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
 import {
@@ -18,6 +23,65 @@ const replacementKind = "replacement";
 const isSelfTarget = (
   target: Target,
 ): target is Extract<Target, { type: "self" }> => target.type === "self";
+
+const isNonEmptyStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((entry) => typeof entry === "string");
+
+const hasSupportedNumericFilter = (
+  filter: CardFilter["cost"] | CardFilter["power"] | CardFilter["baseCost"],
+): boolean => {
+  if (filter === undefined) return true;
+  if ("op" in filter) {
+    return Number.isFinite(filter.value);
+  }
+  return (
+    (filter.min === undefined || Number.isFinite(filter.min)) &&
+    (filter.max === undefined || Number.isFinite(filter.max)) &&
+    (filter.min === undefined ||
+      filter.max === undefined ||
+      filter.min <= filter.max)
+  );
+};
+
+const isSupportedCharacterReplacementTargetFilter = (
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) return true;
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return (
+    keys.every(
+      (key) =>
+        key === "categories" ||
+        key === "names" ||
+        key === "typesAny" ||
+        key === "typesIncludeAny" ||
+        key === "cost" ||
+        key === "baseCost" ||
+        key === "power" ||
+        key === "state",
+    ) &&
+    (filter.categories === undefined ||
+      filter.categories.every((category) => category === "character")) &&
+    (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
+    (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
+    (filter.typesIncludeAny === undefined ||
+      isNonEmptyStringArray(filter.typesIncludeAny)) &&
+    hasSupportedNumericFilter(filter.cost) &&
+    hasSupportedNumericFilter(filter.baseCost) &&
+    hasSupportedNumericFilter(filter.power) &&
+    (filter.state === undefined ||
+      filter.state === "active" ||
+      filter.state === "rested")
+  );
+};
+
+const isSupportedSelfCharacterReplacementTarget = (target: Target): boolean =>
+  target.type === "all" &&
+  target.zone === "characterArea" &&
+  target.player === "self" &&
+  isSupportedCharacterReplacementTargetFilter(target.filter);
 
 const isSupportedReplacementEnvelope = (
   effect: EffectDefinition["effects"][number],
@@ -51,15 +115,29 @@ export const isSupportedOpponentFieldRemovalLifeReplacementEffect = (
   isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
-  effect.trigger.replacement.target.type === "all" &&
-  effect.trigger.replacement.target.zone === "characterArea" &&
-  effect.trigger.replacement.target.player === "self" &&
+  isSupportedSelfCharacterReplacementTarget(
+    effect.trigger.replacement.target,
+  ) &&
   effect.oncePerTurn === undefined &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
-  effect.effect.when.target.type === "all" &&
-  effect.effect.when.target.zone === "characterArea" &&
-  effect.effect.when.target.player === "self" &&
+  isSupportedSelfCharacterReplacementTarget(effect.effect.when.target) &&
+  isSupportedLifeTopToHandEffect(effect.effect.instead);
+
+export const isSupportedKoLifeTopToHandReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedReplacementEnvelope(effect) &&
+  effect.trigger.replacement.type === "wouldBeKOd" &&
+  isSupportedSelfCharacterReplacementTarget(
+    effect.trigger.replacement.target,
+  ) &&
+  effect.oncePerTurn !== false &&
+  effect.effect.when.type === "wouldBeKOd" &&
+  isSupportedSelfCharacterReplacementTarget(effect.effect.when.target) &&
+  effect.effect.when.sourceKind === effect.trigger.replacement.sourceKind &&
+  effect.effect.when.sourceControllerRelation ===
+    effect.trigger.replacement.sourceControllerRelation &&
   isSupportedLifeTopToHandEffect(effect.effect.instead);
 
 export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
@@ -183,6 +261,7 @@ export const isSupportedReplacementEffect = (
 ): effect is SupportedReplacementEffectBlock =>
   isSupportedSelfKoDrawReplacementEffect(effect) ||
   isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
+  isSupportedKoLifeTopToHandReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||

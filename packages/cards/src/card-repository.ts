@@ -356,6 +356,7 @@ const buildResolvedCard = (
   const cardId = detail.card_number as CardId;
   const lines = gameplayLines(detail);
   const printedKeywords = rawKeywordsFromLines(lines);
+  const nameAliases = nameAliasesFromLines(lines);
   const effectLines = lines.filter(
     (line) => parseRawKeywordLine({ text: line }) === undefined,
   );
@@ -404,6 +405,10 @@ const buildResolvedCard = (
     cardId,
     language: detail.language,
     name: detail.name,
+    ...optional(
+      "nameAliases",
+      nameAliases.length > 0 ? nameAliases : undefined,
+    ),
     category: normalizeCategory(detail.card_type),
     set: detail.set,
     setName: detail.set_name,
@@ -458,6 +463,22 @@ const buildResolvedCard = (
 
 const gameplayLines = (detail: PoneglyphCardDetail): string[] =>
   gameplayLinesFromTextParts([detail.effect, detail.trigger]);
+
+const nameAliasesFromLines = (lines: readonly string[]): string[] => {
+  const aliases: string[] = [];
+  for (const line of lines) {
+    const parsed = parseCardEffectLinesDetailed(line);
+    if (!parsed.ok) {
+      continue;
+    }
+    for (const value of parsed.value) {
+      if (value.kind === "metadata" && value.metadata.type === "nameAliases") {
+        aliases.push(...value.metadata.names);
+      }
+    }
+  }
+  return [...new Set(aliases)];
+};
 
 const effectTextSourceMapFromText = (
   text: string | null | undefined,

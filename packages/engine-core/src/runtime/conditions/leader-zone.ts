@@ -8,6 +8,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import {
+  cardMatchesAnyName,
+  cardMatchesNameContains,
+} from "../../card-name-matching.js";
+
 interface ConditionEvaluationSuccess {
   supported: true;
   passed: boolean;
@@ -168,11 +173,11 @@ const leaderMatchesFilter = (
   const namesMatch =
     filter.names === undefined
       ? true
-      : filter.names.some((name) => leader.name === name);
+      : cardMatchesAnyName(leader, filter.names);
   const nameContainsMatch =
     filter.nameContains === undefined
       ? true
-      : leader.name.includes(filter.nameContains);
+      : cardMatchesNameContains(leader, filter.nameContains);
   const anyOfMatch =
     filter.anyOf === undefined
       ? true

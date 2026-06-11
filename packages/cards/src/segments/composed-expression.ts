@@ -387,8 +387,7 @@ export function parseConditionExpression(
     return direct;
   }
 
-  const parts = text
-    .split(/\s+and\s+/iu)
+  const parts = splitConditionConjunction(text)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
   if (parts.length < 2) {
@@ -415,6 +414,16 @@ export function parseConditionExpression(
     ],
     rest: "",
   };
+}
+
+function splitConditionConjunction(text: string): string[] {
+  const protectedSubject = "__condition_subject_you_and_your_opponent__";
+  return text
+    .replace(/\byou and your opponent\b/giu, protectedSubject)
+    .split(/\s+and\s+/iu)
+    .map((part) =>
+      part.replace(new RegExp(protectedSubject, "gu"), "you and your opponent"),
+    );
 }
 
 export function parseLeadingConditionalExpression(

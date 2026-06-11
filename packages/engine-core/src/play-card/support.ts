@@ -16,6 +16,7 @@ import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
 import { hasUnsupportedSupportGateText } from "../battle/support.js";
+import { cardMatchesAnyName } from "../card-name-matching.js";
 
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
@@ -79,7 +80,7 @@ const cardMatchesHandFilter = (
   }
   if (
     filter.names !== undefined &&
-    !filter.names.some((name) => metadata.name === name)
+    !cardMatchesAnyName(metadata, filter.names)
   ) {
     return false;
   }
@@ -170,6 +171,13 @@ const costModifierAppliesToCard = (
 ): boolean => {
   if (effect.modifier.layer !== "costAdd") return false;
   if (effect.modifier.operation.type !== "addCost") return false;
+  if (
+    effect.usageLimit !== undefined &&
+    (!Number.isSafeInteger(effect.usageLimit.maxUses) ||
+      effect.usageLimit.maxUses <= 0)
+  ) {
+    return false;
+  }
   if (!costModifierDurationIsActive(state, effect)) return false;
   if (!costModifierConditionPasses(state, effect)) return false;
   const target = effect.modifier.target;
@@ -364,6 +372,41 @@ export const getEffectivePlayCost = (
     return operation.type === "addCost" ? total + operation.value : total;
   }, 0);
   return Math.max(0, supported.printedCost + costDelta);
+};
+
+export const consumeMatchingPlayCostModifiers = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+): ContinuousEffectRecord[] => {
+  if (
+    !state.continuousEffects.some(
+      (effect) => effect.usageLimit?.type === "nextMatchingPlay",
+    )
+  ) {
+    return state.continuousEffects;
+  }
+
+  return state.continuousEffects.flatMap((effect) => {
+    if (
+      effect.usageLimit?.type !== "nextMatchingPlay" ||
+      !costModifierAppliesToCard(state, playerId, card, effect)
+    ) {
+      return [effect];
+    }
+    if (effect.usageLimit.maxUses <= 1) {
+      return [];
+    }
+    return [
+      {
+        ...effect,
+        usageLimit: {
+          ...effect.usageLimit,
+          maxUses: effect.usageLimit.maxUses - 1,
+        },
+      },
+    ];
+  });
 };
 
 export const isPlayBlockedByRestriction = (

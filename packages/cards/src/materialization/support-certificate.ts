@@ -27,6 +27,7 @@ const directFamilyPrefixes: ReadonlySet<SupportEvidenceFamily> = new Set([
   "player",
   "chooser",
   "duration",
+  "usageLimit",
   "modifier",
   "replacement",
   "reference",
