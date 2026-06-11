@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogButton } from "./ActionLogButton.js";
 import { actionLogCardModel } from "./card-model.js";
@@ -402,14 +402,21 @@ export const MatchApp = ({
     updateDockedWindowRects,
   ]);
 
-  const matchAppStyle =
-    visualSettings.backgroundImageUrl.length === 0
-      ? undefined
+  const zoneGuideStrength = visualSettings.zoneGuideVisibility / 100;
+  const zoneGuideBorderAlpha = 0.04 + zoneGuideStrength * 0.4;
+  const zoneGuideLabelAlpha = 0.18 + zoneGuideStrength * 0.72;
+  const matchAppStyle = {
+    "--zone-guide-border-alpha": zoneGuideBorderAlpha.toFixed(3),
+    "--zone-guide-label-alpha": zoneGuideLabelAlpha.toFixed(3),
+    ...(visualSettings.backgroundImageUrl.length === 0
+      ? {}
       : {
           backgroundImage: `url(${JSON.stringify(
             visualSettings.backgroundImageUrl,
           )})`,
-        };
+        }),
+  } as CSSProperties &
+    Record<"--zone-guide-border-alpha" | "--zone-guide-label-alpha", string>;
 
   return (
     <MatchVisualSettingsProvider value={visualSettings}>

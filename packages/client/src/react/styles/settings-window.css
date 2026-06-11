@@ -19,6 +19,12 @@
   font-size: var(--floating-window-small-font-size);
 }
 
+.settings-field input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--match-accent);
+}
+
 .settings-secondary-button {
   min-height: clamp(30px, calc(var(--card-height) / 5), 40px);
   border: 0;

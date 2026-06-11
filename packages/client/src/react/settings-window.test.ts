@@ -38,6 +38,10 @@ describe("settings window", () => {
     assert.match(markup, /type="file"/u);
     assert.match(markup, /accept="image\/\*,\.gif"/u);
     assert.match(markup, /Clear background/u);
+    assert.match(markup, /Zone guide visibility/u);
+    assert.match(markup, /type="range"/u);
+    assert.match(markup, /min="0"/u);
+    assert.match(markup, /max="100"/u);
     assert.match(markup, /Quick pay Activate: Main costs/u);
     assert.match(markup, /Confirm attach DON/u);
     assert.match(markup, /Confirm end turn/u);
@@ -151,7 +155,10 @@ describe("settings window", () => {
     assert.match(matchApp, /usePersistedMatchVisualSettings/u);
     assert.match(matchApp, /<MatchVisualSettingsProvider/u);
     assert.match(matchApp, /style=\{matchAppStyle\}/u);
+    assert.match(matchApp, /zoneGuideBorderAlpha/u);
+    assert.match(matchApp, /--zone-guide-label-alpha/u);
     assert.match(persistedSettingsHook, /optcg:client:background-image-url/u);
+    assert.match(persistedSettingsHook, /optcg:client:zone-guide-visibility/u);
     assert.match(persistedSettingsHook, /optcg:client:confirm-end-turn/u);
     assert.match(
       persistedSettingsHook,
@@ -166,6 +173,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /new FileReader\(\)/u);
     assert.match(settingsWindow, /reader\.readAsDataURL\(file\)/u);
     assert.match(settingsWindow, /type="file"/u);
+    assert.match(settingsWindow, /setZoneGuideVisibility/u);
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);

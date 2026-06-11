@@ -8,10 +8,12 @@ export interface MatchVisualSettings {
   readonly confirmAttachDon: boolean;
   readonly confirmEndTurn: boolean;
   readonly quickPayActivateMainCosts: boolean;
+  readonly zoneGuideVisibility: number;
   readonly setBackgroundImageUrl: (url: string) => void;
   readonly setConfirmAttachDon: (enabled: boolean) => void;
   readonly setConfirmEndTurn: (enabled: boolean) => void;
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
+  readonly setZoneGuideVisibility: (value: number) => void;
 }
 
 const noopVisualSettings: MatchVisualSettings = {
@@ -19,10 +21,12 @@ const noopVisualSettings: MatchVisualSettings = {
   confirmAttachDon: true,
   confirmEndTurn: false,
   quickPayActivateMainCosts: false,
+  zoneGuideVisibility: 60,
   setBackgroundImageUrl: () => undefined,
   setConfirmAttachDon: () => undefined,
   setConfirmEndTurn: () => undefined,
   setQuickPayActivateMainCosts: () => undefined,
+  setZoneGuideVisibility: () => undefined,
 };
 
 const MatchVisualSettingsContext =
@@ -58,10 +62,12 @@ export const SettingsContent = (): React.JSX.Element => {
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
+    zoneGuideVisibility,
     setBackgroundImageUrl,
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
+    setZoneGuideVisibility,
   } = useMatchVisualSettings();
 
   const selectBackgroundFile = (file: File | undefined): void => {
@@ -100,6 +106,19 @@ export const SettingsContent = (): React.JSX.Element => {
       >
         Clear background
       </button>
+      <label className="settings-field">
+        <span>Zone guide visibility</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={zoneGuideVisibility}
+          onChange={(event) => {
+            setZoneGuideVisibility(event.currentTarget.valueAsNumber);
+          }}
+        />
+      </label>
       <label className="settings-checkbox-field">
         <input
           type="checkbox"
