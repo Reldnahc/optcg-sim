@@ -4,6 +4,7 @@ import { createBrowserPersistentStorage } from "./browser-storage.js";
 import type { MatchVisualSettings } from "./SettingsWindow.js";
 
 const matchBackgroundImageStorageKey = "optcg:client:background-image-url";
+const confirmAttachDonStorageKey = "optcg:client:confirm-attach-don";
 const confirmEndTurnStorageKey = "optcg:client:confirm-end-turn";
 const quickPayActivateMainCostsStorageKey =
   "optcg:client:quick-pay-activate-main-costs";
@@ -18,6 +19,9 @@ const loadQuickPayActivateMainCosts = (): boolean =>
   browserPersistentStorage()?.getItem(quickPayActivateMainCostsStorageKey) ===
   "true";
 
+const loadConfirmAttachDon = (): boolean =>
+  browserPersistentStorage()?.getItem(confirmAttachDonStorageKey) !== "false";
+
 const loadConfirmEndTurn = (): boolean =>
   browserPersistentStorage()?.getItem(confirmEndTurnStorageKey) === "true";
 
@@ -25,6 +29,8 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
   const [backgroundImageUrl, setBackgroundImageUrlState] = useState(
     loadBackgroundImageUrl,
   );
+  const [confirmAttachDon, setConfirmAttachDonState] =
+    useState(loadConfirmAttachDon);
   const [confirmEndTurn, setConfirmEndTurnState] = useState(loadConfirmEndTurn);
   const [quickPayActivateMainCosts, setQuickPayActivateMainCostsState] =
     useState(loadQuickPayActivateMainCosts);
@@ -52,6 +58,15 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
     storage.setItem(confirmEndTurnStorageKey, enabled ? "true" : "false");
   };
 
+  const setConfirmAttachDon = (enabled: boolean): void => {
+    setConfirmAttachDonState(enabled);
+    const storage = browserPersistentStorage();
+    if (storage === undefined) {
+      return;
+    }
+    storage.setItem(confirmAttachDonStorageKey, enabled ? "true" : "false");
+  };
+
   const setQuickPayActivateMainCosts = (enabled: boolean): void => {
     setQuickPayActivateMainCostsState(enabled);
     const storage = browserPersistentStorage();
@@ -66,9 +81,11 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
 
   return {
     backgroundImageUrl,
+    confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
     setBackgroundImageUrl,
+    setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
   };

@@ -51,6 +51,7 @@ import { useMatchSessionActions } from "./use-match-session-actions.js";
 
 export interface UseMatchClientOptions {
   readonly accountSessionToken: string;
+  readonly confirmAttachDon?: boolean | undefined;
   readonly quickPayActivateMainCosts?: boolean | undefined;
 }
 
@@ -94,6 +95,7 @@ const uncheckedLocalLoadouts = (
 
 export const useMatchClient = ({
   accountSessionToken,
+  confirmAttachDon = true,
   quickPayActivateMainCosts = false,
 }: UseMatchClientOptions): MatchClientUi => {
   const localRawDeckSubmissionsAllowed = useMemo(
@@ -364,37 +366,41 @@ export const useMatchClient = ({
     setErrors,
   });
 
-  const { confirmDecision, submitAction, submitDecisionDraft } =
-    useMatchClientActions({
-      activeCardCostGroup,
-      activeDecisionDraft,
-      board,
-      controller,
-      modalResponseActions,
-      optionalCardCostChoice,
-      pendingDecision,
-      selectedCardCostActionIndex,
-      selectedCardInstanceId,
-      selectedDonInstanceIds,
-      autoSubmittedPayCostDecisionId,
-      legalActions: playerSnapshot?.actions ?? [],
-      onVisibleActionSubmitted: (actionType) => {
-        if (actionType === "activateEffect") {
-          quickPayActivateMainArmed.current = true;
-        }
-      },
-      resetInteractionState,
-      setActionInFlight,
-      setActiveAttackTargetChoice,
-      setActiveCardCostChoice,
-      setActiveCardCostSelectedInstanceIds,
-      setActiveCounterTargetChoice,
-      setClientState,
-      setDecisionDraft,
-      setErrors,
-      setSelectedCardInstanceId,
-      setSelectedDonInstanceIds,
-    });
+  const {
+    attachSelectedDonToTarget,
+    confirmDecision,
+    submitAction,
+    submitDecisionDraft,
+  } = useMatchClientActions({
+    activeCardCostGroup,
+    activeDecisionDraft,
+    board,
+    controller,
+    modalResponseActions,
+    optionalCardCostChoice,
+    pendingDecision,
+    selectedCardCostActionIndex,
+    selectedCardInstanceId,
+    selectedDonInstanceIds,
+    autoSubmittedPayCostDecisionId,
+    legalActions: playerSnapshot?.actions ?? [],
+    onVisibleActionSubmitted: (actionType) => {
+      if (actionType === "activateEffect") {
+        quickPayActivateMainArmed.current = true;
+      }
+    },
+    resetInteractionState,
+    setActionInFlight,
+    setActiveAttackTargetChoice,
+    setActiveCardCostChoice,
+    setActiveCardCostSelectedInstanceIds,
+    setActiveCounterTargetChoice,
+    setClientState,
+    setDecisionDraft,
+    setErrors,
+    setSelectedCardInstanceId,
+    setSelectedDonInstanceIds,
+  });
   useEffect(() => {
     if (
       pendingDecision === undefined ||
@@ -459,12 +465,14 @@ export const useMatchClient = ({
     pendingDecisionInteractionMode,
     playerActions: playerSnapshot?.actions ?? [],
     selectedDonInstanceIds,
+    confirmAttachDon,
     setActiveAttackTargetChoice,
     setActiveCardCostSelectedInstanceIds,
     setActiveCounterTargetChoice,
     setDecisionDraft,
     setSelectedCardInstanceId,
     setSelectedDonInstanceIds,
+    attachSelectedDonToTarget,
     submitAction,
     submitDecisionDraft,
   });

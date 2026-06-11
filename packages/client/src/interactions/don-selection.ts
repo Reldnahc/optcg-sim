@@ -33,6 +33,24 @@ const hasAttachDonActionForDon = (
       action.attachment?.donInstanceId === (donInstanceId as InstanceId),
   );
 
+export const selectedDonAttachmentClickIntent = ({
+  confirmAttachDon,
+  selectedDonInstanceIds,
+  targetInstanceId,
+}: {
+  confirmAttachDon: boolean;
+  selectedDonInstanceIds: readonly string[];
+  targetInstanceId: string;
+}): { type: "attach" | "confirm"; targetInstanceId: string } | undefined => {
+  if (selectedDonInstanceIds.length === 0) {
+    return undefined;
+  }
+  return {
+    type: confirmAttachDon ? "confirm" : "attach",
+    targetInstanceId,
+  };
+};
+
 export const isSelectableCostAreaDon = (
   board: BoardViewModel | undefined,
   instanceId: string,

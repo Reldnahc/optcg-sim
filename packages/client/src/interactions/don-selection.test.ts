@@ -7,6 +7,7 @@ import {
   ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
   isSelectableCostAreaDon,
+  selectedDonAttachmentClickIntent,
   selectedDonAttachmentMenuAction,
   toggleSelectedDonInstanceId,
 } from "./don-selection.js";
@@ -186,6 +187,33 @@ describe("DON selection interaction", () => {
     );
     assert.equal(
       selectedDonAttachmentMenuAction(["don-1", "don-3"], actions, "leader-1"),
+      undefined,
+    );
+  });
+
+  test("selected DON target clicks confirm by default and can attach immediately", () => {
+    assert.deepEqual(
+      selectedDonAttachmentClickIntent({
+        confirmAttachDon: true,
+        selectedDonInstanceIds: ["don-1"],
+        targetInstanceId: "leader-1",
+      }),
+      { type: "confirm", targetInstanceId: "leader-1" },
+    );
+    assert.deepEqual(
+      selectedDonAttachmentClickIntent({
+        confirmAttachDon: false,
+        selectedDonInstanceIds: ["don-1"],
+        targetInstanceId: "leader-1",
+      }),
+      { type: "attach", targetInstanceId: "leader-1" },
+    );
+    assert.equal(
+      selectedDonAttachmentClickIntent({
+        confirmAttachDon: false,
+        selectedDonInstanceIds: [],
+        targetInstanceId: "leader-1",
+      }),
       undefined,
     );
   });

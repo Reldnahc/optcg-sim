@@ -48,6 +48,7 @@ export const MatchApp = ({
   const visualSettings = usePersistedMatchVisualSettings();
   const client = useMatchClient({
     accountSessionToken,
+    confirmAttachDon: visualSettings.confirmAttachDon,
     quickPayActivateMainCosts: visualSettings.quickPayActivateMainCosts,
   });
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();

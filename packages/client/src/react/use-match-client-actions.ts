@@ -66,6 +66,7 @@ export interface UseMatchClientActionsInput {
 }
 
 export interface MatchClientActions {
+  attachSelectedDonToTarget: (targetInstanceId: string) => Promise<void>;
   confirmDecision: () => Promise<void>;
   submitAction: (actionIndex: number) => Promise<void>;
   submitDecisionDraft: (draft: DecisionDraft) => Promise<void>;
@@ -348,5 +349,10 @@ export const useMatchClientActions = ({
     submitDecisionDraft,
   ]);
 
-  return { confirmDecision, submitAction, submitDecisionDraft };
+  return {
+    attachSelectedDonToTarget,
+    confirmDecision,
+    submitAction,
+    submitDecisionDraft,
+  };
 };

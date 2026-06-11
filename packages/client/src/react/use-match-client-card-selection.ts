@@ -12,6 +12,7 @@ import {
   optionalCardCostInstanceIds,
   progressClickSelection,
   selectionDraftIsComplete,
+  selectedDonAttachmentClickIntent,
   toggleDecisionSelectedCard,
   toggleSelectedDonInstanceId,
 } from "../index.js";
@@ -46,6 +47,7 @@ export interface UseMatchClientCardSelectionInput {
   pendingDecisionInteractionMode: PendingDecisionInteractionMode | undefined;
   playerActions: MatchClientState["snapshot"]["players"][PlayerId]["actions"];
   selectedDonInstanceIds: readonly string[];
+  confirmAttachDon: boolean;
   setActiveAttackTargetChoice: (value: AttackTargetChoice | undefined) => void;
   setActiveCardCostSelectedInstanceIds: Dispatch<SetStateAction<string[]>>;
   setActiveCounterTargetChoice: (
@@ -54,6 +56,7 @@ export interface UseMatchClientCardSelectionInput {
   setDecisionDraft: (value: DecisionDraft | undefined) => void;
   setSelectedCardInstanceId: (value: string | undefined) => void;
   setSelectedDonInstanceIds: Dispatch<SetStateAction<string[]>>;
+  attachSelectedDonToTarget: (targetInstanceId: string) => Promise<void>;
   submitAction: (actionIndex: number) => Promise<void>;
   submitDecisionDraft: (draft: DecisionDraft) => Promise<void>;
 }
@@ -70,12 +73,14 @@ export const useMatchClientCardSelection = ({
   pendingDecisionInteractionMode,
   playerActions,
   selectedDonInstanceIds,
+  confirmAttachDon,
   setActiveAttackTargetChoice,
   setActiveCardCostSelectedInstanceIds,
   setActiveCounterTargetChoice,
   setDecisionDraft,
   setSelectedCardInstanceId,
   setSelectedDonInstanceIds,
+  attachSelectedDonToTarget,
   submitAction,
   submitDecisionDraft,
 }: UseMatchClientCardSelectionInput): ((
@@ -181,7 +186,18 @@ export const useMatchClientCardSelection = ({
         selectedDonInstanceIds.length > 0 &&
         isSelfAttachmentTarget(board, instanceId)
       ) {
-        setSelectedCardInstanceId(instanceId);
+        const intent = selectedDonAttachmentClickIntent({
+          confirmAttachDon,
+          selectedDonInstanceIds,
+          targetInstanceId: instanceId,
+        });
+        if (intent?.type === "attach") {
+          void attachSelectedDonToTarget(intent.targetInstanceId);
+          return;
+        }
+        if (intent?.type === "confirm") {
+          setSelectedCardInstanceId(intent.targetInstanceId);
+        }
         return;
       }
       setSelectedDonInstanceIds([]);
@@ -195,7 +211,9 @@ export const useMatchClientCardSelection = ({
       activeCounterTargetChoice,
       activeCardCostGroup,
       activeCardCostSelectedInstanceIds,
+      attachSelectedDonToTarget,
       board,
+      confirmAttachDon,
       modalResponseActions,
       pendingDecision,
       pendingDecisionInteractionMode,

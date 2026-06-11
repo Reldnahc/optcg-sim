@@ -5,18 +5,22 @@ import type { WindowRect } from "./FloatingWindow.js";
 
 export interface MatchVisualSettings {
   readonly backgroundImageUrl: string;
+  readonly confirmAttachDon: boolean;
   readonly confirmEndTurn: boolean;
   readonly quickPayActivateMainCosts: boolean;
   readonly setBackgroundImageUrl: (url: string) => void;
+  readonly setConfirmAttachDon: (enabled: boolean) => void;
   readonly setConfirmEndTurn: (enabled: boolean) => void;
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
 }
 
 const noopVisualSettings: MatchVisualSettings = {
   backgroundImageUrl: "",
+  confirmAttachDon: true,
   confirmEndTurn: false,
   quickPayActivateMainCosts: false,
   setBackgroundImageUrl: () => undefined,
+  setConfirmAttachDon: () => undefined,
   setConfirmEndTurn: () => undefined,
   setQuickPayActivateMainCosts: () => undefined,
 };
@@ -51,9 +55,11 @@ export const defaultSettingsWindowRect: WindowRect = {
 export const SettingsContent = (): React.JSX.Element => {
   const {
     backgroundImageUrl,
+    confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
     setBackgroundImageUrl,
+    setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
   } = useMatchVisualSettings();
@@ -103,6 +109,16 @@ export const SettingsContent = (): React.JSX.Element => {
           }}
         />
         <span>Quick pay Activate: Main costs</span>
+      </label>
+      <label className="settings-checkbox-field">
+        <input
+          type="checkbox"
+          checked={confirmAttachDon}
+          onChange={(event) => {
+            setConfirmAttachDon(event.currentTarget.checked);
+          }}
+        />
+        <span>Confirm attach DON</span>
       </label>
       <label className="settings-checkbox-field">
         <input

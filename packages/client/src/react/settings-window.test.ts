@@ -39,6 +39,7 @@ describe("settings window", () => {
     assert.match(markup, /accept="image\/\*,\.gif"/u);
     assert.match(markup, /Clear background/u);
     assert.match(markup, /Quick pay Activate: Main costs/u);
+    assert.match(markup, /Confirm attach DON/u);
     assert.match(markup, /Confirm end turn/u);
     assert.match(markup, /type="checkbox"/u);
   });
@@ -156,6 +157,8 @@ describe("settings window", () => {
       persistedSettingsHook,
       /optcg:client:quick-pay-activate-main-costs/u,
     );
+    assert.match(persistedSettingsHook, /optcg:client:confirm-attach-don/u);
+    assert.match(persistedSettingsHook, /loadConfirmAttachDon/u);
     assert.match(persistedSettingsHook, /createBrowserPersistentStorage/u);
     assert.match(persistedSettingsHook, /\.getItem/u);
     assert.match(persistedSettingsHook, /\.setItem/u);
@@ -166,6 +169,25 @@ describe("settings window", () => {
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
+  });
+
+  test("confirm attach DON setting reaches the selected-DON click path", async () => {
+    const [matchApp, matchClient, cardSelection] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "useMatchClient.ts"), "utf8"),
+      readFile(
+        join(sourceDirectory, "use-match-client-card-selection.ts"),
+        "utf8",
+      ),
+    ]);
+
+    assert.match(
+      matchApp,
+      /confirmAttachDon:\s*visualSettings\.confirmAttachDon/u,
+    );
+    assert.match(matchClient, /confirmAttachDon\s*=\s*true/u);
+    assert.match(cardSelection, /selectedDonAttachmentClickIntent/u);
+    assert.match(cardSelection, /attachSelectedDonToTarget/u);
   });
 
   test("tool strip buttons focus resurfaced info tabs", async () => {
