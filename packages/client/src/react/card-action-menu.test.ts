@@ -164,7 +164,10 @@ describe("card action menu", () => {
       false,
     );
     assert.equal(controlsCss.includes(".summary-panel.is-turn-player"), true);
-    assert.equal(controlsCss.includes("border-color: #59ff8f"), true);
+    assert.equal(
+      controlsCss.includes("border-color: var(--match-accent-strong)"),
+      true,
+    );
   });
 
   test("renders selected-card actions on the selected card instead of the control rail", () => {

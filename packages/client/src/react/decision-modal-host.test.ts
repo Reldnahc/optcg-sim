@@ -341,7 +341,7 @@ test("button-only decision options use pointer and hover feedback", async () => 
   );
   assert.match(
     styles,
-    /\.decision-option-list\s+\.decision-choice:hover:not\(:disabled\),\s*\.decision-option-list\s+\.decision-choice:focus-visible:not\(:disabled\)\s*\{[^}]*background:\s*#706a67;[^}]*box-shadow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.88\),\s*0 0 10px rgba\(255,\s*255,\s*255,\s*0\.42\);/u,
+    /\.decision-option-list\s+\.decision-choice:hover:not\(:disabled\),\s*\.decision-option-list\s+\.decision-choice:focus-visible:not\(:disabled\)\s*\{[^}]*background:\s*var\(--match-surface-control-hover\);[^}]*box-shadow:\s*0 0 0 2px rgba\(255,\s*255,\s*255,\s*0\.88\),\s*0 0 10px rgba\(255,\s*255,\s*255,\s*0\.42\);/u,
   );
 });
 
@@ -603,7 +603,7 @@ test("decision modal card surfaces use the board-card rounded mask", async () =>
   );
   assert.match(
     styles,
-    /\.decision-card-placeholder\s*\{[^}]*border:\s*var\(--card-outline-thin\) solid #f4eee7;[^}]*border-radius:\s*var\(--card-corner-radius\);[^}]*padding:\s*var\(--card-inset-medium\);/u,
+    /\.decision-card-placeholder\s*\{[^}]*border:\s*var\(--card-outline-thin\) solid var\(--match-border-strong\);[^}]*border-radius:\s*var\(--card-corner-radius\);[^}]*padding:\s*var\(--card-inset-medium\);/u,
   );
 });
 

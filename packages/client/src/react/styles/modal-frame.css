@@ -26,9 +26,9 @@
   max-height: calc(100vh - (var(--modal-viewport-gutter) * 2));
   overflow: auto;
   gap: var(--modal-gap);
-  border: var(--card-outline-thin) solid #f4eee7;
+  border: var(--card-outline-thin) solid var(--match-border-strong);
   border-radius: var(--card-corner-radius);
-  background: rgba(38, 35, 34, 0.97);
+  background: var(--match-surface-window);
   padding: var(--modal-padding);
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
   transform: translate(-50%, -50%);
@@ -60,8 +60,8 @@
   min-height: 30px;
   border: 0;
   border-radius: 5px;
-  color: #fff;
-  background: #3f3d3c;
+  color: var(--match-text);
+  background: var(--match-surface-control);
   cursor: pointer;
   padding: 0 12px;
 }

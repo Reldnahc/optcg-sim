@@ -8,14 +8,14 @@
   display: grid;
   gap: calc(var(--floating-window-body-padding) * 0.55);
   min-width: 0;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--match-text);
   font-size: var(--floating-window-small-font-size);
 }
 
 .settings-field input[type="file"] {
   width: 100%;
   min-width: 0;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--match-text-muted);
   font-size: var(--floating-window-small-font-size);
 }
 
@@ -23,8 +23,8 @@
   min-height: clamp(30px, calc(var(--card-height) / 5), 40px);
   border: 0;
   border-radius: calc(var(--floating-window-radius) * 0.7);
-  color: #fff;
-  background: #3f3d3c;
+  color: var(--match-text);
+  background: var(--match-surface-control);
   cursor: pointer;
   font-size: var(--floating-window-small-font-size);
 }
@@ -39,13 +39,13 @@
   align-items: center;
   gap: calc(var(--floating-window-body-padding) * 0.7);
   min-width: 0;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--match-text);
   font-size: var(--floating-window-small-font-size);
 }
 
 .settings-checkbox-field input {
   width: clamp(15px, calc(var(--card-height) / 10), 20px);
   height: clamp(15px, calc(var(--card-height) / 10), 20px);
-  accent-color: #6fbf73;
+  accent-color: var(--match-accent);
   cursor: pointer;
 }

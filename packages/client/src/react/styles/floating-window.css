@@ -7,9 +7,9 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-width: var(--floating-window-min-width);
   min-height: var(--floating-window-min-height);
-  border: var(--floating-window-border-width) solid #f4eee7;
+  border: var(--floating-window-border-width) solid var(--match-border-strong);
   border-radius: var(--floating-window-radius);
-  background: rgba(38, 35, 34, 0.97);
+  background: var(--match-surface-window);
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   font-size: var(--floating-window-font-size);
@@ -20,7 +20,7 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0;
   align-items: center;
-  border-bottom: 1px solid rgba(244, 238, 231, 0.24);
+  border-bottom: 1px solid var(--match-border-soft);
   padding: 0;
 }
 
@@ -29,7 +29,7 @@
   min-height: var(--floating-window-header-height);
   border: 0;
   padding: 0 var(--floating-window-header-padding);
-  color: #fff;
+  color: var(--match-text);
   background: transparent;
   cursor: move;
   text-align: left;
@@ -56,7 +56,7 @@
   place-items: center;
   border: 0;
   border-radius: 0;
-  color: #fff;
+  color: var(--match-text);
   background: transparent;
   cursor: pointer;
   font-size: var(--floating-window-control-font-size);
@@ -65,11 +65,11 @@
 }
 
 .floating-window-minimize:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--match-surface-field-hover);
 }
 
 .floating-window-close:hover {
-  background: #c42b1c;
+  background: var(--match-surface-danger);
 }
 
 .floating-window.is-minimized {
@@ -91,7 +91,7 @@
   height: var(--floating-window-resize-handle-size);
   border: 0;
   background:
-    linear-gradient(135deg, transparent 50%, rgba(244, 238, 231, 0.8) 50%)
+    linear-gradient(135deg, transparent 50%, var(--match-border) 50%)
       bottom right / var(--floating-window-resize-corner-size)
       var(--floating-window-resize-corner-size) no-repeat,
     transparent;

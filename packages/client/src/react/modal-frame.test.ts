@@ -90,7 +90,7 @@ describe("modal frame", () => {
     assert.match(styles, /\.modal-frame\s*\{[^}]*flex-direction:\s*column;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*gap:\s*var\(--modal-gap\);[^}]*border:\s*var\(--card-outline-thin\) solid #f4eee7;[^}]*border-radius:\s*var\(--card-corner-radius\);[^}]*padding:\s*var\(--modal-padding\);/u,
+      /\.modal-frame\s*\{[^}]*gap:\s*var\(--modal-gap\);[^}]*border:\s*var\(--card-outline-thin\) solid var\(--match-border-strong\);[^}]*border-radius:\s*var\(--card-corner-radius\);[^}]*padding:\s*var\(--modal-padding\);/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*box-shadow:/u);
   });

@@ -59,7 +59,7 @@ describe("floating window", () => {
     );
     assert.match(
       styles,
-      /\.floating-window-close:hover\s*\{[^}]*background:\s*#c42b1c;/u,
+      /\.floating-window-close:hover\s*\{[^}]*background:\s*var\(--match-surface-danger\);/u,
     );
     assert.match(
       styles,

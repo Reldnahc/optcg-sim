@@ -59,9 +59,9 @@
 .summary-panel,
 .controls-panel,
 .loading-panel {
-  border: var(--card-outline-thin) solid #e8e0d6;
+  border: var(--card-outline-thin) solid var(--match-border);
   border-radius: var(--control-panel-radius);
-  background: #9d9694;
+  background: var(--match-surface-panel);
   padding: var(--control-panel-padding);
 }
 
@@ -74,8 +74,8 @@
 }
 
 .summary-panel.is-turn-player {
-  border-color: #59ff8f;
-  background: #8f9790;
+  border-color: var(--match-accent-strong);
+  background: var(--match-surface-panel-raised);
   box-shadow:
     inset 0 0 0 var(--card-outline-thin) rgba(0, 0, 0, 0.35),
     0 0 0 var(--card-outline-medium) rgba(89, 255, 143, 0.34),
@@ -87,7 +87,7 @@
   align-items: center;
   gap: var(--control-title-gap);
   margin: 0;
-  color: #fff;
+  color: var(--match-text);
   font-size: var(--control-title-font-size);
   font-weight: 400;
 }
@@ -115,11 +115,11 @@
 }
 
 .connection-status.is-connected {
-  background: #59ff8f;
+  background: var(--match-accent-strong);
 }
 
 .connection-status.is-disconnected {
-  background: #72706e;
+  background: var(--match-text-subtle);
 }
 
 .player-timers {
@@ -127,17 +127,17 @@
   align-items: center;
   gap: var(--control-title-gap);
   min-width: 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--match-text);
   font-size: var(--control-body-font-size);
   font-variant-numeric: tabular-nums;
 }
 
 .game-timer {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--match-text-muted);
 }
 
 .game-timer.is-running {
-  color: #59ff8f;
+  color: var(--match-accent-strong);
 }
 
 .disconnect-timer {
@@ -150,7 +150,7 @@
   gap: 12px;
   max-width: 480px;
   margin: 40px auto;
-  color: #fff;
+  color: var(--match-text);
 }
 
 .loading-panel h1 {
@@ -197,10 +197,10 @@
 .deck-hash-field textarea {
   min-height: 78px;
   max-height: 150px;
-  border: 1px solid rgba(255, 255, 255, 0.36);
+  border: 1px solid var(--match-border-soft);
   border-radius: 4px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.26);
+  color: var(--match-text);
+  background: var(--match-surface-field);
   padding: 8px;
   resize: vertical;
   word-break: break-all;
@@ -209,10 +209,10 @@
 .deck-hash-field input {
   min-height: 34px;
   max-height: none;
-  border: 1px solid rgba(255, 255, 255, 0.36);
+  border: 1px solid var(--match-border-soft);
   border-radius: 4px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.26);
+  color: var(--match-text);
+  background: var(--match-surface-field);
   padding: 8px;
   resize: none;
 }
@@ -231,10 +231,10 @@
   align-items: stretch;
   gap: 10px;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--match-border-soft);
   border-radius: 5px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.24);
+  color: var(--match-text);
+  background: var(--match-surface-field);
   padding: 0;
   text-align: left;
   cursor: pointer;
@@ -248,8 +248,8 @@
 .deck-loadout-selected:hover:not(:disabled),
 .deck-loadout-option:hover:not(:disabled),
 .deck-loadout-option.is-selected {
-  border-color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--match-border);
+  background: var(--match-surface-field-hover);
 }
 
 .deck-loadout-selected:disabled,
@@ -264,12 +264,13 @@
   height: 100%;
   min-height: 54px;
   place-items: center;
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--match-text-muted);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 44%), #585351;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 44%),
+    var(--match-surface-control);
   background-position: center 20%;
   background-size: 180%;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.14);
+  box-shadow: inset -1px 0 0 var(--match-border-soft);
   font-size: 11px;
   font-weight: 700;
   overflow: hidden;
@@ -300,7 +301,7 @@
 
 .deck-loadout-selected-meta,
 .deck-loadout-option-meta {
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--match-text-muted);
   font-size: 12px;
 }
 
@@ -344,10 +345,10 @@
 .deck-loadout-search {
   box-sizing: border-box;
   min-height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.36);
+  border: 1px solid var(--match-border-soft);
   border-radius: 4px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.28);
+  color: var(--match-text);
+  background: var(--match-surface-field);
   padding: 10px;
   font-size: 15px;
   resize: none;
@@ -381,8 +382,8 @@
   min-height: 44px;
   border: 0;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--match-text);
+  background: var(--match-surface-control);
   padding: 0 8px;
   font-size: 16px;
   text-align: left;
@@ -394,8 +395,8 @@
 }
 
 .deck-loadout-folder-header:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.16);
+  color: var(--match-text);
+  background: var(--match-surface-control-hover);
 }
 
 .deck-loadout-folder-body {
@@ -440,12 +441,12 @@
   min-height: 34px;
   border: 0;
   border-radius: 5px;
-  color: #fff;
+  color: var(--match-text);
   cursor: pointer;
 }
 
 .deck-hash-form > .deck-loadout-submit-button {
-  background: #275f3e;
+  background: var(--match-surface-control-active);
 }
 
 .deck-loadout-actions {
@@ -456,7 +457,7 @@
 }
 
 .deck-editor-link {
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--match-text);
   font-size: 13px;
   font-weight: 700;
   text-decoration: underline;
@@ -465,25 +466,25 @@
 
 .deck-editor-link:hover,
 .deck-editor-link:focus-visible {
-  color: #ffffff;
+  color: var(--match-text);
 }
 
 .deck-loadout-refresh-button {
   justify-self: end;
   padding: 0 10px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--match-surface-control);
   font-size: 13px;
   font-weight: 700;
 }
 
 .deck-loadout-refresh-button:hover:not(:disabled),
 .deck-loadout-refresh-button:focus-visible:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--match-surface-control-hover);
 }
 
 .deck-loadout-loading {
   justify-self: center;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--match-text-muted);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
@@ -505,14 +506,14 @@
 .deck-status-list div {
   display: grid;
   gap: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--match-border-soft);
   border-radius: 4px;
   padding: 8px;
-  background: rgba(0, 0, 0, 0.14);
+  background: var(--match-surface-field);
 }
 
 .deck-status-list dt {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--match-text-muted);
   font-size: 12px;
 }
 
@@ -553,7 +554,7 @@
   height: var(--control-icon-button-size);
   border: 0;
   border-radius: calc(var(--control-panel-radius) * 0.75);
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--match-text-muted);
   background: transparent;
   cursor: pointer;
   place-items: center;
@@ -566,8 +567,8 @@
 .settings-button:hover,
 .settings-button.is-open,
 .control-icon-button:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
+  color: var(--match-text);
+  background: var(--match-surface-control);
 }
 
 .card-preview-button svg,
@@ -594,8 +595,8 @@
   min-height: var(--control-action-height);
   border: 0;
   border-radius: calc(var(--control-panel-radius) * 0.75);
-  color: #fff;
-  background: #3f3d3c;
+  color: var(--match-text);
+  background: var(--match-surface-control);
   cursor: pointer;
   font-size: var(--control-small-font-size);
 }
@@ -607,7 +608,7 @@
 
 .primary-action {
   margin-top: var(--control-rail-gap);
-  background: #275f3e;
+  background: var(--match-surface-control-active);
 }
 
 .concede-button {
@@ -654,13 +655,13 @@
   display: grid;
   height: var(--control-window-dock-height);
   place-items: center;
-  border: var(--card-outline-thin) dashed rgba(244, 238, 231, 0.32);
+  border: var(--card-outline-thin) dashed var(--match-border-soft);
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
   border-radius: 0 0 var(--control-panel-radius) var(--control-panel-radius);
-  color: rgba(255, 255, 255, 0.42);
-  background: rgba(0, 0, 0, 0.12);
+  color: var(--match-text-subtle);
+  background: rgba(5, 14, 12, 0.22);
   pointer-events: auto;
   transition:
     border-color 120ms ease,
@@ -710,14 +711,14 @@
 .control-dock-window-tabs {
   display: flex;
   min-width: 0;
-  border-bottom: var(--card-outline-thin) solid rgba(244, 238, 231, 0.22);
+  border-bottom: var(--card-outline-thin) solid var(--match-border-soft);
 }
 
 .control-dock-window-grab-nub {
   position: relative;
   flex: 0 0 var(--control-grab-nub-width);
   border: 0;
-  border-right: var(--card-outline-thin) solid rgba(244, 238, 231, 0.14);
+  border-right: var(--card-outline-thin) solid var(--match-border-soft);
   background: transparent;
   cursor: grab;
 }
@@ -740,7 +741,7 @@
   min-width: 0;
   max-width: clamp(96px, calc(var(--control-rail-default-width) * 0.42), 132px);
   border: 0;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--match-text-muted);
   background: transparent;
   padding: 0 var(--control-rail-gap);
   font-size: var(--control-small-font-size);
@@ -752,15 +753,15 @@
 
 .control-dock-window-tab:hover,
 .control-dock-window-tab.is-active {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--match-text);
+  background: var(--match-surface-field-hover);
 }
 
 .control-dock-window-close {
   width: var(--control-dock-tab-height);
   margin-left: auto;
   border: 0;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--match-text-muted);
   background: transparent;
   cursor: pointer;
 }

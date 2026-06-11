@@ -41,7 +41,7 @@
 
 .collection-modal-order-hint {
   margin: 0;
-  color: #f4eee7;
+  color: var(--match-text);
   font-size: 12px;
   line-height: 1.2;
 }

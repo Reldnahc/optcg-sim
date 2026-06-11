@@ -21,8 +21,8 @@
   padding: calc(var(--floating-window-header-padding) * 0.62)
     calc(var(--floating-window-header-padding) * 1.25)
     calc(var(--floating-window-header-padding) * 0.75);
-  color: rgba(244, 238, 231, 0.75);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--match-text-muted);
+  background: var(--match-surface-field);
   cursor: pointer;
   font-size: var(--floating-window-small-font-size);
   line-height: 1.2;
@@ -35,13 +35,13 @@
 }
 
 .floating-window-tab:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--match-text);
+  background: var(--match-surface-field-hover);
 }
 
 .floating-window-tab.is-active {
-  color: #111;
-  background: #79ff9a;
+  color: #071109;
+  background: var(--match-accent);
 }
 
 .is-combine-drop-target {

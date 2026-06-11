@@ -42,13 +42,31 @@
   --floating-window-small-font-size: clamp(11px, calc(var(--card-height) / 14), 13px);
   --floating-window-resize-handle-size: clamp(18px, calc(var(--card-height) / 6.6), 28px);
   --floating-window-resize-corner-size: calc(var(--floating-window-resize-handle-size) * 0.58);
+  --match-surface-page: #101010;
+  --match-surface-window: rgba(13, 13, 14, 0.86);
+  --match-surface-panel: rgba(24, 24, 25, 0.82);
+  --match-surface-panel-raised: rgba(34, 34, 35, 0.88);
+  --match-surface-control: rgba(42, 42, 44, 0.78);
+  --match-surface-control-hover: rgba(58, 58, 60, 0.84);
+  --match-surface-control-active: rgba(46, 48, 48, 0.92);
+  --match-surface-field: rgba(0, 0, 0, 0.34);
+  --match-surface-field-hover: rgba(247, 223, 177, 0.11);
+  --match-surface-danger: rgba(173, 47, 55, 0.86);
+  --match-border-strong: rgba(246, 232, 209, 0.78);
+  --match-border: rgba(246, 232, 209, 0.46);
+  --match-border-soft: rgba(246, 232, 209, 0.16);
+  --match-text: #fbf3df;
+  --match-text-muted: rgba(251, 243, 223, 0.68);
+  --match-text-subtle: rgba(251, 243, 223, 0.48);
+  --match-accent: #ffdc62;
+  --match-accent-strong: #ffe38a;
 
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
   height: 100vh;
-  background-color: #282322;
+  background-color: var(--match-surface-page);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -121,17 +139,17 @@
   left: 0;
   z-index: 12;
   pointer-events: none;
-  color: #59ff8f;
+  color: var(--match-accent-strong);
   font-size: 24px;
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
   text-shadow:
-    -1px -1px 0 #06110a,
-    1px -1px 0 #06110a,
-    -1px 1px 0 #06110a,
-    1px 1px 0 #06110a,
-    0 0 10px rgba(89, 255, 143, 0.55);
+    -1px -1px 0 rgba(0, 0, 0, 0.82),
+    1px -1px 0 rgba(0, 0, 0, 0.82),
+    -1px 1px 0 rgba(0, 0, 0, 0.82),
+    1px 1px 0 rgba(0, 0, 0, 0.82),
+    0 0 10px rgba(255, 220, 98, 0.48);
 }
 
 .hand-cards {
