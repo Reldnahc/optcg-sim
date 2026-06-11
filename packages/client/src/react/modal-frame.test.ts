@@ -124,6 +124,14 @@ describe("modal frame", () => {
       styles,
       /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*flex:\s*0 0 auto;/u,
     );
+    assert.match(
+      styles,
+      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*background:\s*#2fbf71;[^}]*color:\s*#07160d;/u,
+    );
+    assert.match(
+      styles,
+      /\.modal-frame-decision\s*>\s*\.primary-action:disabled\s*\{[^}]*background:\s*var\(--match-surface-control\);/u,
+    );
   });
 
   test("modal frame stacks above floating windows", async () => {

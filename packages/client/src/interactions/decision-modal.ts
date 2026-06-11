@@ -399,6 +399,9 @@ const modalPresentation = (
     : { source: decision.presentation.source }),
 });
 
+const chooseCardsTitle = (max: number): string =>
+  `Choose ${String(max)} ${max === 1 ? "card" : "cards"}`;
+
 export const createDecisionDraft = (
   decision: PublicPendingDecision,
   responseActions: readonly ClientActionModel[] = [],
@@ -632,6 +635,7 @@ export const createDecisionModalModel = (
     const canConfirm = isSelectConfirmable(decision, draft);
     return {
       ...modalPresentation(decision),
+      title: chooseCardsTitle(decision.max),
       kind: "selectCards",
       decisionId: decision.id,
       min: decision.min,

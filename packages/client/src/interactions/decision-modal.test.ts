@@ -102,9 +102,21 @@ describe("headless decision modal models", () => {
     const response = buildDecisionResponse(decision, draft);
 
     assert.equal(model.kind, "selectCards");
+    assert.equal(model.title, "Choose 1 card");
     assert.equal(model.canConfirm, true);
     assert.deepEqual(model.selectedInstanceIds, ["1"]);
     assert.deepEqual(response, { type: "cards", cards: [cardRef("1")] });
+  });
+
+  test("selectCards modal title reflects multi-card max selections", () => {
+    const decision: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      max: 2,
+    };
+
+    const model = createDecisionModalModel(decision);
+
+    assert.equal(model.title, "Choose 2 cards");
   });
 
   test("selectCards draft ignores unknown candidates and prevents selecting beyond multi-select max", () => {

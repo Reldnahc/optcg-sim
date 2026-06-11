@@ -72,4 +72,17 @@
   min-height: var(--modal-action-height);
   max-height: var(--modal-action-height);
   margin-top: auto;
+  background: #2fbf71;
+  color: #07160d;
+  font-weight: 800;
+}
+
+.modal-frame-decision > .primary-action:hover:not(:disabled),
+.modal-frame-decision > .primary-action:focus-visible:not(:disabled) {
+  background: #42e686;
+}
+
+.modal-frame-decision > .primary-action:disabled {
+  color: var(--match-text-muted);
+  background: var(--match-surface-control);
 }
