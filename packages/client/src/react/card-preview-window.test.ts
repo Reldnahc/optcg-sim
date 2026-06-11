@@ -142,6 +142,8 @@ describe("card preview window", () => {
       styles,
       /\.card-preview-content\s*\{[^}]*--card-preview-copy-font-size:\s*clamp\([^}]*cqw[^}]*cqh/u,
     );
+    assert.match(styles, /--card-preview-copy-font-size:\s*clamp\(\s*9px,/u);
+    assert.match(styles, /--card-preview-title-font-size:\s*clamp\(\s*12px,/u);
     assert.match(
       styles,
       /\.card-preview-text\s*\{[^}]*font-size:\s*var\(--card-preview-copy-font-size\);/u,

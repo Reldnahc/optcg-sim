@@ -19,24 +19,24 @@
   --card-preview-control-height: clamp(26px, calc(var(--card-height) / 6.6), 34px);
   --card-preview-button-height: clamp(22px, calc(var(--card-height) / 8.5), 28px);
   --card-preview-copy-font-size: clamp(
-    11px,
-    min(calc(var(--card-height) / 12.5), calc(2.2cqw + 0.55cqh)),
-    16px
+    9px,
+    min(calc(var(--card-height) / 15), calc(1.35cqw + 0.28cqh)),
+    13px
   );
   --card-preview-title-font-size: clamp(
-    15px,
-    min(calc(var(--card-height) / 8), calc(3cqw + 0.8cqh)),
-    24px
+    12px,
+    min(calc(var(--card-height) / 10.5), calc(2cqw + 0.45cqh)),
+    18px
   );
   --card-preview-label-font-size: clamp(
-    9px,
-    min(calc(var(--card-height) / 16), calc(1.7cqw + 0.35cqh)),
-    12px
+    8px,
+    min(calc(var(--card-height) / 19), calc(1.1cqw + 0.22cqh)),
+    10px
   );
   --card-preview-control-font-size: clamp(
-    11px,
-    min(calc(var(--card-height) / 13.5), calc(1.9cqw + 0.45cqh)),
-    14px
+    9px,
+    min(calc(var(--card-height) / 16), calc(1.25cqw + 0.24cqh)),
+    12px
   );
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
