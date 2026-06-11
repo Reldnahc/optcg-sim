@@ -133,6 +133,7 @@ export type Condition =
       value: number;
     }
   | { type: "handCount"; player: PlayerRef; op: Comparator; value: number }
+  | { type: "deckCount"; player: PlayerRef; op: Comparator; value: number }
   | {
       type: "trashCount";
       player: PlayerRef;

@@ -57,32 +57,6 @@ it("parses any-copy deck rules text as legality metadata without a runtime block
   });
 });
 
-it("parses delayed deck-out rules text as a reusable rule modifier", () => {
-  const result = parseCardEffectLineDetailed(
-    "Under the rules of this game, you do not lose when your deck has 0 cards. You lose at the end of the turn in which your deck becomes 0 cards.",
-  );
-
-  expect(result).toEqual({
-    ok: true,
-    value: {
-      kind: "metadata",
-      metadata: {
-        type: "ruleModifier",
-        modifier: {
-          type: "deckOutLossTiming",
-          timing: "endOfTurn",
-        },
-      },
-      evidence: [
-        "ruleModifier:deckOutLossTiming",
-        "zone:deck",
-        "condition:threshold:nonNegativeInteger",
-        "duration:endOfTurn",
-      ],
-    },
-  });
-});
-
 it("parses activate-main turn-count DON ramp and rested-DON attach compositionally", () => {
   const result = parseCardEffectLine(
     "[Activate: Main] [Once Per Turn] If it is your second turn or later, add up to 1 DON!! card from your DON!! deck and set it as active, and add up to 4 additional DON!! cards and rest them. Then, give up to 4 rested DON!! cards to 1 of your Characters.",

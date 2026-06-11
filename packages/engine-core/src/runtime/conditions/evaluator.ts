@@ -659,6 +659,15 @@ const evaluateCondition = (
         condition.op,
         (playerId) => state.players[playerId]?.hand.length ?? 0,
       );
+    case "deckCount":
+      return evaluateCountCondition(
+        state,
+        entry,
+        condition.player,
+        condition.value,
+        condition.op,
+        (playerId) => state.players[playerId]?.deck.length ?? 0,
+      );
     case "lifeCount":
       return evaluateCountCondition(
         state,
@@ -818,6 +827,7 @@ export const isSupportedQueuedEffectConditionShape = (
       return true;
     case "leaderColorCount":
     case "handCount":
+    case "deckCount":
     case "lifeCount":
     case "turnCount":
       return (

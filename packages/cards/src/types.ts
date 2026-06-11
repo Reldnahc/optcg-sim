@@ -77,6 +77,7 @@ export type PrimitiveEvidence =
   | "condition:leaderColorCount"
   | "condition:opponentFieldCount"
   | "condition:handCount"
+  | "condition:deckCount"
   | "condition:trashCount"
   | "condition:eventHistory"
   | "condition:lifeCount"
