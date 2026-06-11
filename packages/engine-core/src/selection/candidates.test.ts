@@ -90,6 +90,44 @@ const targetCards = (
 };
 
 describe("resolvePublicTargetCandidates", () => {
+  test("matches attached-DON field filters against host cards", () => {
+    const state = createActiveState();
+    const attachedHost = toCardId("attached-host");
+    const unattached = toCardId("unattached");
+    addManifestCard(state, {
+      cardId: attachedHost,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: unattached,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p1, [attachedHost, unattached]);
+    const player = must(state.players[p1], "p1");
+    const don = must(player.donDeck.shift(), "don");
+    player.costArea.push({
+      ...don,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "rested",
+    });
+    const host = must(player.characters[0], "attached host");
+    host.attachedDon = [don.instanceId];
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: { categories: ["character"], attachedDon: { min: 1 } },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([refs[0]]);
+  });
+
   test("matches public target candidates with and without reusable effect-entry-point filters", () => {
     const state = createActiveState();
     const attacker = toCardId("has-when-attacking");

@@ -176,6 +176,7 @@ const createRecord = (
   const modifier = mapEffectToModifier(state, entry, effect, target, {
     ...context,
     controllerId: entry.controllerId,
+    source: entry.source,
   });
   if (modifier === null) {
     return null;
@@ -399,6 +400,18 @@ const isSupportedPowerEffectValue = (
       value.multiplier > 0
     );
   }
+  if (value.type === "countAttachedDon") {
+    return (
+      Number.isSafeInteger(value.per) &&
+      value.per > 0 &&
+      Number.isSafeInteger(value.multiplier) &&
+      value.multiplier !== 0 &&
+      (value.target.type === "self" ||
+        value.target.type === "myLeader" ||
+        value.target.type === "opponentLeader" ||
+        value.target.type === "savedFieldObject")
+    );
+  }
   return (
     value.player === "self" &&
     Number.isSafeInteger(value.per) &&
@@ -542,6 +555,7 @@ const effectToDerivedModifier = (
   if (effect.type === "modifyPower") {
     const value = resolvePowerValue(state, effect.value, {
       controllerId: source.playerId,
+      source,
     });
     if (value === null) {
       throw new TypeError(
@@ -627,6 +641,7 @@ const effectToDerivedModifier = (
     }
     const value = resolveDynamicNumberValue(state, effect.value, {
       controllerId: source.playerId,
+      source,
     });
     if (value === null) {
       throw new TypeError(

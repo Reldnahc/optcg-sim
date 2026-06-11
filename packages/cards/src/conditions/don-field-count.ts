@@ -82,17 +82,24 @@ export const parseDonFieldCountCondition: ConditionParser = (
     };
   }
 
-  const subjectMatch = /^you have\s+(?<comparison>.+)$/i.exec(input.text);
+  const subjectMatch =
+    /^(?<player>you|your opponent) (?:have|has)\s+(?<comparison>.+)$/i.exec(
+      input.text,
+    );
   const comparisonText = subjectMatch?.groups?.["comparison"];
   if (comparisonText === undefined) {
     return undefined;
   }
+  const player =
+    subjectMatch?.groups?.["player"]?.toLowerCase() === "your opponent"
+      ? "opponent"
+      : "self";
 
   if (/^any DON!! cards given$/i.test(comparisonText)) {
     return {
       condition: {
         type: "fieldCount",
-        player: "self",
+        player,
         filter: { categories: ["don"], state: "attached" },
         op: "gte",
         value: 1,
@@ -101,7 +108,7 @@ export const parseDonFieldCountCondition: ConditionParser = (
         "condition:donFieldCount",
         "condition:comparator:gte",
         "condition:threshold:positiveInteger",
-        "player:self",
+        player === "self" ? "player:self" : "player:opponent",
         "filter:category:don",
         "filter:state:attached",
       ],
@@ -122,7 +129,7 @@ export const parseDonFieldCountCondition: ConditionParser = (
   return {
     condition: {
       type: "fieldCount",
-      player: "self",
+      player,
       filter: { categories: ["don"] },
       op: comparison.op,
       value: comparison.value,
@@ -130,7 +137,7 @@ export const parseDonFieldCountCondition: ConditionParser = (
     evidence: [
       "condition:donFieldCount",
       ...comparison.evidence,
-      "player:self",
+      player === "self" ? "player:self" : "player:opponent",
       "filter:category:don",
     ],
     rest: "",

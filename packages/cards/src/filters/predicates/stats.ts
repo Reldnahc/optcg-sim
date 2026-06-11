@@ -192,6 +192,45 @@ export const parseDynamicDonFieldCostPredicate: PredicateParser = (
   };
 };
 
+export const parseAttachedDonPredicate: PredicateParser = (text, current) => {
+  const anyMatch =
+    /^(?:with|that has|has)\s+a DON!! card given\b\s*(?<rest>.*)$/iu.exec(text);
+  if (anyMatch !== null) {
+    return {
+      filter: { ...current, attachedDon: { min: 1 } },
+      evidence: [
+        "filter:attachedDon",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: anyMatch.groups?.["rest"] ?? "",
+    };
+  }
+
+  const thresholdMatch =
+    /^(?:with|that has|has)\s+(?<value>[1-9]\d*) or more DON!! cards given\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  const valueText = thresholdMatch?.groups?.["value"];
+  const restText = thresholdMatch?.groups?.["rest"] ?? "";
+  if (valueText === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      attachedDon: { min: Number.parseInt(valueText, 10) },
+    },
+    evidence: [
+      "filter:attachedDon",
+      "condition:comparator:gte",
+      thresholdEvidence(valueText),
+    ],
+    rest: restText,
+  };
+};
+
 const thresholdEvidence = (valueText: string): PrimitiveEvidence =>
   valueText === "0"
     ? "condition:threshold:nonNegativeInteger"

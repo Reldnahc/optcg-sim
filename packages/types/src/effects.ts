@@ -418,6 +418,12 @@ export type DynamicNumberValue =
       filter?: CardFilter;
       per: number;
       multiplier: number;
+    }
+  | {
+      type: "countAttachedDon";
+      target: Target;
+      per: number;
+      multiplier: number;
     };
 
 export type SnapshotNumberValue = {
@@ -458,6 +464,9 @@ export interface CardFilter {
   cost?: { op: Comparator; value: number } | { min?: number; max?: number };
   power?: { op: Comparator; value: number } | { min?: number; max?: number };
   currentPower?:
+    | { op: Comparator; value: number }
+    | { min?: number; max?: number };
+  attachedDon?:
     | { op: Comparator; value: number }
     | { min?: number; max?: number };
   counter?: { op: Comparator; value: number } | { min?: number; max?: number };

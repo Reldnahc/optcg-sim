@@ -27,6 +27,7 @@ export {
   conditionalCostedBlockExpressionParser,
   conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
+  delayedEndOfTurnSegmentParser,
   trailingConditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,
 } from "./composed-expression.js";

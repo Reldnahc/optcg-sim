@@ -1,7 +1,8 @@
-import type { Target } from "@optcg/types";
+import type { DynamicNumberValue, Duration, Target } from "@optcg/types";
 
 import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
+import type { PrimitiveEvidence } from "../../types.js";
 
 export const modifyPowerInstructionPrimitive = {
   primitiveId: "instruction:modifyPower",
@@ -35,7 +36,12 @@ export function parseGainsPositivePower(target: Target, text: string) {
   }
 
   const duration = parseExplicitFieldEffectDuration({ text: modifier.rest });
-  if (duration?.duration === undefined) {
+  const dynamicDuration =
+    typeof modifier.value === "number"
+      ? parseAttachedDonScaledDuration(modifier.value, modifier.rest)
+      : undefined;
+  const parsedDuration = dynamicDuration ?? duration;
+  if (parsedDuration?.duration === undefined) {
     return undefined;
   }
 
@@ -43,10 +49,49 @@ export function parseGainsPositivePower(target: Target, text: string) {
     effect: {
       type: "modifyPower" as const,
       target,
-      value: modifier.value,
-      duration: duration.duration,
+      value: dynamicDuration?.value ?? modifier.value,
+      duration: parsedDuration.duration,
     },
-    evidence: [...modifier.evidence, ...duration.evidence],
+    evidence: [
+      ...modifier.evidence,
+      ...parsedDuration.evidence,
+      ...(dynamicDuration?.evidence ?? []),
+    ],
+  };
+}
+
+export function parseAttachedDonScaledDuration(
+  multiplier: number,
+  text: string,
+):
+  | {
+      readonly duration: Duration;
+      readonly value: DynamicNumberValue;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match =
+    /^(?<duration>[\s\S]+?)\s+for every DON!! card given to (?<target>this Character|that Character)\.?$/iu.exec(
+      text.trim(),
+    );
+  const durationText = match?.groups?.["duration"];
+  const targetText = match?.groups?.["target"];
+  if (durationText === undefined || targetText === undefined) {
+    return undefined;
+  }
+  const duration = parseExplicitFieldEffectDuration({ text: durationText });
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    duration: duration.duration,
+    value: {
+      type: "countAttachedDon",
+      target: { type: "self" },
+      per: 1,
+      multiplier,
+    },
+    evidence: ["value:dynamic:attachedDonCount", "target:thisCharacter"],
   };
 }
 

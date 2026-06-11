@@ -17,6 +17,7 @@ import { cardMatchesAnyName } from "../../card-name-matching.js";
 export type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];
   controllerId?: PlayerId;
+  source?: CardRef;
 };
 
 const opponentOf = (state: GameState, playerId: PlayerId): PlayerId | null => {
@@ -132,6 +133,83 @@ const countMatchingZoneCards = (
   return Math.floor(matchingCount / value.per) * value.multiplier;
 };
 
+const cardRefForDynamicTarget = (
+  state: GameState,
+  target: Extract<DynamicNumberValue, { type: "countAttachedDon" }>["target"],
+  context: ContinuousResolutionContext | undefined,
+): CardRef | null => {
+  const controllerId = context?.controllerId;
+  if (target.type === "self") {
+    return context?.source ?? null;
+  }
+  if (controllerId === undefined) {
+    return null;
+  }
+  if (target.type === "myLeader") {
+    const player = state.players[controllerId];
+    if (player === undefined) {
+      return null;
+    }
+    return {
+      instanceId: player.leader.instanceId,
+      cardId: player.leader.cardId,
+      playerId: controllerId,
+      zone: player.leader.zone,
+    };
+  }
+  if (target.type === "opponentLeader") {
+    const opponentId = opponentOf(state, controllerId);
+    const opponent =
+      opponentId === null ? undefined : state.players[opponentId];
+    if (opponentId === null || opponent === undefined) {
+      return null;
+    }
+    return {
+      instanceId: opponent.leader.instanceId,
+      cardId: opponent.leader.cardId,
+      playerId: opponentId,
+      zone: opponent.leader.zone,
+    };
+  }
+  if (target.type === "savedFieldObject") {
+    const saved = context?.savedReferences?.[target.binding.saveResultAs];
+    if (saved?.kind !== "selectedTargets") {
+      return null;
+    }
+    const object = saved.targets[target.binding.objectIndex ?? 0]?.object;
+    if (object === undefined) {
+      return null;
+    }
+    if (target.zone !== undefined && object.zone?.zone !== target.zone) {
+      return null;
+    }
+    return object;
+  }
+  return null;
+};
+
+const countAttachedDon = (
+  state: GameState,
+  value: Extract<DynamicNumberValue, { type: "countAttachedDon" }>,
+  context: ContinuousResolutionContext | undefined,
+): number | null => {
+  if (
+    !Number.isSafeInteger(value.per) ||
+    value.per <= 0 ||
+    !Number.isSafeInteger(value.multiplier)
+  ) {
+    return null;
+  }
+  const cardRef = cardRefForDynamicTarget(state, value.target, context);
+  if (cardRef === null) {
+    return null;
+  }
+  const card = findFieldCardInstance(state, cardRef);
+  return card === undefined
+    ? null
+    : Math.floor(card.attachedDon.length / value.per) * value.multiplier;
+};
+
 export const resolveDynamicNumberValue = (
   state: GameState,
   value: number | DynamicNumberValue,
@@ -151,6 +229,9 @@ export const resolveDynamicNumberValue = (
     return controllerId === undefined
       ? null
       : countMatchingZoneCards(state, controllerId, value);
+  }
+  if (value.type === "countAttachedDon") {
+    return countAttachedDon(state, value, context);
   }
   if (value.type === "paidCostCardCount") {
     const reference = context?.savedReferences?.[value.cost];

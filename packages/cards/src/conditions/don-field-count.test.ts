@@ -119,6 +119,31 @@ describe("DON field count condition parser", () => {
     });
   });
 
+  it("parses opponent given DON as the same attached DON field-count primitive", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "your opponent has any DON!! cards given",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: { categories: ["don"], state: "attached" },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+        "filter:category:don",
+        "filter:state:attached",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses relative DON count differences as reusable field-count operands", () => {
     expect(
       parseDonFieldCountCondition({

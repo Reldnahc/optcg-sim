@@ -33,6 +33,7 @@ import {
   conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
+  delayedEndOfTurnSegmentParser,
   entryConditionContinuousExpressionParser,
   handTrashedByEffectReactionExpressionParser,
   implicitEventReactionExpressionParser,
@@ -88,6 +89,10 @@ function generalExpressionParser(input: ParseInput) {
       }),
       conditionalExpressionSegmentParser({
         conditions: conditionParsers,
+        connectors: [parseAndConnector],
+        instructions: instructionParsers,
+      }),
+      delayedEndOfTurnSegmentParser({
         connectors: [parseAndConnector],
         instructions: instructionParsers,
       }),

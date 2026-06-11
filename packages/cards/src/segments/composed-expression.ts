@@ -34,6 +34,46 @@ export function instructionExpressionSegmentParser(options: {
   };
 }
 
+export function delayedEndOfTurnSegmentParser(options: {
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly InstructionParser[];
+}): SegmentParser {
+  return (input: ParseInput) => {
+    const match = /^at the end of this turn,\s*(?<body>[\s\S]+)$/iu.exec(
+      input.text,
+    );
+    const bodyText = match?.groups?.["body"];
+    if (bodyText === undefined) {
+      return undefined;
+    }
+
+    const body = parseExpression(
+      {
+        text: bodyText,
+      },
+      {
+        connectors: options.connectors,
+        segments: [
+          instructionExpressionSegmentParser(options),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
+      },
+    );
+    if (body === undefined || body.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect: body.effect,
+      },
+      evidence: ["duration:endOfTurn", "composition:delayed", ...body.evidence],
+    };
+  };
+}
+
 export function conditionalExpressionSegmentParser(options: {
   readonly conditions: readonly ConditionParser[];
   readonly connectors: readonly ConnectorParser[];

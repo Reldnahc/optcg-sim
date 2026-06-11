@@ -20,6 +20,7 @@ import {
   parseSelfExclusionPredicate,
 } from "./name.js";
 import {
+  parseAttachedDonPredicate,
   parseCostPredicate,
   parseDynamicDonFieldCostPredicate,
   parsePowerPredicate,
@@ -67,6 +68,7 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseCharacterCategoryPredicate,
   parseGenericCardPredicate,
   parsePowerPredicate,
+  parseAttachedDonPredicate,
   parseEffectEntryPointPresencePredicate,
   parseEffectEntryPointPredicate,
   parseDynamicDonFieldCostPredicate,

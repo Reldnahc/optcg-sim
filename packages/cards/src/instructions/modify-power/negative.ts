@@ -7,12 +7,20 @@ import {
   parseOpponentLeaderOrCharacterCardsTarget,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
-import { chooseOpponentCharactersTarget } from "./shared.js";
+import {
+  chooseOpponentCharactersTarget,
+  parseAttachedDonScaledDuration,
+} from "./shared.js";
 
 export const parseNegativePowerInstruction: InstructionParser = (input) => {
   const actionRest = /^give\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  const modifierFirst = parseModifierFirstNegativePowerInstruction(actionRest);
+  if (modifierFirst !== undefined) {
+    return modifierFirst;
   }
 
   const allTarget = parseAllFieldTarget({ text: actionRest });
@@ -22,9 +30,15 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
       return undefined;
     }
 
-    const duration = parseExplicitFieldEffectDuration({
-      text: modifier.rest,
-    });
+    const dynamicDuration = parseAttachedDonScaledDuration(
+      modifier.value,
+      modifier.rest,
+    );
+    const duration =
+      dynamicDuration ??
+      parseExplicitFieldEffectDuration({
+        text: modifier.rest,
+      });
     if (duration === undefined || duration.duration === undefined) {
       return undefined;
     }
@@ -33,7 +47,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
       effect: {
         type: "modifyPower",
         target: allTarget.target,
-        value: modifier.value,
+        value: dynamicDuration?.value ?? modifier.value,
         duration: duration.duration,
       },
       evidence: [
@@ -41,6 +55,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
         ...allTarget.evidence,
         ...modifier.evidence,
         ...duration.evidence,
+        ...(dynamicDuration?.evidence ?? []),
       ],
       rest: "",
     };
@@ -65,8 +80,75 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const duration = parseExplicitFieldEffectDuration({ text: modifier.rest });
+  const dynamicDuration = parseAttachedDonScaledDuration(
+    modifier.value,
+    modifier.rest,
+  );
+  const duration =
+    dynamicDuration ??
+    parseExplicitFieldEffectDuration({ text: modifier.rest });
   if (duration === undefined || duration.duration === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower",
+      target:
+        leaderOrCharacterTarget?.target ??
+        chooseOpponentCharactersTarget(
+          cardinality.cardinality.max,
+          target?.filter ?? { categories: ["character"] },
+        ),
+      value: dynamicDuration?.value ?? modifier.value,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:modifyPower",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...(target?.evidence ?? leaderOrCharacterTarget?.evidence ?? []),
+      ...modifier.evidence,
+      ...duration.evidence,
+      ...(dynamicDuration?.evidence ?? []),
+    ],
+    rest: "",
+  };
+};
+
+function parseModifierFirstNegativePowerInstruction(
+  actionRest: string,
+): ReturnType<InstructionParser> {
+  const modifier = parseNegativePowerModifier({ text: actionRest });
+  if (modifier === undefined) {
+    return undefined;
+  }
+  const match =
+    /^(?<duration>[\s\S]+?)\s+to\s+(?<target>up to [1-9]\d*[\s\S]+)$/iu.exec(
+      modifier.rest,
+    );
+  const durationText = match?.groups?.["duration"];
+  const targetText = match?.groups?.["target"];
+  if (durationText === undefined || targetText === undefined) {
+    return undefined;
+  }
+  const duration = parseExplicitFieldEffectDuration({ text: durationText });
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+  const cardinality = parseUpToCardinality({ text: targetText });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const target = parseOpponentCharactersTarget({ text: cardinality.rest });
+  const leaderOrCharacterTarget = parseOpponentLeaderOrCharacterCardsTarget({
+    text: cardinality.rest,
+  });
+  if (target === undefined && leaderOrCharacterTarget === undefined) {
+    return undefined;
+  }
+  const targetRest = target?.rest ?? leaderOrCharacterTarget?.rest ?? "";
+  if (targetRest.length > 0 && targetRest !== ".") {
     return undefined;
   }
 
@@ -84,12 +166,12 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     },
     evidence: [
       "instruction:modifyPower",
+      ...modifier.evidence,
+      ...duration.evidence,
       ...cardinality.evidence,
       "chooser:self:upTo",
       ...(target?.evidence ?? leaderOrCharacterTarget?.evidence ?? []),
-      ...modifier.evidence,
-      ...duration.evidence,
     ],
     rest: "",
   };
-};
+}

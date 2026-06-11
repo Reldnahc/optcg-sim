@@ -1,6 +1,7 @@
 import type { CardFilter, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
+import { parseCardFilterPredicates } from "../../filters/index.js";
 import {
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
@@ -205,6 +206,22 @@ const parseOpponentRefreshLockTarget = (
         rest: restedCards.rest,
       };
     }
+    const anyRestedCharacter = parseAnyRestedCharacterRefreshLockTarget(
+      cardinality.rest,
+      cardinality.cardinality.min,
+      cardinality.cardinality.max,
+    );
+    if (anyRestedCharacter !== undefined) {
+      return {
+        target: anyRestedCharacter.target,
+        evidence: [
+          ...cardinality.evidence,
+          "chooser:self:upTo",
+          ...anyRestedCharacter.evidence,
+        ],
+        rest: anyRestedCharacter.rest,
+      };
+    }
     const target = parseOpponentCharactersTarget({ text: cardinality.rest });
     if (target === undefined) {
       return undefined;
@@ -263,6 +280,48 @@ const parseOpponentRefreshLockTarget = (
       ),
     ],
     rest: allTarget.rest.trim(),
+  };
+};
+
+const parseAnyRestedCharacterRefreshLockTarget = (
+  text: string,
+  min: number,
+  max: number,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+      readonly target: Target;
+    }
+  | undefined => {
+  const predicates = parseCardFilterPredicates(
+    { text },
+    { powerSemantics: "current" },
+  );
+  if (
+    predicates === undefined ||
+    predicates.filter.categories?.[0] !== "character" ||
+    predicates.filter.state !== "rested"
+  ) {
+    return undefined;
+  }
+  return {
+    target: {
+      type: "choose",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "anyPlayer",
+        zone: "characterArea",
+        filter: predicates.filter,
+        min,
+        max,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+      },
+    },
+    evidence: ["player:any", "target:anyCharacters", ...predicates.evidence],
+    rest: predicates.rest.trim(),
   };
 };
 

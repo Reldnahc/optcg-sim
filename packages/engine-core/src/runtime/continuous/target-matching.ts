@@ -15,7 +15,11 @@ const cardMatchesRef = (card: CardInstance, ref: CardRef): boolean =>
 
 const numericFilterMatches = (
   value: number | undefined,
-  filter: CardFilter["baseCost"] | CardFilter["cost"] | CardFilter["power"],
+  filter:
+    | CardFilter["attachedDon"]
+    | CardFilter["baseCost"]
+    | CardFilter["cost"]
+    | CardFilter["power"],
 ): boolean => {
   if (filter === undefined) return true;
   if (value === undefined) return false;
@@ -69,6 +73,7 @@ const cardMatchesAllFilter = (
     return false;
   }
   return (
+    numericFilterMatches(card.attachedDon.length, filter.attachedDon) &&
     numericFilterMatches(metadata.cost, filter.baseCost) &&
     numericFilterMatches(metadata.cost, filter.cost) &&
     numericFilterMatches(metadata.power, filter.power)

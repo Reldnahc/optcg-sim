@@ -128,6 +128,44 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses attached DON count as a reusable field-card predicate", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters with a DON!! card given",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        attachedDon: { min: 1 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:attachedDon",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters that has 2 or more DON!! cards given",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        attachedDon: { min: 2 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:attachedDon",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses active Character predicates as reusable field-state filters", () => {
     expect(
       parseCardFilterPredicates(

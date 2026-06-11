@@ -21,6 +21,7 @@ export type CharacterFieldCountFilter = Required<
   names?: string[];
   typesAny?: string[];
   typesIncludeAny?: string[];
+  attachedDon?: NumericFilter;
   baseCost?: NumericFilter;
   cost?: NumericFilter;
   power?: NumericFilter;
@@ -43,6 +44,7 @@ export const isSupportedCharacterFieldCountFilter = (
       key !== "names" &&
       key !== "typesAny" &&
       key !== "typesIncludeAny" &&
+      key !== "attachedDon" &&
       key !== "baseCost" &&
       key !== "cost" &&
       key !== "power" &&
@@ -65,6 +67,7 @@ export const isSupportedCharacterFieldCountFilter = (
     isNonEmptyStringArray(filter.names) &&
     isNonEmptyStringArray(filter.typesAny) &&
     isNonEmptyStringArray(filter.typesIncludeAny) &&
+    hasSupportedNumericFilter(filter.attachedDon) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.baseCost) &&
     hasSupportedNumericFilter(filter.power) &&
@@ -79,6 +82,12 @@ export const cardMatchesCharacterFieldCountFilter = (
   card: CardInstance,
   filter: CardFilter,
 ): boolean => {
+  if (
+    filter.attachedDon !== undefined &&
+    !numericFilterMatches(card.attachedDon.length, filter.attachedDon)
+  ) {
+    return false;
+  }
   if (
     filter.categories !== undefined &&
     !filter.categories.includes(metadata.category)

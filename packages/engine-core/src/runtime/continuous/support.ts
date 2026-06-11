@@ -20,6 +20,7 @@ const supportedRestriction = new Set([
 
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
+  "attachedDon",
   "baseCost",
   "categories",
   "cost",
@@ -109,7 +110,11 @@ export const isSupportedBasePowerDuration = (duration: Duration): boolean =>
     isSupportedQueuedEffectConditionShape(duration.condition));
 
 const hasSupportedNumericFilter = (
-  filter: CardFilter["baseCost"] | CardFilter["cost"] | CardFilter["power"],
+  filter:
+    | CardFilter["attachedDon"]
+    | CardFilter["baseCost"]
+    | CardFilter["cost"]
+    | CardFilter["power"],
 ): boolean => {
   if (filter === undefined) return true;
   if ("op" in filter) {
@@ -139,6 +144,7 @@ const isSupportedAllFilter = (filter: CardFilter | undefined): boolean => {
       (filter.anyOf.length > 0 && filter.anyOf.every(isSupportedAllFilter))) &&
     (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
     hasSupportedNumericFilter(filter.baseCost) &&
+    hasSupportedNumericFilter(filter.attachedDon) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power) &&
     (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
@@ -227,7 +233,16 @@ const isSupportedModifierValue = (
         Number.isSafeInteger(value.multiplier) &&
         value.multiplier !== 0 &&
         (value.filter === undefined ||
-          Object.keys(value.filter).every((key) => key === "categories")))));
+          Object.keys(value.filter).every((key) => key === "categories"))) ||
+      (value.type === "countAttachedDon" &&
+        Number.isSafeInteger(value.per) &&
+        value.per > 0 &&
+        Number.isSafeInteger(value.multiplier) &&
+        value.multiplier !== 0 &&
+        (value.target.type === "self" ||
+          value.target.type === "myLeader" ||
+          value.target.type === "opponentLeader" ||
+          value.target.type === "savedFieldObject"))));
 
 export const isSupportedCostModifierEffect = (
   effect: Extract<Effect, { type: "modifyCost" }>,

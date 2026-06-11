@@ -39,6 +39,7 @@ const publicCandidateVisibility = { type: "public" } as const;
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attributesAny",
+  "attachedDon",
   "baseCost",
   "categories",
   "colorsAny",
@@ -129,6 +130,7 @@ const hasOnlySupportedFilterKeys = (filter: CardFilter): boolean =>
 const hasSupportedNumericFilter = (
   filter:
     | CardFilter["baseCost"]
+    | CardFilter["attachedDon"]
     | CardFilter["cost"]
     | CardFilter["power"]
     | CardFilter["currentPower"],
@@ -177,6 +179,7 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
       filter.state === "active" ||
       filter.state === "rested") &&
     hasSupportedNumericFilter(filter.baseCost) &&
+    hasSupportedNumericFilter(filter.attachedDon) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power) &&
     hasSupportedNumericFilter(filter.currentPower));
@@ -345,6 +348,9 @@ const cardMatchesFilter = (
       : undefined;
 
   if (!numericFilterMatches(card.cost, filter.baseCost)) {
+    return false;
+  }
+  if (!numericFilterMatches(instance.attachedDon.length, filter.attachedDon)) {
     return false;
   }
   if (
