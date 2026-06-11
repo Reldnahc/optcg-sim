@@ -51,14 +51,34 @@ export const applyLifeVisibilityPayment = (params: {
     params.paymentResponse.selectedCardInstanceIds !== undefined ||
     params.paymentResponse.selectedDonInstanceIds !== undefined
   ) {
-    return { ok: false, message: "Payment Life visibility selection is invalid." };
+    return {
+      ok: false,
+      message: "Payment Life visibility selection is invalid.",
+    };
   }
   const updated =
     params.selectedOption.type === "turnLifeFaceUp"
-      ? applyTurnLifeFaceUpPayment(params)
-      : applySetLifeFaceUpPayment(params);
+      ? applyTurnLifeFaceUpPayment({
+          decisionId: params.decisionId,
+          events: params.events,
+          player: params.player,
+          playerId: params.playerId,
+          selectedOption: params.selectedOption,
+          state: params.state,
+        })
+      : applySetLifeFaceUpPayment({
+          decisionId: params.decisionId,
+          events: params.events,
+          player: params.player,
+          playerId: params.playerId,
+          selectedOption: params.selectedOption,
+          state: params.state,
+        });
   if (updated === null) {
-    return { ok: false, message: "Payment Life visibility selection is invalid." };
+    return {
+      ok: false,
+      message: "Payment Life visibility selection is invalid.",
+    };
   }
   return {
     ok: true,
