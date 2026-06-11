@@ -73,6 +73,35 @@
   padding: var(--control-panel-padding);
 }
 
+.control-turn-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--control-rail-gap);
+  padding-bottom: calc(var(--control-rail-gap) * 0.72);
+  margin-bottom: var(--control-rail-gap);
+  color: var(--match-text);
+  white-space: nowrap;
+}
+
+.control-turn-number {
+  flex: 0 0 auto;
+  font-size: clamp(15px, calc(var(--card-height) / 8.7), 21px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.control-turn-phase {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: var(--control-small-font-size);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+}
+
 .summary-panel {
   position: relative;
   transition:

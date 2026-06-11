@@ -1,5 +1,6 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 
+import type { PublicTurnState } from "@optcg/types";
 import type {
   ClientActionModel,
   PlayerSummaryTimerModel,
@@ -32,6 +33,7 @@ export interface ControlRailProps {
   opponentIsTurnPlayer?: boolean | undefined;
   selfConnectionStatus?: "connected" | "disconnected" | undefined;
   opponentConnectionStatus?: "connected" | "disconnected" | undefined;
+  turnState?: PublicTurnState | undefined;
   matchStatus?: string | undefined;
   width?: number | undefined;
   dockHeight?: number | undefined;
@@ -85,6 +87,7 @@ export const ControlRail = ({
   opponentIsTurnPlayer = false,
   selfConnectionStatus,
   opponentConnectionStatus,
+  turnState,
   matchStatus,
   width,
   dockHeight,
@@ -170,6 +173,16 @@ export const ControlRail = ({
         />
       </section>
       <section className="controls-panel" style={controlsPanelStyle}>
+        {turnState === undefined ? null : (
+          <div className="control-turn-status" aria-label="Current turn">
+            <span className="control-turn-number">
+              Turn {turnState.globalTurn}
+            </span>
+            <span className="control-turn-phase">
+              {turnStatusLabel(turnState)}
+            </span>
+          </div>
+        )}
         {errors.map((error) => (
           <p key={error} className="error-text">
             {error}
@@ -494,6 +507,27 @@ export const ControlRail = ({
     </aside>
   );
 };
+
+const phaseLabels: Record<PublicTurnState["phase"], string> = {
+  refresh: "Refresh Phase",
+  draw: "Draw Phase",
+  don: "DON!! Phase",
+  main: "Main Phase",
+  end: "End Phase",
+};
+
+const stepLabels: Record<NonNullable<PublicTurnState["step"]>, string> = {
+  attack: "Attack Step",
+  block: "Block Step",
+  counter: "Counter Step",
+  damage: "Damage Step",
+  end: "End Step",
+};
+
+const turnStatusLabel = (turnState: PublicTurnState): string =>
+  turnState.step === undefined
+    ? phaseLabels[turnState.phase]
+    : stepLabels[turnState.step];
 
 const PlayerSummaryLabel = ({
   label,

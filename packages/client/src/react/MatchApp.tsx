@@ -479,6 +479,7 @@ export const MatchApp = ({
           opponentIsTurnPlayer={displayBoard?.opponentIsTurnPlayer}
           selfConnectionStatus={displayBoard?.selfConnectionStatus}
           opponentConnectionStatus={displayBoard?.opponentConnectionStatus}
+          turnState={playerSnapshot?.view.turn}
           matchStatus={matchState?.snapshot.status}
           width={controlRailWidth}
           dockHeight={controlDockHeight}
