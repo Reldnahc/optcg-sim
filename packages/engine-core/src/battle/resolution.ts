@@ -53,6 +53,7 @@ import {
   queueBattleKOTriggers,
   releaseDamageDeferredEffectQueue,
 } from "../effect-runtime.js";
+import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
 import {
   buildFieldRemovalKoReplacementProcess,
   detectSupportedFieldRemovalReplacementCandidate,
@@ -826,9 +827,20 @@ const finalizeSupportedEndOfBattleCleanup = ({
     assertGameStateInvariants(resolved.state);
     return toEngineResult(resolved.state, [...events, ...resolved.events]);
   }
+  if (events.some((event) => event.type === "damageDealt")) {
+    const runtime = continueRuntimeUntilIdle(
+      state,
+      processEffectRuntime(releasedState),
+    );
+    if (runtime.errors !== undefined) {
+      return toEngineResult(state, [], toErrorTuple(runtime.errors));
+    }
+    assertGameStateInvariants(runtime.state);
+    return toEngineResult(runtime.state, [...events, ...runtime.events]);
+  }
 
-  assertGameStateInvariants(finalizedState);
-  return toEngineResult(finalizedState, events);
+  assertGameStateInvariants(releasedState);
+  return toEngineResult(releasedState, events);
 };
 
 export const finalizeBattleAfterReplacementResolution = (

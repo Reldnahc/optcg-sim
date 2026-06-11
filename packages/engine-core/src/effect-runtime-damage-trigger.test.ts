@@ -12,6 +12,7 @@ import {
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
 } from "./action-test-fixtures.js";
+import { resolveSupportedVanillaBattle } from "./battle/actions.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import {
   toEffectId,
@@ -90,6 +91,61 @@ test("damageDealt reactions queue from player damage events", () => {
   assert.equal(
     queued.events.map((event) => event.type).join(","),
     "effectQueued",
+  );
+});
+
+test("battle leader damage resolves damageDealt reactions before battle returns", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  setupDamageOrKoDefinition(state);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 7000,
+  });
+  const handBefore = p1State.hand.length;
+  state.battle = {
+    attacker: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+      zone: p2State.leader.zone,
+    },
+    originalTarget: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+      zone: p1State.leader.zone,
+    },
+    currentTarget: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+      zone: p1State.leader.zone,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    must(result.state.players[p1], "p1").hand.length,
+    handBefore + 2,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+          "damage-or-ko-draw",
+    ),
+    true,
   );
 });
 
