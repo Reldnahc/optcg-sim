@@ -96,6 +96,7 @@ type ConditionalSequenceEffect = Extract<Effect, { type: "conditional" }> & {
   then: SequenceEffect;
 };
 type ConditionalEffect = Extract<Effect, { type: "conditional" }>;
+type ForEachSavedTargetEffect = Extract<Effect, { type: "forEachSavedTarget" }>;
 
 export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
@@ -131,6 +132,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | ConditionalContinuousEffect
     | ConditionalSequenceEffect
     | ConditionalEffect
+    | ForEachSavedTargetEffect
     | DelayedEffect
     | Extract<Effect, { type: "choice" }>
     | KoEffect;
@@ -143,6 +145,7 @@ export type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
 export interface SequenceSupportOptions {
   allowSavedReferences?: boolean;
   allowInitialTrashFromHand?: boolean;
+  initialSavedSelectedTargets?: readonly string[];
   requirePositiveDrawCount?: boolean;
 }
 
@@ -150,12 +153,16 @@ interface SequenceSupportState {
   hasPendingDecisionSegment: boolean;
   savedSelectedCards: Map<string, SavedSelectedCardsKind>;
   savedSelectionSets: Set<string>;
+  savedSelectedTargets: Set<string>;
 }
 
-const emptySequenceSupportState = (): SequenceSupportState => ({
+const emptySequenceSupportState = (
+  options: SequenceSupportOptions = {},
+): SequenceSupportState => ({
   hasPendingDecisionSegment: false,
   savedSelectedCards: new Map(),
   savedSelectionSets: new Set(),
+  savedSelectedTargets: new Set(options.initialSavedSelectedTargets ?? []),
 });
 
 const savedSelectedCardsKind = (
@@ -168,6 +175,11 @@ const hasSavedSelectionSet = (
   state: SequenceSupportState,
   selectionSet: unknown,
 ): boolean => state.savedSelectionSets.has(String(selectionSet));
+
+const hasSavedSelectedTargets = (
+  state: SequenceSupportState,
+  selection: unknown,
+): boolean => state.savedSelectedTargets.has(String(selection));
 
 const requestSelectsDonFromCostArea = (
   request: SelectTargetsEffect["request"],
@@ -258,6 +270,40 @@ const isSupportedDelayedSegment = (
     options,
   );
 
+const isSupportedForEachSavedTargetSegment = (
+  effect: ForEachSavedTargetEffect,
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
+  options: SequenceSupportOptions,
+): boolean => {
+  const childSequence =
+    effect.effect.type === "sequence"
+      ? effect.effect
+      : toSingleEffectSequence(effect.effect);
+  const flattenedChild = flattenSequenceEffect(childSequence);
+  if (flattenedChild === null) {
+    return false;
+  }
+  return isSupportedSequenceBlock(
+    toSyntheticQueueEntry(sourcePresencePolicy),
+    {
+      id: "effect:for-each-saved-target-child" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy,
+      effect: flattenedChild,
+    },
+    {
+      ...options,
+      allowInitialTrashFromHand: true,
+      initialSavedSelectedTargets: [
+        ...(options.initialSavedSelectedTargets ?? []),
+        effect.saveCurrentAs,
+      ],
+      requirePositiveDrawCount: false,
+    },
+  );
+};
+
 export const toSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
@@ -289,7 +335,7 @@ export const toSupportedSequenceBlock = (
     return undefined;
   }
 
-  const supportState = emptySequenceSupportState();
+  const supportState = emptySequenceSupportState(options);
   const allSegmentsSupported = flattenedBlock.effect.effects.every(
     (segment, index) => {
       if (index === 0 && segment.connector !== "always") {
@@ -438,6 +484,9 @@ export const toSupportedSequenceBlock = (
         if (!isSupportedSequenceTargetRequest(request)) {
           return false;
         }
+        if (segment.saveResultAs !== undefined) {
+          supportState.savedSelectedTargets.add(segment.saveResultAs);
+        }
         if (
           segment.saveResultAs !== undefined &&
           requestSelectsDonFromCostArea(request)
@@ -448,7 +497,13 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (segment.effect.type === "selectAllTargets") {
-        return isSupportedSelectAllTargetsRequest(segment.effect.request);
+        if (!isSupportedSelectAllTargetsRequest(segment.effect.request)) {
+          return false;
+        }
+        if (segment.saveResultAs !== undefined) {
+          supportState.savedSelectedTargets.add(segment.saveResultAs);
+        }
+        return true;
       }
       if (isSupportedRestSegment(segment.effect)) {
         if (
@@ -480,6 +535,16 @@ export const toSupportedSequenceBlock = (
       ) {
         supportState.hasPendingDecisionSegment = true;
         return true;
+      }
+      if (segment.effect.type === "forEachSavedTarget") {
+        if (!hasSavedSelectedTargets(supportState, segment.effect.selection)) {
+          return false;
+        }
+        return isSupportedForEachSavedTargetSegment(
+          segment.effect,
+          entry.sourcePresencePolicy,
+          options,
+        );
       }
       if (segment.effect.type === "choice") {
         supportState.hasPendingDecisionSegment = true;

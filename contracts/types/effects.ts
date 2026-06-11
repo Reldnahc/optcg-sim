@@ -559,6 +559,7 @@ export type OptionalCostSegmentResult =
 
 export type SavedFieldObjectReferenceFamily =
   | "selectedTargets"
+  | "forEachSavedTarget"
   | "producedObjects";
 
 export type SavedFieldObjectZone =
@@ -1025,6 +1026,8 @@ export type Effect =
       filter: CardFilter;
       effect: Effect;
     }
+  // prettier-ignore
+  | { type: "forEachSavedTarget"; selection: string; saveCurrentAs: string; effect: Effect }
   | { type: "repeat"; count: number; effect: Effect }
   | { type: "activateReferencedEffect"; source: Target; trigger: Trigger }
   | { type: "replacement"; when: ReplacementTrigger; instead: Effect }

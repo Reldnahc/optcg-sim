@@ -563,6 +563,7 @@ export type OptionalCostSegmentResult =
 
 export type SavedFieldObjectReferenceFamily =
   | "selectedTargets"
+  | "forEachSavedTarget"
   | "producedObjects";
 
 export type SavedFieldObjectZone =
@@ -1027,6 +1028,12 @@ export type Effect =
       zone: Zone;
       player: PlayerRef;
       filter: CardFilter;
+      effect: Effect;
+    }
+  | {
+      type: "forEachSavedTarget";
+      selection: string;
+      saveCurrentAs: string;
       effect: Effect;
     }
   | { type: "repeat"; count: number; effect: Effect }

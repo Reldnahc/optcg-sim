@@ -270,6 +270,97 @@ const ownerRelativeAttachDonSequence = (): Extract<
     ],
   }) as unknown as Extract<Effect, { type: "sequence" }>;
 
+const distributedAttachDonSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "add-rested-don",
+      connector: "always",
+      effect: {
+        type: "moveCards",
+        count: 4,
+        from: { player: "self", zone: "donDeck", position: "top" },
+        to: { player: "self", zone: "costArea" },
+        order: "original",
+        destinationState: "rested",
+      },
+    },
+    {
+      id: "select-distribution-targets",
+      connector: "then",
+      saveResultAs: "targetSelection:distributed-attach-don",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "self",
+          filter: { categories: ["character"] },
+          min: 0,
+          max: 2,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+        },
+      },
+    },
+    {
+      id: "for-each-distribution-target",
+      connector: "then",
+      effect: {
+        type: "forEachSavedTarget",
+        selection: "targetSelection:distributed-attach-don",
+        saveCurrentAs: "targetSelection:distributed-attach-don-current",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "select-rested-don",
+              connector: "always",
+              saveResultAs: "donSelection:attach",
+              effect: {
+                type: "selectCards",
+                zone: "costArea",
+                player: "self",
+                chooser: "self",
+                min: 0,
+                max: 2,
+                filter: { categories: ["don"], state: "rested" },
+                saveAs: "donSelection:attach" as SelectionId,
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              id: "attach-to-current-target",
+              connector: "then",
+              effect: {
+                type: "attachSelectedDon",
+                selection: "donSelection:attach" as SelectionId,
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "forEachSavedTarget",
+                    saveResultAs:
+                      "targetSelection:distributed-attach-don-current",
+                  },
+                  zone: "characterArea",
+                  player: "self",
+                  filter: { categories: ["character"] },
+                  visibility: "publicOnly",
+                  onFailure: "failClosed",
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  ],
+});
+
 const setupDefinition = (
   state: GameState,
   effect: Effect,
@@ -558,6 +649,100 @@ test("DON attachment sequence can attach selected opponent DON to that owner's C
     afterOpponent.costArea.find((card) => card.instanceId === don.instanceId)
       ?.state,
     undefined,
+  );
+});
+
+test("forEachSavedTarget attaches separately selected rested DON to each saved target", () => {
+  const state = createActiveState();
+  setupDefinition(state, distributedAttachDonSequence());
+  const p1State = must(state.players[p1], "p1");
+  const secondTarget = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[1], "second target character"),
+    zone: "characterArea",
+    index: 1,
+  });
+  state.cardManifest.cards[secondTarget.cardId] = resolvedCard({
+    cardId: secondTarget.cardId,
+    category: "character",
+  });
+
+  const targetPause = processEffectRuntime(state);
+  assert.equal(targetPause.errors, undefined);
+  const targetDecision = must(
+    targetPause.state.pendingDecision,
+    "target selection",
+  );
+  assert.equal(targetDecision.type, "selectTargets");
+  assert.equal(targetDecision.candidates.length, 2);
+  const selectedTargets = targetDecision.candidates.map(
+    (candidate) => candidate.card,
+  );
+
+  const firstDonPause = applyAction(targetPause.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: selectedTargets },
+  });
+  assert.equal(firstDonPause.errors, undefined);
+  const firstDonDecision = must(
+    firstDonPause.state.pendingDecision,
+    "first DON selection",
+  );
+  assert.equal(firstDonDecision.type, "selectCards");
+  assert.equal(firstDonDecision.candidates.length, 3);
+  const firstDon = firstDonDecision.candidates
+    .slice(0, 2)
+    .map((candidate) => candidate.card);
+
+  const secondDonPause = applyAction(firstDonPause.state, {
+    type: "respondToDecision",
+    decisionId: firstDonDecision.id,
+    response: { type: "cards", cards: firstDon },
+  });
+  assert.equal(secondDonPause.errors, undefined);
+  const secondDonDecision = must(
+    secondDonPause.state.pendingDecision,
+    "second DON selection",
+  );
+  assert.equal(secondDonDecision.type, "selectCards");
+  assert.equal(secondDonDecision.candidates.length, 1);
+  const secondDon = secondDonDecision.candidates.map(
+    (candidate) => candidate.card,
+  );
+
+  const completed = applyAction(secondDonPause.state, {
+    type: "respondToDecision",
+    decisionId: secondDonDecision.id,
+    response: { type: "cards", cards: secondDon },
+  });
+
+  assert.equal(completed.errors, undefined);
+  assert.equal(completed.state.pendingDecision, undefined);
+  const afterCharacters = must(
+    completed.state.players[p1],
+    "after p1",
+  ).characters;
+  const firstTargetAfter = must(
+    afterCharacters.find(
+      (card) => card.instanceId === selectedTargets[0]?.instanceId,
+    ),
+    "first target after",
+  );
+  const secondTargetAfter = must(
+    afterCharacters.find(
+      (card) => card.instanceId === selectedTargets[1]?.instanceId,
+    ),
+    "second target after",
+  );
+  assert.deepEqual(
+    firstTargetAfter.attachedDon,
+    firstDon.map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    secondTargetAfter.attachedDon,
+    secondDon.map((card) => card.instanceId),
   );
 });
 

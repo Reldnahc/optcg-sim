@@ -144,7 +144,7 @@ const toSavedFieldObjectReferenceList = (
   if (saved === undefined) {
     return { ok: false, reason: "missing-saved-reference" };
   }
-  if (family === "selectedTargets") {
+  if (family === "selectedTargets" || family === "forEachSavedTarget") {
     return saved.kind === "selectedTargets"
       ? { ok: true, objects: saved.targets }
       : { ok: false, reason: "unsupported-saved-reference-family" };

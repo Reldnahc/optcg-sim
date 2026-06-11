@@ -155,6 +155,7 @@ export type PrimitiveEvidence =
   | "composition:selectThenActivate"
   | "composition:selectThenApply"
   | "composition:selectThenMove"
+  | "composition:forEachSavedTarget"
   | "composition:sequence"
   | "composition:delayed"
   | "look:topDeck"

@@ -852,6 +852,23 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "selection", "saveCurrentAs", "effect"],
+          "properties": {
+            "type": { "const": "forEachSavedTarget" },
+            "selection": {
+              "type": "string",
+              "minLength": 1
+            },
+            "saveCurrentAs": {
+              "type": "string",
+              "minLength": 1
+            },
+            "effect": { "$ref": "#/$defs/effect" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "handler"],
           "properties": {
             "type": { "const": "custom" },
@@ -1627,7 +1644,7 @@
       "properties": {
         "family": {
           "type": "string",
-          "enum": ["selectedTargets", "producedObjects"]
+          "enum": ["selectedTargets", "forEachSavedTarget", "producedObjects"]
         },
         "saveResultAs": {
           "type": "string",

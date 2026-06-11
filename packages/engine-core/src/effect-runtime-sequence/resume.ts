@@ -167,6 +167,34 @@ const continueParentSequencesAfterNestedCompletion = (params: {
     if (parentSegment === undefined) {
       return { ok: false };
     }
+    if (parent.kind === "forEachSavedTargetItem") {
+      const continued = continueNoDecisionSegments(
+        nextState,
+        params.entry,
+        parentEffect,
+        parent.parentIndex,
+        nextLedgers,
+        params.createTrashDecision,
+        false,
+        parent.parentPath,
+      );
+      if (!continued.ok) {
+        return { ok: false };
+      }
+      events.push(...continued.events);
+      if (continued.kind === "paused") {
+        return {
+          events,
+          kind: "paused",
+          ok: true,
+          state: continued.state,
+        };
+      }
+      nextState = continued.state;
+      nextLedgers = continued.ledgers;
+      completedPath = parent.parentPath;
+      continue;
+    }
     nextLedgers = {
       ...nextLedgers,
       segmentResults: {

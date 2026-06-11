@@ -39,6 +39,18 @@ export const nestedSequencePath = (
   index: number,
 ): string[] => [...effectPath, String(index), "nested", "sequence"];
 
+export const forEachSavedTargetItemPath = (
+  effectPath: readonly string[],
+  index: number,
+  itemIndex: number,
+): string[] => [
+  ...effectPath,
+  String(index),
+  "forEachSavedTarget",
+  String(itemIndex),
+  "sequence",
+];
+
 export const choiceOptionPath = (
   effectPath: readonly string[],
   index: number,
@@ -86,6 +98,23 @@ export const resolveSequenceForPath = (
         return undefined;
       }
       current = segment.effect;
+    } else if (branchToken === "forEachSavedTarget") {
+      if (segment.effect.type !== "forEachSavedTarget") {
+        return undefined;
+      }
+      const itemIndex = Number(sequenceToken);
+      const sequenceTokenAfterItem = effectPath[index + 3];
+      if (
+        !Number.isSafeInteger(itemIndex) ||
+        sequenceTokenAfterItem !== "sequence"
+      ) {
+        return undefined;
+      }
+      current =
+        segment.effect.effect.type === "sequence"
+          ? segment.effect.effect
+          : toSingleEffectSequence(segment.effect.effect);
+      index += 1;
     } else if (branchToken === "choice") {
       if (segment.effect.type !== "choice") {
         return undefined;
@@ -135,6 +164,7 @@ export const conditionalParentForPath = (
   effectPath: readonly string[],
 ):
   | {
+      kind: "conditional" | "nested" | "choice" | "forEachSavedTargetItem";
       parentIndex: number;
       parentPath: string[];
     }
@@ -149,10 +179,25 @@ export const conditionalParentForPath = (
     branchToken === "sequence" &&
     maybeChoiceToken === "choice" &&
     Number.isSafeInteger(Number(parentToken));
+  const isForEachSavedTargetItemPath =
+    branchToken === "sequence" &&
+    effectPath.length >= 6 &&
+    effectPath[effectPath.length - 3] === "forEachSavedTarget" &&
+    Number.isSafeInteger(Number(effectPath[effectPath.length - 2])) &&
+    Number.isSafeInteger(Number(effectPath[effectPath.length - 4]));
   const parentIndexToken = isChoicePath
     ? effectPath[effectPath.length - 4]
-    : effectPath[effectPath.length - 3];
+    : isForEachSavedTargetItemPath
+      ? effectPath[effectPath.length - 4]
+      : effectPath[effectPath.length - 3];
   const parentIndex = Number(parentIndexToken);
+  if (isForEachSavedTargetItemPath && Number.isSafeInteger(parentIndex)) {
+    return {
+      kind: "forEachSavedTargetItem",
+      parentIndex,
+      parentPath: effectPath.slice(0, -4),
+    };
+  }
   if (
     !(
       (parentToken === "then" &&
@@ -165,6 +210,11 @@ export const conditionalParentForPath = (
     return undefined;
   }
   return {
+    kind: isChoicePath
+      ? "choice"
+      : parentToken === "nested"
+        ? "nested"
+        : "conditional",
     parentIndex,
     parentPath: effectPath.slice(0, isChoicePath ? -4 : -3),
   };

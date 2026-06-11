@@ -467,6 +467,10 @@ test("TYP-009B saved field-object references compile for selectedTargets and pro
     saveResultAs: "playedCharacter",
     objectIndex: 0,
   };
+  const loopCurrentBinding: SavedFieldObjectTargetBinding = {
+    family: "forEachSavedTarget",
+    saveResultAs: "currentCharacter",
+  };
   const selectedTarget: SavedFieldObjectTarget = {
     type: "savedFieldObject",
     binding: selectedTargetBinding,
@@ -553,6 +557,7 @@ test("TYP-009B saved field-object references compile for selectedTargets and pro
   expect(effect.type).toBe("sequence");
   expect(selectedTarget.binding.family).toBe("selectedTargets");
   expect(producedObject.binding.family).toBe("producedObjects");
+  expect(loopCurrentBinding.family).toBe("forEachSavedTarget");
   expect(selectedTargetsReference.kind).toBe("selectedTargets");
   expect(producedObjectsReference.kind).toBe("producedObjects");
 });

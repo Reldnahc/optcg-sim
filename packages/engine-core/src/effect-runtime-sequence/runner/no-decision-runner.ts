@@ -3,7 +3,6 @@ import type {
   EffectQueueEntry,
   EngineEvent,
   GameState,
-  SavedFieldObjectReference,
   SequenceSegmentResult,
 } from "@optcg/types";
 
@@ -34,7 +33,6 @@ import {
   applyNoOpReturnDonSegment,
   applyRevealTopSequenceSegment,
   previousSegmentCompleted,
-  saveReference,
   shouldAttemptSegment,
 } from "../segments.js";
 import { type SupportedSequenceSegment } from "../support.js";
@@ -44,7 +42,6 @@ import { createSelectFromSetDecision } from "../selected-segments.js";
 import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
 import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
 import { scheduleDelayedEffectSequenceSegment } from "../delayed.js";
-import { resolvePublicTargetCandidatesForRequest } from "../../selection/candidates.js";
 import {
   conditionalThenSequencePath,
   conditionalThenSingleEffectPath,
@@ -62,6 +59,8 @@ import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.j
 import { pauseSequenceForPendingDecision } from "./pause.js";
 import { applyLifeStateNoDecisionSegment } from "./life-state-segments.js";
 import { pauseForOptionalSequenceSegment } from "./optional-segment.js";
+import { applyForEachSavedTargetSegment } from "./for-each-saved-target.js";
+import { applySelectAllTargetsSegment } from "./select-all-targets-segment.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   DrawEffect,
@@ -576,60 +575,20 @@ export const continueNoDecisionSegments = (
       continue;
     }
     if (segment.effect.type === "selectAllTargets") {
-      const request = {
-        ...segment.effect.request,
-        min: 0,
-        max: 0,
-        allowFewerIfUnavailable: false,
-      };
-      const candidates = resolvePublicTargetCandidatesForRequest(
-        nextState,
-        request,
-        { sourceControllerId: entry.controllerId },
-      );
-      if (!candidates.ok) {
+      const selectedAll = applySelectAllTargetsSegment({
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment: segment as SequenceEffect["effects"][number] & {
+          effect: Extract<Effect, { type: "selectAllTargets" }>;
+        },
+        segmentKey: ledgerKey(segment, index),
+        state: nextState,
+      });
+      if (!selectedAll.ok) {
         return { ok: false };
       }
-      const selectedTargets = candidates.candidates.map(
-        (candidate) => candidate.card,
-      );
-      const saveResultAs = segment.saveResultAs;
-      const savedTargets =
-        saveResultAs === undefined
-          ? []
-          : selectedTargets.map(
-              (object, objectIndex): SavedFieldObjectReference => ({
-                binding: {
-                  family: "selectedTargets",
-                  saveResultAs,
-                  objectIndex,
-                  ...(segment.id === undefined
-                    ? {}
-                    : { sourceSegmentId: segment.id }),
-                },
-                capturedAtStateSeq: nextState.seq,
-                object,
-                visibility: "public",
-              }),
-            );
-      nextLedgers = {
-        savedReferences:
-          segment.saveResultAs === undefined
-            ? nextLedgers.savedReferences
-            : saveReference(nextLedgers.savedReferences, segment, {
-                kind: "selectedTargets",
-                targets: savedTargets,
-              }),
-        segmentResults: {
-          ...nextLedgers.segmentResults,
-          [ledgerKey(segment, index)]: {
-            ...emptySegmentResult(),
-            attempted: true,
-            succeeded: true,
-            selectedTargets,
-          },
-        },
-      };
+      nextLedgers = selectedAll.ledgers;
       continue;
     }
     if (segment.effect.type === "selectTargets") {
@@ -651,6 +610,33 @@ export const continueNoDecisionSegments = (
       }
       nextState = selectTargets.state;
       nextLedgers = selectTargets.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "forEachSavedTarget") {
+      const loop = applyForEachSavedTargetSegment({
+        continueNoDecisionSegments,
+        createTrashDecision,
+        effectPath,
+        entry,
+        events,
+        incrementStateSeqForDraw,
+        index,
+        ledgers: nextLedgers,
+        segment: segment as SequenceEffect["effects"][number] & {
+          effect: Extract<Effect, { type: "forEachSavedTarget" }>;
+        },
+        segmentKey: ledgerKey(segment, index),
+        state: nextState,
+      });
+      if (!loop.ok) {
+        return { ok: false };
+      }
+      if (loop.kind === "paused") {
+        return loop;
+      }
+      nextState = loop.state;
+      nextLedgers = loop.ledgers;
+      events.push(...loop.events);
       continue;
     }
     if (segment.effect.type === "playSelected") {

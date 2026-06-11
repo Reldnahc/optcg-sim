@@ -19,13 +19,7 @@ export const isSupportedAttachDonTargetFilter = (
   if (filter === undefined) {
     return false;
   }
-  return Object.keys(filter).every(
-    (key) =>
-      key === "categories" ||
-      key === "names" ||
-      key === "typesAny" ||
-      key === "typesIncludeAny",
-  );
+  return isSupportedPublicFieldTargetFilter(filter);
 };
 
 const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([

@@ -140,7 +140,8 @@ export const isSupportedAttachSelectedDonSegment = (
         (zone) => zone === "leaderArea" || zone === "characterArea",
       ) === true)) &&
   effect.target.controller === undefined &&
-  effect.target.binding.family === "selectedTargets" &&
+  (effect.target.binding.family === "selectedTargets" ||
+    effect.target.binding.family === "forEachSavedTarget") &&
   isSupportedAttachDonTargetFilter(effect.target.filter);
 
 export const isSupportedPlaySourceSegment = (

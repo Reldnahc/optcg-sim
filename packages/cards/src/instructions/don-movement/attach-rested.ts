@@ -3,7 +3,12 @@ import type { CardFilter } from "@optcg/types";
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
-import { donAttachSelection, donAttachTarget } from "./shared.js";
+import {
+  distributedDonAttachCurrentTarget,
+  distributedDonAttachTarget,
+  donAttachSelection,
+  donAttachTarget,
+} from "./shared.js";
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   const decomposed = parseDonAttachmentInstruction(input);
@@ -19,6 +24,11 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   const distribution = parseAttachRestedDonEachInstruction(input);
   if (distribution !== undefined) {
     return distribution;
+  }
+
+  const targetDistribution = parseTargetDistributedRestedDonInstruction(input);
+  if (targetDistribution !== undefined) {
+    return targetDistribution;
   }
 
   const match =
@@ -410,6 +420,130 @@ const parseAttachRestedDonEachInstruction: InstructionParser = (input) => {
       "composition:selectThenApply",
       ...leader.evidence,
       ...character.evidence,
+    ],
+    rest: "",
+  };
+};
+
+const parseTargetDistributedRestedDonInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^give (?<targetQuantity>up to [1-9]\d*) of your (?<target>.+) (?<donQuantity>up to [1-9]\d*) rested DON!! cards? each\.?$/iu.exec(
+      input.text,
+    );
+  const targetQuantityText = match?.groups?.["targetQuantity"];
+  const targetText = match?.groups?.["target"];
+  const donQuantityText = match?.groups?.["donQuantity"];
+  if (
+    targetQuantityText === undefined ||
+    targetText === undefined ||
+    donQuantityText === undefined
+  ) {
+    return undefined;
+  }
+  const targetQuantity = parseUpToCardinality({ text: targetQuantityText });
+  const donQuantity = parseUpToCardinality({ text: donQuantityText });
+  const target = parseRestedDonAttachmentTarget(`1 of your ${targetText}`);
+  if (
+    targetQuantity === undefined ||
+    targetQuantity.rest.length > 0 ||
+    donQuantity === undefined ||
+    donQuantity.rest.length > 0 ||
+    target === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:distributed-don-attach-targets",
+          connector: "always",
+          saveResultAs: distributedDonAttachTarget,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              ...target.requestZone,
+              filter: target.filter,
+              min: targetQuantity.cardinality.min,
+              max: targetQuantity.cardinality.max,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          id: "for-each:distributed-don-attach-target",
+          connector: "then",
+          effect: {
+            type: "forEachSavedTarget",
+            selection: distributedDonAttachTarget,
+            saveCurrentAs: distributedDonAttachCurrentTarget,
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  id: "select:rested-don",
+                  connector: "always",
+                  saveResultAs: donAttachSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "costArea",
+                    player: "self",
+                    chooser: "self",
+                    min: donQuantity.cardinality.min,
+                    max: donQuantity.cardinality.max,
+                    filter: { categories: ["don"], state: "rested" },
+                    saveAs: donAttachSelection,
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  id: "attach:selected-don-to-current-target",
+                  connector: "then",
+                  effect: {
+                    type: "attachSelectedDon",
+                    selection: donAttachSelection,
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "forEachSavedTarget",
+                        saveResultAs: distributedDonAttachCurrentTarget,
+                      },
+                      ...target.savedTargetZone,
+                      player: "self",
+                      filter: target.filter,
+                      visibility: "publicOnly",
+                      onFailure: "failClosed",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectTargets",
+      "instruction:selectCards",
+      "instruction:attachDon",
+      ...targetQuantity.evidence,
+      ...donQuantity.evidence,
+      "player:self",
+      "chooser:self:upTo",
+      "zone:costArea",
+      "filter:category:don",
+      "filter:state:rested",
+      ...target.evidence,
+      "composition:forEachSavedTarget",
+      "composition:selectThenApply",
     ],
     rest: "",
   };
