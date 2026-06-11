@@ -43,7 +43,9 @@
   --floating-window-resize-handle-size: clamp(18px, calc(var(--card-height) / 6.6), 28px);
   --floating-window-resize-corner-size: calc(var(--floating-window-resize-handle-size) * 0.58);
   --match-surface-page: #101010;
+  --match-surface-board: rgba(10, 10, 11, 0.82);
   --match-surface-window: rgba(13, 13, 14, 0.86);
+  --match-surface-zone: rgba(0, 0, 0, 0.28);
   --match-surface-panel: rgba(24, 24, 25, 0.82);
   --match-surface-panel-raised: rgba(34, 34, 35, 0.88);
   --match-surface-control: rgba(42, 42, 44, 0.78);
@@ -60,6 +62,9 @@
   --match-text-subtle: rgba(251, 243, 223, 0.48);
   --match-accent: #ffdc62;
   --match-accent-strong: #ffe38a;
+  --card-back-main-deck-image: url("/assets/sim/card-backs/main-deck.webp");
+  --card-back-don-deck-image: url("/assets/sim/card-backs/don-deck.webp");
+  --card-don-face-image: url("/assets/sim/cards/don.webp");
 
   position: relative;
   display: grid;

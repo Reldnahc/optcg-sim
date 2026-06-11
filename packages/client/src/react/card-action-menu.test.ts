@@ -456,6 +456,51 @@ describe("card action menu", () => {
     assert.equal(markup.includes("DON!! 2"), true);
   });
 
+  test("hidden main deck and DON deck cards use separate card backs", () => {
+    const mainDeckCard: ClientCardModel = {
+      ...card("hidden-deck-self-0", "Hidden card"),
+      cardId: "hidden" as CardId,
+      category: "hidden",
+    };
+    const donDeckCard: ClientCardModel = {
+      ...card("hidden-don-deck-self-0", "Hidden card"),
+      cardId: "hidden" as CardId,
+      category: "hidden",
+    };
+
+    const markup = renderToStaticMarkup(
+      createElement(
+        "div",
+        null,
+        createElement(CardTile, { card: mainDeckCard }),
+        createElement(CardTile, { card: donDeckCard }),
+      ),
+    );
+
+    assert.match(markup, /card-back-main-deck/u);
+    assert.match(markup, /card-back-don-deck/u);
+  });
+
+  test("DON cards without catalog art use the shared DON face asset", () => {
+    const donCard = card("don-1", "DON!!");
+    const characterWithDon = {
+      ...card("character-with-don", "Character"),
+      attachedDonCards: [donCard],
+    };
+
+    const markup = renderToStaticMarkup(
+      createElement(
+        "div",
+        null,
+        createElement(CardTile, { card: donCard }),
+        createElement(CardTile, { card: characterWithDon }),
+      ),
+    );
+
+    assert.match(markup, /class="card-face card-don-face"/u);
+    assert.match(markup, /attached-don-card-don-face/u);
+  });
+
   test("renders positive and negative power deltas on modified cards", () => {
     const layout = board();
     layout.self.leader = {
@@ -566,6 +611,38 @@ describe("card action menu", () => {
     assert.match(
       styles,
       /\.keyword-badge-positive\s*\{[^}]*color:\s*#42e67c;/u,
+    );
+  });
+
+  test("card backs and DON fallback are wired to sim image asset variables", async () => {
+    const [appShellStyles, cardStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "card.css"), "utf8"),
+    ]);
+
+    assert.match(
+      appShellStyles,
+      /--card-back-main-deck-image:\s*url\("\/assets\/sim\/card-backs\/main-deck\.webp"\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--card-back-don-deck-image:\s*url\("\/assets\/sim\/card-backs\/don-deck\.webp"\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--card-don-face-image:\s*url\("\/assets\/sim\/cards\/don\.webp"\);/u,
+    );
+    assert.match(
+      cardStyles,
+      /\.card-back-main-deck\s*\{[^}]*background-image:\s*var\(--card-back-main-deck-image\),/u,
+    );
+    assert.match(
+      cardStyles,
+      /\.card-back-don-deck\s*\{[^}]*background-image:\s*var\(--card-back-don-deck-image\),/u,
+    );
+    assert.match(
+      cardStyles,
+      /\.card-don-face\s*\{[^}]*background-image:\s*var\(--card-don-face-image\),/u,
     );
   });
 

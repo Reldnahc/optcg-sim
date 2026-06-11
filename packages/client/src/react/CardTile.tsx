@@ -13,6 +13,16 @@ const handCardReorderDraggingClassName = "is-hand-card-reorder-dragging";
 type ClientKeyword = NonNullable<ClientCardModel["keywords"]>[number];
 type ClientRestriction = NonNullable<ClientCardModel["restrictions"]>[number];
 
+const donCardFaceClassName = "card-face card-don-face";
+
+const isDonCard = (card: ClientCardModel): boolean =>
+  card.name === "DON!!" || card.category.toLowerCase() === "don";
+
+const hiddenCardBackClassName = (card: ClientCardModel): string =>
+  String(card.instanceId).startsWith("hidden-don-deck-")
+    ? "card-back-don-deck"
+    : "card-back-main-deck";
+
 const keywordLabel = (keyword: ClientKeyword): string => {
   switch (keyword) {
     case "rush":
@@ -158,7 +168,12 @@ export const CardTile = ({
     selected || selectedDonInstanceIds.includes(String(card.instanceId));
   const image =
     card.category === "hidden" ? (
-      <div className="card-face card-back" aria-label={card.name} />
+      <div
+        className={`card-face card-back ${hiddenCardBackClassName(card)}`}
+        aria-label={card.name}
+      />
+    ) : card.imageUrl === undefined && isDonCard(card) ? (
+      <div className={donCardFaceClassName} aria-label={card.name} />
     ) : card.imageUrl === undefined ? (
       <div className="card-face card-placeholder">{card.name}</div>
     ) : (
@@ -539,7 +554,14 @@ export const CardTile = ({
               }}
             >
               {donCard.imageUrl === undefined ? (
-                <span>{donCard.name}</span>
+                isDonCard(donCard) ? (
+                  <span
+                    className="attached-don-card-face attached-don-card-don-face"
+                    aria-label={donCard.name}
+                  />
+                ) : (
+                  <span>{donCard.name}</span>
+                )
               ) : (
                 <img src={donCard.imageUrl} alt={donCard.name} />
               )}

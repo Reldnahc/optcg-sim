@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, test } from "vitest";
@@ -212,6 +212,35 @@ describe("match HTTP server health", () => {
 
       assert.equal(response.status, 404);
       assert.equal(await response.text(), "Not found");
+    } finally {
+      await server.close();
+      await rm(staticDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("serves static webp image assets with image content type", async () => {
+    const staticDirectory = await mkdtemp(join(tmpdir(), "optcg-sim-static-"));
+    await mkdir(join(staticDirectory, "assets", "sim", "cards"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(staticDirectory, "assets", "sim", "cards", "don.webp"),
+      new Uint8Array([1, 2, 3]),
+    );
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      staticAssetsDirectory: staticDirectory,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/assets/sim/cards/don.webp`);
+
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("content-type"), "image/webp");
+      assert.deepEqual(
+        new Uint8Array(await response.arrayBuffer()),
+        new Uint8Array([1, 2, 3]),
+      );
     } finally {
       await server.close();
       await rm(staticDirectory, { recursive: true, force: true });

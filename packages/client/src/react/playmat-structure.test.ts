@@ -80,6 +80,14 @@ describe("playmat structure", () => {
     assert.match(appShellStyles, /--playmat-grid-gap:\s*6px;/);
     assert.match(
       appShellStyles,
+      /--match-surface-board:\s*rgba\(10,\s*10,\s*11,\s*0\.82\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--match-surface-zone:\s*rgba\(0,\s*0,\s*0,\s*0\.28\);/u,
+    );
+    assert.match(
+      appShellStyles,
       /--playmat-vertical-chrome:\s*calc\(\s*\(var\(--match-app-padding\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-board-padding\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-border-width\)\s*\*\s*2\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*6\)\s*\);/,
     );
     assert.match(
@@ -98,8 +106,9 @@ describe("playmat structure", () => {
     assert.match(playmatStyles, /gap:\s*var\(--playmat-grid-gap\);/);
     assert.match(
       playmatStyles,
-      /border:\s*var\(--playmat-border-width\)\s+solid\s+#e8e0d6;/,
+      /border:\s*var\(--playmat-border-width\)\s+solid\s+var\(--match-border\);/u,
     );
+    assert.match(playmatStyles, /background:\s*var\(--match-surface-board\);/u);
     assert.match(playmatStyles, /padding:\s*var\(--playmat-board-padding\);/);
     assert.equal(
       playmatStyles.includes('". . center-spacer center-spacer . ."'),
@@ -468,6 +477,10 @@ describe("playmat structure", () => {
     assert.match(styles, /\.zone-cards\s*\{[^}]*align-items:\s*center;/u);
     assert.match(styles, /\.zone-cards\s*\{[^}]*justify-content:\s*center;/u);
     assert.match(styles, /\.zone-cards\s*\{[^}]*min-width:\s*0;/u);
+    assert.match(
+      styles,
+      /\.zone\s*\{[^}]*border:\s*2px solid var\(--match-border-soft\);[^}]*background:\s*var\(--match-surface-zone\);/u,
+    );
   });
 
   test("battle arrow layer sits above the play field but below modals", async () => {

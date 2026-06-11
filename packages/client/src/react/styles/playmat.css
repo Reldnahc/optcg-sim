@@ -21,8 +21,11 @@
     var(--playmat-row-height);
   gap: var(--playmat-grid-gap);
   min-height: 0;
-  border: var(--playmat-border-width) solid #e8e0d6;
-  background: #9d9694;
+  border: var(--playmat-border-width) solid var(--match-border);
+  background: var(--match-surface-board);
+  box-shadow:
+    inset 0 0 0 var(--card-outline-thin) rgba(0, 0, 0, 0.52),
+    inset 0 0 calc(var(--card-height) / 2.4) rgba(0, 0, 0, 0.42);
   padding: var(--playmat-board-padding);
 }
 
