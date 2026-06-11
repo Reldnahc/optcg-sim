@@ -13,25 +13,32 @@ import {
 } from "../instead-effects.js";
 import type { SupportedReplacementEffectBlock } from "./types.js";
 
+const replacementKind = "replacement";
+
 const isSelfTarget = (
   target: Target,
 ): target is Extract<Target, { type: "self" }> => target.type === "self";
 
-export const isSupportedSelfKoDrawReplacementEffect = (
+const isSupportedReplacementEnvelope = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
   effect.category === "replacement" &&
   effect.trigger.type === "replacement" &&
-  effect.trigger.replacement.type === "wouldBeKOd" &&
-  isSelfTarget(effect.trigger.replacement.target) &&
   effect.optional === true &&
   effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
   effect.condition === undefined &&
   effect.conditionTiming === undefined &&
   effect.cost === undefined &&
   effect.failurePolicy === undefined &&
+  effect.effect.type === "replacement";
+
+export const isSupportedSelfKoDrawReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedReplacementEnvelope(effect) &&
+  effect.trigger.replacement.type === "wouldBeKOd" &&
+  isSelfTarget(effect.trigger.replacement.target) &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldBeKOd" &&
   isSelfTarget(effect.effect.when.target) &&
   effect.effect.instead.type === "draw" &&
@@ -41,21 +48,13 @@ export const isSupportedSelfKoDrawReplacementEffect = (
 export const isSupportedOpponentFieldRemovalLifeReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
   effect.trigger.replacement.target.type === "all" &&
   effect.trigger.replacement.target.zone === "characterArea" &&
   effect.trigger.replacement.target.player === "self" &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
   effect.effect.when.target.type === "all" &&
@@ -79,22 +78,14 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
 export const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
   effect.trigger.replacement.sourceKind === "cardEffect" &&
   effect.trigger.replacement.target.type === "all" &&
   effect.trigger.replacement.target.zone === "characterArea" &&
   effect.trigger.replacement.target.player === "self" &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
   effect.effect.when.sourceKind === "cardEffect" &&
@@ -106,22 +97,14 @@ export const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (
 export const isSupportedOpponentEffectFieldRemovalReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
   effect.trigger.replacement.sourceKind === "cardEffect" &&
   effect.trigger.replacement.target.type === "all" &&
   effect.trigger.replacement.target.zone === "characterArea" &&
   effect.trigger.replacement.target.player === "self" &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
   effect.effect.when.sourceKind === "cardEffect" &&
@@ -133,22 +116,14 @@ export const isSupportedOpponentEffectFieldRemovalReplacementEffect = (
 export const isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
   effect.trigger.replacement.sourceKind === "cardEffect" &&
   effect.trigger.replacement.target.type === "all" &&
   effect.trigger.replacement.target.zone === "characterArea" &&
   effect.trigger.replacement.target.player === "self" &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
   effect.effect.when.sourceKind === "cardEffect" &&
@@ -160,21 +135,13 @@ export const isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect = (
 export const isSupportedOpponentEffectKoRestSelfReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldBeKOd" &&
   effect.trigger.replacement.sourceKind === "cardEffect" &&
   effect.trigger.replacement.target.type === "all" &&
   effect.trigger.replacement.target.zone === "characterArea" &&
   effect.trigger.replacement.target.player === "self" &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldBeKOd" &&
   effect.effect.when.sourceKind === "cardEffect" &&
   effect.effect.when.target.type === "all" &&
@@ -185,20 +152,12 @@ export const isSupportedOpponentEffectKoRestSelfReplacementEffect = (
 export const isSupportedOpponentKoTrashFromHandReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldBeKOd" &&
   effect.trigger.replacement.target.type === "all" &&
   effect.trigger.replacement.target.zone === "characterArea" &&
   effect.trigger.replacement.target.player === "self" &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn !== false &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldBeKOd" &&
   effect.effect.when.target.type === "all" &&
   effect.effect.when.target.zone === "characterArea" &&
@@ -211,18 +170,10 @@ export const isSupportedOpponentKoTrashFromHandReplacementEffect = (
 export const isSupportedSelfKoTrashFromHandReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
-  effect.category === "replacement" &&
-  effect.trigger.type === "replacement" &&
+  isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldBeKOd" &&
   isSelfTarget(effect.trigger.replacement.target) &&
-  effect.optional === true &&
-  effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.cost === undefined &&
-  effect.failurePolicy === undefined &&
   effect.oncePerTurn === undefined &&
-  effect.effect.type === "replacement" &&
   effect.effect.when.type === "wouldBeKOd" &&
   isSelfTarget(effect.effect.when.target) &&
   isSupportedTrashFromHandInsteadEffect(effect.effect.instead);
@@ -242,9 +193,9 @@ export const isSupportedReplacementEffect = (
 export const isReplacementTriggerEffect = (
   effect: EffectDefinition["effects"][number],
 ): boolean =>
-  effect.category === "replacement" ||
-  effect.trigger.type === "replacement" ||
-  effect.effect.type === "replacement";
+  effect.category === replacementKind ||
+  effect.trigger.type === replacementKind ||
+  effect.effect.type === replacementKind;
 
 export const isSupportedReplacementEffectBlock = (
   effect: EffectDefinition["effects"][number],

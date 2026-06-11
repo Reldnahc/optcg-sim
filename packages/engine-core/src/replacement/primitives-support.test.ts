@@ -197,3 +197,20 @@ test("replacement support-shapes delegates instead primitive checks", async () =
     "support-shapes must not duplicate return DON instead primitive support",
   );
 });
+
+test("replacement support-shapes has one reusable replacement envelope", async () => {
+  const content = await readFile(
+    path.join(
+      repoRoot,
+      "packages/engine-core/src/replacement/primitives/support-shapes.ts",
+    ),
+    "utf8",
+  );
+  const categoryChecks =
+    content.match(/effect\.category === "replacement"/g) ?? [];
+  const triggerChecks =
+    content.match(/effect\.trigger\.type === "replacement"/g) ?? [];
+
+  assert.equal(categoryChecks.length, 1);
+  assert.equal(triggerChecks.length, 1);
+});
