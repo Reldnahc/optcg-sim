@@ -16,10 +16,7 @@ import {
 import { queueReferencedMainEffectFromTrigger } from "../effect-runtime-activate-referenced-effect.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { cleanupResolvedLifeTrigger } from "../effect-runtime-life-trigger-cleanup.js";
-import {
-  executeMoveCardsPrimitive,
-  resolveSupportedQueuedMoveCardsEffect as resolveMoveCardsEffect,
-} from "../effect-runtime-move-cards.js";
+import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-runtime-top-deck-placement.js";
 import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
 import { applyRuntimePlaySource } from "../play-card/core.js";
@@ -34,8 +31,6 @@ import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   executeWinGamePrimitive,
-  isSupportedDamageEffect,
-  isSupportedQueuedWinGameEffectForEntry,
 } from "../runtime/primitives/execute.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
 import {
@@ -44,6 +39,7 @@ import {
 } from "./choice-decisions.js";
 import { resolveQueuedDamagePrimitive } from "./damage.js";
 import { createQueuedEffectResolvers } from "./effect-resolution.js";
+import { resolveQueuedPrimitiveBody } from "./primitive-resolution.js";
 import { resolveQueuedQuantity } from "./quantity-resolution.js";
 import type { EffectRuntimeQueueResultsDependencies } from "./results-types.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
@@ -195,11 +191,14 @@ export const createQueueEntryResolver = (
             ? toEngineResult(originalState, [], [sequenceFrame.error])
             : unsupportedEffectQueueResult(originalState);
       }
-      const placement = placeTopDeck(
-        nextState,
+      const primitiveBody = resolveQueuedPrimitiveBody(
         queuedEffectForBodyResolution,
         selected,
       );
+      const placement =
+        primitiveBody?.kind === "placeTopDeckCards"
+          ? placeTopDeck(nextState, queuedEffectForBodyResolution, selected)
+          : undefined;
       if (placement !== undefined) return placement;
       const trashFromHandDecision = resolveQueuedTrashFromHandDecision(
         nextState,
@@ -223,10 +222,8 @@ export const createQueueEntryResolver = (
             ])
           : unsupportedEffectQueueResult(originalState);
       }
-      let moveCardsEffect = resolveMoveCardsEffect(
-        queuedEffectForBodyResolution,
-        selected,
-      );
+      let moveCardsEffect =
+        primitiveBody?.kind === "moveCards" ? primitiveBody.effect : undefined;
       const playSourceEffect =
         queuedEffectResolvers.resolveQueuedPlaySourceEffect(
           nextState,
@@ -239,22 +236,9 @@ export const createQueueEntryResolver = (
         ) ??
         queuedEffectResolvers.resolveQueuedDrawUpToEffect(nextState, selected);
       const winGameEffect =
-        queuedEffectForBodyResolution !== undefined &&
-        queuedEffectForBodyResolution.sourcePresencePolicy ===
-          selected.sourcePresencePolicy &&
-        isSupportedQueuedWinGameEffectForEntry(
-          queuedEffectForBodyResolution,
-          selected,
-        )
-          ? queuedEffectForBodyResolution.effect
-          : undefined;
+        primitiveBody?.kind === "winGame" ? primitiveBody.effect : undefined;
       const damageEffect =
-        queuedEffectForBodyResolution !== undefined &&
-        queuedEffectForBodyResolution.sourcePresencePolicy ===
-          selected.sourcePresencePolicy &&
-        isSupportedDamageEffect(queuedEffectForBodyResolution.effect)
-          ? queuedEffectForBodyResolution.effect
-          : undefined;
+        primitiveBody?.kind === "damage" ? primitiveBody.effect : undefined;
       const queuedContinuousEffect =
         queuedEffectResolvers.resolveQueuedContinuousEffect(
           nextState,

@@ -7,12 +7,15 @@ import {
   createActiveState,
   must,
   p1,
+  queuedEffect,
   queueDrawForP1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
   setupOnPlayDefinition,
+  toCardId,
 } from "./test-support.js";
 import { createQueuedEffectResolvers } from "./effect-resolution.js";
+import { resolveQueuedPrimitiveBody } from "./primitive-resolution.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
 
 const createResolvers = () =>
@@ -60,4 +63,22 @@ test("queued draw resolver supports the same draw body under two wrappers", () =
 
     assert.deepEqual(resolved, { type: "draw", player: "self", count: 1 });
   }
+});
+
+test("primitive resolver registry resolves queued bodies from normalized effect block", () => {
+  const entry = queuedEffect(toCardId("registry"));
+  const block = {
+    id: entry.effectBlockId,
+    category: "auto",
+    trigger: { type: "onPlay" },
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    effect: { type: "draw", count: 1, player: "self" },
+  } satisfies EffectDefinition["effects"][number];
+
+  const resolved = resolveQueuedPrimitiveBody(block, entry);
+
+  assert.deepEqual(resolved, {
+    kind: "draw",
+    effect: block.effect,
+  });
 });
