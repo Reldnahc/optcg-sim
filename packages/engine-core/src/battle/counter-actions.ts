@@ -20,7 +20,11 @@ import {
   parseCounterTargetDecisionId,
 } from "./counter-event-payment-context.js";
 import { getCounterEventPaymentLegalActions } from "./counter-event-payment-actions.js";
-import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
+import {
+  isSupportedBattleResolutionEnvelope,
+  isSupportedCounterStepTarget,
+  sameCardRef,
+} from "./support.js";
 import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
@@ -176,7 +180,7 @@ const canOfferCounterStepPassAction = (state: GameState): boolean => {
   if (attacker === null || target === null) {
     return false;
   }
-  if (!target.isLeader && target.card.state !== "rested") {
+  if (!isSupportedCounterStepTarget(battle, target)) {
     return false;
   }
   if (battle.blocker === undefined) {

@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { Effect } from "@optcg/types";
 
-import { applyAction } from "../actions.js";
+import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
 import {
   createCounterStepPassDecision,
@@ -537,6 +537,104 @@ test("defender On Your Opponent's Attack selected target can become current atta
   assert.equal(targeted.state.battle.currentTarget.cardId, newTarget.cardId);
   assert.equal(targeted.state.battle.step, "counter");
   assert.equal(targeted.state.pendingDecision?.type, "selectCards");
+});
+
+test("defender On Your Opponent's Attack retarget to active Character keeps counter pass executable", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = p2State.leader;
+  const newTarget = {
+    ...must(p2State.hand[0], "new attack target"),
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p2,
+      slot: "character" as const,
+      index: 1,
+    },
+    state: "active" as const,
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  p2State.characters = [...p2State.characters, newTarget];
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = withOnOpponentAttackDrawEffect(
+    state,
+    source,
+    "def-on-opponent-attack-retarget-active-character",
+  );
+  const effect = must(definition.effects[0], "On Opponent Attack effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-opponent-attack-retarget-active-character": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: selectLeaderOrCharacterThenRetargetSequence(),
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "selectTargets");
+
+  const targeted = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: opened.state.pendingDecision.id,
+    response: {
+      type: "targets",
+      targets: [
+        {
+          instanceId: newTarget.instanceId,
+          cardId: newTarget.cardId,
+          playerId: p2,
+          zone: newTarget.zone,
+        },
+      ],
+    },
+  });
+
+  assert.equal(targeted.errors, undefined);
+  assert.equal(targeted.state.battle?.step, "counter");
+  assert.equal(
+    targeted.state.battle.currentTarget.instanceId,
+    newTarget.instanceId,
+  );
+  const decision = must(targeted.state.pendingDecision, "counter decision");
+  const passAction = getLegalActions(targeted.state, p2).find(
+    (action) =>
+      action.type === "respondToDecision" &&
+      action.decisionId === decision.id &&
+      action.response.type === "cards" &&
+      action.response.cards.length === 0,
+  );
+  if (passAction === undefined) {
+    assert.fail("expected counter-step pass action after attack retarget");
+  }
+
+  const passed = applyAction(targeted.state, passAction);
+
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.battle, undefined);
 });
 
 test("defender On Your Opponent's Attack trash-self sequence resumes battle after selecting DON", () => {

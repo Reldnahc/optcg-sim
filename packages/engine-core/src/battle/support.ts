@@ -1,4 +1,10 @@
-import type { CardRef, GameState, Keyword, ResolvedCard } from "@optcg/types";
+import type {
+  CardInstance,
+  CardRef,
+  GameState,
+  Keyword,
+  ResolvedCard,
+} from "@optcg/types";
 
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -95,4 +101,14 @@ export const isSupportedBattleResolutionEnvelope = (
     (battle.step === "block" || battle.step === "counter") &&
     sameCardRef(battle.blocker, battle.currentTarget)
   );
+};
+
+export const isSupportedCounterStepTarget = (
+  battle: NonNullable<GameState["battle"]>,
+  target: { isLeader: boolean; card: Pick<CardInstance, "state"> },
+): boolean => {
+  if (target.isLeader || target.card.state === "rested") {
+    return true;
+  }
+  return !sameCardRef(battle.originalTarget, battle.currentTarget);
 };

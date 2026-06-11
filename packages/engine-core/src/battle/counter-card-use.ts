@@ -38,7 +38,11 @@ import {
   getSupportedCounterEventPowerTargets,
   type SupportedCounterEventPower,
 } from "./counter-event-support.js";
-import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
+import {
+  isSupportedBattleResolutionEnvelope,
+  isSupportedCounterStepTarget,
+  sameCardRef,
+} from "./support.js";
 import { computeView } from "../view/compute-view.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
@@ -73,7 +77,7 @@ export const getLegalCharacterCounterActions = (
     !isSupportedBattleResolutionEnvelope(battle) ||
     target === null ||
     target.playerId !== defenderId ||
-    (!target.isLeader && target.card.state !== "rested")
+    !isSupportedCounterStepTarget(battle, target)
   ) {
     return [];
   }
@@ -225,7 +229,7 @@ export const applyUseCounter = (
   } catch {
     return illegalAction(state, "Battle requires unsupported combat metadata.");
   }
-  if (!target.isLeader && target.card.state !== "rested") {
+  if (!isSupportedCounterStepTarget(battle, target)) {
     return illegalAction(
       state,
       "Battle target is no longer a supported rested character target.",

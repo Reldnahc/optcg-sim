@@ -35,6 +35,7 @@ import {
 import {
   expireBattleDurationStateForCleanup,
   isSupportedBattleResolutionEnvelope,
+  isSupportedCounterStepTarget,
   sameCardRef,
 } from "./support.js";
 import {
@@ -328,7 +329,7 @@ export const resolveSupportedVanillaBattle = (
       const koIndex = defender.characters.findIndex(
         (character) => character.instanceId === target.card.instanceId,
       );
-      if (koIndex < 0 || target.card.state !== "rested") {
+      if (koIndex < 0 || !isSupportedCounterStepTarget(battle, target)) {
         return unsupportedBattleResolution(
           state,
           "Battle target is no longer a supported rested character target.",

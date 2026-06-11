@@ -1,7 +1,11 @@
 import type { GameState } from "@optcg/types";
 
 import { reifyCardRef } from "../actions/state.js";
-import { isSupportedBattleResolutionEnvelope, sameCardRef } from "./support.js";
+import {
+  isSupportedBattleResolutionEnvelope,
+  isSupportedCounterStepTarget,
+  sameCardRef,
+} from "./support.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
@@ -75,7 +79,7 @@ export const getUnsupportedDamageStepContinuationReason = (
       targetPlayer === undefined ||
       targetIndex === undefined ||
       targetIndex < 0 ||
-      target.card.state !== "rested"
+      !isSupportedCounterStepTarget(battle, target)
     ) {
       return "Battle target is no longer a supported rested character target.";
     }
