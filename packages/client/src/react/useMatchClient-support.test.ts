@@ -144,7 +144,10 @@ const selectCardsDecision = (id: string): PublicSelectCardsDecision => ({
 const counterPassDecision = (): PublicSelectCardsDecision => ({
   ...selectCardsDecision("decision:counterStep:pass:attacker-1:7"),
   prompt: "Use counter or end step.",
-  presentation: presentation("Use counter or end step."),
+  presentation: {
+    ...presentation("Use counter or end step."),
+    choices: [{ responseKey: "default", label: "End step" }],
+  },
   min: 0,
   max: 0,
   candidates: [],
@@ -276,7 +279,7 @@ const activeSourceEvents = (decisionId: string): EngineEvent[] => [
 ];
 
 describe("match client support helpers", () => {
-  test("global zero-card counter decisions expose a direct End step fallback", () => {
+  test("global zero-card default decisions expose a direct fallback action", () => {
     const pendingDecision = counterPassDecision();
 
     assert.deepEqual(
@@ -300,6 +303,30 @@ describe("match client support helpers", () => {
           type: "chooseNoDecisionCards",
         },
       ],
+    );
+  });
+
+  test("global zero-card decisions without public default choices do not synthesize actions", () => {
+    const pendingDecision: PublicSelectCardsDecision = {
+      ...counterPassDecision(),
+      presentation: presentation("Use counter or end step."),
+    };
+
+    assert.deepEqual(
+      buildGlobalActions({
+        playerSnapshot: playerSnapshotWithActions([]),
+        attackTargetChoiceActive: false,
+        counterTargetChoiceActive: false,
+        activeCardCostGroup: undefined,
+        optionalCardCostChoice: undefined,
+        explicitCardCostChoiceActive: false,
+        selectedCardCostInstanceCount: 0,
+        selectedCardCostActionIndex: undefined,
+        pendingDecisionInteractionMode: "global",
+        pendingDecision,
+        activeDecisionDraft: undefined,
+      }),
+      [],
     );
   });
 

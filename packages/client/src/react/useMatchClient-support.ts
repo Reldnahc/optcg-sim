@@ -14,7 +14,6 @@ import {
   createCollapsedCounterActions,
   cardCostGroupRequiresManualConfirm,
   cardCostPaymentLabel,
-  isDecisionModalSuppressed,
   selectedDonAttachmentMenuAction,
 } from "../index.js";
 import type {
@@ -484,13 +483,24 @@ export const CONFIRM_DECISION_SELECTION_ACTION_INDEX = -2;
 export const CLEAR_DECISION_SELECTION_ACTION_INDEX = -3;
 export const CHOOSE_NO_DECISION_CARDS_ACTION_INDEX = -4;
 
+const defaultDecisionActionChoice = (
+  pendingDecision:
+    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
+    | undefined,
+): { label: string } | undefined =>
+  pendingDecision?.presentation.choices?.find(
+    (choice) => choice.responseKey === "default",
+  );
+
 const globalZeroSelectionDecisionAction = (
   pendingDecision:
     | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
     | undefined,
 ): ClientActionModel | undefined => {
+  const defaultChoice = defaultDecisionActionChoice(pendingDecision);
   if (
     pendingDecision === undefined ||
+    defaultChoice === undefined ||
     (pendingDecision.type !== "selectCards" &&
       pendingDecision.type !== "selectTargets") ||
     pendingDecision.min !== 0 ||
@@ -500,9 +510,7 @@ const globalZeroSelectionDecisionAction = (
   }
   return {
     index: CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
-    label: isDecisionModalSuppressed(pendingDecision)
-      ? "End step"
-      : chooseNoDecisionLabel(pendingDecision),
+    label: defaultChoice.label,
     type: "chooseNoDecisionCards",
   };
 };

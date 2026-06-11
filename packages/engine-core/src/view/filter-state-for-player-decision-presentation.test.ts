@@ -147,3 +147,35 @@ test("chooseReplacement projection includes visible replacement source cards", (
     { responseKey: "decline", label: "Do not replace" },
   ]);
 });
+
+test("counter-step pass decisions project a public default action choice", () => {
+  const state = createActiveState();
+  state.pendingDecision = {
+    id: toDecisionId("decision:counterStep:pass:attacker-1:7"),
+    type: "selectCards",
+    playerId: p2,
+    prompt: "Use counter or end step.",
+    causedBy: { type: "ruleProcess", name: "battle:counterStep" },
+    visibility: { type: "public" },
+    request: {
+      timing: "onActivation",
+      chooser: "nonTurnPlayer",
+      player: "nonTurnPlayer",
+      zone: "hand",
+      filter: { categories: ["character"] },
+      min: 0,
+      max: 0,
+      allowFewerIfUnavailable: true,
+      visibility: "privateToChooser",
+    },
+    candidates: [],
+    defaultResponse: { type: "cards", cards: [] },
+  };
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.equal(view.pendingDecision?.type, "selectCards");
+  assert.deepEqual(view.pendingDecision.presentation.choices, [
+    { responseKey: "default", label: "End step" },
+  ]);
+});

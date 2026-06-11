@@ -235,13 +235,35 @@ const toPublicDecision = (
     ...(source === undefined ? {} : { source }),
     ...(activeEffectText === undefined ? {} : { activeEffectText }),
   });
+  const defaultResponseLabel =
+    pending.type === "selectCards" &&
+    String(pending.id).startsWith("decision:counterStep:pass:") &&
+    pending.defaultResponse?.type === "cards" &&
+    pending.defaultResponse.cards.length === 0 &&
+    pending.request.min === 0 &&
+    pending.request.max === 0
+      ? "End step"
+      : undefined;
+  const publicPresentation =
+    defaultResponseLabel === undefined
+      ? presentation
+      : {
+          ...presentation,
+          choices: [
+            ...(presentation.choices ?? []),
+            {
+              responseKey: "default",
+              label: defaultResponseLabel,
+            },
+          ],
+        };
   const base = {
     id: pending.id,
     type: pending.type,
     playerId: pending.playerId,
     prompt: pending.prompt,
     causedBy: toPublicDecisionCausedBy(pending),
-    presentation,
+    presentation: publicPresentation,
     ...(source === undefined ? {} : { source }),
     ...(pending.timeoutMs === undefined
       ? {}
