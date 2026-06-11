@@ -458,7 +458,11 @@ describe("card action menu", () => {
     );
     assert.match(
       styles,
-      /\.action-button\.is-primary\s*\{[^}]*background:\s*var\(--match-surface-control-active\);[^}]*font-size:\s*var\(--control-body-font-size\);/u,
+      /\.action-button\.is-primary\s*\{[^}]*color:\s*#171006;[^}]*background:\s*#ffd84d;[^}]*font-size:\s*var\(--control-body-font-size\);/u,
+    );
+    assert.match(
+      styles,
+      /\.action-button\.is-primary:hover:not\(:disabled\),\s*\.action-button\.is-primary:focus-visible:not\(:disabled\)\s*\{[^}]*background:\s*#ffe47a;/u,
     );
   });
 
