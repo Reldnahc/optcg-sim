@@ -330,8 +330,14 @@ describe("card action menu", () => {
       styles,
       /\.control-tool-strip\s*\{[^}]*position:\s*absolute;/u,
     );
-    assert.match(styles, /\.control-tool-strip\s*\{[^}]*top:\s*10px;/u);
-    assert.match(styles, /\.control-tool-strip\s*\{[^}]*left:\s*10px;/u);
+    assert.match(
+      styles,
+      /\.control-tool-strip\s*\{[^}]*top:\s*var\(--control-panel-padding\);/u,
+    );
+    assert.match(
+      styles,
+      /\.control-tool-strip\s*\{[^}]*left:\s*var\(--control-panel-padding\);/u,
+    );
   });
 
   test("control rail orders icon controls before global actions", () => {
