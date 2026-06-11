@@ -124,6 +124,11 @@ const countMatchingZoneCards = (
     return null;
   }
   const filter = value.filter;
+  if (value.zone === "life") {
+    return filter === undefined
+      ? Math.floor(player.life.length / value.per) * value.multiplier
+      : null;
+  }
   const matchingCount =
     filter === undefined
       ? player.trash.length

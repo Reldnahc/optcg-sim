@@ -193,6 +193,8 @@ export type PrimitiveEvidence =
   | "filter:effectEntryPoint:with"
   | "filter:effectEntryPoint:without"
   | "valueSource:donFieldCount:self"
+  | "valueSource:lifeCount:self"
+  | "valueSource:lifeCount:opponent"
   | "valueOffset:fieldCountDifference"
   | "value:basePower:positiveInteger"
   | "value:basePower:snapshotCurrentPower"

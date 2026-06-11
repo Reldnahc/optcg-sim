@@ -405,6 +405,64 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
+  it("parses opponent Character rest with a dynamic Life-count cost predicate", () => {
+    expect(
+      parseRestOpponentCharactersInstruction({
+        text: "Rest up to 1 of your opponent's Characters with a cost equal to or less than the number of your opponent's Life cards.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  statComparisons: [
+                    {
+                      stat: "cost",
+                      op: "lte",
+                      value: {
+                        type: "countMatchingZoneCards",
+                        player: "opponent",
+                        zone: "life",
+                        per: 1,
+                        multiplier: 1,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: { type: "rest" },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:rest",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "valueSource:lifeCount:opponent",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses the selected Character refresh lock as a saved-target restriction", () => {
     expect(
       parsePreventThatCharacterRefreshInstruction({

@@ -23,6 +23,7 @@ import {
   parseAttachedDonPredicate,
   parseCostPredicate,
   parseDynamicDonFieldCostPredicate,
+  parseDynamicLifeCountCostPredicate,
   parsePowerPredicate,
 } from "./stats.js";
 import {
@@ -72,6 +73,7 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseEffectEntryPointPresencePredicate,
   parseEffectEntryPointPredicate,
   parseDynamicDonFieldCostPredicate,
+  parseDynamicLifeCountCostPredicate,
   parseCostPredicate,
   parseCardNameContainsPredicate,
   parseSelfExclusionPredicate,

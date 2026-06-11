@@ -79,6 +79,24 @@ const placeCharacters = (
   }));
 };
 
+const setLifeCount = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  const source = player.deck[0] ?? player.leader;
+  player.life = Array.from({ length: count }, (_, index) => ({
+    card: {
+      ...source,
+      instanceId:
+        `${String(source.instanceId)}:life:${String(index)}` as typeof source.instanceId,
+      zone: { zone: "life", playerId, slot: "life", index },
+    },
+    faceUp: false,
+  }));
+};
+
 const targetCards = (
   result: ReturnType<typeof resolvePublicTargetCandidates>,
 ): CardRef[] => {
@@ -423,6 +441,52 @@ describe("resolvePublicTargetCandidates", () => {
 
     expect(targetCards(currentCostResult)).toEqual([refs[0], refs[1]]);
     expect(targetCards(baseCostResult)).toEqual([refs[1]]);
+  });
+
+  test("matches public target candidates with dynamic Life-count stat comparisons", () => {
+    const state = createActiveState();
+    const lowCost = toCardId("life-count-cost-low");
+    const highCost = toCardId("life-count-cost-high");
+    addManifestCard(state, {
+      cardId: lowCost,
+      category: "character",
+      cost: 3,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: highCost,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p2, [lowCost, highCost]);
+    setLifeCount(state, p2, 3);
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        player: "opponent",
+        filter: {
+          categories: ["character"],
+          statComparisons: [
+            {
+              stat: "cost",
+              op: "lte",
+              value: {
+                type: "countMatchingZoneCards",
+                player: "opponent",
+                zone: "life",
+                per: 1,
+                multiplier: 1,
+              },
+            },
+          ],
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([refs[0]]);
   });
 
   test("uses broad permanent power modifiers when resolving current-power target filters", () => {

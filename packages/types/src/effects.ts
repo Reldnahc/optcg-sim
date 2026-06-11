@@ -414,7 +414,7 @@ export type DynamicNumberValue =
   | {
       type: "countMatchingZoneCards";
       player: PlayerRef;
-      zone: "trash";
+      zone: "trash" | "life";
       filter?: CardFilter;
       per: number;
       multiplier: number;
@@ -466,6 +466,7 @@ export interface CardFilter {
   currentPower?:
     | { op: Comparator; value: number }
     | { min?: number; max?: number };
+  statComparisons?: CardStatComparison[];
   attachedDon?:
     | { op: Comparator; value: number }
     | { min?: number; max?: number };
@@ -482,6 +483,12 @@ export interface CardFilter {
   controller?: PlayerRef;
   excludeSelf?: boolean;
   custom?: string;
+}
+
+export interface CardStatComparison {
+  stat: "cost" | "baseCost" | "power" | "currentPower" | "attachedDon";
+  op: Comparator;
+  value: DynamicNumberValue;
 }
 
 export type Duration =

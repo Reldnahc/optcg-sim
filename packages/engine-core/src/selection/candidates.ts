@@ -1,6 +1,8 @@
 import type {
   CardFilter,
   CardInstance,
+  CardStatComparison,
+  DynamicNumberValue,
   GameState,
   MultiZoneTargetRequest,
   PlayerId,
@@ -51,6 +53,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "nameNot",
   "power",
   "state",
+  "statComparisons",
   "typesAny",
   "typesIncludeAny",
 ]);
@@ -159,6 +162,47 @@ const isSupportedEffectEntryPointFilter = (
   filter: CardFilter["effectEntryPoint"],
 ): boolean => filter === undefined || typeof filter.trigger.type === "string";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isSupportedDynamicFilterValue = (value: unknown): boolean => {
+  if (!isRecord(value) || value["type"] !== "countMatchingZoneCards") {
+    return false;
+  }
+  return (
+    value["zone"] === "life" &&
+    value["filter"] === undefined &&
+    (value["player"] === "self" || value["player"] === "opponent") &&
+    Number.isSafeInteger(value["per"]) &&
+    Number(value["per"]) > 0 &&
+    Number.isSafeInteger(value["multiplier"])
+  );
+};
+
+const isSupportedStatComparison = (
+  comparison: unknown,
+): comparison is CardStatComparison => {
+  if (!isRecord(comparison)) {
+    return false;
+  }
+  const stat = comparison["stat"];
+  const op = comparison["op"];
+  return (
+    (stat === "cost" ||
+      stat === "baseCost" ||
+      stat === "power" ||
+      stat === "currentPower" ||
+      stat === "attachedDon") &&
+    (op === "eq" ||
+      op === "neq" ||
+      op === "gt" ||
+      op === "gte" ||
+      op === "lt" ||
+      op === "lte") &&
+    isSupportedDynamicFilterValue(comparison["value"])
+  );
+};
+
 const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
   filter === undefined ||
   (hasOnlySupportedFilterKeys(filter) &&
@@ -178,6 +222,9 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
     (filter.state === undefined ||
       filter.state === "active" ||
       filter.state === "rested") &&
+    (filter.statComparisons === undefined ||
+      (filter.statComparisons.length > 0 &&
+        filter.statComparisons.every(isSupportedStatComparison))) &&
     hasSupportedNumericFilter(filter.baseCost) &&
     hasSupportedNumericFilter(filter.attachedDon) &&
     hasSupportedNumericFilter(filter.cost) &&
@@ -212,6 +259,103 @@ const numericFilterMatches = (
     return false;
   }
 
+  return true;
+};
+
+const compare = (op: CardStatComparison["op"], left: number, right: number) => {
+  switch (op) {
+    case "eq":
+      return left === right;
+    case "neq":
+      return left !== right;
+    case "gt":
+      return left > right;
+    case "gte":
+      return left >= right;
+    case "lt":
+      return left < right;
+    case "lte":
+      return left <= right;
+  }
+};
+
+const resolveDynamicFilterValue = (
+  state: GameState,
+  value: DynamicNumberValue,
+  context: ResolvePublicTargetCandidatesContext,
+): number | undefined => {
+  if (
+    value.type !== "countMatchingZoneCards" ||
+    value.zone !== "life" ||
+    value.filter !== undefined ||
+    !Number.isSafeInteger(value.per) ||
+    value.per <= 0 ||
+    !Number.isSafeInteger(value.multiplier)
+  ) {
+    return undefined;
+  }
+  const playerId = resolvePlayerRef(state, value.player, context);
+  const player = playerId === null ? undefined : state.players[playerId];
+  if (player === undefined) {
+    return undefined;
+  }
+  return Math.floor(player.life.length / value.per) * value.multiplier;
+};
+
+const statComparisonsNeedComputedView = (
+  comparisons: readonly CardStatComparison[] | undefined,
+): boolean =>
+  comparisons?.some(
+    (comparison) =>
+      comparison.stat === "cost" || comparison.stat === "currentPower",
+  ) ?? false;
+
+const statValueForComparison = (
+  comparison: CardStatComparison,
+  instance: CardInstance,
+  card: ResolvedCard,
+  computedCard: ReturnType<typeof computedCardViewFor> | undefined,
+): number | undefined => {
+  switch (comparison.stat) {
+    case "cost":
+      return computedCard?.currentCost ?? card.cost;
+    case "baseCost":
+      return card.cost;
+    case "power":
+      return card.power;
+    case "currentPower":
+      return computedCard?.currentPower ?? card.power;
+    case "attachedDon":
+      return instance.attachedDon.length;
+  }
+};
+
+const statComparisonsMatch = (
+  state: GameState,
+  instance: CardInstance,
+  card: ResolvedCard,
+  computedCard: ReturnType<typeof computedCardViewFor> | undefined,
+  comparisons: readonly CardStatComparison[] | undefined,
+  context: ResolvePublicTargetCandidatesContext,
+): boolean => {
+  if (comparisons === undefined) {
+    return true;
+  }
+  for (const comparison of comparisons) {
+    const left = statValueForComparison(
+      comparison,
+      instance,
+      card,
+      computedCard,
+    );
+    const right = resolveDynamicFilterValue(state, comparison.value, context);
+    if (left === undefined || right === undefined) {
+      return false;
+    }
+    if (!compare(comparison.op, left, right)) {
+      return false;
+    }
+  }
   return true;
 };
 
@@ -343,7 +487,9 @@ const cardMatchesFilter = (
 
   const computedCard =
     state.continuousEffects.length > 0 &&
-    (filter.cost !== undefined || filter.currentPower !== undefined)
+    (filter.cost !== undefined ||
+      filter.currentPower !== undefined ||
+      statComparisonsNeedComputedView(filter.statComparisons))
       ? computedCardViewFor(state, instance)
       : undefined;
 
@@ -361,12 +507,21 @@ const cardMatchesFilter = (
   if (!numericFilterMatches(card.power, filter.power)) {
     return false;
   }
-  if (filter.currentPower === undefined) {
-    return true;
+  if (
+    !numericFilterMatches(
+      computedCard?.currentPower ?? card.power,
+      filter.currentPower,
+    )
+  ) {
+    return false;
   }
-  return numericFilterMatches(
-    computedCard?.currentPower ?? card.power,
-    filter.currentPower,
+  return statComparisonsMatch(
+    state,
+    instance,
+    card,
+    computedCard,
+    filter.statComparisons,
+    context,
   );
 };
 

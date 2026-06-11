@@ -192,6 +192,52 @@ export const parseDynamicDonFieldCostPredicate: PredicateParser = (
   };
 };
 
+export const parseDynamicLifeCountCostPredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match =
+    /^a cost equal to or less than the number of (?<player>your|your opponent's) Life cards\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+  const playerText = match.groups?.["player"]?.toLowerCase();
+  if (playerText === undefined) {
+    return undefined;
+  }
+  const player = playerText === "your opponent's" ? "opponent" : "self";
+
+  return {
+    filter: {
+      ...current,
+      statComparisons: [
+        ...(current.statComparisons ?? []),
+        {
+          stat: "cost",
+          op: "lte",
+          value: {
+            type: "countMatchingZoneCards",
+            player,
+            zone: "life",
+            per: 1,
+            multiplier: 1,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "filter:cost",
+      "condition:comparator:lte",
+      player === "opponent"
+        ? "valueSource:lifeCount:opponent"
+        : "valueSource:lifeCount:self",
+    ],
+    rest: match.groups?.["rest"] ?? "",
+  };
+};
+
 export const parseAttachedDonPredicate: PredicateParser = (text, current) => {
   const anyMatch =
     /^(?:with|that has|has)\s+a DON!! card given\b\s*(?<rest>.*)$/iu.exec(text);

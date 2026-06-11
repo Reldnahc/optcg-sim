@@ -36,6 +36,7 @@ const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "names",
   "power",
   "state",
+  "statComparisons",
   "typesAny",
   "typesIncludeAny",
 ]);
