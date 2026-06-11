@@ -33,7 +33,7 @@ import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/a
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 import {
   executeSelectedTargetEffectPrimitive,
-  isSupportedMainEventTargetKoEffect,
+  isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
   resolvePlayerId,
 } from "../runtime/primitives/execute.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
@@ -137,24 +137,35 @@ const isScopedActivateMainTargetQueueEntry = (
   entry: EffectQueueEntry,
 ): boolean => isScopedActivateMainQueueEntry(entry);
 
+const mainTriggerType = "main";
+const activateMainTriggerType = "activateMain";
+const mainEventQueueingRuleProcess = "effectRuntime:mainEventTriggerQueueing";
+
+const isMainEventQueueEntry = (entry: EffectQueueEntry): boolean =>
+  entry.generation === 0 &&
+  entry.triggerEventId !== undefined &&
+  entry.sourcePresencePolicy === "resolveFromDestinationZone" &&
+  entry.causedBy.type === "ruleProcess" &&
+  entry.causedBy.name === mainEventQueueingRuleProcess;
+
+const canResolveTargetRequestForEntry = (
+  effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
+): boolean =>
+  effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
+  (isMainEventQueueEntry(entry) ||
+    isScopedActivateMainTargetQueueEntry(entry) ||
+    effect.category === "auto");
+
 export const isSupportedTargetChoiceEffectShape = (
   effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: SupportedSelectedTargetKoEffect;
 } => {
-  if (effect.trigger.type === "main") {
-    if (isSupportedMainEventTargetKoEffect(effect)) {
-      return true;
-    }
-    if (effect.oncePerTurn !== true) {
-      return false;
-    }
-    const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
-      ...effect,
-    };
-    delete effectWithoutOncePerTurn.oncePerTurn;
-    return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
+  if (isMainEventQueueEntry(entry)) {
+    return isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect);
   }
   if (effect.category !== "auto") {
     return false;
@@ -174,29 +185,32 @@ export const isSupportedTargetChoiceEffectShape = (
 };
 const isSupportedTargetChoiceContinuousShape = (
   effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: SupportedSelectedTargetContinuousEffect;
 } => {
-  if (effect.trigger.type === "main") {
+  if (isMainEventQueueEntry(entry)) {
     if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
     if (!("target" in effect.effect) || !isChooseTarget(effect.effect.target)) {
       return false;
     }
     return (
       effect.category === "auto" &&
+      effect.trigger.type === mainTriggerType &&
       effect.cost === undefined &&
       effect.conditionTiming === undefined &&
       effect.failurePolicy === undefined
     );
   }
-  if (effect.trigger.type === "activateMain") {
+  if (isScopedActivateMainTargetQueueEntry(entry)) {
     if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
     if (!("target" in effect.effect) || !isChooseTarget(effect.effect.target)) {
       return false;
     }
     return (
       effect.category === "activate" &&
+      effect.trigger.type === activateMainTriggerType &&
       effect.sourcePresencePolicy === "mustRemainInSameZone" &&
       effect.optional !== true &&
       effect.cost === undefined &&
@@ -276,14 +290,16 @@ export const isUnsupportedSelectTargetsDecision = (
   const match = lookup.definition.effects.find(
     (effect) => effect.id === entry.effectBlockId,
   );
+  const request =
+    match === undefined ? undefined : targetRequestForEffect(match.effect);
   return (
     match !== undefined &&
     (match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      (match.trigger.type === "activateMain" &&
-        !isScopedActivateMainTargetQueueEntry(entry)) ||
-      (!isSupportedTargetChoiceEffectShape(match) &&
-        !isSupportedTargetChoiceContinuousShape(match)) ||
-      !targetRequestsEqual(match.effect.target.request, decision.request))
+      !canResolveTargetRequestForEntry(match, entry) ||
+      (!isSupportedTargetChoiceEffectShape(match, entry) &&
+        !isSupportedTargetChoiceContinuousShape(match, entry)) ||
+      request === undefined ||
+      !targetRequestsEqual(request, decision.request))
   );
 };
 
@@ -325,10 +341,9 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      (match.trigger.type === "activateMain" &&
-        !isScopedActivateMainTargetQueueEntry(entry)) ||
-      (!isSupportedTargetChoiceEffectShape(match) &&
-        !isSupportedTargetChoiceContinuousShape(match))
+      !canResolveTargetRequestForEntry(match, entry) ||
+      (!isSupportedTargetChoiceEffectShape(match, entry) &&
+        !isSupportedTargetChoiceContinuousShape(match, entry))
     ) {
       return undefined;
     }
@@ -373,14 +388,16 @@ export const createEffectRuntimeQueueTargetDecisions = (
     const match = lookup.definition.effects.find(
       (effect) => effect.id === entry.effectBlockId,
     );
+    const request =
+      match === undefined ? undefined : targetRequestForEffect(match.effect);
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      (match.trigger.type === "activateMain" &&
-        !isScopedActivateMainTargetQueueEntry(entry)) ||
-      (!isSupportedTargetChoiceEffectShape(match) &&
-        !isSupportedTargetChoiceContinuousShape(match)) ||
-      !targetRequestsEqual(match.effect.target.request, decision.request)
+      !canResolveTargetRequestForEntry(match, entry) ||
+      (!isSupportedTargetChoiceEffectShape(match, entry) &&
+        !isSupportedTargetChoiceContinuousShape(match, entry)) ||
+      request === undefined ||
+      !targetRequestsEqual(request, decision.request)
     ) {
       return { ok: false };
     }
