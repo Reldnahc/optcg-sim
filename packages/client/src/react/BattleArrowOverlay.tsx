@@ -14,6 +14,10 @@ interface ArrowLine {
 }
 
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
+const labelCharacterWidth = 13;
+const labelInlinePadding = 24;
+const labelMinimumWidth = 56;
+const labelHeight = 30;
 
 const cardElementForInstance = (
   board: HTMLElement,
@@ -88,11 +92,27 @@ export const BattleArrowOverlay = ({
     return null;
   }
 
+  const attackPowerLabel =
+    battleArrow.attackPower === undefined
+      ? undefined
+      : String(battleArrow.attackPower);
+  const hasMeasuredLine = line.x1 !== line.x2 || line.y1 !== line.y2;
+  const labelWidth =
+    attackPowerLabel === undefined
+      ? labelMinimumWidth
+      : Math.max(
+          labelMinimumWidth,
+          attackPowerLabel.length * labelCharacterWidth + labelInlinePadding,
+        );
+  const midpointX = (line.x1 + line.x2) / 2;
+  const midpointY = (line.y1 + line.y2) / 2;
+
   return (
     <svg
       ref={overlayRef}
       className="battle-arrow-overlay"
       data-battle-attacker={battleArrow.attackerInstanceId}
+      data-battle-power={attackPowerLabel}
       data-battle-target={battleArrow.targetInstanceId}
       aria-hidden="true"
     >
@@ -115,6 +135,23 @@ export const BattleArrowOverlay = ({
         y2={line.y2}
         markerEnd="url(#battle-arrow-head)"
       />
+      {attackPowerLabel !== undefined && hasMeasuredLine ? (
+        <g
+          className="battle-arrow-power"
+          transform={`translate(${String(midpointX)} ${String(midpointY)})`}
+        >
+          <rect
+            x={-labelWidth / 2}
+            y={-labelHeight / 2}
+            width={labelWidth}
+            height={labelHeight}
+            rx={labelHeight / 2}
+          />
+          <text dominantBaseline="central" textAnchor="middle">
+            {attackPowerLabel}
+          </text>
+        </g>
+      ) : null}
     </svg>
   );
 };

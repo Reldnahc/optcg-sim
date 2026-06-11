@@ -91,6 +91,7 @@ export interface BoardViewModel {
   activeCardInstanceIds?: readonly string[] | undefined;
   battleArrow?: {
     attackerInstanceId: string;
+    attackPower?: number;
     targetInstanceId: string;
   };
 }
@@ -337,6 +338,42 @@ const opponentZones = (
   };
 };
 
+const visibleBoardCards = (
+  view: MatchSnapshot["players"][PlayerId]["view"],
+): PublicCardView[] => [
+  view.self.leader,
+  ...view.self.characters,
+  ...(view.self.stage === undefined ? [] : [view.self.stage]),
+  view.opponent.leader,
+  ...view.opponent.characters,
+  ...(view.opponent.stage === undefined ? [] : [view.opponent.stage]),
+];
+
+const currentPowerForInstance = (
+  view: MatchSnapshot["players"][PlayerId]["view"],
+  instanceId: InstanceId,
+): number | undefined =>
+  visibleBoardCards(view).find((card) => card.instanceId === instanceId)
+    ?.currentPower;
+
+const battleArrowForView = (
+  view: MatchSnapshot["players"][PlayerId]["view"],
+): BoardViewModel["battleArrow"] | undefined => {
+  if (view.battle === undefined) {
+    return undefined;
+  }
+
+  const attackPower = currentPowerForInstance(
+    view,
+    view.battle.attacker.instanceId,
+  );
+  return {
+    attackerInstanceId: String(view.battle.attacker.instanceId),
+    ...(attackPower === undefined ? {} : { attackPower }),
+    targetInstanceId: String(view.battle.currentTarget.instanceId),
+  };
+};
+
 const addAction = (
   actions: Record<string, ClientActionModel[]>,
   instanceId: InstanceId,
@@ -442,6 +479,7 @@ export const createBoardViewModel = ({
   const selfTimer = playerTimer(player.view, playerId);
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
   const turnPlayerId = player.view.turn.turnPlayerId;
+  const battleArrow = battleArrowForView(player.view);
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
@@ -470,15 +508,6 @@ export const createBoardViewModel = ({
     opponent: opponentZones(player.view, catalog),
     actionsByCardInstanceId: actionMenusByCard(player.actions),
     activeCardInstanceIds: [...activeCardInstanceIds],
-    ...(player.view.battle === undefined
-      ? {}
-      : {
-          battleArrow: {
-            attackerInstanceId: String(player.view.battle.attacker.instanceId),
-            targetInstanceId: String(
-              player.view.battle.currentTarget.instanceId,
-            ),
-          },
-        }),
+    ...(battleArrow === undefined ? {} : { battleArrow }),
   };
 };

@@ -1022,6 +1022,7 @@ describe("card action menu", () => {
     const layout = board();
     layout.battleArrow = {
       attackerInstanceId: "self-leader",
+      attackPower: 7000,
       targetInstanceId: "opponent-leader",
     };
 
@@ -1038,6 +1039,7 @@ describe("card action menu", () => {
 
     assert.match(markup, /class="[^"]*battle-arrow-overlay/u);
     assert.match(markup, /data-battle-attacker="self-leader"/u);
+    assert.match(markup, /data-battle-power="7000"/u);
     assert.match(markup, /data-battle-target="opponent-leader"/u);
   });
 

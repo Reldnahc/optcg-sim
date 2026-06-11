@@ -75,6 +75,24 @@
   fill: #e32222;
 }
 
+.battle-arrow-power rect {
+  fill: rgba(9, 12, 17, 0.9);
+  stroke: rgba(255, 216, 77, 0.92);
+  stroke-width: calc(var(--card-height) / 120);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75));
+}
+
+.battle-arrow-power text {
+  fill: #ffd84d;
+  font-size: clamp(18px, calc(var(--card-height) / 5.8), 34px);
+  font-weight: 900;
+  letter-spacing: 0;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-linejoin: round;
+  stroke-width: calc(var(--card-height) / 95);
+}
+
 .opponent-cost {
   grid-area: opponent-cost;
 }

@@ -550,6 +550,7 @@ describe("board view model", () => {
 
     assert.deepEqual(model.battleArrow, {
       attackerInstanceId: "leader-1",
+      attackPower: 7000,
       targetInstanceId: "opp-leader",
     });
   });
