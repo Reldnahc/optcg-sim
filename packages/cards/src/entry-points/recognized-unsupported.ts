@@ -1,25 +1,5 @@
-import type { Trigger } from "@optcg/types";
-
-import type {
-  EntryPointParseResult,
-  ParseInput,
-  PrimitiveEvidence,
-} from "../types.js";
-
-interface RecognizedUnsupportedEntryPoint {
-  readonly text: string;
-  readonly trigger: Trigger;
-  readonly evidence: readonly PrimitiveEvidence[];
-}
-
-const recognizedUnsupportedEntryPoints: readonly RecognizedUnsupportedEntryPoint[] =
-  [
-    {
-      text: "[On Block]",
-      trigger: { type: "onBlock" },
-      evidence: ["entry:onBlock", "entrySupport:unsupported"],
-    },
-  ];
+import type { EntryPointParseResult, ParseInput } from "../types.js";
+import { recognizedUnsupportedEntryPoints } from "../entry-point-definitions.js";
 
 export function parseRecognizedUnsupportedEntryPoint(
   input: ParseInput,

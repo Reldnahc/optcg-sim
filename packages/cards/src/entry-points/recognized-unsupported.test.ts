@@ -4,6 +4,11 @@ import { describe, expect, it } from "vitest";
 import { parseExpression } from "../expression-parser.js";
 import { syntheticInstructionParser } from "../instructions/index.js";
 import { parseEffectLine } from "../orchestrator.js";
+import {
+  entryPointDefinitions,
+  recognizedUnsupportedEntryPoints,
+  supportedEntryPoints,
+} from "../entry-point-definitions.js";
 import { syntheticInstructionSegmentParser } from "../segments/index.js";
 import { parseRecognizedUnsupportedEntryPoint } from "./recognized-unsupported.js";
 import { parseSupportedEntryPoint } from "./supported.js";
@@ -17,6 +22,23 @@ const recognizedUnsupportedEntryPointCases = [
 ] as const;
 
 describe("recognized unsupported entry-point parser", () => {
+  it("derives recognized unsupported entries from the shared entry-point registry", () => {
+    expect(entryPointDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          supportStatus: "recognizedUnsupported",
+          text: "[On Block]",
+        }),
+      ]),
+    );
+    expect(recognizedUnsupportedEntryPoints.map((entry) => entry.text)).toEqual(
+      ["[On Block]"],
+    );
+    expect(supportedEntryPoints.map((entry) => entry.text)).not.toContain(
+      "[On Block]",
+    );
+  });
+
   it.each(recognizedUnsupportedEntryPointCases)(
     "recognizes $text without marking it supported",
     ({ text, trigger, evidence }) => {
