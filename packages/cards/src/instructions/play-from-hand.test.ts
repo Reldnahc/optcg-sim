@@ -205,4 +205,64 @@ describe("play from hand instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses play from hand with separately quantified OR alternatives", () => {
+    expect(
+      parsePlayFromHandInstruction({
+        text: "Play up to 1 [Heavenly Warriors] with a cost of 1 or up to 1 {Vassals} type Character card with a cost of 1 from your hand.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                anyOf: [
+                  {
+                    names: ["Heavenly Warriors"],
+                    cost: { op: "eq", value: 1 },
+                  },
+                  {
+                    categories: ["character"],
+                    typesAny: ["Vassals"],
+                    cost: { op: "eq", value: 1 },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(
+      parsePlayFromHandInstruction({
+        text: "Play up to 1 [Heavenly Warriors] with a cost of 1 or up to 1 {Vassals} type Character card with a cost of 1 from your hand.",
+      })?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "filter:anyOf",
+        "filter:name",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
 });

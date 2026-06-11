@@ -1,4 +1,4 @@
-import type { HandSelectionId, SelectionId } from "@optcg/types";
+import type { CardFilter, HandSelectionId, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
@@ -20,6 +20,11 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
   const afterPlay = playMatch?.groups?.["rest"];
   if (afterPlay === undefined) {
     return undefined;
+  }
+
+  const alternativeSources = parsePlayFromHandAlternativeSources(afterPlay);
+  if (alternativeSources !== undefined) {
+    return alternativeSources;
   }
 
   const cardinality = parseUpToCardinality({ text: afterPlay });
@@ -72,6 +77,96 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
       "chooser:self:upTo",
       ...source.evidence,
       ...(source.enterRested ? ["state:rested" as const] : []),
+      "composition:selectThenPlay",
+    ],
+    rest: "",
+  };
+};
+
+const parsePlayFromHandAlternativeSources = (
+  text: string,
+): ReturnType<InstructionParser> => {
+  const match =
+    /^(?<left>up to [1-9]\d* .+?)\s+or\s+(?<right>up to [1-9]\d* .+ from your hand(?<rested>\s+rested)?\.?)$/iu.exec(
+      text,
+    );
+  const leftText = match?.groups?.["left"];
+  const rightText = match?.groups?.["right"];
+  if (leftText === undefined || rightText === undefined) {
+    return undefined;
+  }
+
+  const leftCardinality = parseUpToCardinality({ text: leftText });
+  const rightCardinality = parseUpToCardinality({ text: rightText });
+  if (leftCardinality === undefined || rightCardinality === undefined) {
+    return undefined;
+  }
+  if (
+    leftCardinality.cardinality.min !== rightCardinality.cardinality.min ||
+    leftCardinality.cardinality.max !== rightCardinality.cardinality.max
+  ) {
+    return undefined;
+  }
+
+  const leftPredicates = parseCardFilterPredicates({
+    text: leftCardinality.rest,
+  });
+  const rightSource = parsePlayFromHandSource(rightCardinality.rest);
+  if (
+    leftPredicates === undefined ||
+    leftPredicates.rest.length > 0 ||
+    rightSource === undefined
+  ) {
+    return undefined;
+  }
+
+  const filter: CardFilter = {
+    anyOf: [leftPredicates.filter, rightSource.filter],
+  };
+  const cardinality = leftCardinality.cardinality;
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:hand-play",
+          connector: "always",
+          saveResultAs: handPlaySelection,
+          effect: {
+            type: "selectCards",
+            zone: "hand",
+            player: "self",
+            chooser: "self",
+            min: cardinality.min,
+            max: cardinality.max,
+            filter,
+            saveAs: handPlaySelection,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          id: "play:selected-from-hand",
+          connector: "ifPossible",
+          effect: {
+            type: "playSelected",
+            selection: handPlaySelection,
+            ignoreCost: true,
+            ...(rightSource.enterRested ? { enterRested: true } : {}),
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:playSelected",
+      ...leftCardinality.evidence,
+      "zone:hand",
+      "player:self",
+      "chooser:self:upTo",
+      "filter:anyOf",
+      ...leftPredicates.evidence,
+      ...rightSource.evidence,
+      ...(rightSource.enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",
     ],
     rest: "",
