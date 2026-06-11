@@ -126,4 +126,35 @@ describe("field activation instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses typed Leader activation as a filtered leader-area activate primitive", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "Set your {Fish-Man} type Leader as active.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "activate",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "leaderArea",
+          filter: {
+            categories: ["leader"],
+            typesAny: ["Fish-Man"],
+          },
+        },
+      },
+      evidence: [
+        "instruction:activate",
+        "target:yourLeader",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:type",
+        "state:active",
+      ],
+      rest: "",
+    });
+  });
 });

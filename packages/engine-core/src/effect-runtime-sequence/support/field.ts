@@ -179,7 +179,8 @@ export const isSupportedActivateSegment = (
     effect.target.type === "self" ||
     (effect.target.type === "all" &&
       effect.target.player === "self" &&
-      effect.target.zone === "characterArea" &&
+      (effect.target.zone === "characterArea" ||
+        effect.target.zone === "leaderArea") &&
       isSupportedPublicFieldTargetFilter(effect.target.filter)));
 
 export const isSupportedChangeAttackTargetSegment = (

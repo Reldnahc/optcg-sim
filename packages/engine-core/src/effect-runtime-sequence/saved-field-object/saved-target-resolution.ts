@@ -6,7 +6,46 @@ import type {
   GameState,
 } from "@optcg/types";
 
+import {
+  cardMatchesHandSelectionFilter,
+  toCardRef,
+} from "../../actions/state.js";
 import { resolveSavedFieldObjectKoSelection } from "../../runtime/primitives/execute.js";
+
+type AllActivateTarget = Extract<
+  Extract<Effect, { type: "activate" }>["target"],
+  { type: "all" }
+>;
+
+const allActivateTargetRefs = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  target: AllActivateTarget,
+): CardRef[] => {
+  if (target.player !== "self") {
+    return [];
+  }
+  const player = state.players[entry.controllerId];
+  if (player === undefined) {
+    return [];
+  }
+  const cards =
+    target.zone === "leaderArea"
+      ? [player.leader]
+      : target.zone === "characterArea"
+        ? player.characters
+        : [];
+  return cards
+    .filter((card) =>
+      cardMatchesHandSelectionFilter(
+        state,
+        entry.controllerId,
+        card,
+        target.filter,
+      ),
+    )
+    .map((card) => toCardRef(card, entry.controllerId));
+};
 
 export const resolveActivateTargets = (
   state: GameState,
@@ -61,16 +100,11 @@ export const resolveActivateTargets = (
   if (
     target.type === "all" &&
     target.player === "self" &&
-    target.zone === "characterArea"
+    (target.zone === "characterArea" || target.zone === "leaderArea")
   ) {
     return {
       ok: true,
-      selectedTargets: player.characters.map((card) => ({
-        instanceId: card.instanceId,
-        cardId: card.cardId,
-        playerId: entry.controllerId,
-        zone: card.zone,
-      })),
+      selectedTargets: allActivateTargetRefs(state, entry, target),
     };
   }
   return { ok: false };

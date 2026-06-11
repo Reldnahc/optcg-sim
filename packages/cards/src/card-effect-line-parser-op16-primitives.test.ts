@@ -453,7 +453,12 @@ describe("OP16 reusable primitive parsing", () => {
                 type: "conditional",
                 then: {
                   type: "activate",
-                  target: { type: "myLeader" },
+                  target: {
+                    type: "all",
+                    player: "self",
+                    zone: "leaderArea",
+                    filter: { categories: ["leader"], names: ["Yamato"] },
+                  },
                 },
               },
             },

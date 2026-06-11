@@ -234,25 +234,53 @@ function parseSetAllFilteredCharactersActive(
 }
 
 function parseSetYourLeaderActive(text: string): ReturnType<InstructionParser> {
-  const match = /^set your Leader(?: \[(?<name>[^\]]+)\])? as active\.?$/i.exec(
-    text,
-  );
+  const match =
+    /^set your (?:\{(?<type>[^}]+)\} type )?Leader(?: \[(?<name>[^\]]+)\])? as active\.?$/i.exec(
+      text,
+    );
   if (match === null) {
     return undefined;
   }
   const name = match.groups?.["name"];
+  const type = match.groups?.["type"];
+
+  if (name !== undefined || type !== undefined) {
+    const filter: CardFilter = {
+      categories: ["leader"],
+      ...(name === undefined ? {} : { names: [name] }),
+      ...(type === undefined ? {} : { typesAny: [type] }),
+    };
+
+    return {
+      effect: {
+        type: "activate",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "leaderArea",
+          filter,
+        },
+      },
+      evidence: [
+        "instruction:activate",
+        "target:yourLeader",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        ...(name === undefined ? [] : (["filter:name"] as const)),
+        ...(type === undefined ? [] : (["filter:type"] as const)),
+        "state:active",
+      ],
+      rest: "",
+    };
+  }
 
   return {
     effect: {
       type: "activate",
       target: { type: "myLeader" },
     },
-    evidence: [
-      "instruction:activate",
-      "target:yourLeader",
-      ...(name === undefined ? [] : (["filter:name"] as const)),
-      "state:active",
-    ],
+    evidence: ["instruction:activate", "target:yourLeader", "state:active"],
     rest: "",
   };
 }

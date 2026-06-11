@@ -554,6 +554,82 @@ test("activate sequence can set your Leader and all Characters active directly",
   );
 });
 
+test("activate sequence applies all-target filters to Leader activation", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "activate",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "leaderArea",
+            filter: { categories: ["leader"], typesAny: ["Fish-Man"] },
+          },
+        },
+      },
+    ],
+  });
+  const p1State = must(state.players[p1], "p1");
+  p1State.leader = { ...p1State.leader, state: "rested" };
+  state.cardManifest.cards[p1State.leader.cardId] = {
+    ...resolvedCard({
+      cardId: p1State.leader.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    types: ["Fish-Man"],
+  };
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    must(resolved.state.players[p1], "resolved p1").leader.state,
+    "active",
+  );
+});
+
+test("activate sequence leaves nonmatching all-target Leaders rested", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "activate",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "leaderArea",
+            filter: { categories: ["leader"], typesAny: ["Fish-Man"] },
+          },
+        },
+      },
+    ],
+  });
+  const p1State = must(state.players[p1], "p1");
+  p1State.leader = { ...p1State.leader, state: "rested" };
+  state.cardManifest.cards[p1State.leader.cardId] = {
+    ...resolvedCard({
+      cardId: p1State.leader.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    types: ["Straw Hat Crew"],
+  };
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    must(resolved.state.players[p1], "resolved p1").leader.state,
+    "rested",
+  );
+});
+
 test("DON activation restriction blocks Character-source DON activation through saved target path", () => {
   const { source, state } = sequenceQueueState(
     selectRestedDonThenActivateSavedTargetSequence(),
