@@ -34,6 +34,33 @@ export const parseMoveCardsCost = (
     return undefined;
   }
 
+  const fieldToOwnerDeckBottom = parseFieldToOwnerDeckBottomCostRoute(
+    cardinality.rest,
+  );
+  if (fieldToOwnerDeckBottom !== undefined) {
+    const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+      type: "moveCards",
+      count: cardinality.count,
+      chooser: "self",
+      from: { player: "self", zone: "characterArea" },
+      to: { player: "self", zone: "deck", position: "bottom" },
+      order: "chooserChoice",
+      filter: fieldToOwnerDeckBottom.filter,
+      optional: true,
+    };
+    const evidence: PrimitiveEvidence[] = [
+      "cost:moveCards",
+      ...cardinality.evidence,
+      "player:self",
+      "zone:characterArea",
+      "destination:deck",
+      "position:bottom",
+      ...fieldToOwnerDeckBottom.evidence,
+    ];
+
+    return { cost, evidence, rest: "" };
+  }
+
   const trashToBottom = parseTrashToBottomDeckCostRoute(cardinality.rest);
   if (trashToBottom !== undefined) {
     const cost: Extract<OptionalCost, { type: "moveCards" }> = {
@@ -186,6 +213,34 @@ function parseTrashToBottomDeckCostRoute(text: string):
 
   const predicates = parseCardFilterPredicates({ text: filterText });
   if (predicates === undefined || predicates.rest.length > 0) {
+    return undefined;
+  }
+  return { filter: predicates.filter, evidence: predicates.evidence };
+}
+
+function parseFieldToOwnerDeckBottomCostRoute(text: string):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: NonNullable<
+        ReturnType<typeof parseCardFilterPredicates>
+      >["filter"];
+    }
+  | undefined {
+  const match =
+    /^of your (?<target>.+?) at the bottom of the owner's deck$/iu.exec(text);
+  const targetText = match?.groups?.["target"];
+  if (targetText === undefined) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates(
+    { text: targetText },
+    { powerSemantics: "current" },
+  );
+  if (
+    predicates === undefined ||
+    predicates.rest.length > 0 ||
+    predicates.filter.categories?.[0] !== "character"
+  ) {
     return undefined;
   }
   return { filter: predicates.filter, evidence: predicates.evidence };

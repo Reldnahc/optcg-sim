@@ -120,6 +120,11 @@ const isSupportedActivateMainPrimitiveBody = (
   return canResolvePrimitiveBodyForEntry(primitiveSupportShape, entry);
 };
 
+const isSupportedActivateMainSequenceBody = (
+  effect: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry,
+): boolean => isSupportedSequenceBlock(entry, effect);
+
 export const isSupportedActivateMainRuntimeEffectBlock = (
   effect: EffectDefinition["effects"][number],
   entry: EffectQueueEntry = activateMainPrimitiveProbeEntry,
@@ -132,6 +137,7 @@ export const isSupportedActivateMainRuntimeEffectBlock = (
   }
   return (
     isSupportedActivateMainPrimitiveBody(effect, entry) ||
+    isSupportedActivateMainSequenceBody(effect, entry) ||
     isSupportedActivateMainContinuousBody(effect)
   );
 };

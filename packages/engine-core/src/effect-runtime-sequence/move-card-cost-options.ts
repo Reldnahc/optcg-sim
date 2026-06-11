@@ -86,6 +86,23 @@ export const expandMoveCardsCostRoutes = (
     ];
   }
   if (
+    (cost.from.zone === "characterArea" || cost.from.zone === "stageArea") &&
+    cost.from.position === undefined &&
+    cost.to.zone === "deck" &&
+    cost.to.position === "bottom"
+  ) {
+    return [
+      {
+        id: "moveCards",
+        type: "moveCards",
+        count: cost.count,
+        from: { player: cost.from.player, zone: cost.from.zone },
+        to: cost.to,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      },
+    ];
+  }
+  if (
     cost.from.zone !== "life" ||
     cost.to.zone !== "hand" ||
     cost.to.position !== undefined
@@ -156,6 +173,34 @@ export const selectableMoveCardsCostIds = (
         cardMatchesHandSelectionFilter(state, playerId, card, option.filter),
       )
       .map((card) => card.instanceId);
+  }
+  if (
+    option.from.zone === "characterArea" &&
+    option.from.position === undefined &&
+    option.to.zone === "deck" &&
+    option.to.position === "bottom"
+  ) {
+    return player.characters
+      .filter((card) =>
+        cardMatchesHandSelectionFilter(state, playerId, card, option.filter),
+      )
+      .map((card) => card.instanceId);
+  }
+  if (
+    option.from.zone === "stageArea" &&
+    option.from.position === undefined &&
+    option.to.zone === "deck" &&
+    option.to.position === "bottom"
+  ) {
+    return player.stage !== undefined &&
+      cardMatchesHandSelectionFilter(
+        state,
+        playerId,
+        player.stage,
+        option.filter,
+      )
+      ? [player.stage.instanceId]
+      : [];
   }
   if (
     option.from.zone === "life" &&

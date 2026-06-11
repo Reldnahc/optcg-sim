@@ -78,6 +78,35 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses field card move costs to deck bottom as reusable moveCards costs", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "place 1 of your Characters at the bottom of the owner's deck",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "moveCards",
+        count: 1,
+        chooser: "self",
+        from: { player: "self", zone: "characterArea" },
+        to: { player: "self", zone: "deck", position: "bottom" },
+        filter: { categories: ["character"] },
+        optional: true,
+      },
+      evidence: [
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:characterArea",
+        "destination:deck",
+        "position:bottom",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses return-DON and hand-trash as one optional cost sequence", () => {
     expect(
       parseOptionalCostSequence({

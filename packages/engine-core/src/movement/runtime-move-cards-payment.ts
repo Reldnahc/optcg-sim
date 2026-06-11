@@ -13,6 +13,7 @@ import {
   cardMatchesHandSelectionFilter,
   reindexZoneCards,
 } from "../actions/state.js";
+import { moveFieldCardToOwnerDeckBottom } from "./field-to-deck.js";
 
 export type MoveCardsPaymentOption = Extract<
   PaymentOption,
@@ -40,6 +41,15 @@ export const isSupportedMoveCardsPaymentRoute = (
     option.to.position === "top"
   ) {
     return option.count === 1;
+  }
+  if (
+    (option.from.zone === "characterArea" ||
+      option.from.zone === "stageArea") &&
+    option.from.position === undefined &&
+    option.to.zone === "deck" &&
+    option.to.position === "bottom"
+  ) {
+    return true;
   }
   return (
     (option.from.zone === "deck" &&
@@ -231,6 +241,52 @@ export const applyMoveCardsPayment = (params: {
         "deck",
       ),
     };
+  }
+
+  if (
+    (params.selectedOption.from.zone === "characterArea" ||
+      params.selectedOption.from.zone === "stageArea") &&
+    params.selectedOption.from.position === undefined &&
+    params.selectedOption.to.zone === "deck" &&
+    params.selectedOption.to.position === "bottom"
+  ) {
+    let nextState = params.state;
+    for (const selectedId of params.selected) {
+      const nextPlayer = nextState.players[params.playerId];
+      if (nextPlayer === undefined) {
+        return null;
+      }
+      const selectedCard =
+        params.selectedOption.from.zone === "characterArea"
+          ? nextPlayer.characters.find(
+              (candidate) => candidate.instanceId === selectedId,
+            )
+          : nextPlayer.stage?.instanceId === selectedId
+            ? nextPlayer.stage
+            : undefined;
+      if (
+        selectedCard === undefined ||
+        !cardMatchesHandSelectionFilter(
+          nextState,
+          params.playerId,
+          selectedCard,
+          params.selectedOption.filter,
+        )
+      ) {
+        return null;
+      }
+      const moved = moveFieldCardToOwnerDeckBottom({
+        card: selectedCard,
+        causedBy: { type: "decision", decisionId: params.decisionId },
+        events: params.events,
+        playerId: params.playerId,
+        reason: "moveCardsCost",
+        sourceZone: params.selectedOption.from.zone,
+        state: nextState,
+      });
+      nextState = moved.state;
+    }
+    return nextState.players[params.playerId] ?? null;
   }
 
   if (

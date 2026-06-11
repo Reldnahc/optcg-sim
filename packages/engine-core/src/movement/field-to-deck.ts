@@ -14,6 +14,7 @@ export const moveFieldCardToOwnerDeckBottom = (params: {
   causedBy: CausalityRef;
   events: EngineEvent[];
   playerId: PlayerId;
+  reason?: "effect" | "moveCardsCost";
   sourceZone: "characterArea" | "stageArea";
   state: GameState;
 }): { state: GameState } => {
@@ -78,7 +79,7 @@ export const moveFieldCardToOwnerDeckBottom = (params: {
       cardId: params.card.cardId,
       from: params.card.zone,
       to: moved?.zone,
-      reason: "effect",
+      reason: params.reason ?? "effect",
     },
     { type: "public" },
   );
