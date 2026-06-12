@@ -19,6 +19,18 @@ const labelInlinePadding = 24;
 const labelMinimumWidth = 56;
 const labelHeight = 30;
 
+const battlePowerLabel = (
+  attackPower: number | undefined,
+  defendPower: number | undefined,
+): string | undefined => {
+  if (attackPower === undefined) {
+    return undefined;
+  }
+  return defendPower === undefined
+    ? String(attackPower)
+    : `${String(attackPower)} vs ${String(defendPower)}`;
+};
+
 export const nextStableArrowLine = (
   previous: ArrowLine,
   next: ArrowLine,
@@ -104,10 +116,10 @@ export const BattleArrowOverlay = ({
     return null;
   }
 
-  const attackPowerLabel =
-    battleArrow.attackPower === undefined
-      ? undefined
-      : String(battleArrow.attackPower);
+  const attackPowerLabel = battlePowerLabel(
+    battleArrow.attackPower,
+    battleArrow.defendPower,
+  );
   const hasMeasuredLine = line.x1 !== line.x2 || line.y1 !== line.y2;
   const labelWidth =
     attackPowerLabel === undefined

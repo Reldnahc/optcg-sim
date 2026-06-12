@@ -92,6 +92,7 @@ export interface BoardViewModel {
   battleArrow?: {
     attackerInstanceId: string;
     attackPower?: number;
+    defendPower?: number;
     targetInstanceId: string;
   };
 }
@@ -367,9 +368,14 @@ const battleArrowForView = (
     view,
     view.battle.attacker.instanceId,
   );
+  const defendPower = currentPowerForInstance(
+    view,
+    view.battle.currentTarget.instanceId,
+  );
   return {
     attackerInstanceId: String(view.battle.attacker.instanceId),
     ...(attackPower === undefined ? {} : { attackPower }),
+    ...(defendPower === undefined ? {} : { defendPower }),
     targetInstanceId: String(view.battle.currentTarget.instanceId),
   };
 };

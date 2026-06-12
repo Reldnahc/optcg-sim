@@ -524,6 +524,7 @@ describe("board view model", () => {
 
   test("projects public battle attacker and current target for both seats", () => {
     const view = minimalView();
+    view.opponent.leader.currentPower = 5000;
     view.battle = {
       attacker: ref("leader-1", "OP13-079", p1),
       originalTarget: ref("opp-leader", "OP01-001", p2),
@@ -551,6 +552,7 @@ describe("board view model", () => {
     assert.deepEqual(model.battleArrow, {
       attackerInstanceId: "leader-1",
       attackPower: 7000,
+      defendPower: 5000,
       targetInstanceId: "opp-leader",
     });
   });
