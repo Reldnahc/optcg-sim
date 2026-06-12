@@ -151,7 +151,15 @@ describe("collection modal", () => {
     assert.match(markup, /card-face card-back card-back-main-deck/u);
     assert.match(
       zoneStyles,
-      /\.zone-cards-stack\s*\{[^}]*position:\s*relative;/u,
+      /\.zone-cards-stack\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.zone-cards-stack\s*\{[^}]*width:\s*var\(--card-width\);[^}]*height:\s*var\(--card-height\);/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.zone-cards-stack\s*\{[^}]*transform:\s*translate\(-50%, -50%\);/u,
     );
     assert.match(
       zoneStyles,

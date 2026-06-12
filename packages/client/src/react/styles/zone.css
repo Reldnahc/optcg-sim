@@ -60,7 +60,12 @@
 }
 
 .zone-cards-stack {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--card-width);
+  height: var(--card-height);
+  transform: translate(-50%, -50%);
 }
 
 .stack-card-visual {
