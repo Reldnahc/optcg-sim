@@ -16,6 +16,13 @@ import {
   toSourceSnapshot,
 } from "../../effect-runtime-queue/test-support.js";
 
+const effectResolvedStatuses = (
+  events: readonly { readonly payload: unknown; readonly type: string }[],
+): unknown[] =>
+  events
+    .filter((event) => event.type === "effectResolved")
+    .map((event) => (event.payload as { readonly status?: unknown }).status);
+
 test("leaderColorCount condition true resolves queued draw", () => {
   const state = createActiveState();
   const source = must(state.players[p1], "p1").leader;
@@ -308,7 +315,11 @@ test("leaderColorCount false skips queued draw", () => {
   const before = structuredClone(must(state.players[p1], "p1"));
   const result = processEffectRuntime(state);
   assert.equal(result.errors, undefined);
-  assert.deepEqual(result.events, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(effectResolvedStatuses(result.events), ["conditionFailed"]);
   assert.equal(
     must(result.state.players[p1], "p1").deck.length,
     before.deck.length,
@@ -375,7 +386,11 @@ test("leader-zone hasCardInZone with combined type+attribute requires both filte
   const before = structuredClone(must(state.players[p1], "p1"));
   const result = processEffectRuntime(state);
   assert.equal(result.errors, undefined);
-  assert.deepEqual(result.events, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(effectResolvedStatuses(result.events), ["conditionFailed"]);
   assert.equal(
     must(result.state.players[p1], "p1").deck.length,
     before.deck.length,
@@ -433,7 +448,11 @@ test("handCount/lifeCount false comparator skips queued draw", () => {
   const before = structuredClone(must(state.players[p1], "p1"));
   const result = processEffectRuntime(state);
   assert.equal(result.errors, undefined);
-  assert.deepEqual(result.events, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(effectResolvedStatuses(result.events), ["conditionFailed"]);
   assert.equal(
     must(result.state.players[p1], "p1").deck.length,
     before.deck.length,

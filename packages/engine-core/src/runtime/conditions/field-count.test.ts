@@ -262,6 +262,13 @@ const setupQueuedDrawWithCondition = (
   ];
 };
 
+const effectResolvedStatuses = (
+  events: readonly { readonly payload: unknown; readonly type: string }[],
+): unknown[] =>
+  events
+    .filter((event) => event.type === "effectResolved")
+    .map((event) => (event.payload as { readonly status?: unknown }).status);
+
 test("fieldCount DON filter supports self and opponent eq/gte/lte comparators", () => {
   assert.deepEqual(
     evaluateFieldCount(
@@ -681,16 +688,22 @@ test("When Attacking fieldCount condition gates body resolution and preserves ev
     failed.result.events.some((event) => event.type === "cardDrawn"),
     false,
   );
-  assert.equal(
-    failed.result.events.some((event) => {
-      const payload = event.payload as Partial<{ effectBlockId: string }>;
-      return (
-        event.type === "effectResolved" &&
-        payload.effectBlockId === failed.effectId
-      );
-    }),
-    false,
-  );
+  const failedResolved = failed.result.events.find((event) => {
+    const payload = event.payload as Partial<{
+      effectBlockId: string;
+      status: string;
+    }>;
+    return (
+      event.type === "effectResolved" &&
+      payload.effectBlockId === failed.effectId
+    );
+  });
+  const failedPayload = must(
+    failedResolved,
+    "failed condition effectResolved event",
+  ).payload as Partial<{ effectBlockId: string; status: string }>;
+  assert.equal(failedPayload.effectBlockId, failed.effectId);
+  assert.equal(failedPayload.status, "conditionFailed");
 });
 
 test("queued effect condition gate resolves only when fieldCount passes", () => {
@@ -738,7 +751,11 @@ test("queued effect condition gate resolves only when fieldCount passes", () => 
 
   const failed = runFalse();
   assert.equal(failed.errors, undefined);
-  assert.deepEqual(failed.events, []);
+  assert.deepEqual(
+    failed.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(effectResolvedStatuses(failed.events), ["conditionFailed"]);
 });
 
 test("fieldCount true/false paths keep deterministic state hash and hidden-info filtering", () => {
@@ -782,7 +799,17 @@ test("fieldCount true/false paths keep deterministic state hash and hidden-info 
 
   const firstFalse = runFalse();
   const secondFalse = runFalse();
-  assert.deepEqual(firstFalse.events, []);
+  assert.deepEqual(
+    firstFalse.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(effectResolvedStatuses(firstFalse.events), [
+    "conditionFailed",
+  ]);
+  assert.deepEqual(
+    firstFalse.events.map((event) => event.seq),
+    secondFalse.events.map((event) => event.seq),
+  );
   assert.equal(firstFalse.stateHash, hashCanonicalStateValue(firstFalse.state));
   assert.equal(firstFalse.stateHash, secondFalse.stateHash);
 

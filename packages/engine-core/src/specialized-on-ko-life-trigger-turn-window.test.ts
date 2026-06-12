@@ -289,6 +289,9 @@ test("damage-triggered life trigger activates but skips referenced On K.O. when 
         .map((event) =>
           String((event.payload as { effectBlockId?: unknown }).effectBlockId),
         ),
+      effectResolvedStatuses: triggerActivated.events
+        .filter((event) => event.type === "effectResolved")
+        .map((event) => String((event.payload as { status?: unknown }).status)),
       referencedOnKoEffectId: String(referencedOnKo.id),
     },
     {
@@ -304,6 +307,7 @@ test("damage-triggered life trigger activates but skips referenced On K.O. when 
         "effectResolved",
         "cardMoved",
         "cardTrashed",
+        "effectResolved",
       ],
       effectQueuedBlockIds: [
         "specialized-card-b-trigger-on-ko:trigger-activate-on-ko",
@@ -311,7 +315,9 @@ test("damage-triggered life trigger activates but skips referenced On K.O. when 
       ],
       effectResolvedBlockIds: [
         "specialized-card-b-trigger-on-ko:trigger-activate-on-ko",
+        "specialized-card-b-trigger-on-ko:on-ko-draw-power-down",
       ],
+      effectResolvedStatuses: ["resolved", "conditionFailed"],
       referencedOnKoEffectId: String(referencedOnKo.id),
     },
   );

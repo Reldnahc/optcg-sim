@@ -57,6 +57,13 @@ const expectedEffectResolvedPayload = (
   status: "resolved",
 });
 
+const eventStatuses = (
+  events: readonly { readonly payload: unknown; readonly type: string }[],
+): unknown[] =>
+  events
+    .filter((event) => event.type === "effectResolved")
+    .map((event) => (event.payload as { readonly status?: unknown }).status);
+
 test("resolves one queued supported On Play draw entry and removes it from effectQueue", () => {
   const { state, played } = queueingState();
   const supportCard = resolvedCard({
@@ -557,7 +564,11 @@ test("condition yourTurn false removes queued entry without mutation side effect
   const afterP1 = must(result.state.players[p1], "p1 after");
 
   assert.equal(result.errors, undefined);
-  assert.deepEqual(result.events, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(eventStatuses(result.events), ["conditionFailed"]);
   assert.equal(result.state.effectQueue.length, 0);
   assert.equal(
     afterP1.hand.length,
@@ -711,7 +722,11 @@ test("attachedDonCount self live source false comparator skips queued draw", () 
   assert.equal(result.state.effectQueue.length, 0);
   assert.equal(must(result.state.players[p1], "p1").deck.length, beforeDeck);
   assert.equal(must(result.state.players[p1], "p1").hand.length, beforeHand);
-  assert.deepEqual(result.events, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(eventStatuses(result.events), ["conditionFailed"]);
 });
 
 test("attachedDonCount fails closed for non-self target and source-snapshot-only lookup attempts", () => {
@@ -923,11 +938,15 @@ test("condition false on first queued entry skips it and still resolves later su
   assert.equal(first.errors, undefined);
   assert.equal(first.state.effectQueue.length, 0);
   assert.deepEqual(first.events.map((event) => event.type).slice(0, 5), [
+    "effectResolved",
     "cardDrawn",
     "cardMoved",
     "cardMoved",
     "effectResolved",
-    "ruleProcessingChecked",
+  ]);
+  assert.deepEqual(eventStatuses(first.events).slice(0, 2), [
+    "conditionFailed",
+    "resolved",
   ]);
   assert.deepEqual(first.events, second.events);
   assert.equal(first.stateHash, second.stateHash);
