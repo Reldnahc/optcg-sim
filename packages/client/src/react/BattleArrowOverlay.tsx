@@ -18,6 +18,9 @@ const labelCharacterWidth = 13;
 const labelInlinePadding = 24;
 const labelMinimumWidth = 56;
 const labelHeight = 30;
+const leaderPowerLabelDefenderWeight = 0.72;
+
+type BattlePowerLabelTarget = "fieldCard" | "leader";
 
 const battlePowerLabel = (
   attackPower: number | undefined,
@@ -42,6 +45,18 @@ export const nextStableArrowLine = (
     ? previous
     : next;
 
+export const battlePowerLabelPoint = (
+  line: ArrowLine,
+  target: BattlePowerLabelTarget,
+): { x: number; y: number } => {
+  const defenderWeight =
+    target === "leader" ? leaderPowerLabelDefenderWeight : 0.5;
+  return {
+    x: line.x1 + (line.x2 - line.x1) * defenderWeight,
+    y: line.y1 + (line.y2 - line.y1) * defenderWeight,
+  };
+};
+
 const cardElementForInstance = (
   board: HTMLElement,
   instanceId: string,
@@ -50,11 +65,22 @@ const cardElementForInstance = (
     board.querySelectorAll<HTMLElement>("[data-card-instance-id]"),
   ).find((element) => element.dataset["cardInstanceId"] === instanceId);
 
+const battlePowerLabelTargetForElement = (
+  element: HTMLElement,
+): BattlePowerLabelTarget => {
+  const zone = element.closest<HTMLElement>("[data-presentation-zone]");
+  return zone?.dataset["presentationZone"]?.endsWith(":leaderArea") === true
+    ? "leader"
+    : "fieldCard";
+};
+
 export const BattleArrowOverlay = ({
   battleArrow,
 }: BattleArrowOverlayProps): React.JSX.Element | null => {
   const overlayRef = useRef<SVGSVGElement | null>(null);
   const [line, setLine] = useState<ArrowLine>(emptyLine);
+  const [powerLabelTarget, setPowerLabelTarget] =
+    useState<BattlePowerLabelTarget>("fieldCard");
 
   useLayoutEffect(() => {
     if (battleArrow === undefined) {
@@ -81,10 +107,12 @@ export const BattleArrowOverlay = ({
       );
       if (attacker === undefined || target === undefined) {
         setLine((currentLine) => nextStableArrowLine(currentLine, emptyLine));
+        setPowerLabelTarget("fieldCard");
         return;
       }
       const attackerRect = attacker.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
+      setPowerLabelTarget(battlePowerLabelTargetForElement(target));
       const nextLine = {
         x1: attackerRect.left + attackerRect.width / 2 - boardRect.left,
         y1: attackerRect.top + attackerRect.height / 2 - boardRect.top,
@@ -128,8 +156,7 @@ export const BattleArrowOverlay = ({
           labelMinimumWidth,
           attackPowerLabel.length * labelCharacterWidth + labelInlinePadding,
         );
-  const midpointX = (line.x1 + line.x2) / 2;
-  const midpointY = (line.y1 + line.y2) / 2;
+  const powerLabelPoint = battlePowerLabelPoint(line, powerLabelTarget);
 
   return (
     <svg
@@ -162,7 +189,7 @@ export const BattleArrowOverlay = ({
       {attackPowerLabel !== undefined && hasMeasuredLine ? (
         <g
           className="battle-arrow-power"
-          transform={`translate(${String(midpointX)} ${String(midpointY)})`}
+          transform={`translate(${String(powerLabelPoint.x)} ${String(powerLabelPoint.y)})`}
         >
           <rect
             x={-labelWidth / 2}
