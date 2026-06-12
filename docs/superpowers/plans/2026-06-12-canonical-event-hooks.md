@@ -246,6 +246,18 @@ const matchPrimitiveEventTrigger = (
       matchDonReturned(state, source, trigger, event),
     );
   }
+  if (trigger.type === "donAttached") {
+    return primitiveMatch(
+      "donAttached",
+      matchDonAttached(state, source, trigger, event),
+    );
+  }
+  if (trigger.type === "attackDeclared") {
+    return primitiveMatch(
+      "attackDeclared",
+      matchAttackDeclared(state, source, trigger, event),
+    );
+  }
   if (trigger.type === "effectQueued") {
     return primitiveMatch(
       "effectQueued",
@@ -350,10 +362,14 @@ Use these payload field names consistently:
 - `onOpponentAttack`: `attacker.playerId`, `attacker.cardId`
 - `opponentActivated`: existing public evidence from `cardPlayed` event category, `counterUsed`, `triggerActivated`, and `blockerActivated`
 - `effectQueued`: `queueEntryId`, `timingWindowId`, `effectBlockId`, `triggerEventId` when present, `controllerId`, `source`, `sourceCardId`, `effectCategory`, `entryPoint`, `sourceTypes`, `sourceCategory`
+- `donAttached`: `playerId`, `donInstanceId`, `target`, `targetPlayerId`, `targetInstanceId`, `targetCardId`, optional `sourceControllerId`, optional `sourceKind`
+- `attackDeclared`: `attacker`, `target`, `attackerPlayerId`, `targetPlayerId`, `attackerCardId`, `targetCardId`
 
 For trigger `sourceKind: "effect"`, require payload `sourceKind: "effect"`. Do not treat existing protection-attempt terminology such as `"cardEffect"` as equivalent unless the event producer is explicitly normalized in a separate task. For trigger `sourceKind: "ko"`, existing `cardMoved.reason === "ko"` remains acceptable compatibility evidence.
 
 For text like "When a `[On Play]` is activated", use `effectQueued` evidence rather than treating `onPlay` itself as the reacting trigger. The `[On Play]` queueer remains responsible for legally queueing the On Play effect; the event hook matcher only observes the canonical `effectQueued` evidence after that happens.
+
+For text like "When this Leader or any of your Characters is given a DON!! card", use `donAttached` evidence. For text like "When this Leader attacks or is attacked", use `attackDeclared` evidence. These are matcher-supported event families in this plan; their timing consumers still decide whether the current event window is open.
 
 ---
 
@@ -432,6 +448,8 @@ Also include direct tests for:
 - `cardPlayed` with `sourceZone`
 - `cardPlayed.anyOf` branch matching, duplicate branch de-duplication, and `sourceFilter` fail-closed behavior
 - `donReturned`
+- `donAttached` with target matching this Leader or one of your Characters
+- `attackDeclared` with this Leader as attacker or target
 - `effectQueued` with `entryPoint: { type: "onPlay" }` and source filter evidence
 - `lifeRemoved` over a public `cardMoved` event from life
 - `onOpponentAttack` requiring public `attackDeclared` event evidence
@@ -472,6 +490,8 @@ export type EffectEntryPointFilter = {
     | "cardPlayed"
     | "cardRested"
     | "donReturned"
+    | "donAttached"
+    | "attackDeclared"
     | "handTrashedByEffect"
     | "opponentActivated"
     | "donAttach"
@@ -496,6 +516,20 @@ export type EffectEntryPointFilter = {
     effectCategory?: EffectCategory;
     sourceFilter?: CardFilter;
   }
+| {
+    type: "donAttached";
+    player: PlayerRef;
+    target?: "self" | "yourLeaderOrCharacters" | "any";
+    filter?: CardFilter;
+    sourceController?: PlayerRef;
+    sourceKind?: "effect" | "any";
+  }
+| {
+    type: "attackDeclared";
+    role: "attacker" | "target" | "attackerOrTarget";
+    player: PlayerRef;
+    filter?: CardFilter;
+  }
 ```
 
 Future parser work can emit this for text such as "When a `[On Play]` is activated." This plan only adds the reusable runtime primitive and tests it with synthetic definitions.
@@ -515,6 +549,8 @@ export type EventReactionTriggerType =
   | "cardPlayed"
   | "cardRested"
   | "donReturned"
+  | "donAttached"
+  | "attackDeclared"
   | "effectQueued"
   | "lifeRemoved"
   | "onOpponentAttack"
@@ -554,7 +590,7 @@ Keep these constraints:
 
 Clarify trigger ownership while implementing:
 
-- `damageDealt`, `fieldRemoved`, `cardPlayed`, `cardRested`, and `donReturned` are consumed by auto event queueing in this plan.
+- `damageDealt`, `fieldRemoved`, `cardPlayed`, `cardRested`, `donReturned`, `donAttached`, and `attackDeclared` are consumed by auto event queueing in this plan.
 - `effectQueued` is consumed by auto event queueing in this plan as canonical evidence that another effect was activated/queued by its timing owner.
 - `lifeRemoved`, `onOpponentAttack`, and `opponentActivated` are included for optional activated reaction matching only in this plan unless an existing auto event-reaction consumer already uses them.
 - Existing special auto queueers for those trigger families remain in place.
@@ -772,6 +808,50 @@ git commit -m "Normalize effect queued event evidence"
 Add tests proving queueing depends on matcher results, not local trigger branches:
 
 ```ts
+test("auto event reactions can hook DON attachment events", () => {
+  const { reactingSource, state } = donAttachedReactionState({
+    trigger: {
+      type: "donAttached",
+      player: "self",
+      target: "yourLeaderOrCharacters",
+    },
+    reactionBody: { type: "draw", player: "self", count: 1 },
+  });
+
+  const result = queueEventReactionTriggers(state);
+
+  assert.ok(result !== undefined);
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.state.effectQueue[0]?.source.instanceId,
+    reactingSource.instanceId,
+  );
+});
+```
+
+```ts
+test("auto event reactions can hook this source attacking or being attacked", () => {
+  const { reactingSource, state } = attackDeclaredReactionState({
+    trigger: {
+      type: "attackDeclared",
+      role: "attackerOrTarget",
+      player: "self",
+    },
+    reactionBody: { type: "draw", player: "self", count: 1 },
+  });
+
+  const result = queueEventReactionTriggers(state);
+
+  assert.ok(result !== undefined);
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.state.effectQueue[0]?.source.instanceId,
+    reactingSource.instanceId,
+  );
+});
+```
+
+```ts
 test("auto event reactions can hook an On Play effect being queued", () => {
   const { reactingSource, state } = onPlayEffectQueuedReactionState({
     reactionEffect: {
@@ -928,7 +1008,7 @@ In `runtime/trigger-queueing/event-reaction.ts`:
 - Delete local duplicated primitive matchers that moved to `runtime/event-hooks/matcher.ts`.
 - Keep `queuedEventReactionTriggerEventIds`, source enumeration, support checks, queue entry creation, event emission, and error handling.
 - Replace `matchingTriggerTypes(...)` calls with `matchEventTrigger(...).triggerTypes`.
-- Include `effectQueued` in `isAutoEventReactionCandidate(event)` so effects can react to other effects being queued/activated.
+- Include `donAttached`, `attackDeclared`, and `effectQueued` in `isAutoEventReactionCandidate(event)` so effects can react to DON attachment, attacks, and other effects being queued/activated.
 - Keep recent-event filtering, already-queued filtering, and source-entry filtering in this queueing module.
 
 - [ ] **Step 4: Run auto queueing tests**
