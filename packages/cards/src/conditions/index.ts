@@ -17,6 +17,7 @@ export { parseOpponentRestedCharactersCondition } from "./opponent-rested-charac
 export { parseRestedCardCountCondition } from "./rested-card-count.js";
 export { parseSelfFieldCountCondition } from "./self-field-count.js";
 export { parseSelectedTargetStatComparisonCondition } from "./selected-target-stat-comparison.js";
+export { parseSelfStatComparisonCondition } from "./self-stat-comparison.js";
 export { parseSourcePlayedThisTurnCondition } from "./source-played-this-turn.js";
 export { syntheticConditionParser } from "./synthetic.js";
 export { parseTrashCountCondition } from "./trash-count.js";

@@ -95,6 +95,7 @@ export type PrimitiveEvidence =
   | "condition:threshold:positiveInteger"
   | "condition:threshold:nonNegativeInteger"
   | "condition:stat:cost"
+  | "condition:stat:currentPower"
   | "instruction:draw"
   | "instruction:preventDraw"
   | "instruction:preventDonActivation"

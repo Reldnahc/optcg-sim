@@ -132,6 +132,30 @@ const resolveSavedFieldObjectRef = (
   return expectedPlayer === object.playerId ? object : undefined;
 };
 
+const resolveSelfRef = (entry: EffectQueueEntry): CardRef | undefined => {
+  if (entry.source.zone === undefined) {
+    return undefined;
+  }
+  return {
+    instanceId: entry.source.instanceId,
+    cardId: entry.source.cardId,
+    playerId: entry.source.playerId,
+    zone: entry.source.zone,
+  };
+};
+
+const resolveCardStatComparisonRef = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  target: Extract<Condition, { type: "cardStatComparison" }>["target"],
+  context: ConditionEvaluationContext | undefined,
+): CardRef | undefined => {
+  if (target.type === "self") {
+    return resolveSelfRef(entry);
+  }
+  return resolveSavedFieldObjectRef(state, entry, target, context);
+};
+
 const readCardStat = (
   state: GameState,
   card: CardInstance,
@@ -168,7 +192,7 @@ export const evaluateCardStatComparison = (
   if (!isComparator(condition.op)) {
     return { supported: false };
   }
-  const cardRef = resolveSavedFieldObjectRef(
+  const cardRef = resolveCardStatComparisonRef(
     state,
     entry,
     condition.target,
@@ -214,6 +238,11 @@ const isSupportedSavedSelectedFieldObjectTarget = (
     target.player === "opponent" ||
     target.player === "anyPlayer");
 
+const isSupportedCardStatComparisonTarget = (
+  target: Extract<Condition, { type: "cardStatComparison" }>["target"],
+): boolean =>
+  target.type === "self" || isSupportedSavedSelectedFieldObjectTarget(target);
+
 const isSupportedCardStatComparisonValue = (
   value: Extract<Condition, { type: "cardStatComparison" }>["value"],
 ): boolean => {
@@ -232,6 +261,6 @@ const isSupportedCardStatComparisonValue = (
 export const isSupportedCardStatComparisonCondition = (
   condition: Extract<Condition, { type: "cardStatComparison" }>,
 ): boolean =>
-  isSupportedSavedSelectedFieldObjectTarget(condition.target) &&
+  isSupportedCardStatComparisonTarget(condition.target) &&
   isComparator(condition.op) &&
   isSupportedCardStatComparisonValue(condition.value);
