@@ -4,7 +4,7 @@
 
 **Goal:** Normalize event-backed "whenever" effects so auto queueing and optional activated reactions use one canonical event-to-trigger matcher.
 
-**Architecture:** Keep `EngineEvent` and `eventJournal` as the canonical event record. Extract reusable event trigger matching into a focused module consumed by both auto event queueing and optional activated reactions, then add regression tests that prove matcher-supported event-backed triggers do not require duplicated matcher branches. Do not change parser support or gameplay timing in this plan.
+**Architecture:** Keep `EngineEvent` and `eventJournal` as the canonical event record. Extract reusable event trigger matching into a focused module consumed by both auto event queueing and optional activated reactions, then add regression tests that prove matcher-supported event-backed triggers do not require duplicated matcher branches. Normalize `effectQueued` payload evidence so effects can react to other effects being activated without replacing the timing consumers that legally queue those effects. Do not change parser support or gameplay timing in this plan.
 
 **Tech Stack:** TypeScript, `@optcg/types`, `packages/engine-core`, Vitest through `npm.cmd run test -- ...`, repo typecheck/lint commands.
 
@@ -17,6 +17,10 @@
   - Exports typed match helpers only; it does not queue effects or create legal actions.
 - Create: `packages/engine-core/src/runtime/event-hooks/matcher.test.ts`
   - Direct unit tests for canonical matching across auto and optional reaction use cases.
+- Modify: `packages/types/src/effects.ts`
+  - Adds the reusable `effectQueued` trigger primitive for reacting to another effect being activated/queued.
+- Modify: `packages/engine-core/src/effect-runtime-entry-adapters.ts`
+  - Adds the reusable auto adapter for `effectQueued`.
 - Modify: `packages/engine-core/src/runtime/trigger-queueing/event-reaction.ts`
   - Replaces local event trigger matchers with `matchEventTrigger`.
   - Keeps queueing behavior, source presence policy, ordering, and failure behavior unchanged.
@@ -27,6 +31,11 @@
   - Adds regressions proving auto event queueing still works through the shared matcher.
 - Modify: `packages/engine-core/src/runtime/optional-activation/event-reaction.test.ts`
   - Adds regressions proving optional reaction legal actions still work through the shared matcher.
+- Modify: `packages/engine-core/src/action-results.ts`
+  - Adds a shared `appendEffectQueuedEvent` helper so queue producers emit consistent canonical activation evidence.
+- Modify: queue producers that currently append `effectQueued`
+  - Replaces local payload construction with `appendEffectQueuedEvent`.
+  - Keeps timing-window ownership and queue creation in the existing queue producers.
 - Optional follow-up only if evidence appears during implementation: create `packages/engine-core/src/runtime/event-hooks/event-selection.ts`
   - Owns recent-event window selection and de-duplication if both queueing paths currently duplicate it in a way that blocks the matcher extraction.
 
@@ -53,6 +62,7 @@ Consumer ownership stays explicit:
 - Auto event queueing keeps its existing recent-event window, already-queued de-duplication, source-entry gate, `isSupportedAutoRuntimeEffectBlock` support check, and queue entry creation.
 - Optional activated reactions keep their existing adapter-specific event-window predicates, `isSupportedActivatedReactionEffect` support gate, condition/once-per-turn checks, legal-action exposure, and activation queue creation.
 - Special auto queueers for `lifeRemoved`, `opponentActivated`, `onOpponentAttack`, and similar timing-specific flows are not collapsed in this plan.
+- Existing entry-point queueers such as `[On Play]` and `[When Attacking]` remain the legal timing owners. This plan only makes their emitted `effectQueued` events canonical enough for other effects to react to them.
 
 ---
 
@@ -236,6 +246,12 @@ const matchPrimitiveEventTrigger = (
       matchDonReturned(state, source, trigger, event),
     );
   }
+  if (trigger.type === "effectQueued") {
+    return primitiveMatch(
+      "effectQueued",
+      matchEffectQueued(state, source, trigger, event),
+    );
+  }
   if (trigger.type === "lifeRemoved") {
     return primitiveMatch(
       "lifeRemoved",
@@ -333,8 +349,11 @@ Use these payload field names consistently:
 - `lifeRemoved` over `cardMoved`: `from`, `playerId`, `instanceId`, `cardId`, `reason`
 - `onOpponentAttack`: `attacker.playerId`, `attacker.cardId`
 - `opponentActivated`: existing public evidence from `cardPlayed` event category, `counterUsed`, `triggerActivated`, and `blockerActivated`
+- `effectQueued`: `queueEntryId`, `timingWindowId`, `effectBlockId`, `triggerEventId` when present, `controllerId`, `source`, `sourceCardId`, `effectCategory`, `entryPoint`, `sourceTypes`, `sourceCategory`
 
 For trigger `sourceKind: "effect"`, require payload `sourceKind: "effect"`. Do not treat existing protection-attempt terminology such as `"cardEffect"` as equivalent unless the event producer is explicitly normalized in a separate task. For trigger `sourceKind: "ko"`, existing `cardMoved.reason === "ko"` remains acceptable compatibility evidence.
+
+For text like "When a `[On Play]` is activated", use `effectQueued` evidence rather than treating `onPlay` itself as the reacting trigger. The `[On Play]` queueer remains responsible for legally queueing the On Play effect; the event hook matcher only observes the canonical `effectQueued` evidence after that happens.
 
 ---
 
@@ -342,6 +361,8 @@ For trigger `sourceKind: "effect"`, require payload `sourceKind: "effect"`. Do n
 
 **Files:**
 
+- Modify: `packages/types/src/effects.ts`
+- Modify: `packages/engine-core/src/effect-runtime-entry-adapters.ts`
 - Create: `packages/engine-core/src/runtime/event-hooks/matcher.ts`
 - Create: `packages/engine-core/src/runtime/event-hooks/matcher.test.ts`
 - Read: `packages/engine-core/src/runtime/trigger-queueing/event-reaction.ts`
@@ -411,6 +432,7 @@ Also include direct tests for:
 - `cardPlayed` with `sourceZone`
 - `cardPlayed.anyOf` branch matching, duplicate branch de-duplication, and `sourceFilter` fail-closed behavior
 - `donReturned`
+- `effectQueued` with `entryPoint: { type: "onPlay" }` and source filter evidence
 - `lifeRemoved` over a public `cardMoved` event from life
 - `onOpponentAttack` requiring public `attackDeclared` event evidence
 - `opponentActivated` from `cardPlayed` event category, `counterUsed`, `triggerActivated`, and `blockerActivated`
@@ -431,6 +453,61 @@ Expected: fail because `runtime/event-hooks/matcher.ts` does not exist.
 
 Move the reusable matching logic out of the existing queueing files. The public API should be small:
 
+In `packages/types/src/effects.ts`, add the trigger primitive:
+
+```ts
+export type EffectEntryPointFilter = {
+  type:
+    | "onPlay"
+    | "whenAttacking"
+    | "onOpponentAttack"
+    | "onBlock"
+    | "onKO"
+    | "endOfYourTurn"
+    | "endOfOpponentTurn"
+    | "trigger"
+    | "damageDealt"
+    | "lifeRemoved"
+    | "fieldRemoved"
+    | "cardPlayed"
+    | "cardRested"
+    | "donReturned"
+    | "handTrashedByEffect"
+    | "opponentActivated"
+    | "donAttach"
+    | "activateMain"
+    | "main"
+    | "counter"
+    | "permanent"
+    | "replacement"
+    | "startOfGame"
+    | "startOfYourTurn"
+    | "startOfOpponentTurn"
+    | "startOfMainPhase"
+    | "endOfBattle"
+    | "custom"
+    | "effectQueued";
+};
+
+| {
+    type: "effectQueued";
+    player: PlayerRef;
+    effectEntryPoint?: EffectEntryPointFilter;
+    effectCategory?: EffectCategory;
+    sourceFilter?: CardFilter;
+  }
+```
+
+Future parser work can emit this for text such as "When a `[On Play]` is activated." This plan only adds the reusable runtime primitive and tests it with synthetic definitions.
+
+In `packages/engine-core/src/effect-runtime-entry-adapters.ts`, add:
+
+```ts
+if (triggerType === "effectQueued") {
+  return autoAdapter("effectQueued", ["mustRemainInSameZone"]);
+}
+```
+
 ```ts
 export type EventReactionTriggerType =
   | "damageDealt"
@@ -438,6 +515,7 @@ export type EventReactionTriggerType =
   | "cardPlayed"
   | "cardRested"
   | "donReturned"
+  | "effectQueued"
   | "lifeRemoved"
   | "onOpponentAttack"
   | "opponentActivated";
@@ -477,6 +555,7 @@ Keep these constraints:
 Clarify trigger ownership while implementing:
 
 - `damageDealt`, `fieldRemoved`, `cardPlayed`, `cardRested`, and `donReturned` are consumed by auto event queueing in this plan.
+- `effectQueued` is consumed by auto event queueing in this plan as canonical evidence that another effect was activated/queued by its timing owner.
 - `lifeRemoved`, `onOpponentAttack`, and `opponentActivated` are included for optional activated reaction matching only in this plan unless an existing auto event-reaction consumer already uses them.
 - Existing special auto queueers for those trigger families remain in place.
 
@@ -517,7 +596,170 @@ git commit -m "Extract canonical event trigger matcher"
 
 ---
 
-### Task 2: Use Matcher For Auto Event Queueing
+### Task 2: Normalize EffectQueued Evidence
+
+**Files:**
+
+- Modify: `packages/engine-core/src/action-results.ts`
+- Modify: queue producers that currently append `effectQueued`
+- Test: `packages/engine-core/src/runtime/event-hooks/effect-queued-evidence.test.ts`
+- Read: `packages/engine-core/src/runtime/effect-presentation.ts`
+- Read: `packages/engine-core/src/effect-runtime-trigger-source-lookup.ts`
+
+- [ ] **Step 1: Write failing tests for canonical `effectQueued` evidence**
+
+Add tests proving every queue producer can emit source and entry-point evidence through one helper. Start with one representative auto entry point and one activated reaction:
+
+```ts
+test("On Play queueing emits canonical effectQueued entry point and source evidence", () => {
+  const { onPlayEffect, playedCard, state } = onPlayQueueEvidenceState();
+
+  const result = queueOnPlayTriggers(state);
+
+  assert.equal(result?.errors, undefined);
+  const queued = must(
+    result?.events.find((event) => event.type === "effectQueued"),
+    "effectQueued event",
+  );
+  assert.deepEqual(queued.payload, {
+    queueEntryId: result?.state.effectQueue[0]?.id,
+    timingWindowId: result?.state.effectQueue[0]?.timingWindowId,
+    generation: 0,
+    effectBlockId: onPlayEffect.id,
+    triggerEventId: state.eventJournal.at(-1)?.id,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "turnPlayer",
+    controllerId: playedCard.controller,
+    source: {
+      instanceId: playedCard.instanceId,
+      cardId: playedCard.cardId,
+      playerId: playedCard.controller,
+      zone: playedCard.zone,
+    },
+    sourceCardId: playedCard.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onPlay" },
+    sourceTypes: ["Navy"],
+    sourceCategory: "character",
+  });
+});
+```
+
+```ts
+test("activated reaction queueing emits canonical effectQueued entry point evidence", () => {
+  const { effect, source, state } = opponentAttackOptionalReactionState();
+  const action = must(
+    getActivatedReactionLegalActions(state, source.controller)[0],
+    "activation action",
+  );
+
+  const result = applyActivatedReactionAction(state, action);
+
+  assert.equal(result?.errors, undefined);
+  const queued = must(
+    result?.events.find((event) => event.type === "effectQueued"),
+    "effectQueued event",
+  );
+  assert.equal(
+    (queued.payload as { effectBlockId?: unknown }).effectBlockId,
+    effect.id,
+  );
+  assert.deepEqual((queued.payload as { entryPoint?: unknown }).entryPoint, {
+    type: "onOpponentAttack",
+  });
+});
+```
+
+- [ ] **Step 2: Run tests and verify they fail**
+
+Run:
+
+```powershell
+npm.cmd run test -- packages/engine-core/src/runtime/event-hooks/effect-queued-evidence.test.ts
+```
+
+Expected: fail because `effectQueued` payloads do not yet include the canonical evidence.
+
+- [ ] **Step 3: Add `appendEffectQueuedEvent`**
+
+In `packages/engine-core/src/action-results.ts`, add a helper parallel to `appendEffectResolvedEvent`:
+
+```ts
+export const appendEffectQueuedEvent = (
+  state: GameState,
+  events: EngineEvent[],
+  queuedEntry: EffectQueueEntry,
+  effectBlock: EffectDefinition["effects"][number],
+  resolvedSourceCard: ResolvedCard,
+): void => {
+  appendEvent(
+    state,
+    events,
+    "effectQueued",
+    {
+      queueEntryId: queuedEntry.id,
+      timingWindowId: queuedEntry.timingWindowId,
+      generation: queuedEntry.generation,
+      effectBlockId: queuedEntry.effectBlockId,
+      ...(queuedEntry.triggerEventId === undefined
+        ? {}
+        : { triggerEventId: queuedEntry.triggerEventId }),
+      sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
+      orderingGroup: queuedEntry.orderingGroup,
+      controllerId: queuedEntry.controllerId,
+      source: queuedEntry.source,
+      sourceCardId: queuedEntry.sourceSnapshot.cardId,
+      effectCategory: effectBlock.category,
+      entryPoint: effectBlock.trigger,
+      sourceTypes: resolvedSourceCard.types,
+      sourceCategory: resolvedSourceCard.category,
+      ...(queuedEntry.presentation === undefined
+        ? {}
+        : { presentation: queuedEntry.presentation }),
+    },
+    { type: "public" },
+  );
+  const queued = events[events.length - 1];
+  if (queued !== undefined) {
+    queued.causedBy = queuedEntry.causedBy;
+  }
+};
+```
+
+Do not derive entry point from `timingWindowId` string suffixes. Do not add effect-entry-point fields to `CardSnapshot`; entry point is effect-block data, not card snapshot data.
+
+- [ ] **Step 4: Replace local `effectQueued` event construction**
+
+Replace local `appendEvent(..., "effectQueued", ...)` payload construction in queue producers with `appendEffectQueuedEvent`. Keep each queue producer responsible for creating the queue entry and timing window.
+
+Run this scan before and after:
+
+```powershell
+rg -n '"effectQueued"' packages/engine-core/src --glob '*.ts'
+```
+
+Expected after implementation: event appends route through `appendEffectQueuedEvent`; tests may still assert `effectQueued` payloads.
+
+- [ ] **Step 5: Run canonical evidence tests**
+
+Run:
+
+```powershell
+npm.cmd run test -- packages/engine-core/src/runtime/event-hooks/effect-queued-evidence.test.ts packages/engine-core/src/runtime/trigger-queueing/on-play.test.ts packages/engine-core/src/runtime/optional-activation/event-reaction.test.ts
+```
+
+Expected: pass.
+
+- [ ] **Step 6: Commit**
+
+```powershell
+git add packages/engine-core/src/action-results.ts packages/engine-core/src/runtime/event-hooks/effect-queued-evidence.test.ts packages/engine-core/src/runtime/trigger-queueing packages/engine-core/src/runtime/optional-activation
+git commit -m "Normalize effect queued event evidence"
+```
+
+---
+
+### Task 3: Use Matcher For Auto Event Queueing
 
 **Files:**
 
@@ -528,6 +770,31 @@ git commit -m "Extract canonical event trigger matcher"
 - [ ] **Step 1: Write auto queueing regression tests**
 
 Add tests proving queueing depends on matcher results, not local trigger branches:
+
+```ts
+test("auto event reactions can hook an On Play effect being queued", () => {
+  const { reactingSource, state } = onPlayEffectQueuedReactionState({
+    reactionEffect: {
+      trigger: {
+        type: "effectQueued",
+        player: "self",
+        effectEntryPoint: { type: "onPlay" },
+      },
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+  });
+
+  const result = queueEventReactionTriggers(state);
+
+  assert.ok(result !== undefined);
+  assert.equal(result.errors, undefined);
+  const entry = must(result.state.effectQueue[0], "queued reaction");
+  assert.equal(entry.source.instanceId, reactingSource.instanceId);
+  assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
+});
+```
+
+This test intentionally uses `draw` as the body so it isolates the event hook. A real card body such as "set up to 1 of your DON!! cards as active" should remain a separate reusable body primitive under the queued effect.
 
 ```ts
 test("auto event reactions queue anyOf event triggers through the canonical matcher", () => {
@@ -661,6 +928,7 @@ In `runtime/trigger-queueing/event-reaction.ts`:
 - Delete local duplicated primitive matchers that moved to `runtime/event-hooks/matcher.ts`.
 - Keep `queuedEventReactionTriggerEventIds`, source enumeration, support checks, queue entry creation, event emission, and error handling.
 - Replace `matchingTriggerTypes(...)` calls with `matchEventTrigger(...).triggerTypes`.
+- Include `effectQueued` in `isAutoEventReactionCandidate(event)` so effects can react to other effects being queued/activated.
 - Keep recent-event filtering, already-queued filtering, and source-entry filtering in this queueing module.
 
 - [ ] **Step 4: Run auto queueing tests**
@@ -698,7 +966,7 @@ git commit -m "Use canonical matcher for auto event reactions"
 
 ---
 
-### Task 3: Use Matcher For Optional Activated Reactions
+### Task 4: Use Matcher For Optional Activated Reactions
 
 **Files:**
 
@@ -812,7 +1080,7 @@ git commit -m "Use canonical matcher for optional event reactions"
 
 ---
 
-### Task 4: Add Specialized Regression Coverage For Future Event Hooks
+### Task 5: Add Specialized Regression Coverage For Future Event Hooks
 
 **Files:**
 
@@ -905,7 +1173,7 @@ git commit -m "Add canonical event hook regression tests"
 
 ---
 
-### Task 5: Final Verification And Architecture Review
+### Task 6: Final Verification And Architecture Review
 
 **Files:**
 
