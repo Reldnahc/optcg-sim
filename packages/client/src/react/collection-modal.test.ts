@@ -118,6 +118,36 @@ describe("collection modal", () => {
     assert.match(markup, />37</u);
   });
 
+  test("stack zones render counted card layers with slight offsets", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Deck",
+        cards: [card("hidden-deck-top", "Hidden card")],
+        displayMode: "stack",
+        stackCount: 4,
+      }),
+    );
+    const zoneStyles = await readFile(zoneStylesPath, "utf8");
+
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 3);
+    assert.match(markup, /--stack-card-offset:0px/u);
+    assert.match(markup, /--stack-card-offset:1px/u);
+    assert.match(markup, /--stack-card-offset:2px/u);
+    assert.match(markup, /stack-card-top/u);
+    assert.match(
+      zoneStyles,
+      /\.zone-cards-stack\s*\{[^}]*position:\s*relative;/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.stack-card-layer\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.stack-card-top\s*\{[^}]*position:\s*relative;/u,
+    );
+  });
+
   test("empty non-stack zones do not render placeholder text", () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
