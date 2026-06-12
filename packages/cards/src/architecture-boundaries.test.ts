@@ -295,6 +295,19 @@ describe("cards package architecture boundaries", () => {
       expect(file.contents, file.path).not.toMatch(directCostChainPattern);
     }
   });
+
+  it("keeps replacement parsers on semantic instead-effect groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const replacementFiles = files.filter((file) =>
+      file.path.includes("/segments/replacement-effect/"),
+    );
+    const directInsteadChainPattern =
+      /(?:parse[A-Za-z0-9]+Instead\([^)]*\)\s*\?\?|\?\?\s*parse[A-Za-z0-9]+Instead\()/u;
+
+    for (const file of replacementFiles) {
+      expect(file.contents, file.path).not.toMatch(directInsteadChainPattern);
+    }
+  });
 });
 
 function escapeRegex(value: string): string {

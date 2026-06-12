@@ -12,26 +12,44 @@ import { parseReturnDonInstead } from "./return-don.js";
 import { parseTopLifeToHandInstead } from "./top-life-to-hand.js";
 import { parseTrashFromHandInstead } from "./trash-from-hand.js";
 
+export type ReplacementInsteadParser = (
+  text: string,
+) => ReplacementInsteadParseResult | undefined;
+
+export const replacementInsteadBodyParsers: readonly ReplacementInsteadParser[] =
+  [
+    parseTopLifeToHandInstead,
+    parseReturnDonInstead,
+    parseMoveToOwnerDeckBottomInstead,
+    parseTrashFromHandInstead,
+    parseDrawInstead,
+    parseKoSelfInstead,
+    parseTrashSelfInstead,
+    parseModifyPowerInstead,
+    parseRestSelfInstead,
+    parseRestCardsInstead,
+  ] as const;
+
+export function parseReplacementInsteadFromSet(
+  text: string,
+  parsers: readonly ReplacementInsteadParser[],
+): ReplacementInsteadParseResult | undefined {
+  for (const parser of parsers) {
+    const parsed = parser(text);
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
 export function parseInsteadEffect(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
-  return parseSequencedInsteadEffect(text) ?? parseAtomicInsteadEffect(text);
-}
-
-function parseAtomicInsteadEffect(
-  text: string,
-): ReplacementInsteadParseResult | undefined {
   return (
-    parseTopLifeToHandInstead(text) ??
-    parseReturnDonInstead(text) ??
-    parseMoveToOwnerDeckBottomInstead(text) ??
-    parseTrashFromHandInstead(text) ??
-    parseDrawInstead(text) ??
-    parseKoSelfInstead(text) ??
-    parseTrashSelfInstead(text) ??
-    parseModifyPowerInstead(text) ??
-    parseRestSelfInstead(text) ??
-    parseRestCardsInstead(text)
+    parseSequencedInsteadEffect(text) ??
+    parseReplacementInsteadFromSet(text, replacementInsteadBodyParsers)
   );
 }
 
@@ -46,7 +64,12 @@ function parseSequencedInsteadEffect(
 
   const parsed = bodyText
     .split(/\s+and\s+/iu)
-    .map((part) => parseAtomicInsteadEffect(`you may ${part} instead.`));
+    .map((part) =>
+      parseReplacementInsteadFromSet(
+        `you may ${part} instead.`,
+        replacementInsteadBodyParsers,
+      ),
+    );
   if (parsed.length < 2 || parsed.some((part) => part === undefined)) {
     return undefined;
   }
