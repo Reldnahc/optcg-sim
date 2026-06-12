@@ -122,4 +122,34 @@ describe("field card count condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses typed Character presence excluding this card as reusable filter data", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you have a {Mountain Bandits} type Character other than this card",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Mountain Bandits"],
+          excludeSelf: true,
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:type",
+        "filter:category:character",
+        "filter:excludeSelf",
+      ],
+      rest: "",
+    });
+  });
 });

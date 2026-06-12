@@ -144,6 +144,31 @@ describe("DON field count condition parser", () => {
     });
   });
 
+  it("parses total given DON as attached DON field-count data", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have a total of 2 or more given DON!! cards",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"], state: "attached" },
+        op: "gte",
+        value: 2,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+        "filter:state:attached",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses relative DON count differences as reusable field-count operands", () => {
     expect(
       parseDonFieldCountCondition({

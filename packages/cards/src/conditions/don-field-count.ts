@@ -116,9 +116,34 @@ export const parseDonFieldCountCondition: ConditionParser = (
     };
   }
 
-  const comparison = parseLeadingCountComparison({ text: comparisonText });
+  const normalizedComparisonText = comparisonText
+    .replace(/^a total of\s+/iu, "")
+    .trim();
+  const comparison = parseLeadingCountComparison({
+    text: normalizedComparisonText,
+  });
   if (comparison === undefined) {
     return undefined;
+  }
+
+  if (/^given DON!! cards$/i.test(comparison.rest)) {
+    return {
+      condition: {
+        type: "fieldCount",
+        player,
+        filter: { categories: ["don"], state: "attached" },
+        op: comparison.op,
+        value: comparison.value,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        ...comparison.evidence,
+        player === "self" ? "player:self" : "player:opponent",
+        "filter:category:don",
+        "filter:state:attached",
+      ],
+      rest: "",
+    };
   }
 
   const objectMatch = /^DON!! cards on your field$/i.exec(comparison.rest);
