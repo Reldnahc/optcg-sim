@@ -218,19 +218,50 @@ export function parseReactionPredicateFromSet(
   return undefined;
 }
 
-const parseSharedLifeRemovedEitherPlayerPredicate: ReactionPredicateParser = ({
-  text,
-}) => {
-  if (
-    text.trim().toLowerCase() !==
-    "a card is removed from your or your opponent's life cards"
-  ) {
+const parseLifeRemovedPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+  const addedToHand = /^a card is added to your hand from your Life$/iu.exec(
+    normalized,
+  );
+  if (addedToHand !== null) {
+    return {
+      trigger: lifeRemovedTrigger(["self"], "hand"),
+      evidence: ["trigger:lifeRemoved", "player:self", "destination:hand"],
+    };
+  }
+
+  const removed =
+    /^a card is removed from (?<owner>your|your opponent's|your or your opponent's) Life cards$/iu.exec(
+      normalized,
+    );
+  const owner = removed?.groups?.["owner"];
+  if (owner === undefined) {
     return undefined;
   }
 
+  const parsedOwner = parseLifeRemovedOwner(owner);
   return {
-    trigger: lifeRemovedTrigger(["self", "opponent"]),
-    evidence: ["trigger:lifeRemoved", "player:self", "player:opponent"],
+    trigger: lifeRemovedTrigger(parsedOwner.players),
+    evidence: ["trigger:lifeRemoved", ...parsedOwner.evidence],
+  };
+};
+
+const parseLifeRemovedOwner = (
+  owner: string,
+): {
+  readonly players: PlayerRef[];
+  readonly evidence: readonly ExpressionParseResult["evidence"][number][];
+} => {
+  const normalized = owner.toLowerCase();
+  if (normalized === "your") {
+    return { players: ["self"], evidence: ["player:self"] };
+  }
+  if (normalized === "your opponent's") {
+    return { players: ["opponent"], evidence: ["player:opponent"] };
+  }
+  return {
+    players: ["self", "opponent"],
+    evidence: ["player:self", "player:opponent"],
   };
 };
 
@@ -413,10 +444,7 @@ const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
 };
 
 export const activatedReactionPredicateParsers: readonly ReactionPredicateParser[] =
-  [
-    parseSharedLifeRemovedEitherPlayerPredicate,
-    activatedReactionSpecificPredicate,
-  ] as const;
+  [parseLifeRemovedPredicate, activatedReactionSpecificPredicate] as const;
 
 const activatedReactionPredicate = (
   text: string,
@@ -616,29 +644,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  if (
-    normalized.toLowerCase() === "a card is added to your hand from your life"
-  ) {
-    return {
-      trigger: lifeRemovedTrigger(["self"], "hand"),
-      evidence: ["trigger:lifeRemoved", "player:self", "destination:hand"],
-    };
-  }
-
-  const lifeRemoved =
-    /^a card is removed from (?<player>your|your opponent's) Life cards$/iu.exec(
-      normalized,
-    );
-  const lifeRemovedPlayer = lifeRemoved?.groups?.["player"];
-  if (lifeRemovedPlayer !== undefined) {
-    const player =
-      lifeRemovedPlayer.toLowerCase() === "your" ? "self" : "opponent";
-    return {
-      trigger: lifeRemovedTrigger([player]),
-      evidence: ["trigger:lifeRemoved", `player:${player}`],
-    };
-  }
-
   const characterPlayed =
     /^(?<player>you|your opponent) plays? (?<filter>.+? Character(?: card)?)$/iu.exec(
       normalized,
@@ -689,10 +694,7 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
 };
 
 export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[] =
-  [
-    parseSharedLifeRemovedEitherPlayerPredicate,
-    implicitReactionSpecificPredicate,
-  ] as const;
+  [parseLifeRemovedPredicate, implicitReactionSpecificPredicate] as const;
 
 const implicitReactionPredicates = (
   text: string,
