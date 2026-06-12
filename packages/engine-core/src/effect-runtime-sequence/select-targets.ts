@@ -18,6 +18,10 @@ import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/
 import { restFieldObjects } from "./saved-field-object.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import {
+  continuousChooseTargetRequest,
+  isContinuousResolvedEffect,
+} from "./target-decisions.js";
+import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
 } from "./frame-decisions.js";
@@ -121,26 +125,10 @@ const isContinuousEffectWithChooseTarget = (
   if (typeof effect !== "object" || effect === null) {
     return false;
   }
-  const candidate = effect as {
-    readonly target?: unknown;
-    readonly type?: unknown;
-  };
-  const target = candidate.target;
+  const candidate = effect as Effect;
   return (
-    (candidate.type === "modifyPower" ||
-      candidate.type === "giveKeyword" ||
-      candidate.type === "giveAttribute" ||
-      candidate.type === "modifyCost" ||
-      candidate.type === "invalidateEffects" ||
-      candidate.type === "cannotBecomeActive" ||
-      candidate.type === "cannotAttack" ||
-      candidate.type === "attackCost" ||
-      candidate.type === "cannotBlock" ||
-      candidate.type === "preventBlockerActivation") &&
-    typeof target === "object" &&
-    target !== null &&
-    ((target as { readonly type?: unknown }).type === "choose" ||
-      (target as { readonly type?: unknown }).type === "chooseFromZones")
+    isContinuousResolvedEffect(candidate) &&
+    continuousChooseTargetRequest(candidate) !== undefined
   );
 };
 
