@@ -164,14 +164,21 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
   p2State.trash = [trashedSource];
   const events = appendBattleKOEvents(state, source);
   const before = structuredClone(state);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const resolvedSourceCard = must(
+    state.cardManifest.cards[source.cardId],
+    "source card",
+  );
 
   const result = detectBattleKOTriggerCandidates(state, events);
 
   assert.equal(result.ok, true);
   assert.deepEqual(result.candidates, [
     {
-      effectBlockId: must(definition.effects[0], "onKO effect").id,
+      effectBlockId: onKOEffect.id,
+      effectBlock: onKOEffect,
       controllerId: p2,
+      resolvedCard: resolvedSourceCard,
       source: {
         instanceId: source.instanceId,
         cardId: source.cardId,
@@ -238,6 +245,14 @@ test("detects last-known On K.O. candidates with the field source snapshot", () 
   p2State.trash = [trashedSource];
   const events = appendBattleKOEvents(state, source);
   const before = structuredClone(state);
+  const lastKnownEffect = {
+    ...onKOEffect,
+    sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+  };
+  const resolvedSourceCard = must(
+    state.cardManifest.cards[source.cardId],
+    "source card",
+  );
 
   const result = detectBattleKOTriggerCandidates(state, events);
 
@@ -245,7 +260,9 @@ test("detects last-known On K.O. candidates with the field source snapshot", () 
   assert.deepEqual(result.candidates, [
     {
       effectBlockId: onKOEffect.id,
+      effectBlock: lastKnownEffect,
       controllerId: p2,
+      resolvedCard: resolvedSourceCard,
       source: {
         instanceId: source.instanceId,
         cardId: source.cardId,

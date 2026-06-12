@@ -227,9 +227,14 @@ test("selectTargets response resolves direct queued rest target effect", () => {
   assert.equal(target?.state, "rested");
   assert.deepEqual(
     result.events.map((event) => event.type),
-    ["decisionResolved", "effectResolved", "ruleProcessingChecked"],
+    [
+      "decisionResolved",
+      "cardRested",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
   );
-  assert.deepEqual(result.events[1]?.payload, {
+  assert.deepEqual(result.events[2]?.payload, {
     queueEntryId: entry.id,
     timingWindowId: entry.timingWindowId,
     generation: entry.generation,

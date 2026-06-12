@@ -451,7 +451,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
 
   const openedForDecline = openLifeTrigger();
   const expectedOpenedSignature = {
-    eventSeq: [8, 9, 10, 11, 12, 13],
+    eventSeq: [9, 10, 11, 12, 13, 14],
     eventIds: [
       "event:4:1:decisionResolved",
       "event:4:1:damageDealt",
@@ -469,7 +469,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "ruleProcessingChecked",
     ],
     stateHash:
-      "71a5b62209bd79e889f16d875e24eb2c6c31a3ee7d325da0a8ea1ee9be121785",
+      "b00d476761053fc0874497cf4118ae1d12a9d95c32954d71a22c193bed6ef943",
   };
   assert.deepEqual(signature(openedForDecline), expectedOpenedSignature);
   const declineDecision = must(
@@ -488,7 +488,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   );
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
   assert.deepEqual(signature(declined), {
-    eventSeq: [14, 15, 16],
+    eventSeq: [15, 16, 17],
     eventIds: [
       "event:5:1:decisionResolved",
       "event:5:2:cardMoved",
@@ -496,7 +496,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
     ],
     eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
     stateHash:
-      "c061e1acd5081b4e23616ca497b0141582bf5e0e5c0e7ced68e71da677057cf1",
+      "c98266971084dc42d7997a7e4dab6b74f529b64d747fad31d7dc63295e319f16",
   });
 
   const openedForActivation = openLifeTrigger();
@@ -519,7 +519,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   assert.equal(activated.state.effectQueue.length, 0);
   assert.equal(activated.state.revealedCards.length, 0);
   assert.deepEqual(signature(activated), {
-    eventSeq: [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
+    eventSeq: [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
     eventIds: [
       "event:5:1:decisionResolved",
       "event:5:2:cardRevealed",
@@ -549,7 +549,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "cardTrashed",
     ],
     stateHash:
-      "5de72ab283ee4805e9de05f6096482e7965616ded40aae001cdc49a7c78999a4",
+      "45350de8cd6da0eb3e3a7b1ad17e4f1d189250e4ac3bee5aa03259387b2f6f80",
   });
 
   return {

@@ -374,6 +374,7 @@ const applyDeclareAttackInternal = (
     undefined,
     {
       events,
+      eventState: state,
       sourceKind: "attack",
       sourceControllerId: attacker.playerId,
     },

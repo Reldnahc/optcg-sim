@@ -1,7 +1,7 @@
 import type { Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import { chosenCharacterSelectionId } from "../conditions/selected-target-stat-comparison.js";
+import { chosenCharacterSelectionId } from "../targets/chosen-character.js";
 import { parseOpponentFieldTarget } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 

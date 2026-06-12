@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, PlayerId } from "@optcg/types";
+import type { EffectDefinition } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack, getDeclareAttackLegalActions } from "./actions.js";
-import {
-  must,
-  p1,
-  p2,
-  resolvedCard,
-  toCardId,
-} from "../action-test-fixtures.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   passCounterStep,
   setupAttackState,
@@ -20,72 +14,12 @@ import {
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
 } from "./test-fixtures.js";
-
-const ensureDeckHasAtLeast = (
-  state: ReturnType<typeof setupAttackState>,
-  playerId: PlayerId,
-  count: number,
-) => {
-  const player = must(state.players[playerId], "deck owner");
-  if (player.deck.length >= count) {
-    return;
-  }
-  const needed = count - player.deck.length;
-  const moved = player.hand.slice(0, needed).map((card, index) => ({
-    ...card,
-    zone: {
-      zone: "deck" as const,
-      playerId,
-      slot: "deck" as const,
-      index: player.deck.length + index,
-    },
-  }));
-  player.deck = [...player.deck, ...moved];
-  player.hand = player.hand.slice(needed).map((card, index) => ({
-    ...card,
-    zone: { zone: "hand" as const, playerId, slot: "hand" as const, index },
-  }));
-};
-
-const hiddenLeakSentinels = [
-  "hidden-attacker-hand-card",
-  "hidden-defender-deck-card",
-  "hidden-defender-life-card",
-] as const;
-
-const seedHiddenLeakSentinels = (
-  state: ReturnType<typeof setupAttackState>,
-) => {
-  const p1State = must(state.players[p1], "p1 hidden sentinel player");
-  const p2State = must(state.players[p2], "p2 hidden sentinel player");
-  const p1Hand = must(p1State.hand[0], "p1 hidden hand card");
-  const p2Deck = must(p2State.deck[0], "p2 hidden deck card");
-  const p2Life = must(p2State.life[0], "p2 hidden life card");
-  p1State.hand[0] = {
-    ...p1Hand,
-    cardId: toCardId("hidden-attacker-hand-card"),
-  };
-  p2State.deck[0] = {
-    ...p2Deck,
-    cardId: toCardId("hidden-defender-deck-card"),
-  };
-  p2State.life[0] = {
-    ...p2Life,
-    card: {
-      ...p2Life.card,
-      cardId: toCardId("hidden-defender-life-card"),
-    },
-  };
-};
-
-const assertNoHiddenLeakInErrors = (
-  errors: ReturnType<typeof applyDeclareAttack>["errors"],
-) => {
-  const serialized = JSON.stringify(errors);
-  for (const sentinel of hiddenLeakSentinels) {
-    assert.equal(serialized.includes(sentinel), false, sentinel);
-  }
-};
+import { expectedEffectQueuedPayload } from "./effect-queued-test-helpers.js";
+import {
+  assertNoHiddenLeakInErrors,
+  ensureDeckHasAtLeast,
+  seedHiddenLeakSentinels,
+} from "./declare-attack-timing-test-helpers.js";
 
 test("ENG-023A: getLegalActions includes supported When Attacking attacker", () => {
   const state = setupAttackState();
@@ -228,15 +162,32 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
     "attackDeclared event",
   );
   const effectQueued = must(events[effectQueuedIndex], "effectQueued");
-  assert.deepEqual(effectQueued.payload, {
-    queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(effect.id)}`,
-    timingWindowId: `timing-window:${String(attackDeclared.id)}`,
-    generation: 0,
-    effectBlockId: effect.id,
-    triggerEventId: attackDeclared.id,
-    sourcePresencePolicy: "mustRemainInSameZone",
-    orderingGroup: "turnPlayer",
-  });
+  const queuedSource = {
+    instanceId: attacker.instanceId,
+    cardId: attacker.cardId,
+    playerId: p1,
+    zone: {
+      zone: "leaderArea" as const,
+      playerId: p1,
+      slot: "leader" as const,
+    },
+  };
+  assert.deepEqual(
+    effectQueued.payload,
+    expectedEffectQueuedPayload({
+      queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(effect.id)}`,
+      timingWindowId: `timing-window:${String(attackDeclared.id)}`,
+      effectBlockId: effect.id,
+      triggerEventId: attackDeclared.id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      orderingGroup: "turnPlayer",
+      controllerId: p1,
+      source: queuedSource,
+      effectCategory: "auto",
+      entryPoint: { type: "whenAttacking" },
+      sourceCategory: "leader",
+    }),
+  );
   for (const event of opened.events) {
     assert.equal(event.createdAtStateSeq, opened.state.seq);
   }
@@ -642,15 +593,32 @@ test("ENG-023B: defender On Your Opponent's Attack resolves before Counter Step 
     "attackDeclared event",
   );
   const effectQueued = must(result.events[effectQueuedIndex], "effectQueued");
-  assert.deepEqual(effectQueued.payload, {
-    queueEntryId: `queue-entry:${String(attackDeclared.id)}:onOpponentAttack:${String(p2State.leader.instanceId)}:${String(effect.id)}`,
-    timingWindowId: `timing-window:${String(attackDeclared.id)}:onOpponentAttack`,
-    generation: 0,
-    effectBlockId: effect.id,
-    triggerEventId: attackDeclared.id,
-    sourcePresencePolicy: "mustRemainInSameZone",
-    orderingGroup: "nonTurnPlayer",
-  });
+  const queuedSource = {
+    instanceId: p2State.leader.instanceId,
+    cardId: p2State.leader.cardId,
+    playerId: p2,
+    zone: {
+      zone: "leaderArea" as const,
+      playerId: p2,
+      slot: "leader" as const,
+    },
+  };
+  assert.deepEqual(
+    effectQueued.payload,
+    expectedEffectQueuedPayload({
+      queueEntryId: `queue-entry:${String(attackDeclared.id)}:onOpponentAttack:${String(p2State.leader.instanceId)}:${String(effect.id)}`,
+      timingWindowId: `timing-window:${String(attackDeclared.id)}:onOpponentAttack`,
+      effectBlockId: effect.id,
+      triggerEventId: attackDeclared.id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      orderingGroup: "nonTurnPlayer",
+      controllerId: p2,
+      source: queuedSource,
+      effectCategory: "auto",
+      entryPoint: { type: "onOpponentAttack" },
+      sourceCategory: "leader",
+    }),
+  );
 });
 
 test("ENG-023B: character Counter is usable after attacker and defender attack timing resolve", () => {
@@ -828,34 +796,68 @@ test("ENG-023C: attacker attack timing resolves before defender attack timing an
     result.events[attackerQueuedIndex],
     "ENG-023C attacker effectQueued",
   );
-  assert.deepEqual(attackerQueued.payload, {
-    queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(
-      attackerEffect.id,
-    )}`,
-    timingWindowId: `timing-window:${String(attackDeclared.id)}`,
-    generation: 0,
-    effectBlockId: attackerEffect.id,
-    triggerEventId: attackDeclared.id,
-    sourcePresencePolicy: "mustRemainInSameZone",
-    orderingGroup: "turnPlayer",
-  });
+  const attackerQueuedSource = {
+    instanceId: p1State.leader.instanceId,
+    cardId: p1State.leader.cardId,
+    playerId: p1,
+    zone: {
+      zone: "leaderArea" as const,
+      playerId: p1,
+      slot: "leader" as const,
+    },
+  };
+  assert.deepEqual(
+    attackerQueued.payload,
+    expectedEffectQueuedPayload({
+      queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(
+        attackerEffect.id,
+      )}`,
+      timingWindowId: `timing-window:${String(attackDeclared.id)}`,
+      effectBlockId: attackerEffect.id,
+      triggerEventId: attackDeclared.id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      orderingGroup: "turnPlayer",
+      controllerId: p1,
+      source: attackerQueuedSource,
+      effectCategory: "auto",
+      entryPoint: { type: "whenAttacking" },
+      sourceCategory: "leader",
+    }),
+  );
   const defenderQueued = must(
     result.events[defenderQueuedIndex],
     "ENG-023C defender effectQueued",
   );
-  assert.deepEqual(defenderQueued.payload, {
-    queueEntryId: `queue-entry:${String(
-      attackDeclared.id,
-    )}:onOpponentAttack:${String(p2State.leader.instanceId)}:${String(defenderEffect.id)}`,
-    timingWindowId: `timing-window:${String(
-      attackDeclared.id,
-    )}:onOpponentAttack`,
-    generation: 0,
-    effectBlockId: defenderEffect.id,
-    triggerEventId: attackDeclared.id,
-    sourcePresencePolicy: "mustRemainInSameZone",
-    orderingGroup: "nonTurnPlayer",
-  });
+  const defenderQueuedSource = {
+    instanceId: p2State.leader.instanceId,
+    cardId: p2State.leader.cardId,
+    playerId: p2,
+    zone: {
+      zone: "leaderArea" as const,
+      playerId: p2,
+      slot: "leader" as const,
+    },
+  };
+  assert.deepEqual(
+    defenderQueued.payload,
+    expectedEffectQueuedPayload({
+      queueEntryId: `queue-entry:${String(
+        attackDeclared.id,
+      )}:onOpponentAttack:${String(p2State.leader.instanceId)}:${String(defenderEffect.id)}`,
+      timingWindowId: `timing-window:${String(
+        attackDeclared.id,
+      )}:onOpponentAttack`,
+      effectBlockId: defenderEffect.id,
+      triggerEventId: attackDeclared.id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      orderingGroup: "nonTurnPlayer",
+      controllerId: p2,
+      source: defenderQueuedSource,
+      effectCategory: "auto",
+      entryPoint: { type: "onOpponentAttack" },
+      sourceCategory: "leader",
+    }),
+  );
 });
 
 test("ENG-023B: defender timing resolves before Block Step decision", () => {

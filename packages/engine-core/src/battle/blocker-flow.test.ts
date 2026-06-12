@@ -794,7 +794,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "ba6d94ac93691c308785035750980336a20de91f8f25826d4ce5a867ebb2d243",
+    "d14501837c7f988180cce0f9a768d6d2570ac9d3cc4f6297da6a118d0d91bb25",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);

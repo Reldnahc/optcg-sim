@@ -1,20 +1,5 @@
-import type { Target } from "@optcg/types";
-
+import { chosenCharacterTarget } from "../targets/chosen-character.js";
 import type { ConditionParseResult, ConditionParser } from "../types.js";
-
-const chosenCharacterSelectionId = "selected:chosenCharacter";
-
-const chosenCharacterTarget = (): Target => ({
-  type: "savedFieldObject",
-  binding: {
-    family: "selectedTargets",
-    saveResultAs: chosenCharacterSelectionId,
-  },
-  zone: "characterArea",
-  player: "opponent",
-  visibility: "publicOnly",
-  onFailure: "failClosed",
-});
 
 export const parseSelectedTargetStatComparisonCondition: ConditionParser = (
   input,
@@ -51,5 +36,3 @@ export const parseSelectedTargetStatComparisonCondition: ConditionParser = (
     rest: "",
   };
 };
-
-export { chosenCharacterSelectionId, chosenCharacterTarget };

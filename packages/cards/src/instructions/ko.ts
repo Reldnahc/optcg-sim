@@ -5,7 +5,7 @@ import {
   parseAllFieldTarget,
   parseOpponentFieldTarget,
 } from "../targets/index.js";
-import { chosenCharacterTarget } from "../conditions/selected-target-stat-comparison.js";
+import { chosenCharacterTarget } from "../targets/chosen-character.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";

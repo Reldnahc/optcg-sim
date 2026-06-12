@@ -919,6 +919,6 @@ test("accepted opponent effect field-removal replacement rests selected own card
   assert.equal(must(nextP2.costArea[0], "rested don").state, "rested");
   assert.deepEqual(
     resolved.events.map((event) => event.type),
-    ["decisionResolved", "replacementApplied"],
+    ["decisionResolved", "cardRested", "replacementApplied"],
   );
 });

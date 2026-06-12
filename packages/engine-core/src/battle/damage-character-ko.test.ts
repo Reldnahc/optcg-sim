@@ -641,6 +641,17 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
   );
   const queuedId = `queue-entry:${String(cardKOd.id)}:${String(onKOEffect.id)}`;
   const timingWindowId = `timing-window:${String(cardKOd.id)}:onKO`;
+  const queuedSource = {
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    playerId: p2,
+    zone: {
+      zone: "trash",
+      playerId: p2,
+      slot: "trash",
+      index: 0,
+    },
+  };
   assert.deepEqual(effectQueued.payload, {
     queueEntryId: queuedId,
     timingWindowId,
@@ -649,6 +660,18 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
     triggerEventId: cardKOd.id,
     sourcePresencePolicy: "resolveFromDestinationZone",
     orderingGroup: "nonTurnPlayer",
+    controllerId: p2,
+    source: queuedSource,
+    sourceCardId: target.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onKO" },
+    sourceTypes: [],
+    sourceCategory: "character",
+    presentation: {
+      source: queuedSource,
+      textKind: "effect",
+      activeSpanIds: [],
+    },
   });
   assert.deepEqual(effectQueued.causedBy, {
     type: "ruleProcess",
@@ -664,17 +687,7 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
     sourcePresencePolicy: "resolveFromDestinationZone",
     orderingGroup: "nonTurnPlayer",
     presentation: {
-      source: {
-        instanceId: target.instanceId,
-        cardId: target.cardId,
-        playerId: p2,
-        zone: {
-          zone: "trash",
-          playerId: p2,
-          slot: "trash",
-          index: 0,
-        },
-      },
+      source: queuedSource,
       textKind: "effect",
       activeSpanIds: [],
     },

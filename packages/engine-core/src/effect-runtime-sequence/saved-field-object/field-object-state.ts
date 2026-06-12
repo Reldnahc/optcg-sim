@@ -29,6 +29,7 @@ type CardRestedSourceKind = "attack" | "blocker" | "cost" | "effect" | "rule";
 
 export interface RestFieldObjectEventOptions {
   readonly events: EngineEvent[];
+  readonly eventState?: GameState;
   readonly sourceControllerId?: PlayerId;
   readonly sourceKind?: CardRestedSourceKind;
 }
@@ -58,7 +59,7 @@ const appendCardRestedEvent = (
     return;
   }
   appendEvent(
-    state,
+    options.eventState ?? state,
     options.events,
     "cardRested",
     {
