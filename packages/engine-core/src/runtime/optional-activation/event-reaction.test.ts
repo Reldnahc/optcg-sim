@@ -6,6 +6,7 @@ import type {
   EffectDefinition,
   EffectId,
   EngineEvent,
+  EventVisibility,
 } from "@optcg/types";
 
 import { appendEvent } from "../../action-results.js";
@@ -157,6 +158,7 @@ const installActivatedDrawDefinition = (params: {
 
 const appendAttackDeclaredEvent = (
   state: ReturnType<typeof createActiveState>,
+  visibility: EventVisibility = { type: "public" },
 ): void => {
   const events: EngineEvent[] = [];
   const p2State = must(state.players[p2], "p2");
@@ -178,7 +180,7 @@ const appendAttackDeclaredEvent = (
         cardId: must(state.players[p1], "p1").leader.cardId,
       },
     },
-    { type: "public" },
+    visibility,
   );
   state.eventJournal = [...state.eventJournal, ...events];
 };
@@ -273,6 +275,27 @@ test("activated opponent-attack reactions are optional legal actions", () => {
     must(result.state.players[p1], "p1 after").hand.length,
     beforeHand + 1,
   );
+});
+
+test("activated opponent-attack reactions ignore non-public attack events", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "main";
+  const leader = must(state.players[p1], "p1").leader;
+  const effectId = toEffectId("activated-hidden-opponent-attack-draw");
+  installActivatedDrawDefinition({
+    state,
+    sourceCardId: leader.cardId,
+    effectId,
+    trigger: { type: "onOpponentAttack" },
+  });
+  appendAttackDeclaredEvent(state, { type: "replayOnly" });
+
+  const p1Actions = getLegalActions(state, p1).filter(
+    (action) => action.type === "activateEffect",
+  );
+
+  assert.deepEqual(p1Actions, []);
 });
 
 test("activated played-card reactions honor effect-entry-point filters", () => {
