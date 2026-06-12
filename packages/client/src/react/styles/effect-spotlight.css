@@ -158,7 +158,7 @@
 
 .effect-spotlight .card-rules-tag--trigger {
   margin: -0.15em 0 -0.2em 0;
-  border-radius: 0.25em 0 0 0.25em;
+  border-radius: 0;
   padding: 0.15em 1.4em 0.15em 0.3em;
   line-height: 1.65;
   font-size: 0.9em;
