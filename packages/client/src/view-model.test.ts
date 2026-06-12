@@ -522,6 +522,82 @@ describe("board view model", () => {
     );
   });
 
+  test("projects terminal reveal cards for hands, decks, DON decks, and life", () => {
+    const view = minimalView();
+    view.self.deck = [card("self-deck-1", "OP15-116", "deck")];
+    view.self.donDeck = [card("self-don-deck-1", "DON", "donDeck")];
+    view.self.life = {
+      count: 2,
+      faceUpCards: [
+        {
+          ...card("self-life-1", "OP15-116", "life"),
+          zone: { playerId: p1, zone: "life", slot: "life", index: 0 },
+        },
+        {
+          ...card("self-life-2", "OP15-117", "life"),
+          zone: { playerId: p1, zone: "life", slot: "life", index: 1 },
+        },
+      ],
+    };
+    view.opponent.hand = [card("opponent-hand-1", "OP15-118", "hand", p2)];
+    view.opponent.deck = [card("opponent-deck-1", "OP15-119", "deck", p2)];
+    view.opponent.donDeck = [card("opponent-don-deck-1", "DON", "donDeck", p2)];
+    view.opponent.life = {
+      count: 1,
+      faceUpCards: [
+        {
+          ...card("opponent-life-1", "OP15-120", "life", p2),
+          zone: { playerId: p2, zone: "life", slot: "life", index: 0 },
+        },
+      ],
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(
+      model.self.deckCards?.map((cardModel) => cardModel.instanceId),
+      ["self-deck-1"],
+    );
+    assert.deepEqual(
+      model.self.donDeckCards?.map((cardModel) => cardModel.instanceId),
+      ["self-don-deck-1"],
+    );
+    assert.deepEqual(
+      model.self.lifeCards.map((cardModel) => cardModel.instanceId),
+      ["self-life-1", "self-life-2"],
+    );
+    assert.deepEqual(
+      model.opponent.hand?.map((cardModel) => cardModel.instanceId),
+      ["opponent-hand-1"],
+    );
+    assert.deepEqual(
+      model.opponent.deckCards?.map((cardModel) => cardModel.instanceId),
+      ["opponent-deck-1"],
+    );
+    assert.deepEqual(
+      model.opponent.donDeckCards?.map((cardModel) => cardModel.instanceId),
+      ["opponent-don-deck-1"],
+    );
+    assert.deepEqual(
+      model.opponent.lifeCards.map((cardModel) => cardModel.instanceId),
+      ["opponent-life-1"],
+    );
+  });
+
   test("projects public battle attacker and current target for both seats", () => {
     const view = minimalView();
     view.opponent.leader.currentPower = 5000;

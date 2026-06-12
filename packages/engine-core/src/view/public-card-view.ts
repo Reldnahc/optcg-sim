@@ -61,10 +61,13 @@ export const toBoardPublicCardView = (
   };
 };
 
-export const toPublicLifeView = (player: PlayerState) => ({
+export const toPublicLifeView = (
+  player: PlayerState,
+  options: { readonly revealAll?: boolean } = {},
+) => ({
   count: player.life.length,
   faceUpCards: player.life
-    .filter((lifeCard) => lifeCard.faceUp)
+    .filter((lifeCard) => options.revealAll === true || lifeCard.faceUp)
     .map((lifeCard) => toPublicCardView(lifeCard.card)),
 });
 

@@ -191,10 +191,10 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
 });
 
 test("TYP-002A player view excludes opponent hidden identities and private internals", () => {
-  const noOpponentHandCards: HasNoKey<OpponentVisibleState, "hand"> = true;
-  const noOpponentDeckCards: HasNoKey<OpponentVisibleState, "deck"> = true;
-  const noOpponentDonDeckCards: HasNoKey<OpponentVisibleState, "donDeck"> =
-    true;
+  const terminalOpponentReveal: Pick<
+    OpponentVisibleState,
+    "deck" | "donDeck" | "hand"
+  > = {};
   const noRng: HasNoKey<PlayerView, "rng"> = true;
   const noEffectQueue: HasNoKey<PlayerView, "effectQueue"> = true;
   const noEffectExecutionFrames: HasNoKey<PlayerView, "effectExecutionFrames"> =
@@ -210,9 +210,7 @@ test("TYP-002A player view excludes opponent hidden identities and private inter
   const noQuantityValueInLegalAction: HasNoKey<PublicLegalAction, "quantity"> =
     true;
 
-  expect(noOpponentHandCards).toBe(true);
-  expect(noOpponentDeckCards).toBe(true);
-  expect(noOpponentDonDeckCards).toBe(true);
+  expect(terminalOpponentReveal).toEqual({});
   expect(noRng).toBe(true);
   expect(noEffectQueue).toBe(true);
   expect(noEffectExecutionFrames).toBe(true);
@@ -242,14 +240,10 @@ test("public decision presentation can expose active effect text spans", () => {
 });
 
 test("TYP-002A initial spectator view excludes hidden identities and player-only choices", () => {
-  const noSpectatorHandCards: HasNoKey<SpectatorVisiblePlayerState, "hand"> =
-    true;
-  const noSpectatorDeckCards: HasNoKey<SpectatorVisiblePlayerState, "deck"> =
-    true;
-  const noSpectatorDonDeckCards: HasNoKey<
+  const terminalSpectatorReveal: Pick<
     SpectatorVisiblePlayerState,
-    "donDeck"
-  > = true;
+    "deck" | "donDeck" | "hand"
+  > = {};
   const noPendingDecision: HasNoKey<SpectatorView, "pendingDecision"> = true;
   const noLegalActions: HasNoKey<SpectatorView, "legalActions"> = true;
   const noRng: HasNoKey<SpectatorView, "rng"> = true;
@@ -288,9 +282,7 @@ test("TYP-002A initial spectator view excludes hidden identities and player-only
     visibility: { type: "private", playerId: player },
   };
 
-  expect(noSpectatorHandCards).toBe(true);
-  expect(noSpectatorDeckCards).toBe(true);
-  expect(noSpectatorDonDeckCards).toBe(true);
+  expect(terminalSpectatorReveal).toEqual({});
   expect(noPendingDecision).toBe(true);
   expect(noLegalActions).toBe(true);
   expect(noRng).toBe(true);

@@ -51,7 +51,9 @@ export interface ClientPlayerZonesModel {
   costArea: ClientCardModel[];
   trash: ClientCardModel[];
   deckCount: number;
+  deckCards?: ClientCardModel[];
   donDeckCount: number;
+  donDeckCards?: ClientCardModel[];
   lifeCount: number;
   lifeCards: ClientCardModel[];
 }
@@ -93,7 +95,10 @@ export interface BoardViewModel {
   selfRestrictions?: string[];
   opponentRestrictions?: string[];
   self: ClientPlayerZonesModel;
-  opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
+  opponent: Omit<ClientPlayerZonesModel, "hand"> & {
+    hand?: ClientCardModel[];
+    handCount: number;
+  };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
   activeCardInstanceIds?: readonly string[] | undefined;
   battleArrow?: {
@@ -299,7 +304,17 @@ const selfZones = (
       cardModel(card, catalog, { includeState: false }),
     ),
     deckCount: view.self.deckCount,
+    ...(view.self.deck === undefined
+      ? {}
+      : { deckCards: view.self.deck.map((card) => cardModel(card, catalog)) }),
     donDeckCount: view.self.donDeckCount,
+    ...(view.self.donDeck === undefined
+      ? {}
+      : {
+          donDeckCards: view.self.donDeck.map((card) =>
+            cardModel(card, catalog),
+          ),
+        }),
     lifeCount: view.self.life.count,
     lifeCards: lifeCards(view.self.life, catalog, "hidden-life-self"),
   };
@@ -339,10 +354,25 @@ const opponentZones = (
       cardModel(card, catalog, { includeState: false }),
     ),
     deckCount: view.opponent.deckCount,
+    ...(view.opponent.deck === undefined
+      ? {}
+      : {
+          deckCards: view.opponent.deck.map((card) => cardModel(card, catalog)),
+        }),
     donDeckCount: view.opponent.donDeckCount,
+    ...(view.opponent.donDeck === undefined
+      ? {}
+      : {
+          donDeckCards: view.opponent.donDeck.map((card) =>
+            cardModel(card, catalog),
+          ),
+        }),
     lifeCount: view.opponent.life.count,
     lifeCards: lifeCards(view.opponent.life, catalog, "hidden-life-opponent"),
     handCount: view.opponent.handCount,
+    ...(view.opponent.hand === undefined
+      ? {}
+      : { hand: view.opponent.hand.map((card) => cardModel(card, catalog)) }),
   };
 };
 
