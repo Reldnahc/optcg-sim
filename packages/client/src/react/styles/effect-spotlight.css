@@ -195,6 +195,7 @@
 
 .effect-spotlight .trigger-block--wraps .card-rules-tag--trigger {
   border-radius: 0;
+  vertical-align: top;
 }
 
 .effect-spotlight .card-rules-tag--ability {
