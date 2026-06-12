@@ -11,7 +11,6 @@ import {
   continuousChooseTargetRequest,
   createSequenceSelectTargetsPause,
   hasSavedFieldObjectContinuousTarget,
-  isContinuousResolvedEffect,
 } from "../target-decisions.js";
 import { createSupportedHandSelectionChoiceDecision } from "../../effect-runtime-hand-selection.js";
 import { applyFieldMutationSequenceSegment } from "../field-segments.js";
@@ -26,6 +25,7 @@ import { applyPlaySelectedSequenceSegment } from "../../runtime/primitives/play-
 import { applyActivateSelectedEventSequenceSegment } from "../../runtime/primitives/activate-selected-event.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
+import { isSupportedContinuousQueueEffect } from "../../runtime/continuous/support.js";
 import { applySelectTargetsSequenceSegment } from "../select-targets.js";
 import { createTopDeckPlacementDecision } from "../../effect-runtime-top-deck-placement.js";
 import {
@@ -766,7 +766,7 @@ export const continueNoDecisionSegments = (
       continue;
     }
     if (
-      isContinuousResolvedEffect(segment.effect) &&
+      isSupportedContinuousQueueEffect(segment.effect) &&
       !hasSavedFieldObjectContinuousTarget(segment.effect)
     ) {
       const request = continuousChooseTargetRequest(segment.effect);
@@ -893,7 +893,7 @@ export const continueNoDecisionSegments = (
       let changedState = false;
       if (
         segment.effect.then.type === "sequence" ||
-        !isContinuousResolvedEffect(segment.effect.then)
+        !isSupportedContinuousQueueEffect(segment.effect.then)
       ) {
         const thenSequence =
           segment.effect.then.type === "sequence"

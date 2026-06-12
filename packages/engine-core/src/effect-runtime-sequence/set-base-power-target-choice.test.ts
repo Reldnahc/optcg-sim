@@ -238,3 +238,91 @@ test("selectTargets saved reference can feed setBasePower snapshot value", () =>
   assert.equal(basePowerRecord.modifier.operation.type, "setBasePower");
   assert.equal(basePowerRecord.modifier.operation.value, 5000);
 });
+
+test("selectTargets saved reference can feed setBasePower target", () => {
+  const { state } = setupSequenceState({
+    type: "sequence",
+    effects: [
+      {
+        id: "select-target",
+        connector: "always",
+        saveResultAs: "selected:base-power-target",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character"] },
+          },
+        },
+      },
+      {
+        id: "set-base-power-on-selected",
+        connector: "then",
+        effect: {
+          type: "setBasePower",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "selectedTargets",
+              saveResultAs: "selected:base-power-target",
+            },
+            zone: "characterArea",
+            player: "opponent",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+          value: 7000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    ],
+  });
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "target"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 5000,
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const record = resolved.state.continuousEffects.find(
+    (effectRecord) =>
+      effectRecord.modifier.layer === "basePowerSet" &&
+      effectRecord.modifier.operation.type === "setBasePower",
+  );
+  const basePowerRecord = must(record, "saved target base power record");
+  assert.equal(basePowerRecord.modifier.operation.type, "setBasePower");
+  assert.equal(basePowerRecord.modifier.operation.value, 7000);
+  assert.equal(basePowerRecord.modifier.target.type, "exactCard");
+  assert.equal(
+    basePowerRecord.modifier.target.card.instanceId,
+    target.instanceId,
+  );
+});

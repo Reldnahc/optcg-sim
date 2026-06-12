@@ -699,6 +699,45 @@ test("cannotBlock choose creates exact-card continuous restriction bound to sele
   assert.equal(created.modifier.operation.restriction, "cannotBlock");
 });
 
+test("setBasePower chooseFromZones creates exact-card continuous modifier bound to selected target", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "setBasePower",
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["characterArea"],
+        min: 1,
+        max: 1,
+        allowFewerIfUnavailable: false,
+        visibility: "public",
+      },
+    },
+    value: 7000,
+    duration: { type: "thisTurn" },
+  });
+  removeFieldCardsFromHands(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selectTargets decision");
+  assert.equal(decision.type, "selectTargets");
+  const selected = must(decision.candidates[0], "selected").card;
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+  assert.equal(result.errors, undefined);
+  const created = must(result.state.continuousEffects[0], "continuous");
+  assert.equal(created.modifier.layer, "basePowerSet");
+  assert.equal(created.modifier.target.type, "exactCard");
+  assert.equal(created.modifier.target.card.instanceId, selected.instanceId);
+  assert.equal(created.modifier.operation.type, "setBasePower");
+  assert.equal(created.modifier.operation.value, 7000);
+});
+
 test.each([
   {
     name: "modifyPower",

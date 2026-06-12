@@ -1,6 +1,10 @@
 import type { Duration, Effect, Target } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../../runtime/continuous/continuous.js";
+import {
+  isSupportedResolvedTargetContinuousEffect,
+  type ResolvedTargetContinuousEffect,
+} from "../../runtime/continuous/resolved-target.js";
 import { isSourceDependentContinuousQueueEffect } from "../../runtime/continuous/support.js";
 import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
 import {
@@ -47,17 +51,7 @@ export type ConditionalContinuousEffect = Extract<
     | Extract<Effect, { type: "cannotBlock" }>
     | Extract<Effect, { type: "preventBlockerActivation" }>;
 };
-export type SavedTargetContinuousEffect = (
-  | Extract<Effect, { type: "modifyPower" }>
-  | Extract<Effect, { type: "giveKeyword" }>
-  | Extract<Effect, { type: "giveAttribute" }>
-  | Extract<Effect, { type: "cannotBecomeActive" }>
-  | Extract<Effect, { type: "cannotAttack" }>
-  | Extract<Effect, { type: "attackCost" }>
-  | Extract<Effect, { type: "cannotBlock" }>
-  | Extract<Effect, { type: "preventBlockerActivation" }>
-  | Extract<Effect, { type: "invalidateEffects" }>
-) & {
+export type SavedTargetContinuousEffect = ResolvedTargetContinuousEffect & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
 export type SwapBasePowerEffect = Extract<Effect, { type: "swapBasePower" }>;
@@ -80,27 +74,18 @@ export const isSourceDependentContinuousSegment = (
   isSupportedContinuousQueueEffect(effect) &&
   isSourceDependentContinuousQueueEffect(effect);
 
+const isSupportedSavedContinuousTarget = (
+  target: Target,
+): target is Extract<Target, { type: "savedFieldObject" }> =>
+  isSupportedSavedLeaderOrCharacterTarget(target) ||
+  isSupportedSavedFieldObjectKoTarget(target);
+
 export const isSupportedSavedTargetContinuousSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SavedTargetContinuousEffect =>
-  (effect.type === "modifyPower" ||
-    effect.type === "giveKeyword" ||
-    effect.type === "giveAttribute" ||
-    effect.type === "cannotBecomeActive" ||
-    effect.type === "cannotAttack" ||
-    effect.type === "attackCost" ||
-    effect.type === "cannotBlock" ||
-    effect.type === "preventBlockerActivation" ||
-    effect.type === "invalidateEffects") &&
-  (effect.type === "modifyPower" ||
-  effect.type === "giveKeyword" ||
-  effect.type === "giveAttribute" ||
-  effect.type === "preventBlockerActivation" ||
-  effect.type === "invalidateEffects"
-    ? isSupportedSavedLeaderOrCharacterTarget(effect.target)
-    : isSupportedSavedFieldObjectKoTarget(effect.target)) &&
-  (effect.type !== "modifyPower" ||
-    (typeof effect.value === "number" && Number.isSafeInteger(effect.value))) &&
+  effect.type !== "payCost" &&
+  isSupportedResolvedTargetContinuousEffect(effect) &&
+  isSupportedSavedContinuousTarget(effect.target) &&
   isSupportedSequenceContinuousDuration(effect.duration);
 
 export const isSupportedConditionalContinuousSegment = (

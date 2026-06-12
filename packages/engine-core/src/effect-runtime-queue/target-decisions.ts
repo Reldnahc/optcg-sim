@@ -29,6 +29,11 @@ import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
 } from "../runtime/continuous/continuous.js";
+import {
+  continuousChooseTargetRequest,
+  isSupportedContinuousTargetChoiceEffect,
+  type ContinuousTargetChoiceEffect,
+} from "../runtime/continuous/targeting.js";
 import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 import {
@@ -114,19 +119,6 @@ type SupportedSelectedTargetKoEffect = Extract<Effect, { type: "ko" }> & {
 type SupportedSelectedTargetRestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<Target, { type: "choose" | "chooseFromZones" }>;
 };
-type SupportedSelectedTargetContinuousEffect =
-  | (Extract<Effect, { type: "modifyPower" }> & {
-      target: Extract<Target, { type: "choose" }>;
-    })
-  | (Extract<Effect, { type: "cannotAttack" }> & {
-      target: Extract<Target, { type: "choose" }>;
-    })
-  | (Extract<Effect, { type: "preventBlockerActivation" }> & {
-      target: Extract<Target, { type: "choose" }>;
-    })
-  | (Extract<Effect, { type: "cannotBlock" }> & {
-      target: Extract<Target, { type: "choose" }>;
-    });
 
 const isEffectQueueCausality = (
   causedBy: CausalityRef,
@@ -188,13 +180,10 @@ const isSupportedTargetChoiceContinuousShape = (
   entry: EffectQueueEntry,
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: SupportedSelectedTargetContinuousEffect;
+  effect: ContinuousTargetChoiceEffect;
 } => {
   if (isMainEventQueueEntry(entry)) {
-    if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
-    if (!("target" in effect.effect) || !isChooseTarget(effect.effect.target)) {
-      return false;
-    }
+    if (!isSupportedContinuousTargetChoiceEffect(effect.effect)) return false;
     return (
       effect.category === "auto" &&
       effect.trigger.type === mainTriggerType &&
@@ -204,10 +193,7 @@ const isSupportedTargetChoiceContinuousShape = (
     );
   }
   if (isScopedActivateMainTargetQueueEntry(entry)) {
-    if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
-    if (!("target" in effect.effect) || !isChooseTarget(effect.effect.target)) {
-      return false;
-    }
+    if (!isSupportedContinuousTargetChoiceEffect(effect.effect)) return false;
     return (
       effect.category === "activate" &&
       effect.trigger.type === activateMainTriggerType &&
@@ -228,9 +214,7 @@ const isSupportedTargetChoiceContinuousShape = (
   ) {
     return false;
   }
-  if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
-  if (!("target" in effect.effect)) return false;
-  return effect.effect.target.type === "choose";
+  return isSupportedContinuousTargetChoiceEffect(effect.effect);
 };
 
 type EffectWithTarget = Extract<Effect, { target: unknown }>;
@@ -250,6 +234,9 @@ const isSelectableTarget = (
 const targetRequestForEffect = (
   effect: Effect,
 ): TargetRequest | MultiZoneTargetRequest | undefined => {
+  if (isSupportedContinuousQueueEffect(effect)) {
+    return continuousChooseTargetRequest(effect);
+  }
   if (!("target" in effect)) {
     return undefined;
   }
@@ -360,7 +347,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         effect:
           | SupportedSelectedTargetKoEffect
           | SupportedSelectedTargetRestEffect
-          | SupportedSelectedTargetContinuousEffect;
+          | ContinuousTargetChoiceEffect;
         oncePerTurn: boolean;
       }
     | { ok: false } => {

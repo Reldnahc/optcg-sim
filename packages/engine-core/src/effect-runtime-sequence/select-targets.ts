@@ -15,12 +15,10 @@ import type {
 
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
+import type { ContinuousTargetChoiceEffect } from "../runtime/continuous/targeting.js";
+import { isSupportedContinuousTargetChoiceEffect } from "../runtime/continuous/targeting.js";
 import { restFieldObjects } from "./saved-field-object.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
-import {
-  continuousChooseTargetRequest,
-  isContinuousResolvedEffect,
-} from "./target-decisions.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
@@ -34,31 +32,11 @@ import { resolveSequenceForPath as resolveSharedSequenceForPath } from "./paths.
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
-type ContinuousResolvedEffect = Extract<
-  Effect,
-  {
-    type:
-      | "modifyPower"
-      | "giveKeyword"
-      | "giveAttribute"
-      | "setBasePower"
-      | "modifyCost"
-      | "invalidateEffects"
-      | "cannotBecomeActive"
-      | "cannotAttack"
-      | "attackCost"
-      | "cannotBlock"
-      | "preventBlockerActivation";
-  }
->;
-type ContinuousEffectWithChooseTarget = ContinuousResolvedEffect & {
-  readonly target: Extract<Target, { type: "choose" | "chooseFromZones" }>;
-};
 type ConditionalContinuousChooseTargetEffect = Extract<
   Effect,
   { type: "conditional" }
 > & {
-  readonly then: ContinuousEffectWithChooseTarget;
+  readonly then: ContinuousTargetChoiceEffect;
 };
 
 const rootSequenceEffectPath = ["effect", "sequence"] as const;
@@ -121,15 +99,11 @@ type SequenceRuntimeError = (
 
 const isContinuousEffectWithChooseTarget = (
   effect: unknown,
-): effect is ContinuousEffectWithChooseTarget => {
+): effect is ContinuousTargetChoiceEffect => {
   if (typeof effect !== "object" || effect === null) {
     return false;
   }
-  const candidate = effect as Effect;
-  return (
-    isContinuousResolvedEffect(candidate) &&
-    continuousChooseTargetRequest(candidate) !== undefined
-  );
+  return isSupportedContinuousTargetChoiceEffect(effect as Effect);
 };
 
 const isConditionalContinuousChooseTargetEffect = (

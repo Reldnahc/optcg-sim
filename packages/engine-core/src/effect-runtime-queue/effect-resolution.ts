@@ -6,6 +6,10 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
+import {
+  continuousChooseTargetRequest,
+  type ContinuousQueueEffect,
+} from "../runtime/continuous/targeting.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import {
   isScopedActivateMainQueueEntry,
@@ -14,30 +18,6 @@ import {
 import { isSupportedQueuedDrawEffectBlock } from "../runtime/primitives/execute.js";
 import { isSupportedDrawUpToBody } from "../effect-runtime-reusable-body-support.js";
 import type { QueuedEffectDefinitionResolverDependencies } from "./results-types.js";
-
-type ContinuousQueueEffect = Extract<
-  Effect,
-  {
-    type:
-      | "modifyPower"
-      | "giveKeyword"
-      | "giveAttribute"
-      | "setBasePower"
-      | "modifyCost"
-      | "modifyCounter"
-      | "preventDraw"
-      | "preventDonActivation"
-      | "preventPlay"
-      | "invalidateEffects"
-      | "giveProtection"
-      | "protectFromKO"
-      | "cannotBecomeActive"
-      | "cannotAttack"
-      | "attackCost"
-      | "preventBlockerActivation"
-      | "cannotBlock";
-  }
->;
 
 type QueuedDrawEffectBlock = EffectDefinition["effects"][number] & {
   readonly effect: Extract<Effect, { type: "draw" }>;
@@ -233,10 +213,7 @@ export const createQueuedEffectResolvers = (
     if (!isSupportedContinuousQueueEffect(supportShape.effect)) {
       return undefined;
     }
-    if (
-      "target" in supportShape.effect &&
-      supportShape.effect.target.type === "choose"
-    ) {
+    if (continuousChooseTargetRequest(supportShape.effect) !== undefined) {
       return undefined;
     }
     return supportShape.effect;

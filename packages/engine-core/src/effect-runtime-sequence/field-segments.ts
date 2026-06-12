@@ -36,6 +36,7 @@ import {
 import type { SegmentLedgers } from "./runner.js";
 import { restChooseTargetRequest } from "./target-decisions.js";
 import type { SupportedSequenceSegment } from "./support.js";
+import { isSupportedSavedTargetContinuousSegment } from "./support/continuous.js";
 import { getOpponentId } from "../actions/state.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -527,18 +528,7 @@ export const applyFieldMutationSequenceSegment = (params: {
     };
   }
 
-  if (
-    (segment.effect.type === "modifyPower" ||
-      segment.effect.type === "giveKeyword" ||
-      segment.effect.type === "giveAttribute" ||
-      segment.effect.type === "cannotBecomeActive" ||
-      segment.effect.type === "cannotAttack" ||
-      segment.effect.type === "attackCost" ||
-      segment.effect.type === "cannotBlock" ||
-      segment.effect.type === "preventBlockerActivation" ||
-      segment.effect.type === "invalidateEffects") &&
-    segment.effect.target.type === "savedFieldObject"
-  ) {
+  if (isSupportedSavedTargetContinuousSegment(segment.effect)) {
     const restricted = applySavedFieldObjectRestrictionSequenceSegment({
       emptySegmentResult,
       entry,

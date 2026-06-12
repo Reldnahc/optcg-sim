@@ -17,6 +17,7 @@ import {
   executeSelectedTargetEffectPrimitive,
   resolveSavedFieldObjectKoSelection,
 } from "../../runtime/primitives/execute.js";
+import { isSupportedSavedTargetContinuousSegment } from "../support/continuous.js";
 import type { SupportedSequenceSegment } from "../support.js";
 import { continuousRecordForSavedObject } from "./continuous-records.js";
 import {
@@ -588,20 +589,7 @@ export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
   ledgers: SegmentLedgers;
   state: GameState;
 } => {
-  if (
-    params.segment.effect.type !== "modifyPower" &&
-    params.segment.effect.type !== "giveKeyword" &&
-    params.segment.effect.type !== "giveAttribute" &&
-    params.segment.effect.type !== "cannotBecomeActive" &&
-    params.segment.effect.type !== "cannotAttack" &&
-    params.segment.effect.type !== "attackCost" &&
-    params.segment.effect.type !== "cannotBlock" &&
-    params.segment.effect.type !== "preventBlockerActivation" &&
-    params.segment.effect.type !== "invalidateEffects"
-  ) {
-    return { ledgers: params.ledgers, state: params.state };
-  }
-  if (params.segment.effect.target.type !== "savedFieldObject") {
+  if (!isSupportedSavedTargetContinuousSegment(params.segment.effect)) {
     return { ledgers: params.ledgers, state: params.state };
   }
   const resolvedSavedTarget = resolveSavedFieldObjectKoSelection({

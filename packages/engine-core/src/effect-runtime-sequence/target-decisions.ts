@@ -5,12 +5,16 @@ import type {
   GameState,
   MultiZoneTargetRequest,
   SelectTargetsDecision,
-  Target,
   TargetRequest,
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
+import {
+  continuousChooseTargetRequest,
+  hasSavedFieldObjectContinuousTarget,
+  isContinuousEffectWithTarget,
+} from "../runtime/continuous/targeting.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
@@ -18,72 +22,10 @@ import {
 import type { SegmentLedgers, SequenceFrameRunResult } from "./runner.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
-type ContinuousResolvedEffect = Extract<
-  Effect,
-  {
-    type:
-      | "modifyPower"
-      | "giveKeyword"
-      | "giveAttribute"
-      | "setBasePower"
-      | "modifyCost"
-      | "preventDraw"
-      | "preventDonActivation"
-      | "preventPlay"
-      | "invalidateEffects"
-      | "cannotBecomeActive"
-      | "cannotAttack"
-      | "attackCost"
-      | "cannotBlock"
-      | "preventBlockerActivation";
-  }
->;
-type ContinuousEffectWithTarget = Extract<
-  ContinuousResolvedEffect,
-  { target: Target }
->;
-
-export const isContinuousResolvedEffect = (
-  effect: Effect,
-): effect is ContinuousResolvedEffect =>
-  effect.type === "modifyPower" ||
-  effect.type === "giveKeyword" ||
-  effect.type === "giveAttribute" ||
-  effect.type === "setBasePower" ||
-  effect.type === "modifyCost" ||
-  effect.type === "preventDraw" ||
-  effect.type === "preventDonActivation" ||
-  effect.type === "preventPlay" ||
-  effect.type === "invalidateEffects" ||
-  effect.type === "cannotBecomeActive" ||
-  effect.type === "cannotAttack" ||
-  effect.type === "attackCost" ||
-  effect.type === "cannotBlock" ||
-  effect.type === "preventBlockerActivation";
-
-const isContinuousEffectWithTarget = (
-  effect: ContinuousResolvedEffect,
-): effect is ContinuousEffectWithTarget => "target" in effect;
-
-export const hasSavedFieldObjectContinuousTarget = (
-  effect: ContinuousResolvedEffect,
-): boolean =>
-  isContinuousEffectWithTarget(effect) &&
-  effect.target.type === "savedFieldObject";
-
-export const continuousChooseTargetRequest = (
-  effect: ContinuousResolvedEffect,
-): TargetRequest | MultiZoneTargetRequest | undefined => {
-  if (!isContinuousEffectWithTarget(effect)) {
-    return undefined;
-  }
-  if (
-    effect.target.type === "choose" ||
-    effect.target.type === "chooseFromZones"
-  ) {
-    return effect.target.request;
-  }
-  return undefined;
+export {
+  continuousChooseTargetRequest,
+  hasSavedFieldObjectContinuousTarget,
+  isContinuousEffectWithTarget,
 };
 
 export const restChooseTargetRequest = (
