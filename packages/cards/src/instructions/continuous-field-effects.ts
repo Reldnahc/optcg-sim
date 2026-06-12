@@ -1,6 +1,7 @@
 export {
   parseBasePowerBecomeInstruction,
   parseHandCounterSetInstruction,
+  parseExplicitDurationAllFieldStatGainInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordAndAttributeGrantInstruction,

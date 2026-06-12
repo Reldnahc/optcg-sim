@@ -1,4 +1,9 @@
-import type { DynamicNumberValue, Effect } from "@optcg/types";
+import type {
+  CardFilter,
+  Duration,
+  DynamicNumberValue,
+  Effect,
+} from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import {
@@ -10,7 +15,7 @@ import {
   parseThisCharacterTarget,
   parseYourLeaderTarget,
 } from "../../targets/index.js";
-import type { PrimitiveEvidence } from "../../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 import {
   continuousDuration,
   continuousDurationEvidence,
@@ -79,6 +84,20 @@ export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionPa
     };
   };
 
+export const parseExplicitDurationAllFieldStatGainInstruction: InstructionParser =
+  (input) => {
+    const parsed = parseAllLeaderAndCharacterStatGainInstruction(input, {
+      condition: undefined,
+    });
+    if (
+      parsed === undefined ||
+      !parsed.evidence.includes("duration:thisTurn")
+    ) {
+      return undefined;
+    }
+    return parsed;
+  };
+
 const parseLeaderStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
@@ -129,6 +148,14 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const leaderAndCharacterGain = parseAllLeaderAndCharacterStatGainInstruction(
+    input,
+    context,
+  );
+  if (leaderAndCharacterGain !== undefined) {
+    return leaderAndCharacterGain;
+  }
+
   const directGain = /^(?<target>All of .+?) gains?\s+(?<modifier>.+)$/iu.exec(
     input.text,
   );
@@ -149,10 +176,11 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
   const modifier =
     parsePositivePowerModifier({ text: modifierText ?? target.rest }) ??
     parseNegativePowerModifier({ text: modifierText ?? target.rest });
-  if (
-    modifier === undefined ||
-    (modifier.rest.length > 0 && modifier.rest !== ".")
-  ) {
+  if (modifier === undefined) {
+    return undefined;
+  }
+  const duration = parseStatGainDuration(modifier.rest, context);
+  if (duration === undefined) {
     return undefined;
   }
 
@@ -161,15 +189,133 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
       type: "modifyPower",
       target: target.target,
       value: modifier.value,
-      duration: continuousDuration(context.condition),
+      duration: duration.duration,
     },
     evidence: [
       "instruction:modifyPower",
       ...target.evidence,
       ...modifier.evidence,
-      continuousDurationEvidence(context.condition),
+      duration.evidence,
     ],
     rest: "",
+  };
+};
+
+const parseAllLeaderAndCharacterStatGainInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^All of your (?<predicate>.+ Leader and Character cards?) gain (?<modifier>.+)$/iu.exec(
+        input.text,
+      );
+    const predicateText = match?.groups?.["predicate"];
+    const modifierText = match?.groups?.["modifier"];
+    if (predicateText === undefined || modifierText === undefined) {
+      return undefined;
+    }
+
+    const predicates = parseCardFilterPredicates({ text: predicateText });
+    if (predicates === undefined || predicates.rest.length > 0) {
+      return undefined;
+    }
+    const modifier =
+      parsePositivePowerModifier({ text: modifierText }) ??
+      parseNegativePowerModifier({ text: modifierText });
+    if (modifier === undefined) {
+      return undefined;
+    }
+    const duration = parseStatGainDuration(modifier.rest, context);
+    if (duration === undefined) {
+      return undefined;
+    }
+
+    const leaderFilter = withCategory(predicates.filter, "leader");
+    const characterFilter = withCategory(predicates.filter, "character");
+    const effects: Effect[] = [
+      {
+        type: "modifyPower",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "leaderArea",
+          filter: leaderFilter,
+        },
+        value: modifier.value,
+        duration: duration.duration,
+      },
+      {
+        type: "modifyPower",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: characterFilter,
+        },
+        value: modifier.value,
+        duration: duration.duration,
+      },
+    ];
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: effects.map((effect) => ({ connector: "always", effect })),
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:all",
+        "player:self",
+        "zone:leaderArea",
+        "zone:characterArea",
+        ...predicates.evidence,
+        "filter:category:leader",
+        "filter:category:character",
+        ...modifier.evidence,
+        duration.evidence,
+      ],
+      rest: "",
+    };
+  };
+
+const withCategory = (
+  filter: CardFilter,
+  category: "leader" | "character",
+): CardFilter => ({
+  ...filter,
+  categories: [category],
+  ...(filter.anyOf === undefined
+    ? {}
+    : {
+        anyOf: filter.anyOf.map((branch) => ({
+          ...branch,
+          categories: branch.categories ?? [category],
+        })),
+      }),
+});
+
+const parseStatGainDuration = (
+  rest: string,
+  context: {
+    readonly condition: Parameters<ContinuousInstructionParser>[1]["condition"];
+  },
+):
+  | {
+      readonly duration: Duration;
+      readonly evidence: PrimitiveEvidence;
+    }
+  | undefined => {
+  const normalized = rest.replace(/\.$/u, "").trim();
+  if (normalized.length === 0) {
+    return {
+      duration: continuousDuration(context.condition),
+      evidence: continuousDurationEvidence(context.condition),
+    };
+  }
+  if (normalized.toLowerCase() !== "during this turn") {
+    return undefined;
+  }
+  return {
+    duration: { type: "thisTurn" },
+    evidence: "duration:thisTurn",
   };
 };
 

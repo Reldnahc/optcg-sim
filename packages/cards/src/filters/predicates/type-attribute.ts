@@ -12,7 +12,7 @@ export const parseTypeLeaderOrCharacterPredicate: PredicateParser = (
   current,
 ) => {
   const match =
-    /^(?<type>\{[^}]+\}) type Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+    /^(?<type>\{[^}]+\}) type Leader (?:or|and) Character cards?\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const typeText = match?.groups?.["type"];
@@ -80,7 +80,7 @@ export const parseMultiTypeLeaderOrCharacterPredicate: PredicateParser = (
   current,
 ) => {
   const match =
-    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+Leader (?:or|and) Character cards?\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const typeNames = parseBraceNameList(match?.groups?.["types"]);

@@ -5,6 +5,7 @@ export { parseActivateSelectedEventInstruction } from "./activate-selected-event
 export {
   parseBasePowerBecomeInstruction,
   parseHandCounterSetInstruction,
+  parseExplicitDurationAllFieldStatGainInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordAndAttributeGrantInstruction,

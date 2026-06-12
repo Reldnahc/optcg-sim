@@ -15,6 +15,7 @@ export {
   selfCannotAttackPrimitive,
 } from "./restrictions.js";
 export {
+  parseExplicitDurationAllFieldStatGainInstruction,
   parseYourLeaderConditionalPowerInstruction,
   yourLeaderConditionalPowerPrimitive,
 } from "./stat-gains.js";

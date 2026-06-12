@@ -339,6 +339,26 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses multi-type Leader and Character predicates with either conjunction", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{Fish-Man} or {Merfolk} type Leader and Character cards",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["leader", "character"],
+        typesAny: ["Fish-Man", "Merfolk"],
+      },
+      evidence: [
+        "filter:type",
+        "filter:type",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses self exclusion separately from attribute, category, and cost predicates", () => {
     expect(
       parseCardFilterPredicates({
