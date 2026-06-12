@@ -21,6 +21,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 };
 
 import {
+  appendEffectQueuedEvent,
   appendEvent,
   toDecisionId,
   toEngineResult,
@@ -618,20 +619,12 @@ const applyActivatedTriggerResponse = (
         source,
       }),
     };
-    appendEvent(
+    appendEffectQueuedEvent(
       state,
       events,
-      "effectQueued",
-      {
-        queueEntryId: queueEntry.id,
-        timingWindowId: queueEntry.timingWindowId,
-        generation: queueEntry.generation,
-        effectBlockId: queueEntry.effectBlockId,
-        triggerEventId: queueEntry.triggerEventId,
-        sourcePresencePolicy: queueEntry.sourcePresencePolicy,
-        orderingGroup: queueEntry.orderingGroup,
-      },
-      { type: "public" },
+      queueEntry,
+      effect,
+      supported.resolved,
     );
     queueEntries.push(queueEntry);
   }

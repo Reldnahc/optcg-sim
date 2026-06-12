@@ -16,7 +16,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 };
 
 import {
-  appendEvent,
+  appendEffectQueuedEvent,
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
@@ -199,6 +199,8 @@ export const createKOTriggerQueueing = (
       });
       candidates.push({
         effectBlockId: effectBlock.id,
+        effectBlock,
+        resolvedCard: resolved,
         controllerId: candidateSource.controller,
         source: {
           instanceId: candidateSource.instanceId,
@@ -235,7 +237,11 @@ export const createKOTriggerQueueing = (
       return { ok: true, state };
     }
 
-    const appended: EffectQueueEntry[] = [];
+    const appended: Array<{
+      readonly entry: EffectQueueEntry;
+      readonly effectBlock: EffectDefinition["effects"][number];
+      readonly resolved: BattleKOTriggerCandidate["resolvedCard"];
+    }> = [];
     const firstCandidate = detected.candidates[0];
     if (firstCandidate === undefined) {
       return { ok: true, state };
@@ -281,37 +287,31 @@ export const createKOTriggerQueueing = (
           ? {}
           : { presentation: candidate.presentation }),
       };
-      appended.push(entry);
+      appended.push({
+        entry,
+        effectBlock: candidate.effectBlock,
+        resolved: candidate.resolvedCard,
+      });
     }
 
-    for (const entry of appended) {
-      const beforeEventCount = events.length;
-      appendEvent(
+    for (const { entry, effectBlock, resolved } of appended) {
+      appendEffectQueuedEvent(
         eventBaseState,
         events,
-        "effectQueued",
-        {
-          queueEntryId: entry.id,
-          timingWindowId: entry.timingWindowId,
-          generation: entry.generation,
-          effectBlockId: entry.effectBlockId,
-          triggerEventId: entry.triggerEventId,
-          sourcePresencePolicy: entry.sourcePresencePolicy,
-          orderingGroup: entry.orderingGroup,
-        },
-        { type: "public" },
+        entry,
+        effectBlock,
+        resolved,
       );
-      const queuedEvent = events[beforeEventCount];
-      if (queuedEvent !== undefined) {
-        queuedEvent.causedBy = entry.causedBy;
-      }
     }
 
     return {
       ok: true,
       state: {
         ...state,
-        effectQueue: [...state.effectQueue, ...appended],
+        effectQueue: [
+          ...state.effectQueue,
+          ...appended.map(({ entry }) => entry),
+        ],
       },
     };
   };
@@ -328,7 +328,11 @@ export const createKOTriggerQueueing = (
       return undefined;
     }
     const eventName = `effectResolved:${String(resolvedEntry.effectBlockId)}`;
-    const appended: EffectQueueEntry[] = [];
+    const appended: Array<{
+      readonly entry: EffectQueueEntry;
+      readonly effectBlock: EffectDefinition["effects"][number];
+      readonly resolved: BattleKOTriggerCandidate["resolvedCard"];
+    }> = [];
     const events: EngineEvent[] = [];
 
     for (const source of fieldTriggerSources(state)) {
@@ -406,7 +410,7 @@ export const createKOTriggerQueueing = (
             source: entrySource,
           }),
         };
-        appended.push(entry);
+        appended.push({ entry, effectBlock, resolved });
       }
     }
 
@@ -438,7 +442,7 @@ export const createKOTriggerQueueing = (
     }
     let deferredTriggers = state.deferredTriggers;
     if (shouldDeferForDamageProcess) {
-      const deferredEntry = appended[0];
+      const deferredEntry = appended[0]?.entry;
       if (deferredEntry === undefined) {
         return toEngineResult(
           state,
@@ -465,30 +469,14 @@ export const createKOTriggerQueueing = (
     const nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      effectQueue: [...state.effectQueue, ...appended],
+      effectQueue: [
+        ...state.effectQueue,
+        ...appended.map(({ entry }) => entry),
+      ],
       deferredTriggers,
     };
-    for (const entry of appended) {
-      const beforeEventCount = events.length;
-      appendEvent(
-        state,
-        events,
-        "effectQueued",
-        {
-          queueEntryId: entry.id,
-          timingWindowId: entry.timingWindowId,
-          generation: entry.generation,
-          effectBlockId: entry.effectBlockId,
-          triggerEventId: entry.triggerEventId,
-          sourcePresencePolicy: entry.sourcePresencePolicy,
-          orderingGroup: entry.orderingGroup,
-        },
-        { type: "public" },
-      );
-      const queuedEvent = events[beforeEventCount];
-      if (queuedEvent !== undefined) {
-        queuedEvent.causedBy = entry.causedBy;
-      }
+    for (const { entry, effectBlock, resolved } of appended) {
+      appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
     }
     nextState.eventJournal = [...state.eventJournal, ...events];
     return toEngineResult(nextState, events);

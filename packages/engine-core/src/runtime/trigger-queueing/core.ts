@@ -118,6 +118,8 @@ interface EndOfYourTurnTriggerQueueingErrorDetails {
 
 export interface BattleKOTriggerCandidate {
   effectBlockId: EffectDefinition["effects"][number]["id"];
+  effectBlock: EffectDefinition["effects"][number];
+  resolvedCard: ResolvedCard;
   controllerId: PlayerId;
   source: EffectQueueEntry["source"];
   sourceSnapshot: EffectQueueEntry["sourceSnapshot"];

@@ -192,9 +192,15 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
   const result = detectBattleKOTriggerCandidates(state, events);
 
   assert.equal(result.ok, true);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
   assert.deepEqual(result.candidates, [
     {
-      effectBlockId: must(definition.effects[0], "onKO effect").id,
+      effectBlockId: onKOEffect.id,
+      effectBlock: onKOEffect,
+      resolvedCard: must(
+        state.cardManifest.cards[source.cardId],
+        "source card",
+      ),
       controllerId: p2,
       source: {
         instanceId: source.instanceId,
@@ -322,6 +328,28 @@ test("queues supported On K.O. candidates with deterministic queue metadata and 
       triggerEventId: triggerEvent.id,
       sourcePresencePolicy: "resolveFromDestinationZone",
       orderingGroup: "nonTurnPlayer",
+      controllerId: p2,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p2,
+        zone: trashedSource.zone,
+      },
+      sourceCardId: source.cardId,
+      effectCategory: "auto",
+      entryPoint: { type: "onKO" },
+      sourceTypes: [],
+      sourceCategory: "character",
+      presentation: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p2,
+          zone: trashedSource.zone,
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
     },
     visibility: { type: "public" },
     causedBy: {
@@ -592,6 +620,14 @@ test("On K.O. drawUpTo queues with deterministic metadata, pauses, and resumes s
     triggerEventId: first.queued.triggerEvent.id,
     sourcePresencePolicy: "resolveFromDestinationZone",
     orderingGroup: "nonTurnPlayer",
+    controllerId: first.queued.queuedEntry.controllerId,
+    source: first.queued.queuedEntry.source,
+    sourceCardId: first.queued.queuedEntry.source.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onKO" },
+    sourceTypes: [],
+    sourceCategory: "character",
+    presentation: first.queued.queuedEntry.presentation,
   });
   assert.deepEqual(decision.causedBy, {
     type: "effect",

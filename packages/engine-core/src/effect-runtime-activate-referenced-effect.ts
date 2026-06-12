@@ -7,8 +7,8 @@ import type {
 } from "@optcg/types";
 
 import {
+  appendEffectQueuedEvent,
   appendEffectResolvedEvent,
-  appendEvent,
   toStateSeq,
 } from "./action-results.js";
 import {
@@ -185,25 +185,13 @@ export const queueReferencedMainEffectFromTrigger = (
         source: referencedSource,
       }),
     };
-    appendEvent(
+    appendEffectQueuedEvent(
       state,
       events,
-      "effectQueued",
-      {
-        queueEntryId: referencedEntry.id,
-        timingWindowId: referencedEntry.timingWindowId,
-        generation: referencedEntry.generation,
-        effectBlockId: referencedEntry.effectBlockId,
-        triggerEventId: referencedEntry.triggerEventId,
-        sourcePresencePolicy: referencedEntry.sourcePresencePolicy,
-        orderingGroup: referencedEntry.orderingGroup,
-      },
-      { type: "public" },
+      referencedEntry,
+      referencedEffect,
+      resolved,
     );
-    const queuedEvent = events[events.length - 1];
-    if (queuedEvent !== undefined) {
-      queuedEvent.causedBy = referencedEntry.causedBy;
-    }
     referencedEntries.push(referencedEntry);
   }
   appendEffectResolvedEvent(state, events, entry);

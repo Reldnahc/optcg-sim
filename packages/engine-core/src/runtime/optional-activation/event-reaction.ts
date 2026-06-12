@@ -16,7 +16,7 @@ import type {
 } from "@optcg/types";
 
 import {
-  appendEvent,
+  appendEffectQueuedEvent,
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
@@ -718,25 +718,13 @@ export const applyActivatedReactionAction = (
     triggerEvent: match.triggerEvent,
   });
   const queuedEvents: EngineEvent[] = [];
-  appendEvent(
+  appendEffectQueuedEvent(
     state,
     queuedEvents,
-    "effectQueued",
-    {
-      queueEntryId: entry.id,
-      timingWindowId: entry.timingWindowId,
-      generation: entry.generation,
-      effectBlockId: entry.effectBlockId,
-      triggerEventId: entry.triggerEventId,
-      sourcePresencePolicy: entry.sourcePresencePolicy,
-      orderingGroup: entry.orderingGroup,
-    },
-    { type: "public" },
+    entry,
+    match.effect,
+    live.resolved,
   );
-  const queuedEvent = queuedEvents[0];
-  if (queuedEvent !== undefined) {
-    queuedEvent.causedBy = entry.causedBy;
-  }
   const queuedState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),

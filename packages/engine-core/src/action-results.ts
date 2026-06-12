@@ -1,11 +1,13 @@
 import type {
   DecisionId,
+  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
   EngineEventId,
   EngineResult,
   GameState,
+  ResolvedCard,
   StateSeq,
 } from "@optcg/types";
 
@@ -107,6 +109,47 @@ export const appendEffectResolvedEvent = (
       queueEntryId: queuedEntry.id,
       effectId: queuedEntry.effectBlockId,
     };
+  }
+};
+
+export const appendEffectQueuedEvent = (
+  state: GameState,
+  events: EngineEvent[],
+  queuedEntry: EffectQueueEntry,
+  effectBlock: EffectDefinition["effects"][number],
+  resolvedSourceCard: ResolvedCard | undefined,
+): void => {
+  appendEvent(
+    state,
+    events,
+    "effectQueued",
+    {
+      queueEntryId: queuedEntry.id,
+      timingWindowId: queuedEntry.timingWindowId,
+      generation: queuedEntry.generation,
+      effectBlockId: queuedEntry.effectBlockId,
+      ...(queuedEntry.triggerEventId === undefined
+        ? {}
+        : { triggerEventId: queuedEntry.triggerEventId }),
+      sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
+      orderingGroup: queuedEntry.orderingGroup,
+      controllerId: queuedEntry.controllerId,
+      source: queuedEntry.source,
+      sourceCardId: queuedEntry.sourceSnapshot.cardId,
+      effectCategory: effectBlock.category,
+      entryPoint: effectBlock.trigger,
+      sourceTypes: resolvedSourceCard?.types ?? [],
+      sourceCategory:
+        resolvedSourceCard?.category ?? queuedEntry.sourceSnapshot.category,
+      ...(queuedEntry.presentation === undefined
+        ? {}
+        : { presentation: queuedEntry.presentation }),
+    },
+    { type: "public" },
+  );
+  const queued = events[events.length - 1];
+  if (queued !== undefined) {
+    queued.causedBy = queuedEntry.causedBy;
   }
 };
 

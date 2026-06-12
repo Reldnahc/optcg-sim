@@ -291,6 +291,10 @@ test("effectQueued payload and queue metadata are deterministic across repeated 
       reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
       "def-deterministic",
     );
+    state.cardManifest.cards[played.cardId] = {
+      ...must(state.cardManifest.cards[played.cardId], "played card"),
+      types: ["Navy"],
+    };
     return processEffectRuntime(state);
   };
   const first = run();
@@ -303,6 +307,23 @@ test("effectQueued payload and queue metadata are deterministic across repeated 
   assert.deepEqual(firstEvent.causedBy, {
     type: "ruleProcess",
     name: "effectRuntime:onPlayTriggerQueueing",
+  });
+  assert.deepEqual(firstEvent.payload, {
+    queueEntryId: first.state.effectQueue[0]?.id,
+    timingWindowId: first.state.effectQueue[0]?.timingWindowId,
+    generation: 0,
+    effectBlockId: "OP01-015:auto-on-play-1",
+    triggerEventId: "event:3:1:cardPlayed",
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "turnPlayer",
+    controllerId: p1,
+    source: first.state.effectQueue[0]?.source,
+    sourceCardId: first.state.effectQueue[0]?.source.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onPlay" },
+    sourceTypes: ["Navy"],
+    sourceCategory: "character",
+    presentation: first.state.effectQueue[0]?.presentation,
   });
   assert.deepEqual(first.state.effectQueue[0], {
     id: "queue-entry:event:3:1:cardPlayed:OP01-015:auto-on-play-1",

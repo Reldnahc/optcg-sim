@@ -7,10 +7,11 @@ import type {
   EngineResult,
   GameState,
   PlayerId,
+  ResolvedCard,
 } from "@optcg/types";
 
 import {
-  appendEvent,
+  appendEffectQueuedEvent,
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
@@ -107,7 +108,11 @@ export const createMainEventTriggerQueueing = (
       return undefined;
     }
 
-    const appended: EffectQueueEntry[] = [];
+    const appended: Array<{
+      readonly entry: EffectQueueEntry;
+      readonly effectBlock: EffectDefinition["effects"][number];
+      readonly resolved: ResolvedCard;
+    }> = [];
     const events: EngineEvent[] = [];
     for (const event of acceptedCardPlayed) {
       const payload = event.payload as {
@@ -225,7 +230,7 @@ export const createMainEventTriggerQueueing = (
           },
           ...(presentation === undefined ? {} : { presentation }),
         };
-        appended.push(entry);
+        appended.push({ entry, effectBlock, resolved });
       }
     }
 
@@ -236,29 +241,13 @@ export const createMainEventTriggerQueueing = (
     const nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      effectQueue: [...state.effectQueue, ...appended],
+      effectQueue: [
+        ...state.effectQueue,
+        ...appended.map(({ entry }) => entry),
+      ],
     };
-    for (const entry of appended) {
-      const beforeEventCount = events.length;
-      appendEvent(
-        state,
-        events,
-        "effectQueued",
-        {
-          queueEntryId: entry.id,
-          timingWindowId: entry.timingWindowId,
-          generation: entry.generation,
-          effectBlockId: entry.effectBlockId,
-          triggerEventId: entry.triggerEventId,
-          sourcePresencePolicy: entry.sourcePresencePolicy,
-          orderingGroup: entry.orderingGroup,
-        },
-        { type: "public" },
-      );
-      const queued = events[beforeEventCount];
-      if (queued !== undefined) {
-        queued.causedBy = entry.causedBy;
-      }
+    for (const { entry, effectBlock, resolved } of appended) {
+      appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
     }
     nextState.eventJournal = [...state.eventJournal, ...events];
     return toEngineResult(nextState, events);
