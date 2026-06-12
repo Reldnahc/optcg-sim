@@ -73,6 +73,7 @@ interface TestSessionTransitionBody {
 interface CreatedCustomLobbyBody {
   lobbyId?: string;
   matchId?: string;
+  rematch?: { status?: "pending" };
   seat?: { playerId?: string };
   seats?: Record<
     string,
@@ -165,6 +166,27 @@ const openSocket = async (url: string): Promise<TestSocket> =>
       reject(new Error("WebSocket failed to open."));
     });
   });
+
+const closeSocket = async (socket: TestSocket): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    socket.socket.addEventListener(
+      "close",
+      () => {
+        resolve();
+      },
+      { once: true },
+    );
+    socket.socket.close();
+  });
+};
+
+const waitForServerLifecycle = async (): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 0);
+  });
+};
 
 const nextSessionTransition = async (
   socket: TestSocket,
@@ -301,6 +323,27 @@ const submitCustomLobbyDeck = async (
   });
   assert.equal(response.status, 200);
   return (await response.json()) as CreatedCustomLobbyBody;
+};
+
+const submitCustomLobbyDeckResponse = async (
+  server: Awaited<ReturnType<typeof createFixtureMatchHttpServer>>,
+  lobbyId: string,
+  sessionToken: string,
+  deckHash: string,
+  donDeckCount = 10,
+): Promise<{ status: number; body: CreatedCustomLobbyBody }> => {
+  const response = await fetch(`${server.url()}/api/lobbies/${lobbyId}/deck`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-optcg-session-token": sessionToken,
+    },
+    body: JSON.stringify({ deckHash, donDeckCount }),
+  });
+  return {
+    status: response.status,
+    body: (await response.json()) as CreatedCustomLobbyBody,
+  };
 };
 
 const nextStateSync = async (socket: TestSocket): Promise<TestDevStateBody> => {
@@ -459,14 +502,26 @@ describe("dev rematches", () => {
         "p1",
         loserToken,
       );
+      const sourceP1 = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", loserToken),
+      );
+      const sourceP2 = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      await sourceP1.next();
+      await sourceP2.next();
 
-      const rematch = await createRematch(
+      const pending = await createRematch(
         server,
         match.matchId,
         "p1",
         loserToken,
       );
+      const rematch = await createRematch(server, match.matchId, "p2", p2Token);
 
+      assert.equal(pending.status, 202);
+      assert.deepEqual(pending.body.rematch, { status: "pending" });
+      assert.equal(pending.body.lobbyId, undefined);
       assert.equal(rematch.status, 201);
       const rematchLobbyId = rematch.body.lobbyId;
       if (rematchLobbyId === undefined) {
@@ -484,7 +539,7 @@ describe("dev rematches", () => {
       }
       assert.equal(rematch.body.matchId, undefined);
       assert.equal(rematch.body.snapshot, undefined);
-      assert.equal(rematchSeat.playerId, "p1");
+      assert.equal(rematchSeat.playerId, "p2");
       assert.equal(rematchP1Seat.claimed, true);
       assert.equal(rematchP2Seat.claimed, true);
       assert.equal(rematchP1Seat.deck.status, "missing");
@@ -518,6 +573,8 @@ describe("dev rematches", () => {
 
       assert.equal(resolved.firstPlayerChoice?.resolvedFirstPlayerId, "p2");
       assert.equal(typeof resolved.snapshot?.stateSeq, "number");
+      await closeSocket(sourceP1);
+      await closeSocket(sourceP2);
     } finally {
       await server.close();
     }
@@ -535,18 +592,24 @@ describe("dev rematches", () => {
         "p1",
         loserToken,
       );
+      const sourceP1 = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", loserToken),
+      );
       const sourceP2 = await openSocket(
         webSocketUrl(server, match.matchId, "p2", p2Token),
       );
+      await sourceP1.next();
       await sourceP2.next();
 
-      const rematch = await createRematch(
+      const pending = await createRematch(
         server,
         match.matchId,
         "p1",
         loserToken,
       );
+      const rematch = await createRematch(server, match.matchId, "p2", p2Token);
 
+      assert.equal(pending.status, 202);
       assert.equal(rematch.status, 201);
       const rematchLobbyId = rematch.body.lobbyId;
       if (rematchLobbyId === undefined) {
@@ -618,10 +681,112 @@ describe("dev rematches", () => {
       assert.equal(p1State.type, "stateSync");
       assert.equal(p2State.type, "stateSync");
 
-      sourceP2.socket.close();
-      rematchLobbyP1.socket.close();
-      rematchP1.socket.close();
-      rematchP2.socket.close();
+      await closeSocket(sourceP1);
+      await closeSocket(sourceP2);
+      await closeSocket(rematchLobbyP1);
+      await closeSocket(rematchP1);
+      await closeSocket(rematchP2);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("cancels pending rematch consensus when a source match socket disconnects", async () => {
+    const server = await createFixtureMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = await createReadyDevMatch(server);
+      const loserToken = await claimDevSeat(server, match.matchId, "p1");
+      const { p2Token } = await concedeViaSocket(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
+      const sourceP1 = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", loserToken),
+      );
+      const sourceP2 = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      await sourceP1.next();
+      await sourceP2.next();
+
+      const pending = await createRematch(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
+      await closeSocket(sourceP1);
+      await waitForServerLifecycle();
+      const nextPending = await createRematch(
+        server,
+        match.matchId,
+        "p2",
+        p2Token,
+      );
+
+      assert.equal(pending.status, 202);
+      assert.equal(nextPending.status, 202);
+      assert.deepEqual(nextPending.body.rematch, { status: "pending" });
+      assert.equal(nextPending.body.lobbyId, undefined);
+
+      await closeSocket(sourceP2);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("cancels rematch lobbies when a rematch lobby socket disconnects before start", async () => {
+    const server = await createFixtureMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = await createReadyDevMatch(server);
+      const loserToken = await claimDevSeat(server, match.matchId, "p1");
+      const { p2Token } = await concedeViaSocket(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
+      const sourceP1 = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", loserToken),
+      );
+      const sourceP2 = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      await sourceP1.next();
+      await sourceP2.next();
+      await createRematch(server, match.matchId, "p1", loserToken);
+      const rematch = await createRematch(server, match.matchId, "p2", p2Token);
+      const rematchLobbyId = rematch.body.lobbyId;
+      if (rematchLobbyId === undefined) {
+        throw new Error("Rematch response did not include lobby id.");
+      }
+      const rematchLobbyP1 = await openSocket(
+        lobbyWebSocketUrl(server, rematchLobbyId, "p1", loserToken),
+      );
+      const rematchLobbyP2 = await openSocket(
+        lobbyWebSocketUrl(server, rematchLobbyId, "p2", p2Token),
+      );
+      await rematchLobbyP1.next();
+      await rematchLobbyP2.next();
+
+      await closeSocket(rematchLobbyP1);
+      await waitForServerLifecycle();
+      const afterCancel = await submitCustomLobbyDeckResponse(
+        server,
+        rematchLobbyId,
+        p2Token,
+        "p2-rematch-hash",
+      );
+
+      assert.equal(afterCancel.status, 404);
+
+      await closeSocket(sourceP1);
+      await closeSocket(sourceP2);
+      await closeSocket(rematchLobbyP2);
     } finally {
       await server.close();
     }

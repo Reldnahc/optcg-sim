@@ -142,7 +142,7 @@ describe("action log window", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         previewControl: createElement("button", { type: "button" }, "preview"),
         actionLogControl: createElement("button", { type: "button" }, "log"),
       }),
@@ -165,7 +165,7 @@ describe("action log window", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         rollbackStatus: {
           message: "Rollback requested. Waiting for opponent.",
           canCancel: true,

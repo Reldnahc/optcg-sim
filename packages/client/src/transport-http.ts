@@ -6,6 +6,7 @@ import type {
   JoinedCustomLobby,
   CustomLobby,
   MatchTransport,
+  PendingRematch,
   ValidatedLobbyLoadouts,
 } from "./transport.js";
 
@@ -110,7 +111,7 @@ export const createDevHttpMatchTransport = ({
       return postJson<CreatedMatch>(`${root}/api/matches`, {});
     },
     async createRematch(input) {
-      return postJson<CreatedMatch>(
+      return postJson<CreatedMatch | JoinedCustomLobby | PendingRematch>(
         matchPath(input.matchId, "/rematch"),
         { playerId: input.playerId },
         input.sessionToken,

@@ -84,7 +84,7 @@ describe("settings window", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         settingsControl: createElement(SettingsButton, {
           open: true,
           onActivate: () => undefined,

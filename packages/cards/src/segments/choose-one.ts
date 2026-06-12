@@ -286,12 +286,38 @@ function choicePresentationSpans(
   const optionLines = lines.filter((line) => line.text.startsWith("\u2022"));
   return [
     sourceSpan("span:choice", "choice", header, ["composition:chooseOne"]),
-    ...optionLines.map((line, index) =>
-      sourceSpan(`span:choice:${String(index)}:option`, "choiceOption", line, [
-        "choice:option",
-      ]),
+    ...optionLines.flatMap(
+      (line, index) =>
+        [
+          sourceSpan(
+            `span:choice:${String(index)}:option`,
+            "choiceOption",
+            line,
+            ["choice:option"],
+          ),
+          sourceSpan(
+            `span:choice:${String(index)}:body`,
+            "body",
+            choiceOptionBodySource(line),
+            ["choice:option"],
+          ),
+        ] satisfies EffectTextSpan[],
     ),
   ];
+}
+
+function choiceOptionBodySource(source: SourceSlice): SourceSlice {
+  const bulletMatch = /^\u2022\s*/u.exec(source.rawText);
+  if (bulletMatch === null) {
+    return source;
+  }
+  const rawText = source.rawText.slice(bulletMatch[0].length);
+  return {
+    text: rawText,
+    rawText,
+    start: source.start + bulletMatch[0].length,
+    end: source.end,
+  };
 }
 
 function sourceLines(source: SourceSlice): readonly SourceSlice[] {

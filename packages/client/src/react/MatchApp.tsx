@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogButton } from "./ActionLogButton.js";
+import { appRoutePath } from "./app-route.js";
 import { actionLogCardModel } from "./card-model.js";
 import { CardPreviewButton } from "./CardPreviewButton.js";
 import type { WindowRect } from "./FloatingWindow.js";
@@ -510,9 +511,9 @@ export const MatchApp = ({
             resetEndTurnConfirmation();
             void client.submitAction(actionIndex);
           }}
-          onNewMatch={() => {
+          onHome={() => {
             resetConcedeConfirmation();
-            void client.createNewMatch();
+            window.location.assign(appRoutePath("dashboard"));
           }}
           onRematch={() => {
             resetConcedeConfirmation();

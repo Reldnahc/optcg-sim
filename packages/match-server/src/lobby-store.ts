@@ -25,12 +25,14 @@ export interface CustomLobbyState {
   settings?: CustomLobbySettings;
   firstPlayerChoice?: FirstPlayerChoiceState;
   playerOrder?: readonly [PlayerId, PlayerId];
+  rematchOfMatchId?: MatchId;
   matchId?: MatchId;
 }
 
 export interface LobbyStore {
   createLobby: (lobby: CustomLobbyState) => Promise<CustomLobbyState>;
   getLobby: (lobbyId: string) => Promise<CustomLobbyState | undefined>;
+  deleteLobby: (lobbyId: string) => Promise<boolean>;
   updateLobby: <T>(
     lobbyId: string,
     update: (lobby: CustomLobbyState) => Promise<T>,
@@ -92,6 +94,9 @@ const parseLobby = (value: string): CustomLobbyState => {
           ],
         }
       : {}),
+    ...(typeof parsed["rematchOfMatchId"] === "string"
+      ? { rematchOfMatchId: parsed["rematchOfMatchId"] as MatchId }
+      : {}),
     ...(typeof parsed["matchId"] === "string"
       ? { matchId: parsed["matchId"] as MatchId }
       : {}),
@@ -114,6 +119,9 @@ export const createMemoryLobbyStore = (): LobbyStore => {
       return Promise.resolve(
         lobby === undefined ? undefined : structuredClone(lobby),
       );
+    },
+    deleteLobby(lobbyId) {
+      return Promise.resolve(lobbies.delete(lobbyId));
     },
     async updateLobby(lobbyId, update) {
       const lobby = lobbies.get(lobbyId);
@@ -167,6 +175,9 @@ export const createRedisLobbyStore = ({
   async getLobby(lobbyId) {
     const value = await redis.get(keyForLobby(lobbyId));
     return value === null ? undefined : parseLobby(value);
+  },
+  async deleteLobby(lobbyId) {
+    return (await redis.del(keyForLobby(lobbyId))) > 0;
   },
   async updateLobby(lobbyId, update) {
     const token = randomUUID();

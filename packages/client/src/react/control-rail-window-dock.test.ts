@@ -22,7 +22,7 @@ describe("control rail window dock", () => {
         selfConnectionStatus: "connected",
         opponentConnectionStatus: "disconnected",
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
 
@@ -59,7 +59,7 @@ describe("control rail window dock", () => {
       disabled: false,
       dockHeight: 420,
       onAction: () => undefined,
-      onNewMatch: () => undefined,
+      onHome: () => undefined,
       onDockResizePointerDown: () => undefined,
       dockTabs: [
         {
@@ -124,7 +124,7 @@ describe("control rail window dock", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         dockTabs: [
           {
             id: "action-log",

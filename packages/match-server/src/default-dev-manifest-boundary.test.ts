@@ -22,6 +22,7 @@ import {
   type DevDeckCardEntry,
 } from "./default-dev-manifest.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
+import type { LobbyValidationTimingSpan } from "./lobby-validation-timing-log.js";
 
 const readySubmission = (
   leaderCardId: CardId,
@@ -334,6 +335,41 @@ describe("default dev manifest boundary", () => {
     }
     assert.equal(request.includes("OP13-079"), true);
     assert.equal(request.includes("OP13-080"), true);
+  });
+
+  test("records deck validation timing spans inside batched validation", async () => {
+    const timingSpans: LobbyValidationTimingSpan[] = [];
+
+    const results = await validateReadyDevDeckSubmissions({
+      submissions: [
+        readySubmission("OP13-079" as CardId, [
+          { cardId: "OP13-080" as CardId, count: 50 },
+        ]),
+      ],
+      createdAt: "2026-05-04T00:00:00.000Z",
+      fetchCard: createDefaultDevFixtureFetch(),
+      timingSpans,
+    });
+
+    assert.deepEqual(
+      results.map((result) => result.valid),
+      [true],
+    );
+    assert.deepEqual(
+      timingSpans.map((span) => span.name),
+      [
+        "deck-validation:create-decklists",
+        "deck-validation:manifest-build",
+        "deck-validation:validation-cache",
+        "deck-validation:variants",
+        "deck-validation:adapt",
+        "deck-validation:player-setup",
+      ],
+    );
+    assert.deepEqual(
+      timingSpans.map((span) => span.count),
+      [1, 2, undefined, 1, 1, 1],
+    );
   });
 
   test("creates the default dev setup without local deck hash files", async () => {

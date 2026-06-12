@@ -21,7 +21,7 @@ test("control rail shows turn and phase at the top of the controls panel", () =>
         step: "counter",
       },
       onAction: () => undefined,
-      onNewMatch: () => undefined,
+      onHome: () => undefined,
     }),
   );
 
@@ -33,4 +33,44 @@ test("control rail shows turn and phase at the top of the controls panel", () =>
   assert.equal(statusPosition >= 0, true);
   assert.equal(actionPosition >= 0, true);
   assert.equal(statusPosition < actionPosition, true);
+});
+
+test("control rail keeps home and rematch hidden during active matches", () => {
+  const markup = renderToStaticMarkup(
+    createElement(ControlRail, {
+      errors: [],
+      globalActions: [{ index: 12, type: "endMainPhase", label: "End turn" }],
+      disabled: false,
+      matchStatus: "active",
+      onAction: () => undefined,
+      onHome: () => undefined,
+      onRematch: () => undefined,
+    }),
+  );
+
+  assert.equal(markup.includes('aria-label="Home"'), false);
+  assert.equal(markup.includes('aria-label="Rematch"'), false);
+  assert.equal(markup.includes('aria-label="New match"'), false);
+});
+
+test("control rail shows home and rematch only once the match is over", () => {
+  const markup = renderToStaticMarkup(
+    createElement(ControlRail, {
+      errors: [],
+      globalActions: [],
+      disabled: false,
+      matchStatus: "gameOver",
+      onAction: () => undefined,
+      onHome: () => undefined,
+      onRematch: () => undefined,
+    }),
+  );
+  const homePosition = markup.indexOf('aria-label="Home"');
+  const rematchPosition = markup.indexOf('aria-label="Rematch"');
+
+  assert.match(markup, /class="[^"]*end-match-actions/u);
+  assert.equal(markup.includes('aria-label="New match"'), false);
+  assert.equal(homePosition >= 0, true);
+  assert.equal(rematchPosition >= 0, true);
+  assert.equal(homePosition < rematchPosition, true);
 });

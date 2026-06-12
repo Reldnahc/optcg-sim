@@ -49,17 +49,29 @@ export const activeSpanIdsForCost = (
 
 export const activeSpanIdsForChoice = (
   activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] | undefined =>
-  activeSpanIdsWithPrefix(activeSpanIds, choiceSpanPrefix);
+): readonly EffectTextSpanId[] | undefined => {
+  const narrowed = activeSpanIds.filter(
+    (spanId) => spanId === choiceSpanPrefix,
+  );
+  return narrowed.length === 0 ? [] : narrowed;
+};
 
 export const activeSpanIdsForChoiceOptionIndex = (
   activeSpanIds: readonly EffectTextSpanId[],
   optionIndex: number | string,
-): readonly EffectTextSpanId[] | undefined =>
-  activeSpanIdsWithPrefix(
-    activeSpanIds,
-    `${choiceSpanPrefix}:${String(optionIndex)}:`,
+): readonly EffectTextSpanId[] | undefined => {
+  const optionPrefix = `${choiceSpanPrefix}:${String(optionIndex)}:`;
+  const narrowed = activeSpanIds.filter((spanId) =>
+    spanId.startsWith(optionPrefix),
   );
+  if (narrowed.length === 0) {
+    return undefined;
+  }
+  const effectTextSpans = narrowed.filter(
+    (spanId) => spanId !== `${optionPrefix}option`,
+  );
+  return effectTextSpans.length === 0 ? narrowed : effectTextSpans;
+};
 
 export const activeSpanIdsForSearchSelection = (
   activeSpanIds: readonly EffectTextSpanId[],

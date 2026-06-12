@@ -176,6 +176,10 @@ export interface JoinedCustomLobby extends CustomLobby {
   seat: { playerId: PlayerId; sessionToken?: string };
 }
 
+export interface PendingRematch {
+  rematch: { status: "pending" };
+}
+
 export interface ValidatedLobbyLoadout {
   loadoutId: string | null;
   status: "playable" | "unplayable" | "unverified";
@@ -348,7 +352,7 @@ export interface MatchTransport {
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken: string;
-  }) => Promise<CreatedMatch | JoinedCustomLobby>;
+  }) => Promise<CreatedMatch | JoinedCustomLobby | PendingRematch>;
   claimSeat: (input: {
     matchId: MatchId;
     playerId: PlayerId;
