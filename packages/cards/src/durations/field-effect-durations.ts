@@ -8,6 +8,10 @@ export interface DurationParseResult {
   readonly rest: string;
 }
 
+type DurationParser = (input: ParseInput) => DurationParseResult | undefined;
+
+export type DurationParserSet = readonly DurationParser[];
+
 export const opponentNextRefreshPhaseDurationPrimitive = {
   primitiveId: "duration:opponentNextRefreshPhase",
   matches: [{ id: "in-opponent-next-refresh-phase" }],
@@ -110,11 +114,38 @@ export function parseThisBattleDuration(
   };
 }
 
+export function parseDurationFromSet(
+  input: ParseInput,
+  parsers: DurationParserSet,
+): DurationParseResult | undefined {
+  for (const parser of parsers) {
+    const parsed = parser(input);
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+export const fieldEffectDurationParsers = [
+  parseOpponentNextEndPhaseDuration,
+  parseOpponentNextRefreshPhaseDuration,
+  parseSelfNextTurnStartDuration,
+  parseThisTurnDuration,
+  parseThisBattleDuration,
+] as const;
+
+export const battleDurationParsers = [parseThisBattleDuration] as const;
+
+export const restrictionDurationParsers = [
+  parseOpponentNextEndPhaseDuration,
+  parseOpponentNextRefreshPhaseDuration,
+  parseThisTurnDuration,
+] as const;
+
+export const replacementDurationParsers = [parseThisTurnDuration] as const;
+
 export const parseExplicitFieldEffectDuration = (
   input: ParseInput,
 ): DurationParseResult | undefined =>
-  parseOpponentNextEndPhaseDuration(input) ??
-  parseOpponentNextRefreshPhaseDuration(input) ??
-  parseSelfNextTurnStartDuration(input) ??
-  parseThisTurnDuration(input) ??
-  parseThisBattleDuration(input);
+  parseDurationFromSet(input, fieldEffectDurationParsers);

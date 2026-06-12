@@ -1,8 +1,18 @@
 export {
+  battleDurationParsers,
+  fieldEffectDurationParsers,
+  opponentNextEndPhaseDurationPrimitive,
+  opponentNextRefreshPhaseDurationPrimitive,
+  parseDurationFromSet,
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
   parseExplicitFieldEffectDuration,
   parseSelfNextTurnStartDuration,
   parseThisBattleDuration,
   parseThisTurnDuration,
+  replacementDurationParsers,
+  restrictionDurationParsers,
+  thisBattleDurationPrimitive,
+  thisTurnDurationPrimitive,
+  type DurationParserSet,
 } from "./field-effect-durations.js";

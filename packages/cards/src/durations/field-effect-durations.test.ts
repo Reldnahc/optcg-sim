@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  battleDurationParsers,
+  fieldEffectDurationParsers,
   opponentNextEndPhaseDurationPrimitive,
   opponentNextRefreshPhaseDurationPrimitive,
+  parseDurationFromSet,
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
   parseThisTurnDuration,
+  replacementDurationParsers,
+  restrictionDurationParsers,
   thisTurnDurationPrimitive,
-} from "./field-effect-durations.js";
+} from "./index.js";
 
 describe("field-effect duration parsers", () => {
   it("defines durations as primitive parents", () => {
@@ -58,5 +63,45 @@ describe("field-effect duration parsers", () => {
       evidence: ["duration:thisTurn"],
       rest: "",
     });
+  });
+
+  it("parses durations through named semantic capability groups", () => {
+    expect(
+      parseDurationFromSet(
+        { text: "until the start of your next turn" },
+        fieldEffectDurationParsers,
+      ),
+    ).toMatchObject({
+      duration: { type: "untilStartOfNextTurn", player: "self" },
+      evidence: ["duration:selfNextTurnStart"],
+      rest: "",
+    });
+
+    expect(
+      parseDurationFromSet(
+        { text: "during this battle" },
+        battleDurationParsers,
+      ),
+    ).toMatchObject({
+      duration: { type: "thisBattle" },
+      evidence: ["duration:thisBattle"],
+      rest: "",
+    });
+  });
+
+  it("fails closed when a duration is outside the semantic group", () => {
+    expect(
+      parseDurationFromSet(
+        { text: "during this battle" },
+        restrictionDurationParsers,
+      ),
+    ).toBeUndefined();
+
+    expect(
+      parseDurationFromSet(
+        { text: "until the start of your next turn" },
+        replacementDurationParsers,
+      ),
+    ).toBeUndefined();
   });
 });
