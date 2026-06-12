@@ -1,7 +1,7 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
-  parseOpponentNextEndPhaseDuration,
-  parseThisTurnDuration,
+  attackRestrictionDurationParsers,
+  parseDurationFromSet,
 } from "../../durations/index.js";
 import { parseOpponentCharactersTarget } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
@@ -38,13 +38,10 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
       return undefined;
     }
 
-    const duration =
-      parseOpponentNextEndPhaseDuration({
-        text: durationText,
-      }) ??
-      parseThisTurnDuration({
-        text: durationText,
-      });
+    const duration = parseDurationFromSet(
+      { text: durationText },
+      attackRestrictionDurationParsers,
+    );
     if (
       duration === undefined ||
       duration.duration === undefined ||

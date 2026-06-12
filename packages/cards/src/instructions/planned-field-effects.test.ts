@@ -713,6 +713,14 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
+  it("does not accept battle-only duration for attack restrictions", () => {
+    expect(
+      parsePreventOpponentCharactersAttackInstruction({
+        text: "up to 1 of your opponent's active Characters cannot attack during this battle.",
+      }),
+    ).toBeUndefined();
+  });
+
   it("parses direct opponent Character Blocker activation restrictions", () => {
     expect(
       parsePreventOpponentCharactersBlockerActivationInstruction({

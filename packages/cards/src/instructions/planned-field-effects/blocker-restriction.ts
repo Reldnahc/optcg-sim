@@ -1,7 +1,10 @@
 import type { CardCategory, Duration, Zone } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
-import { parseThisTurnDuration } from "../../durations/index.js";
+import {
+  parseDurationFromSet,
+  thisTurnOnlyDurationParsers,
+} from "../../durations/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import { sourceSpan } from "../../source-slices.js";
@@ -52,7 +55,10 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
       return undefined;
     }
 
-    const duration = parseThisTurnDuration({ text: durationText });
+    const duration = parseDurationFromSet(
+      { text: durationText },
+      thisTurnOnlyDurationParsers,
+    );
     if (
       duration === undefined ||
       duration.duration === undefined ||
@@ -142,7 +148,10 @@ function parseOpponentCannotActivateBlocker(
     return undefined;
   }
 
-  const duration = parseThisTurnDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
   if (
     duration === undefined ||
     duration.duration === undefined ||
@@ -235,7 +244,10 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
   if (modifier === undefined) {
     return undefined;
   }
-  const duration = parseThisTurnDuration({ text: modifier.rest });
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    thisTurnOnlyDurationParsers,
+  );
   if (
     duration === undefined ||
     duration.duration === undefined ||

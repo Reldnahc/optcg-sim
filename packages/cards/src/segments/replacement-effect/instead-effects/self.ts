@@ -1,4 +1,7 @@
-import { parseThisTurnDuration } from "../../../durations/index.js";
+import {
+  parseDurationFromSet,
+  replacementDurationParsers,
+} from "../../../durations/index.js";
 import {
   parseNegativePowerModifier,
   parsePositivePowerModifier,
@@ -57,7 +60,10 @@ export function parseModifyPowerInstead(
     return undefined;
   }
 
-  const duration = parseThisTurnDuration({ text: modifier.rest });
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    replacementDurationParsers,
+  );
   if (duration?.duration === undefined) {
     return undefined;
   }

@@ -1,4 +1,5 @@
 export {
+  attackRestrictionDurationParsers,
   basePowerSwapDurationParsers,
   battleDurationParsers,
   fieldEffectDurationParsers,
@@ -11,9 +12,12 @@ export {
   parseSelfNextTurnStartDuration,
   parseThisBattleDuration,
   parseThisTurnDuration,
+  opponentNextEndOnlyDurationParsers,
+  refreshRestrictionDurationParsers,
   replacementDurationParsers,
   restrictionDurationParsers,
   thisBattleDurationPrimitive,
+  thisTurnOnlyDurationParsers,
   thisTurnDurationPrimitive,
   type DurationParseResult,
   type DurationParserSet,

@@ -1,4 +1,7 @@
-import { parseOpponentNextEndPhaseDuration } from "../../durations/index.js";
+import {
+  opponentNextEndOnlyDurationParsers,
+  parseDurationFromSet,
+} from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import { parseYourLeaderTarget } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
@@ -31,9 +34,10 @@ export const parseYourLeaderPowerOpponentNextEndInstruction: InstructionParser =
       return undefined;
     }
 
-    const duration = parseOpponentNextEndPhaseDuration({
-      text: modifier.rest,
-    });
+    const duration = parseDurationFromSet(
+      { text: modifier.rest },
+      opponentNextEndOnlyDurationParsers,
+    );
     if (
       duration === undefined ||
       duration.duration === undefined ||

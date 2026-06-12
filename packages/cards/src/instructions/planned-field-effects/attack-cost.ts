@@ -1,4 +1,7 @@
-import { parseOpponentNextEndPhaseDuration } from "../../durations/index.js";
+import {
+  opponentNextEndOnlyDurationParsers,
+  parseDurationFromSet,
+} from "../../durations/index.js";
 import type { ExpressionParseResult, ParseInput } from "../../types.js";
 
 const attackCostTargetsSelectionId = "selected:attack-cost-targets";
@@ -37,7 +40,10 @@ export const selectedOpponentCharactersAttackCostExpressionParser = (
     return undefined;
   }
 
-  const duration = parseOpponentNextEndPhaseDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    opponentNextEndOnlyDurationParsers,
+  );
   const count = Number.parseInt(countText, 10);
   if (
     duration?.duration === undefined ||

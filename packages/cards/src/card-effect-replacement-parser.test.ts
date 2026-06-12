@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
@@ -607,6 +607,14 @@ describe("replacement effect parser", () => {
     ] as const) {
       assert.equal(result.evidence.includes(evidence), true, evidence);
     }
+  });
+
+  it("does not accept opponent-next-end duration for this-turn replacement modifiers", () => {
+    const result = parseCardEffectLine(
+      "If this Character would be removed from the field by your opponent's effect, you may give this Character -2000 power until the end of your opponent's next turn instead.",
+    );
+
+    expect(result).toBeUndefined();
   });
 
   it("parses self K.O. replacement into filtered hand-trash instead primitives", () => {

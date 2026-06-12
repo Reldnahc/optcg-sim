@@ -2,8 +2,9 @@ import type { Effect, SavedFieldObjectZone, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import {
-  parseOpponentNextEndPhaseDuration,
-  parseThisTurnDuration,
+  attackRestrictionDurationParsers,
+  parseDurationFromSet,
+  thisTurnOnlyDurationParsers,
 } from "../durations/index.js";
 import { parseNegativePowerModifier } from "../modifiers/index.js";
 import {
@@ -183,7 +184,10 @@ function parseOpponentLeaderAndAllCharactersInvalidateEffects(
   if (durationText === undefined) {
     return undefined;
   }
-  const duration = parseThisTurnDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }
@@ -374,7 +378,10 @@ function parseOptionalThatCardPowerModifier(text: string):
       readonly powerModifier?: number;
     }
   | undefined {
-  const directDuration = parseThisTurnDuration({ text });
+  const directDuration = parseDurationFromSet(
+    { text },
+    thisTurnOnlyDurationParsers,
+  );
   if (
     directDuration?.duration !== undefined &&
     directDuration.rest.length === 0
@@ -394,7 +401,10 @@ function parseOptionalThatCardPowerModifier(text: string):
   if (modifier === undefined) {
     return undefined;
   }
-  const duration = parseThisTurnDuration({ text: modifier.rest });
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    thisTurnOnlyDurationParsers,
+  );
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }
@@ -437,9 +447,10 @@ function parseOptionalFollowupEffects(text: string):
   if (cannotAttackDurationText === undefined) {
     return undefined;
   }
-  const duration =
-    parseOpponentNextEndPhaseDuration({ text: cannotAttackDurationText }) ??
-    parseThisTurnDuration({ text: cannotAttackDurationText });
+  const duration = parseDurationFromSet(
+    { text: cannotAttackDurationText },
+    attackRestrictionDurationParsers,
+  );
   if (
     duration === undefined ||
     duration.duration === undefined ||

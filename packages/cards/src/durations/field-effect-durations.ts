@@ -148,6 +148,22 @@ export const restrictionDurationParsers = [
   parseThisTurnDuration,
 ] as const;
 
+export const attackRestrictionDurationParsers = [
+  parseOpponentNextEndPhaseDuration,
+  parseThisTurnDuration,
+] as const;
+
+export const refreshRestrictionDurationParsers = [
+  parseOpponentNextRefreshPhaseDuration,
+  parseThisTurnDuration,
+] as const;
+
+export const thisTurnOnlyDurationParsers = [parseThisTurnDuration] as const;
+
+export const opponentNextEndOnlyDurationParsers = [
+  parseOpponentNextEndPhaseDuration,
+] as const;
+
 export const replacementDurationParsers = [parseThisTurnDuration] as const;
 
 export const parseExplicitFieldEffectDuration = (

@@ -3,9 +3,9 @@ import type { CardFilter, Target } from "@optcg/types";
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import {
-  parseOpponentNextEndPhaseDuration,
-  parseOpponentNextRefreshPhaseDuration,
-  parseThisTurnDuration,
+  attackRestrictionDurationParsers,
+  parseDurationFromSet,
+  refreshRestrictionDurationParsers,
 } from "../../durations/index.js";
 import { parseThatCharacterReference } from "../../references/index.js";
 import {
@@ -63,10 +63,10 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
     return undefined;
   }
 
-  const duration =
-    parseOpponentNextRefreshPhaseDuration({
-      text: durationText,
-    }) ?? parseThisTurnDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    refreshRestrictionDurationParsers,
+  );
   if (
     duration === undefined ||
     duration.duration === undefined ||
@@ -104,10 +104,10 @@ export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser
       return undefined;
     }
 
-    const duration =
-      parseOpponentNextRefreshPhaseDuration({
-        text: durationText,
-      }) ?? parseThisTurnDuration({ text: durationText });
+    const duration = parseDurationFromSet(
+      { text: durationText },
+      refreshRestrictionDurationParsers,
+    );
     if (
       duration === undefined ||
       duration.duration === undefined ||
@@ -145,13 +145,10 @@ export const parsePreventOpponentCharactersRestInstruction: InstructionParser =
       return undefined;
     }
 
-    const duration =
-      parseOpponentNextEndPhaseDuration({
-        text: durationText,
-      }) ??
-      parseThisTurnDuration({
-        text: durationText,
-      });
+    const duration = parseDurationFromSet(
+      { text: durationText },
+      attackRestrictionDurationParsers,
+    );
     if (
       duration === undefined ||
       duration.duration === undefined ||
