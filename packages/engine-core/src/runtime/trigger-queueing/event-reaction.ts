@@ -24,7 +24,10 @@ import {
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
-import { matchEventTrigger } from "../event-hooks/matcher.js";
+import {
+  matchEventTrigger,
+  type EventReactionTriggerType,
+} from "../event-hooks/matcher.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   EventReactionTriggerQueueingFailureReason,
@@ -57,6 +60,18 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const supportedAutoEventReactionTriggerTypes: ReadonlySet<EventReactionTriggerType> =
+  new Set([
+    "damageDealt",
+    "fieldRemoved",
+    "cardPlayed",
+    "cardRested",
+    "donReturned",
+    "donAttached",
+    "attackDeclared",
+    "effectQueued",
+  ]);
 
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
@@ -156,9 +171,13 @@ export const createEventReactionTriggerQueueing = (
         }
         const reactionEffects = lookup.definition.effects.flatMap((effect) => {
           const match = matchEventTrigger(state, source, effect.trigger, event);
-          return match.triggerTypes.length === 0
+          const triggerTypesForEvent = match.triggerTypes.filter(
+            (triggerType) =>
+              supportedAutoEventReactionTriggerTypes.has(triggerType),
+          );
+          return triggerTypesForEvent.length === 0
             ? []
-            : [{ effect, triggerTypesForEvent: match.triggerTypes }];
+            : [{ effect, triggerTypesForEvent }];
         });
         if (reactionEffects.length === 0) {
           continue;
