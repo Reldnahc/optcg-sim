@@ -6,6 +6,7 @@ import {
   type ResolvedTargetContinuousEffect,
 } from "../../runtime/continuous/resolved-target.js";
 import { isSourceDependentContinuousQueueEffect } from "../../runtime/continuous/support.js";
+import type { ContinuousQueueEffect } from "../../runtime/continuous/types.js";
 import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
 import {
   isSupportedSavedFieldObjectKoTarget,
@@ -15,41 +16,12 @@ import {
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 
-export type DirectContinuousEffect = Extract<
-  Effect,
-  {
-    type:
-      | "modifyPower"
-      | "giveKeyword"
-      | "giveAttribute"
-      | "setBasePower"
-      | "modifyCost"
-      | "modifyCounter"
-      | "preventDraw"
-      | "preventDonActivation"
-      | "preventPlay"
-      | "invalidateEffects"
-      | "cannotBecomeActive"
-      | "cannotAttack"
-      | "attackCost"
-      | "cannotBlock"
-      | "preventBlockerActivation";
-  }
->;
+export type DirectContinuousEffect = ContinuousQueueEffect;
 export type ConditionalContinuousEffect = Extract<
   Effect,
   { type: "conditional" }
 > & {
-  then:
-    | Extract<Effect, { type: "modifyPower" }>
-    | Extract<Effect, { type: "preventDonActivation" }>
-    | Extract<Effect, { type: "preventPlay" }>
-    | Extract<Effect, { type: "invalidateEffects" }>
-    | Extract<Effect, { type: "cannotBecomeActive" }>
-    | Extract<Effect, { type: "cannotAttack" }>
-    | Extract<Effect, { type: "attackCost" }>
-    | Extract<Effect, { type: "cannotBlock" }>
-    | Extract<Effect, { type: "preventBlockerActivation" }>;
+  then: ContinuousQueueEffect;
 };
 export type SavedTargetContinuousEffect = ResolvedTargetContinuousEffect & {
   target: Extract<Target, { type: "savedFieldObject" }>;
