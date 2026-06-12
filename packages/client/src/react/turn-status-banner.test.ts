@@ -108,7 +108,7 @@ describe("turn status banner", () => {
 
     assert.match(
       css,
-      /animation:\s*turn-status-slide-across 2000ms ease-in-out\s+both;/u,
+      /animation:\s*turn-status-slide-across 1500ms ease-in-out\s+both;/u,
     );
     assert.match(
       css,
