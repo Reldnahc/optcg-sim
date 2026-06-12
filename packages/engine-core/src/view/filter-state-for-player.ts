@@ -46,12 +46,19 @@ const toVisiblePlayerState = (
   computedStatsByInstance:
     | ReadonlyMap<InstanceId, ComputedBoardCardStats>
     | undefined,
+  revealPrivateZones: boolean,
 ): VisiblePlayerState => {
   const restrictions = playerRestrictionLabels(state, player.playerId);
   return {
     playerId: player.playerId,
     deckCount: player.deck.length,
+    ...(revealPrivateZones
+      ? { deck: player.deck.map((card) => toPublicCardView(card)) }
+      : {}),
     donDeckCount: player.donDeck.length,
+    ...(revealPrivateZones
+      ? { donDeck: player.donDeck.map((card) => toPublicCardView(card)) }
+      : {}),
     hand: player.hand.map((card) => toPublicCardView(card)),
     trash: player.trash.map((card) => toPublicCardView(card)),
     leader: toBoardPublicCardView(
@@ -66,7 +73,7 @@ const toVisiblePlayerState = (
       ? {}
       : { stage: toPublicCardView(player.stage) }),
     costArea: player.costArea.map((card) => toPublicCardView(card)),
-    life: toPublicLifeView(player),
+    life: toPublicLifeView(player, { revealAll: revealPrivateZones }),
     hasMulliganed: player.hasMulliganed,
     turnCount: player.turnCount,
     ...(restrictions.length === 0 ? {} : { restrictions }),
@@ -79,13 +86,23 @@ const toOpponentVisibleState = (
   computedStatsByInstance:
     | ReadonlyMap<InstanceId, ComputedBoardCardStats>
     | undefined,
+  revealPrivateZones: boolean,
 ): OpponentVisibleState => {
   const restrictions = playerRestrictionLabels(state, player.playerId);
   return {
     playerId: player.playerId,
     deckCount: player.deck.length,
+    ...(revealPrivateZones
+      ? { deck: player.deck.map((card) => toPublicCardView(card)) }
+      : {}),
     donDeckCount: player.donDeck.length,
+    ...(revealPrivateZones
+      ? { donDeck: player.donDeck.map((card) => toPublicCardView(card)) }
+      : {}),
     handCount: player.hand.length,
+    ...(revealPrivateZones
+      ? { hand: player.hand.map((card) => toPublicCardView(card)) }
+      : {}),
     trash: player.trash.map((card) => toPublicCardView(card)),
     leader: toBoardPublicCardView(
       player.leader,
@@ -99,7 +116,7 @@ const toOpponentVisibleState = (
       ? {}
       : { stage: toPublicCardView(player.stage) }),
     costArea: player.costArea.map((card) => toPublicCardView(card)),
-    life: toPublicLifeView(player),
+    life: toPublicLifeView(player, { revealAll: revealPrivateZones }),
     hasMulliganed: player.hasMulliganed,
     turnCount: player.turnCount,
     ...(restrictions.length === 0 ? {} : { restrictions }),
@@ -600,6 +617,9 @@ const dedupePublicLegalActions = (
   return deduped;
 };
 
+const isTerminalState = (state: GameState): boolean =>
+  state.status.type === "completed" || state.status.type === "gameOver";
+
 const toPublicRevealRecord = (
   state: GameState,
   playerId: PlayerId,
@@ -709,6 +729,7 @@ export const filterStateForPlayer = (
     : undefined;
   // Keep computeView validation fail-closed for unsupported board-power metadata.
   const computedStatsByInstance = computedBoardCardStatsByInstance(state);
+  const revealPrivateZones = isTerminalState(state);
 
   return {
     matchId: state.matchId,
@@ -716,11 +737,17 @@ export const filterStateForPlayer = (
     stateSeq: state.seq,
     actionSeq: state.actionSeq,
     turn,
-    self: toVisiblePlayerState(state, selfState, computedStatsByInstance),
+    self: toVisiblePlayerState(
+      state,
+      selfState,
+      computedStatsByInstance,
+      revealPrivateZones,
+    ),
     opponent: toOpponentVisibleState(
       state,
       opponentState,
       computedStatsByInstance,
+      revealPrivateZones,
     ),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),

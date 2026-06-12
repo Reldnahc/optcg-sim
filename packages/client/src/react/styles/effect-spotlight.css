@@ -64,14 +64,13 @@
 .effect-spotlight-card__rules {
   position: absolute;
   right: 4%;
-  bottom: 12.4%;
+  bottom: 14%;
   left: 4%;
-  display: grid;
-  min-height: 26%;
-  max-height: 31%;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  min-height: 24%;
+  max-height: 29%;
   align-items: start;
-  justify-items: start;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
   border-radius: clamp(3px, 0.5vh, 5px);
@@ -79,6 +78,17 @@
   color: #1f1915;
   background: rgba(246, 238, 224, 0.9);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
+}
+
+.effect-spotlight-card__main-rules,
+.effect-spotlight-card__trigger-rules {
+  min-height: 0;
+  width: 100%;
+}
+
+.effect-spotlight-card__trigger-rules {
+  margin-bottom: clamp(2px, 0.45vh, 4px);
+  margin-top: auto;
 }
 
 .effect-spotlight-card__fallback {
@@ -147,23 +157,33 @@
 }
 
 .effect-spotlight .card-rules-tag--trigger {
-  margin: -0.15em 0 -0.15em 0;
-  border-radius: 0.25em 0 0 0.25em;
+  margin: -0.15em 0 -0.2em 0;
+  border-radius: 0;
   padding: 0.15em 1.4em 0.15em 0.3em;
-  line-height: var(--effect-spotlight-rules-line-height);
+  line-height: 1.65;
+  font-size: 0.9em;
+  vertical-align: baseline;
 }
 
 .effect-spotlight .trigger-block {
   border-radius: 0.25em;
+  background: #17150d;
+  color: #fff8f8;
+}
+
+.effect-spotlight .trigger-block .card-rules-text {
+  line-height: 1;
 }
 
 .effect-spotlight .trigger-block .card-rules-line {
   padding: 0.2em 0.5em 0.2em 0;
-  line-height: var(--effect-spotlight-rules-line-height);
+  line-height: 1.65;
 }
 
 .effect-spotlight .trigger-block .card-rules-line:first-child {
   padding-left: 0.3em;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .effect-spotlight
@@ -174,7 +194,8 @@
 }
 
 .effect-spotlight .trigger-block--wraps .card-rules-tag--trigger {
-  border-radius: 0.25em 0 0 0;
+  border-radius: 0;
+  vertical-align: top;
 }
 
 .effect-spotlight .card-rules-tag--ability {

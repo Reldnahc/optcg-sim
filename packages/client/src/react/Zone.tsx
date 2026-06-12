@@ -55,7 +55,7 @@ export const Zone = ({
   onViewCollection,
 }: ZoneProps): React.JSX.Element => {
   const visibleCards =
-    displayMode === "stack" && cards.length > 0
+    displayMode === "stack" && stackCount === undefined && cards.length > 0
       ? [cards[0] as ClientCardModel]
       : cards;
   const zoneRef = useRef<HTMLElement | null>(null);
@@ -113,6 +113,7 @@ export const Zone = ({
     displayMode === "overlap" ? "zone-cards-overlap" : "",
     displayMode === "slots" ? "zone-cards-slots" : "",
     displayMode === "life" ? "zone-cards-life" : "",
+    displayMode === "stack" ? "zone-cards-stack" : "",
     rowLayout.edgePacked ? "is-edge-packed" : "",
     rowLayout.overlap > 0 ? "is-overlapping" : "",
   ]
@@ -121,14 +122,29 @@ export const Zone = ({
   const zoneCardsStyle = {
     "--card-row-overlap": `${rowLayout.overlap.toFixed(2)}px`,
   } as CSSProperties & Record<"--card-row-overlap", string>;
+  const lifeCardIsSelf = presentationZoneKey === "self:life";
   const lifeCardStyle = (index: number, count: number): CSSProperties => {
-    const yStep = count <= 5 ? 12 : Math.max(6, 16 - count);
+    const offsetIndex = lifeCardIsSelf ? index : count - index - 1;
+    const offset = `${String(offsetIndex * 10)}%`;
     return {
-      "--life-card-y-offset": `${String(index * yStep)}%`,
+      "--life-card-y-offset": offset,
       zIndex: count - index,
+      ...(lifeCardIsSelf
+        ? { bottom: "var(--life-card-y-offset)" }
+        : { top: "var(--life-card-y-offset)" }),
     } as CSSProperties & Record<"--life-card-y-offset", string>;
   };
   const displayedStackCount = stackCount ?? cards.length;
+  const stackCardStyle = (
+    index: number,
+    count: number,
+  ): CSSProperties & Record<"--stack-card-offset", string> => {
+    const offset = count - index - 1;
+    return {
+      "--stack-card-offset": `${String(offset)}px`,
+      zIndex: count - index,
+    };
+  };
 
   return (
     <section
@@ -160,21 +176,17 @@ export const Zone = ({
         />
       ) : null}
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
-        {displayMode === "slots"
-          ? Array.from({ length: slotCount }, (_, index) => {
-              const card = visibleCards[index];
-              if (card === undefined) {
-                return (
-                  <div
-                    key={`empty-slot-${String(index)}`}
-                    className="zone-card-slot is-empty"
-                  />
-                );
-              }
+        {displayMode === "stack" && visibleCards.length > 0 ? (
+          <div className="stack-card-visual">
+            {visibleCards.map((card, index) => {
               const instanceId = String(card.instanceId);
               const actions = cardActions?.(instanceId) ?? [];
               return (
-                <div key={instanceId} className="zone-card-slot">
+                <div
+                  className="stack-card-layer"
+                  key={instanceId}
+                  style={stackCardStyle(index, visibleCards.length)}
+                >
                   <CardTile
                     card={card}
                     selected={
@@ -193,80 +205,120 @@ export const Zone = ({
                     onAttachedDonClick={onCardClick}
                     onHover={onCardPreview}
                     onClick={
-                      onCardClick === undefined
-                        ? undefined
-                        : () => {
-                            onCardClick(instanceId);
-                          }
+                      onViewCollection === undefined
+                        ? onCardClick === undefined
+                          ? undefined
+                          : () => {
+                              onCardClick(instanceId);
+                            }
+                        : onViewCollection
                     }
                   />
                 </div>
               );
-            })
-          : displayMode === "life"
-            ? visibleCards.map((card, index) => {
-                const instanceId = String(card.instanceId);
-                return (
-                  <div
-                    key={instanceId}
-                    className="life-card-position"
-                    style={lifeCardStyle(index, visibleCards.length)}
-                  >
-                    <CardTile
-                      card={card}
-                      selected={decisionSelectedInstanceIds.includes(
-                        instanceId,
-                      )}
-                      pendingChoice={pendingChoiceInstanceIds.includes(
-                        instanceId,
-                      )}
-                      disabled={actionDisabled}
-                      onHover={onCardPreview}
-                      onClick={
-                        onCardClick === undefined
-                          ? undefined
-                          : () => {
-                              onCardClick(instanceId);
-                            }
-                      }
-                    />
-                  </div>
-                );
-              })
-            : visibleCards.map((card) => {
-                const instanceId = String(card.instanceId);
-                const actions = cardActions?.(instanceId) ?? [];
-                return (
-                  <CardTile
-                    key={instanceId}
-                    card={card}
-                    selected={
-                      selectedCardInstanceId === instanceId ||
-                      decisionSelectedInstanceIds.includes(instanceId)
-                    }
-                    pendingChoice={pendingChoiceInstanceIds.includes(
-                      instanceId,
-                    )}
-                    selectable={cardIsSelectable(actions)}
-                    selectedDonInstanceIds={selectedDonInstanceIds}
-                    active={activeCardInstanceIds.includes(instanceId)}
-                    actions={actions}
-                    disabled={actionDisabled}
-                    onAction={onCardAction}
-                    onAttachedDonClick={onCardClick}
-                    onHover={onCardPreview}
-                    onClick={
-                      displayMode === "stack" && onViewCollection !== undefined
-                        ? onViewCollection
-                        : onCardClick === undefined
-                          ? undefined
-                          : () => {
-                              onCardClick(instanceId);
-                            }
-                    }
-                  />
-                );
-              })}
+            })}
+          </div>
+        ) : displayMode === "slots" ? (
+          Array.from({ length: slotCount }, (_, index) => {
+            const card = visibleCards[index];
+            if (card === undefined) {
+              return (
+                <div
+                  key={`empty-slot-${String(index)}`}
+                  className="zone-card-slot is-empty"
+                />
+              );
+            }
+            const instanceId = String(card.instanceId);
+            const actions = cardActions?.(instanceId) ?? [];
+            return (
+              <div key={instanceId} className="zone-card-slot">
+                <CardTile
+                  card={card}
+                  selected={
+                    selectedCardInstanceId === instanceId ||
+                    decisionSelectedInstanceIds.includes(instanceId)
+                  }
+                  pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
+                  selectable={cardIsSelectable(actions)}
+                  selectedDonInstanceIds={selectedDonInstanceIds}
+                  active={activeCardInstanceIds.includes(instanceId)}
+                  actions={actions}
+                  disabled={actionDisabled}
+                  onAction={onCardAction}
+                  onAttachedDonClick={onCardClick}
+                  onHover={onCardPreview}
+                  onClick={
+                    onCardClick === undefined
+                      ? undefined
+                      : () => {
+                          onCardClick(instanceId);
+                        }
+                  }
+                />
+              </div>
+            );
+          })
+        ) : displayMode === "life" ? (
+          visibleCards.map((card, index) => {
+            const instanceId = String(card.instanceId);
+            return (
+              <div
+                key={instanceId}
+                className="life-card-position"
+                style={lifeCardStyle(index, visibleCards.length)}
+              >
+                <CardTile
+                  card={card}
+                  selected={decisionSelectedInstanceIds.includes(instanceId)}
+                  pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
+                  disabled={actionDisabled}
+                  onHover={onCardPreview}
+                  onClick={
+                    onCardClick === undefined
+                      ? undefined
+                      : () => {
+                          onCardClick(instanceId);
+                        }
+                  }
+                />
+              </div>
+            );
+          })
+        ) : (
+          visibleCards.map((card) => {
+            const instanceId = String(card.instanceId);
+            const actions = cardActions?.(instanceId) ?? [];
+            return (
+              <CardTile
+                key={instanceId}
+                card={card}
+                selected={
+                  selectedCardInstanceId === instanceId ||
+                  decisionSelectedInstanceIds.includes(instanceId)
+                }
+                pendingChoice={pendingChoiceInstanceIds.includes(instanceId)}
+                selectable={cardIsSelectable(actions)}
+                selectedDonInstanceIds={selectedDonInstanceIds}
+                active={activeCardInstanceIds.includes(instanceId)}
+                actions={actions}
+                disabled={actionDisabled}
+                onAction={onCardAction}
+                onAttachedDonClick={onCardClick}
+                onHover={onCardPreview}
+                onClick={
+                  displayMode === "stack" && onViewCollection !== undefined
+                    ? onViewCollection
+                    : onCardClick === undefined
+                      ? undefined
+                      : () => {
+                          onCardClick(instanceId);
+                        }
+                }
+              />
+            );
+          })
+        )}
       </div>
     </section>
   );

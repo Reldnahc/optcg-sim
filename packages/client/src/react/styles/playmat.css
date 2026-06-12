@@ -75,11 +75,110 @@
   fill: #e32222;
 }
 
+.turn-status-banner-lane {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.turn-status-banner {
+  width: 100%;
+  border: var(--card-outline-thin) solid rgba(255, 255, 255, 0.42);
+  border-right: 0;
+  border-left: 0;
+  padding: 14px 18px;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 14, 20, 0),
+    rgba(10, 14, 20, 0.88) 16%,
+    rgba(10, 14, 20, 0.92) 50%,
+    rgba(10, 14, 20, 0.88) 84%,
+    rgba(10, 14, 20, 0)
+  );
+  color: #f7f1df;
+  font-size: clamp(18px, calc(var(--card-height) / 5.6), 32px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  animation: turn-status-slide-across 1500ms ease-in-out both;
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 16px rgba(255, 255, 255, 0.16);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.82);
+}
+
+.turn-status-banner.is-self {
+  border-color: rgba(88, 217, 156, 0.86);
+  color: #b9ffd8;
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 18px rgba(88, 217, 156, 0.36);
+}
+
+.turn-status-banner.is-opponent {
+  border-color: rgba(255, 105, 105, 0.86);
+  color: #ffd0d0;
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 18px rgba(255, 105, 105, 0.34);
+}
+
+.turn-status-banner.is-block {
+  border-color: rgba(106, 183, 255, 0.88);
+  color: #d4ebff;
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 20px rgba(106, 183, 255, 0.38);
+}
+
+.turn-status-banner.is-counter {
+  border-color: rgba(255, 216, 77, 0.92);
+  color: #ffe88c;
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 20px rgba(255, 216, 77, 0.4);
+}
+
+@keyframes turn-status-slide-across {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
 .battle-arrow-power rect {
   fill: rgba(9, 12, 17, 0.9);
   stroke: rgba(255, 216, 77, 0.92);
   stroke-width: calc(var(--card-height) / 120);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75));
+}
+
+.battle-arrow-power {
+  animation: battle-power-impact 620ms ease-out both;
 }
 
 .battle-arrow-power text {
@@ -91,6 +190,23 @@
   stroke: rgba(0, 0, 0, 0.85);
   stroke-linejoin: round;
   stroke-width: calc(var(--card-height) / 95);
+}
+
+@keyframes battle-power-impact {
+  0% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 rgba(255, 216, 77, 0));
+  }
+
+  35% {
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(255, 216, 77, 0.82));
+  }
+
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgba(255, 216, 77, 0.36));
+  }
 }
 
 .opponent-cost {

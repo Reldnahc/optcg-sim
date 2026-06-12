@@ -4,7 +4,12 @@ import type {
 } from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
-import { EffectRulesText } from "./EffectRulesText.js";
+import { TriggerBlock } from "optcg-card-rules";
+
+import {
+  EffectRulesText,
+  renderMainSiteSearchLink,
+} from "./EffectRulesText.js";
 
 export interface EffectSpotlightProps {
   readonly card: ClientCardModel | undefined;
@@ -93,6 +98,13 @@ export const EffectSpotlight = ({
     text === undefined
       ? undefined
       : spotlightTextWithoutReminders(text, sourceMap);
+  const triggerSpotlightText =
+    textKind === "trigger" || card.triggerText === undefined
+      ? undefined
+      : spotlightTextWithoutReminders(
+          card.triggerText,
+          card.triggerTextSourceMap,
+        );
   return (
     <aside className="effect-spotlight" aria-label={`Resolving ${card.name}`}>
       <div className="effect-spotlight-card">
@@ -106,16 +118,27 @@ export const EffectSpotlight = ({
           />
         )}
         <div className="effect-spotlight-card__rules">
-          {spotlightText === undefined ? (
-            <div className="effect-spotlight-card__fallback">{card.name}</div>
-          ) : (
-            <EffectRulesText
-              text={spotlightText.text}
-              sourceMap={spotlightText.sourceMap}
-              activeSpanIds={active.activeSpanIds}
-              compact
-              preserveNewlines
-            />
+          <div className="effect-spotlight-card__main-rules">
+            {spotlightText === undefined ? (
+              <div className="effect-spotlight-card__fallback">{card.name}</div>
+            ) : (
+              <EffectRulesText
+                text={spotlightText.text}
+                sourceMap={spotlightText.sourceMap}
+                activeSpanIds={active.activeSpanIds}
+                compact
+                preserveNewlines
+              />
+            )}
+          </div>
+          {triggerSpotlightText === undefined ? null : (
+            <div className="effect-spotlight-card__trigger-rules">
+              <TriggerBlock
+                text={triggerSpotlightText.text}
+                compact
+                renderSearchLink={renderMainSiteSearchLink}
+              />
+            </div>
           )}
         </div>
       </div>

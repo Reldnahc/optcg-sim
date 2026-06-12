@@ -522,8 +522,85 @@ describe("board view model", () => {
     );
   });
 
+  test("projects terminal reveal cards for hands, decks, DON decks, and life", () => {
+    const view = minimalView();
+    view.self.deck = [card("self-deck-1", "OP15-116", "deck")];
+    view.self.donDeck = [card("self-don-deck-1", "DON", "donDeck")];
+    view.self.life = {
+      count: 2,
+      faceUpCards: [
+        {
+          ...card("self-life-1", "OP15-116", "life"),
+          zone: { playerId: p1, zone: "life", slot: "life", index: 0 },
+        },
+        {
+          ...card("self-life-2", "OP15-117", "life"),
+          zone: { playerId: p1, zone: "life", slot: "life", index: 1 },
+        },
+      ],
+    };
+    view.opponent.hand = [card("opponent-hand-1", "OP15-118", "hand", p2)];
+    view.opponent.deck = [card("opponent-deck-1", "OP15-119", "deck", p2)];
+    view.opponent.donDeck = [card("opponent-don-deck-1", "DON", "donDeck", p2)];
+    view.opponent.life = {
+      count: 1,
+      faceUpCards: [
+        {
+          ...card("opponent-life-1", "OP15-120", "life", p2),
+          zone: { playerId: p2, zone: "life", slot: "life", index: 0 },
+        },
+      ],
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(
+      model.self.deckCards?.map((cardModel) => cardModel.instanceId),
+      ["self-deck-1"],
+    );
+    assert.deepEqual(
+      model.self.donDeckCards?.map((cardModel) => cardModel.instanceId),
+      ["self-don-deck-1"],
+    );
+    assert.deepEqual(
+      model.self.lifeCards.map((cardModel) => cardModel.instanceId),
+      ["self-life-1", "self-life-2"],
+    );
+    assert.deepEqual(
+      model.opponent.hand?.map((cardModel) => cardModel.instanceId),
+      ["opponent-hand-1"],
+    );
+    assert.deepEqual(
+      model.opponent.deckCards?.map((cardModel) => cardModel.instanceId),
+      ["opponent-deck-1"],
+    );
+    assert.deepEqual(
+      model.opponent.donDeckCards?.map((cardModel) => cardModel.instanceId),
+      ["opponent-don-deck-1"],
+    );
+    assert.deepEqual(
+      model.opponent.lifeCards.map((cardModel) => cardModel.instanceId),
+      ["opponent-life-1"],
+    );
+  });
+
   test("projects public battle attacker and current target for both seats", () => {
     const view = minimalView();
+    view.opponent.leader.currentPower = 5000;
     view.battle = {
       attacker: ref("leader-1", "OP13-079", p1),
       originalTarget: ref("opp-leader", "OP01-001", p2),
@@ -551,7 +628,128 @@ describe("board view model", () => {
     assert.deepEqual(model.battleArrow, {
       attackerInstanceId: "leader-1",
       attackPower: 7000,
+      defendPower: 5000,
       targetInstanceId: "opp-leader",
+    });
+  });
+
+  test("projects turn ownership into the board status banner", () => {
+    const view = minimalView();
+    view.turn.turnPlayerId = p1;
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const selfTurnModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+    view.turn.turnPlayerId = p2;
+    const opponentTurnModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(selfTurnModel.statusBanner, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 1,
+    });
+    assert.deepEqual(opponentTurnModel.statusBanner, {
+      label: "Opponent's Turn",
+      tone: "opponent",
+      turnNumber: 1,
+    });
+  });
+
+  test("holds turn ownership banner until post-mulligan life is placed", () => {
+    const view = minimalView();
+    view.self.hasMulliganed = false;
+    view.opponent.hasMulliganed = false;
+    view.self.life = { count: 0, faceUpCards: [] };
+    view.opponent.life = { count: 0, faceUpCards: [] };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const pendingMulliganModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+    view.self.life = { count: 5, faceUpCards: [] };
+    view.opponent.life = { count: 5, faceUpCards: [] };
+    const decidedMulliganModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(pendingMulliganModel.statusBanner, undefined);
+    assert.deepEqual(decidedMulliganModel.statusBanner, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 1,
+    });
+  });
+
+  test("projects blocker and counter battle steps into the board status banner", () => {
+    const view = minimalView();
+    view.battle = {
+      attacker: ref("leader-1", "OP13-079", p1),
+      originalTarget: ref("opp-leader", "OP01-001", p2),
+      currentTarget: ref("opp-leader", "OP01-001", p2),
+      step: "block",
+      damageCount: 1,
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const blockerModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+    view.battle.step = "counter";
+    const counterModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(blockerModel.statusBanner, {
+      label: "Blocker Step",
+      tone: "block",
+      turnNumber: 1,
+    });
+    assert.deepEqual(counterModel.statusBanner, {
+      label: "Counter Step",
+      tone: "counter",
+      turnNumber: 1,
     });
   });
 

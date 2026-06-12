@@ -95,6 +95,47 @@ describe("EffectSpotlight", () => {
     expect(html).toContain("effect-rules-span--active");
   });
 
+  it("renders trigger text at the bottom of the resolving rules box", () => {
+    const model: ClientCardModel = {
+      ...card(),
+      triggerText: "[Trigger] Draw 1 card.",
+      triggerTextSourceMap: {
+        textKind: "trigger",
+        sourceText: "[Trigger] Draw 1 card.",
+        spans: [
+          {
+            id: "span:trigger:draw",
+            role: "body",
+            start: 10,
+            end: 22,
+            text: "Draw 1 card.",
+          },
+        ],
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: model,
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+
+    expect(html).toContain("effect-spotlight-card__rules");
+    expect(html).toContain("trigger-block");
+    expect(html).toMatch(
+      /effect-spotlight-card__rules[\s\S]*effect-spotlight-card__main-rules[\s\S]*On Play[\s\S]*effect-spotlight-card__trigger-rules[\s\S]*trigger-block[\s\S]*Trigger/u,
+    );
+  });
+
   it("keeps a visible resolving shell when catalog text is missing", () => {
     const model = card();
     delete model.effectText;

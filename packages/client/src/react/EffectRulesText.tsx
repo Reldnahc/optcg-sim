@@ -43,7 +43,7 @@ const renderedRulesText = (
   );
 };
 
-const renderMainSiteSearchLink = ({
+export const renderMainSiteSearchLink = ({
   children,
   className,
   href,

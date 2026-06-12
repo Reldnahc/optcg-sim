@@ -257,13 +257,41 @@ describe("playmat structure", () => {
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*border-radius:\s*6px;/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*4%;/u);
-    assert.match(effectSpotlightStyles, /bottom:\s*12\.4%;/u);
+    assert.match(effectSpotlightStyles, /bottom:\s*14%;/u);
     assert.match(effectSpotlightStyles, /left:\s*4%;/u);
-    assert.match(effectSpotlightStyles, /min-height:\s*26%;/u);
-    assert.match(effectSpotlightStyles, /max-height:\s*31%;/u);
-    assert.match(effectSpotlightStyles, /align-content:\s*start;/u);
+    assert.match(effectSpotlightStyles, /min-height:\s*24%;/u);
+    assert.match(effectSpotlightStyles, /max-height:\s*29%;/u);
+    assert.match(effectSpotlightStyles, /display:\s*flex;/u);
+    assert.match(effectSpotlightStyles, /flex-direction:\s*column;/u);
     assert.match(effectSpotlightStyles, /align-items:\s*start;/u);
-    assert.match(effectSpotlightStyles, /justify-items:\s*start;/u);
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card__trigger-rules\s*\{[^}]*margin-bottom:\s*clamp\(2px,\s*0\.45vh,\s*4px\);[^}]*margin-top:\s*auto;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.trigger-block\s*\{[^}]*background:\s*#17150d;[^}]*color:\s*#fff8f8;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag--trigger\s*\{[^}]*line-height:\s*1\.65;[^}]*font-size:\s*0\.9em;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag--trigger\s*\{[^}]*border-radius:\s*0;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.trigger-block--wraps \.card-rules-tag--trigger\s*\{[^}]*border-radius:\s*0;[^}]*vertical-align:\s*top;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag--trigger\s*\{[^}]*margin:\s*-0\.15em 0 -0\.2em 0;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.trigger-block \.card-rules-line:first-child\s*\{[^}]*padding-left:\s*0\.3em;[^}]*padding-top:\s*0;[^}]*padding-bottom:\s*0;/u,
+    );
     assert.match(
       effectSpotlightStyles,
       /background:\s*rgba\(246,\s*238,\s*224,\s*0\.9\);/u,
@@ -421,18 +449,37 @@ describe("playmat structure", () => {
       "utf8",
     );
 
-    assert.match(
-      boardLayout,
-      /className="playmat-zone opponent-deck"[\s\S]*label="Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.deckCount/u,
+    const opponentDeckStart = boardLayout.indexOf(
+      'className="playmat-zone opponent-deck"',
     );
+    const opponentDeckEnd = boardLayout.indexOf(
+      'className="playmat-zone opponent-don-deck"',
+      opponentDeckStart,
+    );
+    const opponentDeckZone = boardLayout.slice(
+      opponentDeckStart,
+      opponentDeckEnd,
+    );
+    assert.match(opponentDeckZone, /label="Deck"/u);
+    assert.match(opponentDeckZone, /board\.opponent\.deckCount/u);
+    assert.match(opponentDeckZone, /"hidden-deck-opponent"/u);
+    assert.equal(opponentDeckZone.includes(",\n              10,"), false);
     assert.match(
       boardLayout,
       /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount/u,
     );
-    assert.match(
-      boardLayout,
-      /className="playmat-zone player-deck"[\s\S]*label="Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.deckCount/u,
+    const playerDeckStart = boardLayout.indexOf(
+      'className="playmat-zone player-deck"',
     );
+    const playerDeckEnd = boardLayout.indexOf(
+      'className="playmat-zone player-don-deck"',
+      playerDeckStart,
+    );
+    const playerDeckZone = boardLayout.slice(playerDeckStart, playerDeckEnd);
+    assert.match(playerDeckZone, /label="Deck"/u);
+    assert.match(playerDeckZone, /board\.self\.deckCount/u);
+    assert.match(playerDeckZone, /"hidden-deck-self"/u);
+    assert.equal(playerDeckZone.includes(", 10"), false);
     assert.match(
       boardLayout,
       /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount/u,

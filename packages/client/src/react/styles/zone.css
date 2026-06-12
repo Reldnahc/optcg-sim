@@ -59,6 +59,33 @@
   margin-left: calc(-1 * var(--card-row-overlap));
 }
 
+.zone-cards-stack {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--card-width);
+  height: var(--card-height);
+  transform: translate(-50%, -50%);
+}
+
+.stack-card-visual {
+  position: relative;
+  display: grid;
+  aspect-ratio: 5 / 7;
+  width: var(--card-width);
+  height: var(--card-height);
+  place-items: center;
+  overflow: visible;
+}
+
+.stack-card-layer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform: translateY(calc(-1 * var(--stack-card-offset)));
+}
+
 .zone-cards-slots {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -77,7 +104,6 @@
 
 .life-card-position {
   position: absolute;
-  top: var(--life-card-y-offset);
   left: 50%;
   transform: translateX(-50%);
 }

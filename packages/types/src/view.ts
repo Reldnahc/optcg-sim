@@ -67,7 +67,9 @@ export interface PublicLifeView {
 export interface VisiblePlayerState {
   playerId: PlayerId;
   deckCount: number;
+  deck?: PublicCardView[];
   donDeckCount: number;
+  donDeck?: PublicCardView[];
   hand: PublicCardView[];
   trash: PublicCardView[];
   leader: PublicCardView;
@@ -83,8 +85,11 @@ export interface VisiblePlayerState {
 export interface OpponentVisibleState {
   playerId: PlayerId;
   deckCount: number;
+  deck?: PublicCardView[];
   donDeckCount: number;
+  donDeck?: PublicCardView[];
   handCount: number;
+  hand?: PublicCardView[];
   trash: PublicCardView[];
   leader: PublicCardView;
   characters: PublicCardView[];

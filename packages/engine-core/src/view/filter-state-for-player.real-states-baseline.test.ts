@@ -591,6 +591,53 @@ const assertFaceUpLifeVisible = (
   }
 };
 
+const assertTerminalPrivateZonesVisible = (
+  state: GameState,
+  recipient: PlayerId,
+  label: string,
+): void => {
+  const opponent = recipient === p1 ? p2 : p1;
+  const view = filterStateForPlayer(state, recipient);
+  const recipientState = must(state.players[recipient], `${label} recipient`);
+  const opponentState = must(state.players[opponent], `${label} opponent`);
+
+  assert.deepEqual(
+    view.self.deck?.map((card) => card.instanceId),
+    recipientState.deck.map((card) => card.instanceId),
+    `${label} self deck visible`,
+  );
+  assert.deepEqual(
+    view.self.donDeck?.map((card) => card.instanceId),
+    recipientState.donDeck.map((card) => card.instanceId),
+    `${label} self DON deck visible`,
+  );
+  assert.deepEqual(
+    view.opponent.hand?.map((card) => card.instanceId),
+    opponentState.hand.map((card) => card.instanceId),
+    `${label} opponent hand visible`,
+  );
+  assert.deepEqual(
+    view.opponent.deck?.map((card) => card.instanceId),
+    opponentState.deck.map((card) => card.instanceId),
+    `${label} opponent deck visible`,
+  );
+  assert.deepEqual(
+    view.opponent.donDeck?.map((card) => card.instanceId),
+    opponentState.donDeck.map((card) => card.instanceId),
+    `${label} opponent DON deck visible`,
+  );
+  assert.deepEqual(
+    view.self.life.faceUpCards.map((card) => card.instanceId),
+    recipientState.life.map((lifeCard) => lifeCard.card.instanceId),
+    `${label} self life visible`,
+  );
+  assert.deepEqual(
+    view.opponent.life.faceUpCards.map((card) => card.instanceId),
+    opponentState.life.map((lifeCard) => lifeCard.card.instanceId),
+    `${label} opponent life visible`,
+  );
+};
+
 test("real baseline engine states stay hidden-info safe across phase progression", () => {
   const bootState = createInitialState(createInput());
   const mulliganState = startMulliganFlow(bootState).state;
@@ -610,7 +657,6 @@ test("real baseline engine states stay hidden-info safe across phase progression
     ["after-card-play", afterCardPlay],
     ["stage-present", withStage],
     ["face-up-life", withFaceUpLife],
-    ["completed-match", completed],
   ];
 
   for (const [label, state] of samples) {
@@ -619,6 +665,10 @@ test("real baseline engine states stay hidden-info safe across phase progression
     assertPublicZonesVisible(state, p1, `${label}:p1`);
     assertPublicZonesVisible(state, p2, `${label}:p2`);
   }
+  assertTerminalPrivateZonesVisible(completed, p1, "completed-match:p1");
+  assertTerminalPrivateZonesVisible(completed, p2, "completed-match:p2");
+  assertPublicZonesVisible(completed, p1, "completed-match:p1");
+  assertPublicZonesVisible(completed, p2, "completed-match:p2");
   assertFaceUpLifeVisible(withFaceUpLife, p1, "face-up-life:p1");
   assertFaceUpLifeVisible(withFaceUpLife, p2, "face-up-life:p2");
 });

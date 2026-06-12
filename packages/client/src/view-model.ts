@@ -51,7 +51,9 @@ export interface ClientPlayerZonesModel {
   costArea: ClientCardModel[];
   trash: ClientCardModel[];
   deckCount: number;
+  deckCards?: ClientCardModel[];
   donDeckCount: number;
+  donDeckCards?: ClientCardModel[];
   lifeCount: number;
   lifeCards: ClientCardModel[];
 }
@@ -73,10 +75,17 @@ export interface ClientActionModel {
   counter?: ClientVisibleAction["counter"];
 }
 
+export interface StatusBannerModel {
+  label: string;
+  tone: "self" | "opponent" | "block" | "counter";
+  turnNumber: number;
+}
+
 export interface BoardViewModel {
   playerId: PlayerId;
   selfLabel: string;
   opponentLabel: string;
+  statusBanner?: StatusBannerModel;
   selfTimer?: PlayerSummaryTimerModel;
   opponentTimer?: PlayerSummaryTimerModel;
   selfIsTurnPlayer: boolean;
@@ -86,12 +95,16 @@ export interface BoardViewModel {
   selfRestrictions?: string[];
   opponentRestrictions?: string[];
   self: ClientPlayerZonesModel;
-  opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
+  opponent: Omit<ClientPlayerZonesModel, "hand"> & {
+    hand?: ClientCardModel[];
+    handCount: number;
+  };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
   activeCardInstanceIds?: readonly string[] | undefined;
   battleArrow?: {
     attackerInstanceId: string;
     attackPower?: number;
+    defendPower?: number;
     targetInstanceId: string;
   };
 }
@@ -291,7 +304,17 @@ const selfZones = (
       cardModel(card, catalog, { includeState: false }),
     ),
     deckCount: view.self.deckCount,
+    ...(view.self.deck === undefined
+      ? {}
+      : { deckCards: view.self.deck.map((card) => cardModel(card, catalog)) }),
     donDeckCount: view.self.donDeckCount,
+    ...(view.self.donDeck === undefined
+      ? {}
+      : {
+          donDeckCards: view.self.donDeck.map((card) =>
+            cardModel(card, catalog),
+          ),
+        }),
     lifeCount: view.self.life.count,
     lifeCards: lifeCards(view.self.life, catalog, "hidden-life-self"),
   };
@@ -331,10 +354,25 @@ const opponentZones = (
       cardModel(card, catalog, { includeState: false }),
     ),
     deckCount: view.opponent.deckCount,
+    ...(view.opponent.deck === undefined
+      ? {}
+      : {
+          deckCards: view.opponent.deck.map((card) => cardModel(card, catalog)),
+        }),
     donDeckCount: view.opponent.donDeckCount,
+    ...(view.opponent.donDeck === undefined
+      ? {}
+      : {
+          donDeckCards: view.opponent.donDeck.map((card) =>
+            cardModel(card, catalog),
+          ),
+        }),
     lifeCount: view.opponent.life.count,
     lifeCards: lifeCards(view.opponent.life, catalog, "hidden-life-opponent"),
     handCount: view.opponent.handCount,
+    ...(view.opponent.hand === undefined
+      ? {}
+      : { hand: view.opponent.hand.map((card) => cardModel(card, catalog)) }),
   };
 };
 
@@ -367,11 +405,35 @@ const battleArrowForView = (
     view,
     view.battle.attacker.instanceId,
   );
+  const defendPower = currentPowerForInstance(
+    view,
+    view.battle.currentTarget.instanceId,
+  );
   return {
     attackerInstanceId: String(view.battle.attacker.instanceId),
     ...(attackPower === undefined ? {} : { attackPower }),
+    ...(defendPower === undefined ? {} : { defendPower }),
     targetInstanceId: String(view.battle.currentTarget.instanceId),
   };
+};
+
+const statusBannerForView = (
+  view: MatchSnapshot["players"][PlayerId]["view"],
+  playerId: PlayerId,
+): StatusBannerModel | undefined => {
+  const turnNumber = view.turn.globalTurn;
+  if (view.battle?.step === "block") {
+    return { label: "Blocker Step", tone: "block", turnNumber };
+  }
+  if (view.battle?.step === "counter") {
+    return { label: "Counter Step", tone: "counter", turnNumber };
+  }
+  if (view.self.life.count === 0 || view.opponent.life.count === 0) {
+    return undefined;
+  }
+  return view.turn.turnPlayerId === playerId
+    ? { label: "Your Turn", tone: "self", turnNumber }
+    : { label: "Opponent's Turn", tone: "opponent", turnNumber };
 };
 
 const addAction = (
@@ -480,9 +542,11 @@ export const createBoardViewModel = ({
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
   const turnPlayerId = player.view.turn.turnPlayerId;
   const battleArrow = battleArrowForView(player.view);
+  const statusBanner = statusBannerForView(player.view, playerId);
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
+    ...(statusBanner === undefined ? {} : { statusBanner }),
     ...(selfTimer === undefined ? {} : { selfTimer }),
     selfIsTurnPlayer: turnPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),

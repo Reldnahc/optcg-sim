@@ -4,7 +4,7 @@ import type {
   ClientCardModel,
 } from "../view-model.js";
 import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
@@ -136,6 +136,110 @@ const donCount = (
   });
 };
 
+export const statusBannerAnimationKey = (
+  banner: NonNullable<BoardViewModel["statusBanner"]>,
+  eventId?: number,
+): string =>
+  `${banner.tone}:${banner.label}:${String(banner.turnNumber)}${
+    eventId === undefined ? "" : `:${String(eventId)}`
+  }`;
+
+const isTurnOwnerBanner = (
+  banner: NonNullable<BoardViewModel["statusBanner"]>,
+): boolean => banner.tone === "self" || banner.tone === "opponent";
+
+const isSameBannerEvent = (
+  left: NonNullable<BoardViewModel["statusBanner"]> | undefined,
+  right: NonNullable<BoardViewModel["statusBanner"]>,
+): boolean =>
+  left !== undefined &&
+  left.tone === right.tone &&
+  left.label === right.label &&
+  left.turnNumber === right.turnNumber;
+
+export interface TurnStatusBannerRenderState {
+  activeBanner?: NonNullable<BoardViewModel["statusBanner"]>;
+  eventId: number;
+  lastTurnOwnerTurnNumber?: number;
+}
+
+export const nextTurnStatusBannerRenderState = (
+  state: TurnStatusBannerRenderState,
+  banner: BoardViewModel["statusBanner"],
+): TurnStatusBannerRenderState => {
+  if (banner === undefined) {
+    return state;
+  }
+  if (isSameBannerEvent(state.activeBanner, banner)) {
+    return state;
+  }
+  if (!isTurnOwnerBanner(banner)) {
+    return {
+      ...state,
+      activeBanner: banner,
+      eventId: state.eventId + 1,
+    };
+  }
+  if (
+    state.lastTurnOwnerTurnNumber !== undefined &&
+    banner.turnNumber <= state.lastTurnOwnerTurnNumber
+  ) {
+    return state;
+  }
+  return {
+    activeBanner: banner,
+    eventId: state.eventId + 1,
+    lastTurnOwnerTurnNumber: banner.turnNumber,
+  };
+};
+
+const TurnStatusBanner = ({
+  banner,
+  eventId,
+}: {
+  banner: NonNullable<BoardViewModel["statusBanner"]>;
+  eventId: number;
+}): React.JSX.Element => {
+  const animationKey = statusBannerAnimationKey(banner, eventId);
+  return (
+    <div className="turn-status-banner-lane" aria-live="polite">
+      <div
+        key={animationKey}
+        className={`turn-status-banner is-${banner.tone}`}
+        data-turn-status-animation={animationKey}
+        data-turn-status={banner.tone}
+      >
+        {banner.label}
+      </div>
+    </div>
+  );
+};
+
+const TurnStatusBannerHost = ({
+  banner,
+}: {
+  banner: BoardViewModel["statusBanner"];
+}): React.JSX.Element | null => {
+  const [renderState, setRenderState] = useState<TurnStatusBannerRenderState>(
+    () => nextTurnStatusBannerRenderState({ eventId: 0 }, banner),
+  );
+  useEffect(() => {
+    setRenderState((current) =>
+      nextTurnStatusBannerRenderState(current, banner),
+    );
+  }, [banner]);
+
+  if (renderState.activeBanner === undefined) {
+    return null;
+  }
+  return (
+    <TurnStatusBanner
+      banner={renderState.activeBanner}
+      eventId={renderState.eventId}
+    />
+  );
+};
+
 export const BoardLayout = ({
   board,
   decisionPrompt,
@@ -177,9 +281,13 @@ export const BoardLayout = ({
       <div className="hand-rail">
         <HandRow
           label="Opponent hand"
-          cards={hiddenCards(board.opponent.handCount, "hidden-hand-opponent")}
+          cards={
+            board.opponent.hand ??
+            hiddenCards(board.opponent.handCount, "hidden-hand-opponent")
+          }
           overflowDirection="right"
           presentationZoneKey="opponent:hand"
+          onCardPreview={onPreviewCard}
         />
         {handCount(board.opponentLabel, "opponent", board.opponent.handCount)}
         {handCount(board.selfLabel, "player", board.self.hand.length)}
@@ -211,6 +319,7 @@ export const BoardLayout = ({
         />
       </div>
       <div className="tabletop-board">
+        <TurnStatusBannerHost banner={board.statusBanner} />
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-zone opponent-cost">
           <Zone
@@ -254,11 +363,10 @@ export const BoardLayout = ({
         <div className="playmat-zone opponent-deck">
           <Zone
             label="Deck"
-            cards={hiddenCards(
-              board.opponent.deckCount,
-              "hidden-deck-opponent",
-              10,
-            )}
+            cards={
+              board.opponent.deckCards ??
+              hiddenCards(board.opponent.deckCount, "hidden-deck-opponent")
+            }
             presentationZoneKey="opponent:deck"
             size="small"
             displayMode="stack"
@@ -269,11 +377,14 @@ export const BoardLayout = ({
         <div className="playmat-zone opponent-don-deck">
           <Zone
             label="DON!! Deck"
-            cards={hiddenCards(
-              board.opponent.donDeckCount,
-              "hidden-don-deck-opponent",
-              10,
-            )}
+            cards={
+              board.opponent.donDeckCards ??
+              hiddenCards(
+                board.opponent.donDeckCount,
+                "hidden-don-deck-opponent",
+                10,
+              )
+            }
             presentationZoneKey="opponent:donDeck"
             size="small"
             displayMode="stack"
@@ -447,7 +558,10 @@ export const BoardLayout = ({
         <div className="playmat-zone player-deck">
           <Zone
             label="Deck"
-            cards={hiddenCards(board.self.deckCount, "hidden-deck-self", 10)}
+            cards={
+              board.self.deckCards ??
+              hiddenCards(board.self.deckCount, "hidden-deck-self")
+            }
             presentationZoneKey="self:deck"
             size="small"
             displayMode="stack"
@@ -458,11 +572,10 @@ export const BoardLayout = ({
         <div className="playmat-zone player-don-deck">
           <Zone
             label="DON!! Deck"
-            cards={hiddenCards(
-              board.self.donDeckCount,
-              "hidden-don-deck-self",
-              10,
-            )}
+            cards={
+              board.self.donDeckCards ??
+              hiddenCards(board.self.donDeckCount, "hidden-don-deck-self", 10)
+            }
             presentationZoneKey="self:donDeck"
             size="small"
             displayMode="stack"

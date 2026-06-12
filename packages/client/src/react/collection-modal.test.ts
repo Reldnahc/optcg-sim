@@ -31,6 +31,15 @@ const card = (instanceId: string, name: string): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const hiddenCard = (instanceId: string): ClientCardModel => ({
+  instanceId: instanceId as InstanceId,
+  cardId: "hidden" as CardId,
+  name: "Hidden card",
+  category: "hidden",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
 describe("collection modal", () => {
   test("collection windows default to the center of the viewport", () => {
     assert.deepEqual(
@@ -102,8 +111,8 @@ describe("collection modal", () => {
   });
 
   test("stack zones can display a true count larger than rendered hidden cards", () => {
-    const hiddenCards = Array.from({ length: 10 }, (_, index) =>
-      card(`hidden-${String(index)}`, "Hidden card"),
+    const hiddenCards = Array.from({ length: 37 }, (_, index) =>
+      hiddenCard(`hidden-${String(index)}`),
     );
     const markup = renderToStaticMarkup(
       createElement(Zone, {
@@ -116,6 +125,54 @@ describe("collection modal", () => {
 
     assert.match(markup, /aria-label="Deck count: 37"/u);
     assert.match(markup, />37</u);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 37);
+  });
+
+  test("stack zones render counted card layers with slight offsets", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(Zone, {
+        label: "Deck",
+        cards: Array.from({ length: 4 }, (_, index) =>
+          hiddenCard(`hidden-deck-${String(index)}`),
+        ),
+        displayMode: "stack",
+        stackCount: 4,
+      }),
+    );
+    const zoneStyles = await readFile(zoneStylesPath, "utf8");
+
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 4);
+    assert.match(markup, /--stack-card-offset:0px/u);
+    assert.match(markup, /--stack-card-offset:1px/u);
+    assert.match(markup, /--stack-card-offset:2px/u);
+    assert.match(markup, /--stack-card-offset:3px/u);
+    assert.match(markup, /z-index:4/u);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 4);
+    assert.match(markup, /card-face card-back card-back-main-deck/u);
+    assert.match(
+      zoneStyles,
+      /\.zone-cards-stack\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.zone-cards-stack\s*\{[^}]*width:\s*var\(--card-width\);[^}]*height:\s*var\(--card-height\);/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.zone-cards-stack\s*\{[^}]*transform:\s*translate\(-50%, -50%\);/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.stack-card-visual\s*\{[^}]*width:\s*var\(--card-width\);[^}]*height:\s*var\(--card-height\);/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.stack-card-layer\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*display:\s*grid;[^}]*place-items:\s*center;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
+    );
+    assert.doesNotMatch(
+      zoneStyles,
+      /\.stack-card-layer \.card-tile-shell\s*\{[^}]*height:\s*100%;/u,
+    );
   });
 
   test("empty non-stack zones do not render placeholder text", () => {
