@@ -382,6 +382,18 @@ const applyDeclareAttackInternal = (
       },
       { type: "public" },
     ),
+    createEvent(
+      state,
+      2,
+      "cardRested",
+      {
+        playerId: attacker.playerId,
+        instanceId: attacker.card.instanceId,
+        cardId: attacker.card.cardId,
+        category: attacker.isLeader ? "leader" : "character",
+      },
+      { type: "public" },
+    ),
   ];
   const declaredState = applyRuleProcessingCheckpoint({
     state: nextState,

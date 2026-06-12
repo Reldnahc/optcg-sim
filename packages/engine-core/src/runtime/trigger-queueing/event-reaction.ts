@@ -33,7 +33,11 @@ import type {
   EventReactionTriggerQueueingFailureReason,
 } from "./core.js";
 
-type EventReactionTriggerType = "damageDealt" | "fieldRemoved" | "cardPlayed";
+type EventReactionTriggerType =
+  | "damageDealt"
+  | "fieldRemoved"
+  | "cardPlayed"
+  | "cardRested";
 
 const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
   new Set(
@@ -49,7 +53,8 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
         typeof payload.timingWindowId === "string" &&
         (payload.timingWindowId.endsWith(":damageDealt") ||
           payload.timingWindowId.endsWith(":fieldRemoved") ||
-          payload.timingWindowId.endsWith(":cardPlayed"))
+          payload.timingWindowId.endsWith(":cardPlayed") ||
+          payload.timingWindowId.endsWith(":cardRested"))
         ? [payload.triggerEventId]
         : [];
     }),
@@ -245,6 +250,65 @@ const matchesCardPlayedTrigger = (
   });
 };
 
+const matchesCardRestedTrigger = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "cardRested" }>,
+  event: EngineEvent,
+): boolean => {
+  if (event.type !== "cardRested" || event.visibility.type !== "public") {
+    return false;
+  }
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const payload = event.payload;
+  const playerId = payload["playerId"];
+  if (
+    typeof playerId !== "string" ||
+    !playerRefMatchesSource(state, source, trigger.player, playerId as PlayerId)
+  ) {
+    return false;
+  }
+  if (
+    trigger.target === "self" &&
+    (payload["instanceId"] !== source.instanceId ||
+      payload["cardId"] !== source.cardId)
+  ) {
+    return false;
+  }
+  if (trigger.sourceController !== undefined) {
+    const sourceControllerId = payload["sourceControllerId"];
+    if (
+      typeof sourceControllerId !== "string" ||
+      !playerRefMatchesSource(
+        state,
+        source,
+        trigger.sourceController,
+        sourceControllerId as PlayerId,
+      )
+    ) {
+      return false;
+    }
+  }
+  if (
+    trigger.sourceKind !== undefined &&
+    trigger.sourceKind !== "any" &&
+    payload["sourceKind"] !== trigger.sourceKind
+  ) {
+    return false;
+  }
+  const cardId = payload["cardId"];
+  const resolved =
+    typeof cardId === "string"
+      ? state.cardManifest.cards[cardId as CardId]
+      : undefined;
+  return (
+    trigger.filter === undefined ||
+    cardMatchesSearchFilter(resolved, trigger.filter)
+  );
+};
+
 const matchingTriggerTypes = (
   state: GameState,
   source: CardInstance,
@@ -278,6 +342,12 @@ const matchingTriggerTypes = (
   ) {
     return ["cardPlayed"];
   }
+  if (
+    trigger.type === "cardRested" &&
+    matchesCardRestedTrigger(state, source, trigger, event)
+  ) {
+    return ["cardRested"];
+  }
   return [];
 };
 
@@ -305,7 +375,8 @@ export const createEventReactionTriggerQueueing = (
         !alreadyQueued.has(String(event.id)) &&
         (event.type === "damageDealt" ||
           event.type === "cardMoved" ||
-          event.type === "cardPlayed"),
+          event.type === "cardPlayed" ||
+          event.type === "cardRested"),
     );
     if (reactionEvents.length === 0) {
       return undefined;

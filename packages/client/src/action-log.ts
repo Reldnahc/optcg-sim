@@ -39,6 +39,7 @@ const eventLabels: Record<EngineEvent["type"], string> = {
   cardRevealed: "Card revealed",
   cardMoved: "Card moved",
   cardPlayed: "Card played",
+  cardRested: "Card rested",
   cardDrawn: "Card drawn",
   cardDiscarded: "Card discarded",
   cardTrashed: "Card trashed",

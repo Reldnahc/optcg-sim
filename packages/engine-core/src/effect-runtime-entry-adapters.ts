@@ -73,6 +73,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "cardPlayed") {
     return autoAdapter("cardPlayed", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "cardRested") {
+    return autoAdapter("cardRested", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "handTrashedByEffect") {
     return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
   }

@@ -34,6 +34,7 @@ export type EngineEventType =
   | "cardRevealed"
   | "cardMoved"
   | "cardPlayed"
+  | "cardRested"
   | "cardDrawn"
   | "cardDiscarded"
   | "cardTrashed"
