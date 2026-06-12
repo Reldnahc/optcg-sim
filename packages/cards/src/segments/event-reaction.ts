@@ -75,21 +75,6 @@ const characterFieldRemovedForBothPlayers = (params: {
     },
   ]);
 
-const opponentEventOrBlockerActivatedTrigger = (): Trigger => ({
-  type: "opponentActivated",
-  activations: ["event", "blocker"],
-});
-
-const opponentBlockerActivatedTrigger = (): Trigger => ({
-  type: "opponentActivated",
-  activations: ["blocker"],
-});
-
-const activatedEventOrTriggerTrigger = (): Trigger => ({
-  type: "opponentActivated",
-  activations: ["event", "trigger"],
-});
-
 const bodySource = (
   input: ParseInput,
   body: string,
@@ -497,6 +482,81 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   };
 };
 
+const parseActivationPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+
+  if (normalized.toLowerCase() === "a [trigger] activates") {
+    return {
+      trigger: triggerActivatedForBothPlayers(),
+      evidence: [
+        "activation:trigger",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+      ],
+    };
+  }
+
+  const opponentActivation =
+    /^your opponent activates (?<activation>an Event or \[Blocker\]|\[Blocker\]|an Event or \[Trigger\])$/iu.exec(
+      normalized,
+    );
+  const activationText = opponentActivation?.groups?.["activation"];
+  if (activationText === undefined) {
+    return undefined;
+  }
+
+  const parsed = parseOpponentActivationKinds(activationText);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    trigger: {
+      type: "opponentActivated",
+      activations: parsed.activations,
+    },
+    evidence: ["trigger:opponentActivated", ...parsed.evidence],
+    ...(parsed.allowBodyBlockPatch ? { allowBodyBlockPatch: true } : {}),
+  };
+};
+
+const parseOpponentActivationKinds = (
+  text: string,
+):
+  | {
+      readonly activations: Extract<
+        Trigger,
+        { type: "opponentActivated" }
+      >["activations"];
+      readonly evidence: readonly ExpressionParseResult["evidence"][number][];
+      readonly allowBodyBlockPatch?: boolean;
+    }
+  | undefined => {
+  const normalized = text.toLowerCase();
+  if (normalized === "an event or [blocker]") {
+    return {
+      activations: ["event", "blocker"],
+      evidence: ["activation:event", "activation:blocker"],
+      allowBodyBlockPatch: true,
+    };
+  }
+  if (normalized === "[blocker]") {
+    return {
+      activations: ["blocker"],
+      evidence: ["activation:blocker"],
+      allowBodyBlockPatch: true,
+    };
+  }
+  if (normalized === "an event or [trigger]") {
+    return {
+      activations: ["event", "trigger"],
+      evidence: ["activation:event", "activation:trigger"],
+    };
+  }
+  return undefined;
+};
+
 const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
   text,
   entryPoint,
@@ -517,19 +577,6 @@ const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
         attackerFilter: { categories: ["character"] },
       },
       evidence: ["entry:onOpponentAttack", "filter:category:character"],
-    };
-  }
-
-  if (
-    normalized.toLowerCase() === "your opponent activates an event or [trigger]"
-  ) {
-    return {
-      trigger: activatedEventOrTriggerTrigger(),
-      evidence: [
-        "trigger:opponentActivated",
-        "activation:event",
-        "activation:trigger",
-      ],
     };
   }
 
@@ -574,6 +621,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,
     parseCardPlayedPredicate,
+    parseActivationPredicate,
     activatedReactionSpecificPredicate,
   ] as const;
 
@@ -605,26 +653,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  const opponentActivation =
-    /^your opponent activates (?<activation>an Event or \[Blocker\]|\[Blocker\])$/iu.exec(
-      normalized,
-    );
-  const activation = opponentActivation?.groups?.["activation"];
-  if (activation !== undefined) {
-    const isBlockerOnly = activation.toLowerCase() === "[blocker]";
-    return {
-      trigger: isBlockerOnly
-        ? opponentBlockerActivatedTrigger()
-        : opponentEventOrBlockerActivatedTrigger(),
-      allowBodyBlockPatch: true,
-      evidence: [
-        "trigger:opponentActivated",
-        ...(isBlockerOnly ? [] : (["activation:event"] as const)),
-        "activation:blocker",
-      ],
-    };
-  }
-
   const handTrashedByEffect =
     /^a card is trashed from your hand by (?:(?:an effect)|(?:your \{(?<type>[^}]+)\} type card's effect))$/iu.exec(
       normalized,
@@ -641,18 +669,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
         "destination:trash",
         "player:self",
         ...(sourceType === undefined ? [] : (["filter:type"] as const)),
-      ],
-    };
-  }
-
-  if (normalized.toLowerCase() === "a [trigger] activates") {
-    return {
-      trigger: triggerActivatedForBothPlayers(),
-      evidence: [
-        "activation:trigger",
-        "player:self",
-        "player:opponent",
-        "composition:triggerAnyOf",
       ],
     };
   }
@@ -683,6 +699,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,
     parseCardPlayedPredicate,
+    parseActivationPredicate,
     implicitReactionSpecificPredicate,
   ] as const;
 

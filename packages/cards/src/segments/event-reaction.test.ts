@@ -317,18 +317,87 @@ describe("event reaction predicate routing", () => {
       assertPredicateParsesThroughBothGroups(text, trigger, evidence);
     },
   );
+
+  it.each([
+    {
+      text: "a [Trigger] activates",
+      trigger: {
+        type: "anyOf",
+        triggers: [
+          { type: "triggerActivated", player: "self" },
+          { type: "triggerActivated", player: "opponent" },
+        ],
+      },
+      evidence: [
+        "activation:trigger",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+      ],
+    },
+    {
+      text: "your opponent activates an Event or [Blocker]",
+      trigger: {
+        type: "opponentActivated",
+        activations: ["event", "blocker"],
+      },
+      evidence: [
+        "trigger:opponentActivated",
+        "activation:event",
+        "activation:blocker",
+      ],
+      allowBodyBlockPatch: true,
+    },
+    {
+      text: "your opponent activates [Blocker]",
+      trigger: { type: "opponentActivated", activations: ["blocker"] },
+      evidence: ["trigger:opponentActivated", "activation:blocker"],
+      allowBodyBlockPatch: true,
+    },
+    {
+      text: "your opponent activates an Event or [Trigger]",
+      trigger: {
+        type: "opponentActivated",
+        activations: ["event", "trigger"],
+      },
+      evidence: [
+        "trigger:opponentActivated",
+        "activation:event",
+        "activation:trigger",
+      ],
+    },
+  ] satisfies Array<{
+    readonly text: string;
+    readonly trigger: Trigger;
+    readonly evidence: readonly string[];
+    readonly allowBodyBlockPatch?: boolean;
+  }>)(
+    "parses shared activation predicate $text through semantic predicate groups",
+    ({ text, trigger, evidence, allowBodyBlockPatch }) => {
+      assertPredicateParsesThroughBothGroups(
+        text,
+        trigger,
+        evidence,
+        allowBodyBlockPatch === undefined ? {} : { allowBodyBlockPatch },
+      );
+    },
+  );
 });
 
 function assertPredicateParsesThroughBothGroups(
   text: string,
   trigger: Trigger,
   evidence: readonly string[],
+  options: { readonly allowBodyBlockPatch?: boolean } = {},
 ): void {
   const implicit = parseReactionPredicateFromSet(
     { text },
     implicitReactionPredicateParsers,
   );
   expect(implicit).toMatchObject({ trigger });
+  if (options.allowBodyBlockPatch !== undefined) {
+    expect(implicit?.allowBodyBlockPatch).toBe(options.allowBodyBlockPatch);
+  }
   for (const primitive of evidence) {
     expect(implicit?.evidence).toContain(primitive);
   }
@@ -338,6 +407,9 @@ function assertPredicateParsesThroughBothGroups(
     activatedReactionPredicateParsers,
   );
   expect(activated).toMatchObject({ trigger });
+  if (options.allowBodyBlockPatch !== undefined) {
+    expect(activated?.allowBodyBlockPatch).toBe(options.allowBodyBlockPatch);
+  }
   for (const primitive of evidence) {
     expect(activated?.evidence).toContain(primitive);
   }
