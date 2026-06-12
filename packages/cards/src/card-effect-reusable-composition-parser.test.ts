@@ -186,6 +186,30 @@ describe("card effect reusable parser compositions", () => {
     });
   });
 
+  it("parses DON returned reactions as event trigger primitives", () => {
+    const result = parseCardEffectLine(
+      "When a DON!! card on your field is returned to your DON!! deck, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "donReturned",
+          player: "self",
+        },
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:donReturned",
+        "player:self",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("parses activated life-removed wording as an optional event reaction", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",

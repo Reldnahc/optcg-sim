@@ -63,6 +63,25 @@ const appendCardRestedEvent = (
   });
 };
 
+const appendDonReturnedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  playerId = p1,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:donReturned`),
+    seq: state.eventJournal.length + 1,
+    type: "donReturned",
+    payload: {
+      playerId,
+      donInstanceId: "don:returned:test",
+      state: "donDeck",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "don-returned-reaction-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
 const setupCardPlayedReactionDefinition = (
   state: ReturnType<typeof createActiveState>,
   source: CardInstance,
@@ -221,6 +240,61 @@ const cardRestedReactionState = () => {
   return { source, state };
 };
 
+const setupDonReturnedReactionDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): EffectDefinition => {
+  const effectDefinitionId = "def-don-returned-reaction";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "don-returned-reaction-rules",
+      sourceTextHash: "don-returned-reaction-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: "don-returned-draw" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        trigger: {
+          type: "donReturned",
+          player: "self",
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const donReturnedReactionState = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "source"),
+    zone: "characterArea",
+  });
+  setupDonReturnedReactionDefinition(state, source);
+  appendDonReturnedEvent(state, p1);
+  return { source, state };
+};
+
 test("event reactions queue for matching cardPlayed events from the required source zone", () => {
   const { played, source, state } = cardPlayedReactionState("trash");
 
@@ -286,4 +360,18 @@ test("event reactions queue for matching self cardRested events", () => {
   assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
   assert.equal(String(entry.timingWindowId).endsWith(":cardRested"), true);
   assert.equal(entry.effectBlockId, "card-rested-draw");
+});
+
+test("event reactions queue for matching self donReturned events", () => {
+  const { source, state } = donReturnedReactionState();
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queued entry");
+  assert.equal(entry.source.instanceId, source.instanceId);
+  assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
+  assert.equal(String(entry.timingWindowId).endsWith(":donReturned"), true);
+  assert.equal(entry.effectBlockId, "don-returned-draw");
 });

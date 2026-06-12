@@ -35,6 +35,7 @@ export type PrimitiveEvidence =
   | "event:cardPlayed"
   | "event:cardKOd"
   | "trigger:cardRested"
+  | "trigger:donReturned"
   | "trigger:handTrashedByEffect"
   | "trigger:opponentActivated"
   | "activation:reaction"

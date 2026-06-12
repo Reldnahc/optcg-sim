@@ -124,6 +124,23 @@ test("queued draw support accepts cardRested through the reusable auto adapter",
   assert.equal(isSupportedQueuedDrawEffectBlock(block), true);
 });
 
+test("queued draw support accepts donReturned through the reusable auto adapter", () => {
+  const triggerType = "donReturned";
+  const adapter = autoRuntimeEntryAdapterForTriggerType(triggerType);
+  assert.ok(adapter !== undefined);
+  const block = autoBlock({
+    effect: { type: "draw", count: 1, player: "self" },
+    sourcePresencePolicy: "mustRemainInSameZone",
+    trigger: {
+      type: triggerType,
+      player: "self",
+    },
+  });
+
+  assert.equal(isSupportedAutoRuntimeEffectBlock(block, adapter), true);
+  assert.equal(isSupportedQueuedDrawEffectBlock(block), true);
+});
+
 test("auto runtime admission composes supported conditions with supported body primitives", () => {
   const block = autoBlock({
     condition: {

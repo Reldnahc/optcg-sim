@@ -37,7 +37,8 @@ type EventReactionTriggerType =
   | "damageDealt"
   | "fieldRemoved"
   | "cardPlayed"
-  | "cardRested";
+  | "cardRested"
+  | "donReturned";
 
 const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
   new Set(
@@ -54,7 +55,8 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
         (payload.timingWindowId.endsWith(":damageDealt") ||
           payload.timingWindowId.endsWith(":fieldRemoved") ||
           payload.timingWindowId.endsWith(":cardPlayed") ||
-          payload.timingWindowId.endsWith(":cardRested"))
+          payload.timingWindowId.endsWith(":cardRested") ||
+          payload.timingWindowId.endsWith(":donReturned"))
         ? [payload.triggerEventId]
         : [];
     }),
@@ -309,6 +311,25 @@ const matchesCardRestedTrigger = (
   );
 };
 
+const matchesDonReturnedTrigger = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "donReturned" }>,
+  event: EngineEvent,
+): boolean => {
+  if (event.type !== "donReturned" || event.visibility.type !== "public") {
+    return false;
+  }
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const playerId = event.payload["playerId"];
+  return (
+    typeof playerId === "string" &&
+    playerRefMatchesSource(state, source, trigger.player, playerId as PlayerId)
+  );
+};
+
 const matchingTriggerTypes = (
   state: GameState,
   source: CardInstance,
@@ -348,6 +369,12 @@ const matchingTriggerTypes = (
   ) {
     return ["cardRested"];
   }
+  if (
+    trigger.type === "donReturned" &&
+    matchesDonReturnedTrigger(state, source, trigger, event)
+  ) {
+    return ["donReturned"];
+  }
   return [];
 };
 
@@ -376,7 +403,8 @@ export const createEventReactionTriggerQueueing = (
         (event.type === "damageDealt" ||
           event.type === "cardMoved" ||
           event.type === "cardPlayed" ||
-          event.type === "cardRested"),
+          event.type === "cardRested" ||
+          event.type === "donReturned"),
     );
     if (reactionEvents.length === 0) {
       return undefined;

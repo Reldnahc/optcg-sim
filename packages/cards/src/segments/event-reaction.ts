@@ -416,6 +416,16 @@ const implicitReactionPredicate = (
     };
   }
 
+  if (
+    normalized.toLowerCase() ===
+    "a don!! card on your field is returned to your don!! deck"
+  ) {
+    return {
+      trigger: { type: "donReturned", player: "self" },
+      evidence: ["trigger:donReturned", "player:self"],
+    };
+  }
+
   const characterPlayed =
     /^(?<player>you|your opponent) plays? (?<filter>.+? Character(?: card)?)$/iu.exec(
       normalized,

@@ -76,6 +76,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "cardRested") {
     return autoAdapter("cardRested", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "donReturned") {
+    return autoAdapter("donReturned", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "handTrashedByEffect") {
     return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
   }

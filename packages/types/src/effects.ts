@@ -78,6 +78,7 @@ export type Trigger =
       sourceController?: PlayerRef;
       sourceKind?: "effect" | "any";
     }
+  | { type: "donReturned"; player: PlayerRef }
   | { type: "handTrashedByEffect"; player: PlayerRef }
   | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }
