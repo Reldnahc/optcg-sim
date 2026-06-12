@@ -1,9 +1,8 @@
 import { parseUpToCardinality } from "../../../cardinality/index.js";
 import { parseKeyword } from "../../../keywords/index.js";
 import {
-  parseCompoundYourCharactersTarget,
-  parseYourCharactersTarget,
-  parseYourNamedCardsTarget,
+  parseTargetFromSet,
+  yourFieldEffectTargetParsers,
 } from "../../../targets/index.js";
 import type { InstructionParser } from "../../../types.js";
 import { parseFieldEffectDuration } from "../shared.js";
@@ -16,13 +15,10 @@ export const parseTargetedKeywordGrantInstruction: InstructionParser = (
     return undefined;
   }
 
-  const target =
-    parseCompoundYourCharactersTarget(
-      { text: cardinality.rest },
-      cardinality.cardinality,
-    ) ??
-    parseYourCharactersTarget({ text: cardinality.rest }) ??
-    parseYourNamedCardsTarget({ text: cardinality.rest });
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    yourFieldEffectTargetParsers(cardinality.cardinality),
+  );
   if (target?.target === undefined) {
     return undefined;
   }

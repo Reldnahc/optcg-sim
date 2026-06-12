@@ -242,6 +242,25 @@ describe("cards package architecture boundaries", () => {
       );
     }
   });
+
+  it("keeps body parsers on semantic target groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const bodyFiles = files.filter(
+      (file) =>
+        file.path.includes("/instructions/") ||
+        file.path.includes("/segments/"),
+    );
+    const targetParserName =
+      "parse(?:AllField|CompoundYourCharacters|ThisCharacter|Your(?:Characters|DonCardsCost|Leader|LeaderOrCharacterCards|NamedCards)|Opponent[A-Za-z0-9]+)Target";
+    const directTargetChainPattern = new RegExp(
+      `(?:${targetParserName}\\([^)]*\\)\\s*\\?\\?|\\?\\?\\s*${targetParserName}\\()`,
+      "u",
+    );
+
+    for (const file of bodyFiles) {
+      expect(file.contents, file.path).not.toMatch(directTargetChainPattern);
+    }
+  });
 });
 
 function escapeRegex(value: string): string {

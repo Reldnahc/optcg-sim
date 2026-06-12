@@ -4,8 +4,8 @@ import {
   parseDurationFromSet,
 } from "../../durations/index.js";
 import {
-  parseYourCharactersTarget,
-  parseYourNamedCardsTarget,
+  parseTargetFromSet,
+  yourFieldEffectTargetParsers,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { parsePositiveCostModifier } from "./shared.js";
@@ -18,9 +18,10 @@ export const parseTargetedModifyCostInstruction: InstructionParser = (
     return undefined;
   }
 
-  const target =
-    parseYourCharactersTarget({ text: cardinality.rest }) ??
-    parseYourNamedCardsTarget({ text: cardinality.rest });
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    yourFieldEffectTargetParsers(cardinality.cardinality),
+  );
   if (target?.target === undefined) return undefined;
 
   const modifierText = /^gains\s+(?<rest>.*)$/i.exec(target.rest)?.groups?.[

@@ -8,9 +8,14 @@ export {
   parseOpponentCharactersTarget,
   parseOpponentFieldTarget,
   parseCompoundYourCharactersTarget,
+  directPowerGainTargetParsers,
+  parseTargetFromSet,
+  selectedPowerGainTargetParsers,
   parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
+  yourFieldEffectTargetParsers,
+  type FieldTargetParser,
 } from "./field-targets.js";
 export { parseThisCharacterTarget } from "./this-character.js";

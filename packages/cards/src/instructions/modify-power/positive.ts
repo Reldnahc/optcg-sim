@@ -2,11 +2,9 @@ import type { Cardinality, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
-  parseThisCharacterTarget,
-  parseYourCharactersTarget,
-  parseYourLeaderOrCharacterCardsTarget,
-  parseYourLeaderTarget,
-  parseYourNamedCardsTarget,
+  directPowerGainTargetParsers,
+  parseTargetFromSet,
+  selectedPowerGainTargetParsers,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { parsePaidCostCardCountPower } from "./dynamic-paid-cost.js";
@@ -26,22 +24,11 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
 
   const cardinality = parseUpToCardinality(input);
   if (cardinality !== undefined) {
-    const targetCandidates = [
-      parseYourLeaderTarget({
-        text: stripLeadingOf(cardinality.rest),
-      }),
-      parseYourLeaderOrCharacterCardsTarget({
-        text: cardinality.rest,
-      }),
-      parseYourCharactersTarget({ text: cardinality.rest }),
-      parseYourNamedCardsTarget({ text: cardinality.rest }),
-    ];
-
-    for (const target of targetCandidates) {
-      if (target?.target === undefined) {
-        continue;
-      }
-
+    const target = parseTargetFromSet(
+      { text: cardinality.rest },
+      selectedPowerGainTargetParsers(),
+    );
+    if (target?.target !== undefined) {
       const parsed = parseGainsPositivePower(
         withCardinality(target.target, cardinality.cardinality),
         target.rest,
@@ -62,13 +49,10 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
     }
   }
 
-  const leader = parseYourLeaderTarget(input);
-  const thisLeader = parseThisLeaderTarget(input.text);
-  const directTarget =
-    leader?.target !== undefined
-      ? leader
-      : (thisLeader ??
-        parseThisCharacterTarget({ text: input.text, allowImplicit: false }));
+  const directTarget = parseTargetFromSet(
+    input,
+    directPowerGainTargetParsers(),
+  );
   if (directTarget?.target === undefined) {
     return undefined;
   }
@@ -91,28 +75,6 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
-
-function parseThisLeaderTarget(text: string):
-  | {
-      readonly target: Target;
-      readonly rest: string;
-      readonly evidence: readonly ["target:thisCard"];
-    }
-  | undefined {
-  const rest = /^This Leader\s+(?<rest>.+)$/iu.exec(text)?.groups?.["rest"];
-  if (rest === undefined) {
-    return undefined;
-  }
-  return {
-    target: { type: "self" },
-    rest,
-    evidence: ["target:thisCard"],
-  };
-}
-
-function stripLeadingOf(text: string): string {
-  return text.replace(/^of\s+/iu, "");
-}
 
 function withCardinality(target: Target, cardinality: Cardinality): Target {
   if (target.type === "choose") {
