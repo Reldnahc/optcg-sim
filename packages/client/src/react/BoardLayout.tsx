@@ -4,7 +4,7 @@ import type {
   ClientCardModel,
 } from "../view-model.js";
 import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
@@ -138,7 +138,23 @@ const donCount = (
 
 export const statusBannerAnimationKey = (
   banner: NonNullable<BoardViewModel["statusBanner"]>,
-): string => `${banner.tone}:${banner.label}`;
+): string => `${banner.tone}:${banner.label}:${String(banner.turnNumber)}`;
+
+const isTurnOwnerBanner = (
+  banner: NonNullable<BoardViewModel["statusBanner"]>,
+): boolean => banner.tone === "self" || banner.tone === "opponent";
+
+export const shouldShowTurnStatusBanner = (
+  banner: NonNullable<BoardViewModel["statusBanner"]>,
+  lastShownTurnNumber: number | undefined,
+): boolean => {
+  if (!isTurnOwnerBanner(banner)) {
+    return true;
+  }
+  return (
+    lastShownTurnNumber === undefined || banner.turnNumber > lastShownTurnNumber
+  );
+};
 
 const TurnStatusBanner = ({
   banner,
@@ -158,6 +174,27 @@ const TurnStatusBanner = ({
       </div>
     </div>
   );
+};
+
+const TurnStatusBannerHost = ({
+  banner,
+}: {
+  banner: BoardViewModel["statusBanner"];
+}): React.JSX.Element | null => {
+  const lastShownTurnNumberRef = useRef<number | undefined>(undefined);
+  const shouldShow =
+    banner !== undefined &&
+    shouldShowTurnStatusBanner(banner, lastShownTurnNumberRef.current);
+  useEffect(() => {
+    if (shouldShow && isTurnOwnerBanner(banner)) {
+      lastShownTurnNumberRef.current = banner.turnNumber;
+    }
+  }, [banner, shouldShow]);
+
+  if (!shouldShow) {
+    return null;
+  }
+  return <TurnStatusBanner banner={banner} />;
 };
 
 export const BoardLayout = ({
@@ -235,9 +272,7 @@ export const BoardLayout = ({
         />
       </div>
       <div className="tabletop-board">
-        {board.statusBanner === undefined ? null : (
-          <TurnStatusBanner banner={board.statusBanner} />
-        )}
+        <TurnStatusBannerHost banner={board.statusBanner} />
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-zone opponent-cost">
           <Zone

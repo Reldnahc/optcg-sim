@@ -586,10 +586,12 @@ describe("board view model", () => {
     assert.deepEqual(selfTurnModel.statusBanner, {
       label: "Your Turn",
       tone: "self",
+      turnNumber: 1,
     });
     assert.deepEqual(opponentTurnModel.statusBanner, {
       label: "Opponent's Turn",
       tone: "opponent",
+      turnNumber: 1,
     });
   });
 
@@ -628,10 +630,12 @@ describe("board view model", () => {
     assert.deepEqual(blockerModel.statusBanner, {
       label: "Blocker Step",
       tone: "block",
+      turnNumber: 1,
     });
     assert.deepEqual(counterModel.statusBanner, {
       label: "Counter Step",
       tone: "counter",
+      turnNumber: 1,
     });
   });
 

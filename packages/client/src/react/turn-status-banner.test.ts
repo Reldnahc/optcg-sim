@@ -8,7 +8,11 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
-import { BoardLayout, statusBannerAnimationKey } from "./BoardLayout.js";
+import {
+  BoardLayout,
+  shouldShowTurnStatusBanner,
+  statusBannerAnimationKey,
+} from "./BoardLayout.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
@@ -39,6 +43,7 @@ const board = (): BoardViewModel => ({
   statusBanner: {
     label: "Counter Step",
     tone: "counter",
+    turnNumber: 1,
   },
   selfIsTurnPlayer: true,
   opponentIsTurnPlayer: false,
@@ -70,15 +75,74 @@ const board = (): BoardViewModel => ({
 describe("turn status banner", () => {
   test("uses a distinct animation key for each banner state", () => {
     assert.notEqual(
-      statusBannerAnimationKey({ label: "Your Turn", tone: "self" }),
+      statusBannerAnimationKey({
+        label: "Your Turn",
+        tone: "self",
+        turnNumber: 1,
+      }),
       statusBannerAnimationKey({
         label: "Opponent's Turn",
         tone: "opponent",
+        turnNumber: 1,
       }),
     );
     assert.notEqual(
-      statusBannerAnimationKey({ label: "Blocker Step", tone: "block" }),
-      statusBannerAnimationKey({ label: "Counter Step", tone: "counter" }),
+      statusBannerAnimationKey({
+        label: "Blocker Step",
+        tone: "block",
+        turnNumber: 1,
+      }),
+      statusBannerAnimationKey({
+        label: "Counter Step",
+        tone: "counter",
+        turnNumber: 1,
+      }),
+    );
+    assert.notEqual(
+      statusBannerAnimationKey({
+        label: "Your Turn",
+        tone: "self",
+        turnNumber: 1,
+      }),
+      statusBannerAnimationKey({
+        label: "Your Turn",
+        tone: "self",
+        turnNumber: 2,
+      }),
+    );
+  });
+
+  test("suppresses turn banners until the turn number increments", () => {
+    assert.equal(
+      shouldShowTurnStatusBanner(
+        { label: "Your Turn", tone: "self", turnNumber: 3 },
+        3,
+      ),
+      false,
+    );
+    assert.equal(
+      shouldShowTurnStatusBanner(
+        { label: "Your Turn", tone: "self", turnNumber: 4 },
+        3,
+      ),
+      true,
+    );
+  });
+
+  test("keeps battle step banners visible regardless of the last shown turn number", () => {
+    assert.equal(
+      shouldShowTurnStatusBanner(
+        { label: "Counter Step", tone: "counter", turnNumber: 3 },
+        3,
+      ),
+      true,
+    );
+    assert.equal(
+      shouldShowTurnStatusBanner(
+        { label: "Blocker Step", tone: "block", turnNumber: 3 },
+        3,
+      ),
+      true,
     );
   });
 

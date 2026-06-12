@@ -76,6 +76,7 @@ export interface ClientActionModel {
 export interface StatusBannerModel {
   label: string;
   tone: "self" | "opponent" | "block" | "counter";
+  turnNumber: number;
 }
 
 export interface BoardViewModel {
@@ -390,15 +391,16 @@ const statusBannerForView = (
   view: MatchSnapshot["players"][PlayerId]["view"],
   playerId: PlayerId,
 ): StatusBannerModel => {
+  const turnNumber = view.turn.globalTurn;
   if (view.battle?.step === "block") {
-    return { label: "Blocker Step", tone: "block" };
+    return { label: "Blocker Step", tone: "block", turnNumber };
   }
   if (view.battle?.step === "counter") {
-    return { label: "Counter Step", tone: "counter" };
+    return { label: "Counter Step", tone: "counter", turnNumber };
   }
   return view.turn.turnPlayerId === playerId
-    ? { label: "Your Turn", tone: "self" }
-    : { label: "Opponent's Turn", tone: "opponent" };
+    ? { label: "Your Turn", tone: "self", turnNumber }
+    : { label: "Opponent's Turn", tone: "opponent", turnNumber };
 };
 
 const addAction = (
