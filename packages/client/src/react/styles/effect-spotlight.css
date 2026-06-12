@@ -87,6 +87,7 @@
 }
 
 .effect-spotlight-card__trigger-rules {
+  margin-bottom: clamp(2px, 0.45vh, 4px);
   margin-top: auto;
 }
 
