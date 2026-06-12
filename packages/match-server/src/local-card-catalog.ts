@@ -333,6 +333,18 @@ const addVisibleCatalogEntries = (
   addVisibleCatalogEntriesForCards(
     players,
     manifest,
+    view.self.deck ?? [],
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
+    view.self.donDeck ?? [],
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
     view.self.trash,
     variantOverrides,
   );
@@ -364,6 +376,24 @@ const addVisibleCatalogEntries = (
     players,
     manifest,
     view.opponent.costArea,
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
+    view.opponent.hand ?? [],
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
+    view.opponent.deck ?? [],
+    variantOverrides,
+  );
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
+    view.opponent.donDeck ?? [],
     variantOverrides,
   );
   addVisibleCatalogEntriesForCards(

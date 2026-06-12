@@ -1,9 +1,11 @@
 import { strict as assert } from "node:assert";
 import { beforeAll, describe, test } from "vitest";
 import type {
+  CardInstance,
   DecisionId,
   EffectTextSourceMap,
   EngineEventId,
+  InstanceId,
   PlayerId,
 } from "@optcg/types";
 
@@ -27,6 +29,25 @@ beforeAll(async () => {
 
 const createTestMatch = () =>
   createLocalDevMatch(structuredClone(premadeSetup));
+
+const privateCard = (
+  instanceId: string,
+  owner: PlayerId,
+  cardId: CardInstance["cardId"],
+  zone: "deck" | "donDeck" | "hand" | "life",
+): CardInstance => ({
+  instanceId: instanceId as InstanceId,
+  cardId,
+  owner,
+  controller: owner,
+  zone: {
+    zone,
+    playerId: owner,
+    slot: zone,
+    index: 0,
+  },
+  attachedDon: [],
+});
 
 describe("local dev card catalog", () => {
   test("includes effect text source maps for visible card catalog entries", () => {
@@ -346,6 +367,73 @@ describe("local dev card catalog", () => {
       p2Catalog.players[p1]?.instances?.[moved.instanceId],
       undefined,
     );
+  });
+
+  test("includes terminal revealed private-zone cards for board images", () => {
+    const match = createTestMatch();
+    const p1State = match.state.players[p1];
+    const p2State = match.state.players[p2];
+    if (p1State === undefined || p2State === undefined) {
+      throw new Error("Missing test player state.");
+    }
+    const selfDeck = privateCard(
+      "terminal-self-deck",
+      p1,
+      p1State.leader.cardId,
+      "deck",
+    );
+    const selfLife = privateCard(
+      "terminal-self-life",
+      p1,
+      p1State.leader.cardId,
+      "life",
+    );
+    const opponentHand = privateCard(
+      "terminal-opponent-hand",
+      p2,
+      p2State.leader.cardId,
+      "hand",
+    );
+    const opponentDeck = privateCard(
+      "terminal-opponent-deck",
+      p2,
+      p2State.leader.cardId,
+      "deck",
+    );
+    const opponentLife = privateCard(
+      "terminal-opponent-life",
+      p2,
+      p2State.leader.cardId,
+      "life",
+    );
+    p1State.deck = [selfDeck];
+    p2State.hand = [opponentHand];
+    p2State.deck = [opponentDeck];
+    p1State.life = [{ card: selfLife, faceUp: false }];
+    p2State.life = [{ card: opponentLife, faceUp: false }];
+    match.state.status = { type: "completed", winner: p1 };
+    delete match.state.pendingDecision;
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+
+    for (const card of [
+      selfDeck,
+      selfLife,
+      opponentHand,
+      opponentDeck,
+      opponentLife,
+    ]) {
+      const entry = catalog.players[card.owner]?.instances?.[card.instanceId];
+      if (entry === undefined) {
+        throw new Error(
+          `Missing terminal reveal catalog entry for ${String(
+            card.instanceId,
+          )}.`,
+        );
+      }
+      assert.equal(entry.cardId, card.cardId);
+      assert.equal(entry.imageUrl?.startsWith("https://"), true);
+    }
   });
 
   test("includes private life trigger decision cards for the decision player", () => {
