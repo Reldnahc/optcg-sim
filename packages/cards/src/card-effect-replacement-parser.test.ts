@@ -559,6 +559,124 @@ describe("replacement effect parser", () => {
     }
   });
 
+  it("parses turn-windowed field-removal replacement into reusable leader power modifier instead primitives", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] [Once Per Turn] If your {Supernovas} type Character would be removed from the field by your opponent's effect, you may give your Leader −2000 power during this turn instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    const when = {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Supernovas"],
+        },
+      },
+    } as const;
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      oncePerTurn: true,
+      optional: true,
+      condition: { type: "opponentTurn" },
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "modifyPower",
+          target: { type: "myLeader" },
+          value: -2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    for (const evidence of [
+      "entry:opponentTurn",
+      "condition:opponentTurn",
+      "marker:oncePerTurn",
+      "entry:replacement",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:cardEffect",
+      "target:yourCharacters",
+      "filter:type",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "duration:thisTurn",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
+  it("parses turn-windowed field-removal replacement into reusable rest-card instead primitives", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] If this Character would be removed from the field by your opponent's effect, you may rest 1 of your cards instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    const when = {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      target: { type: "self" },
+    } as const;
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      optional: true,
+      condition: { type: "opponentTurn" },
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+      },
+    });
+    for (const evidence of [
+      "entry:opponentTurn",
+      "condition:opponentTurn",
+      "entry:replacement",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:cardEffect",
+      "target:thisCharacter",
+      "instruction:rest",
+      "target:yourCards",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses once-per-turn self field-removal replacement into reusable self power modifier instead primitives", () => {
     const result = parseCardEffectLine(
       "[Once Per Turn] If this Character would be removed from the field by your opponent's effect, you may give this Character -2000 power during this turn instead.",

@@ -698,8 +698,8 @@ test.each([
     },
   },
   {
-    name: "condition",
-    overrides: { condition: { type: "yourTurn" } },
+    name: "unsupported condition",
+    overrides: { condition: { type: "custom", check: "unsupported" } },
   },
   {
     name: "cost",

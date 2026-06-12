@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
 import type {
+  Condition,
   Effect,
   EffectDefinition,
   EffectId,
@@ -143,11 +144,13 @@ const replacementBlock = (
   id: string,
   when: ReplacementTrigger,
   instead: Effect,
+  condition?: Condition,
 ): EffectDefinition["effects"][number] => ({
   id: toEffectId(id),
   category: "replacement",
   trigger: { type: "replacement", replacement: when },
   optional: true,
+  ...(condition === undefined ? {} : { condition }),
   sourcePresencePolicy: "resolveFromLastKnownInformation",
   effect: {
     type: "replacement",
@@ -194,6 +197,28 @@ test("replacement support admits the same move-zone trigger with multiple instea
     blocks.map((block) => isSupportedReplacementEffectBlock(block)),
     [true, true],
   );
+});
+
+test("replacement support admits shared queued condition shapes", () => {
+  const block = replacementBlock(
+    "replacement-move-zone-rest-self-opponent-turn",
+    wouldMoveFromCharacterArea(),
+    restSelfInstead(),
+    { type: "opponentTurn" },
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support fails closed for unsupported condition shapes", () => {
+  const block = replacementBlock(
+    "replacement-move-zone-rest-self-custom-condition",
+    wouldMoveFromCharacterArea(),
+    restSelfInstead(),
+    { type: "custom", check: "unsupported-replacement-condition" },
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), false);
 });
 
 test("replacement support admits rest-own-cards instead under K.O. replacement triggers", () => {

@@ -6,6 +6,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { parseReplacementEntryPoint } from "./replacement.js";
 
 const turnWindows: readonly {
   readonly condition: Condition;
@@ -22,6 +23,11 @@ const turnWindows: readonly {
     condition: { type: "opponentTurn" },
     evidence: ["entry:opponentTurn", "condition:opponentTurn"],
   },
+];
+
+const nestedEntryMarkerPrefixes: readonly RegExp[] = [
+  /^\[Once Per Turn\]\s*/iu,
+  /^\[DON!!\s*x\s*[1-9]\d*\]\s*/iu,
 ];
 
 export function parseTurnWindowedEntryPoint(
@@ -43,6 +49,29 @@ export function parseTurnWindowedEntryPoint(
       isEntryPointPrefix(restAfterTurnWindow, candidate.text),
   );
   if (nestedEntryPoint === undefined) {
+    const replacementEntryPoint = parseReplacementEntryPoint({
+      text: textAfterLeadingMarkers(restAfterTurnWindow),
+    });
+    if (replacementEntryPoint !== undefined) {
+      return {
+        node: {
+          ...replacementEntryPoint.node,
+          condition:
+            replacementEntryPoint.node.condition === undefined
+              ? turnWindow.condition
+              : {
+                  type: "and",
+                  conditions: [
+                    turnWindow.condition,
+                    replacementEntryPoint.node.condition,
+                  ],
+                },
+        },
+        evidence: [...turnWindow.evidence, ...replacementEntryPoint.evidence],
+        rest: restAfterTurnWindow,
+      };
+    }
+
     return {
       node: {
         type: "entryPoint",
@@ -75,6 +104,20 @@ export function parseTurnWindowedEntryPoint(
     evidence: [...turnWindow.evidence, ...nestedEntryPoint.evidence],
     rest: restAfterTurnWindow.slice(nestedEntryPoint.text.length).trimStart(),
   };
+}
+
+function textAfterLeadingMarkers(text: string): string {
+  let rest = text.trimStart();
+  for (;;) {
+    const marker = nestedEntryMarkerPrefixes
+      .map((pattern) => pattern.exec(rest))
+      .find((match) => match !== null);
+    const matchedText = marker?.[0];
+    if (matchedText === undefined) {
+      return rest;
+    }
+    rest = rest.slice(matchedText.length).trimStart();
+  }
 }
 
 function isEntryPointPrefix(text: string, entryPointText: string): boolean {

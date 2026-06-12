@@ -6,6 +6,7 @@ import type {
   Target,
 } from "@optcg/types";
 
+import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
 import {
   isSupportedKoSelfInsteadEffect,
@@ -101,8 +102,8 @@ const isSupportedReplacementEnvelope = (
   effect.trigger.type === "replacement" &&
   effect.optional === true &&
   effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
-  effect.condition === undefined &&
   effect.conditionTiming === undefined &&
+  isSupportedQueuedEffectConditionShape(effect.condition) &&
   effect.cost === undefined &&
   effect.failurePolicy === undefined &&
   effect.effect.type === "replacement";

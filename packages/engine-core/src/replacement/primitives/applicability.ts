@@ -1,11 +1,15 @@
 import type {
   CardRef,
+  EffectQueueEntry,
   GameState,
   PlayerId,
+  QueueEntryId,
   ReplacementProcess,
+  TimingWindowId,
 } from "@optcg/types";
 
 import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
+import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
 import {
   isOncePerTurnUsed,
@@ -83,6 +87,14 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
   ) {
     return [];
   }
+  const condition = evaluateQueuedEffectCondition(
+    state,
+    replacementConditionEntry(state, source, effect),
+    effect.condition,
+  );
+  if (!condition.supported || !condition.passed) {
+    return [];
+  }
   if (target.target.type === "self") {
     return eligibleTargetLookups
       .filter(({ ref }) => cardRefsEqual(ref, source.ref))
@@ -117,6 +129,50 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
     )
     .map(({ ref }) => ref);
 };
+
+const replacementConditionEntry = (
+  state: GameState,
+  source: LocatedReplacementSource,
+  effect: SupportedReplacementEffectBlock,
+): EffectQueueEntry => ({
+  id: "replacement-condition" as QueueEntryId,
+  state: "pending",
+  timingWindowId: "replacement-condition" as TimingWindowId,
+  generation: 0,
+  controllerId: source.card.controller,
+  source: source.ref,
+  sourceSnapshot: {
+    instanceId: source.card.instanceId,
+    cardId: source.card.cardId,
+    ownerId: source.card.owner,
+    controllerId: source.card.controller,
+    zone: source.card.zone,
+    category: source.resolved.category,
+    colors: source.resolved.colors,
+    ...(source.resolved.cost === undefined
+      ? {}
+      : { cost: source.resolved.cost }),
+    ...(source.resolved.power === undefined
+      ? {}
+      : { power: source.resolved.power }),
+    ...(source.resolved.counter === undefined
+      ? {}
+      : { counter: source.resolved.counter }),
+    ...(source.resolved.life === undefined
+      ? {}
+      : { life: source.resolved.life }),
+    keywords: source.resolved.printedKeywords,
+  },
+  effectBlockId: effect.id,
+  orderingGroup:
+    state.turn.turnPlayerId === source.card.controller
+      ? "turnPlayer"
+      : "nonTurnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: state.seq,
+  sourcePresencePolicy: "resolveFromLastKnownInformation",
+  causedBy: { type: "ruleProcess", name: "replacement-condition" },
+});
 
 const canPayOpponentFieldRemovalReplacementCost = (
   state: GameState,

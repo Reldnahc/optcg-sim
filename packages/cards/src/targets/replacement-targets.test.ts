@@ -37,4 +37,25 @@ describe("replacement field target parser", () => {
     });
     expect(basePower?.evidence).toContain("filter:power");
   });
+
+  it("parses bare typed Character replacement targets", () => {
+    const result = parseYourFieldReplacementTarget({
+      text: "your {Supernovas} type Character would be removed",
+    });
+
+    expect(result).toMatchObject({
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Supernovas"],
+        },
+      },
+      rest: "would be removed",
+    });
+    expect(result?.evidence).toContain("filter:type");
+    expect(result?.evidence).toContain("filter:category:character");
+  });
 });
