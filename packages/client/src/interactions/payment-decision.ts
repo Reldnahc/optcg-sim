@@ -313,6 +313,31 @@ export const autoPayCostActionIndex = (
   return paymentAction.index;
 };
 
+const quickPayRestSelfLabels = new Set(["Rest this card"]);
+const quickPayTrashSelfLabels = new Set(["Trash this card"]);
+
+const quickPayDonPaymentKey = (action: ClientActionModel): string | undefined =>
+  donPaymentCanonicalKey(action) === "don:1" ? "don:1" : undefined;
+
+const quickPayActivateMainPaymentKey = (
+  action: ClientActionModel,
+): string | undefined => {
+  if (action.type !== "respondToDecision") {
+    return undefined;
+  }
+  const donKey = quickPayDonPaymentKey(action);
+  if (donKey !== undefined) {
+    return donKey;
+  }
+  if (quickPayRestSelfLabels.has(action.label)) {
+    return "rest:self";
+  }
+  if (quickPayTrashSelfLabels.has(action.label)) {
+    return "trash:self";
+  }
+  return undefined;
+};
+
 export const quickPayActivateMainCostActionIndex = (
   decision: PublicPendingDecision | undefined,
   actions: readonly ClientActionModel[],
@@ -327,25 +352,19 @@ export const quickPayActivateMainCostActionIndex = (
     return undefined;
   }
 
-  const canonicalDonActions =
-    createCanonicalDonPaymentModalActions(paymentActions);
-  if (canonicalDonActions?.length === 1) {
-    return canonicalDonActions[0]?.index;
+  const canonicalByPaymentKey = new Map<string, ClientActionModel>();
+  for (const action of paymentActions) {
+    const paymentKey = quickPayActivateMainPaymentKey(action);
+    if (paymentKey === undefined) {
+      return undefined;
+    }
+    if (!canonicalByPaymentKey.has(paymentKey)) {
+      canonicalByPaymentKey.set(paymentKey, action);
+    }
   }
-
-  if (paymentActions.length !== 1) {
-    return undefined;
-  }
-  const [paymentAction] = paymentActions;
-  if (
-    paymentAction === undefined ||
-    paymentAction.type !== "respondToDecision" ||
-    (paymentAction.decisionPayment !== undefined &&
-      paymentAction.decisionPayment.kind !== "cardCost")
-  ) {
-    return undefined;
-  }
-  return paymentAction.index;
+  return canonicalByPaymentKey.size === 1
+    ? canonicalByPaymentKey.values().next().value?.index
+    : undefined;
 };
 
 const countLabel = (count: number, singular: string, plural: string): string =>

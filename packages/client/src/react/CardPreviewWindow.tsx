@@ -33,8 +33,8 @@ export interface CardPreviewContentProps {
 export const defaultCardPreviewWindowRect: WindowRect = {
   x: 20,
   y: 20,
-  width: 400,
-  height: 620,
+  width: 320,
+  height: 460,
 };
 
 const minPreviewZoom = 0.65;
@@ -81,7 +81,7 @@ export const CardPreviewContent = ({
   card,
 }: CardPreviewContentProps): React.JSX.Element => {
   const [zoom, setZoom] = useState(1);
-  const [textVisible, setTextVisible] = useState(true);
+  const [textVisible, setTextVisible] = useState(false);
   const [textPanelHeight, setTextPanelHeight] = useState(
     defaultPreviewTextPanelHeight,
   );

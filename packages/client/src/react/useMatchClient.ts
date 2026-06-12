@@ -33,7 +33,6 @@ import {
   isHydratingMatchClientState,
   isLobbyClientState,
   isMatchClientState,
-  quickPayActivateMainArmSurvivesDecision,
   setLobbyLocation,
   setMatchLocation,
   toggleCardCostSelectedInstanceId,
@@ -421,7 +420,8 @@ export const useMatchClient = ({
   useEffect(() => {
     if (
       pendingDecision === undefined ||
-      !quickPayActivateMainArmSurvivesDecision(pendingDecision)
+      (pendingDecision.type !== "chooseOptionalActivation" &&
+        pendingDecision.type !== "payCost")
     ) {
       quickPayActivateMainArmed.current = false;
       return;

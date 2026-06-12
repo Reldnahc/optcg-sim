@@ -42,7 +42,7 @@ const markupForPreviewControls = (): string =>
   );
 
 describe("card preview window", () => {
-  test("renders hovered card details in a floating window", () => {
+  test("renders hovered card image in a floating window with text hidden", () => {
     const markup = renderToStaticMarkup(
       createElement(CardPreviewWindow, {
         card: card(),
@@ -58,21 +58,21 @@ describe("card preview window", () => {
     assert.doesNotMatch(markup, /Card Preview/u);
     assert.match(markup, /Preview Card/u);
     assert.match(markup, /https:\/\/example\.test\/card\.png/u);
-    assert.match(markup, /Draw 1 card\./u);
-    assert.match(markup, /Add 1 card\./u);
+    assert.doesNotMatch(markup, /Draw 1 card\./u);
+    assert.doesNotMatch(markup, /Add 1 card\./u);
     assert.doesNotMatch(markup, />Effect<\/h3>/u);
     assert.doesNotMatch(markup, />Trigger<\/h3>/u);
-    assert.match(markup, /Type/u);
-    assert.match(markup, /Dressrosa \/ Navy/u);
-    assert.match(markup, /Attribute/u);
-    assert.match(markup, /Special/u);
-    assert.match(markup, /Counter/u);
-    assert.match(markup, /\+1000/u);
-    assert.match(markup, /effect-rules-text/u);
-    assert.match(markup, /card-rules-tag--blue/u);
+    assert.doesNotMatch(markup, /Type/u);
+    assert.doesNotMatch(markup, /Dressrosa \/ Navy/u);
+    assert.doesNotMatch(markup, /Attribute/u);
+    assert.doesNotMatch(markup, /Special/u);
+    assert.doesNotMatch(markup, /Counter/u);
+    assert.doesNotMatch(markup, /\+1000/u);
+    assert.doesNotMatch(markup, /effect-rules-text/u);
+    assert.doesNotMatch(markup, /card-rules-tag--blue/u);
   });
 
-  test("renders an image-first preview with zoom controls and a resizable text panel", () => {
+  test("renders an image-first preview with zoom controls and text hidden by default", () => {
     const markup = renderToStaticMarkup(
       createElement(CardPreviewWindow, {
         card: card(),
@@ -88,17 +88,18 @@ describe("card preview window", () => {
     assert.match(markup, /--card-preview-zoom:1/u);
     assert.match(
       markup,
-      /--card-preview-image-bottom-reserve:calc\(42% \+ 24px\)/u,
+      /--card-preview-image-bottom-reserve:0px/u,
     );
-    assert.match(markup, /card-preview-rules-panel/u);
-    assert.match(markup, /card-preview-rules-resize-handle/u);
+    assert.doesNotMatch(markup, /card-preview-rules-panel/u);
+    assert.doesNotMatch(markup, /card-preview-rules-resize-handle/u);
     assert.match(markup, /--card-preview-rules-height:42%/u);
     assert.match(markup, /card-preview-control-bar/u);
-    assert.match(markup, /card-preview-metadata/u);
+    assert.doesNotMatch(markup, /card-preview-metadata/u);
     assert.match(markup, /aria-label="Zoom card out"/u);
     assert.match(markup, /aria-label="Reset card zoom"/u);
     assert.match(markup, /aria-label="Zoom card in"/u);
-    assert.match(markup, /aria-label="Hide card text"/u);
+    assert.match(markup, /aria-label="Show card text"/u);
+    assert.match(markup, /aria-pressed="false"/u);
   });
 
   test("preview image area stays transparent and controls expose feedback states", async () => {
@@ -390,6 +391,8 @@ describe("card preview window", () => {
       /updateFloatingWindowRect\(cardPreviewWindowKey, rect\)/u,
     );
     assert.match(previewWindow, /initialRect\?: WindowRect/u);
+    assert.match(previewWindow, /width:\s*320/u);
+    assert.match(previewWindow, /height:\s*460/u);
     assert.match(
       previewWindow,
       /onRectChange\?: \(\(rect: WindowRect\) => void\)/u,

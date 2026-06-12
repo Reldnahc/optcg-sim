@@ -886,7 +886,86 @@ describe("headless decision modal models", () => {
     );
 
     assert.equal(model.kind, "actionOptions");
-    assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 1 DON!!" }]);
+    assert.deepEqual(model.options, [
+      { actionIndex: 4, label: "Rest 1 DON!!" },
+    ]);
+  });
+
+  test("default decision modal preserves quick-payable cost labels", () => {
+    const decision: PublicPendingDecision = {
+      ...baseDecision,
+      type: "payCost",
+      prompt: "Pay cost",
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose how to pay.",
+        choices: [
+          { responseKey: "rest-self", label: "Rest this card" },
+          { responseKey: "trash-self", label: "Trash this card" },
+          { responseKey: "rest-don", label: "Rest 1 DON!!" },
+        ],
+      },
+    };
+    const responseActions: readonly ClientActionModel[] = [
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Rest this card",
+        responseKey: "rest-self",
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Trash this card",
+        responseKey: "trash-self",
+      },
+      {
+        index: 4,
+        type: "respondToDecision",
+        label: "Rest 1 DON!!",
+        responseKey: "rest-don",
+      },
+    ];
+
+    const model = createDecisionModalModel(
+      decision,
+      createDecisionDraft(decision, responseActions),
+      responseActions,
+    );
+
+    assert.equal(model.kind, "actionOptions");
+    assert.deepEqual(model.options, [
+      { actionIndex: 2, label: "Rest this card" },
+      { actionIndex: 3, label: "Trash this card" },
+      { actionIndex: 4, label: "Rest 1 DON!!" },
+    ]);
+
+    const payDonDecision: PublicPendingDecision = {
+      ...decision,
+      presentation: {
+        title: "Pay cost",
+        instruction: "Choose how to pay.",
+        choices: [{ responseKey: "payment:don:1", label: "Pay 1 DON!!" }],
+      },
+    };
+    const payDonActions: readonly ClientActionModel[] = [
+      {
+        index: 5,
+        type: "respondToDecision",
+        label: "Pay cost with 1 DON!!",
+        responseKey: "payment:don:1",
+      },
+    ];
+    const payDonModel = createDecisionModalModel(
+      payDonDecision,
+      createDecisionDraft(payDonDecision, payDonActions),
+      payDonActions,
+    );
+
+    assert.equal(payDonModel.kind, "actionOptions");
+    assert.deepEqual(payDonModel.options, [
+      { actionIndex: 5, label: "Pay 1 DON!!" },
+    ]);
   });
 
   test("default decision modal collapses restDon permutations by presentation rest label", () => {
@@ -928,7 +1007,9 @@ describe("headless decision modal models", () => {
     );
 
     assert.equal(model.kind, "actionOptions");
-    assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 1 DON!!" }]);
+    assert.deepEqual(model.options, [
+      { actionIndex: 4, label: "Rest 1 DON!!" },
+    ]);
   });
 
   test("life trigger decision modal includes the damaged card with response options", () => {
