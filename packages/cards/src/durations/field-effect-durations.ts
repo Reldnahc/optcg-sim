@@ -137,6 +137,11 @@ export const fieldEffectDurationParsers = [
 
 export const battleDurationParsers = [parseThisBattleDuration] as const;
 
+export const basePowerSwapDurationParsers = [
+  parseThisTurnDuration,
+  parseThisBattleDuration,
+] as const;
+
 export const restrictionDurationParsers = [
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,

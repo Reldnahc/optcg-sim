@@ -209,3 +209,11 @@ it("parses leader and Character base-power swap during this battle", () => {
     ]),
   );
 });
+
+it("does not accept field-effect-only durations for base-power swaps", () => {
+  const result = parseCardEffectLine(
+    "[Main] Select 2 of your opponent's Characters with 9000 base power or less. Swap the base power of the selected Characters with each other until the start of your next turn.",
+  );
+
+  expect(result).toBeUndefined();
+});

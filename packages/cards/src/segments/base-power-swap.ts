@@ -8,8 +8,8 @@ import type {
 
 import { parseExactCardinality } from "../cardinality/index.js";
 import {
-  parseThisBattleDuration,
-  parseThisTurnDuration,
+  basePowerSwapDurationParsers,
+  parseDurationFromSet,
 } from "../durations/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type {
@@ -34,8 +34,7 @@ const isSavedFieldObjectZone = (zone: string): zone is SavedFieldObjectZone =>
   zone === "costArea";
 
 const parseSwapDuration = (text: string): SwapDuration | undefined => {
-  const parsed =
-    parseThisTurnDuration({ text }) ?? parseThisBattleDuration({ text });
+  const parsed = parseDurationFromSet({ text }, basePowerSwapDurationParsers);
   if (
     parsed === undefined ||
     parsed.duration === undefined ||

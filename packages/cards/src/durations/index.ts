@@ -1,4 +1,5 @@
 export {
+  basePowerSwapDurationParsers,
   battleDurationParsers,
   fieldEffectDurationParsers,
   opponentNextEndPhaseDurationPrimitive,
