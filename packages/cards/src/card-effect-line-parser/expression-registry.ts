@@ -37,12 +37,9 @@ import {
   costedEffectExpressionParser,
   delayedEndOfTurnSegmentParser,
   entryConditionContinuousExpressionParser,
-  handTrashedByEffectReactionExpressionParser,
   implicitEventReactionExpressionParser,
   instructionExpressionSegmentParser,
-  lifeRemovedReactionExpressionParser,
   lookPlayFromTopExpressionParser,
-  opponentEventOrBlockerActivatedExpressionParser,
   opponentOptionalCostExpressionParser,
   opponentOptionalCostSegmentParser,
   optionalCostedEffectExpressionParser,
@@ -251,16 +248,7 @@ export const defaultRegistry = {
         generalExpressionParser,
       ],
     }),
-    lifeRemovedReactionExpressionParser({
-      expressions: [generalExpressionParser],
-    }),
     implicitEventReactionExpressionParser({
-      expressions: [generalExpressionParser],
-    }),
-    handTrashedByEffectReactionExpressionParser({
-      expressions: [generalExpressionParser],
-    }),
-    opponentEventOrBlockerActivatedExpressionParser({
       expressions: [
         conditionalBlockExpressionParser({
           conditions: conditionParsers,

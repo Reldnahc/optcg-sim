@@ -19,10 +19,7 @@ export { playedObjectKeywordGrantExpressionParser } from "./played-object-keywor
 export { replacementInsteadExpressionParser } from "./replacement-effect.js";
 export {
   activatedReactionExpressionParser,
-  handTrashedByEffectReactionExpressionParser,
   implicitEventReactionExpressionParser,
-  lifeRemovedReactionExpressionParser,
-  opponentEventOrBlockerActivatedExpressionParser,
 } from "./event-reaction.js";
 export { returnToOwnerHandCostedEffectExpressionParser } from "./return-to-owner-hand-costed-effect.js";
 export { lookPlayFromTopExpressionParser } from "./look-play-from-top.js";

@@ -388,6 +388,7 @@ const implicitReactionPredicate = (
   | {
       trigger: Trigger;
       evidence: ExpressionParseResult["evidence"];
+      allowBodyBlockPatch?: boolean;
     }
   | undefined => {
   const normalized = text.trim();
@@ -396,6 +397,56 @@ const implicitReactionPredicate = (
     return {
       trigger: damageDealtTrigger(["self"]),
       evidence: ["trigger:damageDealt", "player:self"],
+    };
+  }
+
+  if (
+    normalized.toLowerCase() ===
+    "a card is removed from your or your opponent's life cards"
+  ) {
+    return {
+      trigger: lifeRemovedTrigger(["self", "opponent"]),
+      evidence: ["trigger:lifeRemoved", "player:self", "player:opponent"],
+    };
+  }
+
+  const opponentActivation =
+    /^your opponent activates (?<activation>an Event or \[Blocker\]|\[Blocker\])$/iu.exec(
+      normalized,
+    );
+  const activation = opponentActivation?.groups?.["activation"];
+  if (activation !== undefined) {
+    const isBlockerOnly = activation.toLowerCase() === "[blocker]";
+    return {
+      trigger: isBlockerOnly
+        ? opponentBlockerActivatedTrigger()
+        : opponentEventOrBlockerActivatedTrigger(),
+      allowBodyBlockPatch: true,
+      evidence: [
+        "trigger:opponentActivated",
+        ...(isBlockerOnly ? [] : (["activation:event"] as const)),
+        "activation:blocker",
+      ],
+    };
+  }
+
+  const handTrashedByEffect =
+    /^a card is trashed from your hand by (?:(?:an effect)|(?:your \{(?<type>[^}]+)\} type card's effect))$/iu.exec(
+      normalized,
+    );
+  if (handTrashedByEffect !== null) {
+    const sourceType = handTrashedByEffect.groups?.["type"];
+    return {
+      trigger: handTrashedByEffectTrigger(
+        sourceType === undefined ? undefined : { typesAny: [sourceType] },
+      ),
+      evidence: [
+        "trigger:handTrashedByEffect",
+        "zone:hand",
+        "destination:trash",
+        "player:self",
+        ...(sourceType === undefined ? [] : (["filter:type"] as const)),
+      ],
     };
   }
 
@@ -607,10 +658,11 @@ const implicitReactionPredicates = (
   | {
       trigger: Trigger;
       evidence: ExpressionParseResult["evidence"];
+      allowBodyBlockPatch?: boolean;
     }
   | undefined => {
   const predicates = text
-    .split(/\s+or\s+(?=you(?:r)?\b)/iu)
+    .split(/\s+or\s+(?=(?:you|your)\b(?!\s+opponent's\b))/iu)
     .map((part) => implicitReactionPredicate(part));
   if (predicates.some((predicate) => predicate === undefined)) {
     return undefined;
@@ -624,6 +676,9 @@ const implicitReactionPredicates = (
   }
   return {
     trigger: anyOfTrigger(parsed.map((predicate) => predicate.trigger)),
+    ...(parsed.some((predicate) => predicate.allowBodyBlockPatch === true)
+      ? { allowBodyBlockPatch: true }
+      : {}),
     evidence: [
       ...parsed.flatMap((predicate) => predicate.evidence),
       ...(parsed.length > 1 ? (["composition:triggerAnyOf"] as const) : []),
@@ -688,49 +743,6 @@ const activatedReactionBodyPredicate = (
   return { predicate, body };
 };
 
-export function lifeRemovedReactionExpressionParser(options: {
-  readonly expressions: readonly ((
-    input: ParseInput,
-  ) => ExpressionParseResult | undefined)[];
-}): (input: ParseInput) => ExpressionParseResult | undefined {
-  return (input: ParseInput) => {
-    const match =
-      /^when a card is removed from your or your opponent's Life cards,\s*(?<body>.+)$/i.exec(
-        input.text,
-      );
-    const body = match?.groups?.["body"];
-    if (body === undefined) {
-      return undefined;
-    }
-
-    for (const expressionParser of options.expressions) {
-      const parsed = parseReactionBody(expressionParser, input, body);
-      if (parsed === undefined || parsed.rest.length > 0) {
-        continue;
-      }
-      return {
-        effect: parsed.effect,
-        evidence: [
-          "trigger:lifeRemoved",
-          "player:self",
-          "player:opponent",
-          ...parsed.evidence,
-        ],
-        rest: "",
-        blockPatch: {
-          category: "auto",
-          trigger: lifeRemovedTrigger(["self", "opponent"]),
-        },
-        ...(parsed.presentationSpans === undefined
-          ? {}
-          : { presentationSpans: parsed.presentationSpans }),
-      };
-    }
-
-    return undefined;
-  };
-}
-
 export function implicitEventReactionExpressionParser(options: {
   readonly expressions: readonly ((
     input: ParseInput,
@@ -751,6 +763,12 @@ export function implicitEventReactionExpressionParser(options: {
     for (const expressionParser of options.expressions) {
       const parsed = parseReactionBody(expressionParser, input, body);
       if (parsed === undefined || parsed.rest.length > 0) {
+        continue;
+      }
+      if (
+        parsed.blockPatch !== undefined &&
+        predicate.allowBodyBlockPatch !== true
+      ) {
         continue;
       }
       return {
@@ -849,103 +867,3 @@ const activatedReactionSplits = (
 
 const isAbbreviationPeriod = (text: string, index: number): boolean =>
   text.slice(Math.max(0, index - 3), index + 1).toLowerCase() === "k.o.";
-
-export function opponentEventOrBlockerActivatedExpressionParser(options: {
-  readonly expressions: readonly ((
-    input: ParseInput,
-  ) => ExpressionParseResult | undefined)[];
-}): (input: ParseInput) => ExpressionParseResult | undefined {
-  return (input: ParseInput) => {
-    const match =
-      /^When your opponent activates (?<activation>an Event or \[Blocker\]|\[Blocker\]),\s*(?<body>.+)$/iu.exec(
-        input.text,
-      );
-    const activation = match?.groups?.["activation"];
-    const body = match?.groups?.["body"];
-    if (activation === undefined || body === undefined) {
-      return undefined;
-    }
-    const isBlockerOnly = activation.toLowerCase() === "[blocker]";
-
-    for (const expressionParser of options.expressions) {
-      const parsed = parseReactionBody(expressionParser, input, body);
-      if (parsed === undefined || parsed.rest.length > 0) {
-        continue;
-      }
-      return {
-        effect: parsed.effect,
-        evidence: [
-          "trigger:opponentActivated",
-          ...(isBlockerOnly ? [] : (["activation:event"] as const)),
-          "activation:blocker",
-          ...parsed.evidence,
-        ],
-        rest: "",
-        blockPatch: {
-          ...parsed.blockPatch,
-          category: "auto",
-          trigger: isBlockerOnly
-            ? opponentBlockerActivatedTrigger()
-            : opponentEventOrBlockerActivatedTrigger(),
-        },
-        ...(parsed.presentationSpans === undefined
-          ? {}
-          : { presentationSpans: parsed.presentationSpans }),
-      };
-    }
-
-    return undefined;
-  };
-}
-
-export function handTrashedByEffectReactionExpressionParser(options: {
-  readonly expressions: readonly ((
-    input: ParseInput,
-  ) => ExpressionParseResult | undefined)[];
-}): (input: ParseInput) => ExpressionParseResult | undefined {
-  return (input: ParseInput) => {
-    const match =
-      /^When a card is trashed from your hand by (?:(?:an effect)|(?:your \{(?<type>[^}]+)\} type card's effect)),\s*(?<body>.+)$/iu.exec(
-        input.text,
-      );
-    if (match === null) {
-      return undefined;
-    }
-    const body = match.groups?.["body"];
-    if (body === undefined) {
-      return undefined;
-    }
-    const sourceType = match.groups?.["type"];
-    const sourceFilter =
-      sourceType === undefined ? undefined : { typesAny: [sourceType] };
-
-    for (const expressionParser of options.expressions) {
-      const parsed = parseReactionBody(expressionParser, input, body);
-      if (parsed === undefined || parsed.rest.length > 0) {
-        continue;
-      }
-      return {
-        effect: parsed.effect,
-        evidence: [
-          "trigger:handTrashedByEffect",
-          "zone:hand",
-          "destination:trash",
-          "player:self",
-          ...(sourceType === undefined ? [] : (["filter:type"] as const)),
-          ...parsed.evidence,
-        ],
-        rest: "",
-        blockPatch: {
-          ...parsed.blockPatch,
-          category: "auto",
-          trigger: handTrashedByEffectTrigger(sourceFilter),
-        },
-        ...(parsed.presentationSpans === undefined
-          ? {}
-          : { presentationSpans: parsed.presentationSpans }),
-      };
-    }
-
-    return undefined;
-  };
-}

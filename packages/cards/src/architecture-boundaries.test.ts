@@ -209,6 +209,21 @@ describe("cards package architecture boundaries", () => {
       /\b(?:parserRule|shape|component|capability)[A-Za-z0-9_]*To[A-Za-z0-9_]*(?:Support|Certification)\b/u,
     );
   });
+
+  it("routes implicit event reactions through one shared registry parser", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const registryFile = files.find((file) =>
+      file.path.endsWith("/card-effect-line-parser/expression-registry.ts"),
+    );
+
+    expect(registryFile).toBeDefined();
+    expect(registryFile?.contents).toMatch(
+      /implicitEventReactionExpressionParser/u,
+    );
+    expect(registryFile?.contents).not.toMatch(
+      /\b(?:lifeRemovedReactionExpressionParser|handTrashedByEffectReactionExpressionParser|opponentEventOrBlockerActivatedExpressionParser)\b/u,
+    );
+  });
 });
 
 function escapeRegex(value: string): string {
