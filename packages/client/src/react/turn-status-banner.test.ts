@@ -100,7 +100,7 @@ describe("turn status banner", () => {
     assert.equal(markup.includes("Counter Step"), true);
   });
 
-  test("uses a linear three-second sweep across the playmat", async () => {
+  test("enters quickly, pauses centered, then exits quickly", async () => {
     const css = await readFile(
       join(sourceDirectory, "styles", "playmat.css"),
       "utf8",
@@ -108,7 +108,15 @@ describe("turn status banner", () => {
 
     assert.match(
       css,
-      /animation:\s*turn-status-slide-across 3000ms linear\s+both;/u,
+      /animation:\s*turn-status-slide-across 3000ms ease-in-out\s+both;/u,
+    );
+    assert.match(
+      css,
+      /18%\s*\{\s*opacity:\s*1;\s*transform:\s*translateX\(0\);\s*\}/u,
+    );
+    assert.match(
+      css,
+      /82%\s*\{\s*opacity:\s*1;\s*transform:\s*translateX\(0\);\s*\}/u,
     );
   });
 });
