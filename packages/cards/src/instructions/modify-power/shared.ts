@@ -1,4 +1,9 @@
-import type { DynamicNumberValue, Duration, Target } from "@optcg/types";
+import type {
+  Cardinality,
+  DynamicNumberValue,
+  Duration,
+  Target,
+} from "@optcg/types";
 
 import {
   fieldEffectDurationParsers,
@@ -13,6 +18,7 @@ export const modifyPowerInstructionPrimitive = {
     "cardinality:all",
     "cardinality:upTo",
     "target:opponentCharacters",
+    "target:opponentLeaderOrCharacters",
     "target:yourNamedCards",
     "target:yourCharacters",
     "target:yourLeaderOrCharacters",
@@ -105,26 +111,31 @@ export function parseAttachedDonScaledDuration(
   };
 }
 
-export function chooseOpponentCharactersTarget(
-  max: number,
-  filter: TargetFilter,
+export function withCardinality(
+  target: Target,
+  cardinality: Cardinality,
 ): Target {
-  return {
-    type: "choose",
-    request: {
-      timing: "onResolution",
-      chooser: "self",
-      player: "opponent",
-      zone: "characterArea",
-      min: 0,
-      max,
-      allowFewerIfUnavailable: true,
-      visibility: "public",
-      filter,
-    },
-  };
-}
+  if (target.type === "choose") {
+    return {
+      ...target,
+      request: {
+        ...target.request,
+        min: cardinality.min,
+        max: cardinality.max,
+      },
+    };
+  }
 
-type TargetFilter = NonNullable<
-  Extract<Target, { type: "choose" }>["request"]["filter"]
->;
+  if (target.type === "chooseFromZones") {
+    return {
+      ...target,
+      request: {
+        ...target.request,
+        min: cardinality.min,
+        max: cardinality.max,
+      },
+    };
+  }
+
+  return target;
+}

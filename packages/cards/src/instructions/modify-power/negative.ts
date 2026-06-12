@@ -5,15 +5,12 @@ import {
 } from "../../durations/index.js";
 import { parseNegativePowerModifier } from "../../modifiers/index.js";
 import {
+  opponentNegativePowerTargetParsers,
   parseAllFieldTarget,
-  parseOpponentCharactersTarget,
-  parseOpponentLeaderOrCharacterCardsTarget,
+  parseTargetFromSet,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
-import {
-  chooseOpponentCharactersTarget,
-  parseAttachedDonScaledDuration,
-} from "./shared.js";
+import { parseAttachedDonScaledDuration, withCardinality } from "./shared.js";
 
 export const parseNegativePowerInstruction: InstructionParser = (input) => {
   const actionRest = /^give\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
@@ -67,16 +64,15 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const target = parseOpponentCharactersTarget({ text: cardinality.rest });
-  const leaderOrCharacterTarget = parseOpponentLeaderOrCharacterCardsTarget({
-    text: cardinality.rest,
-  });
-  if (target === undefined && leaderOrCharacterTarget === undefined) {
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentNegativePowerTargetParsers(),
+  );
+  if (target?.target === undefined) {
     return undefined;
   }
 
-  const targetRest = target?.rest ?? leaderOrCharacterTarget?.rest ?? "";
-  const modifier = parseNegativePowerModifier({ text: targetRest });
+  const modifier = parseNegativePowerModifier({ text: target.rest });
   if (modifier === undefined) {
     return undefined;
   }
@@ -95,12 +91,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
   return {
     effect: {
       type: "modifyPower",
-      target:
-        leaderOrCharacterTarget?.target ??
-        chooseOpponentCharactersTarget(
-          cardinality.cardinality.max,
-          target?.filter ?? { categories: ["character"] },
-        ),
+      target: withCardinality(target.target, cardinality.cardinality),
       value: dynamicDuration?.value ?? modifier.value,
       duration: duration.duration,
     },
@@ -108,7 +99,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
       "instruction:modifyPower",
       ...cardinality.evidence,
       "chooser:self:upTo",
-      ...(target?.evidence ?? leaderOrCharacterTarget?.evidence ?? []),
+      ...target.evidence,
       ...modifier.evidence,
       ...duration.evidence,
       ...(dynamicDuration?.evidence ?? []),
@@ -144,27 +135,21 @@ function parseModifierFirstNegativePowerInstruction(
   if (cardinality === undefined) {
     return undefined;
   }
-  const target = parseOpponentCharactersTarget({ text: cardinality.rest });
-  const leaderOrCharacterTarget = parseOpponentLeaderOrCharacterCardsTarget({
-    text: cardinality.rest,
-  });
-  if (target === undefined && leaderOrCharacterTarget === undefined) {
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentNegativePowerTargetParsers(),
+  );
+  if (target?.target === undefined) {
     return undefined;
   }
-  const targetRest = target?.rest ?? leaderOrCharacterTarget?.rest ?? "";
-  if (targetRest.length > 0 && targetRest !== ".") {
+  if (target.rest.length > 0 && target.rest !== ".") {
     return undefined;
   }
 
   return {
     effect: {
       type: "modifyPower",
-      target:
-        leaderOrCharacterTarget?.target ??
-        chooseOpponentCharactersTarget(
-          cardinality.cardinality.max,
-          target?.filter ?? { categories: ["character"] },
-        ),
+      target: withCardinality(target.target, cardinality.cardinality),
       value: modifier.value,
       duration: duration.duration,
     },
@@ -174,7 +159,7 @@ function parseModifierFirstNegativePowerInstruction(
       ...duration.evidence,
       ...cardinality.evidence,
       "chooser:self:upTo",
-      ...(target?.evidence ?? leaderOrCharacterTarget?.evidence ?? []),
+      ...target.evidence,
     ],
     rest: "",
   };

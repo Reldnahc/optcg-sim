@@ -1,6 +1,10 @@
 import type { Cardinality, Target } from "@optcg/types";
 
 import type { ParseInput } from "../../types.js";
+import {
+  parseOpponentCharactersTarget,
+  parseOpponentLeaderOrCharacterCardsTarget,
+} from "./opponent.js";
 import { parseThisCharacterTarget } from "../this-character.js";
 import {
   parseCompoundYourCharactersTarget,
@@ -53,6 +57,41 @@ export const directPowerGainTargetParsers = (): readonly FieldTargetParser[] =>
     parseThisLeaderTarget,
     (input) => parseThisCharacterTarget({ ...input, allowImplicit: false }),
   ] as const;
+
+export const opponentNegativePowerTargetParsers =
+  (): readonly FieldTargetParser[] =>
+    [
+      parseOpponentLeaderOrCharacterCardsTarget,
+      parseOpponentCharactersPowerTarget,
+    ] as const;
+
+function parseOpponentCharactersPowerTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const parsed = parseOpponentCharactersTarget(input);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "choose",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zone: "characterArea",
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: parsed.filter ?? { categories: ["character"] },
+      },
+    },
+    rest: parsed.rest,
+    evidence: parsed.evidence,
+  };
+}
 
 function parseThisLeaderTarget(input: ParseInput):
   | {

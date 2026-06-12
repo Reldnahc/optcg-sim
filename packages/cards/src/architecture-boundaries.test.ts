@@ -274,9 +274,16 @@ describe("cards package architecture boundaries", () => {
       `(?:${targetParserName}\\([^)]*\\)\\s*\\?\\?|\\?\\?\\s*${targetParserName}\\()`,
       "u",
     );
+    const directTargetFallbackPairPattern = new RegExp(
+      `${targetParserName}\\([^)]*\\)[\\s\\S]{0,240}${targetParserName}\\(`,
+      "u",
+    );
 
     for (const file of bodyFiles) {
       expect(file.contents, file.path).not.toMatch(directTargetChainPattern);
+      expect(file.contents, file.path).not.toMatch(
+        directTargetFallbackPairPattern,
+      );
     }
   });
 

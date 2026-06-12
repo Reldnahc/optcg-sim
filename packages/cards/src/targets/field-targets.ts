@@ -13,6 +13,7 @@ export {
   parseOpponentLeaderOrCharacterCardsTarget,
   parseCompoundYourCharactersTarget,
   directPowerGainTargetParsers,
+  opponentNegativePowerTargetParsers,
   parseTargetFromSet,
   selectedPowerGainTargetParsers,
   parseYourCharactersTarget,

@@ -9,6 +9,7 @@ export {
   parseOpponentFieldTarget,
   parseCompoundYourCharactersTarget,
   directPowerGainTargetParsers,
+  opponentNegativePowerTargetParsers,
   parseTargetFromSet,
   selectedPowerGainTargetParsers,
   parseYourCharactersTarget,

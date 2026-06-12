@@ -1,5 +1,3 @@
-import type { Cardinality, Target } from "@optcg/types";
-
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   directPowerGainTargetParsers,
@@ -9,7 +7,7 @@ import {
 import type { InstructionParser } from "../../types.js";
 import { parsePaidCostCardCountPower } from "./dynamic-paid-cost.js";
 import { parseThisCharacterRevealedCostPower } from "./dynamic-revealed-cost.js";
-import { parseGainsPositivePower } from "./shared.js";
+import { parseGainsPositivePower, withCardinality } from "./shared.js";
 
 export const parsePowerGainInstruction: InstructionParser = (input) => {
   const paidCostCardCountPower = parsePaidCostCardCountPower(input);
@@ -75,29 +73,3 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
-
-function withCardinality(target: Target, cardinality: Cardinality): Target {
-  if (target.type === "choose") {
-    return {
-      ...target,
-      request: {
-        ...target.request,
-        min: cardinality.min,
-        max: cardinality.max,
-      },
-    };
-  }
-
-  if (target.type === "chooseFromZones") {
-    return {
-      ...target,
-      request: {
-        ...target.request,
-        min: cardinality.min,
-        max: cardinality.max,
-      },
-    };
-  }
-
-  return target;
-}

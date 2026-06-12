@@ -13,6 +13,7 @@ describe("modify power instruction parser", () => {
         "cardinality:all",
         "cardinality:upTo",
         "target:opponentCharacters",
+        "target:opponentLeaderOrCharacters",
         "target:yourNamedCards",
         "target:yourCharacters",
         "target:yourLeaderOrCharacters",

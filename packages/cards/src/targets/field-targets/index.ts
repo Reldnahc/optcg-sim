@@ -12,6 +12,7 @@ export {
 } from "./primitives.js";
 export {
   directPowerGainTargetParsers,
+  opponentNegativePowerTargetParsers,
   parseTargetFromSet,
   selectedPowerGainTargetParsers,
   yourFieldEffectTargetParsers,
