@@ -1073,7 +1073,7 @@ describe("card action menu", () => {
     assert.match(markup, /--life-card-y-offset:36%;z-index:1/u);
   });
 
-  test("life zones compact vertically per count without shifting sideways above five life", () => {
+  test("life zones keep the same vertical spacing above five life", () => {
     const layout = board();
     layout.self.lifeCount = 10;
     layout.self.lifeCards = hiddenLifeCards(10, "hidden-life-self");
@@ -1091,8 +1091,8 @@ describe("card action menu", () => {
 
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 10);
     assert.match(markup, /--life-card-y-offset:0%;z-index:10/u);
-    assert.match(markup, /--life-card-y-offset:30%;z-index:5/u);
-    assert.match(markup, /--life-card-y-offset:54%;z-index:1/u);
+    assert.match(markup, /--life-card-y-offset:60%;z-index:5/u);
+    assert.match(markup, /--life-card-y-offset:108%;z-index:1/u);
     assert.equal(markup.includes("--life-card-x-offset"), false);
 
     layout.self.lifeCount = 6;
@@ -1107,7 +1107,7 @@ describe("card action menu", () => {
         onBackgroundClick: () => undefined,
       }),
     );
-    assert.match(sixLifeMarkup, /--life-card-y-offset:50%;z-index:1/u);
+    assert.match(sixLifeMarkup, /--life-card-y-offset:60%;z-index:1/u);
     assert.equal(sixLifeMarkup.includes("--life-card-x-offset"), false);
   });
 });

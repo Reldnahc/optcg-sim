@@ -122,9 +122,8 @@ export const Zone = ({
     "--card-row-overlap": `${rowLayout.overlap.toFixed(2)}px`,
   } as CSSProperties & Record<"--card-row-overlap", string>;
   const lifeCardStyle = (index: number, count: number): CSSProperties => {
-    const yStep = count <= 5 ? 12 : Math.max(6, 16 - count);
     return {
-      "--life-card-y-offset": `${String(index * yStep)}%`,
+      "--life-card-y-offset": `${String(index * 12)}%`,
       zIndex: count - index,
     } as CSSProperties & Record<"--life-card-y-offset", string>;
   };
