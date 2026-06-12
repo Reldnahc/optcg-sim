@@ -6,7 +6,6 @@ import type {
 } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
-import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
 import {
   parseNegativePowerModifier,
   parsePositivePowerModifier,
@@ -20,6 +19,7 @@ import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 import {
   continuousDuration,
   continuousDurationEvidence,
+  parseFieldEffectDuration,
   type ContinuousInstructionParser,
 } from "./shared.js";
 
@@ -382,7 +382,7 @@ const parseStatGainDuration = (
       evidence: continuousDurationEvidence(context.condition),
     };
   }
-  const explicit = parseExplicitFieldEffectDuration({ text: normalized });
+  const explicit = parseFieldEffectDuration({ text: normalized });
   const evidence = explicit?.evidence[0];
   return explicit?.duration !== undefined &&
     explicit.rest.length === 0 &&
@@ -432,16 +432,20 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const duration = continuousDuration(context.condition);
   const effects: Effect[] = [];
   const instructionEvidence: PrimitiveEvidence[] = [];
   const modifierEvidence: PrimitiveEvidence[] = [];
+  const durationEvidence: PrimitiveEvidence[] = [];
 
   for (const part of parts) {
     const power =
       parsePositivePowerModifier({ text: part }) ??
       parseNegativePowerModifier({ text: part });
-    if (power !== undefined && power.rest.length === 0) {
+    if (power !== undefined) {
+      const parsedDuration = parseStatGainDuration(power.rest, context);
+      if (parsedDuration === undefined) {
+        return undefined;
+      }
       effects.push({
         type: "modifyPower",
         target: { type: "self" },
@@ -449,19 +453,25 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
           dynamicValue === undefined
             ? power.value
             : { ...dynamicValue.value, multiplier: power.value },
-        duration,
+        duration: parsedDuration.duration,
       });
       instructionEvidence.push("instruction:modifyPower");
       modifierEvidence.push(...power.evidence);
+      durationEvidence.push(parsedDuration.evidence);
       if (dynamicValue !== undefined) {
         modifierEvidence.push(...dynamicValue.evidence);
       }
       continue;
     }
 
-    const cost = /^\+(?<value>[1-9]\d*) cost$/iu.exec(part);
+    const cost = /^\+(?<value>[1-9]\d*) cost\b(?<rest>.*)$/iu.exec(part);
     const costValueText = cost?.groups?.["value"];
+    const costRestText = cost?.groups?.["rest"]?.trim() ?? "";
     if (costValueText !== undefined) {
+      const parsedDuration = parseStatGainDuration(costRestText, context);
+      if (parsedDuration === undefined) {
+        return undefined;
+      }
       effects.push({
         type: "modifyCost",
         player: "self",
@@ -473,10 +483,11 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
                 ...dynamicValue.value,
                 multiplier: Number.parseInt(costValueText, 10),
               },
-        duration,
+        duration: parsedDuration.duration,
       });
       instructionEvidence.push("instruction:modifyCost");
       modifierEvidence.push("modifier:positiveCost");
+      durationEvidence.push(parsedDuration.evidence);
       if (dynamicValue !== undefined) {
         modifierEvidence.push(...dynamicValue.evidence);
       }
@@ -499,16 +510,12 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   if (effect === undefined) {
     return undefined;
   }
-  const durationEvidence: PrimitiveEvidence =
-    context.condition === undefined
-      ? "duration:whileSourceOnField"
-      : "duration:whileConditionTrue";
   const evidence = [
     ...new Set<PrimitiveEvidence>([
       ...instructionEvidence,
       ...target.evidence,
       ...modifierEvidence,
-      durationEvidence,
+      ...durationEvidence,
     ]),
   ];
 

@@ -9,7 +9,7 @@ import type {
 import {
   continuousDuration,
   continuousDurationEvidence,
-  parseExplicitFieldEffectDuration,
+  parseFieldEffectDuration,
   type ContinuousInstructionContext,
 } from "../shared.js";
 
@@ -45,7 +45,7 @@ export const parseKeywordAndPositivePowerGrant = ({
   const explicitDuration =
     modifier.rest.length === 0
       ? undefined
-      : parseExplicitFieldEffectDuration({ text: modifier.rest });
+      : parseFieldEffectDuration({ text: modifier.rest });
   if (
     modifier.rest.length > 0 &&
     modifier.rest !== "." &&

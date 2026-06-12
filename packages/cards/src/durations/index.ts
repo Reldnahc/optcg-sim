@@ -14,5 +14,6 @@ export {
   restrictionDurationParsers,
   thisBattleDurationPrimitive,
   thisTurnDurationPrimitive,
+  type DurationParseResult,
   type DurationParserSet,
 } from "./field-effect-durations.js";

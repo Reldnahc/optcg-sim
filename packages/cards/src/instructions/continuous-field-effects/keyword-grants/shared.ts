@@ -8,7 +8,7 @@ import type {
 import {
   continuousDuration,
   continuousDurationEvidence,
-  parseExplicitFieldEffectDuration,
+  parseFieldEffectDuration,
   type ContinuousInstructionContext,
 } from "../shared.js";
 
@@ -30,7 +30,7 @@ export const parseKeywordGrantForTarget = ({
   const explicitDuration =
     keyword.rest.length === 0
       ? undefined
-      : parseExplicitFieldEffectDuration({ text: keyword.rest });
+      : parseFieldEffectDuration({ text: keyword.rest });
   if (keyword.rest.length > 0 && explicitDuration === undefined) {
     return undefined;
   }

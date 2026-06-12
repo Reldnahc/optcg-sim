@@ -14,7 +14,7 @@ import {
   parseYourNamedCardsTarget,
 } from "../../../targets/index.js";
 import type { InstructionParser } from "../../../types.js";
-import { parseExplicitFieldEffectDuration } from "../shared.js";
+import { parseFieldEffectDuration } from "../shared.js";
 
 const selectedKeywordAttributeGrantTarget = "selected:keyword-attribute-grant";
 const savedFieldObjectZones = new Set<string>([
@@ -75,7 +75,7 @@ export const parseTargetedKeywordAndAttributeGrantInstruction: InstructionParser
       return undefined;
     }
 
-    const duration = parseExplicitFieldEffectDuration({ text: durationText });
+    const duration = parseFieldEffectDuration({ text: durationText });
     if (
       duration === undefined ||
       duration.duration === undefined ||

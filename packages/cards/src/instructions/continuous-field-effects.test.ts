@@ -279,6 +279,54 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses self-next-turn duration through multiple field effect body families", () => {
+    expect(
+      parseYourLeaderConditionalPowerInstruction(
+        {
+          text: "This Character gains +2000 power until the start of your next turn.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: 2000,
+        duration: { type: "untilStartOfNextTurn", player: "self" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "modifier:positivePower",
+        "duration:selfNextTurnStart",
+      ],
+      rest: "",
+    });
+
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "This Character gains [Blocker] until the start of your next turn.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "giveKeyword",
+        target: { type: "self" },
+        keyword: "blocker",
+        duration: { type: "untilStartOfNextTurn", player: "self" },
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "duration:selfNextTurnStart",
+      ],
+      rest: "",
+    });
+  });
+
   it.each([
     ["This Leader cannot attack.", "target:thisCard"],
     ["This Character cannot attack.", "target:thisCharacter"],

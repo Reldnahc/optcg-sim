@@ -6,7 +6,7 @@ import {
   parseYourNamedCardsTarget,
 } from "../../../targets/index.js";
 import type { InstructionParser } from "../../../types.js";
-import { parseExplicitFieldEffectDuration } from "../shared.js";
+import { parseFieldEffectDuration } from "../shared.js";
 
 export const parseTargetedKeywordGrantInstruction: InstructionParser = (
   input,
@@ -38,7 +38,7 @@ export const parseTargetedKeywordGrantInstruction: InstructionParser = (
   if (keyword === undefined) {
     return undefined;
   }
-  const duration = parseExplicitFieldEffectDuration({ text: keyword.rest });
+  const duration = parseFieldEffectDuration({ text: keyword.rest });
   if (
     duration === undefined ||
     duration.duration === undefined ||

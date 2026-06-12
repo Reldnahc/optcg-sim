@@ -7,7 +7,7 @@ import type { PrimitiveEvidence } from "../../types.js";
 import {
   continuousDuration,
   continuousDurationEvidence,
-  parseExplicitFieldEffectDuration,
+  parseFieldEffectDuration,
   type ContinuousInstructionParser,
 } from "./shared.js";
 
@@ -154,7 +154,7 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
   const explicitDuration =
     durationText.length === 0 || durationText === "."
       ? undefined
-      : parseExplicitFieldEffectDuration({ text: durationText });
+      : parseFieldEffectDuration({ text: durationText });
   if (durationText.length > 0 && durationText !== ".") {
     if (explicitDuration === undefined || explicitDuration.rest.length > 0) {
       return undefined;
@@ -224,7 +224,7 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
   const explicitDuration =
     durationText.length === 0 || durationText === "."
       ? undefined
-      : parseExplicitFieldEffectDuration({ text: durationText });
+      : parseFieldEffectDuration({ text: durationText });
   if (durationText.length > 0 && durationText !== ".") {
     if (explicitDuration === undefined || explicitDuration.rest.length > 0) {
       return undefined;

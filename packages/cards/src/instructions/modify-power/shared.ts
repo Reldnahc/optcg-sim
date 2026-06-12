@@ -1,6 +1,9 @@
 import type { DynamicNumberValue, Duration, Target } from "@optcg/types";
 
-import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
+import {
+  fieldEffectDurationParsers,
+  parseDurationFromSet,
+} from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 
@@ -19,6 +22,7 @@ export const modifyPowerInstructionPrimitive = {
     "modifier:positivePower",
     "duration:thisBattle",
     "duration:thisTurn",
+    "duration:selfNextTurnStart",
     "duration:opponentNextEndPhase",
     "duration:opponentNextRefreshPhase",
   ],
@@ -35,7 +39,10 @@ export function parseGainsPositivePower(target: Target, text: string) {
     return undefined;
   }
 
-  const duration = parseExplicitFieldEffectDuration({ text: modifier.rest });
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    fieldEffectDurationParsers,
+  );
   const dynamicDuration =
     typeof modifier.value === "number"
       ? parseAttachedDonScaledDuration(modifier.value, modifier.rest)
@@ -79,7 +86,10 @@ export function parseAttachedDonScaledDuration(
   if (durationText === undefined || targetText === undefined) {
     return undefined;
   }
-  const duration = parseExplicitFieldEffectDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    fieldEffectDurationParsers,
+  );
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }

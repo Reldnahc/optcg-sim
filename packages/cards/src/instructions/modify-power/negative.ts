@@ -1,5 +1,8 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
-import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
+import {
+  fieldEffectDurationParsers,
+  parseDurationFromSet,
+} from "../../durations/index.js";
 import { parseNegativePowerModifier } from "../../modifiers/index.js";
 import {
   parseAllFieldTarget,
@@ -36,9 +39,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     );
     const duration =
       dynamicDuration ??
-      parseExplicitFieldEffectDuration({
-        text: modifier.rest,
-      });
+      parseDurationFromSet({ text: modifier.rest }, fieldEffectDurationParsers);
     if (duration === undefined || duration.duration === undefined) {
       return undefined;
     }
@@ -86,7 +87,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
   );
   const duration =
     dynamicDuration ??
-    parseExplicitFieldEffectDuration({ text: modifier.rest });
+    parseDurationFromSet({ text: modifier.rest }, fieldEffectDurationParsers);
   if (duration === undefined || duration.duration === undefined) {
     return undefined;
   }
@@ -132,7 +133,10 @@ function parseModifierFirstNegativePowerInstruction(
   if (durationText === undefined || targetText === undefined) {
     return undefined;
   }
-  const duration = parseExplicitFieldEffectDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    fieldEffectDurationParsers,
+  );
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }
