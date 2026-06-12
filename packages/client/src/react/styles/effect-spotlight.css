@@ -183,6 +183,7 @@
 .effect-spotlight .trigger-block .card-rules-line:first-child {
   padding-left: 0.3em;
   padding-top: 0;
+  padding-bottom: 0;
 }
 
 .effect-spotlight

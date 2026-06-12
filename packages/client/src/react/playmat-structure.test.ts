@@ -282,7 +282,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight \.trigger-block \.card-rules-line:first-child\s*\{[^}]*padding-left:\s*0\.3em;[^}]*padding-top:\s*0;/u,
+      /\.effect-spotlight \.trigger-block \.card-rules-line:first-child\s*\{[^}]*padding-left:\s*0\.3em;[^}]*padding-top:\s*0;[^}]*padding-bottom:\s*0;/u,
     );
     assert.match(
       effectSpotlightStyles,
