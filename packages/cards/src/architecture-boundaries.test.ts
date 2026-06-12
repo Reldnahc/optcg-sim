@@ -225,6 +225,24 @@ describe("cards package architecture boundaries", () => {
     );
   });
 
+  it("routes event reaction predicates through semantic predicate groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const eventReactionFile = files.find((file) =>
+      file.path.endsWith("/segments/event-reaction.ts"),
+    );
+
+    expect(eventReactionFile).toBeDefined();
+    expect(eventReactionFile?.contents).toMatch(
+      /implicitReactionPredicateParsers/u,
+    );
+    expect(eventReactionFile?.contents).toMatch(
+      /activatedReactionPredicateParsers/u,
+    );
+    expect(eventReactionFile?.contents).toMatch(
+      /parseReactionPredicateFromSet/u,
+    );
+  });
+
   it("keeps body parsers on semantic duration groups", async () => {
     const files = await readCardsPackageSourceFiles();
     const bodyFiles = files.filter(

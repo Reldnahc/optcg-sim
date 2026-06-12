@@ -188,27 +188,57 @@ const onlyMatchingCharactersCondition = (
   };
 };
 
-const activatedReactionPredicate = (
-  text: string,
-  entryPoint: ParseInput["entryPoint"],
-):
-  | {
-      trigger: Trigger;
-      evidence: ExpressionParseResult["evidence"];
-      condition?: Condition;
-    }
-  | undefined => {
-  const normalized = text.trim();
+export interface ReactionPredicateInput {
+  readonly text: string;
+  readonly entryPoint?: ParseInput["entryPoint"];
+}
 
+export interface ReactionPredicateResult {
+  readonly trigger: Trigger;
+  readonly evidence: ExpressionParseResult["evidence"];
+  readonly condition?: Condition;
+  readonly allowBodyBlockPatch?: boolean;
+}
+
+export type ReactionPredicateParser = (
+  input: ReactionPredicateInput,
+) => ReactionPredicateResult | undefined;
+
+export function parseReactionPredicateFromSet(
+  input: ReactionPredicateInput,
+  parsers: readonly ReactionPredicateParser[],
+): ReactionPredicateResult | undefined {
+  for (const parser of parsers) {
+    const parsed = parser(input);
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+const parseSharedLifeRemovedEitherPlayerPredicate: ReactionPredicateParser = ({
+  text,
+}) => {
   if (
-    normalized.toLowerCase() ===
+    text.trim().toLowerCase() !==
     "a card is removed from your or your opponent's life cards"
   ) {
-    return {
-      trigger: lifeRemovedTrigger(["self", "opponent"]),
-      evidence: ["trigger:lifeRemoved", "player:self", "player:opponent"],
-    };
+    return undefined;
   }
+
+  return {
+    trigger: lifeRemovedTrigger(["self", "opponent"]),
+    evidence: ["trigger:lifeRemoved", "player:self", "player:opponent"],
+  };
+};
+
+const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
+  text,
+  entryPoint,
+}) => {
+  const normalized = text.trim();
 
   if (normalized.toLowerCase() === "your opponent attacks") {
     return {
@@ -382,31 +412,37 @@ const activatedReactionPredicate = (
   return undefined;
 };
 
-const implicitReactionPredicate = (
+export const activatedReactionPredicateParsers: readonly ReactionPredicateParser[] =
+  [
+    parseSharedLifeRemovedEitherPlayerPredicate,
+    activatedReactionSpecificPredicate,
+  ] as const;
+
+const activatedReactionPredicate = (
   text: string,
+  entryPoint: ParseInput["entryPoint"],
 ):
   | {
       trigger: Trigger;
       evidence: ExpressionParseResult["evidence"];
-      allowBodyBlockPatch?: boolean;
+      condition?: Condition;
     }
   | undefined => {
+  return parseReactionPredicateFromSet(
+    { text, ...(entryPoint === undefined ? {} : { entryPoint }) },
+    activatedReactionPredicateParsers,
+  );
+};
+
+const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
+  text,
+}) => {
   const normalized = text.trim();
 
   if (normalized.toLowerCase() === "you take damage") {
     return {
       trigger: damageDealtTrigger(["self"]),
       evidence: ["trigger:damageDealt", "player:self"],
-    };
-  }
-
-  if (
-    normalized.toLowerCase() ===
-    "a card is removed from your or your opponent's life cards"
-  ) {
-    return {
-      trigger: lifeRemovedTrigger(["self", "opponent"]),
-      evidence: ["trigger:lifeRemoved", "player:self", "player:opponent"],
     };
   }
 
@@ -652,6 +688,12 @@ const implicitReactionPredicate = (
   return undefined;
 };
 
+export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[] =
+  [
+    parseSharedLifeRemovedEitherPlayerPredicate,
+    implicitReactionSpecificPredicate,
+  ] as const;
+
 const implicitReactionPredicates = (
   text: string,
 ):
@@ -663,7 +705,12 @@ const implicitReactionPredicates = (
   | undefined => {
   const predicates = text
     .split(/\s+or\s+(?=(?:you|your)\b(?!\s+opponent's\b))/iu)
-    .map((part) => implicitReactionPredicate(part));
+    .map((part) =>
+      parseReactionPredicateFromSet(
+        { text: part },
+        implicitReactionPredicateParsers,
+      ),
+    );
   if (predicates.some((predicate) => predicate === undefined)) {
     return undefined;
   }
