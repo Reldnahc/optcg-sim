@@ -1,0 +1,83 @@
+import { strict as assert } from "node:assert";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, test } from "vitest";
+
+import type { CardId, InstanceId, PlayerId } from "@optcg/types";
+
+import { BoardLayout } from "./BoardLayout.js";
+import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+
+const card = (instanceId: string, name = instanceId): ClientCardModel => ({
+  instanceId: instanceId as InstanceId,
+  cardId: `${instanceId}-card` as CardId,
+  name,
+  category: "Character",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
+const hiddenLifeCards = (count: number, prefix: string): ClientCardModel[] =>
+  Array.from({ length: count }, (_, index) => ({
+    instanceId: `${prefix}-${String(index)}` as InstanceId,
+    cardId: "hidden" as CardId,
+    name: "Hidden card",
+    category: "hidden",
+    attachedDonCount: 0,
+    attachedDonCards: [],
+  }));
+
+const board = (): BoardViewModel => ({
+  playerId: "p1" as PlayerId,
+  selfLabel: "Player",
+  opponentLabel: "Opponent",
+  statusBanner: {
+    label: "Counter Step",
+    tone: "counter",
+  },
+  selfIsTurnPlayer: true,
+  opponentIsTurnPlayer: false,
+  self: {
+    leader: card("self-leader", "Self Leader"),
+    hand: [],
+    characters: [],
+    costArea: [],
+    trash: [],
+    deckCount: 40,
+    donDeckCount: 10,
+    lifeCount: 5,
+    lifeCards: hiddenLifeCards(5, "hidden-life-self"),
+  },
+  opponent: {
+    leader: card("opponent-leader", "Opponent Leader"),
+    handCount: 5,
+    characters: [],
+    costArea: [],
+    trash: [],
+    deckCount: 40,
+    donDeckCount: 10,
+    lifeCount: 5,
+    lifeCards: hiddenLifeCards(5, "hidden-life-opponent"),
+  },
+  actionsByCardInstanceId: {},
+});
+
+describe("turn status banner", () => {
+  test("renders across the playmat with the projected banner tone", () => {
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: board(),
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*turn-status-banner-lane/u);
+    assert.match(markup, /class="[^"]*turn-status-banner[^"]*is-counter/u);
+    assert.match(markup, /data-turn-status="counter"/u);
+    assert.equal(markup.includes("Counter Step"), true);
+  });
+});

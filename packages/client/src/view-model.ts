@@ -73,10 +73,16 @@ export interface ClientActionModel {
   counter?: ClientVisibleAction["counter"];
 }
 
+export interface StatusBannerModel {
+  label: string;
+  tone: "self" | "opponent" | "block" | "counter";
+}
+
 export interface BoardViewModel {
   playerId: PlayerId;
   selfLabel: string;
   opponentLabel: string;
+  statusBanner?: StatusBannerModel;
   selfTimer?: PlayerSummaryTimerModel;
   opponentTimer?: PlayerSummaryTimerModel;
   selfIsTurnPlayer: boolean;
@@ -380,6 +386,21 @@ const battleArrowForView = (
   };
 };
 
+const statusBannerForView = (
+  view: MatchSnapshot["players"][PlayerId]["view"],
+  playerId: PlayerId,
+): StatusBannerModel => {
+  if (view.battle?.step === "block") {
+    return { label: "Blocker Step", tone: "block" };
+  }
+  if (view.battle?.step === "counter") {
+    return { label: "Counter Step", tone: "counter" };
+  }
+  return view.turn.turnPlayerId === playerId
+    ? { label: "Your Turn", tone: "self" }
+    : { label: "Opponent's Turn", tone: "opponent" };
+};
+
 const addAction = (
   actions: Record<string, ClientActionModel[]>,
   instanceId: InstanceId,
@@ -489,6 +510,7 @@ export const createBoardViewModel = ({
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
+    statusBanner: statusBannerForView(player.view, playerId),
     ...(selfTimer === undefined ? {} : { selfTimer }),
     selfIsTurnPlayer: turnPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),

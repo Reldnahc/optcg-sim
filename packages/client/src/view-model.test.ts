@@ -557,6 +557,84 @@ describe("board view model", () => {
     });
   });
 
+  test("projects turn ownership into the board status banner", () => {
+    const view = minimalView();
+    view.turn.turnPlayerId = p1;
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const selfTurnModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+    view.turn.turnPlayerId = p2;
+    const opponentTurnModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(selfTurnModel.statusBanner, {
+      label: "Your Turn",
+      tone: "self",
+    });
+    assert.deepEqual(opponentTurnModel.statusBanner, {
+      label: "Opponent's Turn",
+      tone: "opponent",
+    });
+  });
+
+  test("projects blocker and counter battle steps into the board status banner", () => {
+    const view = minimalView();
+    view.battle = {
+      attacker: ref("leader-1", "OP13-079", p1),
+      originalTarget: ref("opp-leader", "OP01-001", p2),
+      currentTarget: ref("opp-leader", "OP01-001", p2),
+      step: "block",
+      damageCount: 1,
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const blockerModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+    view.battle.step = "counter";
+    const counterModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(blockerModel.statusBanner, {
+      label: "Blocker Step",
+      tone: "block",
+    });
+    assert.deepEqual(counterModel.statusBanner, {
+      label: "Counter Step",
+      tone: "counter",
+    });
+  });
+
   test("preserves active card ids separately from selection state", () => {
     const snapshot: MatchSnapshot = {
       matchId: "match-1" as MatchId,

@@ -136,6 +136,21 @@ const donCount = (
   });
 };
 
+const TurnStatusBanner = ({
+  banner,
+}: {
+  banner: NonNullable<BoardViewModel["statusBanner"]>;
+}): React.JSX.Element => (
+  <div className="turn-status-banner-lane" aria-live="polite">
+    <div
+      className={`turn-status-banner is-${banner.tone}`}
+      data-turn-status={banner.tone}
+    >
+      {banner.label}
+    </div>
+  </div>
+);
+
 export const BoardLayout = ({
   board,
   decisionPrompt,
@@ -211,6 +226,9 @@ export const BoardLayout = ({
         />
       </div>
       <div className="tabletop-board">
+        {board.statusBanner === undefined ? null : (
+          <TurnStatusBanner banner={board.statusBanner} />
+        )}
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-zone opponent-cost">
           <Zone
