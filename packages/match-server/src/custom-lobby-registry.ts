@@ -58,6 +58,10 @@ export interface CreatedCustomLobbyResponse {
   seat?: { playerId: PlayerId; sessionToken?: string };
 }
 
+export interface PendingRematchResponse {
+  rematch: { status: "pending" };
+}
+
 export interface ValidatedCustomLobbyLoadout {
   readonly loadoutId: string | null;
   readonly status: "playable" | "unplayable" | "unverified";
@@ -140,12 +144,15 @@ export interface CustomLobbyRegistry {
     auth: AuthContext | undefined,
   ) => Promise<
     | CreatedCustomLobbyResponse
+    | PendingRematchResponse
     | "matchNotFound"
     | "unauthenticated"
     | "forbidden"
     | "sourceNotCompleted"
     | "noPreviousLoser"
   >;
+  cancelRematchConsensusForMatch: (sourceMatchId: MatchId) => boolean;
+  cancelRematchLobby: (lobbyId: string) => Promise<boolean>;
 }
 
 export interface CreateCustomLobbyRegistryOptions extends CreatePremadeDevMatchSetupOptions {
@@ -404,6 +411,7 @@ export const createCustomLobbyRegistry = async (
     );
     lobby.matchId = created.matchId;
   };
+  const pendingRematchVotes = new Map<MatchId, Set<PlayerId>>();
 
   return {
     createLobby(settings) {
@@ -707,6 +715,14 @@ export const createCustomLobbyRegistry = async (
       if (typeof seed === "string") {
         return seed;
       }
+      const votes =
+        pendingRematchVotes.get(sourceMatchId) ?? new Set<PlayerId>();
+      votes.add(playerId);
+      pendingRematchVotes.set(sourceMatchId, votes);
+      if (votes.size < 2) {
+        return { rematch: { status: "pending" } };
+      }
+      pendingRematchVotes.delete(sourceMatchId);
       const playerOrder = twoPlayerOrder(seed.playerOrder);
       const lobby: CustomLobbyState = {
         lobbyId: `rematch-${lobbyStore.createLobbyId()}`,
@@ -724,12 +740,26 @@ export const createCustomLobbyRegistry = async (
         ),
         firstPlayerChoice: seed.firstPlayerChoice,
         playerOrder,
+        rematchOfMatchId: sourceMatchId,
       };
       await lobbyStore.createLobby(lobby);
       return {
         ...lobbyResponse(lobby),
         seat: { playerId },
       };
+    },
+    cancelRematchConsensusForMatch(sourceMatchId) {
+      return pendingRematchVotes.delete(sourceMatchId);
+    },
+    async cancelRematchLobby(lobbyId) {
+      const lobby = await lobbyStore.getLobby(lobbyId);
+      if (
+        lobby?.rematchOfMatchId === undefined ||
+        lobby.matchId !== undefined
+      ) {
+        return false;
+      }
+      return lobbyStore.deleteLobby(lobbyId);
     },
   };
 };

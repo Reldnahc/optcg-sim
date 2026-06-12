@@ -22,6 +22,7 @@ import type {
   MatchLiveTransport,
   MatchSnapshot,
   MatchTransport,
+  PendingRematch,
   LiveMatchConnection,
   ValidatedLobbyLoadouts,
 } from "./transport.js";
@@ -159,6 +160,10 @@ const isJoinedCustomLobby = (
   value: Awaited<ReturnType<MatchTransport["createRematch"]>>,
 ): value is CustomLobby & { seat: { playerId: PlayerId } } =>
   "lobbyId" in value && "seat" in value;
+
+const isPendingRematch = (
+  value: Awaited<ReturnType<MatchTransport["createRematch"]>>,
+): value is PendingRematch => "rematch" in value;
 
 export const createMatchClientController = ({
   transport,
@@ -392,6 +397,17 @@ export const createMatchClientController = ({
         playerId: credential.playerId,
         sessionToken: credential.sessionToken,
       });
+      if (isPendingRematch(created)) {
+        return (
+          currentState ?? {
+            matchId: credential.matchId,
+            seat: {
+              matchId: credential.matchId,
+              playerId: credential.playerId,
+            },
+          }
+        );
+      }
       if (isJoinedCustomLobby(created)) {
         currentState = undefined;
         currentFirstPlayerSetupState = undefined;

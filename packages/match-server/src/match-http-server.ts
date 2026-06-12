@@ -50,6 +50,7 @@ import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
 import { handleLobbyLoadoutValidationRequest } from "./lobby-loadout-validation-route.js";
+import { handleRematchRequest } from "./match-rematch-route.js";
 import { isRecord, readRequestJson } from "./request-json.js";
 import {
   playerStatePayload,
@@ -75,10 +76,6 @@ interface DevResetRequest {
 interface FirstPlayerChoiceRequest {
   playerId?: unknown;
   choice?: unknown;
-}
-
-interface RematchRequest {
-  playerId?: unknown;
 }
 
 interface CreateLobbyRequest {
@@ -420,49 +417,21 @@ const handleApiRequest = async (
       return;
     }
     if (request.method === "POST" && resource === "rematch") {
-      let body: unknown;
-      try {
-        body = await readRequestJson(request);
-      } catch {
-        sendJson(response, 400, { errors: ["Request body must be JSON."] });
-        return;
-      }
-      const rematchRequest: RematchRequest = isRecord(body) ? body : {};
-      const playerId = rematchRequest.playerId;
-      if (typeof playerId !== "string") {
-        sendJson(response, 400, {
-          errors: ["Rematch creation requires playerId."],
-        });
-        return;
-      }
-      const result = await lobbyRegistry.createRematchLobby(
-        matchId as MatchId,
-        playerId as PlayerId,
-        authProvider.authenticate(request),
-      );
-      if (result === "matchNotFound") {
-        sendMatchNotFound(response, matchId);
-        return;
-      }
-      if (result === "unauthenticated") {
-        sendJson(response, 401, { errors: ["Rematch requires a session."] });
-        return;
-      }
-      if (result === "forbidden") {
-        sendJson(response, 403, {
-          errors: ["Session token is not authorized for this match seat."],
-        });
-        return;
-      }
-      if (result === "sourceNotCompleted" || result === "noPreviousLoser") {
-        sendJson(response, 409, {
-          errors: ["Rematch requires a completed source match with a loser."],
-        });
-        return;
-      }
-      broadcastSessionTransition(matchId as MatchId, result, matchConnections);
-      broadcastLobbyState(result, lobbyConnections);
-      sendJson(response, 201, result);
+      await handleRematchRequest({
+        request,
+        response,
+        matchId: matchId as MatchId,
+        lobbyRegistry,
+        auth: authProvider.authenticate(request),
+        onCreated: (created) => {
+          broadcastSessionTransition(
+            matchId as MatchId,
+            created,
+            matchConnections,
+          );
+          broadcastLobbyState(created, lobbyConnections);
+        },
+      });
       return;
     }
     const match = registry.getMatch(matchId as MatchId);
@@ -551,6 +520,23 @@ const broadcastLobbyState = (
   for (const connection of connections) {
     if (connection.lobbyId === lobby.lobbyId) {
       sendSocketJson(connection, lobbyStatePayload(lobby, connection));
+    }
+  }
+};
+
+const broadcastLobbyError = (
+  lobbyId: string,
+  message: string,
+  connections: Set<DevLobbySocketConnection>,
+): void => {
+  for (const connection of connections) {
+    if (connection.lobbyId === lobbyId) {
+      sendSocketJson(connection, {
+        type: "lobbyError",
+        lobbyId,
+        serverSeq: ++connection.serverSeq,
+        message,
+      });
     }
   }
 };
@@ -684,6 +670,16 @@ const handleWebSocketUpgrade = async (
     resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
     registerConnectionLifecycle(connection, () => {
       lobbyConnections.delete(connection);
+      void lobbyRegistry.cancelRematchLobby(lobbyId).then((cancelled) => {
+        if (!cancelled) {
+          return;
+        }
+        broadcastLobbyError(
+          lobbyId,
+          "Rematch canceled because a player disconnected from the lobby.",
+          lobbyConnections,
+        );
+      });
     });
     sendSocketJson(connection, lobbyStatePayload(lobby, connection));
 
@@ -758,6 +754,7 @@ const handleWebSocketUpgrade = async (
   });
   registerConnectionLifecycle(connection, () => {
     connections.delete(connection);
+    lobbyRegistry.cancelRematchConsensusForMatch(matchId);
     registry.advanceTimers({
       elapsedMs: 0,
       connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
