@@ -168,6 +168,15 @@ const emptySequenceSupportState = (
   savedSelectedTargets: new Set(options.initialSavedSelectedTargets ?? []),
 });
 
+const cloneSequenceSupportState = (
+  state: SequenceSupportState,
+): SequenceSupportState => ({
+  hasPendingDecisionSegment: state.hasPendingDecisionSegment,
+  savedSelectedCards: new Map(state.savedSelectedCards),
+  savedSelectionSets: new Set(state.savedSelectionSets),
+  savedSelectedTargets: new Set(state.savedSelectedTargets),
+});
+
 const savedSelectedCardsKind = (
   state: SequenceSupportState,
   selection: unknown,
@@ -307,11 +316,12 @@ const isSupportedForEachSavedTargetSegment = (
   );
 };
 
-export const toSupportedSequenceBlock = (
+const isSupportedSequenceBlockWithState = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
-  options: SequenceSupportOptions = {},
-): SupportedSequenceBlock | undefined => {
+  options: SequenceSupportOptions,
+  supportState: SequenceSupportState,
+): effectBlock is SupportedSequenceBlock => {
   const flattenedBlock = toFlattenedSequenceBlock(effectBlock);
   const allowSavedReferences = options.allowSavedReferences ?? true;
   const allowInitialTrashFromHand = options.allowInitialTrashFromHand ?? false;
@@ -335,10 +345,9 @@ export const toSupportedSequenceBlock = (
     flattenedBlock.effect.type !== "sequence" ||
     flattenedBlock.effect.effects.length === 0
   ) {
-    return undefined;
+    return false;
   }
 
-  const supportState = emptySequenceSupportState(options);
   const allSegmentsSupported = flattenedBlock.effect.effects.every(
     (segment, index) => {
       if (index === 0 && segment.connector !== "always") {
@@ -556,10 +565,11 @@ export const toSupportedSequenceBlock = (
       if (segment.effect.type === "choice") {
         supportState.hasPendingDecisionSegment = true;
         return isSupportedChoiceEffect(segment.effect, (effect) =>
-          isSupportedSequenceBlock(
+          isSupportedSequenceBlockWithState(
             entry,
             { ...flattenedBlock, effect },
             { ...options, allowInitialTrashFromHand: true },
+            cloneSequenceSupportState(supportState),
           ),
         );
       }
@@ -595,8 +605,25 @@ export const toSupportedSequenceBlock = (
       return false;
     },
   );
-  return allSegmentsSupported
-    ? (flattenedBlock as SupportedSequenceBlock)
+  return allSegmentsSupported;
+};
+
+export const toSupportedSequenceBlock = (
+  entry: EffectQueueEntry,
+  effectBlock: EffectDefinition["effects"][number] | undefined,
+  options: SequenceSupportOptions = {},
+): SupportedSequenceBlock | undefined => {
+  const flattenedBlock = toFlattenedSequenceBlock(effectBlock);
+  if (flattenedBlock === undefined) {
+    return undefined;
+  }
+  return isSupportedSequenceBlockWithState(
+    entry,
+    flattenedBlock,
+    options,
+    emptySequenceSupportState(options),
+  )
+    ? flattenedBlock
     : undefined;
 };
 
