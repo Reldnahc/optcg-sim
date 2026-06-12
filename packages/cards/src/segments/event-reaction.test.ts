@@ -219,6 +219,104 @@ describe("event reaction predicate routing", () => {
       assertPredicateParsesThroughBothGroups(text, trigger, evidence);
     },
   );
+
+  it.each([
+    {
+      text: "you play a Character",
+      trigger: {
+        type: "cardPlayed",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:self",
+        "filter:category:character",
+      ],
+    },
+    {
+      text: "your opponent plays a Character",
+      trigger: {
+        type: "cardPlayed",
+        player: "opponent",
+        filter: { categories: ["character"] },
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:opponent",
+        "filter:category:character",
+      ],
+    },
+    {
+      text: "you play a Character with a [Trigger]",
+      trigger: {
+        type: "cardPlayed",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          effectEntryPoint: { mode: "with", trigger: { type: "trigger" } },
+        },
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:self",
+        "filter:category:character",
+        "filter:effectEntryPoint",
+        "filter:effectEntryPoint:with",
+      ],
+    },
+    {
+      text: "a {Land of Wano} type Character card is played from your trash",
+      trigger: {
+        type: "cardPlayed",
+        player: "self",
+        sourceZone: "trash",
+        filter: { categories: ["character"], typesAny: ["Land of Wano"] },
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:self",
+        "zone:trash",
+        "filter:type",
+      ],
+    },
+    {
+      text: "your opponent plays a Character with a base cost of 8 or more, or when your opponent plays a Character using a Character's effect",
+      trigger: {
+        type: "cardPlayed",
+        player: "opponent",
+        anyOf: [
+          {
+            filter: {
+              categories: ["character"],
+              baseCost: { op: "gte", value: 8 },
+            },
+          },
+          {
+            filter: { categories: ["character"] },
+            sourceFilter: { categories: ["character"] },
+          },
+        ],
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:opponent",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+    },
+  ] satisfies Array<{
+    readonly text: string;
+    readonly trigger: Trigger;
+    readonly evidence: readonly string[];
+  }>)(
+    "parses shared card-played predicate $text through semantic predicate groups",
+    ({ text, trigger, evidence }) => {
+      assertPredicateParsesThroughBothGroups(text, trigger, evidence);
+    },
+  );
 });
 
 function assertPredicateParsesThroughBothGroups(

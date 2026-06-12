@@ -135,7 +135,7 @@ const parseCharacterFilter = (
   text: string,
 ): { filter: CardFilter; evidence: ExpressionParseResult["evidence"] } => {
   const parsed = parseCardFilterPredicates(
-    { text },
+    { text: normalizeCharacterFilterText(text) },
     { powerSemantics: "printed" },
   );
   if (
@@ -150,6 +150,9 @@ const parseCharacterFilter = (
   }
   return { filter: parsed.filter, evidence: parsed.evidence };
 };
+
+const normalizeCharacterFilterText = (text: string): string =>
+  text.trim().replace(/^(?:a|an)\s+(?=Character(?: card)?\b)/iu, "");
 
 const onlyMatchingCharactersCondition = (
   text: string,
@@ -410,6 +413,90 @@ const parseFieldRemovalSource = (
   return undefined;
 };
 
+const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+
+  if (
+    normalized.toLowerCase() ===
+    "your opponent plays a character with a base cost of 8 or more, or when your opponent plays a character using a character's effect"
+  ) {
+    return {
+      trigger: {
+        type: "cardPlayed",
+        player: "opponent",
+        anyOf: [
+          {
+            filter: {
+              categories: ["character"],
+              baseCost: { op: "gte", value: 8 },
+            },
+          },
+          {
+            filter: { categories: ["character"] },
+            sourceFilter: { categories: ["character"] },
+          },
+        ],
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:opponent",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+    };
+  }
+
+  const playedFromTrash =
+    /^(?:a|your) (?<filter>.+) is played from your trash$/iu.exec(normalized);
+  const trashFilter = playedFromTrash?.groups?.["filter"];
+  if (
+    trashFilter !== undefined &&
+    /\bCharacter(?: card)?\b/iu.test(trashFilter)
+  ) {
+    const parsed = parseCharacterFilter(trashFilter);
+    return {
+      trigger: {
+        type: "cardPlayed",
+        player: "self",
+        sourceZone: "trash",
+        filter: parsed.filter,
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:self",
+        "zone:trash",
+        ...parsed.evidence,
+      ],
+    };
+  }
+
+  const played = /^(?<player>you|your opponent) plays? (?<filter>.+)$/iu.exec(
+    normalized,
+  );
+  const playedPlayer = played?.groups?.["player"];
+  const playedFilter = played?.groups?.["filter"];
+  if (
+    playedPlayer === undefined ||
+    playedFilter === undefined ||
+    !/\bCharacter(?: card)?\b/iu.test(playedFilter)
+  ) {
+    return undefined;
+  }
+
+  const parsed = parseCharacterFilter(playedFilter);
+  const player = playedPlayer.toLowerCase() === "you" ? "self" : "opponent";
+  return {
+    trigger: {
+      type: "cardPlayed",
+      player,
+      filter: parsed.filter,
+    },
+    evidence: ["trigger:cardPlayed", `player:${player}`, ...parsed.evidence],
+  };
+};
+
 const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
   text,
   entryPoint,
@@ -442,58 +529,6 @@ const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
         "trigger:opponentActivated",
         "activation:event",
         "activation:trigger",
-      ],
-    };
-  }
-
-  if (normalized.toLowerCase() === "you play a character with a [trigger]") {
-    return {
-      trigger: {
-        type: "cardPlayed",
-        player: "self",
-        filter: {
-          categories: ["character"],
-          effectEntryPoint: { mode: "with", trigger: { type: "trigger" } },
-        },
-      },
-      evidence: [
-        "trigger:cardPlayed",
-        "player:self",
-        "filter:category:character",
-        "filter:effectEntryPoint",
-        "filter:effectEntryPoint:with",
-      ],
-    };
-  }
-
-  if (
-    normalized.toLowerCase() ===
-    "your opponent plays a character with a base cost of 8 or more, or when your opponent plays a character using a character's effect"
-  ) {
-    return {
-      trigger: {
-        type: "cardPlayed",
-        player: "opponent",
-        anyOf: [
-          {
-            filter: {
-              categories: ["character"],
-              baseCost: { op: "gte", value: 8 },
-            },
-          },
-          {
-            filter: { categories: ["character"] },
-            sourceFilter: { categories: ["character"] },
-          },
-        ],
-      },
-      evidence: [
-        "trigger:cardPlayed",
-        "player:opponent",
-        "filter:category:character",
-        "filter:cost",
-        "condition:comparator:gte",
-        "condition:threshold:positiveInteger",
       ],
     };
   }
@@ -538,6 +573,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,
+    parseCardPlayedPredicate,
     activatedReactionSpecificPredicate,
   ] as const;
 
@@ -638,52 +674,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  const characterPlayed =
-    /^(?<player>you|your opponent) plays? (?<filter>.+? Character(?: card)?)$/iu.exec(
-      normalized,
-    );
-  const characterPlayedPlayer = characterPlayed?.groups?.["player"];
-  const characterPlayedFilter = characterPlayed?.groups?.["filter"];
-  if (
-    characterPlayedPlayer !== undefined &&
-    characterPlayedFilter !== undefined
-  ) {
-    const parsed = parseCharacterFilter(characterPlayedFilter);
-    const player =
-      characterPlayedPlayer.toLowerCase() === "you" ? "self" : "opponent";
-    return {
-      trigger: {
-        type: "cardPlayed",
-        player,
-        filter: parsed.filter,
-      },
-      evidence: ["trigger:cardPlayed", `player:${player}`, ...parsed.evidence],
-    };
-  }
-
-  const yourTrashCardPlayed =
-    /^(?:a|your) (?<filter>.+? Character(?: card)?) is played from your trash$/iu.exec(
-      normalized,
-    );
-  const yourTrashPlayedFilter = yourTrashCardPlayed?.groups?.["filter"];
-  if (yourTrashPlayedFilter !== undefined) {
-    const parsed = parseCharacterFilter(yourTrashPlayedFilter);
-    return {
-      trigger: {
-        type: "cardPlayed",
-        player: "self",
-        sourceZone: "trash",
-        filter: parsed.filter,
-      },
-      evidence: [
-        "trigger:cardPlayed",
-        "player:self",
-        "zone:trash",
-        ...parsed.evidence,
-      ],
-    };
-  }
-
   return undefined;
 };
 
@@ -692,6 +682,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,
+    parseCardPlayedPredicate,
     implicitReactionSpecificPredicate,
   ] as const;
 
