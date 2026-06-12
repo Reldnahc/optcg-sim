@@ -224,6 +224,24 @@ describe("cards package architecture boundaries", () => {
       /\b(?:lifeRemovedReactionExpressionParser|handTrashedByEffectReactionExpressionParser|opponentEventOrBlockerActivatedExpressionParser)\b/u,
     );
   });
+
+  it("keeps body parsers on semantic duration groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const bodyFiles = files.filter(
+      (file) =>
+        file.path.includes("/instructions/") ||
+        file.path.includes("/segments/"),
+    );
+
+    for (const file of bodyFiles) {
+      expect(file.contents, file.path).not.toMatch(
+        /parse(?:ThisTurn|ThisBattle|SelfNextTurnStart|OpponentNextEndPhase|OpponentNextRefreshPhase)Duration/u,
+      );
+      expect(file.contents, file.path).not.toMatch(
+        /parseExplicitFieldEffectDuration/u,
+      );
+    }
+  });
 });
 
 function escapeRegex(value: string): string {

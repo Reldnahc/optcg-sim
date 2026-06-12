@@ -1,7 +1,10 @@
 import type { SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
-import { parseThisTurnDuration } from "../durations/index.js";
+import {
+  parseDurationFromSet,
+  thisTurnOnlyDurationParsers,
+} from "../durations/index.js";
 import { parseOpponentFieldTarget } from "../targets/index.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 
@@ -33,7 +36,10 @@ export function selectedBasePowerSnapshotExpressionParser(
   ) {
     return undefined;
   }
-  const duration = parseThisTurnDuration({ text: durationText });
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
   if (
     duration === undefined ||
     duration.duration === undefined ||

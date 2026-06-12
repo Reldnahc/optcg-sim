@@ -164,9 +164,8 @@ export const opponentNextEndOnlyDurationParsers = [
   parseOpponentNextEndPhaseDuration,
 ] as const;
 
-export const replacementDurationParsers = [parseThisTurnDuration] as const;
+export const selfNextTurnStartOnlyDurationParsers = [
+  parseSelfNextTurnStartDuration,
+] as const;
 
-export const parseExplicitFieldEffectDuration = (
-  input: ParseInput,
-): DurationParseResult | undefined =>
-  parseDurationFromSet(input, fieldEffectDurationParsers);
+export const replacementDurationParsers = [parseThisTurnDuration] as const;

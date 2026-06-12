@@ -1,4 +1,7 @@
-import { parseSelfNextTurnStartDuration } from "../../durations/index.js";
+import {
+  parseDurationFromSet,
+  selfNextTurnStartOnlyDurationParsers,
+} from "../../durations/index.js";
 import { parseProtectionProcess } from "../../protection/process.js";
 import { parseProtectionSource } from "../../protection/source.js";
 import {
@@ -97,7 +100,10 @@ export const parseExplicitProtectionInstruction: InstructionParser = (
   if (source === undefined) {
     return undefined;
   }
-  const duration = parseSelfNextTurnStartDuration({ text: source.rest });
+  const duration = parseDurationFromSet(
+    { text: source.rest },
+    selfNextTurnStartOnlyDurationParsers,
+  );
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }
