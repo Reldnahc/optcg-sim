@@ -1,11 +1,13 @@
 import {
   createPoneglyphHttpClient,
-  createRedisCardDataCache,
+  createRedisCardDataCacheFromClient,
   fetchDevPoneglyphCatalogSnapshot,
 } from "@optcg/cards";
 import { createRuntimeSupportedCardRepository } from "@optcg/card-support";
 import type { CardId } from "@optcg/types";
 import { warmCardCache } from "optcg-card-cache";
+import { createClient } from "redis";
+import { defaultDevEffectDefinitionsVersion } from "./default-dev-manifest.js";
 import { writeActiveSimCardCacheVersions } from "./sim-card-cache-versions.js";
 
 const defaultBatchSize = 40;
@@ -40,29 +42,40 @@ const readConfig = (): WarmCliConfig => {
 
 const run = async (): Promise<void> => {
   const config = readConfig();
-  const cache = await createRedisCardDataCache({ url: config.redisUrl });
-  const catalog = await fetchDevPoneglyphCatalogSnapshot({
-    baseUrl: config.poneglyphBaseUrl,
-  });
-  const versions = catalog.versions;
-  const repository = createRuntimeSupportedCardRepository({
-    cache,
-    poneglyphClient: createPoneglyphHttpClient({
+  const redis = createClient({ url: config.redisUrl });
+  try {
+    await redis.connect();
+    const cache = createRedisCardDataCacheFromClient(redis);
+    const catalog = await fetchDevPoneglyphCatalogSnapshot({
       baseUrl: config.poneglyphBaseUrl,
-    }),
-    versions,
-  });
-  const result = await warmCardCache({
-    cardIds: catalog.cardIds,
-    versions,
-    cache,
-    batchSize: config.batchSize,
-    delayMs: config.delayMs,
-    resolveCards: (ids) => repository.resolveCacheEntries(ids as CardId[]),
-  });
-  await writeActiveSimCardCacheVersions(cache, versions);
+      versions: {
+        effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
+      },
+    });
+    const versions = catalog.versions;
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: createPoneglyphHttpClient({
+        baseUrl: config.poneglyphBaseUrl,
+      }),
+      versions,
+    });
+    const result = await warmCardCache({
+      cardIds: catalog.cardIds,
+      versions,
+      cache,
+      batchSize: config.batchSize,
+      delayMs: config.delayMs,
+      resolveCards: (ids) => repository.resolveCacheEntries(ids as CardId[]),
+    });
+    await writeActiveSimCardCacheVersions(cache, versions);
 
-  process.stdout.write(`${JSON.stringify({ data: result })}\n`);
+    process.stdout.write(`${JSON.stringify({ data: result })}\n`);
+  } finally {
+    if (redis.isOpen) {
+      await redis.quit();
+    }
+  }
 };
 
 const readPositiveIntegerEnv = (name: string, fallback: number): number => {
