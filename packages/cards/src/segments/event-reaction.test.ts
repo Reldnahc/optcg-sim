@@ -319,6 +319,22 @@ describe("event reaction predicate routing", () => {
   );
 
   it.each([
+    "your {Example} type Character with unsupported text is K.O.'d",
+    "you play a Character with unsupported text",
+    "a {Land of Wano} type Character card with unsupported text is played from your trash",
+  ])("fails closed for unsupported Character filter tail $text", (text) => {
+    expect(
+      parseReactionPredicateFromSet({ text }, implicitReactionPredicateParsers),
+    ).toBeUndefined();
+    expect(
+      parseReactionPredicateFromSet(
+        { text },
+        activatedReactionPredicateParsers,
+      ),
+    ).toBeUndefined();
+  });
+
+  it.each([
     {
       text: "a [Trigger] activates",
       trigger: {

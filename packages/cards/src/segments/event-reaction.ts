@@ -118,20 +118,28 @@ const toSequenceExpression = (
 
 const parseCharacterFilter = (
   text: string,
-): { filter: CardFilter; evidence: ExpressionParseResult["evidence"] } => {
+):
+  | { filter: CardFilter; evidence: ExpressionParseResult["evidence"] }
+  | undefined => {
+  const normalized = normalizeCharacterFilterText(text);
   const parsed = parseCardFilterPredicates(
-    { text: normalizeCharacterFilterText(text) },
+    { text: normalized },
     { powerSemantics: "printed" },
   );
-  if (
-    parsed === undefined ||
-    parsed.rest.length > 0 ||
-    parsed.filter.categories?.includes("character") !== true
-  ) {
+  if (parsed === undefined) {
+    if (!/^Character(?: card)?$/iu.test(normalized)) {
+      return undefined;
+    }
     return {
       filter: { categories: ["character"] },
       evidence: ["filter:category:character"],
     };
+  }
+  if (
+    parsed.rest.length > 0 ||
+    parsed.filter.categories?.includes("character") !== true
+  ) {
+    return undefined;
   }
   return { filter: parsed.filter, evidence: parsed.evidence };
 };
@@ -355,6 +363,9 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const parsed = parseCharacterFilter(filterText);
+  if (parsed === undefined) {
+    return undefined;
+  }
   const source = parseFieldRemovalSource(removalText);
   if (source === undefined) {
     return undefined;
@@ -441,6 +452,9 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
     /\bCharacter(?: card)?\b/iu.test(trashFilter)
   ) {
     const parsed = parseCharacterFilter(trashFilter);
+    if (parsed === undefined) {
+      return undefined;
+    }
     return {
       trigger: {
         type: "cardPlayed",
@@ -471,6 +485,9 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const parsed = parseCharacterFilter(playedFilter);
+  if (parsed === undefined) {
+    return undefined;
+  }
   const player = playedPlayer.toLowerCase() === "you" ? "self" : "opponent";
   return {
     trigger: {
