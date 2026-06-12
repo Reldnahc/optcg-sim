@@ -110,7 +110,10 @@ describe("lobby deck panel", () => {
     assert.match(html, /Enel Yellow/u);
     assert.match(html, /Unfiled/u);
     assert.match(html, /Luffy Life/u);
-    assert.match(html, /class="deck-loadout-submit-button"/u);
+    assert.match(
+      html,
+      /class="deck-loadout-submit-button modal-submit-button"/u,
+    );
     assert.match(html, />Submit</u);
     assert.doesNotMatch(html, /Deck Loadout/u);
     assert.doesNotMatch(html, /Account loadout/u);
@@ -214,7 +217,7 @@ describe("lobby deck panel", () => {
     );
     assert.doesNotMatch(
       html,
-      /<button class="deck-loadout-submit-button" type="submit" disabled="">Submit/u,
+      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
     );
   });
 
@@ -358,9 +361,9 @@ describe("lobby deck panel", () => {
       styles,
       /\.deck-hash-form button\s*\{[^}]*background:/u,
     );
-    assert.match(
+    assert.doesNotMatch(
       styles,
-      /\.deck-hash-form > \.deck-loadout-submit-button\s*\{[^}]*background:\s*var\(--match-surface-control-active\);/u,
+      /\.deck-loadout-submit-button\s*\{[^}]*background:/u,
     );
   });
 
@@ -383,7 +386,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       html,
-      /<button class="deck-loadout-submit-button" type="submit" disabled="">Submit/u,
+      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
     );
   });
 

@@ -488,10 +488,6 @@
   cursor: pointer;
 }
 
-.deck-hash-form > .deck-loadout-submit-button {
-  background: var(--match-surface-control-active);
-}
-
 .deck-loadout-actions {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr) max-content;

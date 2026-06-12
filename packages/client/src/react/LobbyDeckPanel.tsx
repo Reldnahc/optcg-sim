@@ -132,7 +132,7 @@ export const LobbyDeckPanel = ({
             </button>
           </div>
           <button
-            className="deck-loadout-submit-button"
+            className="deck-loadout-submit-button modal-submit-button"
             type="submit"
             disabled={!canSubmit}
           >

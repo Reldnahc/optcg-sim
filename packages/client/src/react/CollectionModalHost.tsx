@@ -102,7 +102,7 @@ export const CollectionModalContent = ({
             </p>
           )}
           <button
-            className="action-button primary-action"
+            className="action-button primary-action modal-submit-button"
             type="button"
             disabled={disabled || !model.selection.canConfirm}
             onClick={onConfirm}
