@@ -109,8 +109,7 @@
   line-height: 1;
   text-align: center;
   text-transform: uppercase;
-  animation: turn-status-slide-across 4800ms cubic-bezier(0.18, 0.78, 0.24, 1)
-    both;
+  animation: turn-status-slide-across 3000ms linear both;
   box-shadow:
     0 0 0 rgba(0, 0, 0, 0),
     0 0 16px rgba(255, 255, 255, 0.16);

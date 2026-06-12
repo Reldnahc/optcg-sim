@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
@@ -7,6 +10,8 @@ import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import { BoardLayout, statusBannerAnimationKey } from "./BoardLayout.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 const card = (instanceId: string, name = instanceId): ClientCardModel => ({
   instanceId: instanceId as InstanceId,
@@ -93,5 +98,17 @@ describe("turn status banner", () => {
     assert.match(markup, /class="[^"]*turn-status-banner[^"]*is-counter/u);
     assert.match(markup, /data-turn-status="counter"/u);
     assert.equal(markup.includes("Counter Step"), true);
+  });
+
+  test("uses a linear three-second sweep across the playmat", async () => {
+    const css = await readFile(
+      join(sourceDirectory, "styles", "playmat.css"),
+      "utf8",
+    );
+
+    assert.match(
+      css,
+      /animation:\s*turn-status-slide-across 3000ms linear\s+both;/u,
+    );
   });
 });
