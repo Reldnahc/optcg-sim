@@ -64,12 +64,12 @@
 .effect-spotlight-card__rules {
   position: absolute;
   right: 4%;
-  bottom: 12.4%;
+  bottom: 14%;
   left: 4%;
   display: flex;
   flex-direction: column;
-  min-height: 26%;
-  max-height: 31%;
+  min-height: 24%;
+  max-height: 29%;
   align-items: start;
   overflow: hidden;
   border: 1px solid rgba(42, 31, 22, 0.58);
