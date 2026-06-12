@@ -22,6 +22,7 @@ describe("modify power instruction parser", () => {
         "modifier:positivePower",
         "duration:thisBattle",
         "duration:thisTurn",
+        "duration:selfNextTurnStart",
         "duration:opponentNextEndPhase",
         "duration:opponentNextRefreshPhase",
       ],

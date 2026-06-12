@@ -30,6 +30,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
         {
           id: "draw-n-cards",
         },
+        {
+          id: "draw-per-trigger-hand-trash",
+        },
       ],
     });
     expect(trashFromHandPrimitive).toMatchObject({
