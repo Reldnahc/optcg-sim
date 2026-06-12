@@ -82,6 +82,35 @@ const appendDonReturnedEvent = (
   });
 };
 
+const appendDonAttachedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:donAttached`),
+    seq: state.eventJournal.length + 1,
+    type: "donAttached",
+    payload: {
+      playerId: source.controller,
+      donInstanceId: "don:attached:test",
+      target: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: source.controller,
+        zone: source.zone,
+      },
+      targetPlayerId: source.controller,
+      targetInstanceId: source.instanceId,
+      targetCardId: source.cardId,
+      sourceControllerId: source.controller,
+      sourceKind: "effect",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "don-attached-reaction-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
 const setupCardPlayedReactionDefinition = (
   state: ReturnType<typeof createActiveState>,
   source: CardInstance,
@@ -295,6 +324,64 @@ const donReturnedReactionState = () => {
   return { source, state };
 };
 
+const setupDonAttachedReactionDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): EffectDefinition => {
+  const effectDefinitionId = "def-don-attached-reaction";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "don-attached-reaction-rules",
+      sourceTextHash: "don-attached-reaction-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: "don-attached-draw" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        trigger: {
+          type: "donAttached",
+          player: "self",
+          target: "self",
+          sourceController: "self",
+          sourceKind: "effect",
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const donAttachedReactionState = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "source"),
+    zone: "characterArea",
+  });
+  setupDonAttachedReactionDefinition(state, source);
+  appendDonAttachedEvent(state, source);
+  return { source, state };
+};
+
 test("event reactions queue for matching cardPlayed events from the required source zone", () => {
   const { played, source, state } = cardPlayedReactionState("trash");
 
@@ -374,4 +461,18 @@ test("event reactions queue for matching self donReturned events", () => {
   assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
   assert.equal(String(entry.timingWindowId).endsWith(":donReturned"), true);
   assert.equal(entry.effectBlockId, "don-returned-draw");
+});
+
+test("event reactions queue DON attachment triggers through the canonical matcher", () => {
+  const { source, state } = donAttachedReactionState();
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queued entry");
+  assert.equal(entry.source.instanceId, source.instanceId);
+  assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
+  assert.equal(String(entry.timingWindowId).endsWith(":donAttached"), true);
+  assert.equal(entry.effectBlockId, "don-attached-draw");
 });
