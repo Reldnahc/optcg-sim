@@ -46,7 +46,7 @@ const isSupportedDamageBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "damage" }> =>
   effect.type === "damage" &&
-  effect.player === "opponent" &&
+  (effect.player === "self" || effect.player === "opponent") &&
   effect.count === 1;
 
 export const isSupportedReusableEffectBody = (effect: Effect): boolean =>

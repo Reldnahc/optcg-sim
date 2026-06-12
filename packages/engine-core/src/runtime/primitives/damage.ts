@@ -30,8 +30,17 @@ export const isSupportedDamageEffect = (
   effect: Effect,
 ): effect is DamageEffect =>
   effect.type === "damage" &&
-  effect.player === "opponent" &&
+  (effect.player === "self" || effect.player === "opponent") &&
   effect.count === 1;
+
+const resolveDamagePlayerId = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: DamageEffect,
+) =>
+  effect.player === "self"
+    ? entry.controllerId
+    : getOpponentId(state, entry.controllerId);
 
 export const executeDamagePrimitive = (
   state: GameState,
@@ -46,7 +55,7 @@ export const executeDamagePrimitive = (
     );
   }
 
-  const damagedPlayerId = getOpponentId(state, entry.controllerId);
+  const damagedPlayerId = resolveDamagePlayerId(state, entry, effect);
   const damaged =
     damagedPlayerId === null ? undefined : state.players[damagedPlayerId];
   if (damagedPlayerId === null || damaged === undefined) {

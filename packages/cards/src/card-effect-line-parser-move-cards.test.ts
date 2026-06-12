@@ -301,6 +301,55 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses deck-to-Life followed by self damage as reusable move and damage primitives", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] [On K.O.] Add up to 1 card from the top of your deck to the top of your Life cards. Then, you take 1 damage.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onKO" },
+        condition: { type: "opponentTurn" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "moveCards",
+                min: 0,
+                count: 1,
+                from: { player: "self", zone: "deck", position: "top" },
+                to: { player: "self", zone: "life", position: "top" },
+                order: "original",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "damage",
+                target: "leader",
+                player: "self",
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onKO",
+        "condition:opponentTurn",
+        "instruction:moveCards",
+        "destination:life",
+        "instruction:damage",
+        "player:self",
+        "connector:then",
+      ]),
+    );
+  });
+
   it("parses optional rest plus move-cards cost into opponent hand-count trash", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] You may rest this Character and place 2 cards from your trash at the bottom of your deck in any order: If your opponent has 6 or more cards in their hand, your opponent trashes 1 card from their hand.",

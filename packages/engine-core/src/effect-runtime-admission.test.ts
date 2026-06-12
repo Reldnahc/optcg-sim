@@ -279,6 +279,26 @@ test("runtime admission accepts effect damage as a reusable auto body", () => {
   );
 });
 
+test("runtime admission accepts self damage as the same reusable damage body", () => {
+  const effect = {
+    type: "damage",
+    target: "leader",
+    player: "self",
+    count: 1,
+  } as const;
+
+  assertRuntimeSupported(
+    evaluateEffectBlockRuntimeSupport(
+      block({
+        category: "auto",
+        effect,
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        trigger: { type: "onKO" },
+      }),
+    ),
+  );
+});
+
 test("runtime admission accepts damage inside reusable sequence and choice composition", () => {
   assertRuntimeSupported(
     evaluateEffectBlockRuntimeSupport(
