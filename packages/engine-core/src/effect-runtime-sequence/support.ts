@@ -80,9 +80,11 @@ import {
   isSourceDependentContinuousSegment,
   isSupportedConditionalContinuousSegment,
   isSupportedSavedTargetContinuousSegment,
+  isSupportedSwapBasePowerSegment,
   type ConditionalContinuousEffect,
   type DirectContinuousEffect,
   type SavedTargetContinuousEffect,
+  type SwapBasePowerEffect,
 } from "./support/continuous.js";
 import {
   isSupportedPayCostSegment,
@@ -129,6 +131,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | ActivateEffect
     | ChangeAttackTargetEffect
     | SavedTargetContinuousEffect
+    | SwapBasePowerEffect
     | ConditionalContinuousEffect
     | ConditionalSequenceEffect
     | ConditionalEffect
@@ -521,6 +524,9 @@ export const toSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedSavedTargetContinuousSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedSwapBasePowerSegment(segment.effect)) {
         return true;
       }
       if (isSupportedConditionalContinuousSegment(segment.effect)) {

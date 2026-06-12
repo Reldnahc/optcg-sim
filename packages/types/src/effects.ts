@@ -430,7 +430,7 @@ export type DynamicNumberValue =
 export type SnapshotNumberValue = {
   type: "snapshotCardStat";
   target: Target;
-  stat: "currentPower";
+  stat: "currentPower" | "basePower";
 };
 
 export type Target =

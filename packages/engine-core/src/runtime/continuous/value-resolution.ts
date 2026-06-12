@@ -391,6 +391,7 @@ const findFieldCardInstance = (
 const currentPowerForSnapshotTarget = (
   state: GameState,
   card: CardRef,
+  stat: SnapshotNumberValue["stat"],
 ): number | null => {
   const cardInstance = findFieldCardInstance(state, card);
   const printedPower = state.cardManifest.cards[card.cardId]?.power;
@@ -410,6 +411,9 @@ const currentPowerForSnapshotTarget = (
       powerAdd += effect.modifier.operation.value;
     }
   }
+  if (stat === "basePower") {
+    return basePower;
+  }
   return basePower + powerAdd;
 };
 
@@ -423,5 +427,7 @@ export const resolveBasePowerValue = (
     return value;
   }
   const target = cardRefForSnapshotTarget(state, entry, value.target, context);
-  return target === null ? null : currentPowerForSnapshotTarget(state, target);
+  return target === null
+    ? null
+    : currentPowerForSnapshotTarget(state, target, value.stat);
 };

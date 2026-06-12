@@ -1,10 +1,13 @@
 import type {
   CardInstance,
+  CardRef,
   ContinuousEffectRecord,
+  Duration,
   EffectExecutionFrame,
   EffectQueueEntry,
   EngineEvent,
   GameState,
+  SavedFieldObjectTargetBinding,
   SequenceSegmentResult,
 } from "@optcg/types";
 
@@ -23,11 +26,71 @@ import {
   restProtectionAttemptFromEntry,
 } from "./field-object-state.js";
 import { resolveActivateTargets } from "./saved-target-resolution.js";
+import { cardMatchesContinuousModifierTarget } from "../../runtime/continuous/target-matching.js";
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
 };
+
+const basePowerForFieldObject = (
+  state: GameState,
+  target: CardRef,
+): number | undefined => {
+  const located = findFieldObjectByRef(state, target);
+  const printedPower = state.cardManifest.cards[target.cardId]?.power;
+  if (located === null || printedPower === undefined) {
+    return undefined;
+  }
+
+  let basePowerOverride: number | undefined;
+  for (const effect of state.continuousEffects) {
+    if (effect.modifier.layer !== "basePowerSet") continue;
+    if (effect.modifier.operation.type !== "setBasePower") continue;
+    if (!cardMatchesContinuousModifierTarget(state, located.card, effect)) {
+      continue;
+    }
+
+    basePowerOverride =
+      basePowerOverride === undefined
+        ? effect.modifier.operation.value
+        : Math.max(basePowerOverride, effect.modifier.operation.value);
+  }
+
+  return basePowerOverride ?? printedPower;
+};
+
+const swapBasePowerRecord = (params: {
+  binding: SavedFieldObjectTargetBinding;
+  duration: Duration;
+  entry: EffectQueueEntry;
+  idSuffix: string;
+  state: GameState;
+  target: CardRef;
+  value: number;
+}): ContinuousEffectRecord => ({
+  id: `continuous:${String(params.entry.id)}:${params.idSuffix}`,
+  source: params.entry.source,
+  sourceSnapshot: params.entry.sourceSnapshot,
+  controller: params.entry.controllerId,
+  modifier: {
+    layer: "basePowerSet",
+    target: {
+      type: "exactCard",
+      card: params.target,
+      binding: params.binding,
+      createdAtStateSeq: params.state.seq,
+    },
+    operation: { type: "setBasePower", value: params.value },
+  },
+  duration: params.duration,
+  createdBy: {
+    type: "effect",
+    queueEntryId: params.entry.id,
+    effectId: params.entry.effectBlockId,
+  },
+  createdAtStateSeq: params.state.seq,
+});
 
 export const applySavedFieldObjectKoSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
@@ -588,6 +651,121 @@ export const applySavedFieldObjectRestrictionSequenceSegment = (params: {
           succeeded: true,
           changedState: records.length > 0,
           selectedTargets: [...resolvedSavedTarget.selectedTargets],
+        },
+      },
+    },
+    state: nextState,
+  };
+};
+
+export const applySavedFieldObjectBasePowerSwapSequenceSegment = (params: {
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SupportedSequenceSegment;
+  segmentKey: (segment: SupportedSequenceSegment, index: number) => string;
+  state: GameState;
+}): {
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  if (params.segment.effect.type !== "swapBasePower") {
+    return { ledgers: params.ledgers, state: params.state };
+  }
+
+  const left = resolveSavedFieldObjectKoSelection({
+    controllerId: params.entry.controllerId,
+    savedReferences: params.ledgers.savedReferences,
+    state: params.state,
+    target: params.segment.effect.left,
+  });
+  const right = resolveSavedFieldObjectKoSelection({
+    controllerId: params.entry.controllerId,
+    savedReferences: params.ledgers.savedReferences,
+    state: params.state,
+    target: params.segment.effect.right,
+  });
+  const leftTarget = left.ok ? left.selectedTargets[0] : undefined;
+  const rightTarget = right.ok ? right.selectedTargets[0] : undefined;
+  if (
+    !left.ok ||
+    !right.ok ||
+    left.selectedTargets.length !== 1 ||
+    right.selectedTargets.length !== 1 ||
+    leftTarget === undefined ||
+    rightTarget === undefined
+  ) {
+    return {
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+
+  const leftBasePower = basePowerForFieldObject(params.state, leftTarget);
+  const rightBasePower = basePowerForFieldObject(params.state, rightTarget);
+  if (leftBasePower === undefined || rightBasePower === undefined) {
+    return {
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+
+  const records = [
+    swapBasePowerRecord({
+      binding: params.segment.effect.left.binding,
+      duration: params.segment.effect.duration,
+      entry: params.entry,
+      idSuffix: `${String(params.segment.id ?? params.index)}:left`,
+      state: params.state,
+      target: leftTarget,
+      value: rightBasePower,
+    }),
+    swapBasePowerRecord({
+      binding: params.segment.effect.right.binding,
+      duration: params.segment.effect.duration,
+      entry: params.entry,
+      idSuffix: `${String(params.segment.id ?? params.index)}:right`,
+      state: params.state,
+      target: rightTarget,
+      value: leftBasePower,
+    }),
+  ];
+  const nextState = {
+    ...params.state,
+    continuousEffects: [...params.state.continuousEffects, ...records],
+    seq: toStateSeq(params.state.seq + 1),
+  };
+
+  return {
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: true,
+          selectedTargets: [leftTarget, rightTarget],
         },
       },
     },

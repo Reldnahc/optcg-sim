@@ -19,6 +19,7 @@ import {
 } from "./frame-decisions.js";
 import {
   applySavedFieldObjectActivateSequenceSegment,
+  applySavedFieldObjectBasePowerSwapSequenceSegment,
   applySavedFieldObjectChangeAttackTargetSequenceSegment,
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,
@@ -492,6 +493,26 @@ export const applyFieldMutationSequenceSegment = (params: {
       ledgers: changedTarget.ledgers,
       ok: true,
       state: changedTarget.state,
+    };
+  }
+
+  if (segment.effect.type === "swapBasePower") {
+    const swapped = applySavedFieldObjectBasePowerSwapSequenceSegment({
+      emptySegmentResult,
+      entry,
+      index,
+      ledgers,
+      segment,
+      segmentKey,
+      state,
+    });
+    return {
+      events,
+      handled: true,
+      kind: "continue",
+      ledgers: swapped.ledgers,
+      ok: true,
+      state: swapped.state,
     };
   }
 

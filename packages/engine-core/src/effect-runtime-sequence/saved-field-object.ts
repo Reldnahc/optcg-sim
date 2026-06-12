@@ -4,6 +4,7 @@ export {
 } from "./saved-field-object/field-object-state.js";
 export {
   applySavedFieldObjectActivateSequenceSegment,
+  applySavedFieldObjectBasePowerSwapSequenceSegment,
   applySavedFieldObjectChangeAttackTargetSequenceSegment,
   applySavedFieldObjectKoSequenceSegment,
   applySavedFieldObjectRestSequenceSegment,

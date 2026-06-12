@@ -27,6 +27,7 @@ import {
 import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
   applyEachContinuousExpressionParser,
+  basePowerSwapExpressionParser,
   chooseOneExpressionParser,
   activatedReactionExpressionParser,
   conditionalBlockExpressionParser,
@@ -155,6 +156,7 @@ const costedExpressions = [
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
+  basePowerSwapExpressionParser,
   playedObjectKeywordGrantExpressionParser({
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser],
@@ -311,6 +313,7 @@ export const defaultRegistry = {
     selectedAttackRetargetExpressionParser,
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
+    basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,

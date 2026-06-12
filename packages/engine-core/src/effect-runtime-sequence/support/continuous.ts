@@ -60,6 +60,7 @@ export type SavedTargetContinuousEffect = (
 ) & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
+export type SwapBasePowerEffect = Extract<Effect, { type: "swapBasePower" }>;
 
 export const isSupportedSequenceContinuousDuration = (
   duration: Duration,
@@ -109,3 +110,11 @@ export const isSupportedConditionalContinuousSegment = (
   effect.else === undefined &&
   isSupportedQueuedEffectConditionShape(effect.if) &&
   isSupportedContinuousQueueEffect(effect.then);
+
+export const isSupportedSwapBasePowerSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SwapBasePowerEffect =>
+  effect.type === "swapBasePower" &&
+  isSupportedSavedLeaderOrCharacterTarget(effect.left) &&
+  isSupportedSavedLeaderOrCharacterTarget(effect.right) &&
+  isSupportedSequenceContinuousDuration(effect.duration);

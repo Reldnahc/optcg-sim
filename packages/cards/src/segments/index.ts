@@ -3,6 +3,7 @@ export {
   entryConditionContinuousExpressionParser,
 } from "./conditional-continuous.js";
 export { applyEachContinuousExpressionParser } from "./apply-each-continuous.js";
+export { basePowerSwapExpressionParser } from "./base-power-swap.js";
 export { chooseOneExpressionParser } from "./choose-one.js";
 export { costedEffectExpressionParser } from "./costed-effect.js";
 export {

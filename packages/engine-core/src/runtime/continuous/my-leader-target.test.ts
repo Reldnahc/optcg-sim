@@ -412,3 +412,111 @@ test("continuous setBasePower resolves saved selected Character current power as
   assert.equal(record.modifier.operation.type, "setBasePower");
   assert.equal(record.modifier.operation.value, 8000);
 });
+
+test("continuous setBasePower resolves saved selected Character base power as a queued snapshot", () => {
+  const state = createActiveState();
+  const entry = { ...queueDrawForP1(), controllerId: p1 };
+  const p2State = state.players[p2];
+  assert.ok(p2State !== undefined);
+  const selectedSource = p2State.hand[0];
+  assert.ok(selectedSource !== undefined);
+  const selectedCharacter: CardInstance = {
+    ...selectedSource,
+    zone: { zone: "characterArea", playerId: p2, slot: "character", index: 0 },
+    attachedDon: [],
+    state: "active",
+    turnPlayed: state.turn.globalTurn,
+  };
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  p2State.characters = [selectedCharacter];
+  state.cardManifest.cards[selectedCharacter.cardId] = resolvedCard({
+    cardId: selectedCharacter.cardId,
+    category: "character",
+    power: 6000,
+  });
+  const selectedRef: CardRef = {
+    instanceId: selectedCharacter.instanceId,
+    cardId: selectedCharacter.cardId,
+    playerId: p2,
+    zone: selectedCharacter.zone,
+  };
+  state.continuousEffects.push({
+    id: "continuous:test:selected-character-base-power",
+    source: selectedRef,
+    sourceSnapshot: entry.sourceSnapshot,
+    controller: p2,
+    modifier: {
+      layer: "powerAdd",
+      target: {
+        type: "exactCard",
+        card: selectedRef,
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:base-power-source",
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "addPower", value: 2000 },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const effect: Extract<Effect, { type: "setBasePower" }> = {
+    type: "setBasePower",
+    target: { type: "self" },
+    value: {
+      type: "snapshotCardStat",
+      target: {
+        type: "savedFieldObject",
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:base-power-source",
+        },
+        zone: "characterArea",
+        player: "opponent",
+        visibility: "publicOnly",
+        onFailure: "failClosed",
+      },
+      stat: "basePower",
+    },
+    duration: { type: "thisTurn" },
+  };
+
+  assert.equal(isSupportedContinuousQueueEffect(effect), true);
+  const records = createContinuousRecordsForResolvedEffect(
+    state,
+    entry,
+    effect,
+    undefined,
+    {
+      savedReferences: {
+        "selected:base-power-source": {
+          kind: "selectedTargets",
+          targets: [
+            {
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: "selected:base-power-source",
+              },
+              capturedAtStateSeq: state.seq,
+              object: selectedRef,
+              visibility: "public",
+            },
+          ],
+        },
+      },
+    },
+  );
+
+  assert.ok(records !== null);
+  const record = records[0];
+  assert.ok(record !== undefined);
+  assert.equal(record.modifier.layer, "basePowerSet");
+  assert.equal(record.modifier.operation.type, "setBasePower");
+  assert.equal(record.modifier.operation.value, 6000);
+});
