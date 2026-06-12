@@ -155,11 +155,15 @@ describe("collection modal", () => {
     );
     assert.match(
       zoneStyles,
-      /\.stack-card-layer\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
+      /\.stack-card-visual\s*\{[^}]*width:\s*var\(--card-width\);[^}]*height:\s*var\(--card-height\);/u,
     );
     assert.match(
       zoneStyles,
-      /\.stack-card-layer \.card-tile-shell\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;/u,
+      /\.stack-card-layer\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*display:\s*grid;[^}]*place-items:\s*center;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
+    );
+    assert.doesNotMatch(
+      zoneStyles,
+      /\.stack-card-layer \.card-tile-shell\s*\{[^}]*height:\s*100%;/u,
     );
   });
 

@@ -67,6 +67,7 @@
   position: relative;
   display: grid;
   aspect-ratio: 5 / 7;
+  width: var(--card-width);
   height: var(--card-height);
   place-items: center;
   overflow: visible;
@@ -75,12 +76,9 @@
 .stack-card-layer {
   position: absolute;
   inset: 0;
+  display: grid;
+  place-items: center;
   transform: translateY(calc(-1 * var(--stack-card-offset)));
-}
-
-.stack-card-layer .card-tile-shell {
-  width: 100%;
-  height: 100%;
 }
 
 .zone-cards-slots {
