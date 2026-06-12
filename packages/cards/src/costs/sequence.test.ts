@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseOptionalCostSequence } from "./sequence.js";
+import {
+  optionalActivationCostParsers,
+  parseCostFromSet,
+  parseOptionalCostSequence,
+} from "./index.js";
 
 describe("optional cost sequence parser", () => {
   it("parses a single optional trash-from-hand cost without requiring a body shape", () => {
@@ -196,6 +200,26 @@ describe("optional cost sequence parser", () => {
         "reveal:bothPlayers",
       ],
       rest: "",
+    });
+  });
+
+  it("parses activation costs through a semantic cost group", () => {
+    expect(
+      parseCostFromSet(
+        {
+          text: "You may trash 1 card from your hand: Draw 1 card.",
+        },
+        optionalActivationCostParsers,
+      ),
+    ).toMatchObject({
+      cost: {
+        type: "trashFromHand",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      evidence: ["cost:trashFromHand", "count:positiveInteger", "chooser:self"],
+      rest: "Draw 1 card.",
     });
   });
 });

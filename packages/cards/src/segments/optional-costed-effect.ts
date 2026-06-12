@@ -1,9 +1,8 @@
 import type { Effect } from "@optcg/types";
 
 import {
-  parseOptionalChooseOneTrashCost,
-  parseOptionalCostSequence,
-  type OptionalCostSequenceParseResult,
+  optionalActivationCostParsers,
+  parseCostFromSet,
 } from "../costs/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type {
@@ -12,7 +11,7 @@ import type {
   ParseInput,
   SegmentParser,
 } from "../types.js";
-import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
+import type { SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function optionalCostedEffectExpressionParser(options: {
@@ -22,9 +21,7 @@ export function optionalCostedEffectExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const cost =
-      parseOptionalCostSequenceFromOptionalText(input) ??
-      parseOptionalChooseOneTrashCost(input);
+    const cost = parseCostFromSet(input, optionalActivationCostParsers);
     if (cost === undefined) {
       return undefined;
     }
@@ -122,100 +119,6 @@ function findPaidCostReference(effect: Effect): string | undefined {
     return findPaidCostReference(effect.then);
   }
   return undefined;
-}
-
-type OptionalCostSequenceWithSource = OptionalCostSequenceParseResult & {
-  readonly presentationSpans?: ExpressionParseResult["presentationSpans"];
-  readonly restSource?: SourceSlice;
-};
-
-function parseOptionalCostSequenceFromOptionalText(
-  input: ParseInput,
-): OptionalCostSequenceWithSource | undefined {
-  const sentenceCost = parseOptionalCostSequenceFromIfYouDoSentence(input);
-  if (sentenceCost !== undefined) {
-    return sentenceCost;
-  }
-
-  const separatorIndex = input.text.indexOf(":");
-  if (separatorIndex < 0) {
-    return undefined;
-  }
-
-  const costText = input.text.slice(0, separatorIndex).trim();
-  if (!hasOptionalCostMarker(costText)) {
-    return undefined;
-  }
-
-  const bodyText = input.text.slice(separatorIndex + 1).trim();
-  if (costText.length === 0 || bodyText.length === 0) {
-    return undefined;
-  }
-
-  const cost = parseOptionalCostSequence({ text: costText });
-  if (cost === undefined) {
-    return undefined;
-  }
-  const rawBodyText = input.text.slice(separatorIndex + 1);
-  const rawCostText = input.text.slice(0, separatorIndex);
-  return {
-    ...cost,
-    rest: bodyText,
-    ...(input.source === undefined
-      ? {}
-      : {
-          presentationSpans: [
-            sourceSpan(
-              "span:cost:optional",
-              "cost",
-              trimSource({
-                text: rawCostText,
-                rawText: rawCostText,
-                start: input.source.start,
-                end: input.source.start + separatorIndex,
-              }),
-              cost.evidence,
-            ),
-          ],
-          restSource: trimSource({
-            text: rawBodyText,
-            rawText: rawBodyText,
-            start: input.source.start + separatorIndex + 1,
-            end: input.source.end,
-          }),
-        }),
-  };
-}
-
-function parseOptionalCostSequenceFromIfYouDoSentence(
-  input: ParseInput,
-): OptionalCostSequenceWithSource | undefined {
-  const match = /^(?<cost>.+?)\.\s+(?:(?:If you do),\s+)?(?<body>.+)$/iu.exec(
-    input.text,
-  );
-  const costText = match?.groups?.["cost"]?.trim();
-  const bodyText = match?.groups?.["body"]?.trim();
-  if (
-    costText === undefined ||
-    bodyText === undefined ||
-    !hasOptionalCostMarker(costText)
-  ) {
-    return undefined;
-  }
-
-  const cost = parseOptionalCostSequence({ text: costText });
-  if (cost === undefined) {
-    return undefined;
-  }
-
-  return {
-    ...cost,
-    rest: bodyText,
-  };
-}
-
-function hasOptionalCostMarker(text: string): boolean {
-  return /^(?:[➀①➁②➂③➃④➄⑤]|You may\b|.*(?:,|\band\b)\s*You may\b)/iu.test(text);
 }
 
 function parseOptionalCostedBody(

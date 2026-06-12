@@ -280,6 +280,21 @@ describe("cards package architecture boundaries", () => {
       expect(file.contents, file.path).not.toMatch(directModifierChainPattern);
     }
   });
+
+  it("keeps body parsers on semantic cost groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const bodyFiles = files.filter(
+      (file) =>
+        file.path.includes("/instructions/") ||
+        file.path.includes("/segments/"),
+    );
+    const directCostChainPattern =
+      /(?:parse[A-Za-z0-9]+Cost\([^)]*\)\s*\?\?|\?\?\s*parse[A-Za-z0-9]+Cost\()/u;
+
+    for (const file of bodyFiles) {
+      expect(file.contents, file.path).not.toMatch(directCostChainPattern);
+    }
+  });
 });
 
 function escapeRegex(value: string): string {

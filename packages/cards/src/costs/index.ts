@@ -1,4 +1,8 @@
 export { parseOptionalChooseOneTrashCost } from "./optional-choose-one-trash.js";
+export {
+  optionalActivationCostParsers,
+  type OptionalActivationCostParseResult,
+} from "./activation.js";
 export { parseAttachDonCost } from "./attach-don.js";
 export { parseReturnDonCost } from "./return-don.js";
 export { parseRestDonCost } from "./rest-don.js";
@@ -9,6 +13,7 @@ export {
   parseOptionalCostSequence,
   type OptionalCostSequenceParseResult,
 } from "./sequence.js";
+export { parseCostFromSet, type CostParser } from "./groups.js";
 export { parseRestSelfCost } from "./rest-self.js";
 export { parseTrashFromHandCost } from "./trash-from-hand.js";
 export { parseTrashFromFieldCost } from "./trash-from-field.js";
