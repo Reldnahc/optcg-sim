@@ -338,6 +338,11 @@ const donPaymentCount = (
   );
 };
 
+const restDonPaymentLabelPattern = /^Rest (?<count>[1-9]\d*) DON!!$/u;
+
+const isRestDonPaymentLabel = (label: string | undefined): boolean =>
+  label !== undefined && restDonPaymentLabelPattern.test(label);
+
 const actionOptionModels = (
   decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
@@ -374,7 +379,10 @@ const actionOptionModels = (
     const paymentDonCount = donPaymentCount(action, presentationLabel);
     const label =
       paymentDonCount !== undefined
-        ? `Pay ${paymentDonCount} DON!!`
+        ? isRestDonPaymentLabel(presentationLabel) ||
+          isRestDonPaymentLabel(action.label)
+          ? `Rest ${paymentDonCount} DON!!`
+          : `Pay ${paymentDonCount} DON!!`
         : action.responseKey === undefined
           ? action.label
           : (presentationLabel ?? action.label);

@@ -771,36 +771,10 @@ describe("generic no-choice payment interaction", () => {
 
     assert.equal(autoPayCostActionIndex(payCostDecision, actions), undefined);
   });
+});
 
-  test("quick activate-main payment submits a collapsed optional DON payment", () => {
-    const actions: readonly ClientActionModel[] = [
-      {
-        index: 1,
-        type: "respondToDecision",
-        label: "Decline cost",
-        decisionPayment: { kind: "paymentDeclined" },
-      },
-      {
-        index: 2,
-        type: "respondToDecision",
-        label: "Rest 1 DON!!",
-        responseKey: "payment:don:1",
-      },
-      {
-        index: 3,
-        type: "respondToDecision",
-        label: "Rest 1 DON!!",
-        responseKey: "payment:don:1",
-      },
-    ];
-
-    assert.equal(
-      quickPayActivateMainCostActionIndex(payCostDecision, actions),
-      2,
-    );
-  });
-
-  test("quick activate-main payment submits a single optional no-choice cost", () => {
+describe("quick activate-main payment interaction", () => {
+  test("auto-pays a single rest-self cost", () => {
     const actions: readonly ClientActionModel[] = [
       {
         index: 1,
@@ -817,7 +791,41 @@ describe("generic no-choice payment interaction", () => {
     );
   });
 
-  test("quick activate-main payment submits a single structured card cost", () => {
+  test("auto-pays a single trash-self cost", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      { index: 2, type: "respondToDecision", label: "Trash this card" },
+    ];
+
+    assert.equal(
+      quickPayActivateMainCostActionIndex(payCostDecision, actions),
+      2,
+    );
+  });
+
+  test("auto-pays a single rest-DON cost", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      { index: 2, type: "respondToDecision", label: "Rest 1 DON!!" },
+    ];
+
+    assert.equal(
+      quickPayActivateMainCostActionIndex(payCostDecision, actions),
+      2,
+    );
+  });
+
+  test("auto-pays a collapsed single-DON payment", () => {
     const actions: readonly ClientActionModel[] = [
       {
         index: 1,
@@ -828,13 +836,14 @@ describe("generic no-choice payment interaction", () => {
       {
         index: 2,
         type: "respondToDecision",
-        label: "Pay cost with 1 card",
-        decisionPayment: {
-          kind: "cardCost",
-          operation: "trash",
-          chooseLabel: "Choose card to trash",
-          selectedCardInstanceIds: ["hand-1" as InstanceId],
-        },
+        label: "Pay cost with 1 DON!!",
+        responseKey: "payment:don:1",
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Pay cost with 1 DON!!",
+        responseKey: "payment:don:1",
       },
     ];
 
@@ -844,40 +853,33 @@ describe("generic no-choice payment interaction", () => {
     );
   });
 
-  test("quick activate-main payment does not pick among card-cost alternatives", () => {
-    const actions: readonly ClientActionModel[] = [
+  test("does not auto-pay larger DON costs or ambiguous cost alternatives", () => {
+    const largerDonActions: readonly ClientActionModel[] = [
       {
         index: 1,
         type: "respondToDecision",
         label: "Decline cost",
         decisionPayment: { kind: "paymentDeclined" },
       },
+      { index: 2, type: "respondToDecision", label: "Pay cost with 2 DON!!" },
+    ];
+    const mixedActions: readonly ClientActionModel[] = [
       {
-        index: 2,
+        index: 1,
         type: "respondToDecision",
-        label: "Return 1 Character",
-        decisionPayment: {
-          kind: "cardCost",
-          operation: "returnToHand",
-          chooseLabel: "Choose Character to return to hand",
-          selectedCardInstanceIds: ["character-1" as InstanceId],
-        },
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
       },
-      {
-        index: 3,
-        type: "respondToDecision",
-        label: "Return 1 Character",
-        decisionPayment: {
-          kind: "cardCost",
-          operation: "returnToHand",
-          chooseLabel: "Choose Character to return to hand",
-          selectedCardInstanceIds: ["character-2" as InstanceId],
-        },
-      },
+      { index: 2, type: "respondToDecision", label: "Rest this card" },
+      { index: 3, type: "respondToDecision", label: "Trash this card" },
     ];
 
     assert.equal(
-      quickPayActivateMainCostActionIndex(payCostDecision, actions),
+      quickPayActivateMainCostActionIndex(payCostDecision, largerDonActions),
+      undefined,
+    );
+    assert.equal(
+      quickPayActivateMainCostActionIndex(payCostDecision, mixedActions),
       undefined,
     );
   });

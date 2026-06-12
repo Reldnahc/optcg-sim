@@ -21,7 +21,6 @@ import {
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   applyPendingDecisionLifeChoiceCards,
   prominentDecisionPrompt,
-  quickPayActivateMainArmSurvivesDecision,
   resolvingEffectSourceInstanceIds,
   zoneClickVisibleInstanceIds,
 } from "./useMatchClient-support.js";
@@ -200,17 +199,6 @@ const payCostDecision = (
   playerId: "p1" as PlayerId,
   prompt: "Pay cost.",
   presentation: presentation("Pay cost."),
-  causedBy: { type: "ruleProcess", name: "privateCausality" },
-});
-
-const optionalActivationDecision = (
-  id: string,
-): NonNullable<PlayerView["pendingDecision"]> => ({
-  id: id as DecisionId,
-  type: "chooseOptionalActivation",
-  playerId: "p1" as PlayerId,
-  prompt: "Choose whether to resolve this optional effect.",
-  presentation: presentation("Choose whether to resolve this optional effect."),
   causedBy: { type: "ruleProcess", name: "privateCausality" },
 });
 
@@ -516,26 +504,6 @@ describe("match client support helpers", () => {
         ["active-source"],
       );
     }
-  });
-
-  test("quick-pay activate-main arming survives optional activation before cost", () => {
-    assert.equal(
-      quickPayActivateMainArmSurvivesDecision(
-        optionalActivationDecision("decision:activate"),
-      ),
-      true,
-    );
-    assert.equal(
-      quickPayActivateMainArmSurvivesDecision(
-        payCostDecision("decision:pay-cost"),
-      ),
-      true,
-    );
-    assert.equal(
-      quickPayActivateMainArmSurvivesDecision(decision("decision:search")),
-      false,
-    );
-    assert.equal(quickPayActivateMainArmSurvivesDecision(undefined), false);
   });
 
   test("pending life card choices render as hidden clickable zone cards", () => {

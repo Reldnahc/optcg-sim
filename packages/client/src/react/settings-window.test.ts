@@ -203,6 +203,11 @@ describe("settings window", () => {
       matchApp,
       /confirmAttachDon:\s*visualSettings\.confirmAttachDon/u,
     );
+    assert.match(
+      matchApp,
+      /quickPayActivateMainCosts:\s*visualSettings\.quickPayActivateMainCosts/u,
+    );
+    assert.match(matchClient, /quickPayActivateMainCosts\s*=\s*false/u);
     assert.match(matchClient, /confirmAttachDon\s*=\s*true/u);
     assert.match(cardSelection, /selectedDonAttachmentClickIntent/u);
     assert.match(cardSelection, /attachSelectedDonToTarget/u);

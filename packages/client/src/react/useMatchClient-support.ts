@@ -515,13 +515,6 @@ const globalZeroSelectionDecisionAction = (
   };
 };
 
-export const quickPayActivateMainArmSurvivesDecision = (
-  decision:
-    | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
-    | undefined,
-): boolean =>
-  decision?.type === "chooseOptionalActivation" || decision?.type === "payCost";
-
 export const activeCardCostGlobalActions = ({
   choice,
   group,
