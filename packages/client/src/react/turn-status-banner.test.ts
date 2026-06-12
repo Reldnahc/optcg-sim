@@ -197,6 +197,21 @@ describe("turn status banner", () => {
     assert.equal(blockerState.eventId, counterState.eventId + 1);
   });
 
+  test("keeps identical battle step snapshots from restarting the event", () => {
+    const counterState = nextTurnStatusBannerRenderState(
+      { eventId: 0 },
+      { label: "Counter Step", tone: "counter", turnNumber: 3 },
+    );
+    const repeatCounterState = nextTurnStatusBannerRenderState(counterState, {
+      label: "Counter Step",
+      tone: "counter",
+      turnNumber: 3,
+    });
+
+    assert.equal(repeatCounterState.activeBanner, counterState.activeBanner);
+    assert.equal(repeatCounterState.eventId, counterState.eventId);
+  });
+
   test("renders across the playmat with the projected banner tone", () => {
     const markup = renderToStaticMarkup(
       createElement(BoardLayout, {

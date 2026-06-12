@@ -148,6 +148,15 @@ const isTurnOwnerBanner = (
   banner: NonNullable<BoardViewModel["statusBanner"]>,
 ): boolean => banner.tone === "self" || banner.tone === "opponent";
 
+const isSameBannerEvent = (
+  left: NonNullable<BoardViewModel["statusBanner"]> | undefined,
+  right: NonNullable<BoardViewModel["statusBanner"]>,
+): boolean =>
+  left !== undefined &&
+  left.tone === right.tone &&
+  left.label === right.label &&
+  left.turnNumber === right.turnNumber;
+
 export interface TurnStatusBannerRenderState {
   activeBanner?: NonNullable<BoardViewModel["statusBanner"]>;
   eventId: number;
@@ -159,6 +168,9 @@ export const nextTurnStatusBannerRenderState = (
   banner: BoardViewModel["statusBanner"],
 ): TurnStatusBannerRenderState => {
   if (banner === undefined) {
+    return state;
+  }
+  if (isSameBannerEvent(state.activeBanner, banner)) {
     return state;
   }
   if (!isTurnOwnerBanner(banner)) {
