@@ -136,20 +136,29 @@ const donCount = (
   });
 };
 
+export const statusBannerAnimationKey = (
+  banner: NonNullable<BoardViewModel["statusBanner"]>,
+): string => `${banner.tone}:${banner.label}`;
+
 const TurnStatusBanner = ({
   banner,
 }: {
   banner: NonNullable<BoardViewModel["statusBanner"]>;
-}): React.JSX.Element => (
-  <div className="turn-status-banner-lane" aria-live="polite">
-    <div
-      className={`turn-status-banner is-${banner.tone}`}
-      data-turn-status={banner.tone}
-    >
-      {banner.label}
+}): React.JSX.Element => {
+  const animationKey = statusBannerAnimationKey(banner);
+  return (
+    <div className="turn-status-banner-lane" aria-live="polite">
+      <div
+        key={animationKey}
+        className={`turn-status-banner is-${banner.tone}`}
+        data-turn-status-animation={animationKey}
+        data-turn-status={banner.tone}
+      >
+        {banner.label}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const BoardLayout = ({
   board,

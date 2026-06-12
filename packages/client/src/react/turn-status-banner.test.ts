@@ -5,7 +5,7 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
-import { BoardLayout } from "./BoardLayout.js";
+import { BoardLayout, statusBannerAnimationKey } from "./BoardLayout.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 
 const card = (instanceId: string, name = instanceId): ClientCardModel => ({
@@ -63,6 +63,20 @@ const board = (): BoardViewModel => ({
 });
 
 describe("turn status banner", () => {
+  test("uses a distinct animation key for each banner state", () => {
+    assert.notEqual(
+      statusBannerAnimationKey({ label: "Your Turn", tone: "self" }),
+      statusBannerAnimationKey({
+        label: "Opponent's Turn",
+        tone: "opponent",
+      }),
+    );
+    assert.notEqual(
+      statusBannerAnimationKey({ label: "Blocker Step", tone: "block" }),
+      statusBannerAnimationKey({ label: "Counter Step", tone: "counter" }),
+    );
+  });
+
   test("renders across the playmat with the projected banner tone", () => {
     const markup = renderToStaticMarkup(
       createElement(BoardLayout, {
