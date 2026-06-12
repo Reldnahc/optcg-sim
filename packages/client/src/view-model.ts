@@ -398,7 +398,7 @@ const statusBannerForView = (
   if (view.battle?.step === "counter") {
     return { label: "Counter Step", tone: "counter", turnNumber };
   }
-  if (!view.self.hasMulliganed || !view.opponent.hasMulliganed) {
+  if (view.self.life.count === 0 || view.opponent.life.count === 0) {
     return undefined;
   }
   return view.turn.turnPlayerId === playerId

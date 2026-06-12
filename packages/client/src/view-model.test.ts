@@ -595,10 +595,12 @@ describe("board view model", () => {
     });
   });
 
-  test("holds turn ownership banner until both mulligans are decided", () => {
+  test("holds turn ownership banner until post-mulligan life is placed", () => {
     const view = minimalView();
-    view.self.hasMulliganed = true;
+    view.self.hasMulliganed = false;
     view.opponent.hasMulliganed = false;
+    view.self.life = { count: 0, faceUpCards: [] };
+    view.opponent.life = { count: 0, faceUpCards: [] };
     const snapshot: MatchSnapshot = {
       matchId: "match-1" as MatchId,
       stateSeq: 7,
@@ -615,7 +617,8 @@ describe("board view model", () => {
       catalog: { players: {} },
       playerId: p1,
     });
-    view.opponent.hasMulliganed = true;
+    view.self.life = { count: 5, faceUpCards: [] };
+    view.opponent.life = { count: 5, faceUpCards: [] };
     const decidedMulliganModel = createBoardViewModel({
       snapshot,
       catalog: { players: {} },
