@@ -158,7 +158,8 @@ export const createEventReactionTriggerQueueing = (
         const resolved = state.cardManifest.cards[source.cardId];
         if (
           resolved === undefined ||
-          resolved.support.status !== "implemented-dsl"
+          resolved.support.status !== "implemented-dsl" ||
+          resolved.support.effectDefinitionId === undefined
         ) {
           continue;
         }
