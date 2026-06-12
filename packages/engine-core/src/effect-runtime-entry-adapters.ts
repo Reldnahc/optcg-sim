@@ -79,6 +79,15 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "donReturned") {
     return autoAdapter("donReturned", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "donAttached") {
+    return autoAdapter("donAttached", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "attackDeclared") {
+    return autoAdapter("attackDeclared", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "effectQueued") {
+    return autoAdapter("effectQueued", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "handTrashedByEffect") {
     return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
   }

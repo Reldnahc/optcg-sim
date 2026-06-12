@@ -23,6 +23,14 @@ import type {
   TurnLifeFaceUpCost,
 } from "./effect-costs.js";
 import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
+import type { Trigger } from "./effect-triggers.js";
+
+export type {
+  EffectCategory,
+  EffectEntryPointFilter,
+  OpponentActivationKind,
+  Trigger,
+} from "./effect-triggers.js";
 
 export type FailurePolicy =
   | "doAsMuchAsPossible"
@@ -35,64 +43,6 @@ export type SourcePresencePolicy =
   | "resolveFromDestinationZone"
   | "resolveFromLastKnownInformation"
   | "noSourceRequired";
-
-export type EffectCategory = "auto" | "activate" | "permanent" | "replacement";
-
-export type Trigger =
-  | { type: "onPlay" }
-  | { type: "whenAttacking" }
-  | { type: "onOpponentAttack"; attackerFilter?: CardFilter }
-  | { type: "onBlock" }
-  | { type: "onKO" }
-  | { type: "endOfYourTurn" }
-  | { type: "endOfOpponentTurn" }
-  | { type: "trigger" }
-  | { type: "anyOf"; triggers: Trigger[] }
-  | { type: "damageDealt"; players: PlayerRef[] }
-  | { type: "lifeRemoved"; players: PlayerRef[] }
-  | {
-      type: "fieldRemoved";
-      target?: "self" | "any";
-      player: PlayerRef;
-      filter?: CardFilter;
-      sourceController?: PlayerRef;
-      sourceKind?: "effect" | "ko" | "any";
-    }
-  | {
-      type: "cardPlayed";
-      player: PlayerRef;
-      filter?: CardFilter;
-      sourceZone?: Zone;
-      sourceFilter?: CardFilter;
-      anyOf?: Array<{
-        filter?: CardFilter;
-        sourceZone?: Zone;
-        sourceFilter?: CardFilter;
-      }>;
-    }
-  | {
-      type: "cardRested";
-      target?: "self" | "any";
-      player: PlayerRef;
-      filter?: CardFilter;
-      sourceController?: PlayerRef;
-      sourceKind?: "effect" | "any";
-    }
-  | { type: "donReturned"; player: PlayerRef }
-  | { type: "handTrashedByEffect"; player: PlayerRef }
-  | { type: "opponentActivated"; activations: OpponentActivationKind[] }
-  | { type: "donAttach"; count: number }
-  | { type: "activateMain" }
-  | { type: "main" }
-  | { type: "counter" }
-  | { type: "permanent" }
-  | { type: "replacement"; replacement: ReplacementTrigger }
-  | { type: "startOfGame" }
-  | { type: "startOfYourTurn" }
-  | { type: "startOfOpponentTurn" }
-  | { type: "startOfMainPhase" }
-  | { type: "endOfBattle" }
-  | { type: "custom"; event: string };
 
 export type Condition =
   | { type: "donCount"; target?: Target; min: number }
@@ -392,8 +342,6 @@ export interface CardSelectionRequest {
   visibility?: "public" | "privateToChooser";
   remainingCards?: RemainingCardsPlacement;
 }
-
-export type OpponentActivationKind = "event" | "blocker" | "trigger";
 
 export type DynamicNumberValue =
   | {
