@@ -274,6 +274,18 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag--trigger\s*\{[^}]*line-height:\s*1\.65;[^}]*font-size:\s*0\.9em;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.card-rules-tag--trigger\s*\{[^}]*margin:\s*-0\.15em 0 -0\.2em 0;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight \.trigger-block \.card-rules-line:first-child\s*\{[^}]*padding-left:\s*0\.3em;[^}]*padding-top:\s*0;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /background:\s*rgba\(246,\s*238,\s*224,\s*0\.9\);/u,
     );
     assert.match(

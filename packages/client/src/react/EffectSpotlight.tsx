@@ -4,7 +4,12 @@ import type {
 } from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
-import { EffectRulesText } from "./EffectRulesText.js";
+import { TriggerBlock } from "optcg-card-rules";
+
+import {
+  EffectRulesText,
+  renderMainSiteSearchLink,
+} from "./EffectRulesText.js";
 
 export interface EffectSpotlightProps {
   readonly card: ClientCardModel | undefined;
@@ -128,11 +133,10 @@ export const EffectSpotlight = ({
           </div>
           {triggerSpotlightText === undefined ? null : (
             <div className="effect-spotlight-card__trigger-rules">
-              <EffectRulesText
+              <TriggerBlock
                 text={triggerSpotlightText.text}
-                sourceMap={triggerSpotlightText.sourceMap}
                 compact
-                preserveNewlines
+                renderSearchLink={renderMainSiteSearchLink}
               />
             </div>
           )}

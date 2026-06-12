@@ -130,8 +130,9 @@ describe("EffectSpotlight", () => {
     );
 
     expect(html).toContain("effect-spotlight-card__rules");
+    expect(html).toContain("trigger-block");
     expect(html).toMatch(
-      /effect-spotlight-card__rules[\s\S]*effect-spotlight-card__main-rules[\s\S]*On Play[\s\S]*effect-spotlight-card__trigger-rules[\s\S]*Trigger/u,
+      /effect-spotlight-card__rules[\s\S]*effect-spotlight-card__main-rules[\s\S]*On Play[\s\S]*effect-spotlight-card__trigger-rules[\s\S]*trigger-block[\s\S]*Trigger/u,
     );
   });
 

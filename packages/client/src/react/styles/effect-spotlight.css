@@ -157,10 +157,12 @@
 }
 
 .effect-spotlight .card-rules-tag--trigger {
-  margin: -0.15em 0 -0.15em 0;
+  margin: -0.15em 0 -0.2em 0;
   border-radius: 0.25em 0 0 0.25em;
   padding: 0.15em 1.4em 0.15em 0.3em;
-  line-height: var(--effect-spotlight-rules-line-height);
+  line-height: 1.65;
+  font-size: 0.9em;
+  vertical-align: baseline;
 }
 
 .effect-spotlight .trigger-block {
@@ -169,13 +171,18 @@
   color: #fff8f8;
 }
 
+.effect-spotlight .trigger-block .card-rules-text {
+  line-height: 1;
+}
+
 .effect-spotlight .trigger-block .card-rules-line {
   padding: 0.2em 0.5em 0.2em 0;
-  line-height: var(--effect-spotlight-rules-line-height);
+  line-height: 1.65;
 }
 
 .effect-spotlight .trigger-block .card-rules-line:first-child {
   padding-left: 0.3em;
+  padding-top: 0;
 }
 
 .effect-spotlight
