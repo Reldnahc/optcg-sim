@@ -1,6 +1,6 @@
 import type { Duration } from "@optcg/types";
 
-import { parseThisTurnDuration } from "../../durations/index.js";
+import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import type { ContinuousInstructionContext } from "../continuous-field-effects.js";
 
@@ -34,7 +34,7 @@ export function parseCostModifierDuration(
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined {
-  const explicit = parseThisTurnDuration({ text });
+  const explicit = parseExplicitFieldEffectDuration({ text });
   if (explicit?.duration !== undefined && explicit.rest.length === 0) {
     return { duration: explicit.duration, evidence: explicit.evidence };
   }

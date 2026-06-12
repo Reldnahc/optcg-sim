@@ -6,6 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
+import { parseExplicitFieldEffectDuration } from "../../durations/index.js";
 import {
   parseNegativePowerModifier,
   parsePositivePowerModifier,
@@ -86,7 +87,7 @@ export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionPa
 
 export const parseExplicitDurationAllFieldStatGainInstruction: InstructionParser =
   (input) => {
-    const parsed = parseAllLeaderAndCharacterStatGainInstruction(input, {
+    const parsed = parseAllFieldStatGainInstruction(input, {
       condition: undefined,
     });
     if (
@@ -148,6 +149,12 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const leaderAndAllCharactersGain =
+    parseYourLeaderAndAllCharactersStatGainInstruction(input, context);
+  if (leaderAndAllCharactersGain !== undefined) {
+    return leaderAndAllCharactersGain;
+  }
+
   const leaderAndCharacterGain = parseAllLeaderAndCharacterStatGainInstruction(
     input,
     context,
@@ -200,6 +207,71 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
     rest: "",
   };
 };
+
+const parseYourLeaderAndAllCharactersStatGainInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^Your Leader and all of your Characters gain (?<modifier>.+)$/iu.exec(
+        input.text,
+      );
+    const modifierText = match?.groups?.["modifier"];
+    if (modifierText === undefined) {
+      return undefined;
+    }
+
+    const modifier =
+      parsePositivePowerModifier({ text: modifierText }) ??
+      parseNegativePowerModifier({ text: modifierText });
+    if (modifier === undefined) {
+      return undefined;
+    }
+    const duration = parseStatGainDuration(modifier.rest, context);
+    if (duration === undefined) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "modifyPower",
+              target: { type: "myLeader" },
+              value: modifier.value,
+              duration: duration.duration,
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+              },
+              value: modifier.value,
+              duration: duration.duration,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:category:character",
+        ...modifier.evidence,
+        duration.evidence,
+      ],
+      rest: "",
+    };
+  };
 
 const parseAllLeaderAndCharacterStatGainInstruction: ContinuousInstructionParser =
   (input, context) => {
@@ -310,13 +382,13 @@ const parseStatGainDuration = (
       evidence: continuousDurationEvidence(context.condition),
     };
   }
-  if (normalized.toLowerCase() !== "during this turn") {
-    return undefined;
-  }
-  return {
-    duration: { type: "thisTurn" },
-    evidence: "duration:thisTurn",
-  };
+  const explicit = parseExplicitFieldEffectDuration({ text: normalized });
+  const evidence = explicit?.evidence[0];
+  return explicit?.duration !== undefined &&
+    explicit.rest.length === 0 &&
+    evidence !== undefined
+    ? { duration: explicit.duration, evidence }
+    : undefined;
 };
 
 const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
