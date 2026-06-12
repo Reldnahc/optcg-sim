@@ -165,6 +165,8 @@
 
 .effect-spotlight .trigger-block {
   border-radius: 0.25em;
+  background: #17150d;
+  color: #fff8f8;
 }
 
 .effect-spotlight .trigger-block .card-rules-line {

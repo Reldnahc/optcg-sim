@@ -270,6 +270,10 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /\.effect-spotlight \.trigger-block\s*\{[^}]*background:\s*#17150d;[^}]*color:\s*#fff8f8;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /background:\s*rgba\(246,\s*238,\s*224,\s*0\.9\);/u,
     );
     assert.match(
