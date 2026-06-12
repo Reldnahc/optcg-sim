@@ -4,7 +4,7 @@ import type {
   ClientCardModel,
 } from "../view-model.js";
 import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
@@ -138,30 +138,57 @@ const donCount = (
 
 export const statusBannerAnimationKey = (
   banner: NonNullable<BoardViewModel["statusBanner"]>,
-): string => `${banner.tone}:${banner.label}:${String(banner.turnNumber)}`;
+  eventId?: number,
+): string =>
+  `${banner.tone}:${banner.label}:${String(banner.turnNumber)}${
+    eventId === undefined ? "" : `:${String(eventId)}`
+  }`;
 
 const isTurnOwnerBanner = (
   banner: NonNullable<BoardViewModel["statusBanner"]>,
 ): boolean => banner.tone === "self" || banner.tone === "opponent";
 
-export const shouldShowTurnStatusBanner = (
-  banner: NonNullable<BoardViewModel["statusBanner"]>,
-  lastShownTurnNumber: number | undefined,
-): boolean => {
-  if (!isTurnOwnerBanner(banner)) {
-    return true;
+export interface TurnStatusBannerRenderState {
+  activeBanner?: NonNullable<BoardViewModel["statusBanner"]>;
+  eventId: number;
+  lastTurnOwnerTurnNumber?: number;
+}
+
+export const nextTurnStatusBannerRenderState = (
+  state: TurnStatusBannerRenderState,
+  banner: BoardViewModel["statusBanner"],
+): TurnStatusBannerRenderState => {
+  if (banner === undefined) {
+    return state;
   }
-  return (
-    lastShownTurnNumber === undefined || banner.turnNumber > lastShownTurnNumber
-  );
+  if (!isTurnOwnerBanner(banner)) {
+    return {
+      ...state,
+      activeBanner: banner,
+      eventId: state.eventId + 1,
+    };
+  }
+  if (
+    state.lastTurnOwnerTurnNumber !== undefined &&
+    banner.turnNumber <= state.lastTurnOwnerTurnNumber
+  ) {
+    return state;
+  }
+  return {
+    activeBanner: banner,
+    eventId: state.eventId + 1,
+    lastTurnOwnerTurnNumber: banner.turnNumber,
+  };
 };
 
 const TurnStatusBanner = ({
   banner,
+  eventId,
 }: {
   banner: NonNullable<BoardViewModel["statusBanner"]>;
+  eventId: number;
 }): React.JSX.Element => {
-  const animationKey = statusBannerAnimationKey(banner);
+  const animationKey = statusBannerAnimationKey(banner, eventId);
   return (
     <div className="turn-status-banner-lane" aria-live="polite">
       <div
@@ -181,20 +208,29 @@ const TurnStatusBannerHost = ({
 }: {
   banner: BoardViewModel["statusBanner"];
 }): React.JSX.Element | null => {
-  const lastShownTurnNumberRef = useRef<number | undefined>(undefined);
-  const shouldShow =
-    banner !== undefined &&
-    shouldShowTurnStatusBanner(banner, lastShownTurnNumberRef.current);
+  const [renderState, setRenderState] = useState<TurnStatusBannerRenderState>(
+    () => nextTurnStatusBannerRenderState({ eventId: 0 }, banner),
+  );
+  const didInitializeBannerRef = useRef(false);
   useEffect(() => {
-    if (shouldShow && isTurnOwnerBanner(banner)) {
-      lastShownTurnNumberRef.current = banner.turnNumber;
+    if (!didInitializeBannerRef.current) {
+      didInitializeBannerRef.current = true;
+      return;
     }
-  }, [banner, shouldShow]);
+    setRenderState((current) =>
+      nextTurnStatusBannerRenderState(current, banner),
+    );
+  }, [banner]);
 
-  if (!shouldShow) {
+  if (renderState.activeBanner === undefined) {
     return null;
   }
-  return <TurnStatusBanner banner={banner} />;
+  return (
+    <TurnStatusBanner
+      banner={renderState.activeBanner}
+      eventId={renderState.eventId}
+    />
+  );
 };
 
 export const BoardLayout = ({

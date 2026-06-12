@@ -10,7 +10,7 @@ import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import {
   BoardLayout,
-  shouldShowTurnStatusBanner,
+  nextTurnStatusBannerRenderState,
   statusBannerAnimationKey,
 } from "./BoardLayout.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
@@ -112,38 +112,89 @@ describe("turn status banner", () => {
     );
   });
 
-  test("suppresses turn banners until the turn number increments", () => {
-    assert.equal(
-      shouldShowTurnStatusBanner(
-        { label: "Your Turn", tone: "self", turnNumber: 3 },
-        3,
-      ),
-      false,
+  test("keeps a turn banner event active after same-turn snapshots", () => {
+    const firstState = nextTurnStatusBannerRenderState(
+      { eventId: 0 },
+      { label: "Your Turn", tone: "self", turnNumber: 3 },
     );
-    assert.equal(
-      shouldShowTurnStatusBanner(
-        { label: "Your Turn", tone: "self", turnNumber: 4 },
-        3,
-      ),
-      true,
-    );
+    const repeatState = nextTurnStatusBannerRenderState(firstState, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 3,
+    });
+    const nextTurnState = nextTurnStatusBannerRenderState(repeatState, {
+      label: "Opponent's Turn",
+      tone: "opponent",
+      turnNumber: 4,
+    });
+
+    assert.deepEqual(firstState.activeBanner, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 3,
+    });
+    assert.equal(repeatState.activeBanner, firstState.activeBanner);
+    assert.equal(repeatState.eventId, firstState.eventId);
+    assert.deepEqual(nextTurnState.activeBanner, {
+      label: "Opponent's Turn",
+      tone: "opponent",
+      turnNumber: 4,
+    });
+    assert.equal(nextTurnState.eventId, firstState.eventId + 1);
   });
 
-  test("keeps battle step banners visible regardless of the last shown turn number", () => {
-    assert.equal(
-      shouldShowTurnStatusBanner(
-        { label: "Counter Step", tone: "counter", turnNumber: 3 },
-        3,
-      ),
-      true,
+  test("does not replace a battle step event with a same-turn owner banner", () => {
+    const turnState = nextTurnStatusBannerRenderState(
+      { eventId: 0 },
+      { label: "Your Turn", tone: "self", turnNumber: 3 },
     );
-    assert.equal(
-      shouldShowTurnStatusBanner(
-        { label: "Blocker Step", tone: "block", turnNumber: 3 },
-        3,
-      ),
-      true,
+    const counterState = nextTurnStatusBannerRenderState(turnState, {
+      label: "Counter Step",
+      tone: "counter",
+      turnNumber: 3,
+    });
+    const repeatTurnState = nextTurnStatusBannerRenderState(counterState, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 3,
+    });
+
+    assert.deepEqual(repeatTurnState.activeBanner, {
+      label: "Counter Step",
+      tone: "counter",
+      turnNumber: 3,
+    });
+    assert.equal(repeatTurnState.eventId, counterState.eventId);
+  });
+
+  test("creates battle step events regardless of the last shown turn number", () => {
+    const turnState = nextTurnStatusBannerRenderState(
+      { eventId: 0 },
+      { label: "Opponent's Turn", tone: "opponent", turnNumber: 3 },
     );
+    const counterState = nextTurnStatusBannerRenderState(turnState, {
+      label: "Counter Step",
+      tone: "counter",
+      turnNumber: 3,
+    });
+    const blockerState = nextTurnStatusBannerRenderState(counterState, {
+      label: "Blocker Step",
+      tone: "block",
+      turnNumber: 3,
+    });
+
+    assert.deepEqual(counterState.activeBanner, {
+      label: "Counter Step",
+      tone: "counter",
+      turnNumber: 3,
+    });
+    assert.deepEqual(blockerState.activeBanner, {
+      label: "Blocker Step",
+      tone: "block",
+      turnNumber: 3,
+    });
+    assert.equal(counterState.eventId, turnState.eventId + 1);
+    assert.equal(blockerState.eventId, counterState.eventId + 1);
   });
 
   test("renders across the playmat with the projected banner tone", () => {
