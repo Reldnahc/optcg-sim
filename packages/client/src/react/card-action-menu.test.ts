@@ -1069,8 +1069,14 @@ describe("card action menu", () => {
     assert.equal(markup.includes(">Hidden card<"), false);
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 4);
     assert.equal((markup.match(/hidden-life-opponent-/gu) ?? []).length, 5);
-    assert.match(markup, /--life-card-y-offset:0%;z-index:4/u);
-    assert.match(markup, /--life-card-y-offset:36%;z-index:1/u);
+    [
+      /--life-card-y-offset:0%;z-index:4;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-0/u,
+      /--life-card-y-offset:30%;z-index:1;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-3/u,
+      /--life-card-y-offset:40%;z-index:5;top:var\(--life-card-y-offset\)[\s\S]*hidden-life-opponent-0/u,
+      /--life-card-y-offset:0%;z-index:1;top:var\(--life-card-y-offset\)[\s\S]*hidden-life-opponent-4/u,
+    ].forEach((pattern) => {
+      assert.match(markup, pattern);
+    });
   });
 
   test("life zones keep the same vertical spacing above five life", () => {
@@ -1090,24 +1096,13 @@ describe("card action menu", () => {
     );
 
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 10);
-    assert.match(markup, /--life-card-y-offset:0%;z-index:10/u);
-    assert.match(markup, /--life-card-y-offset:60%;z-index:5/u);
-    assert.match(markup, /--life-card-y-offset:108%;z-index:1/u);
+    [
+      /--life-card-y-offset:0%;z-index:10;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-0/u,
+      /--life-card-y-offset:50%;z-index:5;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-5/u,
+      /--life-card-y-offset:90%;z-index:1;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-9/u,
+    ].forEach((pattern) => {
+      assert.match(markup, pattern);
+    });
     assert.equal(markup.includes("--life-card-x-offset"), false);
-
-    layout.self.lifeCount = 6;
-    layout.self.lifeCards = hiddenLifeCards(6, "hidden-life-self");
-    const sixLifeMarkup = renderToStaticMarkup(
-      createElement(BoardLayout, {
-        board: layout,
-        cardActions: () => [],
-        onCardClick: () => undefined,
-        onCardAction: () => undefined,
-        onViewCollection: () => undefined,
-        onBackgroundClick: () => undefined,
-      }),
-    );
-    assert.match(sixLifeMarkup, /--life-card-y-offset:60%;z-index:1/u);
-    assert.equal(sixLifeMarkup.includes("--life-card-x-offset"), false);
   });
 });

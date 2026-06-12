@@ -121,10 +121,16 @@ export const Zone = ({
   const zoneCardsStyle = {
     "--card-row-overlap": `${rowLayout.overlap.toFixed(2)}px`,
   } as CSSProperties & Record<"--card-row-overlap", string>;
+  const lifeCardIsSelf = presentationZoneKey === "self:life";
   const lifeCardStyle = (index: number, count: number): CSSProperties => {
+    const offsetIndex = lifeCardIsSelf ? index : count - index - 1;
+    const offset = `${String(offsetIndex * 10)}%`;
     return {
-      "--life-card-y-offset": `${String(index * 12)}%`,
+      "--life-card-y-offset": offset,
       zIndex: count - index,
+      ...(lifeCardIsSelf
+        ? { bottom: "var(--life-card-y-offset)" }
+        : { top: "var(--life-card-y-offset)" }),
     } as CSSProperties & Record<"--life-card-y-offset", string>;
   };
   const displayedStackCount = stackCount ?? cards.length;
