@@ -390,13 +390,16 @@ const battleArrowForView = (
 const statusBannerForView = (
   view: MatchSnapshot["players"][PlayerId]["view"],
   playerId: PlayerId,
-): StatusBannerModel => {
+): StatusBannerModel | undefined => {
   const turnNumber = view.turn.globalTurn;
   if (view.battle?.step === "block") {
     return { label: "Blocker Step", tone: "block", turnNumber };
   }
   if (view.battle?.step === "counter") {
     return { label: "Counter Step", tone: "counter", turnNumber };
+  }
+  if (!view.self.hasMulliganed || !view.opponent.hasMulliganed) {
+    return undefined;
   }
   return view.turn.turnPlayerId === playerId
     ? { label: "Your Turn", tone: "self", turnNumber }
@@ -509,10 +512,11 @@ export const createBoardViewModel = ({
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
   const turnPlayerId = player.view.turn.turnPlayerId;
   const battleArrow = battleArrowForView(player.view);
+  const statusBanner = statusBannerForView(player.view, playerId);
   return {
     playerId,
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
-    statusBanner: statusBannerForView(player.view, playerId),
+    ...(statusBanner === undefined ? {} : { statusBanner }),
     ...(selfTimer === undefined ? {} : { selfTimer }),
     selfIsTurnPlayer: turnPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),

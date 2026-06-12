@@ -595,6 +595,41 @@ describe("board view model", () => {
     });
   });
 
+  test("holds turn ownership banner until both mulligans are decided", () => {
+    const view = minimalView();
+    view.self.hasMulliganed = true;
+    view.opponent.hasMulliganed = false;
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const pendingMulliganModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+    view.opponent.hasMulliganed = true;
+    const decidedMulliganModel = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(pendingMulliganModel.statusBanner, undefined);
+    assert.deepEqual(decidedMulliganModel.statusBanner, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 1,
+    });
+  });
+
   test("projects blocker and counter battle steps into the board status banner", () => {
     const view = minimalView();
     view.battle = {
