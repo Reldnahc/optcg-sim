@@ -13,6 +13,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { parseConditionFromSet } from "../conditions/index.js";
 import { parseBulletListPayload } from "./bullet-list.js";
 
 interface ParsedChooseOneBody {
@@ -256,14 +257,15 @@ function parseCondition(
     }
   | undefined {
   const conditionText = text.replace(/\.$/u, "").trim();
-  for (const parser of conditionParsers) {
-    const parsed = parser({ text: conditionText });
-    if (parsed !== undefined && parsed.rest.length === 0) {
-      return {
-        condition: parsed.condition,
-        evidence: parsed.evidence,
-      };
-    }
+  const parsed = parseConditionFromSet(
+    { text: conditionText },
+    conditionParsers,
+  );
+  if (parsed !== undefined) {
+    return {
+      condition: parsed.condition,
+      evidence: parsed.evidence,
+    };
   }
   return undefined;
 }

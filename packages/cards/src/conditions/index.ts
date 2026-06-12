@@ -1,6 +1,7 @@
 export { parseDonFieldCountCondition } from "./don-field-count.js";
 export { parseDeckCountCondition } from "./deck-count.js";
 export { parseEventHistoryCondition } from "./event-history.js";
+export { parseConditionFromSet } from "./groups.js";
 export { parseFieldPresenceCondition } from "./field-presence.js";
 export { parseFieldCardCountCondition } from "./field-card-count.js";
 export { parseHandCountCondition } from "./hand-count.js";

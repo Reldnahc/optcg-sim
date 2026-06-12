@@ -8,6 +8,7 @@ import type {
   ParseInput,
   SegmentParser,
 } from "../types.js";
+import { parseConditionFromSet } from "../conditions/index.js";
 import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
@@ -509,14 +510,7 @@ function parseSingleCondition(
   text: string,
   conditionParsers: readonly ConditionParser[],
 ): ConditionParseResult | undefined {
-  for (const conditionParser of conditionParsers) {
-    const condition = conditionParser({ text });
-    if (condition !== undefined && condition.rest.length === 0) {
-      return condition;
-    }
-  }
-
-  return undefined;
+  return parseConditionFromSet({ text }, conditionParsers);
 }
 
 function splitLeadingConditionSource(

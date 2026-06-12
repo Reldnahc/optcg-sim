@@ -308,6 +308,19 @@ describe("cards package architecture boundaries", () => {
       expect(file.contents, file.path).not.toMatch(directInsteadChainPattern);
     }
   });
+
+  it("keeps segment parsers on semantic condition groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const segmentFiles = files.filter((file) =>
+      file.path.includes("/segments/"),
+    );
+
+    for (const file of segmentFiles) {
+      expect(file.contents, file.path).not.toMatch(
+        /for\s*\(\s*const\s+\w+\s+of\s+conditionParsers\s*\)/u,
+      );
+    }
+  });
 });
 
 function escapeRegex(value: string): string {
