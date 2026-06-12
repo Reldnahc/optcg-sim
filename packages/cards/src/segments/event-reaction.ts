@@ -294,6 +294,122 @@ const parseDonReturnedPredicate: ReactionPredicateParser = ({ text }) => {
   };
 };
 
+const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+
+  if (normalized.toLowerCase() === "a character is k.o.'d") {
+    return {
+      trigger: characterFieldRemovedForBothPlayers({ sourceKind: "ko" }),
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+        "filter:category:character",
+      ],
+    };
+  }
+
+  if (
+    normalized.toLowerCase() ===
+    "a character is removed from the field by your effect"
+  ) {
+    return {
+      trigger: characterFieldRemovedForBothPlayers({
+        sourceController: "self",
+        sourceKind: "effect",
+      }),
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+        "filter:category:character",
+      ],
+    };
+  }
+
+  const thisCharacterByOpponentEffect =
+    /^this Character is K\.O\.'d by your opponent's effect$/iu.exec(normalized);
+  if (thisCharacterByOpponentEffect !== null) {
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceController: "opponent",
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+      ],
+    };
+  }
+
+  const yourCharacter =
+    /^your (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your opponent's effect or K\.O\.'d)?)$/iu.exec(
+      normalized,
+    );
+  const filterText = yourCharacter?.groups?.["filter"];
+  const removalText = yourCharacter?.groups?.["removal"];
+  if (
+    filterText === undefined ||
+    removalText === undefined ||
+    !/\bCharacter(?: card)?\b/iu.test(filterText)
+  ) {
+    return undefined;
+  }
+
+  const parsed = parseCharacterFilter(filterText);
+  const source = parseFieldRemovalSource(removalText);
+  if (source === undefined) {
+    return undefined;
+  }
+
+  return {
+    trigger: {
+      type: "fieldRemoved",
+      player: "self",
+      filter: parsed.filter,
+      ...source.trigger,
+    },
+    evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
+  };
+};
+
+const parseFieldRemovalSource = (
+  text: string,
+):
+  | {
+      readonly trigger: Pick<
+        Extract<Trigger, { type: "fieldRemoved" }>,
+        "sourceController" | "sourceKind"
+      >;
+    }
+  | undefined => {
+  if (text.toLowerCase() === "k.o.'d") {
+    return { trigger: { sourceKind: "ko" } };
+  }
+  if (text.toLowerCase() === "removed from the field") {
+    return { trigger: { sourceKind: "any" } };
+  }
+  if (
+    text.toLowerCase() ===
+    "removed from the field by your opponent's effect or k.o.'d"
+  ) {
+    return {
+      trigger: { sourceController: "opponent", sourceKind: "any" },
+    };
+  }
+  return undefined;
+};
+
 const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
   text,
   entryPoint,
@@ -327,61 +443,6 @@ const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
         "activation:event",
         "activation:trigger",
       ],
-    };
-  }
-
-  const removedByYourEffect =
-    /^a Character is removed from the field by your effect$/iu.exec(normalized);
-  if (removedByYourEffect !== null) {
-    return {
-      trigger: characterFieldRemovedForBothPlayers({
-        sourceController: "self",
-        sourceKind: "effect",
-      }),
-      evidence: [
-        "trigger:fieldRemoved",
-        "player:self",
-        "player:opponent",
-        "composition:triggerAnyOf",
-        "filter:category:character",
-      ],
-    };
-  }
-
-  const yourTypedOpponentRemoved =
-    /^your (?<filter>.+? Character(?: card)?) is removed from the field by your opponent's effect or K\.O\.'d$/iu.exec(
-      normalized,
-    );
-  const opponentRemovedFilter = yourTypedOpponentRemoved?.groups?.["filter"];
-  if (opponentRemovedFilter !== undefined) {
-    const parsed = parseCharacterFilter(opponentRemovedFilter);
-    return {
-      trigger: {
-        type: "fieldRemoved",
-        player: "self",
-        filter: parsed.filter,
-        sourceController: "opponent",
-        sourceKind: "any",
-      },
-      evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
-    };
-  }
-
-  const yourTypedRemoved =
-    /^your (?<filter>.+? Character(?: card)?) is removed from the field$/iu.exec(
-      normalized,
-    );
-  const yourTypedFilter = yourTypedRemoved?.groups?.["filter"];
-  if (yourTypedFilter !== undefined) {
-    const parsed = parseCharacterFilter(yourTypedFilter);
-    return {
-      trigger: {
-        type: "fieldRemoved",
-        player: "self",
-        filter: parsed.filter,
-        sourceKind: "any",
-      },
-      evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
     };
   }
 
@@ -476,6 +537,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
   [
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
+    parseFieldRemovedPredicate,
     activatedReactionSpecificPredicate,
   ] as const;
 
@@ -547,19 +609,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  if (normalized.toLowerCase() === "a character is k.o.'d") {
-    return {
-      trigger: characterFieldRemovedForBothPlayers({ sourceKind: "ko" }),
-      evidence: [
-        "trigger:fieldRemoved",
-        "player:self",
-        "player:opponent",
-        "composition:triggerAnyOf",
-        "filter:category:character",
-      ],
-    };
-  }
-
   if (normalized.toLowerCase() === "a [trigger] activates") {
     return {
       trigger: triggerActivatedForBothPlayers(),
@@ -568,67 +617,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
         "player:self",
         "player:opponent",
         "composition:triggerAnyOf",
-      ],
-    };
-  }
-
-  if (
-    normalized.toLowerCase() ===
-    "a character is removed from the field by your effect"
-  ) {
-    return {
-      trigger: characterFieldRemovedForBothPlayers({
-        sourceController: "self",
-        sourceKind: "effect",
-      }),
-      evidence: [
-        "trigger:fieldRemoved",
-        "player:self",
-        "player:opponent",
-        "composition:triggerAnyOf",
-        "filter:category:character",
-      ],
-    };
-  }
-
-  const yourTypedKOD = /^your (?<filter>.+) is K\.O\.'d$/iu.exec(normalized);
-  const yourTypedFilter = yourTypedKOD?.groups?.["filter"];
-  if (
-    yourTypedFilter !== undefined &&
-    /\bCharacter(?: card)?\b/iu.test(yourTypedFilter)
-  ) {
-    const parsed = parseCharacterFilter(yourTypedFilter);
-    return {
-      trigger: {
-        type: "fieldRemoved",
-        player: "self",
-        filter: parsed.filter,
-        sourceKind: "ko",
-      },
-      evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
-    };
-  }
-
-  if (
-    normalized.toLowerCase() ===
-    "this character is k.o.'d by your opponent's effect"
-  ) {
-    return {
-      trigger: {
-        type: "fieldRemoved",
-        target: "self",
-        player: "self",
-        filter: { categories: ["character"] },
-        sourceController: "opponent",
-        sourceKind: "effect",
-      },
-      evidence: [
-        "trigger:fieldRemoved",
-        "target:thisCharacter",
-        "player:self",
-        "filter:category:character",
-        "replacementSource:opponent",
-        "replacementSource:cardEffect",
       ],
     };
   }
@@ -703,6 +691,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
   [
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
+    parseFieldRemovedPredicate,
     implicitReactionSpecificPredicate,
   ] as const;
 
