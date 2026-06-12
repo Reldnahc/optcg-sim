@@ -41,7 +41,7 @@ export interface ControlRailProps {
   dockTabs?: readonly ControlDockTab[] | undefined;
   activeDockTabId?: string | undefined;
   onAction: (actionIndex: number) => void;
-  onNewMatch: () => void;
+  onHome: () => void;
   onRematch?: (() => Promise<void> | void) | undefined;
   onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onDockResizePointerDown?:
@@ -95,7 +95,7 @@ export const ControlRail = ({
   dockTabs = [],
   activeDockTabId,
   onAction,
-  onNewMatch,
+  onHome,
   onRematch,
   onResizePointerDown,
   onDockResizePointerDown,
@@ -130,8 +130,7 @@ export const ControlRail = ({
   >(undefined);
   const suppressTabClick = useRef(false);
   const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
-  const rematchDisabled =
-    disabled || (matchStatus !== "completed" && matchStatus !== "gameOver");
+  const matchIsOver = matchStatus === "completed" || matchStatus === "gameOver";
   const activeDockTab =
     dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
   const hasDockedWindow = activeDockTab !== undefined;
@@ -208,6 +207,30 @@ export const ControlRail = ({
           disabled={disabled}
           onAction={onAction}
         />
+        {matchIsOver ? (
+          <div className="end-match-actions" aria-label="Match ended actions">
+            <button
+              className="action-button end-match-action"
+              type="button"
+              disabled={disabled}
+              aria-label="Home"
+              onClick={onHome}
+            >
+              Home
+            </button>
+            <button
+              className="action-button end-match-action"
+              type="button"
+              disabled={disabled || onRematch === undefined}
+              aria-label="Rematch"
+              onClick={() => {
+                void onRematch?.();
+              }}
+            >
+              Rematch
+            </button>
+          </div>
+        ) : null}
         <div className="control-tool-strip">
           {previewControl === undefined ? null : (
             <div className="control-preview-slot">{previewControl}</div>
@@ -231,35 +254,6 @@ export const ControlRail = ({
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 3v18" />
               <path d="M5 4h12l-2 4 2 4H5" />
-            </svg>
-          </button>
-          <button
-            className="control-icon-button new-match-button"
-            type="button"
-            disabled={rematchDisabled}
-            aria-label="Rematch"
-            title="Rematch"
-            onClick={() => {
-              void onRematch?.();
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M17 2v5h-5" />
-              <path d="M7 22v-5h5" />
-              <path d="M18.5 9A7 7 0 0 0 7.4 5.2L4 8.5" />
-              <path d="M5.5 15A7 7 0 0 0 16.6 18.8L20 15.5" />
-            </svg>
-          </button>
-          <button
-            className="control-icon-button new-match-button"
-            type="button"
-            aria-label="New match"
-            title="New match"
-            onClick={onNewMatch}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
             </svg>
           </button>
         </div>

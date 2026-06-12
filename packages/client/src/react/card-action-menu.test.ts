@@ -81,7 +81,7 @@ describe("card action menu", () => {
         selfIsTurnPlayer: true,
         opponentIsTurnPlayer: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
 
@@ -184,7 +184,7 @@ describe("card action menu", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
     assert.equal(railMarkup.includes("Selected card"), false);
@@ -265,7 +265,7 @@ describe("card action menu", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         concedeDisabled: false,
         concedeConfirming: true,
         onConcede: () => undefined,
@@ -295,7 +295,7 @@ describe("card action menu", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
     const styles = await readFile(
@@ -317,7 +317,7 @@ describe("card action menu", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         previewControl: createElement("button", {
           className: "card-preview-minimized-button",
           type: "button",
@@ -349,7 +349,7 @@ describe("card action menu", () => {
         globalActions: [{ index: 12, type: "endMainPhase", label: "End turn" }],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
         concedeDisabled: false,
         onConcede: () => undefined,
         previewControl: createElement("button", {
@@ -373,17 +373,19 @@ describe("card action menu", () => {
       'aria-label="Log"',
       'aria-label="Settings"',
       'aria-label="Concede"',
-      'aria-label="New match"',
     ].map((needle) => markup.indexOf(needle));
 
     assert.deepEqual(
       positions.map((position) => position >= 0),
-      [true, true, true, true, true, true],
+      [true, true, true, true, true],
     );
     assert.deepEqual(
       [...positions].sort((a, b) => a - b),
       positions,
     );
+    assert.equal(markup.includes('aria-label="Home"'), false);
+    assert.equal(markup.includes('aria-label="Rematch"'), false);
+    assert.equal(markup.includes('aria-label="New match"'), false);
   });
 
   test("control rail hides empty global action chrome", () => {
@@ -393,7 +395,7 @@ describe("card action menu", () => {
         globalActions: [],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
 
@@ -406,7 +408,7 @@ describe("card action menu", () => {
         globalActions: [{ index: 12, type: "endMainPhase", label: "End turn" }],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
 
@@ -439,7 +441,7 @@ describe("card action menu", () => {
         ],
         disabled: false,
         onAction: () => undefined,
-        onNewMatch: () => undefined,
+        onHome: () => undefined,
       }),
     );
     const styles = await readFile(
