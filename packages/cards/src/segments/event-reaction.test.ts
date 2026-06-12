@@ -428,6 +428,43 @@ describe("event reaction predicate routing", () => {
       assertPredicateParsesThroughBothGroups(text, trigger, evidence);
     },
   );
+
+  it.each([
+    {
+      text: "a card is trashed from your hand by an effect",
+      trigger: { type: "handTrashedByEffect", player: "self" },
+      evidence: [
+        "trigger:handTrashedByEffect",
+        "zone:hand",
+        "destination:trash",
+        "player:self",
+      ],
+    },
+    {
+      text: "a card is trashed from your hand by your {Navy} type card's effect",
+      trigger: {
+        type: "handTrashedByEffect",
+        player: "self",
+        sourceFilter: { typesAny: ["Navy"] },
+      },
+      evidence: [
+        "trigger:handTrashedByEffect",
+        "zone:hand",
+        "destination:trash",
+        "player:self",
+        "filter:type",
+      ],
+    },
+  ] satisfies Array<{
+    readonly text: string;
+    readonly trigger: Trigger;
+    readonly evidence: readonly string[];
+  }>)(
+    "parses shared hand-trash predicate $text through semantic predicate groups",
+    ({ text, trigger, evidence }) => {
+      assertPredicateParsesThroughBothGroups(text, trigger, evidence);
+    },
+  );
 });
 
 function assertPredicateParsesThroughBothGroups(

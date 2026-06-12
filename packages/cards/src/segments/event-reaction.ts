@@ -604,6 +604,32 @@ const parseCardRestedPredicate: ReactionPredicateParser = ({ text }) => {
   return undefined;
 };
 
+const parseHandTrashedByEffectPredicate: ReactionPredicateParser = ({
+  text,
+}) => {
+  const handTrashedByEffect =
+    /^a card is trashed from your hand by (?:(?:an effect)|(?:your \{(?<type>[^}]+)\} type card's effect))$/iu.exec(
+      text.trim(),
+    );
+  if (handTrashedByEffect === null) {
+    return undefined;
+  }
+
+  const sourceType = handTrashedByEffect.groups?.["type"];
+  return {
+    trigger: handTrashedByEffectTrigger(
+      sourceType === undefined ? undefined : { typesAny: [sourceType] },
+    ),
+    evidence: [
+      "trigger:handTrashedByEffect",
+      "zone:hand",
+      "destination:trash",
+      "player:self",
+      ...(sourceType === undefined ? [] : (["filter:type"] as const)),
+    ],
+  };
+};
+
 const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
   text,
   entryPoint,
@@ -649,6 +675,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
     parseCardPlayedPredicate,
     parseActivationPredicate,
     parseCardRestedPredicate,
+    parseHandTrashedByEffectPredicate,
     activatedReactionSpecificPredicate,
   ] as const;
 
@@ -680,26 +707,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  const handTrashedByEffect =
-    /^a card is trashed from your hand by (?:(?:an effect)|(?:your \{(?<type>[^}]+)\} type card's effect))$/iu.exec(
-      normalized,
-    );
-  if (handTrashedByEffect !== null) {
-    const sourceType = handTrashedByEffect.groups?.["type"];
-    return {
-      trigger: handTrashedByEffectTrigger(
-        sourceType === undefined ? undefined : { typesAny: [sourceType] },
-      ),
-      evidence: [
-        "trigger:handTrashedByEffect",
-        "zone:hand",
-        "destination:trash",
-        "player:self",
-        ...(sourceType === undefined ? [] : (["filter:type"] as const)),
-      ],
-    };
-  }
-
   return undefined;
 };
 
@@ -711,6 +718,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseCardPlayedPredicate,
     parseActivationPredicate,
     parseCardRestedPredicate,
+    parseHandTrashedByEffectPredicate,
     implicitReactionSpecificPredicate,
   ] as const;
 
