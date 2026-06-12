@@ -115,5 +115,6 @@ export const parseExplicitFieldEffectDuration = (
 ): DurationParseResult | undefined =>
   parseOpponentNextEndPhaseDuration(input) ??
   parseOpponentNextRefreshPhaseDuration(input) ??
+  parseSelfNextTurnStartDuration(input) ??
   parseThisTurnDuration(input) ??
   parseThisBattleDuration(input);

@@ -274,8 +274,13 @@ const matchLifeRemoved = (
       : payload["from"] === "life" && typeof payload["playerId"] === "string"
         ? (payload["playerId"] as PlayerId)
         : undefined;
+  const to = zoneRefFromUnknown(payload["to"]);
+  const destination =
+    to?.zone ?? (typeof payload["to"] === "string" ? payload["to"] : undefined);
   return (
     playerId !== undefined &&
+    (trigger.destination === undefined ||
+      destination === trigger.destination) &&
     trigger.players.some((ref) =>
       playerRefMatchesSource(state, source, ref, playerId),
     )
@@ -395,7 +400,19 @@ const matchDonReturned = (
   const playerId = payload["playerId"];
   return (
     typeof playerId === "string" &&
-    playerRefMatchesSource(state, source, trigger.player, playerId as PlayerId)
+    playerRefMatchesSource(
+      state,
+      source,
+      trigger.player,
+      playerId as PlayerId,
+    ) &&
+    matchesSourceEvidence(
+      state,
+      source,
+      trigger.sourceController,
+      trigger.sourceKind,
+      payload,
+    )
   );
 };
 

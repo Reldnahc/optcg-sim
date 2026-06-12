@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type {
   CardId,
+  CardInstance,
   EffectDefinition,
   EffectId,
   EngineEvent,
@@ -200,6 +201,31 @@ const appendCardPlayedEvent = (
   state.eventJournal = [...state.eventJournal, ...events];
 };
 
+const appendFieldRemovedByEffectEvent = (
+  state: ReturnType<typeof createActiveState>,
+  removed: CardInstance,
+  sourceControllerId = p1,
+): void => {
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "cardMoved",
+    {
+      playerId: removed.controller,
+      instanceId: removed.instanceId,
+      cardId: removed.cardId,
+      from: removed.zone,
+      to: { zone: "trash", playerId: removed.owner, slot: "trash", index: 0 },
+      reason: "effect",
+      sourceControllerId,
+      sourceKind: "effect",
+    },
+    { type: "public" },
+  );
+  state.eventJournal = [...state.eventJournal, ...events];
+};
+
 test("activated life-removed reactions are optional legal actions, not auto-queued triggers", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
@@ -356,6 +382,77 @@ test("activated played-card reactions honor effect-entry-point filters", () => {
   });
   const beforeHand = p1State.hand.length;
   appendCardPlayedEvent(state, playedCardId);
+
+  const p1Actions = getLegalActions(state, p1).filter(
+    (action) => action.type === "activateEffect",
+  );
+
+  assert.equal(p1Actions.length, 1);
+  assert.equal(p1Actions[0]?.effectId, effectId);
+
+  const result = applyAction(state, must(p1Actions[0], "activated reaction"));
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p1], "p1 after").hand.length,
+    beforeHand + 1,
+  );
+});
+
+test("activated field-removal reactions support any removed Character caused by your effect", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const leader = p1State.leader;
+  const removed: CardInstance = {
+    instanceId: "p2-removed-character" as CardInstance["instanceId"],
+    cardId: "removed-character-card" as CardId,
+    owner: p2,
+    controller: p2,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 0,
+    },
+    state: "active",
+    attachedDon: [],
+  };
+  p2State.characters = [removed];
+  state.cardManifest.cards[removed.cardId] = resolvedCard({
+    cardId: removed.cardId,
+    category: "character",
+    power: 5000,
+  });
+  const effectId = toEffectId("activated-field-removed-by-effect-draw");
+  installActivatedDrawDefinition({
+    state,
+    sourceCardId: leader.cardId,
+    effectId,
+    trigger: {
+      type: "anyOf",
+      triggers: [
+        {
+          type: "fieldRemoved",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceController: "self",
+          sourceKind: "effect",
+        },
+        {
+          type: "fieldRemoved",
+          player: "opponent",
+          filter: { categories: ["character"] },
+          sourceController: "self",
+          sourceKind: "effect",
+        },
+      ],
+    },
+  });
+  const beforeHand = p1State.hand.length;
+  appendFieldRemovedByEffectEvent(state, removed);
 
   const p1Actions = getLegalActions(state, p1).filter(
     (action) => action.type === "activateEffect",

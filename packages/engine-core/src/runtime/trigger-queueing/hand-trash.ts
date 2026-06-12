@@ -1,4 +1,5 @@
 import type {
+  CardFilter,
   CardInstance,
   EffectDefinition,
   EffectQueueEntry,
@@ -9,6 +10,7 @@ import type {
   PlayerId,
   PlayerRef,
   ResolvedCard,
+  CardId,
 } from "@optcg/types";
 
 import {
@@ -16,7 +18,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
-import { getOpponentId } from "../../actions/state.js";
+import { cardMatchesSearchFilter, getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
 import {
@@ -118,6 +120,25 @@ const playerRefMatches = (
   }
 };
 
+const sourceFilterMatches = (
+  state: GameState,
+  event: EngineEvent,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if (!isRecord(event.payload)) {
+    return false;
+  }
+  const sourceCardId = event.payload["sourceCardId"];
+  if (typeof sourceCardId !== "string") {
+    return false;
+  }
+  const resolved = state.cardManifest.cards[sourceCardId as CardId];
+  return resolved !== undefined && cardMatchesSearchFilter(resolved, filter);
+};
+
 export const createHandTrashedByEffectTriggerQueueing = (
   dependencies: Pick<
     EffectRuntimeTriggerQueueingDependencies,
@@ -198,7 +219,8 @@ export const createHandTrashedByEffectTriggerQueueing = (
               source,
               effect.trigger.player,
               trashedPlayerId,
-            ),
+            ) &&
+            sourceFilterMatches(state, event, effect.trigger.sourceFilter),
         );
         if (handTrashEffects.length === 0) {
           continue;

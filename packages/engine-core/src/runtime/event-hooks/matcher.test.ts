@@ -241,6 +241,8 @@ test("canonical event matcher matches donReturned and donAttached primitives", (
   const donReturned = publicEvent(state, "donReturned", {
     playerId: source.controller,
     donInstanceId: "don-1",
+    sourceControllerId: source.controller,
+    sourceKind: "effect",
   });
   const donAttached = publicEvent(state, "donAttached", {
     playerId: source.controller,
@@ -257,10 +259,29 @@ test("canonical event matcher matches donReturned and donAttached primitives", (
     matchEventTrigger(
       state,
       source,
-      { type: "donReturned", player: "self" },
+      {
+        type: "donReturned",
+        player: "self",
+        sourceController: "self",
+        sourceKind: "effect",
+      },
       donReturned,
     ),
     { matched: true, triggerTypes: ["donReturned"] },
+  );
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "donReturned",
+        player: "self",
+        sourceController: "opponent",
+        sourceKind: "effect",
+      },
+      donReturned,
+    ),
+    { matched: false, triggerTypes: [] },
   );
   assert.deepEqual(
     matchEventTrigger(
@@ -414,6 +435,7 @@ test("canonical event matcher matches lifeRemoved and opponentActivated event fa
   const { source, state, character } = setupEventHookState();
   const lifeRemoved = publicEvent(state, "cardMoved", {
     from: { zone: "life", playerId: source.controller, slot: "life", index: 0 },
+    to: { zone: "hand", playerId: source.controller, slot: "hand", index: 0 },
     playerId: source.controller,
     instanceId: character.instanceId,
     cardId: character.cardId,
@@ -438,10 +460,19 @@ test("canonical event matcher matches lifeRemoved and opponentActivated event fa
     matchEventTrigger(
       state,
       source,
-      { type: "lifeRemoved", players: ["self"] },
+      { type: "lifeRemoved", players: ["self"], destination: "hand" },
       lifeRemoved,
     ),
     { matched: true, triggerTypes: ["lifeRemoved"] },
+  );
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      { type: "lifeRemoved", players: ["self"], destination: "trash" },
+      lifeRemoved,
+    ),
+    { matched: false, triggerTypes: [] },
   );
   for (const event of [eventActivated, triggerActivated, blockerActivated]) {
     assert.deepEqual(

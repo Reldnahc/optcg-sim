@@ -51,7 +51,7 @@ export type Trigger =
   | { type: "trigger" }
   | { type: "anyOf"; triggers: Trigger[] }
   | { type: "damageDealt"; players: PlayerRef[] }
-  | { type: "lifeRemoved"; players: PlayerRef[] }
+  | { type: "lifeRemoved"; players: PlayerRef[]; destination?: Zone }
   | {
       type: "fieldRemoved";
       target?: "self" | "any";
@@ -80,7 +80,12 @@ export type Trigger =
       sourceController?: PlayerRef;
       sourceKind?: "effect" | "any";
     }
-  | { type: "donReturned"; player: PlayerRef }
+  | {
+      type: "donReturned";
+      player: PlayerRef;
+      sourceController?: PlayerRef;
+      sourceKind?: "effect" | "any";
+    }
   | {
       type: "donAttached";
       player: PlayerRef;
@@ -115,7 +120,11 @@ export type Trigger =
       player: PlayerRef;
       sourceFilter?: CardFilter;
     }
-  | { type: "handTrashedByEffect"; player: PlayerRef }
+  | {
+      type: "handTrashedByEffect";
+      player: PlayerRef;
+      sourceFilter?: CardFilter;
+    }
   | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }
   | { type: "activateMain" }

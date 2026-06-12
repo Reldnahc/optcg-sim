@@ -266,7 +266,11 @@ export const createSupportedTrashFromHandChoiceDecision = (
       visibility,
     })),
     runtime: {
-      trashFromHand: { triggerSource: options.triggerSource ?? "effect" },
+      trashFromHand: {
+        triggerSource: options.triggerSource ?? "effect",
+        sourceCardId: entry.source.cardId,
+        sourceCategory: entry.sourceSnapshot.category,
+      },
     },
   };
 
@@ -457,7 +461,13 @@ export const applySupportedTrashFromHandChoiceResponse = (
     cardMovedPayloadShape: "publicZoneNames",
     cardMovedVisibility: { type: "public" },
     ...(decision.runtime?.trashFromHand?.triggerSource === "effect"
-      ? { cardTrashedPayloadExtra: { triggerSource: "effect" } }
+      ? {
+          cardTrashedPayloadExtra: {
+            triggerSource: "effect",
+            sourceCardId: decision.runtime.trashFromHand.sourceCardId,
+            sourceCategory: decision.runtime.trashFromHand.sourceCategory,
+          },
+        }
       : {}),
     cardTrashedVisibility: { type: "public" },
     causedBy: { type: "decision", decisionId: decision.id },

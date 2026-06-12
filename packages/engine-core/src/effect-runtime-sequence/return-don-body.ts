@@ -66,6 +66,7 @@ export const resumeSequenceFrameAfterReturnDonBody = (
   }
   const resolved = applySelectedReturnDonSegment(
     state,
+    entry,
     playerId,
     pausedSegment as SupportedSequenceSegment & { effect: ReturnDonEffect },
     frame.pendingDecision.resumeAtSegmentIndex,

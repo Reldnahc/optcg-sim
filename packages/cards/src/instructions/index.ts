@@ -56,6 +56,7 @@ export {
   parseRestOpponentDonCardsInstruction,
   parseRestOpponentLeaderOrCharactersInstruction,
   parseRestOpponentCharactersInstruction,
+  parseRestThisCharacterInstruction,
   parseRestThisCharacterAndOpponentCharactersInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   selectedAttackRetargetExpressionParser,

@@ -65,6 +65,9 @@ export const isSupportedActivatedReactionEffect = (
   isSupportedSequenceBlock(syntheticActivatedReactionQueueEntry, effect);
 
 const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
+  if (trigger.type === "anyOf") {
+    return trigger.triggers.every(isSupportedActivatedReactionTrigger);
+  }
   if (trigger.type === "lifeRemoved") {
     return true;
   }
@@ -83,12 +86,7 @@ const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
   }
   if (trigger.type === "fieldRemoved") {
     return (
-      trigger.target !== "self" &&
-      trigger.sourceController === undefined &&
-      (trigger.sourceKind === undefined ||
-        trigger.sourceKind === "any" ||
-        trigger.sourceKind === "ko") &&
-      isSupportedEventCardFilter(trigger.filter)
+      trigger.target !== "self" && isSupportedEventCardFilter(trigger.filter)
     );
   }
   return false;
@@ -227,22 +225,26 @@ const activatedReactionEventsForSource = (
   effect: EffectDefinition["effects"][number],
 ): EngineEvent[] => {
   const trigger = effect.trigger;
+  const acceptsTriggerType = (type: Trigger["type"]): boolean =>
+    trigger.type === type ||
+    (trigger.type === "anyOf" &&
+      trigger.triggers.some((child) => child.type === type));
   const candidateEvents = state.eventJournal.filter((event) => {
-    if (trigger.type === "lifeRemoved") {
+    if (acceptsTriggerType("lifeRemoved")) {
       return isOpenLifeRemovedEvent(state, event);
     }
-    if (trigger.type === "onOpponentAttack") {
+    if (acceptsTriggerType("onOpponentAttack")) {
       return (
         event.type === "attackDeclared" && isRecentRuntimeEvent(state, event)
       );
     }
-    if (trigger.type === "opponentActivated") {
+    if (acceptsTriggerType("opponentActivated")) {
       return isRecentRuntimeEvent(state, event);
     }
-    if (trigger.type === "cardPlayed") {
+    if (acceptsTriggerType("cardPlayed")) {
       return event.type === "cardPlayed" && isRecentRuntimeEvent(state, event);
     }
-    if (trigger.type === "fieldRemoved") {
+    if (acceptsTriggerType("fieldRemoved")) {
       return event.type === "cardMoved" && isRecentRuntimeEvent(state, event);
     }
     return false;

@@ -10,9 +10,13 @@ import type { ExpressionParseResult, ParseInput } from "../types.js";
 import type { SourceSlice } from "../source-slices.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 
-const lifeRemovedTrigger = (players: PlayerRef[]): Trigger => ({
+const lifeRemovedTrigger = (
+  players: PlayerRef[],
+  destination?: Extract<Trigger, { type: "lifeRemoved" }>["destination"],
+): Trigger => ({
   type: "lifeRemoved",
   players,
+  ...(destination === undefined ? {} : { destination }),
 });
 
 const damageDealtTrigger = (players: PlayerRef[]): Trigger => ({
@@ -27,10 +31,49 @@ const anyOfTrigger = (triggers: readonly Trigger[]): Trigger => {
     : { type: "anyOf", triggers: [...triggers] };
 };
 
-const handTrashedByEffectTrigger = (): Trigger => ({
+const handTrashedByEffectTrigger = (
+  sourceFilter?: Extract<
+    Trigger,
+    { type: "handTrashedByEffect" }
+  >["sourceFilter"],
+): Trigger => ({
   type: "handTrashedByEffect",
   player: "self",
+  ...(sourceFilter === undefined ? {} : { sourceFilter }),
 });
+
+const triggerActivatedForBothPlayers = (): Trigger =>
+  anyOfTrigger([
+    { type: "triggerActivated", player: "self" },
+    { type: "triggerActivated", player: "opponent" },
+  ]);
+
+const characterFieldRemovedForBothPlayers = (params: {
+  readonly sourceController?: PlayerRef;
+  readonly sourceKind: NonNullable<
+    Extract<Trigger, { type: "fieldRemoved" }>["sourceKind"]
+  >;
+}): Trigger =>
+  anyOfTrigger([
+    {
+      type: "fieldRemoved",
+      player: "self",
+      filter: { categories: ["character"] },
+      sourceKind: params.sourceKind,
+      ...(params.sourceController === undefined
+        ? {}
+        : { sourceController: params.sourceController }),
+    },
+    {
+      type: "fieldRemoved",
+      player: "opponent",
+      filter: { categories: ["character"] },
+      sourceKind: params.sourceKind,
+      ...(params.sourceController === undefined
+        ? {}
+        : { sourceController: params.sourceController }),
+    },
+  ]);
 
 const opponentEventOrBlockerActivatedTrigger = (): Trigger => ({
   type: "opponentActivated",
@@ -201,16 +244,15 @@ const activatedReactionPredicate = (
     /^a Character is removed from the field by your effect$/iu.exec(normalized);
   if (removedByYourEffect !== null) {
     return {
-      trigger: {
-        type: "fieldRemoved",
-        player: "self",
-        filter: { categories: ["character"] },
+      trigger: characterFieldRemovedForBothPlayers({
         sourceController: "self",
         sourceKind: "effect",
-      },
+      }),
       evidence: [
         "trigger:fieldRemoved",
         "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
         "filter:category:character",
       ],
     };
@@ -357,6 +399,50 @@ const implicitReactionPredicate = (
     };
   }
 
+  if (normalized.toLowerCase() === "a character is k.o.'d") {
+    return {
+      trigger: characterFieldRemovedForBothPlayers({ sourceKind: "ko" }),
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+        "filter:category:character",
+      ],
+    };
+  }
+
+  if (normalized.toLowerCase() === "a [trigger] activates") {
+    return {
+      trigger: triggerActivatedForBothPlayers(),
+      evidence: [
+        "activation:trigger",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+      ],
+    };
+  }
+
+  if (
+    normalized.toLowerCase() ===
+    "a character is removed from the field by your effect"
+  ) {
+    return {
+      trigger: characterFieldRemovedForBothPlayers({
+        sourceController: "self",
+        sourceKind: "effect",
+      }),
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+        "filter:category:character",
+      ],
+    };
+  }
+
   const yourTypedKOD = /^your (?<filter>.+) is K\.O\.'d$/iu.exec(normalized);
   const yourTypedFilter = yourTypedKOD?.groups?.["filter"];
   if (
@@ -416,13 +502,53 @@ const implicitReactionPredicate = (
     };
   }
 
+  const donReturned =
+    /^a DON!! card on (?:your|the) field is returned to your DON!! deck(?<byYourEffect> by your effect)?$/iu.exec(
+      normalized,
+    );
+  if (donReturned !== null) {
+    const byYourEffect = donReturned.groups?.["byYourEffect"] !== undefined;
+    return {
+      trigger: {
+        type: "donReturned",
+        player: "self",
+        ...(byYourEffect
+          ? {
+              sourceController: "self" as const,
+              sourceKind: "effect" as const,
+            }
+          : {}),
+      },
+      evidence: [
+        "trigger:donReturned",
+        "player:self",
+        ...(byYourEffect
+          ? (["player:self", "replacementSource:cardEffect"] as const)
+          : []),
+      ],
+    };
+  }
+
   if (
-    normalized.toLowerCase() ===
-    "a don!! card on your field is returned to your don!! deck"
+    normalized.toLowerCase() === "a card is added to your hand from your life"
   ) {
     return {
-      trigger: { type: "donReturned", player: "self" },
-      evidence: ["trigger:donReturned", "player:self"],
+      trigger: lifeRemovedTrigger(["self"], "hand"),
+      evidence: ["trigger:lifeRemoved", "player:self", "destination:hand"],
+    };
+  }
+
+  const lifeRemoved =
+    /^a card is removed from (?<player>your|your opponent's) Life cards$/iu.exec(
+      normalized,
+    );
+  const lifeRemovedPlayer = lifeRemoved?.groups?.["player"];
+  if (lifeRemovedPlayer !== undefined) {
+    const player =
+      lifeRemovedPlayer.toLowerCase() === "your" ? "self" : "opponent";
+    return {
+      trigger: lifeRemovedTrigger([player]),
+      evidence: ["trigger:lifeRemoved", `player:${player}`],
     };
   }
 
@@ -779,13 +905,19 @@ export function handTrashedByEffectReactionExpressionParser(options: {
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
     const match =
-      /^When a card is trashed from your hand by an effect,\s*(?<body>.+)$/iu.exec(
+      /^When a card is trashed from your hand by (?:(?:an effect)|(?:your \{(?<type>[^}]+)\} type card's effect)),\s*(?<body>.+)$/iu.exec(
         input.text,
       );
-    const body = match?.groups?.["body"];
+    if (match === null) {
+      return undefined;
+    }
+    const body = match.groups?.["body"];
     if (body === undefined) {
       return undefined;
     }
+    const sourceType = match.groups?.["type"];
+    const sourceFilter =
+      sourceType === undefined ? undefined : { typesAny: [sourceType] };
 
     for (const expressionParser of options.expressions) {
       const parsed = parseReactionBody(expressionParser, input, body);
@@ -799,13 +931,14 @@ export function handTrashedByEffectReactionExpressionParser(options: {
           "zone:hand",
           "destination:trash",
           "player:self",
+          ...(sourceType === undefined ? [] : (["filter:type"] as const)),
           ...parsed.evidence,
         ],
         rest: "",
         blockPatch: {
           ...parsed.blockPatch,
           category: "auto",
-          trigger: handTrashedByEffectTrigger(),
+          trigger: handTrashedByEffectTrigger(sourceFilter),
         },
         ...(parsed.presentationSpans === undefined
           ? {}

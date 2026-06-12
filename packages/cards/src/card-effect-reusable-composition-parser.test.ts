@@ -292,16 +292,29 @@ describe("card effect reusable parser compositions", () => {
       block: {
         category: "activate",
         trigger: {
-          type: "fieldRemoved",
-          player: "self",
-          filter: { categories: ["character"] },
-          sourceController: "self",
-          sourceKind: "effect",
+          type: "anyOf",
+          triggers: [
+            {
+              type: "fieldRemoved",
+              player: "self",
+              filter: { categories: ["character"] },
+              sourceController: "self",
+              sourceKind: "effect",
+            },
+            {
+              type: "fieldRemoved",
+              player: "opponent",
+              filter: { categories: ["character"] },
+              sourceController: "self",
+              sourceKind: "effect",
+            },
+          ],
         },
         condition: { type: "yourTurn" },
       },
     });
     expect(result?.evidence).toContain("trigger:fieldRemoved");
+    expect(result?.evidence).toContain("composition:triggerAnyOf");
   });
 
   it("parses opponent-caused field-removal activated reactions as reusable predicates", () => {

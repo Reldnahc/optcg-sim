@@ -134,6 +134,7 @@ export const applyNoOpReturnDonSegment = (
 
 export const applySelectedReturnDonSegment = (
   state: GameState,
+  entry: EffectQueueEntry,
   playerId: PlayerId,
   segment: SupportedSequenceSegment & { effect: ReturnDonEffect },
   index: number,
@@ -200,7 +201,13 @@ export const applySelectedReturnDonSegment = (
       nextState,
       events,
       "donReturned",
-      { playerId, donInstanceId, state: "donDeck" },
+      {
+        playerId,
+        donInstanceId,
+        state: "donDeck",
+        sourceControllerId: entry.controllerId,
+        sourceKind: "effect",
+      },
       { type: "public" },
     );
   });

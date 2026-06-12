@@ -1,13 +1,14 @@
 import type {
   DecisionId,
   EffectId,
+  CardId,
   InstanceId,
   PlayerRef,
   PlayerId,
   QueueEntryId,
   Zone,
 } from "./primitives.js";
-import type { CardRef } from "./card-metadata.js";
+import type { CardCategory, CardRef } from "./card-metadata.js";
 import type { CausalityRef, EventVisibility } from "./events.js";
 import type {
   Cardinality,
@@ -196,6 +197,8 @@ export interface SelectCardsDecision extends BaseDecision {
     };
     trashFromHand?: {
       triggerSource: "effect" | "cost";
+      sourceCardId?: CardId;
+      sourceCategory?: CardCategory;
     };
     attackCost?: {
       attacker: CardRef;

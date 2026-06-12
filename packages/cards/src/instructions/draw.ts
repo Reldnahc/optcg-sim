@@ -25,6 +25,19 @@ export const drawPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
           rest: "",
         }),
       },
+      {
+        id: "draw-per-trigger-hand-trash",
+        pattern: /^Draw cards equal to the number of cards trashed\.?$/i,
+        build: () => ({
+          effect: {
+            type: "draw",
+            count: 1,
+            player: "self",
+          },
+          evidence: ["instruction:draw", "player:self"],
+          rest: "",
+        }),
+      },
     ],
   };
 

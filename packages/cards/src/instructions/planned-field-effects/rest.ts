@@ -50,6 +50,11 @@ export const restThisCharacterAndOpponentCharactersPrimitive = {
   ],
 } as const;
 
+export const restThisCharacterPrimitive = {
+  primitiveId: "instruction:rest",
+  childPrimitiveIds: ["target:thisCharacter"],
+} as const;
+
 export const parseRestOpponentCharactersInstruction: InstructionParser = (
   input,
 ) => {
@@ -156,6 +161,21 @@ export const parseRestThisCharacterAndOpponentCharactersInstruction: Instruction
       rest: "",
     };
   };
+
+export const parseRestThisCharacterInstruction: InstructionParser = (input) => {
+  if (!/^Rest this Character\.?$/iu.test(input.text)) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "rest",
+      target: { type: "self" },
+    },
+    evidence: ["instruction:rest", "target:thisCharacter"],
+    rest: "",
+  };
+};
 
 export const parseRestOpponentCharactersOrDonCardsInstruction: InstructionParser =
   (input) => {

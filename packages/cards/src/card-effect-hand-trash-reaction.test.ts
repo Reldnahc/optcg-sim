@@ -31,6 +31,31 @@ describe("hand-trash reaction parser", () => {
     );
   });
 
+  it("parses source-filtered hand-trash reactions without binding the trigger to the draw body", () => {
+    const result = parseCardEffectLine(
+      "When a card is trashed from your hand by your {Navy} type card's effect, draw cards equal to the number of cards trashed.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "handTrashedByEffect",
+          player: "self",
+          sourceFilter: { typesAny: ["Navy"] },
+        },
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:handTrashedByEffect",
+        "filter:type",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("parses end-of-turn trash-until-hand-count as its own body primitive", () => {
     const result = parseCardEffectLine(
       "[End of Your Turn] Trash cards from your hand until you have 5 cards in your hand.",
