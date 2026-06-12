@@ -261,9 +261,13 @@ describe("playmat structure", () => {
     assert.match(effectSpotlightStyles, /left:\s*4%;/u);
     assert.match(effectSpotlightStyles, /min-height:\s*26%;/u);
     assert.match(effectSpotlightStyles, /max-height:\s*31%;/u);
-    assert.match(effectSpotlightStyles, /align-content:\s*start;/u);
+    assert.match(effectSpotlightStyles, /display:\s*flex;/u);
+    assert.match(effectSpotlightStyles, /flex-direction:\s*column;/u);
     assert.match(effectSpotlightStyles, /align-items:\s*start;/u);
-    assert.match(effectSpotlightStyles, /justify-items:\s*start;/u);
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card__trigger-rules\s*\{[^}]*margin-top:\s*auto;/u,
+    );
     assert.match(
       effectSpotlightStyles,
       /background:\s*rgba\(246,\s*238,\s*224,\s*0\.9\);/u,
