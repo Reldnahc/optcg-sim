@@ -688,6 +688,153 @@ describe("card effect line parser search effects", () => {
     );
   });
 
+  it("parses private top-of-deck search with top-or-bottom remainder", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 3 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the top or bottom of the deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 3 } },
+            { effect: { type: "selectFromSet", filter: {}, max: 1 } },
+            { effect: { type: "moveSelected", to: "hand" } },
+            {
+              effect: {
+                type: "placeSetRemainder",
+                destination: "deck",
+                position: "topOrBottom",
+                order: "chooser",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:moveSelected",
+        "instruction:placeSetRemainder",
+        "reveal:chooserOnly",
+        "remaining:bottomDeck",
+        "position:top",
+        "position:bottom",
+      ]),
+    );
+  });
+
+  it("parses top-deck placement when printed text says the deck", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 5 cards from the top of your deck and place them at the top or bottom of the deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "placeTopDeckCards",
+          player: "self",
+          count: 5,
+          destination: "topOrBottom",
+          order: "ownerChoice",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:placeTopDeckCards",
+        "look:topDeck",
+        "position:top",
+        "position:bottom",
+      ]),
+    );
+  });
+
+  it("parses public search with three comma-separated type alternatives", () => {
+    const result = parseCardEffectLine(
+      "[Main] Look at 3 cards from the top of your deck; reveal up to 1 {Straw Hat Crew}, {Kid Pirates}, or {Heart Pirates} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 3 } },
+            {
+              effect: {
+                type: "selectFromSet",
+                filter: {
+                  typesAny: ["Straw Hat Crew", "Kid Pirates", "Heart Pirates"],
+                },
+              },
+            },
+            { effect: { type: "revealSelected" } },
+            { effect: { type: "moveSelected", to: "hand" } },
+            { effect: { type: "placeSetRemainder", position: "bottom" } },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "filter:type",
+        "instruction:placeSetRemainder",
+      ]),
+    );
+  });
+
+  it("parses search remainder followed by named play from hand", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 [Holly] and add it to your hand. Then, place the rest at the bottom of your deck in any order and play up to 1 [Holly] from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 5 } },
+            { effect: { type: "selectFromSet", filter: { names: ["Holly"] } } },
+            { effect: { type: "revealSelected" } },
+            { effect: { type: "moveSelected", to: "hand" } },
+            { effect: { type: "placeSetRemainder", position: "bottom" } },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      filter: { names: ["Holly"] },
+                    },
+                  },
+                  { effect: { type: "playSelected" } },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "filter:name",
+        "instruction:playSelected",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
+
   it("parses rules text plus start-of-game stage play as separate primitives", () => {
     const result = parseCardEffectLine(
       "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",

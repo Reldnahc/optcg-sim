@@ -32,7 +32,11 @@ const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
     zone: { zone: "hand", playerId: p1, slot: "hand", index },
   }));
 
-const lookedSetPlaySequence = (): Extract<Effect, { type: "sequence" }> => {
+const lookedSetPlaySequence = ({
+  remainderPosition = "bottom",
+}: {
+  readonly remainderPosition?: "bottom" | "topOrBottom";
+} = {}): Extract<Effect, { type: "sequence" }> => {
   const lookedSet = "set:looked-play-candidates" as SelectionSetId;
   const selected = "revealSelection:play-from-looked-set" as SelectionId;
   return {
@@ -84,7 +88,7 @@ const lookedSetPlaySequence = (): Extract<Effect, { type: "sequence" }> => {
           set: lookedSet,
           owner: "self",
           destination: "deck",
-          position: "bottom",
+          position: remainderPosition,
           order: "chooser",
         },
       },
@@ -332,6 +336,60 @@ test("looked-set playSelected plays selected deck cards and bottoms only the rem
   );
   assert.deepEqual(
     finalPlayer.deck.slice(-3).map((card) => card.instanceId),
+    expectedRemainder.map((card) => card.instanceId).reverse(),
+  );
+});
+
+test("looked-set remainder can be placed at the top or bottom of the deck", () => {
+  const state = sequenceQueueState(
+    lookedSetPlaySequence({ remainderPosition: "topOrBottom" }),
+  );
+  const topDeck = markTopDeckCharactersSupported(state, 5);
+  const selected = topDeck.slice(0, 2);
+  const expectedRemainder = topDeck.slice(2, 5);
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const selection = must(paused.state.pendingDecision, "selection");
+  assert.equal(selection.type, "selectCards");
+
+  const played = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selection.id,
+    response: {
+      type: "cards",
+      cards: selected.map((card) => ({
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        playerId: p1,
+        zone: card.zone,
+      })),
+    },
+  });
+  assert.equal(played.errors, undefined);
+  const placement = must(played.state.pendingDecision, "remainder placement");
+  assert.equal(placement.type, "orderCards");
+  assert.deepEqual(placement.placement, { type: "topOrBottom" });
+  assert.deepEqual(
+    placement.cards.map((card) => card.instanceId),
+    expectedRemainder.map((card) => card.instanceId),
+  );
+
+  const placed = applyAction(played.state, {
+    type: "respondToDecision",
+    decisionId: placement.id,
+    response: {
+      type: "topBottomPlacement",
+      topIds: placement.cards.map((card) => String(card.instanceId)).reverse(),
+      bottomIds: [],
+    },
+  });
+  assert.equal(placed.errors, undefined);
+  assert.equal(placed.state.pendingDecision, undefined);
+  assert.deepEqual(placed.state.effectQueue, []);
+  const finalPlayer = must(placed.state.players[p1], "p1 final");
+  assert.deepEqual(
+    finalPlayer.deck.slice(0, 3).map((card) => card.instanceId),
     expectedRemainder.map((card) => card.instanceId).reverse(),
   );
 });

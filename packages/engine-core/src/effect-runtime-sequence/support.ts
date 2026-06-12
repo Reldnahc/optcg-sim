@@ -428,7 +428,8 @@ export const toSupportedSequenceBlock = (
         }
         if (
           segment.effect.order === "chooser" &&
-          segment.effect.position !== "bottom"
+          segment.effect.position !== "bottom" &&
+          segment.effect.position !== "topOrBottom"
         ) {
           return false;
         }

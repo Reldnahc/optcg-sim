@@ -7,6 +7,8 @@ import {
   type PredicateParser,
 } from "./types.js";
 
+const multiBraceTypesPattern = String.raw`\{[^}]+\}(?:(?:\s*,\s*)|(?:\s*,?\s+or\s+))\{[^}]+\}(?:(?:\s*,\s*)|(?:\s*,?\s+or\s+)\{[^}]+\})*`;
+
 export const parseTypeLeaderOrCharacterPredicate: PredicateParser = (
   text,
   current,
@@ -79,10 +81,10 @@ export const parseMultiTypeLeaderOrCharacterPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match =
-    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+Leader (?:or|and) Character cards?\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<types>${multiBraceTypesPattern})\\s+type\\s+Leader (?:or|and) Character cards?\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const typeNames = parseBraceNameList(match?.groups?.["types"]);
   if (typeNames.length < 2) {
     return undefined;
@@ -244,10 +246,10 @@ export const parseQuotedTypeIncludingPredicate: PredicateParser = (
 };
 
 export const parseMultiTypePredicate: PredicateParser = (text, current) => {
-  const match =
-    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<types>${multiBraceTypesPattern})\\s+type\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const typeNames = parseBraceNameList(match?.groups?.["types"]);
   if (typeNames.length < 2) {
     return undefined;
@@ -338,10 +340,10 @@ export const parseMultiTypeCategoryPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match =
-    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+(?<category>Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<types>${multiBraceTypesPattern})\\s+type\\s+(?<category>Character|Stage|Event)(?: cards?|s)?\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const categoryText = match?.groups?.["category"];
   const typeNames = parseBraceNameList(match?.groups?.["types"]);
   if (typeNames.length < 2 || categoryText === undefined) {
@@ -363,10 +365,10 @@ export const parseMultiTypeCategoryPredicate: PredicateParser = (
 };
 
 export const parseMultiTypeCardPredicate: PredicateParser = (text, current) => {
-  const match =
-    /^(?<types>\{[^}]+\}(?:\s+or\s+\{[^}]+\})+)\s+type\s+card\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<types>${multiBraceTypesPattern})\\s+type\\s+card\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const typeNames = parseBraceNameList(match?.groups?.["types"]);
   if (typeNames.length < 2) {
     return undefined;
@@ -383,6 +385,6 @@ const parseBraceNameList = (text: string | undefined): string[] =>
   text === undefined
     ? []
     : text
-        .split(/\s+or\s+/i)
+        .split(/\s*,\s*(?:or\s+)?|\s+or\s+/i)
         .map(parseBraceName)
         .filter((name): name is string => name !== undefined);

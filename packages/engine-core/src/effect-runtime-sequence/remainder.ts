@@ -115,8 +115,9 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
     effect.owner !== "self" ||
     !(
       (effect.destination === "deck" &&
-        (effect.position === "bottom" || effect.position === "top") &&
-        (effect.order === "chooser" || effect.order === "original")) ||
+        (((effect.position === "bottom" || effect.position === "top") &&
+          (effect.order === "chooser" || effect.order === "original")) ||
+          (effect.position === "topOrBottom" && effect.order === "chooser"))) ||
       (effect.destination === "trash" &&
         effect.position === "bottom" &&
         effect.order === "original")
@@ -200,7 +201,10 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
       },
     };
   }
-  if (effect.order === "original" || current.remainder.length === 1) {
+  if (
+    effect.position !== "topOrBottom" &&
+    (effect.order === "original" || current.remainder.length === 1)
+  ) {
     const moved = placeOrderedCardsOnDeck(
       params.state,
       params.entry.controllerId,
@@ -231,6 +235,9 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
     })),
     decisionId: `${placeSetRemainderOrderPrefix}${String(params.entry.id)}:${String(params.index)}`,
     effectId: params.entry.effectBlockId,
+    ...(effect.position === "topOrBottom"
+      ? { placement: { type: "topOrBottom" as const } }
+      : {}),
     playerId: params.entry.controllerId,
     queueEntryId: params.entry.id,
   });
@@ -288,11 +295,102 @@ export const applyPlaceSetRemainderOrderResponse = (
   }
   const fail = (reason: string): EngineResult =>
     toEngineResult(state, [], invalidDecision(reason));
+  const expectedIds = decision.cards.map((card) => String(card.instanceId));
+  if (decision.placement?.type === "topOrBottom") {
+    if (action.response.type !== "topBottomPlacement") {
+      return fail(
+        "Response type must be topBottomPlacement for set remainder placement.",
+      );
+    }
+    const topIds = action.response.topIds;
+    const bottomIds = action.response.bottomIds;
+    const placedOnTop = topIds.length === expectedIds.length;
+    const placedOnBottom = bottomIds.length === expectedIds.length;
+    if (!placedOnTop && !placedOnBottom) {
+      return fail(
+        "Remaining cards must all be placed on top or all on bottom.",
+      );
+    }
+    const responseIds = [...topIds, ...bottomIds];
+    if (
+      new Set(responseIds).size !== responseIds.length ||
+      responseIds.length !== expectedIds.length ||
+      !responseIds.every((id) => expectedIds.includes(id))
+    ) {
+      return fail("Top and bottom ids must partition the remaining set cards.");
+    }
+    const player = state.players[decision.playerId];
+    if (player === undefined) {
+      return fail("Set remainder order player is missing.");
+    }
+    const activeDeckCards = activeDeckCardsForOrder(
+      state,
+      decision.playerId,
+      decision.cards,
+    );
+    if (activeDeckCards === null) {
+      return fail("Set remainder order cards are stale or unsupported.");
+    }
+    const orderedCards = orderedDeckCardsFromIds(
+      activeDeckCards,
+      placedOnTop ? topIds : bottomIds,
+    );
+    const moved = placeOrderedCardsOnDeck(
+      state,
+      decision.playerId,
+      orderedCards,
+      placedOnTop ? "top" : "bottom",
+    );
+    if (moved === null) {
+      return fail("Set remainder order player is missing.");
+    }
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionResolved",
+      {
+        decisionId: decision.id,
+        decisionType: decision.type,
+        playerId: decision.playerId,
+        responseType: action.response.type,
+        orderedCount: responseIds.length,
+      },
+      decision.visibility,
+    );
+    const resolved = events[0];
+    if (resolved !== undefined) {
+      resolved.causedBy = { type: "decision", decisionId: decision.id };
+    }
+    const orderedIdSet = new Set(expectedIds);
+    const revealToClear = moved.revealedCards.find((record) =>
+      expectedIds.every((id) =>
+        record.cards.some((card) => String(card.instanceId) === id),
+      ),
+    );
+    const nextState: GameState = {
+      ...moved,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq + 1,
+      revealedCards:
+        revealToClear === undefined
+          ? moved.revealedCards
+          : moved.revealedCards.filter(
+              (record) =>
+                record.id !== revealToClear.id ||
+                !record.cards.some((card) =>
+                  orderedIdSet.has(String(card.instanceId)),
+                ),
+            ),
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    delete nextState.pendingDecision;
+    return toEngineResult(nextState, events);
+  }
   if (action.response.type !== "orderedIds") {
     return fail("Response type must be orderedIds for set remainder order.");
   }
   const responseIds = (action.response as { ids?: unknown }).ids;
-  const expectedIds = decision.cards.map((card) => String(card.instanceId));
   const orderedIds = orderedIdsFromResponse(responseIds, expectedIds);
   if (orderedIds === null) {
     return fail("Ordered ids must match the remaining set cards.");

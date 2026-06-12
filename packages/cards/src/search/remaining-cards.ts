@@ -4,7 +4,7 @@ export interface RestBottomParseResult {
   readonly evidence: readonly PrimitiveEvidence[];
   readonly remainingCards: {
     readonly destination: "deck";
-    readonly position: "bottom";
+    readonly position: "bottom" | "topOrBottom";
     readonly order: "ownerChoice";
   };
   readonly rest: string;
@@ -22,7 +22,7 @@ export function parseRestToBottomAnyOrder(
   input: ParseInput,
 ): RestBottomParseResult | undefined {
   const match =
-    /^Then, place the rest at the bottom of your deck in any order(?:\.|,\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
+    /^Then, place the rest at the bottom of your deck in any order(?:\.|,?\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
       input.text,
     );
   if (match === null) {
@@ -34,6 +34,34 @@ export function parseRestToBottomAnyOrder(
     remainingCards: {
       destination: "deck",
       position: "bottom",
+      order: "ownerChoice",
+    },
+    rest: match.groups?.["rest"] ?? match.groups?.["thenRest"] ?? "",
+  };
+}
+
+export function parseRestToTopOrBottomAnyOrder(
+  input: ParseInput,
+): RestBottomParseResult | undefined {
+  const match =
+    /^Then, place the rest at the top or bottom of (?:your|the) deck in any order(?:\.|,?\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
+      input.text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    evidence: [
+      "remaining:rest",
+      "remaining:bottomDeck",
+      "position:top",
+      "position:bottom",
+      "order:anyOrder",
+    ],
+    remainingCards: {
+      destination: "deck",
+      position: "topOrBottom",
       order: "ownerChoice",
     },
     rest: match.groups?.["rest"] ?? match.groups?.["thenRest"] ?? "",

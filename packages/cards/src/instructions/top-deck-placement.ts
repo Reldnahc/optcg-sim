@@ -43,14 +43,18 @@ const parsePlacementText = (
     }
   | undefined => {
   if (
-    /^place them at the top or bottom of your deck in any order\.?$/i.test(text)
+    /^place them at the top or bottom of (?:your|the) deck in any order\.?$/i.test(
+      text,
+    )
   ) {
     return {
       destination: "topOrBottom",
       evidence: ["position:top", "position:bottom"],
     };
   }
-  if (/^place them at the top of your deck in any order\.?$/i.test(text)) {
+  if (
+    /^place them at the top of (?:your|the) deck in any order\.?$/i.test(text)
+  ) {
     return { destination: "top", evidence: ["position:top"] };
   }
   return undefined;

@@ -191,8 +191,9 @@ export const isSupportedPlaceSetRemainderSegment = (
   effect.type === "placeSetRemainder" &&
   effect.owner === "self" &&
   ((effect.destination === "deck" &&
-    (effect.position === "bottom" || effect.position === "top") &&
-    (effect.order === "chooser" || effect.order === "original")) ||
+    (((effect.position === "bottom" || effect.position === "top") &&
+      (effect.order === "chooser" || effect.order === "original")) ||
+      (effect.position === "topOrBottom" && effect.order === "chooser"))) ||
     (effect.destination === "trash" &&
       effect.position === "bottom" &&
       effect.order === "original"));

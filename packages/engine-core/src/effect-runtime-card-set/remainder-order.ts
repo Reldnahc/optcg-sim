@@ -109,6 +109,7 @@ export const createRemainingCardsOrderDecision = (params: {
   cards: readonly CardRef[];
   decisionId: string;
   effectId: EffectQueueEntry["effectBlockId"];
+  placement?: OrderCardsDecision["placement"];
   playerId: PlayerId;
   queueEntryId: EffectQueueEntry["id"];
 }): OrderCardsDecision => ({
@@ -124,8 +125,13 @@ export const createRemainingCardsOrderDecision = (params: {
   visibility: { type: "private", playerId: params.playerId },
   cards: params.cards.map((card) => ({ ...card })),
   destination: "deck",
-  defaultResponse: {
-    type: "orderedIds",
-    ids: params.cards.map((card) => String(card.instanceId)),
-  },
+  ...(params.placement === undefined ? {} : { placement: params.placement }),
+  ...(params.placement === undefined
+    ? {
+        defaultResponse: {
+          type: "orderedIds" as const,
+          ids: params.cards.map((card) => String(card.instanceId)),
+        },
+      }
+    : {}),
 });

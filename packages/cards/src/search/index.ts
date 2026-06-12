@@ -6,6 +6,7 @@ export {
 } from "./reveal-to-hand.js";
 export {
   parseRestToBottomAnyOrder,
+  parseRestToTopOrBottomAnyOrder,
   parseRestToTrash,
 } from "./remaining-cards.js";
 export { parseStageTypeCardFilter } from "./stage-type-card-filter.js";

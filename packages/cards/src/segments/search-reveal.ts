@@ -13,6 +13,7 @@ import type {
 import {
   parseRestToTrash,
   parseRestToBottomAnyOrder,
+  parseRestToTopOrBottomAnyOrder,
   parseSearchSelectionToHand,
   parseTopDeckLook,
 } from "../search/index.js";
@@ -48,6 +49,7 @@ export function searchRevealExpressionParser(
 
   const remaining =
     parseRestToBottomAnyOrder({ text: reveal.rest }) ??
+    parseRestToTopOrBottomAnyOrder({ text: reveal.rest }) ??
     parseRestToTrash({ text: reveal.rest });
   if (remaining === undefined) {
     return undefined;
@@ -147,7 +149,7 @@ const createTopDeckSearchSequence = ({
     remaining.remainingCards.destination === "deck"
       ? {
           destination: "deck" as const,
-          position: "bottom" as const,
+          position: remaining.remainingCards.position,
           order: "chooser" as const,
         }
       : {

@@ -7,6 +7,7 @@ import {
 } from "./reveal-to-hand.js";
 import {
   parseRestToBottomAnyOrder,
+  parseRestToTopOrBottomAnyOrder,
   parseRestToTrash,
 } from "./remaining-cards.js";
 import { parseStageTypeCardFilter } from "./stage-type-card-filter.js";
@@ -230,6 +231,31 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses comma-separated multi-type generic card filters", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 {Straw Hat Crew}, {Kid Pirates}, or {Heart Pirates} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        typesAny: ["Straw Hat Crew", "Kid Pirates", "Heart Pirates"],
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:type",
+        "filter:type",
+        "filter:type",
+        "destination:hand",
+      ],
+    });
+  });
+
   it("parses generic card filters with cost predicates", () => {
     expect(
       parseSearchSelectionToHand({
@@ -336,6 +362,50 @@ describe("search reveal primitives", () => {
       remainingCards: {
         destination: "deck",
         position: "bottom",
+        order: "ownerChoice",
+      },
+      rest: "trash 1 card from your hand.",
+    });
+  });
+
+  it("parses rest-to-top-or-bottom remainder policy independently from search selection", () => {
+    expect(
+      parseRestToTopOrBottomAnyOrder({
+        text: "Then, place the rest at the top or bottom of the deck in any order.",
+      }),
+    ).toEqual({
+      evidence: [
+        "remaining:rest",
+        "remaining:bottomDeck",
+        "position:top",
+        "position:bottom",
+        "order:anyOrder",
+      ],
+      remainingCards: {
+        destination: "deck",
+        position: "topOrBottom",
+        order: "ownerChoice",
+      },
+      rest: "",
+    });
+  });
+
+  it("leaves trailing body text after rest-to-top-or-bottom remainder policy", () => {
+    expect(
+      parseRestToTopOrBottomAnyOrder({
+        text: "Then, place the rest at the top or bottom of your deck in any order, and trash 1 card from your hand.",
+      }),
+    ).toEqual({
+      evidence: [
+        "remaining:rest",
+        "remaining:bottomDeck",
+        "position:top",
+        "position:bottom",
+        "order:anyOrder",
+      ],
+      remainingCards: {
+        destination: "deck",
+        position: "topOrBottom",
         order: "ownerChoice",
       },
       rest: "trash 1 card from your hand.",
