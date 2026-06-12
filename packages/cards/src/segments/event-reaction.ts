@@ -416,6 +416,29 @@ const implicitReactionPredicate = (
     };
   }
 
+  const characterPlayed =
+    /^(?<player>you|your opponent) plays? (?<filter>.+? Character(?: card)?)$/iu.exec(
+      normalized,
+    );
+  const characterPlayedPlayer = characterPlayed?.groups?.["player"];
+  const characterPlayedFilter = characterPlayed?.groups?.["filter"];
+  if (
+    characterPlayedPlayer !== undefined &&
+    characterPlayedFilter !== undefined
+  ) {
+    const parsed = parseCharacterFilter(characterPlayedFilter);
+    const player =
+      characterPlayedPlayer.toLowerCase() === "you" ? "self" : "opponent";
+    return {
+      trigger: {
+        type: "cardPlayed",
+        player,
+        filter: parsed.filter,
+      },
+      evidence: ["trigger:cardPlayed", `player:${player}`, ...parsed.evidence],
+    };
+  }
+
   const yourTrashCardPlayed =
     /^(?:a|your) (?<filter>.+? Character(?: card)?) is played from your trash$/iu.exec(
       normalized,

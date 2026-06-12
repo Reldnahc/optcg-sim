@@ -144,6 +144,48 @@ describe("card effect reusable parser compositions", () => {
     );
   });
 
+  it("parses generic self character-played reactions independently from turn windows", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] When you play a Character, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "opponentTurn" },
+        trigger: {
+          type: "cardPlayed",
+          player: "self",
+          filter: { categories: ["character"] },
+        },
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:cardPlayed",
+        "player:self",
+        "filter:category:character",
+        "instruction:draw",
+      ]),
+    );
+
+    const opponentResult = parseCardEffectLine(
+      "When your opponent plays a Character, draw 1 card.",
+    );
+    expect(opponentResult).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "cardPlayed",
+          player: "opponent",
+          filter: { categories: ["character"] },
+        },
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+  });
+
   it("parses activated life-removed wording as an optional event reaction", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",
