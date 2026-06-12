@@ -479,6 +479,8 @@ export const createQueueEntryResolver = (
         resolvedEventBaseState,
         resolvedEvents,
         selected,
+        queuedEffectForBodyResolution,
+        nextState.cardManifest.cards[selected.source.cardId],
       );
       const resolvedEvent = resolvedEvents[0];
       if (resolvedEvent !== undefined) {

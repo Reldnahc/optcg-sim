@@ -353,6 +353,63 @@ test("canonical event matcher matches effectQueued entry point, category, and so
   );
 });
 
+test("canonical event matcher matches effectResolved entry point, category, status, and source filter evidence", () => {
+  const { source, state } = setupEventHookState();
+  const event = publicEvent(state, "effectResolved", {
+    queueEntryId: "queue-entry:1",
+    timingWindowId: "timing-window:1",
+    effectBlockId: "effect-1",
+    controllerId: source.controller,
+    sourceCardId: source.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onPlay" },
+    sourceTypes: ["Navy"],
+    sourceCategory: "leader",
+    status: "resolved",
+  });
+
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "effectResolved",
+        player: "self",
+        effectCategory: "auto",
+        effectEntryPoint: { type: "onPlay" },
+        sourceFilter: { typesAny: ["Navy"] },
+        status: "resolved",
+      },
+      event,
+    ),
+    { matched: true, triggerTypes: ["effectResolved"] },
+  );
+});
+
+test("canonical event matcher matches triggerActivated by player and trigger source filter evidence", () => {
+  const { source, state } = setupEventHookState();
+  const event = publicEvent(state, "triggerActivated", {
+    playerId: source.controller,
+    sourceCardId: source.cardId,
+    sourceTypes: ["Navy"],
+    sourceCategory: "leader",
+  });
+
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "triggerActivated",
+        player: "self",
+        sourceFilter: { typesAny: ["Navy"] },
+      },
+      event,
+    ),
+    { matched: true, triggerTypes: ["triggerActivated"] },
+  );
+});
+
 test("canonical event matcher matches lifeRemoved and opponentActivated event families", () => {
   const { source, state, character } = setupEventHookState();
   const lifeRemoved = publicEvent(state, "cardMoved", {
@@ -435,6 +492,8 @@ test("canonical event matcher rejects non-public events for public event hook tr
     { type: "cardRested", player: "self" },
     { type: "donReturned", player: "self" },
     { type: "effectQueued", player: "self" },
+    { type: "effectResolved", player: "self" },
+    { type: "triggerActivated", player: "self" },
   ];
   const events = hiddenVariants(state, "cardRested", {
     playerId: source.controller,

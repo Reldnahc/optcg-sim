@@ -376,6 +376,50 @@ test("effectQueued payload and queue metadata are deterministic across repeated 
   });
 });
 
+test("effectResolved payload carries canonical source and entry point evidence", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    played,
+    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
+    "def-resolved-canonical",
+  );
+  state.cardManifest.cards[played.cardId] = {
+    ...must(state.cardManifest.cards[played.cardId], "played card"),
+    types: ["Navy"],
+  };
+  const queued = processEffectRuntime(state);
+  const resolved = processEffectRuntime(queued.state);
+  const queuedEntry = must(queued.state.effectQueue[0], "queued entry");
+  const effectResolved = must(
+    resolved.events.find((event) => event.type === "effectResolved"),
+    "effectResolved event",
+  );
+
+  assert.deepEqual(effectResolved.payload, {
+    queueEntryId: queuedEntry.id,
+    timingWindowId: queuedEntry.timingWindowId,
+    generation: 0,
+    effectBlockId: queuedEntry.effectBlockId,
+    triggerEventId: "event:3:1:cardPlayed",
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "turnPlayer",
+    controllerId: p1,
+    source: queuedEntry.source,
+    sourceCardId: queuedEntry.source.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onPlay" },
+    sourceTypes: ["Navy"],
+    sourceCategory: "character",
+    presentation: queuedEntry.presentation,
+    status: "resolved",
+  });
+});
+
 test("no matching On Play effect leaves queue and events unchanged", () => {
   const { state, played } = queueingState();
   const baseCard = resolvedCard({

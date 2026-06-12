@@ -581,7 +581,11 @@ const applyActivatedTriggerResponse = (
       "triggerActivated",
       {
         playerId: decision.playerId,
+        source,
         card: source,
+        sourceCardId: source.cardId,
+        sourceTypes: supported.resolved.types,
+        sourceCategory: supported.resolved.category,
         revealId,
         effectBlockId: effect.id,
       },

@@ -111,6 +111,64 @@ const appendDonAttachedEvent = (
   });
 };
 
+const appendEffectResolvedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:effectResolved`),
+    seq: state.eventJournal.length + 1,
+    type: "effectResolved",
+    payload: {
+      queueEntryId: "queue-entry:resolved:test",
+      timingWindowId: "timing-window:resolved:test",
+      effectBlockId: "resolved-effect:test",
+      controllerId: source.controller,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: source.controller,
+        zone: source.zone,
+      },
+      sourceCardId: source.cardId,
+      effectCategory: "auto",
+      entryPoint: { type: "onPlay" },
+      sourceTypes: ["Navy"],
+      sourceCategory: "character",
+      status: "resolved",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "effect-resolved-reaction-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
+const appendTriggerActivatedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:triggerActivated`),
+    seq: state.eventJournal.length + 1,
+    type: "triggerActivated",
+    payload: {
+      playerId: source.controller,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: source.controller,
+        zone: source.zone,
+      },
+      sourceCardId: source.cardId,
+      sourceTypes: ["Navy"],
+      sourceCategory: "character",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "trigger-activated-reaction-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
 const setupCardPlayedReactionDefinition = (
   state: ReturnType<typeof createActiveState>,
   source: CardInstance,
@@ -382,6 +440,129 @@ const donAttachedReactionState = () => {
   return { source, state };
 };
 
+const setupEffectResolvedReactionDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): EffectDefinition => {
+  const effectDefinitionId = "def-effect-resolved-reaction";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "effect-resolved-reaction-rules",
+      sourceTextHash: "effect-resolved-reaction-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: "effect-resolved-draw" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        trigger: {
+          type: "effectResolved",
+          player: "self",
+          effectEntryPoint: { type: "onPlay" },
+          effectCategory: "auto",
+          sourceFilter: { typesAny: ["Navy"] },
+          status: "resolved",
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const effectResolvedReactionState = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "source"),
+    zone: "characterArea",
+  });
+  setupEffectResolvedReactionDefinition(state, source);
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source manifest card"),
+    types: ["Navy"],
+  };
+  appendEffectResolvedEvent(state, source);
+  return { source, state };
+};
+
+const setupTriggerActivatedReactionDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): EffectDefinition => {
+  const effectDefinitionId = "def-trigger-activated-reaction";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "trigger-activated-reaction-rules",
+      sourceTextHash: "trigger-activated-reaction-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: "trigger-activated-draw" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        trigger: {
+          type: "triggerActivated",
+          player: "self",
+          sourceFilter: { typesAny: ["Navy"] },
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const triggerActivatedReactionState = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "source"),
+    zone: "characterArea",
+  });
+  setupTriggerActivatedReactionDefinition(state, source);
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source manifest card"),
+    types: ["Navy"],
+  };
+  appendTriggerActivatedEvent(state, source);
+  return { source, state };
+};
+
 test("event reactions queue for matching cardPlayed events from the required source zone", () => {
   const { played, source, state } = cardPlayedReactionState("trash");
 
@@ -475,4 +656,35 @@ test("event reactions queue DON attachment triggers through the canonical matche
   assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
   assert.equal(String(entry.timingWindowId).endsWith(":donAttached"), true);
   assert.equal(entry.effectBlockId, "don-attached-draw");
+});
+
+test("event reactions queue effect resolution triggers through the canonical matcher", () => {
+  const { source, state } = effectResolvedReactionState();
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queued entry");
+  assert.equal(entry.source.instanceId, source.instanceId);
+  assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
+  assert.equal(String(entry.timingWindowId).endsWith(":effectResolved"), true);
+  assert.equal(entry.effectBlockId, "effect-resolved-draw");
+});
+
+test("event reactions queue trigger activation triggers through the canonical matcher", () => {
+  const { source, state } = triggerActivatedReactionState();
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queued entry");
+  assert.equal(entry.source.instanceId, source.instanceId);
+  assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
+  assert.equal(
+    String(entry.timingWindowId).endsWith(":triggerActivated"),
+    true,
+  );
+  assert.equal(entry.effectBlockId, "trigger-activated-draw");
 });

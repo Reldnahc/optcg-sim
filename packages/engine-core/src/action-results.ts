@@ -80,6 +80,8 @@ export const appendEffectResolvedEvent = (
   state: GameState,
   events: EngineEvent[],
   queuedEntry: EffectQueueEntry,
+  effectBlock?: EffectDefinition["effects"][number],
+  resolvedSourceCard?: ResolvedCard,
 ): void => {
   appendEvent(
     state,
@@ -95,6 +97,19 @@ export const appendEffectResolvedEvent = (
         : { triggerEventId: queuedEntry.triggerEventId }),
       sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
       orderingGroup: queuedEntry.orderingGroup,
+      ...(effectBlock === undefined
+        ? {}
+        : {
+            controllerId: queuedEntry.controllerId,
+            source: queuedEntry.source,
+            sourceCardId: queuedEntry.sourceSnapshot.cardId,
+            effectCategory: effectBlock.category,
+            entryPoint: effectBlock.trigger,
+            sourceTypes: resolvedSourceCard?.types ?? [],
+            sourceCategory:
+              resolvedSourceCard?.category ??
+              queuedEntry.sourceSnapshot.category,
+          }),
       ...(queuedEntry.presentation === undefined
         ? {}
         : { presentation: queuedEntry.presentation }),

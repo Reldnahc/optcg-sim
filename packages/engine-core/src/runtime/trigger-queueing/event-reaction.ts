@@ -52,7 +52,9 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
           payload.timingWindowId.endsWith(":donReturned") ||
           payload.timingWindowId.endsWith(":donAttached") ||
           payload.timingWindowId.endsWith(":attackDeclared") ||
-          payload.timingWindowId.endsWith(":effectQueued"))
+          payload.timingWindowId.endsWith(":effectQueued") ||
+          payload.timingWindowId.endsWith(":effectResolved") ||
+          payload.timingWindowId.endsWith(":triggerActivated"))
         ? [payload.triggerEventId]
         : [];
     }),
@@ -71,6 +73,8 @@ const supportedAutoEventReactionTriggerTypes: ReadonlySet<EventReactionTriggerTy
     "donAttached",
     "attackDeclared",
     "effectQueued",
+    "effectResolved",
+    "triggerActivated",
   ]);
 
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
@@ -134,7 +138,9 @@ export const createEventReactionTriggerQueueing = (
           event.type === "donReturned" ||
           event.type === "donAttached" ||
           event.type === "attackDeclared" ||
-          event.type === "effectQueued"),
+          event.type === "effectQueued" ||
+          event.type === "effectResolved" ||
+          event.type === "triggerActivated"),
     );
     if (reactionEvents.length === 0) {
       return undefined;

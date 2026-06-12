@@ -88,6 +88,12 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "effectQueued") {
     return autoAdapter("effectQueued", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "effectResolved") {
+    return autoAdapter("effectResolved", ["mustRemainInSameZone"]);
+  }
+  if (triggerType === "triggerActivated") {
+    return autoAdapter("triggerActivated", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "handTrashedByEffect") {
     return autoAdapter("handTrashedByEffect", ["mustRemainInSameZone"]);
   }

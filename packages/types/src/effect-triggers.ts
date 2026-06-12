@@ -102,6 +102,19 @@ export type Trigger =
       effectCategory?: EffectCategory;
       sourceFilter?: CardFilter;
     }
+  | {
+      type: "effectResolved";
+      player: PlayerRef;
+      effectEntryPoint?: EffectEntryPointFilter;
+      effectCategory?: EffectCategory;
+      sourceFilter?: CardFilter;
+      status?: "resolved";
+    }
+  | {
+      type: "triggerActivated";
+      player: PlayerRef;
+      sourceFilter?: CardFilter;
+    }
   | { type: "handTrashedByEffect"; player: PlayerRef }
   | { type: "opponentActivated"; activations: OpponentActivationKind[] }
   | { type: "donAttach"; count: number }

@@ -23,6 +23,8 @@ export type EventReactionTriggerType =
   | "donAttached"
   | "attackDeclared"
   | "effectQueued"
+  | "effectResolved"
+  | "triggerActivated"
   | "lifeRemoved"
   | "onOpponentAttack"
   | "opponentActivated";
@@ -632,6 +634,68 @@ const matchEffectQueued = (
   return matchesResolvedFilter(state, sourceResolved, trigger.sourceFilter);
 };
 
+const matchEffectResolved = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "effectResolved" }>,
+  event: EngineEvent,
+): boolean => {
+  const payload = publicPayload(event);
+  if (event.type !== "effectResolved" || payload === undefined) {
+    return false;
+  }
+  const controllerId = payload["controllerId"];
+  if (
+    typeof controllerId !== "string" ||
+    !playerRefMatchesSource(
+      state,
+      source,
+      trigger.player,
+      controllerId as PlayerId,
+    )
+  ) {
+    return false;
+  }
+  if (
+    trigger.effectEntryPoint !== undefined &&
+    entryPointTypeFromPayload(payload) !== trigger.effectEntryPoint.type
+  ) {
+    return false;
+  }
+  if (
+    trigger.effectCategory !== undefined &&
+    payload["effectCategory"] !== trigger.effectCategory
+  ) {
+    return false;
+  }
+  if (trigger.status !== undefined && payload["status"] !== trigger.status) {
+    return false;
+  }
+  const sourceResolved = resolvedCardForId(state, payload["sourceCardId"]);
+  return matchesResolvedFilter(state, sourceResolved, trigger.sourceFilter);
+};
+
+const matchTriggerActivated = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "triggerActivated" }>,
+  event: EngineEvent,
+): boolean => {
+  const payload = publicPayload(event);
+  if (event.type !== "triggerActivated" || payload === undefined) {
+    return false;
+  }
+  const playerId = payload["playerId"];
+  if (
+    typeof playerId !== "string" ||
+    !playerRefMatchesSource(state, source, trigger.player, playerId as PlayerId)
+  ) {
+    return false;
+  }
+  const sourceResolved = resolvedCardForId(state, payload["sourceCardId"]);
+  return matchesResolvedFilter(state, sourceResolved, trigger.sourceFilter);
+};
+
 const matchPrimitiveEventTrigger = (
   state: GameState,
   source: CardInstance,
@@ -684,6 +748,18 @@ const matchPrimitiveEventTrigger = (
     return primitiveMatch(
       "effectQueued",
       matchEffectQueued(state, source, trigger, event),
+    );
+  }
+  if (trigger.type === "effectResolved") {
+    return primitiveMatch(
+      "effectResolved",
+      matchEffectResolved(state, source, trigger, event),
+    );
+  }
+  if (trigger.type === "triggerActivated") {
+    return primitiveMatch(
+      "triggerActivated",
+      matchTriggerActivated(state, source, trigger, event),
     );
   }
   if (trigger.type === "lifeRemoved") {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectTextSpanId } from "@optcg/types";
+import type { EffectTextSpanId, Trigger } from "@optcg/types";
 
 import type {
   CardInstance,
@@ -29,6 +29,33 @@ import {
   queueingState,
 } from "./test-support.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
+
+const expectedEffectResolvedPayload = (
+  entry: EffectQueueEntry,
+  entryPoint: Trigger,
+  sourceCategory = entry.sourceSnapshot.category,
+): unknown => ({
+  queueEntryId: entry.id,
+  timingWindowId: entry.timingWindowId,
+  generation: entry.generation,
+  effectBlockId: entry.effectBlockId,
+  ...(entry.triggerEventId === undefined
+    ? {}
+    : { triggerEventId: entry.triggerEventId }),
+  sourcePresencePolicy: entry.sourcePresencePolicy,
+  orderingGroup: entry.orderingGroup,
+  controllerId: entry.controllerId,
+  source: entry.source,
+  sourceCardId: entry.sourceSnapshot.cardId,
+  effectCategory: "auto",
+  entryPoint,
+  sourceTypes: [],
+  sourceCategory,
+  ...(entry.presentation === undefined
+    ? {}
+    : { presentation: entry.presentation }),
+  status: "resolved",
+});
 
 test("resolves one queued supported On Play draw entry and removes it from effectQueue", () => {
   const { state, played } = queueingState();
@@ -68,19 +95,10 @@ test("resolves one queued supported On Play draw entry and removes it from effec
   const queuedEntry = must(queued.state.effectQueue[0], "queued entry");
   assert.ok(resolvedEvent !== undefined);
   assert.equal(resolvedEvent.createdAtStateSeq, result.state.seq);
-  assert.deepEqual(resolvedEvent.payload, {
-    queueEntryId: queuedEntry.id,
-    timingWindowId: queuedEntry.timingWindowId,
-    generation: queuedEntry.generation,
-    effectBlockId: queuedEntry.effectBlockId,
-    triggerEventId: queuedEntry.triggerEventId,
-    sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
-    orderingGroup: queuedEntry.orderingGroup,
-    ...(queuedEntry.presentation === undefined
-      ? {}
-      : { presentation: queuedEntry.presentation }),
-    status: "resolved",
-  });
+  assert.deepEqual(
+    resolvedEvent.payload,
+    expectedEffectResolvedPayload(queuedEntry, { type: "onPlay" }),
+  );
   assert.deepEqual(resolvedEvent.causedBy, {
     type: "effect",
     queueEntryId: queuedEntry.id,
@@ -138,17 +156,13 @@ test("preserves queued effect presentation on no-choice effectResolved events", 
     "effectResolved event",
   );
 
-  assert.deepEqual(resolvedEvent.payload, {
-    queueEntryId: queuedEntry.id,
-    timingWindowId: queuedEntry.timingWindowId,
-    generation: queuedEntry.generation,
-    effectBlockId: queuedEntry.effectBlockId,
-    triggerEventId: queuedEntry.triggerEventId,
-    sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
-    orderingGroup: queuedEntry.orderingGroup,
-    presentation,
-    status: "resolved",
-  });
+  assert.deepEqual(
+    resolvedEvent.payload,
+    expectedEffectResolvedPayload(
+      { ...queuedEntry, presentation },
+      { type: "onPlay" },
+    ),
+  );
 });
 
 test("resolves queued supported draw from last-known source presence", () => {
@@ -213,15 +227,10 @@ test("resolves queued supported draw from last-known source presence", () => {
     "ruleProcessingChecked",
   ]);
   assert.ok(resolvedEvent !== undefined);
-  assert.deepEqual(resolvedEvent.payload, {
-    queueEntryId: entry.id,
-    timingWindowId: entry.timingWindowId,
-    generation: entry.generation,
-    effectBlockId: entry.effectBlockId,
-    sourcePresencePolicy: "resolveFromLastKnownInformation",
-    orderingGroup: entry.orderingGroup,
-    status: "resolved",
-  });
+  assert.deepEqual(
+    resolvedEvent.payload,
+    expectedEffectResolvedPayload(entry, { type: "onPlay" }, "character"),
+  );
   assert.deepEqual(
     result.state.eventJournal.slice(-result.events.length),
     result.events,
@@ -291,15 +300,10 @@ test("resolves queued supported On K.O. draw from trash destination presence", (
     "ruleProcessingChecked",
   ]);
   assert.ok(resolvedEvent !== undefined);
-  assert.deepEqual(resolvedEvent.payload, {
-    queueEntryId: entry.id,
-    timingWindowId: entry.timingWindowId,
-    generation: entry.generation,
-    effectBlockId: entry.effectBlockId,
-    sourcePresencePolicy: "resolveFromDestinationZone",
-    orderingGroup: entry.orderingGroup,
-    status: "resolved",
-  });
+  assert.deepEqual(
+    resolvedEvent.payload,
+    expectedEffectResolvedPayload(entry, { type: "onKO" }),
+  );
 });
 
 test("resolves queued supported On K.O. draw from last-known source snapshot", () => {
@@ -365,15 +369,10 @@ test("resolves queued supported On K.O. draw from last-known source snapshot", (
   assert.equal(afterP2.deck.length, beforeDeck - 1);
   assert.equal(afterP2.hand.length, beforeHand + 1);
   assert.ok(resolvedEvent !== undefined);
-  assert.deepEqual(resolvedEvent.payload, {
-    queueEntryId: entry.id,
-    timingWindowId: entry.timingWindowId,
-    generation: entry.generation,
-    effectBlockId: entry.effectBlockId,
-    sourcePresencePolicy: "resolveFromLastKnownInformation",
-    orderingGroup: entry.orderingGroup,
-    status: "resolved",
-  });
+  assert.deepEqual(
+    resolvedEvent.payload,
+    expectedEffectResolvedPayload(entry, { type: "onKO" }),
+  );
 });
 
 test("non-Life Trigger no-zone queued effects resolve without Life Trigger trash cleanup", () => {

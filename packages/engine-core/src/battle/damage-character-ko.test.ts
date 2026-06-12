@@ -686,6 +686,13 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
     triggerEventId: cardKOd.id,
     sourcePresencePolicy: "resolveFromDestinationZone",
     orderingGroup: "nonTurnPlayer",
+    controllerId: p2,
+    source: queuedSource,
+    sourceCardId: target.cardId,
+    effectCategory: "auto",
+    entryPoint: { type: "onKO" },
+    sourceTypes: [],
+    sourceCategory: "character",
     presentation: {
       source: queuedSource,
       textKind: "effect",
