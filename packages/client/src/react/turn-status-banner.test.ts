@@ -11,7 +11,6 @@ import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 import {
   BoardLayout,
   nextTurnStatusBannerRenderState,
-  shouldSkipInitialBannerEffect,
   statusBannerAnimationKey,
 } from "./BoardLayout.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
@@ -213,21 +212,24 @@ describe("turn status banner", () => {
     assert.equal(repeatCounterState.eventId, counterState.eventId);
   });
 
-  test("does not skip the first effect when initial render has no banner", () => {
-    assert.equal(
-      shouldSkipInitialBannerEffect({
-        eventId: 0,
-      }),
-      false,
+  test("creates the first turn banner after an initially empty state", () => {
+    const emptyState = nextTurnStatusBannerRenderState(
+      { eventId: 0 },
+      undefined,
     );
-    assert.equal(
-      shouldSkipInitialBannerEffect({
-        activeBanner: { label: "Your Turn", tone: "self", turnNumber: 1 },
-        eventId: 1,
-        lastTurnOwnerTurnNumber: 1,
-      }),
-      true,
-    );
+    const firstTurnState = nextTurnStatusBannerRenderState(emptyState, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 1,
+    });
+
+    assert.equal(emptyState.activeBanner, undefined);
+    assert.deepEqual(firstTurnState.activeBanner, {
+      label: "Your Turn",
+      tone: "self",
+      turnNumber: 1,
+    });
+    assert.equal(firstTurnState.eventId, emptyState.eventId + 1);
   });
 
   test("renders across the playmat with the projected banner tone", () => {

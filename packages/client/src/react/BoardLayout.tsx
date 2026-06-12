@@ -193,10 +193,6 @@ export const nextTurnStatusBannerRenderState = (
   };
 };
 
-export const shouldSkipInitialBannerEffect = (
-  initialState: TurnStatusBannerRenderState,
-): boolean => initialState.activeBanner !== undefined;
-
 const TurnStatusBanner = ({
   banner,
   eventId,
@@ -224,30 +220,10 @@ const TurnStatusBannerHost = ({
 }: {
   banner: BoardViewModel["statusBanner"];
 }): React.JSX.Element | null => {
-  const initialRenderStateRef = useRef<TurnStatusBannerRenderState | undefined>(
-    undefined,
-  );
   const [renderState, setRenderState] = useState<TurnStatusBannerRenderState>(
-    () => {
-      const initialState = nextTurnStatusBannerRenderState(
-        { eventId: 0 },
-        banner,
-      );
-      initialRenderStateRef.current = initialState;
-      return initialState;
-    },
+    () => nextTurnStatusBannerRenderState({ eventId: 0 }, banner),
   );
-  const didInitializeBannerRef = useRef(false);
   useEffect(() => {
-    if (!didInitializeBannerRef.current) {
-      didInitializeBannerRef.current = true;
-      if (
-        initialRenderStateRef.current !== undefined &&
-        shouldSkipInitialBannerEffect(initialRenderStateRef.current)
-      ) {
-        return;
-      }
-    }
     setRenderState((current) =>
       nextTurnStatusBannerRenderState(current, banner),
     );
