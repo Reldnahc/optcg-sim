@@ -75,6 +75,14 @@ const decisionCardGridClass = (
     cardCount === 1 ? "is-single-card" : ""
   }`.trim();
 
+const orderDeckInstruction =
+  "Drag cards into deck order. 1 is highest in the deck; last is bottom-most.";
+
+const decisionModalInstruction = (model: DecisionModalModel): string =>
+  model.kind === "orderCards" && model.destination === "deck"
+    ? orderDeckInstruction
+    : model.instruction;
+
 export const DecisionModalHost = ({
   model,
   disabled,
@@ -139,7 +147,9 @@ export const DecisionModalHost = ({
   return (
     <ModalFrame title={model.title} className={decisionModalFrameClass(model)}>
       <div className="decision-modal-context">
-        <p className="decision-modal-instruction">{model.instruction}</p>
+        <p className="decision-modal-instruction">
+          {decisionModalInstruction(model)}
+        </p>
       </div>
       {model.kind === "selectCards" ? (
         <div className={decisionCardGridClass(model.cards.length)}>
@@ -184,11 +194,6 @@ export const DecisionModalHost = ({
       ) : null}
       {model.kind === "orderCards" ? (
         <>
-          <p className="decision-order-hint">
-            {model.destination === "deck"
-              ? "Drag cards into deck order. 1 is highest in the deck; last is bottom-most."
-              : "Drag cards into order."}
-          </p>
           {model.placement?.type === "topOrBottom" ? (
             <div className="decision-placement-choice" role="group">
               <button

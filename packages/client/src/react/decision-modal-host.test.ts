@@ -466,7 +466,11 @@ test("return-to-deck order modal renders card images with deck order badges", ()
   assert.match(markup, /decision-order-card-grid/u);
   assert.match(markup, /modal-frame-card-decision/u);
   assert.match(markup, /hand-cards decision-order-card-grid/u);
-  assert.match(markup, /decision-order-hint/u);
+  assert.match(
+    markup,
+    /<p class="decision-modal-instruction">Drag cards into deck order\. 1 is highest in the deck; last is bottom-most\.<\/p>/u,
+  );
+  assert.doesNotMatch(markup, /decision-order-hint/u);
   assert.equal(markup.includes("top-card.png"), true);
   assert.equal(markup.includes("bottom-card.png"), true);
   assert.match(markup, /selection-order-badge/u);
