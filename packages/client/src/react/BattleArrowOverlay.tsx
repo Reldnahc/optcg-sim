@@ -6,7 +6,7 @@ interface BattleArrowOverlayProps {
   battleArrow?: BoardViewModel["battleArrow"] | undefined;
 }
 
-interface ArrowLine {
+export interface ArrowLine {
   x1: number;
   y1: number;
   x2: number;
@@ -18,6 +18,17 @@ const labelCharacterWidth = 13;
 const labelInlinePadding = 24;
 const labelMinimumWidth = 56;
 const labelHeight = 30;
+
+export const nextStableArrowLine = (
+  previous: ArrowLine,
+  next: ArrowLine,
+): ArrowLine =>
+  previous.x1 === next.x1 &&
+  previous.y1 === next.y1 &&
+  previous.x2 === next.x2 &&
+  previous.y2 === next.y2
+    ? previous
+    : next;
 
 const cardElementForInstance = (
   board: HTMLElement,
@@ -57,17 +68,18 @@ export const BattleArrowOverlay = ({
         battleArrow.targetInstanceId,
       );
       if (attacker === undefined || target === undefined) {
-        setLine(emptyLine);
+        setLine((currentLine) => nextStableArrowLine(currentLine, emptyLine));
         return;
       }
       const attackerRect = attacker.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
-      setLine({
+      const nextLine = {
         x1: attackerRect.left + attackerRect.width / 2 - boardRect.left,
         y1: attackerRect.top + attackerRect.height / 2 - boardRect.top,
         x2: targetRect.left + targetRect.width / 2 - boardRect.left,
         y2: targetRect.top + targetRect.height / 2 - boardRect.top,
-      });
+      };
+      setLine((currentLine) => nextStableArrowLine(currentLine, nextLine));
     };
 
     updateLine();
@@ -86,7 +98,7 @@ export const BattleArrowOverlay = ({
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateLine);
     };
-  }, [battleArrow]);
+  }, [battleArrow?.attackerInstanceId, battleArrow?.targetInstanceId]);
 
   if (battleArrow === undefined) {
     return null;
