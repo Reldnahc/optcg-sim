@@ -449,18 +449,37 @@ describe("playmat structure", () => {
       "utf8",
     );
 
-    assert.match(
-      boardLayout,
-      /className="playmat-zone opponent-deck"[\s\S]*label="Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.deckCount/u,
+    const opponentDeckStart = boardLayout.indexOf(
+      'className="playmat-zone opponent-deck"',
     );
+    const opponentDeckEnd = boardLayout.indexOf(
+      'className="playmat-zone opponent-don-deck"',
+      opponentDeckStart,
+    );
+    const opponentDeckZone = boardLayout.slice(
+      opponentDeckStart,
+      opponentDeckEnd,
+    );
+    assert.match(opponentDeckZone, /label="Deck"/u);
+    assert.match(opponentDeckZone, /board\.opponent\.deckCount/u);
+    assert.match(opponentDeckZone, /"hidden-deck-opponent"/u);
+    assert.equal(opponentDeckZone.includes(",\n              10,"), false);
     assert.match(
       boardLayout,
       /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount/u,
     );
-    assert.match(
-      boardLayout,
-      /className="playmat-zone player-deck"[\s\S]*label="Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.deckCount/u,
+    const playerDeckStart = boardLayout.indexOf(
+      'className="playmat-zone player-deck"',
     );
+    const playerDeckEnd = boardLayout.indexOf(
+      'className="playmat-zone player-don-deck"',
+      playerDeckStart,
+    );
+    const playerDeckZone = boardLayout.slice(playerDeckStart, playerDeckEnd);
+    assert.match(playerDeckZone, /label="Deck"/u);
+    assert.match(playerDeckZone, /board\.self\.deckCount/u);
+    assert.match(playerDeckZone, /"hidden-deck-self"/u);
+    assert.equal(playerDeckZone.includes(", 10"), false);
     assert.match(
       boardLayout,
       /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount/u,

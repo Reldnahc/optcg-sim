@@ -66,6 +66,8 @@
 .stack-card-visual {
   position: relative;
   display: grid;
+  aspect-ratio: 5 / 7;
+  height: var(--card-height);
   place-items: center;
   overflow: visible;
 }
@@ -73,23 +75,12 @@
 .stack-card-layer {
   position: absolute;
   inset: 0;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.48);
-  cursor: default;
-  pointer-events: auto;
   transform: translateY(calc(-1 * var(--stack-card-offset)));
 }
 
-.stack-card-layer:hover {
-  box-shadow:
-    0 0 0 var(--card-outline-thin) rgba(255, 255, 255, 0.88),
-    0 0 var(--card-glow-size) rgba(255, 255, 255, 0.42),
-    0 1px 1px rgba(0, 0, 0, 0.48);
-}
-
-.stack-card-top {
-  position: relative;
-  z-index: 100;
-  transform: translateY(calc(-1 * var(--stack-card-offset)));
+.stack-card-layer .card-tile-shell {
+  width: 100%;
+  height: 100%;
 }
 
 .zone-cards-slots {

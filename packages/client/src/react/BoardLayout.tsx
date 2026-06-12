@@ -362,7 +362,6 @@ export const BoardLayout = ({
             cards={hiddenCards(
               board.opponent.deckCount,
               "hidden-deck-opponent",
-              10,
             )}
             presentationZoneKey="opponent:deck"
             size="small"
@@ -552,7 +551,7 @@ export const BoardLayout = ({
         <div className="playmat-zone player-deck">
           <Zone
             label="Deck"
-            cards={hiddenCards(board.self.deckCount, "hidden-deck-self", 10)}
+            cards={hiddenCards(board.self.deckCount, "hidden-deck-self")}
             presentationZoneKey="self:deck"
             size="small"
             displayMode="stack"

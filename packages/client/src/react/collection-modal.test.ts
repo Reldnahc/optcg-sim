@@ -31,6 +31,15 @@ const card = (instanceId: string, name: string): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const hiddenCard = (instanceId: string): ClientCardModel => ({
+  instanceId: instanceId as InstanceId,
+  cardId: "hidden" as CardId,
+  name: "Hidden card",
+  category: "hidden",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
 describe("collection modal", () => {
   test("collection windows default to the center of the viewport", () => {
     assert.deepEqual(
@@ -102,8 +111,8 @@ describe("collection modal", () => {
   });
 
   test("stack zones can display a true count larger than rendered hidden cards", () => {
-    const hiddenCards = Array.from({ length: 10 }, (_, index) =>
-      card(`hidden-${String(index)}`, "Hidden card"),
+    const hiddenCards = Array.from({ length: 37 }, (_, index) =>
+      hiddenCard(`hidden-${String(index)}`),
     );
     const markup = renderToStaticMarkup(
       createElement(Zone, {
@@ -116,32 +125,30 @@ describe("collection modal", () => {
 
     assert.match(markup, /aria-label="Deck count: 37"/u);
     assert.match(markup, />37</u);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 37);
   });
 
   test("stack zones render counted card layers with slight offsets", async () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
         label: "Deck",
-        cards: [card("hidden-deck-top", "Hidden card")],
+        cards: Array.from({ length: 4 }, (_, index) =>
+          hiddenCard(`hidden-deck-${String(index)}`),
+        ),
         displayMode: "stack",
         stackCount: 4,
       }),
     );
     const zoneStyles = await readFile(zoneStylesPath, "utf8");
 
-    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 3);
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 4);
     assert.match(markup, /--stack-card-offset:0px/u);
     assert.match(markup, /--stack-card-offset:1px/u);
     assert.match(markup, /--stack-card-offset:2px/u);
     assert.match(markup, /--stack-card-offset:3px/u);
-    assert.match(markup, /z-index:3/u);
-    assert.match(
-      markup,
-      /stack-card-layer card-face card-back card-back-main-deck/u,
-    );
-    assert.match(markup, /data-stack-card-index="0"/u);
-    assert.match(markup, /data-stack-card-index="2"/u);
-    assert.match(markup, /stack-card-top/u);
+    assert.match(markup, /z-index:4/u);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 4);
+    assert.match(markup, /card-face card-back card-back-main-deck/u);
     assert.match(
       zoneStyles,
       /\.zone-cards-stack\s*\{[^}]*position:\s*relative;/u,
@@ -152,12 +159,7 @@ describe("collection modal", () => {
     );
     assert.match(
       zoneStyles,
-      /\.stack-card-layer\s*\{[^}]*pointer-events:\s*auto;/u,
-    );
-    assert.match(zoneStyles, /\.stack-card-layer:hover\s*\{[^}]*box-shadow:/u);
-    assert.match(
-      zoneStyles,
-      /\.stack-card-top\s*\{[^}]*position:\s*relative;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
+      /\.stack-card-layer \.card-tile-shell\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;/u,
     );
   });
 

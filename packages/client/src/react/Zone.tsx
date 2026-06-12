@@ -55,7 +55,7 @@ export const Zone = ({
   onViewCollection,
 }: ZoneProps): React.JSX.Element => {
   const visibleCards =
-    displayMode === "stack" && cards.length > 0
+    displayMode === "stack" && stackCount === undefined && cards.length > 0
       ? [cards[0] as ClientCardModel]
       : cards;
   const zoneRef = useRef<HTMLElement | null>(null);
@@ -135,9 +135,16 @@ export const Zone = ({
     } as CSSProperties & Record<"--life-card-y-offset", string>;
   };
   const displayedStackCount = stackCount ?? cards.length;
-  const stackTopCard = displayMode === "stack" ? visibleCards[0] : undefined;
-  const stackLayerCount =
-    stackTopCard === undefined ? 0 : Math.max(0, displayedStackCount - 1);
+  const stackCardStyle = (
+    index: number,
+    count: number,
+  ): CSSProperties & Record<"--stack-card-offset", string> => {
+    const offset = count - index - 1;
+    return {
+      "--stack-card-offset": `${String(offset)}px`,
+      zIndex: count - index,
+    };
+  };
 
   return (
     <section
@@ -169,64 +176,47 @@ export const Zone = ({
         />
       ) : null}
       <div ref={cardsRef} className={zoneCardsClassName} style={zoneCardsStyle}>
-        {displayMode === "stack" && stackTopCard !== undefined ? (
+        {displayMode === "stack" && visibleCards.length > 0 ? (
           <div className="stack-card-visual">
-            {Array.from({ length: stackLayerCount }, (_, index) => (
-              <div
-                aria-hidden="true"
-                className="stack-card-layer card-face card-back card-back-main-deck"
-                data-stack-card-index={index}
-                key={`stack-layer-${String(index)}`}
-                style={
-                  {
-                    "--stack-card-offset": `${String(index)}px`,
-                    zIndex: index + 1,
-                  } as CSSProperties & Record<"--stack-card-offset", string>
-                }
-              />
-            ))}
-            <div
-              className="stack-card-top"
-              style={
-                {
-                  "--stack-card-offset": `${String(stackLayerCount)}px`,
-                } as CSSProperties & Record<"--stack-card-offset", string>
-              }
-            >
-              <CardTile
-                card={stackTopCard}
-                selected={
-                  selectedCardInstanceId === String(stackTopCard.instanceId) ||
-                  decisionSelectedInstanceIds.includes(
-                    String(stackTopCard.instanceId),
-                  )
-                }
-                pendingChoice={pendingChoiceInstanceIds.includes(
-                  String(stackTopCard.instanceId),
-                )}
-                selectable={cardIsSelectable(
-                  cardActions?.(String(stackTopCard.instanceId)) ?? [],
-                )}
-                selectedDonInstanceIds={selectedDonInstanceIds}
-                active={activeCardInstanceIds.includes(
-                  String(stackTopCard.instanceId),
-                )}
-                actions={cardActions?.(String(stackTopCard.instanceId)) ?? []}
-                disabled={actionDisabled}
-                onAction={onCardAction}
-                onAttachedDonClick={onCardClick}
-                onHover={onCardPreview}
-                onClick={
-                  onViewCollection === undefined
-                    ? onCardClick === undefined
-                      ? undefined
-                      : () => {
-                          onCardClick(String(stackTopCard.instanceId));
-                        }
-                    : onViewCollection
-                }
-              />
-            </div>
+            {visibleCards.map((card, index) => {
+              const instanceId = String(card.instanceId);
+              const actions = cardActions?.(instanceId) ?? [];
+              return (
+                <div
+                  className="stack-card-layer"
+                  key={instanceId}
+                  style={stackCardStyle(index, visibleCards.length)}
+                >
+                  <CardTile
+                    card={card}
+                    selected={
+                      selectedCardInstanceId === instanceId ||
+                      decisionSelectedInstanceIds.includes(instanceId)
+                    }
+                    pendingChoice={pendingChoiceInstanceIds.includes(
+                      instanceId,
+                    )}
+                    selectable={cardIsSelectable(actions)}
+                    selectedDonInstanceIds={selectedDonInstanceIds}
+                    active={activeCardInstanceIds.includes(instanceId)}
+                    actions={actions}
+                    disabled={actionDisabled}
+                    onAction={onCardAction}
+                    onAttachedDonClick={onCardClick}
+                    onHover={onCardPreview}
+                    onClick={
+                      onViewCollection === undefined
+                        ? onCardClick === undefined
+                          ? undefined
+                          : () => {
+                              onCardClick(instanceId);
+                            }
+                        : onViewCollection
+                    }
+                  />
+                </div>
+              );
+            })}
           </div>
         ) : displayMode === "slots" ? (
           Array.from({ length: slotCount }, (_, index) => {
