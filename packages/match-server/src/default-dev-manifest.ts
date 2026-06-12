@@ -21,6 +21,10 @@ import {
   type ExplicitDonDeckSubmission,
 } from "./deck-validation.js";
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
+import {
+  recordLobbyValidationTimingSpan,
+  type LobbyValidationTimingSpan,
+} from "./lobby-validation-timing-log.js";
 import { resolveRedisConfig, type RedisMode } from "./redis-config.js";
 import { writeActiveSimCardCacheVersions } from "./sim-card-cache-versions.js";
 
@@ -49,6 +53,7 @@ export interface ValidateReadyDevDeckSubmissionInput extends Omit<
   "matchId" | "firstPlayerId" | "playerOrder"
 > {
   readonly submission: ReadyDeckSubmission;
+  readonly timingSpans?: LobbyValidationTimingSpan[];
 }
 
 export interface ValidateReadyDevDeckSubmissionsInput extends Omit<
@@ -241,6 +246,21 @@ const createExplicitDevDonDeckSubmission = (
   })),
 });
 
+const recordDevDeckValidationTimingSpan = async <T>(
+  timingSpans: LobbyValidationTimingSpan[] | undefined,
+  name: string,
+  fn: () => T | Promise<T>,
+  options: { readonly count?: number } = {},
+): Promise<T> =>
+  timingSpans === undefined
+    ? await fn()
+    : await recordLobbyValidationTimingSpan(
+        timingSpans,
+        name,
+        async () => await fn(),
+        options,
+      );
+
 export const validateAndAdaptDevDecklist = async ({
   decklist,
   cardManifest,
@@ -325,8 +345,14 @@ export const validateReadyDevDeckSubmission = async (
 export const validateReadyDevDeckSubmissions = async (
   input: ValidateReadyDevDeckSubmissionsInput,
 ): Promise<readonly ReadyDeckSubmissionValidationResult[]> => {
-  const decklists = input.submissions.map((submission) =>
-    createDevDecklistFromSubmission(submission),
+  const decklists = await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:create-decklists",
+    () =>
+      input.submissions.map((submission) =>
+        createDevDecklistFromSubmission(submission),
+      ),
+    { count: input.submissions.length },
   );
   if (decklists.length === 0) {
     return [];
@@ -335,49 +361,81 @@ export const validateReadyDevDeckSubmissions = async (
     const devDonCount = Math.max(
       ...decklists.map((decklist) => decklist.donDeckCount),
     );
-    const cardManifest = await buildDevManifestFromCardIds(
-      createDevManifestCardIds(...decklists),
-      {
-        matchId: "validation-only" as DevMatchSetup["matchId"],
-        firstPlayerId: "p1" as PlayerId,
-        playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
-        createdAt: input.createdAt,
-        ...(input.fetchCard === undefined
-          ? {}
-          : { fetchCard: input.fetchCard }),
-        ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
-        ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
-        ...(input.redisMode === undefined
-          ? {}
-          : { redisMode: input.redisMode }),
-        ...(input.cardDataCache === undefined
-          ? {}
-          : { cardDataCache: input.cardDataCache }),
-        ...(input.validationCache === undefined
-          ? {}
-          : { validationCache: input.validationCache }),
-      },
-      devDonCount,
+    const manifestCardIds = createDevManifestCardIds(...decklists);
+    const cardManifest = await recordDevDeckValidationTimingSpan(
+      input.timingSpans,
+      "deck-validation:manifest-build",
+      async () =>
+        await buildDevManifestFromCardIds(
+          manifestCardIds,
+          {
+            matchId: "validation-only" as DevMatchSetup["matchId"],
+            firstPlayerId: "p1" as PlayerId,
+            playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+            createdAt: input.createdAt,
+            ...(input.fetchCard === undefined
+              ? {}
+              : { fetchCard: input.fetchCard }),
+            ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+            ...(input.redisUrl === undefined
+              ? {}
+              : { redisUrl: input.redisUrl }),
+            ...(input.redisMode === undefined
+              ? {}
+              : { redisMode: input.redisMode }),
+            ...(input.cardDataCache === undefined
+              ? {}
+              : { cardDataCache: input.cardDataCache }),
+            ...(input.validationCache === undefined
+              ? {}
+              : { validationCache: input.validationCache }),
+          },
+          devDonCount,
+        ),
+      { count: manifestCardIds.length },
     );
-    const validationCache =
-      input.validationCache ?? (await createRequestScopedRedisCache(input));
+    const validationCache = await recordDevDeckValidationTimingSpan(
+      input.timingSpans,
+      "deck-validation:validation-cache",
+      async () =>
+        input.validationCache ?? (await createRequestScopedRedisCache(input)),
+    );
     return await Promise.all(
       decklists.map(async (decklist) => {
         try {
-          validateDevDeckSubmissionVariants(decklist, cardManifest);
-          const adaptedDecklist = await validateAndAdaptDevDecklist({
-            decklist,
-            cardManifest,
-            ...(input.formatId === undefined
-              ? {}
-              : { formatId: input.formatId }),
-            ...(validationCache === undefined ? {} : { validationCache }),
-          });
-          createDevPlayerSetupFromDecklist(
-            "p1" as PlayerId,
-            adaptedDecklist,
-            cardManifest,
-            createDevDonDeckCardIds(adaptedDecklist.donDeckCount),
+          await recordDevDeckValidationTimingSpan(
+            input.timingSpans,
+            "deck-validation:variants",
+            () => {
+              validateDevDeckSubmissionVariants(decklist, cardManifest);
+            },
+            { count: 1 },
+          );
+          const adaptedDecklist = await recordDevDeckValidationTimingSpan(
+            input.timingSpans,
+            "deck-validation:adapt",
+            async () =>
+              await validateAndAdaptDevDecklist({
+                decklist,
+                cardManifest,
+                ...(input.formatId === undefined
+                  ? {}
+                  : { formatId: input.formatId }),
+                ...(validationCache === undefined ? {} : { validationCache }),
+              }),
+            { count: 1 },
+          );
+          await recordDevDeckValidationTimingSpan(
+            input.timingSpans,
+            "deck-validation:player-setup",
+            () =>
+              createDevPlayerSetupFromDecklist(
+                "p1" as PlayerId,
+                adaptedDecklist,
+                cardManifest,
+                createDevDonDeckCardIds(adaptedDecklist.donDeckCount),
+              ),
+            { count: 1 },
           );
           return { valid: true };
         } catch (error: unknown) {
@@ -411,41 +469,80 @@ export const validateReadyDevDeckSubmissions = async (
 const validateReadyDevDeckSubmissionUnbatched = async (
   input: ValidateReadyDevDeckSubmissionInput,
 ): Promise<void> => {
-  const decklist = createDevDecklistFromSubmission(input.submission);
-  const cardManifest = await buildDevManifestFromCardIds(
-    createDevManifestCardIds(decklist),
-    {
-      matchId: "validation-only" as DevMatchSetup["matchId"],
-      firstPlayerId: "p1" as PlayerId,
-      playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
-      createdAt: input.createdAt,
-      ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
-      ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
-      ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
-      ...(input.redisMode === undefined ? {} : { redisMode: input.redisMode }),
-      ...(input.cardDataCache === undefined
-        ? {}
-        : { cardDataCache: input.cardDataCache }),
-      ...(input.validationCache === undefined
-        ? {}
-        : { validationCache: input.validationCache }),
-    },
-    decklist.donDeckCount,
+  const decklist = await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:unbatched:create-decklist",
+    () => createDevDecklistFromSubmission(input.submission),
+    { count: 1 },
   );
-  const validationCache =
-    input.validationCache ?? (await createRequestScopedRedisCache(input));
-  validateDevDeckSubmissionVariants(decklist, cardManifest);
-  const adaptedDecklist = await validateAndAdaptDevDecklist({
-    decklist,
-    cardManifest,
-    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
-    ...(validationCache === undefined ? {} : { validationCache }),
-  });
-  createDevPlayerSetupFromDecklist(
-    "p1" as PlayerId,
-    adaptedDecklist,
-    cardManifest,
-    createDevDonDeckCardIds(adaptedDecklist.donDeckCount),
+  const manifestCardIds = createDevManifestCardIds(decklist);
+  const cardManifest = await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:unbatched:manifest-build",
+    async () =>
+      await buildDevManifestFromCardIds(
+        manifestCardIds,
+        {
+          matchId: "validation-only" as DevMatchSetup["matchId"],
+          firstPlayerId: "p1" as PlayerId,
+          playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+          createdAt: input.createdAt,
+          ...(input.fetchCard === undefined
+            ? {}
+            : { fetchCard: input.fetchCard }),
+          ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+          ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
+          ...(input.redisMode === undefined
+            ? {}
+            : { redisMode: input.redisMode }),
+          ...(input.cardDataCache === undefined
+            ? {}
+            : { cardDataCache: input.cardDataCache }),
+          ...(input.validationCache === undefined
+            ? {}
+            : { validationCache: input.validationCache }),
+        },
+        decklist.donDeckCount,
+      ),
+    { count: manifestCardIds.length },
+  );
+  const validationCache = await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:unbatched:validation-cache",
+    async () =>
+      input.validationCache ?? (await createRequestScopedRedisCache(input)),
+  );
+  await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:unbatched:variants",
+    () => {
+      validateDevDeckSubmissionVariants(decklist, cardManifest);
+    },
+    { count: 1 },
+  );
+  const adaptedDecklist = await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:unbatched:adapt",
+    async () =>
+      await validateAndAdaptDevDecklist({
+        decklist,
+        cardManifest,
+        ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
+        ...(validationCache === undefined ? {} : { validationCache }),
+      }),
+    { count: 1 },
+  );
+  await recordDevDeckValidationTimingSpan(
+    input.timingSpans,
+    "deck-validation:unbatched:player-setup",
+    () =>
+      createDevPlayerSetupFromDecklist(
+        "p1" as PlayerId,
+        adaptedDecklist,
+        cardManifest,
+        createDevDonDeckCardIds(adaptedDecklist.donDeckCount),
+      ),
+    { count: 1 },
   );
 };
 

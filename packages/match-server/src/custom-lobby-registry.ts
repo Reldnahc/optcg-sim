@@ -314,6 +314,7 @@ export const createCustomLobbyRegistry = async (
         submissions: pendingSubmissions.map((pending) => pending.submission),
         createdAt: devLobbyCreatedAt,
         formatId,
+        ...(timingSpans === undefined ? {} : { timingSpans }),
         ...(options.fetchCard === undefined
           ? {}
           : { fetchCard: options.fetchCard }),
