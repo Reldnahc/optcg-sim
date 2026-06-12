@@ -105,6 +105,29 @@ describe("leader name condition parser", () => {
     });
   });
 
+  it("parses opponent leader attribute predicates through reusable card filters", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your opponent's Leader has the <Slash> attribute",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "opponent",
+        filter: { categories: ["leader"], attributesAny: ["slash"] },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:opponent",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:attribute",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses leader type alternatives through reusable card filters", () => {
     expect(
       parseLeaderNameCondition({

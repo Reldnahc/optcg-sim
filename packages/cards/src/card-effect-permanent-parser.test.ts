@@ -6,6 +6,43 @@ import {
 } from "./card-effect-line-parser.js";
 
 describe("permanent card effect line parser", () => {
+  it("parses opponent leader attribute condition before continuous leader power gain", () => {
+    const result = parseCardEffectLine(
+      "If your opponent's Leader has the <Slash> attribute, this Leader gains +1000 power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyPower",
+          target: { type: "myLeader" },
+          value: 1000,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "hasCardInZone",
+              zone: "leaderArea",
+              player: "opponent",
+              filter: { categories: ["leader"], attributesAny: ["slash"] },
+            },
+          },
+        },
+      },
+    });
+    for (const evidence of [
+      "condition:leaderIdentity",
+      "player:opponent",
+      "filter:attribute",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "duration:whileConditionTrue",
+    ] as const) {
+      expect(result?.evidence).toContain(evidence);
+    }
+  });
+
   it("parses apply-each trash thresholds as independent continuous conditionals", () => {
     const result = parseCardEffectLine(
       [

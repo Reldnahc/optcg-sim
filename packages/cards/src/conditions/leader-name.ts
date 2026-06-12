@@ -101,11 +101,17 @@ export const parseLeaderNameCondition: ConditionParser = (
   }
 
   const subjectMatch =
-    /^your Leader (?:is|has(?: the)?)\s+(?<predicate>.+)$/i.exec(input.text);
+    /^(?<owner>your|your opponent's) Leader (?:is|has(?: the)?)\s+(?<predicate>.+)$/i.exec(
+      input.text,
+    );
+  const ownerText = subjectMatch?.groups?.["owner"];
   const predicateText = subjectMatch?.groups?.["predicate"];
-  if (predicateText === undefined) {
+  if (ownerText === undefined || predicateText === undefined) {
     return undefined;
   }
+  const player = ownerText.toLowerCase() === "your" ? "self" : "opponent";
+  const playerEvidence =
+    player === "self" ? ("player:self" as const) : ("player:opponent" as const);
 
   const predicates = parseCardFilterPredicates(
     { text: predicateText },
@@ -120,7 +126,7 @@ export const parseLeaderNameCondition: ConditionParser = (
       condition: {
         type: "hasCardInZone",
         zone: "leaderArea",
-        player: "self",
+        player,
         filter: {
           categories: ["leader"],
           ...mixedAlternative.filter,
@@ -128,7 +134,7 @@ export const parseLeaderNameCondition: ConditionParser = (
       },
       evidence: [
         "condition:leaderIdentity",
-        "player:self",
+        playerEvidence,
         "zone:leaderArea",
         "filter:category:leader",
         ...mixedAlternative.evidence,
@@ -141,7 +147,7 @@ export const parseLeaderNameCondition: ConditionParser = (
     condition: {
       type: "hasCardInZone",
       zone: "leaderArea",
-      player: "self",
+      player,
       filter: {
         categories: ["leader"],
         ...predicates.filter,
@@ -149,7 +155,7 @@ export const parseLeaderNameCondition: ConditionParser = (
     },
     evidence: [
       "condition:leaderIdentity",
-      "player:self",
+      playerEvidence,
       "zone:leaderArea",
       "filter:category:leader",
       ...predicates.evidence,
