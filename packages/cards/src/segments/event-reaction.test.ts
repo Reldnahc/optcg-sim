@@ -382,6 +382,52 @@ describe("event reaction predicate routing", () => {
       );
     },
   );
+
+  it.each([
+    {
+      text: "this Character becomes rested",
+      trigger: {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+      evidence: [
+        "trigger:cardRested",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+      ],
+    },
+    {
+      text: "this Character is rested by your opponent's effect",
+      trigger: {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceController: "opponent",
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:cardRested",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+      ],
+    },
+  ] satisfies Array<{
+    readonly text: string;
+    readonly trigger: Trigger;
+    readonly evidence: readonly string[];
+  }>)(
+    "parses shared card-rested predicate $text through semantic predicate groups",
+    ({ text, trigger, evidence }) => {
+      assertPredicateParsesThroughBothGroups(text, trigger, evidence);
+    },
+  );
 });
 
 function assertPredicateParsesThroughBothGroups(

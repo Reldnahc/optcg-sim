@@ -557,6 +557,53 @@ const parseOpponentActivationKinds = (
   return undefined;
 };
 
+const parseCardRestedPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+
+  if (normalized.toLowerCase() === "this character becomes rested") {
+    return {
+      trigger: {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+      evidence: [
+        "trigger:cardRested",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+      ],
+    };
+  }
+
+  if (
+    normalized.toLowerCase() ===
+    "this character is rested by your opponent's effect"
+  ) {
+    return {
+      trigger: {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceController: "opponent",
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:cardRested",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+      ],
+    };
+  }
+
+  return undefined;
+};
+
 const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
   text,
   entryPoint,
@@ -577,27 +624,6 @@ const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
         attackerFilter: { categories: ["character"] },
       },
       evidence: ["entry:onOpponentAttack", "filter:category:character"],
-    };
-  }
-
-  if (
-    normalized.toLowerCase() ===
-    "this character is rested by your opponent's effect"
-  ) {
-    return {
-      trigger: {
-        type: "cardRested",
-        target: "self",
-        player: "self",
-        filter: { categories: ["character"] },
-        sourceController: "opponent",
-        sourceKind: "effect",
-      },
-      evidence: [
-        "trigger:cardRested",
-        "player:self",
-        "filter:category:character",
-      ],
     };
   }
 
@@ -622,6 +648,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
     parseFieldRemovedPredicate,
     parseCardPlayedPredicate,
     parseActivationPredicate,
+    parseCardRestedPredicate,
     activatedReactionSpecificPredicate,
   ] as const;
 
@@ -673,23 +700,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  if (normalized.toLowerCase() === "this character becomes rested") {
-    return {
-      trigger: {
-        type: "cardRested",
-        target: "self",
-        player: "self",
-        filter: { categories: ["character"] },
-      },
-      evidence: [
-        "trigger:cardRested",
-        "target:thisCharacter",
-        "player:self",
-        "filter:category:character",
-      ],
-    };
-  }
-
   return undefined;
 };
 
@@ -700,6 +710,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseFieldRemovedPredicate,
     parseCardPlayedPredicate,
     parseActivationPredicate,
+    parseCardRestedPredicate,
     implicitReactionSpecificPredicate,
   ] as const;
 
