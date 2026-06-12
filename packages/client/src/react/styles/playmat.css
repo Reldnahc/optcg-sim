@@ -77,21 +77,31 @@
 
 .turn-status-banner-lane {
   position: absolute;
-  top: 42%;
-  right: var(--playmat-board-padding);
-  left: var(--playmat-board-padding);
+  top: 50%;
+  right: 0;
+  left: 0;
   z-index: 4;
   display: flex;
+  align-items: center;
   overflow: hidden;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .turn-status-banner {
-  min-width: min(42%, 360px);
+  width: 100%;
   border: var(--card-outline-thin) solid rgba(255, 255, 255, 0.42);
-  border-radius: 4px;
-  padding: 10px 18px;
-  background: rgba(10, 14, 20, 0.84);
+  border-right: 0;
+  border-left: 0;
+  padding: 14px 18px;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 14, 20, 0),
+    rgba(10, 14, 20, 0.88) 16%,
+    rgba(10, 14, 20, 0.92) 50%,
+    rgba(10, 14, 20, 0.88) 84%,
+    rgba(10, 14, 20, 0)
+  );
   color: #f7f1df;
   font-size: clamp(18px, calc(var(--card-height) / 5.6), 32px);
   font-weight: 900;
@@ -102,7 +112,7 @@
   animation: turn-status-slide-across 1150ms cubic-bezier(0.2, 0.74, 0.22, 1)
     both;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 0 0 rgba(0, 0, 0, 0),
     0 0 16px rgba(255, 255, 255, 0.16);
   text-shadow: 0 2px 3px rgba(0, 0, 0, 0.82);
 }
@@ -111,7 +121,7 @@
   border-color: rgba(88, 217, 156, 0.86);
   color: #b9ffd8;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 0 0 rgba(0, 0, 0, 0),
     0 0 18px rgba(88, 217, 156, 0.36);
 }
 
@@ -119,7 +129,7 @@
   border-color: rgba(255, 105, 105, 0.86);
   color: #ffd0d0;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 0 0 rgba(0, 0, 0, 0),
     0 0 18px rgba(255, 105, 105, 0.34);
 }
 
@@ -127,7 +137,7 @@
   border-color: rgba(106, 183, 255, 0.88);
   color: #d4ebff;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 0 0 rgba(0, 0, 0, 0),
     0 0 20px rgba(106, 183, 255, 0.38);
 }
 
@@ -135,14 +145,14 @@
   border-color: rgba(255, 216, 77, 0.92);
   color: #ffe88c;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 0 0 rgba(0, 0, 0, 0),
     0 0 20px rgba(255, 216, 77, 0.4);
 }
 
 @keyframes turn-status-slide-across {
   0% {
     opacity: 0;
-    transform: translateX(-105%);
+    transform: translateX(-100%);
   }
 
   18% {
@@ -155,7 +165,7 @@
 
   100% {
     opacity: 0;
-    transform: translateX(calc(100vw - 10%));
+    transform: translateX(100%);
   }
 }
 
