@@ -105,6 +105,9 @@ const assertNoForbiddenKeys = (
   }
 };
 
+const privateZonesRevealed = (state: GameState): boolean =>
+  state.status.type === "completed" || state.status.type === "gameOver";
+
 const supportedLifeTriggerDefinition = (
   cardId: Parameters<typeof resolvedCard>[0]["cardId"],
 ): EffectDefinition => {
@@ -275,105 +278,127 @@ const assertNoHiddenLeak = (
     );
   }
 
-  for (const card of opponentState.hand) {
-    if (!publicVisibleCardIds.has(String(card.cardId))) {
+  if (privateZonesRevealed(state)) {
+    assert.deepEqual(
+      view.self.deck?.map((card) => card.instanceId),
+      recipientState.deck.map((card) => card.instanceId),
+      `${label} self deck visible after terminal state`,
+    );
+    assert.deepEqual(
+      view.opponent.hand?.map((card) => card.instanceId),
+      opponentState.hand.map((card) => card.instanceId),
+      `${label} opponent hand visible after terminal state`,
+    );
+    assert.deepEqual(
+      view.opponent.deck?.map((card) => card.instanceId),
+      opponentState.deck.map((card) => card.instanceId),
+      `${label} opponent deck visible after terminal state`,
+    );
+  } else {
+    for (const card of opponentState.hand) {
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(card.cardId),
+          `${label} opponent hand card id must stay hidden`,
+        );
+      }
       assertNoScalarValue(
         view,
-        String(card.cardId),
-        `${label} opponent hand card id must stay hidden`,
+        String(card.instanceId),
+        `${label} opponent hand instance id must stay hidden`,
       );
     }
-    assertNoScalarValue(
-      view,
-      String(card.instanceId),
-      `${label} opponent hand instance id must stay hidden`,
-    );
-  }
 
-  for (const card of recipientState.deck) {
-    if (!publicVisibleCardIds.has(String(card.cardId))) {
+    for (const card of recipientState.deck) {
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(card.cardId),
+          `${label} recipient deck card id must stay hidden`,
+        );
+      }
       assertNoScalarValue(
         view,
-        String(card.cardId),
-        `${label} recipient deck card id must stay hidden`,
+        String(card.instanceId),
+        `${label} recipient deck instance id must stay hidden`,
       );
     }
-    assertNoScalarValue(
-      view,
-      String(card.instanceId),
-      `${label} recipient deck instance id must stay hidden`,
-    );
-  }
-  for (const card of opponentState.deck) {
-    if (!publicVisibleCardIds.has(String(card.cardId))) {
-      assertNoScalarValue(
-        view,
-        String(card.cardId),
-        `${label} opponent deck card id must stay hidden`,
-      );
-    }
-    assertNoScalarValue(
-      view,
-      String(card.instanceId),
-      `${label} opponent deck instance id must stay hidden`,
-    );
-  }
-  for (const card of recipientState.donDeck) {
-    if (!publicVisibleCardIds.has(String(card.cardId))) {
-      assertNoScalarValue(
-        view,
-        String(card.cardId),
-        `${label} recipient DON deck card id must stay hidden`,
-      );
-    }
-    assertNoScalarValue(
-      view,
-      String(card.instanceId),
-      `${label} recipient DON deck instance id must stay hidden`,
-    );
-  }
-  for (const card of opponentState.donDeck) {
-    if (!publicVisibleCardIds.has(String(card.cardId))) {
-      assertNoScalarValue(
-        view,
-        String(card.cardId),
-        `${label} opponent DON deck card id must stay hidden`,
-      );
-    }
-    assertNoScalarValue(
-      view,
-      String(card.instanceId),
-      `${label} opponent DON deck instance id must stay hidden`,
-    );
-  }
 
-  for (const lifeCard of recipientState.life.filter((card) => !card.faceUp)) {
-    if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+    for (const card of opponentState.deck) {
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(card.cardId),
+          `${label} opponent deck card id must stay hidden`,
+        );
+      }
       assertNoScalarValue(
         view,
-        String(lifeCard.card.cardId),
-        `${label} recipient face-down life card id must stay hidden`,
+        String(card.instanceId),
+        `${label} opponent deck instance id must stay hidden`,
       );
     }
-    assertNoScalarValue(
-      view,
-      String(lifeCard.card.instanceId),
-      `${label} recipient face-down life instance id must stay hidden`,
-    );
-  }
-  for (const lifeCard of opponentState.life.filter((card) => !card.faceUp)) {
-    if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+
+    for (const card of recipientState.donDeck) {
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(card.cardId),
+          `${label} recipient DON deck card id must stay hidden`,
+        );
+      }
       assertNoScalarValue(
         view,
-        String(lifeCard.card.cardId),
-        `${label} opponent face-down life card id must stay hidden`,
+        String(card.instanceId),
+        `${label} recipient DON deck instance id must stay hidden`,
       );
     }
-    assertNoScalarValue(
-      view,
-      String(lifeCard.card.instanceId),
-      `${label} opponent face-down life instance id must stay hidden`,
-    );
+
+    for (const card of opponentState.donDeck) {
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(card.cardId),
+          `${label} opponent DON deck card id must stay hidden`,
+        );
+      }
+      assertNoScalarValue(
+        view,
+        String(card.instanceId),
+        `${label} opponent DON deck instance id must stay hidden`,
+      );
+    }
+
+    for (const lifeCard of recipientState.life.filter((card) => !card.faceUp)) {
+      if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(lifeCard.card.cardId),
+          `${label} recipient face-down life card id must stay hidden`,
+        );
+      }
+      assertNoScalarValue(
+        view,
+        String(lifeCard.card.instanceId),
+        `${label} recipient face-down life instance id must stay hidden`,
+      );
+    }
+
+    for (const lifeCard of opponentState.life.filter((card) => !card.faceUp)) {
+      if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(lifeCard.card.cardId),
+          `${label} opponent face-down life card id must stay hidden`,
+        );
+      }
+      assertNoScalarValue(
+        view,
+        String(lifeCard.card.instanceId),
+        `${label} opponent face-down life instance id must stay hidden`,
+      );
+    }
   }
 
   assert.ok(view.self.leader);
@@ -491,16 +516,26 @@ test("real K.O. trigger battle views omit runtime queue internals and hidden dra
   }
 
   const p1View = filterStateForPlayer(state, p1);
-  assertNoScalarValue(
-    p1View,
-    String(hiddenDrawnCard.instanceId),
-    "p1 must not see opponent's On K.O. drawn card instance id",
-  );
-  assertNoScalarValue(
-    p1View,
-    String(hiddenDrawnCard.cardId),
-    "p1 must not see opponent's On K.O. drawn card id",
-  );
+  if (privateZonesRevealed(state)) {
+    assert.equal(
+      p1View.opponent.hand?.some(
+        (card) => card.instanceId === hiddenDrawnCard.instanceId,
+      ),
+      true,
+      "p1 terminal view should reveal opponent's On K.O. drawn card",
+    );
+  } else {
+    assertNoScalarValue(
+      p1View,
+      String(hiddenDrawnCard.instanceId),
+      "p1 must not see opponent's On K.O. drawn card instance id",
+    );
+    assertNoScalarValue(
+      p1View,
+      String(hiddenDrawnCard.cardId),
+      "p1 must not see opponent's On K.O. drawn card id",
+    );
+  }
 });
 
 test("real life trigger views keep decline, activation, no-zone, and adjacent hidden state safe", () => {
@@ -609,22 +644,24 @@ test("real life trigger views keep decline, activation, no-zone, and adjacent hi
     assert.equal(serialized.includes("sourcePresencePolicy"), false);
     assert.equal(serialized.includes("orderingGroup"), false);
     assert.equal(serialized.includes('"effectQueue"'), false);
-    assertNoScalarValue(
-      view,
-      String(adjacentLifeId),
-      `${String(recipient)} activation view must not leak adjacent life`,
-    );
-    if (recipient === p1) {
+    if (!privateZonesRevealed(activated.state)) {
       assertNoScalarValue(
         view,
-        String(hiddenHandId),
-        "attacker activation view must not leak defender hand",
+        String(adjacentLifeId),
+        `${String(recipient)} activation view must not leak adjacent life`,
       );
-      assertNoScalarValue(
-        view,
-        String(hiddenDeckId),
-        "attacker activation view must not leak defender deck order",
-      );
+      if (recipient === p1) {
+        assertNoScalarValue(
+          view,
+          String(hiddenHandId),
+          "attacker activation view must not leak defender hand",
+        );
+        assertNoScalarValue(
+          view,
+          String(hiddenDeckId),
+          "attacker activation view must not leak defender deck order",
+        );
+      }
     }
   }
 });
