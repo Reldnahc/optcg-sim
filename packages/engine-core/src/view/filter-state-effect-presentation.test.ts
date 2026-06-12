@@ -497,11 +497,7 @@ test("player decision projection narrows choose-one prompts to the choice spans"
   assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
     source,
     textKind: "effect",
-    activeSpanIds: [
-      "span:choice",
-      "span:choice:0:option",
-      "span:choice:1:option",
-    ],
+    activeSpanIds: ["span:choice"],
   });
 });
 
@@ -536,6 +532,7 @@ test("player decision projection narrows decisions inside choose-one options to 
         "span:choice",
         "span:choice:0:option",
         "span:choice:1:option",
+        "span:choice:1:body",
         "span:body:after-choice",
       ] as EffectTextSpanId[],
     },
@@ -589,7 +586,7 @@ test("player decision projection narrows decisions inside choose-one options to 
   assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
     source,
     textKind: "effect",
-    activeSpanIds: ["span:choice:1:option"],
+    activeSpanIds: ["span:choice:1:body"],
   });
 });
 

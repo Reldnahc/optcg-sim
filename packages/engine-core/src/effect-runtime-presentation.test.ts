@@ -9,6 +9,8 @@ import type {
 import {
   activeEffectTextPresentationForEffectBlock,
   activeEffectTextPresentationForFailedCondition,
+  activeSpanIdsForChoice,
+  activeSpanIdsForChoiceOptionIndex,
   activeSpanIdsForCost,
   activeSpanIdsForEffectPath,
   activeSpanIdsForSequenceIndex,
@@ -250,12 +252,22 @@ describe("runtime effect presentation refs", () => {
   test("narrows active span ids by shared presentation phases", () => {
     const ids = [
       "span:cost:optional",
+      "span:choice",
+      "span:choice:1:option",
+      "span:choice:1:body",
       "span:sequence:1:body",
       "span:sequence:2:body",
     ] as const;
 
     expect(activeSpanIdsForCost(ids)).toEqual(["span:cost:optional"]);
+    expect(activeSpanIdsForChoice(ids)).toEqual(["span:choice"]);
+    expect(activeSpanIdsForChoiceOptionIndex(ids, 1)).toEqual([
+      "span:choice:1:body",
+    ]);
     expect(activeSpanIdsWithoutCost(ids)).toEqual([
+      "span:choice",
+      "span:choice:1:option",
+      "span:choice:1:body",
       "span:sequence:1:body",
       "span:sequence:2:body",
     ]);

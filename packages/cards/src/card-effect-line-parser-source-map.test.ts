@@ -208,7 +208,7 @@ describe("card effect parser source maps", () => {
     }
   });
 
-  it("emits choice header and bullet option spans", () => {
+  it("emits choice header, bullet option, and option body spans", () => {
     const text = `[Main] Choose one:
 \u2022 Draw 2 cards.
 \u2022 Rest up to 1 of your opponent's Characters.`;
@@ -231,6 +231,20 @@ describe("card effect parser source maps", () => {
     ).toBe(true);
     expect(spans.filter((span) => span.role === "choiceOption")).toHaveLength(
       2,
+    );
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:choice:0:body",
+          role: "body",
+          text: "Draw 2 cards.",
+        }),
+        expect.objectContaining({
+          id: "span:choice:1:body",
+          role: "body",
+          text: "Rest up to 1 of your opponent's Characters.",
+        }),
+      ]),
     );
   });
 

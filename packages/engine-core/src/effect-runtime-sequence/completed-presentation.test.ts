@@ -224,6 +224,7 @@ test("completed choose-one option narrows to the selected option span", () => {
           "span:choice",
           "span:choice:0:option",
           "span:choice:1:option",
+          "span:choice:1:body",
           "span:body:after-choice",
         ] as EffectTextSpanId[],
       },
@@ -244,6 +245,6 @@ test("completed choose-one option narrows to the selected option span", () => {
   assert.deepEqual(result.presentation, {
     source: queuedEntry.source,
     textKind: "effect" as const,
-    activeSpanIds: ["span:choice:1:option"],
+    activeSpanIds: ["span:choice:1:body"],
   });
 });
