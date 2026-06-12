@@ -133,6 +133,14 @@ describe("collection modal", () => {
     assert.match(markup, /--stack-card-offset:0px/u);
     assert.match(markup, /--stack-card-offset:1px/u);
     assert.match(markup, /--stack-card-offset:2px/u);
+    assert.match(markup, /--stack-card-offset:3px/u);
+    assert.match(markup, /z-index:3/u);
+    assert.match(
+      markup,
+      /stack-card-layer card-face card-back card-back-main-deck/u,
+    );
+    assert.match(markup, /data-stack-card-index="0"/u);
+    assert.match(markup, /data-stack-card-index="2"/u);
     assert.match(markup, /stack-card-top/u);
     assert.match(
       zoneStyles,
@@ -140,11 +148,16 @@ describe("collection modal", () => {
     );
     assert.match(
       zoneStyles,
-      /\.stack-card-layer\s*\{[^}]*position:\s*absolute;/u,
+      /\.stack-card-layer\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
     );
     assert.match(
       zoneStyles,
-      /\.stack-card-top\s*\{[^}]*position:\s*relative;/u,
+      /\.stack-card-layer\s*\{[^}]*pointer-events:\s*auto;/u,
+    );
+    assert.match(zoneStyles, /\.stack-card-layer:hover\s*\{[^}]*box-shadow:/u);
+    assert.match(
+      zoneStyles,
+      /\.stack-card-top\s*\{[^}]*position:\s*relative;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
     );
   });
 

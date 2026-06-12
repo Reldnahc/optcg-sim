@@ -174,16 +174,25 @@ export const Zone = ({
             {Array.from({ length: stackLayerCount }, (_, index) => (
               <div
                 aria-hidden="true"
-                className="stack-card-layer"
+                className="stack-card-layer card-face card-back card-back-main-deck"
+                data-stack-card-index={index}
                 key={`stack-layer-${String(index)}`}
                 style={
                   {
                     "--stack-card-offset": `${String(index)}px`,
+                    zIndex: index + 1,
                   } as CSSProperties & Record<"--stack-card-offset", string>
                 }
               />
             ))}
-            <div className="stack-card-top">
+            <div
+              className="stack-card-top"
+              style={
+                {
+                  "--stack-card-offset": `${String(stackLayerCount)}px`,
+                } as CSSProperties & Record<"--stack-card-offset", string>
+              }
+            >
               <CardTile
                 card={stackTopCard}
                 selected={
