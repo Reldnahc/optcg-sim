@@ -248,6 +248,20 @@ describe("event reaction predicate routing", () => {
       ],
     },
     {
+      text: "your opponent plays a Character using a Character's effect",
+      trigger: {
+        type: "cardPlayed",
+        player: "opponent",
+        filter: { categories: ["character"] },
+        sourceFilter: { categories: ["character"] },
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:opponent",
+        "filter:category:character",
+      ],
+    },
+    {
       text: "you play a Character with a [Trigger]",
       trigger: {
         type: "cardPlayed",
@@ -289,7 +303,7 @@ describe("event reaction predicate routing", () => {
           {
             filter: {
               categories: ["character"],
-              baseCost: { op: "gte", value: 8 },
+              baseCost: { min: 8 },
             },
           },
           {
@@ -305,6 +319,7 @@ describe("event reaction predicate routing", () => {
         "filter:cost",
         "condition:comparator:gte",
         "condition:threshold:positiveInteger",
+        "composition:triggerAnyOf",
       ],
     },
   ] satisfies Array<{

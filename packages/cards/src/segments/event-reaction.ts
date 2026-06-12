@@ -211,7 +211,92 @@ export function parseReactionPredicateFromSet(
     }
   }
 
-  return undefined;
+  const alternatives = reactionPredicateAlternatives(input.text);
+  if (alternatives.length < 2) {
+    return undefined;
+  }
+  const parsed = alternatives.map((text) =>
+    parseReactionPredicateFromSet({ ...input, text }, parsers),
+  );
+  if (parsed.some((predicate) => predicate === undefined)) {
+    return undefined;
+  }
+  return composeReactionPredicates(
+    parsed.filter(
+      (predicate): predicate is ReactionPredicateResult =>
+        predicate !== undefined,
+    ),
+  );
+}
+
+function reactionPredicateAlternatives(text: string): readonly string[] {
+  const normalized = text.trim();
+  const whenAlternatives = normalized.split(/,\s+or\s+when\s+/iu);
+  if (whenAlternatives.length > 1) {
+    return whenAlternatives.map((part) => part.trim());
+  }
+  return normalized
+    .split(/\s+or\s+(?=(?:you|your)\b(?!\s+opponent's\b))/iu)
+    .map((part) => part.trim());
+}
+
+function composeReactionPredicates(
+  predicates: readonly ReactionPredicateResult[],
+): ReactionPredicateResult | undefined {
+  if (predicates.length === 0) {
+    return undefined;
+  }
+  if (predicates.length === 1) {
+    return predicates[0];
+  }
+  if (predicates.some((predicate) => predicate.condition !== undefined)) {
+    return undefined;
+  }
+  return {
+    trigger: composeReactionTriggers(
+      predicates.map((predicate) => predicate.trigger),
+    ),
+    evidence: [
+      ...predicates.flatMap((predicate) => predicate.evidence),
+      "composition:triggerAnyOf",
+    ],
+    ...(predicates.some((predicate) => predicate.allowBodyBlockPatch === true)
+      ? { allowBodyBlockPatch: true }
+      : {}),
+  };
+}
+
+function composeReactionTriggers(triggers: readonly Trigger[]): Trigger {
+  const first = triggers[0];
+  if (
+    first?.type === "cardPlayed" &&
+    triggers.every(
+      (trigger) =>
+        trigger.type === "cardPlayed" &&
+        trigger.player === first.player &&
+        trigger.anyOf === undefined,
+    )
+  ) {
+    return {
+      type: "cardPlayed",
+      player: first.player,
+      anyOf: triggers.map((trigger) => {
+        if (trigger.type !== "cardPlayed") {
+          return {};
+        }
+        return {
+          ...(trigger.filter === undefined ? {} : { filter: trigger.filter }),
+          ...(trigger.sourceZone === undefined
+            ? {}
+            : { sourceZone: trigger.sourceZone }),
+          ...(trigger.sourceFilter === undefined
+            ? {}
+            : { sourceFilter: trigger.sourceFilter }),
+        };
+      }),
+    };
+  }
+  return anyOfTrigger(triggers);
 }
 
 const parseLifeRemovedPredicate: ReactionPredicateParser = ({ text }) => {
@@ -412,38 +497,6 @@ const parseFieldRemovalSource = (
 const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   const normalized = text.trim();
 
-  if (
-    normalized.toLowerCase() ===
-    "your opponent plays a character with a base cost of 8 or more, or when your opponent plays a character using a character's effect"
-  ) {
-    return {
-      trigger: {
-        type: "cardPlayed",
-        player: "opponent",
-        anyOf: [
-          {
-            filter: {
-              categories: ["character"],
-              baseCost: { op: "gte", value: 8 },
-            },
-          },
-          {
-            filter: { categories: ["character"] },
-            sourceFilter: { categories: ["character"] },
-          },
-        ],
-      },
-      evidence: [
-        "trigger:cardPlayed",
-        "player:opponent",
-        "filter:category:character",
-        "filter:cost",
-        "condition:comparator:gte",
-        "condition:threshold:positiveInteger",
-      ],
-    };
-  }
-
   const playedFromTrash =
     /^(?:a|your) (?<filter>.+) is played from your trash$/iu.exec(normalized);
   const trashFilter = playedFromTrash?.groups?.["filter"];
@@ -484,8 +537,15 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
     return undefined;
   }
 
-  const parsed = parseCharacterFilter(playedFilter);
+  const sourceEffect = parsePlayedUsingSourceEffect(playedFilter);
+  const parsed = parseCharacterFilter(sourceEffect?.filterText ?? playedFilter);
   if (parsed === undefined) {
+    return undefined;
+  }
+  const source = sourceEffect?.sourceFilterText;
+  const parsedSource =
+    source === undefined ? undefined : parseCharacterFilter(source);
+  if (source !== undefined && parsedSource === undefined) {
     return undefined;
   }
   const player = playedPlayer.toLowerCase() === "you" ? "self" : "opponent";
@@ -494,10 +554,33 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
       type: "cardPlayed",
       player,
       filter: parsed.filter,
+      ...(parsedSource === undefined
+        ? {}
+        : { sourceFilter: parsedSource.filter }),
     },
-    evidence: ["trigger:cardPlayed", `player:${player}`, ...parsed.evidence],
+    evidence: [
+      "trigger:cardPlayed",
+      `player:${player}`,
+      ...parsed.evidence,
+      ...(parsedSource?.evidence ?? []),
+    ],
   };
 };
+
+function parsePlayedUsingSourceEffect(
+  text: string,
+):
+  | { readonly filterText: string; readonly sourceFilterText: string }
+  | undefined {
+  const match = /^(?<filter>.+?)\s+using\s+(?<source>.+)'s effect$/iu.exec(
+    text.trim(),
+  );
+  const filterText = match?.groups?.["filter"];
+  const sourceFilterText = match?.groups?.["source"];
+  return filterText === undefined || sourceFilterText === undefined
+    ? undefined
+    : { filterText, sourceFilterText };
+}
 
 const parseActivationPredicate: ReactionPredicateParser = ({ text }) => {
   const normalized = text.trim();
