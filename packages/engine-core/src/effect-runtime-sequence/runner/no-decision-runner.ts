@@ -63,11 +63,14 @@ import { applyLifeStateNoDecisionSegment } from "./life-state-segments.js";
 import { pauseForOptionalSequenceSegment } from "./optional-segment.js";
 import { applyForEachSavedTargetSegment } from "./for-each-saved-target.js";
 import { applySelectAllTargetsSegment } from "./select-all-targets-segment.js";
+import {
+  pauseForTrashFromHandSegment,
+  pauseForTrashFromHandUntilCountSegment,
+} from "./trash-from-hand-segment.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   DrawEffect,
   MoveCardsEffect,
-  PayCostEffect,
   ReturnDonEffect,
   SegmentLedgers,
   SequenceEffect,
@@ -422,10 +425,7 @@ export const continueNoDecisionSegments = (
       },
     };
     if (segment.effect.type === "payCost") {
-      const paySegment = segment as SupportedSequenceSegment & {
-        effect: PayCostEffect;
-      };
-      const cost = paySegment.effect.cost;
+      const cost = segment.effect.cost;
       const paymentOptions = getSequenceOptionalPayCostOptions(
         nextState,
         entry,
@@ -460,6 +460,24 @@ export const continueNoDecisionSegments = (
         ledgers: pausedLedgers,
         state: decisionResult.state,
       });
+    }
+    if (segment.effect.type === "trashFromHandUntilCount") {
+      const trashResult = pauseForTrashFromHandUntilCountSegment({
+        createTrashDecision,
+        effect: segment.effect,
+        effectPath,
+        entry,
+        events,
+        index,
+        ledgers: pausedLedgers,
+        segmentResultKey: ledgerKey(segment, index),
+        state: nextState,
+      });
+      if (trashResult.kind === "continue") {
+        nextLedgers = trashResult.ledgers;
+        continue;
+      }
+      return trashResult.result;
     }
     if (segment.effect.type === "choice") {
       const decisionResult = createChooseEffectOptionDecisionForSequenceSegment(
@@ -963,22 +981,15 @@ export const continueNoDecisionSegments = (
       };
       continue;
     }
-    const decisionResult = createTrashDecision(
-      nextState,
+    return pauseForTrashFromHandSegment({
+      createTrashDecision,
+      effect: segment.effect as TrashFromHandEffect,
+      effectPath,
       entry,
-      segment.effect as TrashFromHandEffect,
-    );
-    if (!decisionResult.ok) {
-      return { ok: false };
-    }
-    return pauseSequenceForPendingDecision({
-      decisionEvents: decisionResult.events,
-      entry,
-      effectPath: [...effectPath],
       events,
       index,
       ledgers: pausedLedgers,
-      state: decisionResult.state,
+      state: nextState,
     });
   }
   return {

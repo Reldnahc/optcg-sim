@@ -32,6 +32,7 @@ import {
   isSupportedReturnDonSegment,
   isSupportedSetLifeFaceUpSegment,
   isSupportedTrashFromHandSegment,
+  isSupportedTrashFromHandUntilCountSegment,
   type DamageEffect,
   type DrawEffect,
   type DrawUpToEffect,
@@ -41,6 +42,7 @@ import {
   type ReturnDonEffect,
   type SetLifeFaceUpEffect,
   type TrashFromHandEffect,
+  type TrashFromHandUntilCountEffect,
 } from "./support/basic.js";
 import {
   isSupportedAttachSelectedDonSegment,
@@ -110,6 +112,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | ReorderLifeEffect
     | SetLifeFaceUpEffect
     | TrashFromHandEffect
+    | TrashFromHandUntilCountEffect
     | PlaceTopDeckCardsEffect
     | PayCostEffect
     | SelectCardsEffect
@@ -380,6 +383,10 @@ const isSupportedSequenceBlockWithState = (
         if (index === 0 && !allowInitialTrashFromHand) {
           return false;
         }
+        supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedTrashFromHandUntilCountSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return true;
       }

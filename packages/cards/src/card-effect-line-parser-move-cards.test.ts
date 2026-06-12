@@ -350,6 +350,51 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses return-to-owner hand followed by trash-all-hand as reusable sequence primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Return up to 1 of your opponent's Characters to the owner's hand. Then, trash all cards from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "sequence",
+                effects: [
+                  { effect: { type: "selectTargets" } },
+                  { effect: { type: "bounce", destination: "hand" } },
+                ],
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "trashFromHandUntilCount",
+                player: "self",
+                chooser: "self",
+                handCount: 0,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:returnToOwnerHand",
+        "instruction:trashFromHandUntilCount",
+        "condition:handCount",
+        "condition:threshold:nonNegativeInteger",
+        "connector:then",
+      ]),
+    );
+  });
+
   it("parses optional rest plus move-cards cost into opponent hand-count trash", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] You may rest this Character and place 2 cards from your trash at the bottom of your deck in any order: If your opponent has 6 or more cards in their hand, your opponent trashes 1 card from their hand.",

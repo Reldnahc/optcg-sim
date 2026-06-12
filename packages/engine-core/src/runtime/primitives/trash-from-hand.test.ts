@@ -314,6 +314,55 @@ test("trashFromHandUntilCount resolves as no-op when hand is already at or below
   );
 });
 
+test("sequence trashFromHandUntilCount resumes through the shared hand-trash decision", () => {
+  const { state } = trashFromHandQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "trashFromHandUntilCount",
+          player: "self",
+          chooser: "self",
+          handCount: 0,
+        },
+      },
+    ],
+  });
+
+  const decisionResult = processEffectRuntime(state);
+  const decision = must(
+    decisionResult.state.pendingDecision,
+    "pending decision",
+  );
+  assert.equal(decisionResult.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.request.zone, "hand");
+  assert.equal(decision.request.min, decision.candidates.length);
+  assert.equal(decision.request.max, decision.candidates.length);
+
+  const selected = decision.candidates.map((candidate) => candidate.card);
+  const result = respondWithCards(decisionResult.state, selected);
+  const afterP1 = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP1.hand.length, 0);
+  assert.equal(
+    result.events.some((event) => event.type === "effectResolved"),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "ruleProcessingChecked"),
+    true,
+  );
+});
+
 test("trashFromHand rejects malformed, wrong-count, duplicate, stale, and opponent responses without mutation", () => {
   const { result: decisionResult } = createTrashDecision();
   const state = decisionResult.state;

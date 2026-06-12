@@ -3,6 +3,7 @@ import type { Effect } from "@optcg/types";
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import { isSupportedDamageEffect } from "../../runtime/primitives/execute.js";
+import { isSupportedTrashFromHandUntilCountBody } from "../../runtime/primitives/trash-from-hand-until.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -15,6 +16,10 @@ export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
 export type SetLifeFaceUpEffect = Extract<Effect, { type: "setLifeFaceUp" }>;
 export type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
+export type TrashFromHandUntilCountEffect = Extract<
+  Effect,
+  { type: "trashFromHandUntilCount" }
+>;
 export type PlaceTopDeckCardsEffect = Extract<
   Effect,
   { type: "placeTopDeckCards" }
@@ -45,6 +50,12 @@ export const isSupportedTrashFromHandSegment = (
   effect.filter === undefined &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
+
+export const isSupportedTrashFromHandUntilCountSegment = (
+  effect: SequenceSegmentEffect,
+): effect is TrashFromHandUntilCountEffect =>
+  effect.type === "trashFromHandUntilCount" &&
+  isSupportedTrashFromHandUntilCountBody(effect);
 
 export const isSupportedMoveCardsSegment = (
   effect: SequenceSegmentEffect,

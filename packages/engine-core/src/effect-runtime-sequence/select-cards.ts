@@ -110,7 +110,8 @@ export const resumeSequenceFrameAfterTrashFromHand = (params: {
   )?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
-    pausedSegment.effect.type !== "trashFromHand"
+    (pausedSegment.effect.type !== "trashFromHand" &&
+      pausedSegment.effect.type !== "trashFromHandUntilCount")
   ) {
     return {
       error: params.sequenceRuntimeError(

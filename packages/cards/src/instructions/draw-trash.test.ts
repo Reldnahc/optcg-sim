@@ -48,6 +48,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
           id: "opponent-trashes-n-cards-from-their-hand",
         },
         {
+          id: "trash-all-cards-from-your-hand",
+        },
+        {
           id: "trash-from-hand-until-count",
         },
       ],
