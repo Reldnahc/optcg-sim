@@ -399,6 +399,23 @@ const implicitReactionPredicate = (
     };
   }
 
+  if (normalized.toLowerCase() === "this character becomes rested") {
+    return {
+      trigger: {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+      evidence: [
+        "trigger:cardRested",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+      ],
+    };
+  }
+
   const yourTrashCardPlayed =
     /^(?:a|your) (?<filter>.+? Character(?: card)?) is played from your trash$/iu.exec(
       normalized,

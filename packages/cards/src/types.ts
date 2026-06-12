@@ -87,6 +87,7 @@ export type PrimitiveEvidence =
   | "condition:lifeCountTotal"
   | "condition:donFieldCount"
   | "condition:attachedDonCount"
+  | "condition:cardState"
   | "condition:cardStatComparison"
   | "condition:fieldCountDifference"
   | "condition:comparator:eq"

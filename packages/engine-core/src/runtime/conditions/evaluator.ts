@@ -164,6 +164,30 @@ const evaluateSourcePlayedThisTurn = (
   };
 };
 
+const evaluateCardState = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  condition: Extract<Condition, { type: "cardState" }>,
+): ConditionEvaluationResult => {
+  if (condition.target.type !== "self") {
+    return { supported: false };
+  }
+  const sourceZone = entry.source.zone;
+  if (sourceZone === undefined || !isFieldZone(sourceZone.zone)) {
+    return { supported: false };
+  }
+  const source = findLiveSourceFieldCard(state, entry);
+  if (
+    source === undefined ||
+    source.cardId !== entry.source.cardId ||
+    source.controller !== entry.source.playerId ||
+    !isFieldZone(source.zone.zone)
+  ) {
+    return { supported: false };
+  }
+  return { supported: true, passed: source.state === condition.state };
+};
+
 const resolveConditionPlayer = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -821,10 +845,11 @@ const evaluateCondition = (
       }
       return { supported: true, passed: !childResult.passed };
     }
+    case "cardState":
+      return evaluateCardState(state, entry, condition);
     case "custom":
     case "attackTarget":
     case "donCount":
-    case "cardState":
     case "eventPayload":
       return { supported: false };
     case "sourceStillInZone":
@@ -925,10 +950,11 @@ export const isSupportedQueuedEffectConditionShape = (
       return condition.conditions.every(isSupportedQueuedEffectConditionShape);
     case "not":
       return isSupportedQueuedEffectConditionShape(condition.condition);
+    case "cardState":
+      return condition.target.type === "self";
     case "custom":
     case "attackTarget":
     case "donCount":
-    case "cardState":
     case "eventPayload":
       return false;
     case "sourceStillInZone":

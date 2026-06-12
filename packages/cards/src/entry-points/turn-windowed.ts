@@ -43,7 +43,16 @@ export function parseTurnWindowedEntryPoint(
       isEntryPointPrefix(restAfterTurnWindow, candidate.text),
   );
   if (nestedEntryPoint === undefined) {
-    return undefined;
+    return {
+      node: {
+        type: "entryPoint",
+        trigger: { type: "permanent" },
+        category: "permanent",
+        condition: turnWindow.condition,
+      },
+      evidence: turnWindow.evidence,
+      rest: restAfterTurnWindow,
+    };
   }
 
   const condition =

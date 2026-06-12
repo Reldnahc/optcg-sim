@@ -17,6 +17,7 @@ export { parseOnlyMatchingFieldCardsCondition } from "./only-matching-field-card
 export { parseOpponentRestedCharactersCondition } from "./opponent-rested-characters.js";
 export { parseRestedCardCountCondition } from "./rested-card-count.js";
 export { parseSelfFieldCountCondition } from "./self-field-count.js";
+export { parseSelfCardStateCondition } from "./self-card-state.js";
 export { parseSelectedTargetStatComparisonCondition } from "./selected-target-stat-comparison.js";
 export { parseSelfStatComparisonCondition } from "./self-stat-comparison.js";
 export { parseSourcePlayedThisTurnCondition } from "./source-played-this-turn.js";
