@@ -1,5 +1,6 @@
 import type {
   Effect,
+  EffectDefinition,
   EffectQueueEntry,
   EngineEvent,
   GameState,
@@ -25,6 +26,7 @@ type ContinueNoDecisionSegments = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: SequenceEffect | undefined,
+  effectBlock: EffectDefinition["effects"][number] | undefined,
   startIndex: number,
   ledgers: SegmentLedgers,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
@@ -98,6 +100,7 @@ const markLoopItemCompleted = (params: {
 export const applyForEachSavedTargetSegment = (params: {
   continueNoDecisionSegments: ContinueNoDecisionSegments;
   createTrashDecision: CreateTrashFromHandSequenceDecision;
+  effectBlock: EffectDefinition["effects"][number] | undefined;
   effectPath: readonly string[];
   entry: EffectQueueEntry;
   events: readonly EngineEvent[];
@@ -160,6 +163,7 @@ export const applyForEachSavedTargetSegment = (params: {
       nextState,
       params.entry,
       childSequence,
+      params.effectBlock,
       0,
       {
         segmentResults: nextLedgers.segmentResults,

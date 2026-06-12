@@ -685,7 +685,7 @@ const matchEffectResolved = (
   ) {
     return false;
   }
-  if (trigger.status !== undefined && payload["status"] !== trigger.status) {
+  if (payload["status"] !== "resolved") {
     return false;
   }
   const sourceResolved = resolvedCardForId(state, payload["sourceCardId"]);

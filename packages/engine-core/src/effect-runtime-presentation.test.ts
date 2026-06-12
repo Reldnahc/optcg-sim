@@ -8,6 +8,7 @@ import type {
 
 import {
   activeEffectTextPresentationForEffectBlock,
+  activeEffectTextPresentationForFailedCondition,
   activeSpanIdsForCost,
   activeSpanIdsForEffectPath,
   activeSpanIdsForSequenceIndex,
@@ -195,6 +196,55 @@ describe("runtime effect presentation refs", () => {
     });
 
     expect(ids).toEqual(["span:sequence:1:body"]);
+  });
+
+  test("resolves failed condition presentation to condition parser span ids", () => {
+    expect(
+      activeEffectTextPresentationForFailedCondition({
+        effectBlock: {
+          ...effectBlock,
+          condition: {
+            type: "trashCount",
+            player: "self",
+            op: "gte",
+            value: 7,
+          },
+          presentation: {
+            textKind: "effect",
+            spanIds: ["span:body"],
+          },
+        },
+        resolvedCard: {
+          ...resolvedCard,
+          effectTextSourceMap: {
+            textKind: "effect",
+            sourceText:
+              "[On Play] If you have 7 or more cards in your trash, draw 1 card.",
+            spans: [
+              {
+                id: "span:condition",
+                role: "condition",
+                start: 13,
+                end: 56,
+                text: "you have 7 or more cards in your trash",
+              },
+              {
+                id: "span:body",
+                role: "body",
+                start: 58,
+                end: 70,
+                text: "draw 1 card.",
+              },
+            ],
+          },
+        },
+        source,
+      }),
+    ).toEqual({
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:condition"],
+    });
   });
 
   test("narrows active span ids by shared presentation phases", () => {

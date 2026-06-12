@@ -37,6 +37,7 @@ import {
   createChooseOptionalActivationDecision,
   createChooseQuantityDecision,
 } from "./choice-decisions.js";
+import { appendFailedConditionSpotlightEvent } from "../runtime/failed-condition-presentation.js";
 import { resolveQueuedDamagePrimitive } from "./damage.js";
 import { createQueuedEffectResolvers } from "./effect-resolution.js";
 import { resolveQueuedPrimitiveBody } from "./primitive-resolution.js";
@@ -96,6 +97,12 @@ export const createQueueEntryResolver = (
         return unsupportedEffectQueueResult(originalState);
       }
       if (!conditionResult.passed) {
+        nextState = appendFailedConditionSpotlightEvent({
+          effectBlock: queuedEffect,
+          entry: selected,
+          events: allEvents,
+          state: nextState,
+        });
         nextState = {
           ...nextState,
           effectQueue: nextState.effectQueue.filter(

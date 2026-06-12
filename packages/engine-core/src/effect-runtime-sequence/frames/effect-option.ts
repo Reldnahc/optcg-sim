@@ -133,6 +133,7 @@ export const resumeSequenceFrameAfterEffectOption = (
     stateAfterDecision,
     entry,
     optionSequence,
+    supportedBlock,
     0,
     {
       savedReferences: frame.savedReferences,

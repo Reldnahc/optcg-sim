@@ -1,5 +1,6 @@
 import type {
   Effect,
+  EffectDefinition,
   EffectQueueEntry,
   EngineEvent,
   GameState,
@@ -37,6 +38,7 @@ import {
 } from "../segments.js";
 import { type SupportedSequenceSegment } from "../support.js";
 import { applyRuntimePlaySource } from "../../play-card/core.js";
+import { appendFailedConditionSpotlightEvent } from "../../runtime/failed-condition-presentation.js";
 import { executeDamagePrimitive } from "../../runtime/primitives/execute.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
 import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
@@ -78,6 +80,7 @@ export const continueNoDecisionSegments = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: SequenceEffect | undefined,
+  effectBlock: EffectDefinition["effects"][number] | undefined,
   startIndex: number,
   ledgers: SegmentLedgers,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
@@ -617,6 +620,7 @@ export const continueNoDecisionSegments = (
       const loop = applyForEachSavedTargetSegment({
         continueNoDecisionSegments,
         createTrashDecision,
+        effectBlock,
         effectPath,
         entry,
         events,
@@ -797,6 +801,7 @@ export const continueNoDecisionSegments = (
         nextState,
         entry,
         segment.effect,
+        effectBlock,
         0,
         nextLedgers,
         createTrashDecision,
@@ -847,6 +852,14 @@ export const continueNoDecisionSegments = (
         return { ok: false };
       }
       if (!condition.passed) {
+        nextState = appendFailedConditionSpotlightEvent({
+          effectBlock,
+          effectPath,
+          entry,
+          events,
+          sequenceIndex: index,
+          state: nextState,
+        });
         nextLedgers = {
           ...nextLedgers,
           segmentResults: {
@@ -876,6 +889,7 @@ export const continueNoDecisionSegments = (
           nextState,
           entry,
           thenSequence,
+          effectBlock,
           0,
           nextLedgers,
           createTrashDecision,

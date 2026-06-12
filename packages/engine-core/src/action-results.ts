@@ -82,6 +82,7 @@ export const appendEffectResolvedEvent = (
   queuedEntry: EffectQueueEntry,
   effectBlock?: EffectDefinition["effects"][number],
   resolvedSourceCard?: ResolvedCard,
+  options: { readonly status?: "resolved" | "conditionFailed" } = {},
 ): void => {
   appendEvent(
     state,
@@ -113,7 +114,7 @@ export const appendEffectResolvedEvent = (
       ...(queuedEntry.presentation === undefined
         ? {}
         : { presentation: queuedEntry.presentation }),
-      status: "resolved" as const,
+      status: options.status ?? ("resolved" as const),
     },
     { type: "public" },
   );

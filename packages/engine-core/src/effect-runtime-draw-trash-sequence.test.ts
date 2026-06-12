@@ -55,6 +55,20 @@ const drawTrashSequence = (
   ],
 });
 
+const conditionalDrawSequence = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: {
+        type: "conditional",
+        if: { type: "trashCount", player: "self", op: "gte", value: 7 },
+        then: { type: "draw", player: "self", count: 1 },
+      },
+    },
+  ],
+});
+
 const handRef = (card: CardInstance, playerId = p1): CardRef => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
@@ -266,6 +280,78 @@ test("zero-count draw still creates trash decision through sequence frame pause"
   assert.equal(frame.pendingDecision.decisionId, decision.id);
   assert.equal(frame.pendingDecision.resumeAtSegmentIndex, 1);
   assert.equal(frame.nextSegmentIndex, 2);
+});
+
+test("failed conditional sequence segment queues condition spotlight presentation", () => {
+  const { state, source } = sequenceQueueState(conditionalDrawSequence(), {
+    presentation: {
+      textKind: "effect",
+      spanIds: ["span:condition", "span:sequence:0:body"],
+    },
+  });
+  const sourceText =
+    "[On Play] If you have 7 or more cards in your trash, draw 1 card.";
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    effectText: sourceText,
+    effectTextSourceMap: {
+      textKind: "effect",
+      sourceText,
+      spans: [
+        {
+          id: "span:condition",
+          role: "condition",
+          start: 13,
+          end: 56,
+          text: "you have 7 or more cards in your trash",
+          effectPath: ["effect", "sequence"],
+          sequenceIndex: 0,
+        },
+        {
+          id: "span:sequence:0:body",
+          role: "body",
+          start: 58,
+          end: 70,
+          text: "draw 1 card.",
+          effectPath: ["effect", "sequence"],
+          sequenceIndex: 0,
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+  const failedConditionEvent = must(result.events[0], "failed condition event");
+  const payload = failedConditionEvent.payload as {
+    readonly presentation?: unknown;
+    readonly status?: unknown;
+  };
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(eventTypes(result.events), [
+    "effectResolved",
+    "effectResolved",
+  ]);
+  assert.equal(payload.status, "conditionFailed");
+  assert.deepEqual(payload.presentation, {
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    textKind: "effect",
+    activeSpanIds: ["span:condition"],
+  });
+  assert.equal(
+    (
+      must(result.events[1], "completed sequence event").payload as {
+        readonly status?: unknown;
+      }
+    ).status,
+    "resolved",
+  );
+  assert.equal(result.state.effectQueue.length, 0);
 });
 
 test("valid sequence trash response resumes through the existing finalizer and completes the original queue entry", () => {

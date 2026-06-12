@@ -146,6 +146,7 @@ export const createSupportedSequenceFrameDecision = (
     nextState,
     resolvingEntry,
     supportedBlock.effect,
+    effectBlock,
     0,
     ledgers,
     createTrashDecision,
@@ -209,6 +210,7 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
     replaceQueueEntry(stateWithEntry, resolvingEntry),
     resolvingEntry,
     supportedBlock.effect,
+    params.effectBlock,
     params.startIndex,
     {
       savedReferences: initialSavedReferences(params.state, resolvingEntry),

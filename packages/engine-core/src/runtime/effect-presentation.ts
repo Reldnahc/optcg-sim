@@ -121,6 +121,35 @@ export const activeSpanIdsForEffectPath = ({
     .map((span) => span.id);
 };
 
+const conditionSpanIdsForEffectPath = ({
+  sourceMap,
+  effectPath,
+  sequenceIndex,
+}: {
+  readonly sourceMap: EffectTextSourceMap | undefined;
+  readonly effectPath?: readonly string[] | undefined;
+  readonly sequenceIndex?: number | undefined;
+}): EffectTextSpanId[] => {
+  if (sourceMap === undefined) {
+    return [];
+  }
+  return sourceMap.spans
+    .filter((span) => {
+      if (span.role !== "condition") {
+        return false;
+      }
+      const samePath =
+        effectPath === undefined ||
+        span.effectPath === undefined ||
+        (span.effectPath.length === effectPath.length &&
+          span.effectPath.every((part, index) => part === effectPath[index]));
+      const sameIndex =
+        sequenceIndex === undefined || span.sequenceIndex === sequenceIndex;
+      return samePath && sameIndex;
+    })
+    .map((span) => span.id);
+};
+
 export const activeEffectTextPresentationForEffectBlock = ({
   effectBlock,
   resolvedCard,
@@ -163,6 +192,38 @@ export const activeEffectTextPresentationForEffectBlock = ({
   };
 };
 
+export const activeEffectTextPresentationForFailedCondition = ({
+  effectBlock,
+  effectPath,
+  resolvedCard,
+  sequenceIndex,
+  source,
+}: {
+  readonly effectBlock: EffectDefinition["effects"][number];
+  readonly effectPath?: readonly string[] | undefined;
+  readonly resolvedCard: ResolvedCard;
+  readonly sequenceIndex?: number | undefined;
+  readonly source: CardRef;
+}): ActiveEffectTextPresentation | undefined => {
+  const textKind =
+    effectBlock.presentation?.textKind ??
+    (effectBlock.trigger.type === "trigger" ? "trigger" : "effect");
+  const sourceMap =
+    textKind === "trigger"
+      ? resolvedCard.triggerTextSourceMap
+      : resolvedCard.effectTextSourceMap;
+  const activeSpanIds = conditionSpanIdsForEffectPath({
+    sourceMap: sourceMap?.textKind === textKind ? sourceMap : undefined,
+    effectPath,
+    sequenceIndex,
+  });
+  return {
+    source,
+    textKind,
+    activeSpanIds,
+  };
+};
+
 export const effectQueueEntryPresentationForEffectBlock = (params: {
   readonly effectBlock: EffectDefinition["effects"][number];
   readonly resolvedCard: ResolvedCard;
@@ -170,4 +231,27 @@ export const effectQueueEntryPresentationForEffectBlock = (params: {
 }): Pick<EffectQueueEntry, "presentation"> | Record<string, never> => {
   const presentation = activeEffectTextPresentationForEffectBlock(params);
   return presentation === undefined ? {} : { presentation };
+};
+
+export const entryWithFailedConditionPresentation = ({
+  effectBlock,
+  effectPath,
+  entry,
+  resolvedCard,
+  sequenceIndex,
+}: {
+  readonly effectBlock: EffectDefinition["effects"][number];
+  readonly effectPath?: readonly string[] | undefined;
+  readonly entry: EffectQueueEntry;
+  readonly resolvedCard: ResolvedCard;
+  readonly sequenceIndex?: number | undefined;
+}): EffectQueueEntry => {
+  const presentation = activeEffectTextPresentationForFailedCondition({
+    effectBlock,
+    effectPath,
+    resolvedCard,
+    sequenceIndex,
+    source: entry.source,
+  });
+  return presentation === undefined ? entry : { ...entry, presentation };
 };

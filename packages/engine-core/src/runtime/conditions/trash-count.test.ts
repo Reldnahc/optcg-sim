@@ -90,6 +90,8 @@ const setupQueuedDrawWithCondition = (
   const base = reviewedOnPlayDrawDefinition(source.cardId, leaderCard.support);
   const effect = must(base.effects[0], "effect");
   const effectBlockId = toEffectId(effectIdSuffix);
+  const sourceText =
+    "[On Play] If you have 7 or more cards in your trash, draw 1 card.";
   setupOnPlayDefinition(
     state,
     source,
@@ -100,11 +102,39 @@ const setupQueuedDrawWithCondition = (
           ...effect,
           id: effectBlockId,
           condition,
+          presentation: {
+            textKind: "effect",
+            spanIds: ["span:body"],
+          },
         },
       ],
     },
     `def-${effectIdSuffix}`,
   );
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    effectText: sourceText,
+    effectTextSourceMap: {
+      textKind: "effect",
+      sourceText,
+      spans: [
+        {
+          id: "span:condition",
+          role: "condition",
+          start: 13,
+          end: 56,
+          text: "you have 7 or more cards in your trash",
+        },
+        {
+          id: "span:body",
+          role: "body",
+          start: 58,
+          end: 70,
+          text: "draw 1 card.",
+        },
+      ],
+    },
+  };
   state.effectQueue = [
     {
       ...queueDrawForP1(),
@@ -238,9 +268,25 @@ test("false trashCount condition skips queued effect body cleanly", () => {
   const beforeP1 = structuredClone(must(state.players[p1], "p1"));
 
   const result = processEffectRuntime(state);
+  const failedConditionEvent = must(result.events[0], "failed condition event");
+  const payload = failedConditionEvent.payload as {
+    readonly presentation?: unknown;
+    readonly status?: unknown;
+  };
 
   assert.equal(result.errors, undefined);
-  assert.deepEqual(result.events, []);
+  assert.equal(failedConditionEvent.type, "effectResolved");
+  assert.equal(payload.status, "conditionFailed");
+  assert.deepEqual(payload.presentation, {
+    source: {
+      instanceId: must(state.players[p1], "p1").leader.instanceId,
+      cardId: must(state.players[p1], "p1").leader.cardId,
+      playerId: p1,
+      zone: must(state.players[p1], "p1").leader.zone,
+    },
+    textKind: "effect",
+    activeSpanIds: ["span:condition"],
+  });
   assert.equal(result.state.effectQueue.length, 0);
   assert.equal(
     must(result.state.players[p1], "p1").deck.length,
@@ -309,7 +355,20 @@ test("true, false, and unsupported trashCount paths keep deterministic event ord
   const firstFalse = runFalse();
   const secondFalse = runFalse();
   assert.equal(firstFalse.errors, undefined);
-  assert.deepEqual(firstFalse.events, []);
+  assert.deepEqual(
+    firstFalse.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(
+    firstFalse.events.map(
+      (event) => (event.payload as { readonly status?: unknown }).status,
+    ),
+    ["conditionFailed"],
+  );
+  assert.deepEqual(
+    firstFalse.events.map((event) => event.seq),
+    secondFalse.events.map((event) => event.seq),
+  );
   assert.equal(firstFalse.stateHash, hashCanonicalStateValue(firstFalse.state));
   assert.equal(firstFalse.stateHash, secondFalse.stateHash);
 
