@@ -52,4 +52,52 @@ describe("event reaction predicate routing", () => {
       });
     },
   );
+
+  it.each([
+    {
+      text: "a DON!! card on your field is returned to your DON!! deck",
+      trigger: { type: "donReturned", player: "self" },
+      evidence: ["trigger:donReturned", "player:self"],
+    },
+    {
+      text: "a DON!! card on the field is returned to your DON!! deck",
+      trigger: { type: "donReturned", player: "self" },
+      evidence: ["trigger:donReturned", "player:self"],
+    },
+    {
+      text: "a DON!! card on your field is returned to your DON!! deck by your effect",
+      trigger: {
+        type: "donReturned",
+        player: "self",
+        sourceController: "self",
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:donReturned",
+        "player:self",
+        "replacementSource:cardEffect",
+      ],
+    },
+  ])(
+    "parses shared DON-returned predicate $text through semantic predicate groups",
+    ({ text, trigger, evidence }) => {
+      const implicit = parseReactionPredicateFromSet(
+        { text },
+        implicitReactionPredicateParsers,
+      );
+      expect(implicit).toMatchObject({ trigger });
+      for (const primitive of evidence) {
+        expect(implicit?.evidence).toContain(primitive);
+      }
+
+      const activated = parseReactionPredicateFromSet(
+        { text },
+        activatedReactionPredicateParsers,
+      );
+      expect(activated).toMatchObject({ trigger });
+      for (const primitive of evidence) {
+        expect(activated?.evidence).toContain(primitive);
+      }
+    },
+  );
 });

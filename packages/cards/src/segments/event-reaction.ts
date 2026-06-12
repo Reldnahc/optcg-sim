@@ -265,6 +265,35 @@ const parseLifeRemovedOwner = (
   };
 };
 
+const parseDonReturnedPredicate: ReactionPredicateParser = ({ text }) => {
+  const returned =
+    /^a DON!! card on (?<field>your|the) field is returned to your DON!! deck(?<byYourEffect> by your effect)?$/iu.exec(
+      text.trim(),
+    );
+  if (returned === null) {
+    return undefined;
+  }
+
+  const byYourEffect = returned.groups?.["byYourEffect"] !== undefined;
+  return {
+    trigger: {
+      type: "donReturned",
+      player: "self",
+      ...(byYourEffect
+        ? {
+            sourceController: "self" as const,
+            sourceKind: "effect" as const,
+          }
+        : {}),
+    },
+    evidence: [
+      "trigger:donReturned",
+      "player:self",
+      ...(byYourEffect ? (["replacementSource:cardEffect"] as const) : []),
+    ],
+  };
+};
+
 const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
   text,
   entryPoint,
@@ -444,7 +473,11 @@ const activatedReactionSpecificPredicate: ReactionPredicateParser = ({
 };
 
 export const activatedReactionPredicateParsers: readonly ReactionPredicateParser[] =
-  [parseLifeRemovedPredicate, activatedReactionSpecificPredicate] as const;
+  [
+    parseLifeRemovedPredicate,
+    parseDonReturnedPredicate,
+    activatedReactionSpecificPredicate,
+  ] as const;
 
 const activatedReactionPredicate = (
   text: string,
@@ -617,33 +650,6 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
     };
   }
 
-  const donReturned =
-    /^a DON!! card on (?:your|the) field is returned to your DON!! deck(?<byYourEffect> by your effect)?$/iu.exec(
-      normalized,
-    );
-  if (donReturned !== null) {
-    const byYourEffect = donReturned.groups?.["byYourEffect"] !== undefined;
-    return {
-      trigger: {
-        type: "donReturned",
-        player: "self",
-        ...(byYourEffect
-          ? {
-              sourceController: "self" as const,
-              sourceKind: "effect" as const,
-            }
-          : {}),
-      },
-      evidence: [
-        "trigger:donReturned",
-        "player:self",
-        ...(byYourEffect
-          ? (["player:self", "replacementSource:cardEffect"] as const)
-          : []),
-      ],
-    };
-  }
-
   const characterPlayed =
     /^(?<player>you|your opponent) plays? (?<filter>.+? Character(?: card)?)$/iu.exec(
       normalized,
@@ -694,7 +700,11 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
 };
 
 export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[] =
-  [parseLifeRemovedPredicate, implicitReactionSpecificPredicate] as const;
+  [
+    parseLifeRemovedPredicate,
+    parseDonReturnedPredicate,
+    implicitReactionSpecificPredicate,
+  ] as const;
 
 const implicitReactionPredicates = (
   text: string,
