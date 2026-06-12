@@ -106,8 +106,18 @@ export const executeReplacementInsteadEffect = (
   }
   if (isSupportedRestSelfInsteadEffect(effect)) {
     const source = currentPublicFieldRefForInstance(state, entry.source);
-    const rested = restFieldObjects(state, [source ?? entry.source]);
-    return toEngineResult(rested.state, []);
+    const events: EngineEvent[] = [];
+    const rested = restFieldObjects(
+      state,
+      [source ?? entry.source],
+      undefined,
+      {
+        events,
+        sourceKind: "effect",
+        sourceControllerId: entry.controllerId,
+      },
+    );
+    return toEngineResult(rested.state, events);
   }
   if (isSupportedModifyPowerInsteadEffect(effect)) {
     const records = createContinuousRecordsForResolvedEffect(

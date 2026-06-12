@@ -348,7 +348,11 @@ export const applyReplacementRestTargetDecisionResponse = (
   if (resolved !== undefined) {
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
-  const rested = restFieldObjects(state, targetRefs);
+  const rested = restFieldObjects(state, targetRefs, undefined, {
+    events,
+    sourceKind: "effect",
+    sourceControllerId: decision.playerId,
+  });
   const transformedPayload = {
     replacementId: pending.payload.replacementId,
     restedTargets: targetRefs,

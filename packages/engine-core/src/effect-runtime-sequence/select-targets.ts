@@ -95,6 +95,7 @@ type SequenceFrameResumeResult =
   | undefined;
 
 type ResumeSequenceFrameFromLedgers = (params: {
+  completedSegmentEvents?: readonly EngineEvent[];
   createTrashDecision: unknown;
   effectBlock: unknown;
   entry: EffectQueueEntry;
@@ -528,11 +529,21 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
   }
 
   if (isRestEffectWithChooseTarget(pausedSegment.effect)) {
-    const rested = restFieldObjects(params.state, params.selectedTargets, {
-      sourceKind: "cardEffect",
-      sourceControllerId: entry.controllerId,
-      sourceCardCategory: entry.sourceSnapshot.category,
-    });
+    const completedSegmentEvents: EngineEvent[] = [];
+    const rested = restFieldObjects(
+      params.state,
+      params.selectedTargets,
+      {
+        sourceKind: "cardEffect",
+        sourceControllerId: entry.controllerId,
+        sourceCardCategory: entry.sourceSnapshot.category,
+      },
+      {
+        events: completedSegmentEvents,
+        sourceKind: "effect",
+        sourceControllerId: entry.controllerId,
+      },
+    );
     const scopedSegmentKey = segmentKeyForPath(
       frame.effectPath,
       params.segmentKey,
@@ -543,6 +554,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       entry,
       finalizeCompleted: true,
       frame,
+      completedSegmentEvents,
       ledgers: {
         savedReferences: frame.savedReferences,
         segmentResults: {

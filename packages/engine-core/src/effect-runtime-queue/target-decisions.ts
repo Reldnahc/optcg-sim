@@ -548,15 +548,24 @@ export const createEffectRuntimeQueueTargetDecisions = (
         ),
       };
       if (resolved.effect.type === "rest") {
-        const rested = restFieldObjects(queueRemovedState, selectedTargets, {
-          sourceKind: "cardEffect",
-          sourceControllerId: resolved.entry.controllerId,
-          sourceCardCategory: resolved.entry.sourceSnapshot.category,
-        });
+        const allEvents: EngineEvent[] = [];
+        const rested = restFieldObjects(
+          queueRemovedState,
+          selectedTargets,
+          {
+            sourceKind: "cardEffect",
+            sourceControllerId: resolved.entry.controllerId,
+            sourceCardCategory: resolved.entry.sourceSnapshot.category,
+          },
+          {
+            events: allEvents,
+            sourceKind: "effect",
+            sourceControllerId: resolved.entry.controllerId,
+          },
+        );
         nextState = rested.changed
           ? { ...rested.state, seq: toStateSeq(rested.state.seq + 1) }
           : rested.state;
-        const allEvents: EngineEvent[] = [];
         return finalizeSelectedTargetEffectResolution(
           nextState,
           state,

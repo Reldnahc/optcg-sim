@@ -268,7 +268,18 @@ test("accepted opponent effect field-removal replacement rests its source Charac
   assert.equal(nextReplacementSource.state, "rested");
   assert.deepEqual(
     accepted.events.map((event) => event.type),
-    ["decisionResolved", "replacementApplied"],
+    ["decisionResolved", "replacementApplied", "cardRested"],
+  );
+  assert.deepEqual(
+    accepted.events.find((event) => event.type === "cardRested")?.payload,
+    {
+      playerId: p2,
+      instanceId: fixture.replacementSource.instanceId,
+      cardId: fixture.replacementSource.cardId,
+      category: "character",
+      sourceKind: "effect",
+      sourceControllerId: p2,
+    },
   );
 });
 

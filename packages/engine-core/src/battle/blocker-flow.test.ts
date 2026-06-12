@@ -100,6 +100,7 @@ test("applyDeclareAttack enters block step and opens defender decline decision w
       state.eventJournal.length + 1,
       state.eventJournal.length + 2,
       state.eventJournal.length + 3,
+      state.eventJournal.length + 4,
     ],
   );
   const replay = applyDeclareAttack(structuredClone(state), {
@@ -489,6 +490,18 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
         visibility: { type: "public" },
       },
       {
+        type: "cardRested",
+        payload: {
+          playerId: p2,
+          instanceId: defenderBlocker.instanceId,
+          cardId: defenderBlocker.cardId,
+          category: "character",
+          sourceKind: "blocker",
+          sourceControllerId: p2,
+        },
+        visibility: { type: "public" },
+      },
+      {
         type: "decisionCreated",
         payload: {
           decisionId: must(blocked.state.pendingDecision, "counter decision")
@@ -749,6 +762,7 @@ test("supported blocked-battle resolution is deterministic", () => {
     [
       "decisionResolved",
       "blockerActivated",
+      "cardRested",
       "decisionCreated",
       "decisionResolved",
       "damageDealt",
@@ -768,6 +782,7 @@ test("supported blocked-battle resolution is deterministic", () => {
       { type: "public" },
       { type: "public" },
       { type: "public" },
+      { type: "public" },
       { type: "replayOnly" },
       { type: "replayOnly" },
     ],
@@ -779,7 +794,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "5c5b7ae2f7e480ed62491f84a83aa36722c9079c8432638cec275bfc9cd27815",
+    "ba6d94ac93691c308785035750980336a20de91f8f25826d4ce5a867ebb2d243",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);

@@ -54,6 +54,7 @@ import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuatio
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
+import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 
 export { applyUseCounter };
 export {
@@ -343,34 +344,6 @@ const applyDeclareAttackInternal = (
       "declareAttack attacker player does not exist.",
     );
   }
-  const nextState: GameState = {
-    ...state,
-    seq: toStateSeq(state.seq + 1),
-    actionSeq: state.actionSeq + 1,
-    players: {
-      ...state.players,
-      [attacker.playerId]: {
-        ...nextPlayer,
-        leader: attacker.isLeader
-          ? { ...nextPlayer.leader, state: "rested" }
-          : nextPlayer.leader,
-        characters: nextPlayer.characters.map((character) =>
-          !attacker.isLeader &&
-          character.instanceId === attacker.card.instanceId
-            ? { ...character, state: "rested" }
-            : character,
-        ),
-      },
-    },
-    battle: {
-      attacker: toCardRef(attacker.card, attacker.playerId),
-      originalTarget: toCardRef(target.card, target.playerId),
-      currentTarget: toCardRef(target.card, target.playerId),
-      step: "attack",
-      damageCount: target.isLeader && attackerHasDoubleAttack ? 2 : 1,
-    },
-  };
-
   const events: EngineEvent[] = [
     createEvent(
       state,
@@ -382,19 +355,30 @@ const applyDeclareAttackInternal = (
       },
       { type: "public" },
     ),
-    createEvent(
-      state,
-      2,
-      "cardRested",
-      {
-        playerId: attacker.playerId,
-        instanceId: attacker.card.instanceId,
-        cardId: attacker.card.cardId,
-        category: attacker.isLeader ? "leader" : "character",
-      },
-      { type: "public" },
-    ),
   ];
+  const baseState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    battle: {
+      attacker: toCardRef(attacker.card, attacker.playerId),
+      originalTarget: toCardRef(target.card, target.playerId),
+      currentTarget: toCardRef(target.card, target.playerId),
+      step: "attack",
+      damageCount: target.isLeader && attackerHasDoubleAttack ? 2 : 1,
+    },
+  };
+  const rested = restFieldObjects(
+    baseState,
+    [toCardRef(attacker.card, attacker.playerId)],
+    undefined,
+    {
+      events,
+      sourceKind: "attack",
+      sourceControllerId: attacker.playerId,
+    },
+  );
+  const nextState = rested.state;
   const declaredState = applyRuleProcessingCheckpoint({
     state: nextState,
     events,

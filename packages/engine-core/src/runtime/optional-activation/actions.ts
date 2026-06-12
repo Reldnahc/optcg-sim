@@ -27,12 +27,15 @@ import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";
 import { applyModifyPowerPayment } from "../primitives/modify-power-cost.js";
-import { applyRestFromFieldPaymentResponse } from "../costs/rest-from-field.js";
+import {
+  applyRestFromFieldPaymentResponse,
+  restFromFieldCandidates,
+} from "../costs/rest-from-field.js";
 import {
   applyMoveCardsPayment,
   isSupportedMoveCardsPaymentRoute,
 } from "../../effect-runtime-move-cards-payment.js";
-import { restSourceCard } from "../../effect-runtime-rest-self-cost.js";
+import { restFieldObjects } from "../../effect-runtime-sequence/saved-field-object.js";
 import {
   processEffectRuntimeAfterOptionalActivationAccept,
   processEffectRuntimeAfterOptionalActivationDecline,
@@ -429,7 +432,18 @@ export const applyOptionalActivationDecisionResponse = (
         if (!paid.ok) {
           return toEngineResult(state, [], invalidDecision(paid.message));
         }
-        nextPlayer = paid.player;
+        const selectedIds = new Set(
+          paid.costPaidPayload.selectedCardInstanceIds,
+        );
+        const selectedRefs = restFromFieldCandidates(player)
+          .filter((card) => selectedIds.has(card.instanceId))
+          .map((card) => toCardRef(card, decision.playerId));
+        const rested = restFieldObjects(state, selectedRefs, undefined, {
+          events,
+          sourceKind: "cost",
+          sourceControllerId: decision.playerId,
+        });
+        nextPlayers = rested.state.players;
         costPaidPayload = paid.costPaidPayload;
       } else if (
         selectedOption.type === "trashFromHand" ||
@@ -613,15 +627,19 @@ export const applyOptionalActivationDecisionResponse = (
             invalidDecision("Payment source rest selection is invalid."),
           );
         }
-        const rested = restSourceCard(player, source);
-        if (rested === null) {
+        const rested = restFieldObjects(state, [source], undefined, {
+          events,
+          sourceKind: "cost",
+          sourceControllerId: decision.playerId,
+        });
+        if (!rested.changed) {
           return toEngineResult(
             state,
             [],
             invalidDecision("Payment source rest selection is invalid."),
           );
         }
-        nextPlayer = rested;
+        nextPlayers = rested.state.players;
         paidCostSelectedCards = [source];
         costPaidPayload = {
           playerId: decision.playerId,

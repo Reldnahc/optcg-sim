@@ -360,6 +360,11 @@ export const applyFieldMutationSequenceSegment = (params: {
         state,
         [leaderRef],
         restProtectionAttemptFromEntry(entry),
+        {
+          events,
+          sourceKind: "effect",
+          sourceControllerId: entry.controllerId,
+        },
       );
       return {
         events,
@@ -414,6 +419,11 @@ export const applyFieldMutationSequenceSegment = (params: {
         state,
         [selfRef],
         restProtectionAttemptFromEntry(entry),
+        {
+          events,
+          sourceKind: "effect",
+          sourceControllerId: entry.controllerId,
+        },
       );
       return {
         events,
@@ -438,6 +448,7 @@ export const applyFieldMutationSequenceSegment = (params: {
     }
     const rested = applySavedFieldObjectRestSequenceSegment({
       emptySegmentResult,
+      events,
       entry,
       index,
       ledgers,

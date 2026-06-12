@@ -2,11 +2,13 @@ import type {
   CardInstance,
   CardRef,
   ContinuousEffectRecord,
+  EngineEvent,
   EffectQueueEntry,
   GameState,
   PlayerId,
 } from "@optcg/types";
 
+import { appendEvent } from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
 import {
   applyRestProtection,
@@ -22,6 +24,58 @@ const refsEqual = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
   left.cardId === right.cardId &&
   left.playerId === right.playerId;
+
+type CardRestedSourceKind = "attack" | "blocker" | "cost" | "effect" | "rule";
+
+export interface RestFieldObjectEventOptions {
+  readonly events: EngineEvent[];
+  readonly sourceControllerId?: PlayerId;
+  readonly sourceKind?: CardRestedSourceKind;
+}
+
+const cardRestedCategory = (
+  target: CardRef,
+): "leader" | "character" | "stage" | undefined => {
+  if (target.zone?.zone === "leaderArea") {
+    return "leader";
+  }
+  if (target.zone?.zone === "characterArea") {
+    return "character";
+  }
+  if (target.zone?.zone === "stageArea") {
+    return "stage";
+  }
+  return undefined;
+};
+
+const appendCardRestedEvent = (
+  state: GameState,
+  target: CardRef,
+  options: RestFieldObjectEventOptions | undefined,
+): void => {
+  const category = cardRestedCategory(target);
+  if (category === undefined || options === undefined) {
+    return;
+  }
+  appendEvent(
+    state,
+    options.events,
+    "cardRested",
+    {
+      playerId: target.playerId,
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      category,
+      ...(options.sourceKind === undefined
+        ? {}
+        : { sourceKind: options.sourceKind }),
+      ...(options.sourceControllerId === undefined
+        ? {}
+        : { sourceControllerId: options.sourceControllerId }),
+    },
+    { type: "public" },
+  );
+};
 
 const restFieldObject = (
   state: GameState,
@@ -131,6 +185,7 @@ export const restFieldObjects = (
   state: GameState,
   targets: readonly CardRef[],
   attempt?: RestProtectionAttempt,
+  eventOptions?: RestFieldObjectEventOptions,
 ): { changed: boolean; state: GameState } => {
   let nextState = state;
   let changed = false;
@@ -149,6 +204,9 @@ export const restFieldObjects = (
       }
     }
     const rested = restFieldObject(nextState, target);
+    if (rested.changed) {
+      appendCardRestedEvent(state, target, eventOptions);
+    }
     nextState = rested.state;
     changed ||= rested.changed;
   }

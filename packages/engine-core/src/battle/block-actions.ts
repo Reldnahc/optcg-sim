@@ -22,6 +22,7 @@ import { sameCardRef } from "./support.js";
 import { hasUnsupportedCounterWindow } from "./counter-actions.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
+import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
@@ -217,29 +218,6 @@ const isLegalBlockerSelection = (
   return candidates.some((candidate) => sameCardRef(candidate.card, selected));
 };
 
-const restBlocker = (
-  state: GameState,
-  defenderId: PlayerId,
-  blocker: CardRef,
-): GameState["players"] => {
-  const defender = state.players[defenderId];
-  if (defender === undefined) {
-    return state.players;
-  }
-  return {
-    ...state.players,
-    [defenderId]: {
-      ...defender,
-      characters: defender.characters.map((character) =>
-        character.instanceId === blocker.instanceId &&
-        character.cardId === blocker.cardId
-          ? { ...character, state: "rested" }
-          : character,
-      ),
-    },
-  };
-};
-
 export const applyBlockStepDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -316,16 +294,28 @@ export const applyBlockStepDecisionResponse = (
       },
       { type: "public" },
     );
-    const activatedState: GameState = {
+    const activatedBaseState: GameState = {
       ...state,
       actionSeq: eventState.actionSeq,
-      players: restBlocker(state, decision.playerId, blockerRef),
       battle: {
         ...battle,
         blocker: blockerRef,
         currentTarget: blockerRef,
         damageCount: 1,
       },
+    };
+    const rested = restFieldObjects(
+      activatedBaseState,
+      [blockerRef],
+      undefined,
+      {
+        events,
+        sourceKind: "blocker",
+        sourceControllerId: decision.playerId,
+      },
+    );
+    const activatedState = {
+      ...rested.state,
       eventJournal: [...state.eventJournal, ...events],
     };
     delete activatedState.pendingDecision;

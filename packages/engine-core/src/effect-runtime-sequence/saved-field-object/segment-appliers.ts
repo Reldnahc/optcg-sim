@@ -372,6 +372,7 @@ export const applySavedFieldObjectTrashSequenceSegment = (params: {
 
 export const applySavedFieldObjectRestSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
+  events: EngineEvent[];
   entry: EffectQueueEntry;
   index: number;
   ledgers: SegmentLedgers;
@@ -414,6 +415,11 @@ export const applySavedFieldObjectRestSequenceSegment = (params: {
     params.state,
     resolvedSavedTarget.selectedTargets,
     restProtectionAttemptFromEntry(params.entry),
+    {
+      events: params.events,
+      sourceKind: "effect",
+      sourceControllerId: params.entry.controllerId,
+    },
   );
   const nextState = rested.state;
   const changedState = rested.changed;
