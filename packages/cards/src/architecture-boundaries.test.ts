@@ -261,6 +261,25 @@ describe("cards package architecture boundaries", () => {
       expect(file.contents, file.path).not.toMatch(directTargetChainPattern);
     }
   });
+
+  it("keeps body parsers on semantic modifier groups", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const bodyFiles = files.filter(
+      (file) =>
+        file.path.includes("/instructions/") ||
+        file.path.includes("/segments/"),
+    );
+    const modifierParserName =
+      "parse(?:Positive|Negative)(?:Power|Cost)Modifier";
+    const directModifierChainPattern = new RegExp(
+      `(?:${modifierParserName}\\([^)]*\\)\\s*\\?\\?|\\?\\?\\s*${modifierParserName}\\()`,
+      "u",
+    );
+
+    for (const file of bodyFiles) {
+      expect(file.contents, file.path).not.toMatch(directModifierChainPattern);
+    }
+  });
 });
 
 function escapeRegex(value: string): string {

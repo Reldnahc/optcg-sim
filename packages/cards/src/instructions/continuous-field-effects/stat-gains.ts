@@ -7,7 +7,8 @@ import type {
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import {
-  parseNegativePowerModifier,
+  allPowerModifierParsers,
+  parseModifierFromSet,
   parsePositivePowerModifier,
 } from "../../modifiers/index.js";
 import {
@@ -118,9 +119,10 @@ const parseLeaderStatGainInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const modifier =
-    parsePositivePowerModifier({ text: modifierText }) ??
-    parseNegativePowerModifier({ text: modifierText });
+  const modifier = parseModifierFromSet(
+    { text: modifierText },
+    allPowerModifierParsers,
+  );
   if (
     modifier === undefined ||
     (modifier.rest.length > 0 && modifier.rest !== ".")
@@ -180,9 +182,10 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const modifier =
-    parsePositivePowerModifier({ text: modifierText ?? target.rest }) ??
-    parseNegativePowerModifier({ text: modifierText ?? target.rest });
+  const modifier = parseModifierFromSet(
+    { text: modifierText ?? target.rest },
+    allPowerModifierParsers,
+  );
   if (modifier === undefined) {
     return undefined;
   }
@@ -219,9 +222,10 @@ const parseYourLeaderAndAllCharactersStatGainInstruction: ContinuousInstructionP
       return undefined;
     }
 
-    const modifier =
-      parsePositivePowerModifier({ text: modifierText }) ??
-      parseNegativePowerModifier({ text: modifierText });
+    const modifier = parseModifierFromSet(
+      { text: modifierText },
+      allPowerModifierParsers,
+    );
     if (modifier === undefined) {
       return undefined;
     }
@@ -289,9 +293,10 @@ const parseAllLeaderAndCharacterStatGainInstruction: ContinuousInstructionParser
     if (predicates === undefined || predicates.rest.length > 0) {
       return undefined;
     }
-    const modifier =
-      parsePositivePowerModifier({ text: modifierText }) ??
-      parseNegativePowerModifier({ text: modifierText });
+    const modifier = parseModifierFromSet(
+      { text: modifierText },
+      allPowerModifierParsers,
+    );
     if (modifier === undefined) {
       return undefined;
     }
@@ -438,9 +443,7 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   const durationEvidence: PrimitiveEvidence[] = [];
 
   for (const part of parts) {
-    const power =
-      parsePositivePowerModifier({ text: part }) ??
-      parseNegativePowerModifier({ text: part });
+    const power = parseModifierFromSet({ text: part }, allPowerModifierParsers);
     if (power !== undefined) {
       const parsedDuration = parseStatGainDuration(power.rest, context);
       if (parsedDuration === undefined) {

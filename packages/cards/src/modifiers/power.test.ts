@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { allPowerModifierParsers, parseModifierFromSet } from "./index.js";
 import {
   negativePowerModifierPrimitive,
   parseNegativePowerModifier,
@@ -41,4 +42,16 @@ describe("power modifier parser", () => {
       });
     },
   );
+  it("parses signed power modifiers through a semantic modifier group", () => {
+    expect(
+      parseModifierFromSet(
+        { text: "-3000 power during this turn." },
+        allPowerModifierParsers,
+      ),
+    ).toEqual({
+      value: -3000,
+      evidence: ["modifier:negativePower"],
+      rest: "during this turn.",
+    });
+  });
 });

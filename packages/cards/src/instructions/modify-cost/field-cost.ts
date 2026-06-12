@@ -1,4 +1,5 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
+import { parseModifierFromSet } from "../../modifiers/index.js";
 import {
   parseAllFieldTarget,
   parseOpponentCharactersTarget,
@@ -6,9 +7,9 @@ import {
 import type { InstructionParser } from "../../types.js";
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
 import {
+  allCostModifierParsers,
   parseCostModifierDuration,
   parseNegativeCostModifier,
-  parsePositiveCostModifier,
 } from "./shared.js";
 
 export const parseContinuousFieldModifyCostInstruction: ContinuousInstructionParser =
@@ -118,9 +119,10 @@ function parseAllFieldCostModifierInstruction(
     return undefined;
   }
 
-  const modifier =
-    parsePositiveCostModifier({ text: modifierText }) ??
-    parseNegativeCostModifier({ text: modifierText });
+  const modifier = parseModifierFromSet(
+    { text: modifierText },
+    allCostModifierParsers,
+  );
   if (modifier === undefined) {
     return undefined;
   }

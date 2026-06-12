@@ -4,6 +4,7 @@ import {
   fieldEffectDurationParsers,
   parseDurationFromSet,
 } from "../../durations/index.js";
+import type { ModifierParser } from "../../modifiers/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import type { ContinuousInstructionContext } from "../continuous-field-effects.js";
 
@@ -102,3 +103,7 @@ export function parseNegativeCostModifier(input: { readonly text: string }):
     rest: restText?.trim() ?? "",
   };
 }
+
+export const allCostModifierParsers: readonly ModifierParser<
+  NonNullable<ReturnType<typeof parsePositiveCostModifier>>
+>[] = [parsePositiveCostModifier, parseNegativeCostModifier] as const;

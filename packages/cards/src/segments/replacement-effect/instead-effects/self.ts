@@ -3,8 +3,8 @@ import {
   replacementDurationParsers,
 } from "../../../durations/index.js";
 import {
-  parseNegativePowerModifier,
-  parsePositivePowerModifier,
+  allPowerModifierParsers,
+  parseModifierFromSet,
 } from "../../../modifiers/index.js";
 import type { ReplacementInsteadParseResult } from "../shared.js";
 
@@ -53,9 +53,10 @@ export function parseModifyPowerInstead(
     return undefined;
   }
 
-  const modifier =
-    parseNegativePowerModifier({ text: modifierText }) ??
-    parsePositivePowerModifier({ text: modifierText });
+  const modifier = parseModifierFromSet(
+    { text: modifierText },
+    allPowerModifierParsers,
+  );
   if (modifier === undefined) {
     return undefined;
   }
