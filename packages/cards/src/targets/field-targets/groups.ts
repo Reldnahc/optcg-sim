@@ -8,6 +8,7 @@ import {
 import { parseThisCharacterTarget } from "../this-character.js";
 import {
   parseCompoundYourCharactersTarget,
+  parseYourCharactersOrNamedCardsTarget,
   parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
@@ -46,6 +47,7 @@ export const selectedPowerGainTargetParsers =
   (): readonly FieldTargetParser[] =>
     [
       parseYourLeaderOrCharacterCardsTarget,
+      parseYourCharactersOrNamedCardsTarget,
       parseYourCharactersTarget,
       parseYourNamedCardsTarget,
       (input) => parseYourLeaderTarget({ text: stripLeadingOf(input.text) }),

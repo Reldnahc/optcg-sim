@@ -153,6 +153,47 @@ export function parseYourNamedCardsTarget(
   };
 }
 
+export function parseYourCharactersOrNamedCardsTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match =
+    /^of your Characters?(?: cards?)?\s+or\s+\[(?<name>[^\]]+)\](?:\s+cards?)?\s*(?<rest>.*)$/iu.exec(
+      input.text,
+    );
+  const nameText = match?.groups?.["name"]?.trim();
+  if (nameText === undefined || nameText.length === 0) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "self",
+        zones: ["leaderArea", "characterArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: {
+          anyOf: [{ categories: ["character"] }, { names: [nameText] }],
+        },
+      },
+    },
+    evidence: [
+      "target:yourCharacters",
+      "target:yourNamedCards",
+      "player:self",
+      "filter:anyOf",
+      "filter:category:character",
+      "filter:name",
+    ],
+    rest: normalizeTargetRest(match?.groups?.["rest"] ?? ""),
+  };
+}
+
 export function parseCompoundYourCharactersTarget(
   input: ParseInput,
   cardinality: Cardinality,

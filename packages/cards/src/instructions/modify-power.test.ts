@@ -249,6 +249,52 @@ describe("modify power instruction parser", () => {
     });
   });
 
+  it("parses positive power for self Character-or-named-card targets", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Up to 1 of your Characters or [Silvers Rayleigh] gains +2000 power during this battle.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: {
+              anyOf: [
+                { categories: ["character"] },
+                { names: ["Silvers Rayleigh"] },
+              ],
+            },
+          },
+        },
+        value: 2000,
+        duration: { type: "thisBattle" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourCharacters",
+        "target:yourNamedCards",
+        "player:self",
+        "filter:anyOf",
+        "filter:category:character",
+        "filter:name",
+        "modifier:positivePower",
+        "duration:thisBattle",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses positive power for typed self Leader or Character targets", () => {
     expect(
       parseModifyPowerInstruction({

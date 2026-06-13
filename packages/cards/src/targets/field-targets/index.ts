@@ -28,6 +28,7 @@ export {
 } from "./opponent.js";
 export {
   parseCompoundYourCharactersTarget,
+  parseYourCharactersOrNamedCardsTarget,
   parseYourCharactersTarget,
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
