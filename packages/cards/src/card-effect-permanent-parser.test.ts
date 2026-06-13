@@ -460,6 +460,118 @@ describe("permanent card effect line parser", () => {
     });
   });
 
+  it("parses attached-DON conditional all-field power gains", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] If you have a Character with a cost of 8 or more, your Leader and all of your Characters gain +1000 power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 1,
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "modifyPower",
+                target: { type: "myLeader" },
+                value: 1000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "and",
+                    conditions: [
+                      {
+                        type: "attachedDonCount",
+                        target: { type: "self" },
+                        op: "gte",
+                        value: 1,
+                      },
+                      {
+                        type: "fieldCount",
+                        player: "self",
+                        filter: {
+                          categories: ["character"],
+                          cost: { min: 8 },
+                        },
+                        op: "gte",
+                        value: 1,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "all",
+                  player: "self",
+                  zone: "characterArea",
+                  filter: { categories: ["character"] },
+                },
+                value: 1000,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "marker:attachedDon",
+        "condition:attachedDonCount",
+        "expression:conditionalContinuous",
+        "composition:conditionAnd",
+        "condition:fieldCount",
+        "filter:category:character",
+        "filter:cost",
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "cardinality:all",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
+  it("parses attached-DON conditional all-field power gains with another threshold", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x2] If you have a Character with a cost of 6 or more, your Leader and all of your Characters gain +2000 power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        condition: {
+          type: "attachedDonCount",
+          value: 2,
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "modifyPower", value: 2000 } },
+            { effect: { type: "modifyPower", value: 2000 } },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "marker:attachedDon",
+        "composition:conditionAnd",
+        "filter:cost",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses relative DON-count self hand cost reduction as reusable primitives", () => {
     const result = parseCardEffectLine(
       "If the number of DON!! cards on your field is at least 2 less than the number on your opponent's field, give this card in your hand −3 cost.",

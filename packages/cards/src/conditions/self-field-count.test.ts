@@ -81,3 +81,33 @@ it("parses singular matching Character presence as a reusable field-count thresh
     rest: "",
   });
 });
+
+it("parses singular matching Character cost presence as reusable field-count data", () => {
+  expect(
+    parseSelfFieldCountCondition({
+      text: "you have a Character with a cost of 8 or more",
+    }),
+  ).toEqual({
+    condition: {
+      type: "fieldCount",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        cost: { min: 8 },
+      },
+      op: "gte",
+      value: 1,
+    },
+    evidence: [
+      "condition:fieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "player:self",
+      "filter:category:character",
+      "filter:cost",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+    ],
+    rest: "",
+  });
+});

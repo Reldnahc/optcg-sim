@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { parseAndConnector } from "../connectors/index.js";
 import {
   parseFieldCardCountCondition,
+  parseSelfFieldCountCondition,
   parseTrashCountCondition,
 } from "../conditions/index.js";
 import {
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
+  parseYourLeaderConditionalPowerInstruction,
 } from "../instructions/index.js";
 import { conditionalContinuousExpressionParser } from "./conditional-continuous.js";
 
@@ -18,6 +20,12 @@ const parser = conditionalContinuousExpressionParser({
     parseOpponentEffectFieldRemovalProtectionInstruction,
     parseThisCharacterKeywordGrantInstruction,
   ],
+});
+
+const allFieldStatGainParser = conditionalContinuousExpressionParser({
+  conditions: [parseSelfFieldCountCondition],
+  connectors: [parseAndConnector],
+  instructions: [parseYourLeaderConditionalPowerInstruction],
 });
 
 describe("conditional continuous expression parser", () => {
@@ -133,5 +141,72 @@ describe("conditional continuous expression parser", () => {
         duration: { type: "thisTurn" },
       },
     });
+  });
+
+  it("combines entry conditions with conditional all-field stat gains", () => {
+    const result = allFieldStatGainParser({
+      text: "If you have a Character with a cost of 8 or more, your Leader and all of your Characters gain +1000 power.",
+      entryPoint: {
+        type: "entryPoint",
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 1,
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      blockPatch: { category: "permanent" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "modifyPower",
+              target: { type: "myLeader" },
+              value: 1000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: {
+                  type: "and",
+                  conditions: [
+                    { type: "attachedDonCount", value: 1 },
+                    {
+                      type: "fieldCount",
+                      filter: { categories: ["character"], cost: { min: 8 } },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+              },
+              value: 1000,
+            },
+          },
+        ],
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "expression:conditionalContinuous",
+        "composition:conditionAnd",
+        "condition:fieldCount",
+        "instruction:modifyPower",
+        "duration:whileConditionTrue",
+      ]),
+    );
   });
 });

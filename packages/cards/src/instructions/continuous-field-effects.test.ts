@@ -484,6 +484,68 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses own Leader and all Characters stat gain under a supplied condition", () => {
+    expect(
+      parseYourLeaderConditionalPowerInstruction(
+        {
+          text: "your Leader and all of your Characters gain +1000 power.",
+        },
+        {
+          condition: {
+            type: "fieldCount",
+            player: "self",
+            filter: { categories: ["character"], cost: { min: 8 } },
+            op: "gte",
+            value: 1,
+          },
+        },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "modifyPower",
+              target: { type: "myLeader" },
+              value: 1000,
+              duration: {
+                type: "whileConditionTrue",
+                condition: {
+                  type: "fieldCount",
+                  filter: { categories: ["character"], cost: { min: 8 } },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+              },
+              value: 1000,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:category:character",
+        "modifier:positivePower",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses this Character power per distinct matching field name as a dynamic value", () => {
     expect(
       parseYourLeaderConditionalPowerInstruction(

@@ -42,15 +42,29 @@ export function conditionalContinuousExpressionParser(options: {
         : {
             condition: combinedCondition,
           };
-    const body = parseExpression(bodyText, {
-      connectors: options.connectors,
-      segments: [
-        continuousInstructionSegmentParser({
-          condition: continuousCondition,
-          instructions: options.instructions,
-        }),
-      ],
-    });
+    const directBody = continuousInstructionSegmentParser({
+      condition: continuousCondition,
+      instructions: options.instructions,
+    })({ text: bodyText });
+    const body =
+      directBody === undefined
+        ? parseExpression(bodyText, {
+            connectors: options.connectors,
+            segments: [
+              continuousInstructionSegmentParser({
+                condition: continuousCondition,
+                instructions: options.instructions,
+              }),
+            ],
+          })
+        : {
+            effect: directBody.effect,
+            evidence: directBody.evidence,
+            rest: "",
+            ...(directBody.presentationSpans === undefined
+              ? {}
+              : { presentationSpans: directBody.presentationSpans }),
+          };
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
