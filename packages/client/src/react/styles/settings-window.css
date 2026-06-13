@@ -25,13 +25,34 @@
   accent-color: var(--match-accent);
 }
 
+.settings-section {
+  display: grid;
+  gap: calc(var(--floating-window-body-padding) * 0.72);
+  min-width: 0;
+  padding-bottom: calc(var(--floating-window-body-padding) * 0.55);
+  border-bottom: var(--floating-window-border-width) solid
+    var(--match-border-soft);
+}
+
+.settings-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.settings-section > h3 {
+  margin: 0;
+  color: var(--match-accent-strong);
+  font-size: var(--floating-window-small-font-size);
+  line-height: 1.2;
+}
+
 .settings-surface-group {
   display: grid;
   gap: calc(var(--floating-window-body-padding) * 0.65);
   min-width: 0;
 }
 
-.settings-surface-group h3 {
+.settings-surface-group h4 {
   margin: 0;
   color: var(--match-text);
   font-size: var(--floating-window-small-font-size);

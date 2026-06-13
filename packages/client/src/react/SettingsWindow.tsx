@@ -76,6 +76,19 @@ const ColorSelector = ({
   </div>
 );
 
+const SettingsSection = ({
+  title,
+  children,
+}: {
+  readonly title: string;
+  readonly children: React.ReactNode;
+}): React.JSX.Element => (
+  <section className="settings-section" aria-label={title}>
+    <h3>{title}</h3>
+    {children}
+  </section>
+);
+
 export const SettingsContent = (): React.JSX.Element => {
   const {
     backgroundImageUrl,
@@ -119,148 +132,156 @@ export const SettingsContent = (): React.JSX.Element => {
 
   return (
     <div className="settings-window-content">
-      <label className="settings-field">
-        <span>Background image</span>
-        <input
-          type="file"
-          accept="image/*,.gif"
-          onChange={(event) => {
-            selectBackgroundFile(event.target.files?.[0]);
-            event.currentTarget.value = "";
-          }}
-        />
-      </label>
-      <button
-        className="settings-secondary-button"
-        type="button"
-        disabled={backgroundImageUrl.length === 0}
-        onClick={() => {
-          setBackgroundImageUrl("");
-        }}
-      >
-        Clear background
-      </button>
-      <label className="settings-field">
-        <span>Sound volume</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={soundVolume}
-          onChange={(event) => {
-            setSoundVolume(event.currentTarget.valueAsNumber);
-          }}
-        />
-      </label>
-      <section className="settings-surface-group" aria-label="Windows">
-        <h3>Windows</h3>
+      <SettingsSection title="Customization">
         <label className="settings-field">
-          <span>Window opacity</span>
+          <span>Background image</span>
           <input
-            type="range"
-            min="50"
-            max="100"
-            step="1"
-            value={windowOpacity}
+            type="file"
+            accept="image/*,.gif"
             onChange={(event) => {
-              setWindowOpacity(event.currentTarget.valueAsNumber);
+              selectBackgroundFile(event.target.files?.[0]);
+              event.currentTarget.value = "";
             }}
           />
         </label>
-        <ColorSelector
-          label="Window color"
-          value={windowColor}
-          onChange={setWindowColor}
-        />
-      </section>
-      <section className="settings-surface-group" aria-label="Playmat">
-        <h3>Playmat</h3>
+        <button
+          className="settings-secondary-button"
+          type="button"
+          disabled={backgroundImageUrl.length === 0}
+          onClick={() => {
+            setBackgroundImageUrl("");
+          }}
+        >
+          Clear background
+        </button>
+        <section className="settings-surface-group" aria-label="Windows">
+          <h4>Windows</h4>
+          <label className="settings-field">
+            <span>Window opacity</span>
+            <input
+              type="range"
+              min="50"
+              max="100"
+              step="1"
+              value={windowOpacity}
+              onChange={(event) => {
+                setWindowOpacity(event.currentTarget.valueAsNumber);
+              }}
+            />
+          </label>
+          <ColorSelector
+            label="Window color"
+            value={windowColor}
+            onChange={setWindowColor}
+          />
+        </section>
+        <section className="settings-surface-group" aria-label="Playmat">
+          <h4>Playmat</h4>
+          <label className="settings-field">
+            <span>Playmat opacity</span>
+            <input
+              type="range"
+              min="50"
+              max="100"
+              step="1"
+              value={playmatOpacity}
+              onChange={(event) => {
+                setPlaymatOpacity(event.currentTarget.valueAsNumber);
+              }}
+            />
+          </label>
+          <ColorSelector
+            label="Playmat color"
+            value={playmatColor}
+            onChange={setPlaymatColor}
+          />
+        </section>
         <label className="settings-field">
-          <span>Playmat opacity</span>
+          <span>Zone guide visibility</span>
           <input
             type="range"
-            min="50"
+            min="0"
             max="100"
             step="1"
-            value={playmatOpacity}
+            value={zoneGuideVisibility}
             onChange={(event) => {
-              setPlaymatOpacity(event.currentTarget.valueAsNumber);
+              setZoneGuideVisibility(event.currentTarget.valueAsNumber);
             }}
           />
         </label>
-        <ColorSelector
-          label="Playmat color"
-          value={playmatColor}
-          onChange={setPlaymatColor}
-        />
-      </section>
-      <label className="settings-field">
-        <span>Zone guide visibility</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={zoneGuideVisibility}
-          onChange={(event) => {
-            setZoneGuideVisibility(event.currentTarget.valueAsNumber);
-          }}
-        />
-      </label>
-      <label className="settings-field">
-        <span>Zone background visibility</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={zoneBackgroundVisibility}
-          onChange={(event) => {
-            setZoneBackgroundVisibility(event.currentTarget.valueAsNumber);
-          }}
-        />
-      </label>
-      <label className="settings-checkbox-field">
-        <input
-          type="checkbox"
-          checked={reducedMotion}
-          onChange={(event) => {
-            setReducedMotion(event.currentTarget.checked);
-          }}
-        />
-        <span>Reduced motion</span>
-      </label>
-      <label className="settings-checkbox-field">
-        <input
-          type="checkbox"
-          checked={quickPayActivateMainCosts}
-          onChange={(event) => {
-            setQuickPayActivateMainCosts(event.currentTarget.checked);
-          }}
-        />
-        <span>Quick pay Activate: Main costs</span>
-      </label>
-      <label className="settings-checkbox-field">
-        <input
-          type="checkbox"
-          checked={confirmAttachDon}
-          onChange={(event) => {
-            setConfirmAttachDon(event.currentTarget.checked);
-          }}
-        />
-        <span>Confirm attach DON</span>
-      </label>
-      <label className="settings-checkbox-field">
-        <input
-          type="checkbox"
-          checked={confirmEndTurn}
-          onChange={(event) => {
-            setConfirmEndTurn(event.currentTarget.checked);
-          }}
-        />
-        <span>Confirm end turn</span>
-      </label>
+        <label className="settings-field">
+          <span>Zone background visibility</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={zoneBackgroundVisibility}
+            onChange={(event) => {
+              setZoneBackgroundVisibility(event.currentTarget.valueAsNumber);
+            }}
+          />
+        </label>
+      </SettingsSection>
+      <SettingsSection title="Sound">
+        <label className="settings-field">
+          <span>Sound volume</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={soundVolume}
+            onChange={(event) => {
+              setSoundVolume(event.currentTarget.valueAsNumber);
+            }}
+          />
+        </label>
+      </SettingsSection>
+      <SettingsSection title="Video">
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={reducedMotion}
+            onChange={(event) => {
+              setReducedMotion(event.currentTarget.checked);
+            }}
+          />
+          <span>Reduced motion</span>
+        </label>
+      </SettingsSection>
+      <SettingsSection title="Gameplay">
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={quickPayActivateMainCosts}
+            onChange={(event) => {
+              setQuickPayActivateMainCosts(event.currentTarget.checked);
+            }}
+          />
+          <span>Quick pay Activate: Main costs</span>
+        </label>
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={confirmAttachDon}
+            onChange={(event) => {
+              setConfirmAttachDon(event.currentTarget.checked);
+            }}
+          />
+          <span>Confirm attach DON</span>
+        </label>
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={confirmEndTurn}
+            onChange={(event) => {
+              setConfirmEndTurn(event.currentTarget.checked);
+            }}
+          />
+          <span>Confirm end turn</span>
+        </label>
+      </SettingsSection>
     </div>
   );
 };
