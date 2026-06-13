@@ -199,3 +199,51 @@ test("first-player choice timeout concedes the chooser", async () => {
     winner: opponent,
   });
 });
+
+test("bot players are exempt from disconnect timers", async () => {
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchTimerPolicy: { gameTimeMs: 1_000, disconnectGraceMs: 100 },
+    },
+  );
+  const matchId = "bot-disconnect-exempt" as MatchId;
+  const botPlayerId = premadeSetup.playerOrder[1];
+  const created = await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+      botPlayerIds: [botPlayerId],
+    },
+  );
+  assert.equal(
+    created.snapshot?.players[botPlayerId]?.view.timers.disconnects?.[
+      botPlayerId
+    ],
+    undefined,
+  );
+
+  assert.deepEqual(
+    registry.advanceTimers({
+      elapsedMs: 100,
+      connectedPlayerIds: () => new Set([premadeSetup.playerOrder[0]]),
+      matchIds: [matchId],
+    }),
+    [{ matchId, sync: "timers" }],
+  );
+
+  const match = registry.getMatch(matchId);
+  assert.notEqual(match?.state.status.type, "completed");
+  assert.notEqual(match?.state.status.type, "gameOver");
+  assert.equal(match?.state.timers.disconnects?.[botPlayerId], undefined);
+});

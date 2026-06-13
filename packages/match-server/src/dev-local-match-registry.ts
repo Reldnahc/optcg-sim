@@ -264,6 +264,16 @@ const pausedTimerState = (timers: TimerState): TimerState => ({
       }),
 });
 
+const connectedPlayerIdsWithBots = (
+  connectedPlayerIds: ReadonlySet<PlayerId>,
+  botPlayerIds: ReadonlySet<PlayerId>,
+): ReadonlySet<PlayerId> => {
+  if (botPlayerIds.size === 0) {
+    return connectedPlayerIds;
+  }
+  return new Set([...connectedPlayerIds, ...botPlayerIds]);
+};
+
 const createActiveLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
   sessionService: MatchSessionService,
@@ -862,7 +872,10 @@ export const createLocalDevMatchRegistry = async (
         }
         const result = advanceLocalDevMatchTimers(session.match, {
           elapsedMs,
-          connectedPlayerIds: connectedPlayerIds(matchId),
+          connectedPlayerIds: connectedPlayerIdsWithBots(
+            connectedPlayerIds(matchId),
+            session.botPlayerIds,
+          ),
           policy: matchTimerPolicy,
         });
         if (result.expiries.length > 0) {
