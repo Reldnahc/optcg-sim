@@ -171,13 +171,13 @@
 }
 
 .battle-arrow-power text {
-  font-size: clamp(24px, calc(var(--card-height) / 4.6), 44px);
+  font-size: clamp(30px, calc(var(--card-height) / 3.7), 56px);
   font-weight: 900;
   letter-spacing: 0;
   paint-order: stroke;
   stroke: rgba(0, 0, 0, 0.96);
   stroke-linejoin: round;
-  stroke-width: calc(var(--card-height) / 58);
+  stroke-width: calc(var(--card-height) / 48);
 }
 
 .battle-arrow-power-vs {
