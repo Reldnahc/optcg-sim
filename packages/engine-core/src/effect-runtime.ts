@@ -329,7 +329,6 @@ export const queueBattleKOTriggers = triggerQueueing.queueBattleKOTriggers;
 const queueOnPlayTriggers = triggerQueueing.queueOnPlayTriggers;
 const queueMainEventTriggers = triggerQueueing.queueMainEventTriggers;
 const queueEndOfYourTurnTriggers = triggerQueueing.queueEndOfYourTurnTriggers;
-const queueLifeRemovedTriggers = triggerQueueing.queueLifeRemovedTriggers;
 const queueHandTrashedByEffectTriggers =
   triggerQueueing.queueHandTrashedByEffectTriggers;
 const queueOpponentActivationTriggers =
@@ -432,10 +431,6 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
     if (queuedFromOnOpponentAttack !== undefined) {
       return queuedFromOnOpponentAttack;
     }
-  }
-  const queuedFromLifeRemoved = queueLifeRemovedTriggers(state);
-  if (queuedFromLifeRemoved !== undefined) {
-    return queuedFromLifeRemoved;
   }
   const queuedFromEventReaction = queueEventReactionTriggers(state);
   if (queuedFromEventReaction !== undefined) {

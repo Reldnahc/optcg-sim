@@ -465,7 +465,7 @@ test("lifeRemoved reaction queues when an on-play optional life cost removes Lif
       (event) =>
         event.type === "effectQueued" &&
         event.causedBy?.type === "ruleProcess" &&
-        event.causedBy.name === "effectRuntime:lifeRemovedTriggerQueueing",
+        event.causedBy.name === "effectRuntime:eventReactionTriggerQueueing",
     ),
     true,
     "paying an optional cost that moves Life to hand should queue the lifeRemoved reaction after the on-play chain resolves",

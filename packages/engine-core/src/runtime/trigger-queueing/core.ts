@@ -11,7 +11,6 @@ import type {
 
 import { createAttackTriggerQueueing } from "./attack.js";
 import { createKOTriggerQueueing } from "./ko.js";
-import { createLifeRemovedTriggerQueueing } from "./life-removed.js";
 import { createMainEventTriggerQueueing } from "./main-event.js";
 import { createOnPlayTriggerQueueing } from "./on-play.js";
 import { createOpponentActivationTriggerQueueing } from "./opponent-activation.js";
@@ -54,11 +53,6 @@ export type MainEventTriggerQueueingFailureReason =
   | "unsupported-main-event-definition"
   | "multiple-main-event-effects";
 
-export type LifeRemovedTriggerQueueingFailureReason =
-  | "invalid-life-removed-event"
-  | "missing-card-definition"
-  | "unsupported-life-removed-definition";
-
 export type HandTrashedByEffectTriggerQueueingFailureReason =
   | "invalid-hand-trashed-by-effect-event"
   | "unsupported-hand-trashed-by-effect-definition";
@@ -94,10 +88,6 @@ interface OnKOTriggerCandidateDetectionErrorDetails {
 
 interface MainEventTriggerQueueingErrorDetails {
   reason: MainEventTriggerQueueingFailureReason;
-}
-
-interface LifeRemovedTriggerQueueingErrorDetails {
-  reason: LifeRemovedTriggerQueueingFailureReason;
 }
 
 interface HandTrashedByEffectTriggerQueueingErrorDetails {
@@ -166,7 +156,6 @@ export interface EffectRuntimeTriggerQueueingHelpers {
   queueMainEventTriggers: (state: GameState) => EngineResult | undefined;
   queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
   queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;
-  queueLifeRemovedTriggers: (state: GameState) => EngineResult | undefined;
   queueHandTrashedByEffectTriggers: (
     state: GameState,
   ) => EngineResult | undefined;
@@ -222,14 +211,6 @@ const mainEventTriggerQueueingError = (
   details: { reason } satisfies MainEventTriggerQueueingErrorDetails,
 });
 
-const lifeRemovedTriggerQueueingError = (
-  reason: LifeRemovedTriggerQueueingFailureReason,
-): EngineError => ({
-  type: "effectRuntimeError",
-  effectId: "life-removed-trigger-queueing",
-  details: { reason } satisfies LifeRemovedTriggerQueueingErrorDetails,
-});
-
 const handTrashedByEffectTriggerQueueingError = (
   reason: HandTrashedByEffectTriggerQueueingFailureReason,
 ): EngineError => ({
@@ -283,10 +264,6 @@ export const createEffectRuntimeTriggerQueueing = (
     dependencies,
     endOfYourTurnTriggerQueueingError,
   );
-  const { queueLifeRemovedTriggers } = createLifeRemovedTriggerQueueing(
-    dependencies,
-    lifeRemovedTriggerQueueingError,
-  );
   const { queueHandTrashedByEffectTriggers } =
     createHandTrashedByEffectTriggerQueueing(
       dependencies,
@@ -319,7 +296,6 @@ export const createEffectRuntimeTriggerQueueing = (
     queueOnPlayTriggers,
     queueMainEventTriggers,
     queueEndOfYourTurnTriggers,
-    queueLifeRemovedTriggers,
     queueHandTrashedByEffectTriggers,
     queueOpponentActivationTriggers,
     queueEventReactionTriggers,

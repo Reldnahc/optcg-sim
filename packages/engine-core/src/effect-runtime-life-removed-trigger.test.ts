@@ -306,7 +306,7 @@ test("lifeRemoved reaction queues from canonical moveCards after the moving effe
       return (
         event.type === "effectQueued" &&
         causedBy?.type === "ruleProcess" &&
-        causedBy.name === "effectRuntime:lifeRemovedTriggerQueueing"
+        causedBy.name === "effectRuntime:eventReactionTriggerQueueing"
       );
     }),
     true,

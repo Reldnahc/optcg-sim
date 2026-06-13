@@ -15,7 +15,9 @@ import {
   processEffectRuntime,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
+  toEffectId,
   toEngineEventId,
+  toQueueEntryId,
   withCardInZone,
 } from "../../effect-runtime-queue/test-support.js";
 
@@ -107,6 +109,28 @@ const appendDonAttachedEvent = (
     },
     visibility: { type: "public" },
     causedBy: { type: "ruleProcess", name: "don-attached-reaction-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
+const appendLifeRemovedEvent = (
+  state: ReturnType<typeof createActiveState>,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:lifeRemoved`),
+    seq: state.eventJournal.length + 1,
+    type: "cardMoved",
+    payload: {
+      from: { zone: "life", playerId: p1, slot: "life", index: 0 },
+      to: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+      reason: "moveCards",
+    },
+    visibility: { type: "public" },
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry:life:test"),
+      effectId: toEffectId("effect:life:test"),
+    },
     createdAtStateSeq: state.seq,
   });
 };
@@ -440,6 +464,89 @@ const donAttachedReactionState = () => {
   return { source, state };
 };
 
+const setupLifeRemovedReactionDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): EffectDefinition => {
+  const effectDefinitionId = "def-life-removed-reaction";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "life-removed-reaction-rules",
+      sourceTextHash: "life-removed-reaction-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: "life-removed-draw-trash" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        oncePerTurn: true,
+        trigger: { type: "lifeRemoved", players: ["self"] },
+        condition: {
+          type: "and",
+          conditions: [
+            {
+              type: "attachedDonCount",
+              target: { type: "self" },
+              op: "gte",
+              value: 1,
+            },
+            { type: "yourTurn" },
+          ],
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "draw", count: 2, player: "self" },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "trashFromHand",
+                player: "self",
+                chooser: "self",
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const lifeRemovedReactionState = () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "source"),
+    zone: "characterArea",
+  });
+  source.attachedDon = [must(player.donDeck[0], "attached DON").instanceId];
+  setupLifeRemovedReactionDefinition(state, source);
+  appendLifeRemovedEvent(state);
+  return { source, state };
+};
+
 const setupEffectResolvedReactionDefinition = (
   state: ReturnType<typeof createActiveState>,
   source: CardInstance,
@@ -656,6 +763,24 @@ test("event reactions queue DON attachment triggers through the canonical matche
   assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
   assert.equal(String(entry.timingWindowId).endsWith(":donAttached"), true);
   assert.equal(entry.effectBlockId, "don-attached-draw");
+});
+
+test("event reactions queue life removal triggers through the canonical matcher", () => {
+  const { source, state } = lifeRemovedReactionState();
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queued entry");
+  assert.equal(entry.source.instanceId, source.instanceId);
+  assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
+  assert.equal(String(entry.timingWindowId).endsWith(":lifeRemoved"), true);
+  assert.equal(entry.effectBlockId, "life-removed-draw-trash");
+  assert.deepEqual(entry.causedBy, {
+    type: "ruleProcess",
+    name: "effectRuntime:eventReactionTriggerQueueing",
+  });
 });
 
 test("event reactions queue effect resolution triggers through the canonical matcher", () => {

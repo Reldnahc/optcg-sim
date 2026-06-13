@@ -128,7 +128,7 @@ test("up-to opponent life top to trash is movement, not damage or life trigger",
     resolved.state.effectQueue.some(
       (entry) =>
         entry.causedBy.type === "ruleProcess" &&
-        entry.causedBy.name === "effectRuntime:lifeRemovedTriggerQueueing",
+        entry.causedBy.name === "effectRuntime:eventReactionTriggerQueueing",
     ),
     false,
   );

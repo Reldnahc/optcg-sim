@@ -198,7 +198,7 @@ test("lifeRemoved reaction queues after opponent Life moves to owner hand", () =
       (event) =>
         event.type === "effectQueued" &&
         event.causedBy?.type === "ruleProcess" &&
-        event.causedBy.name === "effectRuntime:lifeRemovedTriggerQueueing",
+        event.causedBy.name === "effectRuntime:eventReactionTriggerQueueing",
     ),
     true,
   );

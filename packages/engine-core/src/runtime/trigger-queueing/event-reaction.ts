@@ -55,7 +55,8 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
           payload.timingWindowId.endsWith(":attackDeclared") ||
           payload.timingWindowId.endsWith(":effectQueued") ||
           payload.timingWindowId.endsWith(":effectResolved") ||
-          payload.timingWindowId.endsWith(":triggerActivated"))
+          payload.timingWindowId.endsWith(":triggerActivated") ||
+          payload.timingWindowId.endsWith(":lifeRemoved"))
         ? [payload.triggerEventId]
         : [];
     }),
@@ -76,6 +77,7 @@ const supportedAutoEventReactionTriggerTypes: ReadonlySet<EventReactionTriggerTy
     "effectQueued",
     "effectResolved",
     "triggerActivated",
+    "lifeRemoved",
   ]);
 
 const autoEventReactionAdapter = (triggerType: EventReactionTriggerType) => ({
@@ -86,6 +88,9 @@ const autoEventReactionAdapter = (triggerType: EventReactionTriggerType) => ({
 
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
+
+const isRuntimeEffectEvent = (event: EngineEvent): boolean =>
+  event.causedBy?.type === "effect" || event.causedBy?.type === "decision";
 
 const sourceFieldEntryEventSeq = (
   state: GameState,
@@ -136,7 +141,7 @@ export const createEventReactionTriggerQueueing = (
     const alreadyQueued = queuedEventReactionTriggerEventIds(state);
     const reactionEvents = state.eventJournal.filter(
       (event) =>
-        isRecentRuntimeEvent(state, event) &&
+        (isRecentRuntimeEvent(state, event) || isRuntimeEffectEvent(event)) &&
         !alreadyQueued.has(String(event.id)) &&
         (event.type === "damageDealt" ||
           event.type === "cardMoved" ||
