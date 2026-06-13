@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, test } from "vitest";
 import type { MatchId } from "@optcg/types";
 
@@ -142,6 +145,37 @@ describe("match HTTP server replay routes", () => {
       assert.deepEqual(repository.detailCalls, ["match-1"]);
     } finally {
       await server.close();
+    }
+  });
+
+  test("serves a local replay fixture when configured", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "optcg-replay-fixture-"));
+    const fixturePath = join(directory, "replay.json");
+    const previousFixturePath =
+      process.env["PONEGLYPH_SIM_REPLAY_FIXTURE_PATH"];
+    process.env["PONEGLYPH_SIM_REPLAY_FIXTURE_PATH"] = fixturePath;
+    await writeFile(
+      fixturePath,
+      JSON.stringify({ replay: replayDetail() }),
+      "utf8",
+    );
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/api/replays/match-1`);
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { replay: replayDetail() });
+    } finally {
+      await server.close();
+      if (previousFixturePath === undefined) {
+        delete process.env["PONEGLYPH_SIM_REPLAY_FIXTURE_PATH"];
+      } else {
+        process.env["PONEGLYPH_SIM_REPLAY_FIXTURE_PATH"] = previousFixturePath;
+      }
+      await rm(directory, { recursive: true, force: true });
     }
   });
 });
