@@ -31,6 +31,7 @@ export interface RestFieldObjectEventOptions {
   readonly events: EngineEvent[];
   readonly eventState?: GameState;
   readonly sourceControllerId?: PlayerId;
+  readonly sourceCardId?: CardInstance["cardId"];
   readonly sourceKind?: CardRestedSourceKind;
 }
 
@@ -73,6 +74,9 @@ const appendCardRestedEvent = (
       ...(options.sourceControllerId === undefined
         ? {}
         : { sourceControllerId: options.sourceControllerId }),
+      ...(options.sourceCardId === undefined
+        ? {}
+        : { sourceCardId: options.sourceCardId }),
     },
     { type: "public" },
   );

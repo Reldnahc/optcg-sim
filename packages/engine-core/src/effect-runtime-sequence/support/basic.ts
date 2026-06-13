@@ -71,7 +71,7 @@ export const isSupportedReturnDonSegment = (
   effect: SequenceSegmentEffect,
 ): effect is ReturnDonEffect =>
   effect.type === "returnDon" &&
-  effect.player === "opponent" &&
+  (effect.player === "self" || effect.player === "opponent") &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
 

@@ -86,4 +86,48 @@ describe("OP14 rested-state and rested-trigger parsing", () => {
       ]),
     );
   });
+
+  it("parses source-filtered rested reactions with optional return-DON action resume", () => {
+    const result = parseCardEffectLine(
+      "When this Character becomes rested by your opponent's Character's effect, you may return 1 DON!! card from your field to your DON!! deck. If you do, set this Character as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "cardRested",
+          target: "self",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceController: "opponent",
+          sourceKind: "effect",
+          sourceFilter: { categories: ["character"] },
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              optional: true,
+              effect: { type: "returnDon", count: 1, player: "self" },
+            },
+            {
+              connector: "ifYouDo",
+              effect: { type: "activate", target: { type: "self" } },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:cardRested",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+        "instruction:returnDon",
+        "instruction:activate",
+        "composition:optionalActionEffect",
+      ]),
+    );
+  });
 });

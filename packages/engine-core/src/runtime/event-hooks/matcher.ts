@@ -383,6 +383,11 @@ const matchCardRested = (
       state,
       resolvedCardForId(state, payload["cardId"]),
       trigger.filter,
+    ) &&
+    matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, payload["sourceCardId"]),
+      trigger.sourceFilter,
     )
   );
 };

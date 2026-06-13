@@ -420,6 +420,7 @@ export const applySavedFieldObjectRestSequenceSegment = (params: {
       events: params.events,
       sourceKind: "effect",
       sourceControllerId: params.entry.controllerId,
+      sourceCardId: params.entry.source.cardId,
     },
   );
   const nextState = rested.state;

@@ -365,6 +365,7 @@ export const applyFieldMutationSequenceSegment = (params: {
           events,
           sourceKind: "effect",
           sourceControllerId: entry.controllerId,
+          sourceCardId: entry.source.cardId,
         },
       );
       return {
@@ -424,6 +425,7 @@ export const applyFieldMutationSequenceSegment = (params: {
           events,
           sourceKind: "effect",
           sourceControllerId: entry.controllerId,
+          sourceCardId: entry.source.cardId,
         },
       );
       return {

@@ -51,6 +51,7 @@ test("shared field-object resting emits cardRested only for active-to-rested tra
     events,
     sourceKind: "effect",
     sourceControllerId: p1,
+    sourceCardId: target.cardId,
   });
   const restedAgain = restFieldObjects(
     rested.state,
@@ -73,6 +74,7 @@ test("shared field-object resting emits cardRested only for active-to-rested tra
     category: "character",
     sourceKind: "effect",
     sourceControllerId: p1,
+    sourceCardId: target.cardId,
   });
 });
 

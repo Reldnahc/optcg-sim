@@ -1,14 +1,12 @@
-import type {
-  Attribute,
-  CardFilter,
-  Condition,
-  PlayerRef,
-  Trigger,
-} from "@optcg/types";
+import type { Attribute, Condition, PlayerRef, Trigger } from "@optcg/types";
 
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 import type { SourceSlice } from "../source-slices.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import {
+  containsCharacterCategoryText,
+  parseCharacterFilter,
+} from "./event-reaction-character-filter.js";
 
 const lifeRemovedTrigger = (
   players: PlayerRef[],
@@ -115,40 +113,6 @@ const toSequenceExpression = (
         type: "sequence",
         effects: [{ connector: "always", effect: parsed.effect }],
       };
-
-const parseCharacterFilter = (
-  text: string,
-):
-  | { filter: CardFilter; evidence: ExpressionParseResult["evidence"] }
-  | undefined => {
-  const normalized = normalizeCharacterFilterText(text);
-  const parsed = parseCardFilterPredicates(
-    { text: normalized },
-    { powerSemantics: "printed" },
-  );
-  if (parsed === undefined) {
-    if (!/^Character(?: card)?$/iu.test(normalized)) {
-      return undefined;
-    }
-    return {
-      filter: { categories: ["character"] },
-      evidence: ["filter:category:character"],
-    };
-  }
-  if (
-    parsed.rest.length > 0 ||
-    parsed.filter.categories?.includes("character") !== true
-  ) {
-    return undefined;
-  }
-  return { filter: parsed.filter, evidence: parsed.evidence };
-};
-
-const normalizeCharacterFilterText = (text: string): string =>
-  text.trim().replace(/^(?:a|an)\s+(?=Character(?: card)?\b)/iu, "");
-
-const containsCharacterCategoryText = (text: string): boolean =>
-  /\bCharacters?\b|\bCharacter cards?\b/iu.test(text);
 
 const onlyMatchingCharactersCondition = (
   text: string,
@@ -712,6 +676,38 @@ const parseCardRestedPredicate: ReactionPredicateParser = ({ text }) => {
         "filter:category:character",
         "replacementSource:opponent",
         "replacementSource:cardEffect",
+      ],
+    };
+  }
+
+  const sourceFiltered =
+    /^this Character (?:becomes|is) rested by your opponent's (?<source>.+)'s effect$/iu.exec(
+      normalized,
+    );
+  const sourceText = sourceFiltered?.groups?.["source"];
+  if (sourceText !== undefined) {
+    const source = parseCharacterFilter(sourceText);
+    if (source === undefined) {
+      return undefined;
+    }
+    return {
+      trigger: {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceController: "opponent",
+        sourceKind: "effect",
+        sourceFilter: source.filter,
+      },
+      evidence: [
+        "trigger:cardRested",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+        ...source.evidence,
       ],
     };
   }

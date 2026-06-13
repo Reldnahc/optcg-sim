@@ -118,6 +118,52 @@ test("canonical event matcher matches cardRested triggers by player, self target
   assert.deepEqual(match, { matched: true, triggerTypes: ["cardRested"] });
 });
 
+test("canonical event matcher applies cardRested source-card filters", () => {
+  const { character, source, state } = setupEventHookState();
+  const event = publicEvent(state, "cardRested", {
+    playerId: source.controller,
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    sourceControllerId: character.controller,
+    sourceKind: "effect",
+    sourceCardId: character.cardId,
+  });
+
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        sourceController: "self",
+        sourceKind: "effect",
+        sourceFilter: { categories: ["character"], typesAny: ["Navy"] },
+      },
+      event,
+    ),
+    { matched: true, triggerTypes: ["cardRested"] },
+  );
+
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "cardRested",
+        target: "self",
+        player: "self",
+        sourceController: "self",
+        sourceKind: "effect",
+        sourceFilter: { categories: ["event"] },
+      },
+      event,
+    ),
+    { matched: false, triggerTypes: [] },
+  );
+});
+
 test("canonical event matcher rejects unsupported payload evidence instead of trusting trigger shape", () => {
   const { source, state } = setupEventHookState();
   const event = publicEvent(state, "cardRested", {

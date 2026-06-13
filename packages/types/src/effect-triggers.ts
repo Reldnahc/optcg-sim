@@ -79,6 +79,7 @@ export type Trigger =
       filter?: CardFilter;
       sourceController?: PlayerRef;
       sourceKind?: "effect" | "any";
+      sourceFilter?: CardFilter;
     }
   | {
       type: "donReturned";

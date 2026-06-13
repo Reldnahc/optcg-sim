@@ -215,6 +215,21 @@ test("runtime admission accepts pay-cost before choice as reusable sequence comp
   );
 });
 
+test("runtime admission accepts self and opponent return-DON as reusable auto bodies", () => {
+  for (const player of ["self", "opponent"] as const) {
+    assertRuntimeSupported(
+      evaluateEffectBlockRuntimeSupport(
+        block({
+          category: "auto",
+          effect: { type: "returnDon", count: 1, player },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          trigger: { type: "cardRested", player: "self" },
+        }),
+      ),
+    );
+  }
+});
+
 test("runtime admission accepts deck-top card movement as a reusable auto body", () => {
   const effect = {
     type: "moveCards",

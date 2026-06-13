@@ -505,6 +505,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
         events: completedSegmentEvents,
         sourceKind: "effect",
         sourceControllerId: entry.controllerId,
+        sourceCardId: entry.source.cardId,
       },
     );
     const scopedSegmentKey = segmentKeyForPath(

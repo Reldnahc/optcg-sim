@@ -548,6 +548,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
             events: allEvents,
             sourceKind: "effect",
             sourceControllerId: resolved.entry.controllerId,
+            sourceCardId: resolved.entry.source.cardId,
           },
         );
         nextState = rested.changed
