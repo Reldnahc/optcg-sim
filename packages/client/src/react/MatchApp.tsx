@@ -17,7 +17,7 @@ import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
-import { MatchVisualSettingsProvider } from "./SettingsWindow.js";
+import { MatchVisualSettingsProvider } from "./match-visual-settings-context.js";
 import { SettingsButton } from "./SettingsButton.js";
 import {
   endTurnConfirmationActions,
