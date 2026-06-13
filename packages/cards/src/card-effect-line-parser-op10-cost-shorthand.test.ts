@@ -159,3 +159,40 @@ it("parses all-target temporary K.O. protection independently from On Play", () 
     ]),
   );
 });
+
+it("parses field-count-difference conditions with composed K.O. targets", () => {
+  const result = parseCardEffectLine(
+    "[Main] If the number of your Characters is at least 2 less than the number of your opponent's Characters, K.O. up to 1 of your opponent's Characters with a base cost of 6 or less and up to 1 of your opponent's Characters with a base cost of 4 or less.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      condition: {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: { categories: ["character"] },
+        },
+        subtrahend: {
+          player: "self",
+          filter: { categories: ["character"] },
+        },
+        op: "gte",
+        value: 2,
+      },
+      effect: {
+        type: "sequence",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "expression:conditional",
+      "condition:fieldCountDifference",
+      "instruction:ko",
+      "composition:selectThenApply",
+    ]),
+  );
+});

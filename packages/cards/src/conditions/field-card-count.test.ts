@@ -178,4 +178,36 @@ describe("field card count condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses Character count differences as reusable field-count operands", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "the number of your Characters is at least 2 less than the number of your opponent's Characters",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: { categories: ["character"] },
+        },
+        subtrahend: {
+          player: "self",
+          filter: { categories: ["character"] },
+        },
+        op: "gte",
+        value: 2,
+      },
+      evidence: [
+        "condition:fieldCountDifference",
+        "player:opponent",
+        "player:self",
+        "filter:category:character",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "valueOffset:fieldCountDifference",
+      ],
+      rest: "",
+    });
+  });
 });
