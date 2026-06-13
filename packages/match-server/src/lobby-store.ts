@@ -34,7 +34,10 @@ export interface LobbyStore {
   createLobby: (lobby: CustomLobbyState) => Promise<CustomLobbyState>;
   getLobby: (lobbyId: string) => Promise<CustomLobbyState | undefined>;
   createLobbyJoinCode: (lobbyId: string) => Promise<string>;
+  setLobbyJoinCode: (lobbyId: string, joinCode: string) => Promise<void>;
   getLobbyIdByJoinCode: (joinCode: string) => Promise<string | undefined>;
+  setLobbyMatchId: (lobbyId: string, matchId: MatchId) => Promise<void>;
+  getLobbyIdByMatchId: (matchId: MatchId) => Promise<string | undefined>;
   deleteLobby: (lobbyId: string) => Promise<boolean>;
   updateLobby: <T>(
     lobbyId: string,
@@ -58,6 +61,7 @@ const p2 = "p2" as PlayerId;
 const keyForLobby = (lobbyId: string): string => `lobby:${lobbyId}:state`;
 const keyForJoinCode = (joinCode: string): string =>
   `lobby:join-code:${joinCode}`;
+const keyForMatch = (matchId: MatchId): string => `lobby:match:${matchId}`;
 const keyForLock = (lobbyId: string): string => `lobby:${lobbyId}:lock`;
 const joinCodeAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
 const joinCodeLength = 4;
@@ -126,6 +130,7 @@ export const createMemoryLobbyStore = (): LobbyStore => {
   let nextLobbyNumber = 1;
   const lobbies = new Map<string, CustomLobbyState>();
   const lobbyIdsByJoinCode = new Map<string, string>();
+  const lobbyIdsByMatchId = new Map<MatchId, string>();
   return {
     createLobbyId() {
       return `lobby-${String(nextLobbyNumber++)}`;
@@ -156,10 +161,30 @@ export const createMemoryLobbyStore = (): LobbyStore => {
         lobbyIdsByJoinCode.get(normalizeJoinCode(joinCode)),
       );
     },
+    setLobbyJoinCode(lobbyId, joinCode) {
+      lobbyIdsByJoinCode.set(normalizeJoinCode(joinCode), lobbyId);
+      return Promise.resolve();
+    },
+    setLobbyMatchId(lobbyId, matchId) {
+      lobbyIdsByMatchId.set(matchId, lobbyId);
+      return Promise.resolve();
+    },
+    getLobbyIdByMatchId(matchId) {
+      return Promise.resolve(lobbyIdsByMatchId.get(matchId));
+    },
     deleteLobby(lobbyId) {
       const lobby = lobbies.get(lobbyId);
-      if (lobby?.joinCode !== undefined) {
+      if (
+        lobby?.joinCode !== undefined &&
+        lobbyIdsByJoinCode.get(lobby.joinCode) === lobbyId
+      ) {
         lobbyIdsByJoinCode.delete(lobby.joinCode);
+      }
+      if (
+        lobby?.matchId !== undefined &&
+        lobbyIdsByMatchId.get(lobby.matchId) === lobbyId
+      ) {
+        lobbyIdsByMatchId.delete(lobby.matchId);
       }
       return Promise.resolve(lobbies.delete(lobbyId));
     },
@@ -235,14 +260,33 @@ export const createRedisLobbyStore = ({
       undefined
     );
   },
+  async setLobbyJoinCode(lobbyId, joinCode) {
+    await redis.set(keyForJoinCode(normalizeJoinCode(joinCode)), lobbyId, {
+      px: ttlMs,
+    });
+  },
+  async setLobbyMatchId(lobbyId, matchId) {
+    await redis.set(keyForMatch(matchId), lobbyId, { px: ttlMs });
+  },
+  async getLobbyIdByMatchId(matchId) {
+    return (await redis.get(keyForMatch(matchId))) ?? undefined;
+  },
   async deleteLobby(lobbyId) {
     const value = await redis.get(keyForLobby(lobbyId));
     const lobby = value === null ? undefined : parseLobby(value);
-    const deleted =
-      (await redis.del(keyForLobby(lobbyId))) +
-      (lobby?.joinCode === undefined
-        ? 0
-        : await redis.del(keyForJoinCode(lobby.joinCode)));
+    let deleted = await redis.del(keyForLobby(lobbyId));
+    if (
+      lobby?.joinCode !== undefined &&
+      (await redis.get(keyForJoinCode(lobby.joinCode))) === lobbyId
+    ) {
+      deleted += await redis.del(keyForJoinCode(lobby.joinCode));
+    }
+    if (
+      lobby?.matchId !== undefined &&
+      (await redis.get(keyForMatch(lobby.matchId))) === lobbyId
+    ) {
+      deleted += await redis.del(keyForMatch(lobby.matchId));
+    }
     return deleted > 0;
   },
   async updateLobby(lobbyId, update) {

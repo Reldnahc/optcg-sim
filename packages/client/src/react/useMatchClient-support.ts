@@ -119,6 +119,11 @@ export const lobbyFormatIdFromUrl = (): string | undefined => {
 
 export const setMatchLocation = (matchId: MatchId): void => {
   const url = new URL(window.location.href);
+  if (lobbyJoinCodeFromPath() !== undefined) {
+    url.search = "";
+    window.history.replaceState({}, "", url);
+    return;
+  }
   url.searchParams.delete("lobbyId");
   url.searchParams.set("matchId", String(matchId));
   url.searchParams.delete("seat");

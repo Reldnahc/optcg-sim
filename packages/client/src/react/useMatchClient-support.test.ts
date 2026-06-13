@@ -6,6 +6,7 @@ import type {
   DecisionId,
   EngineEvent,
   InstanceId,
+  MatchId,
   PlayerId,
   PlayerView,
   PublicSelectCardsDecision,
@@ -22,6 +23,7 @@ import {
   applyPendingDecisionLifeChoiceCards,
   prominentDecisionPrompt,
   resolvingEffectSourceInstanceIds,
+  setMatchLocation,
   zoneClickVisibleInstanceIds,
 } from "./useMatchClient-support.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
@@ -566,5 +568,42 @@ describe("match client support helpers", () => {
       "self-leader",
       "opponent-leader",
     ]);
+  });
+
+  test("match URL updates preserve reusable room code paths", () => {
+    const hadWindow = Object.prototype.hasOwnProperty.call(
+      globalThis,
+      "window",
+    );
+    const originalWindow = Reflect.get(globalThis, "window");
+    const testWindow = {
+      location: { href: "http://localhost/r/ab12" },
+      history: {
+        replaceState(_state: unknown, _title: string, url: string) {
+          testWindow.location.href = new URL(
+            url,
+            testWindow.location.href,
+          ).href;
+        },
+      },
+    };
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: testWindow,
+    });
+    try {
+      setMatchLocation("match-rematch-1" as MatchId);
+
+      assert.equal(testWindow.location.href, "http://localhost/r/ab12");
+    } finally {
+      if (!hadWindow) {
+        Reflect.deleteProperty(globalThis, "window");
+      } else {
+        Object.defineProperty(globalThis, "window", {
+          configurable: true,
+          value: originalWindow,
+        });
+      }
+    }
   });
 });
