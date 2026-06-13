@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { beforeAll, test } from "vitest";
+import { afterEach, beforeAll, test, vi } from "vitest";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
@@ -25,6 +25,10 @@ const shortTimerPolicy: MatchTimerPolicy = {
 
 beforeAll(async () => {
   premadeSetup = await createFixtureDevMatchSetup();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 const waitForBotMicrotasks = async (): Promise<void> => {
@@ -284,4 +288,45 @@ test("bot players do not concede while waiting on human setup decisions", async 
   assert.notEqual(match?.state.status.type, "completed");
   assert.notEqual(match?.state.status.type, "gameOver");
   assert.equal(match?.state.pendingDecision?.playerId, humanPlayerId);
+});
+
+test("bot players wait between accepted actions", async () => {
+  vi.useFakeTimers();
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { botActionDelayMs: 1_000, createDefaultMatch: false },
+  );
+  const matchId = "bot-action-delay" as MatchId;
+  const botPlayerId = premadeSetup.playerOrder[0];
+  const createdPromise = registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: botPlayerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: botPlayerId,
+      },
+      botPlayerIds: [botPlayerId],
+    },
+  );
+  await waitForBotMicrotasks();
+
+  let resolved = false;
+  void createdPromise.then(() => {
+    resolved = true;
+  });
+  await waitForBotMicrotasks();
+
+  assert.equal(resolved, false);
+
+  await vi.advanceTimersByTimeAsync(999);
+  assert.equal(resolved, false);
+
+  await vi.advanceTimersByTimeAsync(1);
+  await createdPromise;
 });

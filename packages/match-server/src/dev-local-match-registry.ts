@@ -460,6 +460,7 @@ export const createLocalDevMatchRegistry = async (
   createDefaultSetup: (matchId?: MatchId) => Promise<LocalDevMatchSetup>,
   initialSetup?: LocalDevMatchSetup,
   options: {
+    readonly botActionDelayMs?: number;
     readonly createDefaultMatch?: boolean;
     readonly completedMatchRepository?: CompletedMatchRepository;
     readonly matchTimerPolicy?: MatchTimerPolicy;
@@ -470,6 +471,15 @@ export const createLocalDevMatchRegistry = async (
   const completedPersistedMatchIds = new Set<MatchId>();
   const sessionService = createMatchSessionService();
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
+  const botActionDelayMs = options.botActionDelayMs ?? 1_000;
+  const waitForBotActionDelay = async (): Promise<void> => {
+    if (botActionDelayMs <= 0) {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, botActionDelayMs);
+    });
+  };
   const createTemplateSetup = async (
     matchId: MatchId,
   ): Promise<LocalDevMatchSetup> => {
@@ -574,6 +584,7 @@ export const createLocalDevMatchRegistry = async (
         }
         acceptedAction = true;
         await persistCompletedMatchIfNeeded(session);
+        await waitForBotActionDelay();
       }
       if (!acceptedAction) {
         return;
