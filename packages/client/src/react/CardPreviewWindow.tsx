@@ -40,6 +40,7 @@ export const defaultCardPreviewWindowRect: WindowRect = {
 const minPreviewZoom = 0.65;
 const maxPreviewZoom = 1.8;
 const previewZoomStep = 0.1;
+const previewRenderedScale = 1.5;
 const defaultPreviewTextPanelHeight = 42;
 const minPreviewTextPanelHeight = 22;
 const maxPreviewTextPanelHeight = 100;
@@ -89,7 +90,9 @@ export const CardPreviewContent = ({
   const stageRef = useRef<HTMLDivElement>(null);
   const textPanelDrag = useRef<TextPanelDragState | undefined>(undefined);
   const previewStyle = {
-    "--card-preview-zoom": String(zoom),
+    "--card-preview-zoom": String(
+      Number((zoom * previewRenderedScale).toFixed(2)),
+    ),
     "--card-preview-rules-height": `${String(textPanelHeight)}%`,
     "--card-preview-image-bottom-reserve": textVisible
       ? `calc(${String(textPanelHeight)}% + 24px)`
