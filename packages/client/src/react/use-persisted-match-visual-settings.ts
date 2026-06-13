@@ -50,6 +50,14 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
       );
       setSettings((current) => ({ ...current, quickPayActivateMainCosts }));
     },
+    setSoundVolume: (value) => {
+      const soundVolume = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "soundVolume",
+        value,
+      );
+      setSettings((current) => ({ ...current, soundVolume }));
+    },
     setZoneBackgroundVisibility: (value) => {
       const zoneBackgroundVisibility = saveMatchVisualSetting(
         browserPersistentStorage(),

@@ -115,6 +115,12 @@ export const matchVisualSettingDefinitions = {
     storageKey: "optcg:client:quick-pay-activate-main-costs",
     defaultValue: defaultMatchVisualSettingsValues.quickPayActivateMainCosts,
   }),
+  soundVolume: visibilitySetting({
+    id: "soundVolume",
+    groupId: "sound",
+    storageKey: "optcg:client:sound-volume",
+    defaultValue: defaultMatchVisualSettingsValues.soundVolume,
+  }),
   zoneBackgroundVisibility: visibilitySetting({
     id: "zoneBackgroundVisibility",
     groupId: "appearance",
@@ -136,6 +142,7 @@ export const matchVisualSettingIds = [
   "confirmAttachDon",
   "confirmEndTurn",
   "quickPayActivateMainCosts",
+  "soundVolume",
   "zoneBackgroundVisibility",
   "zoneGuideVisibility",
 ] as const satisfies readonly MatchVisualSettingId[];
@@ -143,6 +150,7 @@ export const matchVisualSettingIds = [
 export const matchVisualSettingGroupIds = [
   "appearance",
   "gameplay",
+  "sound",
 ] as const satisfies readonly MatchVisualSettingGroupId[];
 
 export { defaultMatchVisualSettingsValues };
@@ -169,7 +177,7 @@ export function loadMatchVisualSetting(
 ): boolean;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "zoneBackgroundVisibility" | "zoneGuideVisibility",
+  settingId: "soundVolume" | "zoneBackgroundVisibility" | "zoneGuideVisibility",
 ): number;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
@@ -196,6 +204,11 @@ export function loadMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.quickPayActivateMainCosts,
       );
+    case "soundVolume":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.soundVolume,
+      );
     case "zoneBackgroundVisibility":
       return loadWithDefinition(
         storage,
@@ -219,6 +232,7 @@ export const loadMatchVisualSettings = (
     storage,
     "quickPayActivateMainCosts",
   ),
+  soundVolume: loadMatchVisualSetting(storage, "soundVolume"),
   zoneBackgroundVisibility: loadMatchVisualSetting(
     storage,
     "zoneBackgroundVisibility",
@@ -259,7 +273,7 @@ export function saveMatchVisualSetting(
 ): boolean;
 export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "zoneBackgroundVisibility" | "zoneGuideVisibility",
+  settingId: "soundVolume" | "zoneBackgroundVisibility" | "zoneGuideVisibility",
   value: number,
 ): number;
 export function saveMatchVisualSetting(
@@ -291,6 +305,12 @@ export function saveMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.quickPayActivateMainCosts,
         value === true,
+      );
+    case "soundVolume":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.soundVolume,
+        typeof value === "number" ? value : Number.NaN,
       );
     case "zoneBackgroundVisibility":
       return saveWithDefinition(
