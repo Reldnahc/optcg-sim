@@ -128,7 +128,7 @@ export const Zone = ({
     const offset = `${String(offsetIndex * 10)}%`;
     return {
       "--life-card-y-offset": offset,
-      zIndex: count - index,
+      zIndex: lifeCardIsSelf ? index + 1 : count - index,
       ...(lifeCardIsSelf
         ? { bottom: "var(--life-card-y-offset)" }
         : { top: "var(--life-card-y-offset)" }),
