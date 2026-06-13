@@ -261,6 +261,46 @@ describe("bot player", () => {
     });
   });
 
+  test("resolves pending search decisions before playing another card", () => {
+    const searchHit = {
+      instanceId: "search-hit" as InstanceId,
+      cardId: "OP16-012" as CardId,
+      playerId: botId,
+    };
+    const snapshot = snapshotWithActions([
+      {
+        index: 0,
+        type: "playCard",
+        label: "Play another card",
+      },
+    ]);
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:ace-sabo-luffy-search" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Reveal up to 1 card with a cost of 3 or more.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "searcher" as InstanceId,
+        cardId: "PRB02-002" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+      min: 1,
+      max: 1,
+      candidates: [{ card: searchHit }],
+      choices: [{ card: searchHit, selectable: true }],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:ace-sabo-luffy-search",
+      response: { type: "cards", cards: [searchHit] },
+    });
+  });
+
   test("activates OP09-001 leader power reduction when it changes battle math", () => {
     const snapshot = snapshotWithActions([], {
       selfLeader: {

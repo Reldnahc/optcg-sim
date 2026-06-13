@@ -70,10 +70,40 @@ const mergedScore = (
     : Math.min(...numericScores);
 };
 
+const choosePendingDecision = ({
+  snapshot,
+  botPlayerId,
+  profile,
+}: Parameters<BotStrategy["chooseAction"]>[0] & {
+  readonly profile: BotBehaviorProfile;
+}): BotActionChoice | undefined => {
+  const decision = snapshot.players[botPlayerId]?.view.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.playerId !== botPlayerId ||
+    decision.type === "payCost" ||
+    decision.type === "mulligan"
+  ) {
+    return undefined;
+  }
+  return (
+    profile.chooseDecision?.({ snapshot, botPlayerId }) ??
+    chooseDefaultBotDecision({ snapshot, botPlayerId })
+  );
+};
+
 export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
 ): BotStrategy => ({
   chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
+    const pendingDecisionChoice = choosePendingDecision({
+      snapshot,
+      botPlayerId,
+      profile,
+    });
+    if (pendingDecisionChoice !== undefined) {
+      return pendingDecisionChoice;
+    }
     const actions = snapshot.players[botPlayerId]?.actions ?? [];
     const scored = actions.flatMap((action) => {
       const context = {
