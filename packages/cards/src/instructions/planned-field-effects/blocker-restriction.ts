@@ -127,6 +127,11 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
 function parseOpponentCannotActivateBlocker(
   input: ParseInput,
 ): InstructionParseResult | undefined {
+  const paidCostAttack = parsePaidCostAttackBlockerRestriction(input.text);
+  if (paidCostAttack !== undefined) {
+    return paidCostAttack;
+  }
+
   const leaderAttack = parseLeaderAttackBlockerRestriction(input.text);
   if (leaderAttack !== undefined) {
     return leaderAttack;
@@ -219,6 +224,50 @@ function parseOpponentCannotActivateBlocker(
       ...duration.evidence,
       "activation:blocker",
       "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
+
+function parsePaidCostAttackBlockerRestriction(
+  text: string,
+): InstructionParseResult | undefined {
+  const durationText =
+    /^Your opponent cannot activate \[Blocker\] when the card given these DON!! cards attacks\s+(?<duration>during this turn\.?)$/iu.exec(
+      text,
+    )?.groups?.["duration"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  return {
+    effect: {
+      type: "preventBlockerActivation",
+      target: {
+        type: "savedFieldObject",
+        binding: { family: "paidCost", saveResultAs: "paidCost" },
+        zones: ["leaderArea", "characterArea"],
+        player: "self",
+        visibility: "publicOnly",
+        onFailure: "failClosed",
+      },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:preventBlockerActivation",
+      "reference:paidCost",
+      ...duration.evidence,
+      "activation:blocker",
     ],
     rest: "",
   };

@@ -134,7 +134,8 @@ const isPublicFieldZone = (
 
 const toSavedFieldObjectReferenceList = (
   saved: SequenceSavedResultReference | undefined,
-  family: SavedFieldObjectTarget["binding"]["family"],
+  binding: SavedFieldObjectTarget["binding"],
+  capturedAtStateSeq: GameState["seq"],
 ):
   | {
       ok: true;
@@ -144,9 +145,32 @@ const toSavedFieldObjectReferenceList = (
   if (saved === undefined) {
     return { ok: false, reason: "missing-saved-reference" };
   }
+  const family = binding.family;
   if (family === "selectedTargets" || family === "forEachSavedTarget") {
     return saved.kind === "selectedTargets"
       ? { ok: true, objects: saved.targets }
+      : { ok: false, reason: "unsupported-saved-reference-family" };
+  }
+  if (family === "paidCost") {
+    return saved.kind === "paidCost"
+      ? {
+          ok: true,
+          objects: (saved.selectedCards ?? []).map(
+            (object, objectIndex): SavedFieldObjectReference => ({
+              binding: {
+                family: "paidCost",
+                saveResultAs: binding.saveResultAs,
+                objectIndex,
+                ...(binding.sourceSegmentId === undefined
+                  ? {}
+                  : { sourceSegmentId: binding.sourceSegmentId }),
+              },
+              capturedAtStateSeq,
+              object,
+              visibility: "public",
+            }),
+          ),
+        }
       : { ok: false, reason: "unsupported-saved-reference-family" };
   }
   return saved.kind === "producedObjects"
@@ -177,7 +201,8 @@ export const resolveSavedFieldObjectKoSelection = (params: {
 
   const refs = toSavedFieldObjectReferenceList(
     params.savedReferences[params.target.binding.saveResultAs],
-    params.target.binding.family,
+    params.target.binding,
+    params.state.seq,
   );
   if (!refs.ok) {
     return refs;

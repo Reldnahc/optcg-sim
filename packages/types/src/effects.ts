@@ -565,7 +565,8 @@ export type OptionalCostSegmentResult =
 export type SavedFieldObjectReferenceFamily =
   | "selectedTargets"
   | "forEachSavedTarget"
-  | "producedObjects";
+  | "producedObjects"
+  | "paidCost";
 
 export type SavedFieldObjectZone =
   | "leaderArea"

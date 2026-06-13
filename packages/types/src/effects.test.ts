@@ -455,7 +455,7 @@ test("sequence saved-result references support producedObjects with CardRef and 
   expect(producedObjects.objects).toHaveLength(1);
 });
 
-test("TYP-009B saved field-object references compile for selectedTargets and producedObjects consumers", () => {
+test("TYP-009B saved field-object references compile for field-object consumers", () => {
   const selectedTargetBinding: SavedFieldObjectTargetBinding = {
     family: "selectedTargets",
     saveResultAs: "chosenCharacter",
@@ -466,6 +466,10 @@ test("TYP-009B saved field-object references compile for selectedTargets and pro
     family: "producedObjects",
     saveResultAs: "playedCharacter",
     objectIndex: 0,
+  };
+  const paidCostBinding: SavedFieldObjectTargetBinding = {
+    family: "paidCost",
+    saveResultAs: "paidCost",
   };
   const loopCurrentBinding: SavedFieldObjectTargetBinding = {
     family: "forEachSavedTarget",
@@ -557,21 +561,17 @@ test("TYP-009B saved field-object references compile for selectedTargets and pro
   expect(effect.type).toBe("sequence");
   expect(selectedTarget.binding.family).toBe("selectedTargets");
   expect(producedObject.binding.family).toBe("producedObjects");
+  expect(paidCostBinding.family).toBe("paidCost");
   expect(loopCurrentBinding.family).toBe("forEachSavedTarget");
   expect(selectedTargetsReference.kind).toBe("selectedTargets");
   expect(producedObjectsReference.kind).toBe("producedObjects");
 });
 
-test("TYP-009B saved field-object references reject unsupported and ambiguous families", () => {
+test("TYP-009B saved field-object references reject unsupported and ambiguous policies", () => {
   const unsupportedSelectedCardsBinding: SavedFieldObjectTargetBinding = {
     // @ts-expect-error selectedCards is a hand/card-selection family, not a field-object target family.
     family: "selectedCards",
     saveResultAs: "handCard",
-  };
-  const unsupportedPaidCostBinding: SavedFieldObjectTargetBinding = {
-    // @ts-expect-error paidCost is not a field-object target family.
-    family: "paidCost",
-    saveResultAs: "paidReturnDon",
   };
   const hiddenVisibilityTarget: SavedFieldObjectTarget = {
     type: "savedFieldObject",
@@ -623,7 +623,6 @@ test("TYP-009B saved field-object references reject unsupported and ambiguous fa
   expect(hiddenFailure.publicReason).toBe("savedFieldObjectUnavailable");
   expect(unsupportedFailure.reason).toBe("unsupportedFamily");
   void unsupportedSelectedCardsBinding;
-  void unsupportedPaidCostBinding;
   void hiddenVisibilityTarget;
   void ambiguousFailurePolicy;
   void handZoneTarget;

@@ -290,6 +290,7 @@ export type PrimitiveEvidence =
   | "target:selectedCharacter"
   | "reference:thatCharacter"
   | "reference:ownerOfSelected"
+  | "reference:paidCost"
   | "duration:whileConditionTrue"
   | "duration:whileSourceOnField"
   | "duration:thisBattle"
