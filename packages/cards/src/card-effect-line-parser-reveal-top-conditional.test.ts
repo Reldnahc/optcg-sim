@@ -90,6 +90,58 @@ it("reuses revealed-card condition with another supported body primitive", () =>
   });
 });
 
+it("parses revealed Life card conditions through the reusable reveal-top source zone", () => {
+  const result = parseCardEffectLine(
+    "[Main] Reveal 1 card from the top of your Life cards. If that card is a {Supernovas} type Character card with a cost of 5 or less, you may play that card.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "revealTop",
+              player: "self",
+              zone: "life",
+              count: 1,
+              visibility: "bothPlayers",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "selectFromSet",
+              filter: {
+                categories: ["character"],
+                typesAny: ["Supernovas"],
+                cost: { max: 5 },
+              },
+            },
+          },
+          {
+            connector: "ifPreviousSucceeded",
+            effect: { type: "playSelected" },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "instruction:revealTop",
+      "zone:life",
+      "instruction:selectFromSet",
+      "instruction:playSelected",
+      "filter:type",
+      "filter:cost",
+    ]),
+  );
+});
+
 it("parses revealed-card type-includes condition with composed draw and trash body", () => {
   const result = parseCardEffectLine(
     `[On Play] Reveal 1 card from the top of your deck. If that card's type includes "Whitebeard Pirates", draw 2 cards and trash 1 card from your hand.`,
