@@ -3,6 +3,47 @@ import type { InstructionParser } from "../../types.js";
 import { donActivationTarget } from "./shared.js";
 
 export const parseSetDonActiveInstruction: InstructionParser = (input) => {
+  const allMatch =
+    /^set all of your DON!! cards as active(?<delayed> at the end of this turn)?\.?$/i.exec(
+      input.text,
+    );
+  if (allMatch !== null) {
+    const delayed = allMatch.groups?.["delayed"] !== undefined;
+    const effect = {
+      type: "activate" as const,
+      target: {
+        type: "all" as const,
+        player: "self" as const,
+        zone: "costArea" as const,
+        filter: { categories: ["don" as const], state: "rested" as const },
+      },
+    };
+
+    return {
+      effect: delayed
+        ? {
+            type: "delayed",
+            timing: { type: "endOfTurn", turn: "current" },
+            effect,
+          }
+        : effect,
+      evidence: [
+        "instruction:activate",
+        "cardinality:all",
+        "player:self",
+        "target:yourDonCards",
+        "zone:costArea",
+        "filter:category:don",
+        "filter:state:rested",
+        "state:active",
+        ...(delayed
+          ? (["duration:endOfTurn", "composition:delayed"] as const)
+          : []),
+      ],
+      rest: "",
+    };
+  }
+
   const match =
     /^set (?<quantity>up to [1-9]\d*) of your DON!! cards as active(?<delayed> at the end of this turn)?\.?$/i.exec(
       input.text,

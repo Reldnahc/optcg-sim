@@ -34,7 +34,9 @@ const allActivateTargetRefs = (
       ? [player.leader]
       : target.zone === "characterArea"
         ? player.characters
-        : [];
+        : target.zone === "costArea"
+          ? player.costArea
+          : [];
   return cards
     .filter((card) =>
       cardMatchesHandSelectionFilter(
@@ -100,7 +102,9 @@ export const resolveActivateTargets = (
   if (
     target.type === "all" &&
     target.player === "self" &&
-    (target.zone === "characterArea" || target.zone === "leaderArea")
+    (target.zone === "costArea" ||
+      target.zone === "characterArea" ||
+      target.zone === "leaderArea")
   ) {
     return {
       ok: true,

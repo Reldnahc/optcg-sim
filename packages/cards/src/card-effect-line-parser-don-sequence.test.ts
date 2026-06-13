@@ -510,6 +510,61 @@ it("parses on-play DON activation followed by filtered play restriction", () => 
   );
 });
 
+it("parses all-DON activation followed by generic hand play restriction", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Set all of your DON!! cards as active. Then, you cannot play cards from your hand during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "activate",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "costArea",
+                filter: { categories: ["don"], state: "rested" },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "preventPlay",
+              player: "self",
+              filter: {},
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:activate",
+      "instruction:preventPlay",
+      "target:yourDonCards",
+      "cardinality:all",
+      "zone:costArea",
+      "filter:category:don",
+      "filter:state:rested",
+      "state:active",
+      "zone:hand",
+      "duration:thisTurn",
+    ]),
+  );
+});
+
 it("parses delayed end-of-turn DON activation as timing around reusable activation body", () => {
   const result = parseCardEffectLine(
     "[On Play] Set up to 5 of your DON!! cards as active at the end of this turn.",

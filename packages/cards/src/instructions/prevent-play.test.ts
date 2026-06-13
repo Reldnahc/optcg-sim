@@ -25,4 +25,26 @@ describe("prevent play instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses generic hand wording as an all-card play restriction", () => {
+    expect(
+      parsePreventPlayInstruction({
+        text: "you cannot play cards from your hand during this turn.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "preventPlay",
+        player: "self",
+        filter: {},
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:preventPlay",
+        "player:self",
+        "zone:hand",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
 });
