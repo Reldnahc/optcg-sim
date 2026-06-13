@@ -201,7 +201,7 @@ describe("Postgres completed match repository", () => {
 });
 
 describe("Postgres completed match replay repository", () => {
-  test("lists replay summaries for matches where the user participated", async () => {
+  test("lists replay summaries without requiring player participation", async () => {
     const calls: Array<{
       readonly sql: string;
       readonly params: readonly unknown[];
@@ -240,12 +240,12 @@ describe("Postgres completed match replay repository", () => {
       },
     });
 
-    const summaries = await repository.listReplaysForUser("user-1");
+    const summaries = await repository.listReplays();
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.sql).toContain("FROM sim_dev.matches");
-    expect(calls[0]?.sql).toContain("viewer.user_id = $1");
-    expect(calls[0]?.params).toEqual(["user-1", 25]);
+    expect(calls[0]?.sql).not.toContain("viewer.user_id");
+    expect(calls[0]?.params).toEqual([25]);
     expect(summaries).toEqual([
       {
         matchId: "match-1",
@@ -273,7 +273,7 @@ describe("Postgres completed match replay repository", () => {
     ]);
   });
 
-  test("returns replay detail only for a participating user", async () => {
+  test("returns replay detail without requiring player participation", async () => {
     const calls: Array<{
       readonly sql: string;
       readonly params: readonly unknown[];
@@ -304,12 +304,12 @@ describe("Postgres completed match replay repository", () => {
       },
     });
 
-    const detail = await repository.getReplayForUser("user-1", matchId);
+    const detail = await repository.getReplay(matchId);
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.sql).toContain("viewer.user_id = $1");
-    expect(calls[0]?.sql).toContain("m.id = $2");
-    expect(calls[0]?.params).toEqual(["user-1", matchId]);
+    expect(calls[0]?.sql).not.toContain("viewer.user_id");
+    expect(calls[0]?.sql).toContain("m.id = $1");
+    expect(calls[0]?.params).toEqual([matchId]);
     expect(detail?.matchId).toBe("match-1");
     expect(detail?.replay).toEqual({
       deterministicEntries: [{ type: "action" }],

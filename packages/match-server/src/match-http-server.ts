@@ -114,7 +114,6 @@ const handleApiRequest = async (
       request,
       response,
       pathname,
-      authProvider,
       replayRepository,
     })
   ) {
