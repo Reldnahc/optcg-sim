@@ -21,6 +21,7 @@ import { executeMoveCardsPrimitive } from "../../effect-runtime-move-cards.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
 import { executeNoChoiceEffectPrimitive } from "../../runtime/primitives/draw.js";
 import { moveFieldCardToOwnerLife } from "../../movement/field-to-life.js";
+import { moveFieldCardToOwnerHand } from "../../movement/field-to-hand.js";
 import {
   isSupportedKoSelfInsteadEffect,
   isSupportedLifeVisibilityInsteadEffect,
@@ -28,6 +29,7 @@ import {
   isSupportedReplacementTargetLifeInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
   isSupportedRestSelfInsteadEffect,
+  isSupportedReturnSelfToHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
 } from "../instead-effects.js";
 import { executeKoSelfInsteadEffect } from "../ko-self-instead.js";
@@ -132,6 +134,9 @@ export const executeReplacementInsteadEffect = (
       context.replacementTargets ?? [],
     );
   }
+  if (isSupportedReturnSelfToHandInsteadEffect(effect)) {
+    return executeReturnSelfToHandInsteadEffect(state, entry);
+  }
   if (isSupportedRestSelfInsteadEffect(effect)) {
     const source = currentPublicFieldRefForInstance(state, entry.source);
     const events: EngineEvent[] = [];
@@ -212,6 +217,52 @@ export const executeReplacementInsteadEffect = (
   return executeNoChoiceEffectPrimitive(state, entry, effect, {
     incrementStateSeq: false,
   });
+};
+
+const executeReturnSelfToHandInsteadEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): EngineResult => {
+  const source = currentPublicFieldRefForInstance(state, entry.source);
+  const playerId = source?.playerId ?? entry.controllerId;
+  const player = state.players[playerId];
+  const sourceZone = source?.zone?.zone;
+  if (
+    player === undefined ||
+    (sourceZone !== "characterArea" && sourceZone !== "stageArea")
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      [acceptedReplacementError(entry.effectBlockId, "missing-card")],
+    );
+  }
+  const card =
+    sourceZone === "characterArea"
+      ? player.characters.find(
+          (candidate) => candidate.instanceId === entry.source.instanceId,
+        )
+      : player.stage?.instanceId === entry.source.instanceId
+        ? player.stage
+        : undefined;
+  if (card === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [acceptedReplacementError(entry.effectBlockId, "missing-card")],
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  const moved = moveFieldCardToOwnerHand({
+    card,
+    causedBy: entry.causedBy,
+    events,
+    playerId,
+    sourceZone,
+    state,
+  });
+  return toEngineResult(moved.state, events);
 };
 
 const executeReplacementTargetLifeInsteadEffect = (

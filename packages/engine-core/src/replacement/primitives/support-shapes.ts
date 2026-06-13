@@ -20,6 +20,7 @@ import {
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedReturnDonInsteadEffect,
+  isSupportedReturnSelfToHandInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
   isSupportedDrawInsteadEffect,
@@ -236,6 +237,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementTargetLifeInsteadEffect(effect) ||
+  isSupportedReturnSelfToHandInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
   isSupportedReplacementPayCostInsteadEffect(effect) ||

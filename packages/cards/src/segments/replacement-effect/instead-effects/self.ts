@@ -40,6 +40,31 @@ export function parseKoSelfInstead(
   };
 }
 
+export function parseReturnSelfToOwnerHandInstead(
+  text: string,
+): ReplacementInsteadParseResult | undefined {
+  if (
+    !/^you may return this Character to the owner's hand instead\.?$/i.test(
+      text.trim(),
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "bounce",
+      destination: "hand",
+      target: { type: "self" },
+    },
+    evidence: [
+      "instruction:bounce",
+      "target:thisCharacter",
+      "destination:hand",
+    ],
+  };
+}
+
 export function parseModifyPowerInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {

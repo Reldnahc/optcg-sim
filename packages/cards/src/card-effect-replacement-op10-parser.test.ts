@@ -105,3 +105,40 @@ it("parses active DON rest as a reusable replacement instead primitive", () => {
     },
   });
 });
+
+it("parses return-this-Character-to-owner-hand replacement instead primitive", () => {
+  const result = parseCardEffectLine(
+    "If your Character with a base cost of 7 or less other than [Sabo] would be removed from the field by your opponent's effect, you may return this Character to the owner's hand instead.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "replacement",
+      trigger: {
+        type: "replacement",
+        replacement: {
+          type: "wouldMoveZone",
+          sourceKind: "cardEffect",
+        },
+      },
+      effect: {
+        type: "replacement",
+        instead: {
+          type: "bounce",
+          destination: "hand",
+          target: { type: "self" },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "replacement:wouldMoveZone",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "instruction:bounce",
+      "destination:hand",
+      "target:thisCharacter",
+    ]),
+  );
+});

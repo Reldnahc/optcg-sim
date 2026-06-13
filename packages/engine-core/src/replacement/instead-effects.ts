@@ -140,6 +140,19 @@ export const isSupportedReplacementTargetLifeInsteadEffect = (
   effect.target.type === "replacementTarget" &&
   (effect.destination === "lifeTop" || effect.destination === "lifeBottom");
 
+export const isSupportedReturnSelfToHandInsteadEffect = (
+  effect: ReplacementInstead,
+): effect is Extract<ReplacementInstead, { type: "bounce" }> & {
+  target: Extract<
+    Extract<ReplacementInstead, { type: "bounce" }>["target"],
+    { type: "self" }
+  >;
+  destination: "hand";
+} =>
+  effect.type === "bounce" &&
+  effect.target.type === "self" &&
+  effect.destination === "hand";
+
 const isSupportedAtomicNoDecisionInsteadEffect = (
   effect: SequenceSegmentEffect,
 ): boolean =>
@@ -148,6 +161,8 @@ const isSupportedAtomicNoDecisionInsteadEffect = (
     isSupportedLifeVisibilityInsteadEffect(effect)) ||
   (effect.type === "bounce" &&
     isSupportedReplacementTargetLifeInsteadEffect(effect)) ||
+  (effect.type === "bounce" &&
+    isSupportedReturnSelfToHandInsteadEffect(effect)) ||
   (effect.type === "rest" && isSupportedRestSelfInsteadEffect(effect)) ||
   (effect.type === "modifyPower" &&
     isSupportedModifyPowerInsteadEffect(effect)) ||
@@ -335,6 +350,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementTargetLifeInsteadEffect(effect) ||
+  isSupportedReturnSelfToHandInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
   isSupportedReplacementPayCostInsteadEffect(effect) ||

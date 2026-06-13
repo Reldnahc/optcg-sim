@@ -45,6 +45,12 @@ const restSelfInstead = (): Extract<Effect, { type: "rest" }> => ({
   target: { type: "self" },
 });
 
+const returnSelfToHandInstead = (): Extract<Effect, { type: "bounce" }> => ({
+  type: "bounce",
+  destination: "hand",
+  target: { type: "self" },
+});
+
 const restOwnCardsInstead = (
   filter?: Extract<
     Extract<Effect, { type: "rest" }>["target"],
@@ -193,6 +199,11 @@ test("replacement support admits the same move-zone trigger with multiple instea
       restSelfInstead(),
     ),
     replacementBlock(
+      "replacement-move-zone-return-self-hand",
+      wouldMoveFromCharacterArea(),
+      returnSelfToHandInstead(),
+    ),
+    replacementBlock(
       "replacement-move-zone-return-don",
       wouldMoveFromCharacterArea(),
       returnDonInstead(),
@@ -201,7 +212,7 @@ test("replacement support admits the same move-zone trigger with multiple instea
 
   assert.deepEqual(
     blocks.map((block) => isSupportedReplacementEffectBlock(block)),
-    [true, true],
+    [true, true, true],
   );
 });
 

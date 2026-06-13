@@ -7,6 +7,7 @@ import {
   parseKoSelfInstead,
   parseModifyPowerInstead,
   parseRestSelfInstead,
+  parseReturnSelfToOwnerHandInstead,
   parseTrashSelfInstead,
 } from "./self.js";
 import { parseRestCardsInstead } from "./rest-cards.js";
@@ -31,6 +32,7 @@ export const replacementInsteadBodyParsers: readonly ReplacementInsteadParser[] 
     parseDrawInstead,
     parseKoSelfInstead,
     parseTrashSelfInstead,
+    parseReturnSelfToOwnerHandInstead,
     parseModifyPowerInstead,
     parseRestSelfInstead,
     parseRestCardsInstead,
