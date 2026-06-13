@@ -12,12 +12,36 @@
 }
 
 .card-preview-content {
-  --card-preview-card-width: clamp(190px, calc(var(--card-height) * 1.25), 300px);
-  --card-preview-panel-min-height: clamp(88px, calc(var(--card-height) * 0.56), 136px);
-  --card-preview-panel-padding-block: clamp(7px, calc(var(--card-height) / 17), 12px);
-  --card-preview-panel-padding-inline: clamp(9px, calc(var(--card-height) / 14), 16px);
-  --card-preview-control-height: clamp(26px, calc(var(--card-height) / 6.6), 34px);
-  --card-preview-button-height: clamp(22px, calc(var(--card-height) / 8.5), 28px);
+  --card-preview-card-width: clamp(
+    190px,
+    calc(var(--card-height) * 1.25),
+    300px
+  );
+  --card-preview-panel-min-height: clamp(
+    88px,
+    calc(var(--card-height) * 0.56),
+    136px
+  );
+  --card-preview-panel-padding-block: clamp(
+    7px,
+    calc(var(--card-height) / 17),
+    12px
+  );
+  --card-preview-panel-padding-inline: clamp(
+    9px,
+    calc(var(--card-height) / 14),
+    16px
+  );
+  --card-preview-control-height: clamp(
+    26px,
+    calc(var(--card-height) / 6.6),
+    34px
+  );
+  --card-preview-button-height: clamp(
+    22px,
+    calc(var(--card-height) / 8.5),
+    28px
+  );
   --card-preview-copy-font-size: clamp(
     9px,
     min(calc(var(--card-height) / 15), calc(1.35cqw + 0.28cqh)),
@@ -164,10 +188,9 @@
 
 .card-preview-metadata-row {
   display: grid;
-  grid-template-columns: clamp(58px, calc(var(--card-height) / 1.9), 84px) minmax(
-      0,
-      1fr
-    );
+  grid-template-columns:
+    clamp(58px, calc(var(--card-height) / 1.9), 84px)
+    minmax(0, 1fr);
   gap: calc(var(--floating-window-body-padding) * 0.7);
   align-items: baseline;
 }

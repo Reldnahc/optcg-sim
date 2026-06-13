@@ -91,8 +91,8 @@
   height: var(--floating-window-resize-handle-size);
   border: 0;
   background:
-    linear-gradient(135deg, transparent 50%, var(--match-border) 50%)
-      bottom right / var(--floating-window-resize-corner-size)
+    linear-gradient(135deg, transparent 50%, var(--match-border) 50%) bottom
+      right / var(--floating-window-resize-corner-size)
       var(--floating-window-resize-corner-size) no-repeat,
     transparent;
   cursor: nwse-resize;

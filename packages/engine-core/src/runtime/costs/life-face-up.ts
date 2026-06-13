@@ -63,7 +63,9 @@ export const applySetLifeFaceUpPayment = (params: {
   if (
     startIndex < 0 ||
     selected.length !== count ||
-    selected.some((lifeCard) => lifeCard.faceUp === targetFaceUp(params.selectedOption))
+    selected.some(
+      (lifeCard) => lifeCard.faceUp === targetFaceUp(params.selectedOption),
+    )
   ) {
     return null;
   }

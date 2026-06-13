@@ -316,7 +316,9 @@ export const autoPayCostActionIndex = (
 const quickPayRestSelfLabels = new Set(["Rest this card"]);
 const quickPayTrashSelfLabels = new Set(["Trash this card"]);
 
-const quickPayDonPaymentKey = (action: ClientActionModel): string | undefined =>
+const quickPayDonPaymentKey = (
+  action: ClientActionModel,
+): string | undefined =>
   donPaymentCanonicalKey(action) === "don:1" ? "don:1" : undefined;
 
 const quickPayActivateMainPaymentKey = (
