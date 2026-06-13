@@ -21,6 +21,12 @@ const auth = (userId: string, sessionId: string): AuthContext => ({
 const createFakeMatchRegistry = (): LocalDevMatchRegistry =>
   ({
     defaultMatchId: "match-default" as MatchId,
+    getMatch() {
+      return undefined;
+    },
+    getFirstPlayerChoice() {
+      return undefined;
+    },
     createRematchSeed() {
       return {
         firstPlayerChoice: {
@@ -78,4 +84,22 @@ test("rematch lobbies reuse the source lobby code and repoint the alias", async 
     await lobbyStore.getLobbyIdByJoinCode(joinCode),
     rematch.lobbyId,
   );
+});
+
+test("lobby responses do not expose match ids unavailable to the local registry", async () => {
+  const lobbyStore = createMemoryLobbyStore();
+  const unavailableMatchId = "match-unavailable" as MatchId;
+  await lobbyStore.createLobby({
+    lobbyId: "lobby-with-stale-match",
+    settings: { formatId: "sandbox-open" },
+    seats: createDefaultLobbySeats(),
+    matchId: unavailableMatchId,
+  });
+  const registry = await createCustomLobbyRegistry(createFakeMatchRegistry(), {
+    lobbyStore,
+  });
+
+  const lobby = await registry.getLobby("lobby-with-stale-match");
+
+  assert.equal(lobby?.matchId, undefined);
 });

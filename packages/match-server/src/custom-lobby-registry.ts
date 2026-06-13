@@ -204,6 +204,7 @@ const lobbySettings = (lobby: CustomLobbyState): CustomLobbySettings =>
 
 const lobbyResponse = (
   lobby: CustomLobbyState,
+  options: { readonly exposeMatchId?: boolean } = {},
 ): CreatedCustomLobbyResponse => ({
   lobbyId: lobby.lobbyId,
   ...(lobby.joinCode === undefined ? {} : { joinCode: lobby.joinCode }),
@@ -218,7 +219,9 @@ const lobbyResponse = (
       },
     ]),
   ),
-  ...(lobby.matchId === undefined ? {} : { matchId: lobby.matchId }),
+  ...(lobby.matchId === undefined || options.exposeMatchId !== true
+    ? {}
+    : { matchId: lobby.matchId }),
 });
 
 const botSubject = {
@@ -254,6 +257,14 @@ export const createCustomLobbyRegistry = async (
   const deckHashCodec = options.deckHashCodec ?? createPoneglyphDeckHashCodec();
   const botDeckSubmission =
     options.botDeckSubmission ?? createDefaultBotDeckSubmission();
+  const canExposeLobbyMatchId = (lobby: CustomLobbyState): boolean =>
+    lobby.matchId !== undefined &&
+    (matchRegistry.getMatch(lobby.matchId) !== undefined ||
+      matchRegistry.getFirstPlayerChoice(lobby.matchId) !== undefined);
+  const lobbyResponseForLocalRegistry = (
+    lobby: CustomLobbyState,
+  ): CreatedCustomLobbyResponse =>
+    lobbyResponse(lobby, { exposeMatchId: canExposeLobbyMatchId(lobby) });
   const redisConfig = resolveRedisConfig({
     redisUrl: options.redisUrl,
     redisMode: options.redisMode,
@@ -466,7 +477,7 @@ export const createCustomLobbyRegistry = async (
       if (existing !== undefined) {
         await ensureMatchWhenReady(lobby);
         return {
-          ...lobbyResponse(lobby),
+          ...lobbyResponseForLocalRegistry(lobby),
           seat: { playerId: existing.playerId },
         };
       }
@@ -476,7 +487,7 @@ export const createCustomLobbyRegistry = async (
       }
       await ensureMatchWhenReady(lobby);
       return {
-        ...lobbyResponse(lobby),
+        ...lobbyResponseForLocalRegistry(lobby),
         seat: { playerId: open.playerId },
       };
     });
@@ -501,7 +512,7 @@ export const createCustomLobbyRegistry = async (
         settings: createdSettings,
         seats,
       };
-      return lobbyResponse(await lobbyStore.createLobby(lobby));
+      return lobbyResponseForLocalRegistry(await lobbyStore.createLobby(lobby));
     },
     async joinLobby(lobbyId, auth) {
       return await joinLobbyById(lobbyId, auth);
@@ -541,7 +552,7 @@ export const createCustomLobbyRegistry = async (
         seat.deckSubmission = submission;
         await ensureMatchWhenReady(lobby);
         return {
-          ...lobbyResponse(lobby),
+          ...lobbyResponseForLocalRegistry(lobby),
           seat: { playerId: seat.playerId },
         };
       });
@@ -585,7 +596,7 @@ export const createCustomLobbyRegistry = async (
         seat.verifiedHandoff = handoff;
         await ensureMatchWhenReady(lobby);
         return {
-          ...lobbyResponse(lobby),
+          ...lobbyResponseForLocalRegistry(lobby),
           seat: {
             playerId: seat.playerId,
             sessionToken: createDevUserSessionToken(
@@ -751,7 +762,9 @@ export const createCustomLobbyRegistry = async (
     },
     async getLobby(lobbyId) {
       const lobby = await lobbyStore.getLobby(lobbyId);
-      return lobby === undefined ? undefined : lobbyResponse(lobby);
+      return lobby === undefined
+        ? undefined
+        : lobbyResponseForLocalRegistry(lobby);
     },
     async authorizeSeat(auth, lobbyId, playerId) {
       if (auth === undefined) {
@@ -818,7 +831,7 @@ export const createCustomLobbyRegistry = async (
         await lobbyStore.setLobbyJoinCode(lobby.lobbyId, joinCode);
       }
       return {
-        ...lobbyResponse(lobby),
+        ...lobbyResponseForLocalRegistry(lobby),
         seat: { playerId },
       };
     },
