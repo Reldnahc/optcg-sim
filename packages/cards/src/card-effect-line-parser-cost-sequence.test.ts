@@ -751,6 +751,61 @@ it("parses active DON attachment and trash-self as reusable optional cost sequen
   });
 });
 
+it("parses direct active DON attachment to a named card as a reusable optional cost", () => {
+  expect(
+    parseCardEffectLine(
+      "[Main] You may give 1 active DON!! card to 1 of your [Silvers Rayleigh]: Up to 1 of your Leader or Character cards gains +1000 power during this turn.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "attachDon",
+                count: 1,
+                sourcePlayer: "self",
+                sourceState: "active",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    player: "self",
+                    zones: ["leaderArea", "characterArea"],
+                    min: 1,
+                    max: 1,
+                    allowFewerIfUnavailable: false,
+                    visibility: "public",
+                    filter: { names: ["Silvers Rayleigh"] },
+                  },
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "modifyPower",
+              target: { type: "chooseFromZones" },
+              value: 1000,
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  });
+});
+
 it("parses return-DON cost into temporary keyword grant then hand-trash sequence", () => {
   expect(
     parseCardEffectLine(

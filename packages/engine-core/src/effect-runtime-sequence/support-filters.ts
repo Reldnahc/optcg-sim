@@ -3,20 +3,22 @@ import type { CardFilter } from "@optcg/types";
 export const isSupportedAttachDonTargetFilter = (
   filter: CardFilter | undefined,
 ): boolean => {
-  const categories = filter?.categories;
-  if (categories === undefined) {
-    return false;
-  }
-  const categoryShape =
-    (categories.length === 1 && categories[0] === "leader") ||
-    (categories.length === 1 && categories[0] === "character") ||
-    (categories.length === 2 &&
-      categories[0] === "leader" &&
-      categories[1] === "character");
-  if (!categoryShape) {
-    return false;
-  }
   if (filter === undefined) {
+    return false;
+  }
+  const categories = filter.categories;
+  const categoryShape =
+    categories !== undefined &&
+    ((categories.length === 1 && categories[0] === "leader") ||
+      (categories.length === 1 && categories[0] === "character") ||
+      (categories.length === 2 &&
+        categories[0] === "leader" &&
+        categories[1] === "character"));
+  const nameShape =
+    filter.names !== undefined &&
+    filter.names.length > 0 &&
+    filter.names.every((name) => typeof name === "string" && name.length > 0);
+  if (!categoryShape && !nameShape) {
     return false;
   }
   return isSupportedPublicFieldTargetFilter(filter);

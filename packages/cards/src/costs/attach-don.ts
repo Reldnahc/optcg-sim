@@ -1,23 +1,23 @@
 import type { Target } from "@optcg/types";
 
 import type { CostParseResult } from "./rest-don.js";
-import { parseYourLeaderOrCharacterCardsTarget } from "../targets/index.js";
+import {
+  parseYourLeaderOrCharacterCardsTarget,
+  parseYourNamedCardsTarget,
+} from "../targets/index.js";
 import type { ParseInput } from "../types.js";
 
 export function parseAttachDonCost(
   input: ParseInput,
 ): CostParseResult | undefined {
   const match =
-    /^give\s+(?<count>[1-9]\d*)\s+of (?<sourceOwner>your|your opponent's) (?<state>active|rested) DON!! cards? to (?<target>.+)$/i.exec(
-      input.text,
-    );
+    parseOwnedAttachDonCost(input.text) ?? parseDirectAttachDonCost(input.text);
   const countText = match?.groups?.["count"];
-  const sourceOwner = match?.groups?.["sourceOwner"]?.toLowerCase();
+  const sourceOwner = match?.groups?.["sourceOwner"]?.toLowerCase() ?? "your";
   const state = match?.groups?.["state"]?.toLowerCase();
   const targetText = match?.groups?.["target"];
   if (
     countText === undefined ||
-    sourceOwner === undefined ||
     targetText === undefined ||
     (state !== "active" && state !== "rested")
   ) {
@@ -55,6 +55,16 @@ export function parseAttachDonCost(
   };
 }
 
+const parseOwnedAttachDonCost = (text: string): RegExpExecArray | null =>
+  /^give\s+(?<count>[1-9]\d*)\s+of (?<sourceOwner>your|your opponent's) (?<state>active|rested) DON!! cards? to (?<target>.+)$/i.exec(
+    text,
+  );
+
+const parseDirectAttachDonCost = (text: string): RegExpExecArray | null =>
+  /^give\s+(?<count>[1-9]\d*)\s+(?<state>active|rested) DON!! cards? to (?<target>.+)$/i.exec(
+    text,
+  );
+
 const parseAttachDonCostTarget = (
   targetText: string,
   sourceOwner: string,
@@ -91,9 +101,10 @@ const parseAttachDonCostTarget = (
   if (sourceOwner !== "your") {
     return undefined;
   }
-  const target = parseYourLeaderOrCharacterCardsTarget({
-    text: targetText.replace(/^1\s+/iu, ""),
-  });
+  const targetInput = { text: targetText.replace(/^1\s+/iu, "") };
+  const target =
+    parseYourLeaderOrCharacterCardsTarget(targetInput) ??
+    parseYourNamedCardsTarget(targetInput);
   const targetData = target?.target;
   if (
     target === undefined ||
