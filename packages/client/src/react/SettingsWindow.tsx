@@ -27,12 +27,14 @@ export const SettingsContent = (): React.JSX.Element => {
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
+    soundVolume,
     zoneBackgroundVisibility,
     zoneGuideVisibility,
     setBackgroundImageUrl,
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
+    setSoundVolume,
     setZoneBackgroundVisibility,
     setZoneGuideVisibility,
   } = useMatchVisualSettings();
@@ -73,6 +75,19 @@ export const SettingsContent = (): React.JSX.Element => {
       >
         Clear background
       </button>
+      <label className="settings-field">
+        <span>Sound volume</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={soundVolume}
+          onChange={(event) => {
+            setSoundVolume(event.currentTarget.valueAsNumber);
+          }}
+        />
+      </label>
       <label className="settings-field">
         <span>Zone guide visibility</span>
         <input

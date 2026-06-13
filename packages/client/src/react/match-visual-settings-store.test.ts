@@ -18,6 +18,7 @@ describe("match visual settings store", () => {
       "confirmAttachDon",
       "confirmEndTurn",
       "quickPayActivateMainCosts",
+      "soundVolume",
       "zoneBackgroundVisibility",
       "zoneGuideVisibility",
     ] satisfies MatchVisualSettingId[]);
@@ -29,7 +30,7 @@ describe("match visual settings store", () => {
       assert.match(definition.storageKey, /^optcg:client:/u);
       groupIds.add(definition.groupId);
     }
-    assert.deepEqual([...groupIds].sort(), ["appearance", "gameplay"]);
+    assert.deepEqual([...groupIds].sort(), ["appearance", "gameplay", "sound"]);
   });
 
   test("loads default settings through the registry", () => {
@@ -50,6 +51,7 @@ describe("match visual settings store", () => {
     saveMatchVisualSetting(storage, "confirmAttachDon", false);
     saveMatchVisualSetting(storage, "confirmEndTurn", true);
     saveMatchVisualSetting(storage, "quickPayActivateMainCosts", true);
+    saveMatchVisualSetting(storage, "soundVolume", 42);
     saveMatchVisualSetting(storage, "zoneBackgroundVisibility", 37);
     saveMatchVisualSetting(storage, "zoneGuideVisibility", 82);
 
@@ -58,6 +60,7 @@ describe("match visual settings store", () => {
       confirmAttachDon: false,
       confirmEndTurn: true,
       quickPayActivateMainCosts: true,
+      soundVolume: 42,
       zoneBackgroundVisibility: 37,
       zoneGuideVisibility: 82,
     });
@@ -75,9 +78,11 @@ describe("match visual settings store", () => {
       matchVisualSettingDefinitions.zoneGuideVisibility.storageKey,
       "bad",
     );
+    storage.setItem(matchVisualSettingDefinitions.soundVolume.storageKey, "-1");
 
     assert.deepEqual(loadMatchVisualSettings(storage), {
       ...defaultMatchVisualSettingsValues,
+      soundVolume: 0,
       zoneBackgroundVisibility: 100,
     });
   });

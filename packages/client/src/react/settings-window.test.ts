@@ -40,6 +40,7 @@ describe("settings window", () => {
     assert.match(markup, /Clear background/u);
     assert.match(markup, /Zone guide visibility/u);
     assert.match(markup, /Zone background visibility/u);
+    assert.match(markup, /Sound volume/u);
     assert.match(markup, /type="range"/u);
     assert.match(markup, /min="0"/u);
     assert.match(markup, /max="100"/u);
@@ -170,8 +171,10 @@ describe("settings window", () => {
     assert.match(settingsStore, /optcg:client:confirm-end-turn/u);
     assert.match(settingsStore, /optcg:client:quick-pay-activate-main-costs/u);
     assert.match(settingsStore, /optcg:client:confirm-attach-don/u);
+    assert.match(settingsStore, /optcg:client:sound-volume/u);
     assert.match(settingsStore, /groupId:\s*"appearance"/u);
     assert.match(settingsStore, /groupId:\s*"gameplay"/u);
+    assert.match(settingsStore, /groupId:\s*"sound"/u);
     assert.match(settingsStore, /loadMatchVisualSettings/u);
     assert.match(settingsStore, /saveMatchVisualSetting/u);
     assert.match(persistedSettingsHook, /createBrowserPersistentStorage/u);
@@ -182,6 +185,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /type="file"/u);
     assert.match(settingsWindow, /setZoneGuideVisibility/u);
     assert.match(settingsWindow, /setZoneBackgroundVisibility/u);
+    assert.match(settingsWindow, /setSoundVolume/u);
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
