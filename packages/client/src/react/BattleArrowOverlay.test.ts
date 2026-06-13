@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  battlePowerLabelBox,
   battlePowerLabelPoint,
   battlePowerLabelScale,
   nextStableArrowLine,
@@ -53,5 +54,21 @@ describe("battlePowerLabelScale", () => {
 
   it("caps the power label growth on wide playmats", () => {
     expect(battlePowerLabelScale(2200)).toBe(1.18);
+  });
+});
+
+describe("battlePowerLabelBox", () => {
+  it("falls back to the scaled minimum box before text is measured", () => {
+    const box = battlePowerLabelBox(undefined, 1.18);
+
+    expect(box.width).toBeCloseTo(66.08);
+    expect(box.height).toBeCloseTo(44.84);
+  });
+
+  it("sizes the background from measured rendered text bounds", () => {
+    const box = battlePowerLabelBox({ width: 236, height: 35 }, 1.18);
+
+    expect(box.width).toBeCloseTo(273.76);
+    expect(box.height).toBeCloseTo(51.52);
   });
 });
