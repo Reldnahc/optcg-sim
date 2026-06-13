@@ -119,6 +119,63 @@ it("parses opponent rested DON attachment to opponent Characters", () => {
   );
 });
 
+it("parses rested DON attachment to a named self Leader target", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Give up to 2 rested DON!! cards to your [Trafalgar Law] Leader.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "costArea",
+              player: "self",
+              filter: { categories: ["don"], state: "rested" },
+            },
+          },
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                filter: { categories: ["leader"], names: ["Trafalgar Law"] },
+                min: 1,
+                max: 1,
+              },
+            },
+          },
+          {
+            effect: {
+              type: "attachSelectedDon",
+              sourceState: "rested",
+              target: {
+                type: "savedFieldObject",
+                filter: { categories: ["leader"], names: ["Trafalgar Law"] },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:attachDon",
+      "zone:leaderArea",
+      "filter:category:leader",
+      "filter:name",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses opponent cost-area DON attachment without requiring a rested source", () => {
   const result = parseCardEffectLine(
     "[On Play] Give up to 2 DON!! cards from your opponent's cost area to 1 of your opponent's Characters.",

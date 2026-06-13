@@ -788,6 +788,18 @@ const parseRestedDonAttachmentTarget = (
       savedTargetZone: { zones: ["leaderArea", "characterArea"] },
     };
   }
+  const namedLeaderMatch = /^your \[(?<name>[^\]]+)\] Leader\.?$/iu.exec(
+    targetText,
+  );
+  const namedLeader = namedLeaderMatch?.groups?.["name"]?.trim();
+  if (namedLeader !== undefined && namedLeader.length > 0) {
+    return {
+      evidence: ["zone:leaderArea", "filter:category:leader", "filter:name"],
+      filter: { categories: ["leader"], names: [namedLeader] },
+      requestZone: { zones: ["leaderArea", "characterArea"] },
+      savedTargetZone: { zones: ["leaderArea", "characterArea"] },
+    };
+  }
   if (/^your Leader or 1 of your Characters\.?$/iu.test(targetText)) {
     const zoneTarget = {
       zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],

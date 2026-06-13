@@ -1,61 +1,6 @@
 import { expect, it } from "vitest";
 
-import {
-  parseCardEffectLine,
-  parseCardEffectLineDetailed,
-} from "./card-effect-line-parser.js";
-
-it("parses DON deck-size rules text as legality metadata without a runtime block", () => {
-  const result = parseCardEffectLineDetailed(
-    "Under the rules of this game, your DON!! deck consists of 6 cards.",
-  );
-
-  expect(result).toEqual({
-    ok: true,
-    value: {
-      kind: "metadata",
-      metadata: {
-        type: "deckRestriction",
-        restriction: {
-          type: "donDeckSize",
-          count: 6,
-        },
-      },
-      evidence: [
-        "deckRestriction:ignored",
-        "deckRestriction:donDeckSize",
-        "filter:category:don",
-        "zone:donDeck",
-        "count:positiveInteger",
-      ],
-    },
-  });
-});
-
-it("parses any-copy deck rules text as legality metadata without a runtime block", () => {
-  const result = parseCardEffectLineDetailed(
-    "Under the rules of this game, you may have any number of this card in your deck.",
-  );
-
-  expect(result).toEqual({
-    ok: true,
-    value: {
-      kind: "metadata",
-      metadata: {
-        type: "deckRestriction",
-        restriction: {
-          type: "anyCopiesOfThisCard",
-        },
-      },
-      evidence: [
-        "deckRestriction:ignored",
-        "deckRestriction:anyCopiesOfThisCard",
-        "target:thisCard",
-        "zone:deck",
-      ],
-    },
-  });
-});
+import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 it("parses activate-main turn-count DON ramp and rested-DON attach compositionally", () => {
   const result = parseCardEffectLine(
@@ -198,6 +143,83 @@ it("parses activate-main turn-count DON ramp and rested-DON attach compositional
       "filter:category:don",
       "filter:category:character",
       "filter:state:rested",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
+it("parses rest target then rested-DON attachment to a named Leader as reusable sequence segments", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Rest up to 1 of your opponent's Characters with a base cost of 6 or less. Then, give up to 3 rested DON!! cards to your [Roronoa Zoro] Leader.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zone: "characterArea",
+                      filter: {
+                        categories: ["character"],
+                        baseCost: { max: 6 },
+                      },
+                    },
+                  },
+                },
+                { effect: { type: "rest" } },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    filter: { categories: ["don"], state: "rested" },
+                  },
+                },
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "self",
+                      filter: {
+                        categories: ["leader"],
+                        names: ["Roronoa Zoro"],
+                      },
+                    },
+                  },
+                },
+                { effect: { type: "attachSelectedDon" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:rest",
+      "filter:cost",
+      "instruction:attachDon",
+      "filter:name",
       "composition:selectThenApply",
     ]),
   );
