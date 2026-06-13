@@ -55,4 +55,20 @@ describe("implicit permanent entry point parser", () => {
       evidence: ["entry:implicitPermanent", "sourcePresence:mustRemain"],
     });
   });
+
+  it("recognizes bare once-per-turn continuous text without consuming the marker", () => {
+    expect(
+      parseImplicitPermanentEntryPoint({
+        text: "Once per turn, this Character cannot be K.O.'d by your opponent's effects.",
+      }),
+    ).toMatchObject({
+      node: {
+        type: "entryPoint",
+        trigger: { type: "permanent" },
+        category: "permanent",
+      },
+      evidence: ["entry:implicitPermanent", "sourcePresence:mustRemain"],
+      rest: "Once per turn, this Character cannot be K.O.'d by your opponent's effects.",
+    });
+  });
 });

@@ -36,6 +36,14 @@ describe("once-per-turn marker parser", () => {
     });
   });
 
+  it("consumes bare once-per-turn prose as the same marker primitive", () => {
+    expect(parseOncePerTurnMarker({ text: "Once per turn, A." })).toEqual({
+      patch: { oncePerTurn: true },
+      evidence: ["marker:oncePerTurn"],
+      rest: "A.",
+    });
+  });
+
   it.each(["[When Attacking]", "[Activate: Main]"])(
     "integrates with %s without entry/body pair registration",
     (entryPoint) => {
