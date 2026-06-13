@@ -457,9 +457,14 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       clientSource,
-      /setAccountLoadouts\(uncheckedLocalLoadouts\(loadouts\)\);[\s\S]*setAccountLoadoutsStatus\("ready"\);[\s\S]*for \(const loadout of loadouts\)/u,
+      /const loadoutsWithValidation = loadoutsWithCachedValidation\(\{[\s\S]*cache: sharedLoadoutValidationCache,[\s\S]*loadouts,[\s\S]*formatId,[\s\S]*\}\);/u,
+    );
+    assert.match(
+      clientSource,
+      /setAccountLoadouts\(loadoutsWithValidation\);[\s\S]*setAccountLoadoutsStatus\("ready"\);[\s\S]*for \(const loadout of loadouts\)/u,
     );
     assert.match(clientSource, /validateLoadoutPreview/u);
+    assert.match(clientSource, /rememberLoadoutValidation\(\{/u);
     assert.match(clientSource, /for \(const loadout of loadouts\)/u);
     assert.match(clientSource, /setAccountLoadouts\(\(current\) =>/u);
     assert.doesNotMatch(clientSource, /accountClient\s*\.createSimHandoffs\(/u);
