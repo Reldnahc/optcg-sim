@@ -16,8 +16,12 @@ import type {
   ConditionParser,
   ExpressionParseResult,
   ParseInput,
+  PrimitiveEvidence,
 } from "../types.js";
-import { parseLeadingConditionalExpression } from "./composed-expression.js";
+import {
+  parseConditionExpression,
+  parseLeadingConditionalExpression,
+} from "./composed-expression.js";
 
 const powerContinuationSelection =
   "selected:power-continuation-target" as SelectionId;
@@ -29,11 +33,30 @@ type SelectableTarget = Extract<Target, { type: "choose" | "chooseFromZones" }>;
 export function selectedPowerContinuationExpressionParser(
   input: ParseInput,
 ): ExpressionParseResult | undefined {
+  return parseSelectedPowerContinuation(input);
+}
+
+export function conditionalAdditionalSelectedPowerContinuationExpressionParser(options: {
+  readonly conditions: readonly ConditionParser[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input) =>
+    parseSelectedPowerContinuation(input, {
+      additionalConditionParsers: options.conditions,
+    });
+}
+
+function parseSelectedPowerContinuation(
+  input: ParseInput,
+  options: {
+    readonly additionalConditionParsers?: readonly ConditionParser[];
+  } = {},
+): ExpressionParseResult | undefined {
   const split =
-    /^(?<first>.+?)\.\s+Then,\s+that card gains an additional \+(?<amount>[1-9]\d*) power (?<duration>.+)$/iu.exec(
+    /^(?<first>.+?)\.\s+Then,\s+(?:if (?<condition>.+?),\s+)?that card gains an additional \+(?<amount>[1-9]\d*) power (?<duration>.+)$/iu.exec(
       input.text,
     );
   const firstText = split?.groups?.["first"];
+  const conditionText = split?.groups?.["condition"];
   const amountText = split?.groups?.["amount"];
   const durationText = split?.groups?.["duration"];
   if (
@@ -51,6 +74,16 @@ export function selectedPowerContinuationExpressionParser(
     first.effect.type !== "modifyPower" ||
     !isSelectableTarget(first.effect.target)
   ) {
+    return undefined;
+  }
+  const additionalCondition =
+    conditionText === undefined
+      ? undefined
+      : parseConditionExpression(
+          conditionText,
+          options.additionalConditionParsers ?? [],
+        );
+  if (conditionText !== undefined && additionalCondition === undefined) {
     return undefined;
   }
 
@@ -81,6 +114,18 @@ export function selectedPowerContinuationExpressionParser(
     value: Number.parseInt(amountText, 10),
     duration: duration.duration,
   };
+  const additionalEffect: Effect =
+    additionalCondition === undefined
+      ? additionalPower
+      : {
+          type: "conditional",
+          if: additionalCondition.condition,
+          then: additionalPower,
+        };
+  const additionalConditionEvidence: readonly PrimitiveEvidence[] =
+    additionalCondition === undefined
+      ? []
+      : ["expression:conditional", ...additionalCondition.evidence];
 
   return {
     effect: {
@@ -100,7 +145,7 @@ export function selectedPowerContinuationExpressionParser(
         {
           id: "power:additional-selected-target",
           connector: "then",
-          effect: additionalPower,
+          effect: additionalEffect,
         },
       ],
     },
@@ -109,6 +154,7 @@ export function selectedPowerContinuationExpressionParser(
       ...first.evidence,
       "target:selectedCharacter",
       "modifier:positivePower",
+      ...additionalConditionEvidence,
       ...duration.evidence,
     ],
     rest: "",

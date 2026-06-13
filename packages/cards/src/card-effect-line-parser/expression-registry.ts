@@ -33,6 +33,7 @@ import {
   chooseOneExpressionParser,
   activatedReactionExpressionParser,
   conditionalSelectedPowerContinuationExpressionParser,
+  conditionalAdditionalSelectedPowerContinuationExpressionParser,
   conditionalBlockExpressionParser,
   conditionalContinuousExpressionParser,
   conditionalCostedBlockExpressionParser,
@@ -203,6 +204,9 @@ const costedExpressions = [
   conditionalSelectedPowerContinuationExpressionParser({
     conditions: conditionParsers,
   }),
+  conditionalAdditionalSelectedPowerContinuationExpressionParser({
+    conditions: conditionParsers,
+  }),
   selectedPowerContinuationExpressionParser,
   basePowerSwapExpressionParser,
   playedObjectKeywordGrantExpressionParser({
@@ -336,6 +340,9 @@ export const defaultRegistry = {
           expressions: [singleInstructionExpressionParser],
         }),
         selectedOpponentCharactersAttackCostExpressionParser,
+        conditionalAdditionalSelectedPowerContinuationExpressionParser({
+          conditions: conditionParsers,
+        }),
         selectedPowerContinuationExpressionParser,
         singleInstructionExpressionParser,
         generalExpressionParser,
@@ -354,6 +361,9 @@ export const defaultRegistry = {
     selectedAttackRetargetExpressionParser,
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
+    conditionalAdditionalSelectedPowerContinuationExpressionParser({
+      conditions: conditionParsers,
+    }),
     selectedPowerContinuationExpressionParser,
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
