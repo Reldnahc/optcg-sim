@@ -298,16 +298,20 @@ const matchesCardPlayedBranch = (
     readonly sourceFilter?: CardFilter;
   },
 ): boolean => {
-  if (branch.sourceFilter !== undefined) {
-    return false;
-  }
   if (
     branch.sourceZone !== undefined &&
     payload["sourceZone"] !== branch.sourceZone
   ) {
     return false;
   }
-  return matchesResolvedFilter(state, resolved, branch.filter);
+  return (
+    matchesResolvedFilter(state, resolved, branch.filter) &&
+    matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, payload["sourceCardId"]),
+      branch.sourceFilter,
+    )
+  );
 };
 
 const matchCardPlayed = (
@@ -318,9 +322,6 @@ const matchCardPlayed = (
 ): boolean => {
   const payload = publicPayload(event);
   if (event.type !== "cardPlayed" || payload === undefined) {
-    return false;
-  }
-  if (trigger.sourceFilter !== undefined) {
     return false;
   }
   const playerId = payload["playerId"];
@@ -338,6 +339,15 @@ const matchCardPlayed = (
   }
   const resolved = resolvedCardForId(state, payload["cardId"]);
   if (!matchesResolvedFilter(state, resolved, trigger.filter)) {
+    return false;
+  }
+  if (
+    !matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, payload["sourceCardId"]),
+      trigger.sourceFilter,
+    )
+  ) {
     return false;
   }
   return (

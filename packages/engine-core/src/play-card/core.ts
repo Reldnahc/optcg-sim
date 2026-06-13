@@ -322,6 +322,7 @@ export const applyRuntimePlaySelected = (params: {
   sourceZone: "hand" | "trash" | "deck";
   enterRested: boolean;
   ignoreCost: boolean;
+  effectSourceCardId?: CardInstance["cardId"];
   causedBy?: CausalityRef;
 }): EngineResult => {
   const {
@@ -331,6 +332,7 @@ export const applyRuntimePlaySelected = (params: {
     sourceZone,
     enterRested,
     ignoreCost,
+    effectSourceCardId,
     causedBy,
   } = params;
   const player = state.players[playerId];
@@ -390,6 +392,7 @@ export const applyRuntimePlaySelected = (params: {
     supported,
     costArea: player.costArea,
     enterRested,
+    ...(effectSourceCardId === undefined ? {} : { effectSourceCardId }),
     resolveOnPlayRuntime: false,
     incrementActionSeq: false,
     ...(supported.category === "character"

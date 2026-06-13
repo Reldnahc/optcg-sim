@@ -8,6 +8,7 @@ import type {
   EffectId,
   EngineEvent,
   EventVisibility,
+  PlayerId,
 } from "@optcg/types";
 
 import { appendEvent } from "../../action-results.js";
@@ -189,13 +190,26 @@ const appendAttackDeclaredEvent = (
 const appendCardPlayedEvent = (
   state: ReturnType<typeof createActiveState>,
   cardId: CardId,
+  options: {
+    readonly playerId?: PlayerId;
+    readonly sourceCardId?: CardId;
+  } = {},
 ): void => {
+  const playerId = options.playerId ?? p1;
   const events: EngineEvent[] = [];
   appendEvent(
     state,
     events,
     "cardPlayed",
-    { playerId: p1, instanceId: "played-1", cardId, category: "character" },
+    {
+      playerId,
+      instanceId: "played-1",
+      cardId,
+      category: "character",
+      ...(options.sourceCardId === undefined
+        ? {}
+        : { sourceCardId: options.sourceCardId }),
+    },
     { type: "public" },
   );
   state.eventJournal = [...state.eventJournal, ...events];
@@ -396,6 +410,121 @@ test("activated played-card reactions honor effect-entry-point filters", () => {
   assert.equal(
     must(result.state.players[p1], "p1 after").hand.length,
     beforeHand + 1,
+  );
+});
+
+test("activated played-card reactions support any-of source filters and reusable moveCards bodies", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const leader = p1State.leader;
+  const playedCardId = "opponent-large-character" as CardId;
+  const sourceCardId = "opponent-effect-character" as CardId;
+  state.cardManifest.cards[playedCardId] = resolvedCard({
+    cardId: playedCardId,
+    category: "character",
+    cost: 4,
+    power: 5000,
+  });
+  state.cardManifest.cards[sourceCardId] = resolvedCard({
+    cardId: sourceCardId,
+    category: "character",
+    cost: 4,
+    power: 5000,
+  });
+
+  const definitionId = "def-activated-card-played-life-move";
+  const effectId = toEffectId("activated-card-played-life-move");
+  const definition: EffectDefinition = {
+    cardId: leader.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: effectId,
+        category: "activate",
+        trigger: {
+          type: "cardPlayed",
+          player: "opponent",
+          anyOf: [
+            {
+              filter: {
+                categories: ["character"],
+                baseCost: { min: 8 },
+              },
+            },
+            {
+              filter: { categories: ["character"] },
+              sourceFilter: { categories: ["character"] },
+            },
+          ],
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "moveCards",
+                count: 1,
+                from: { player: "opponent", zone: "life", position: "top" },
+                to: { player: "opponent", zone: "hand" },
+                order: "original",
+              },
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: `${definitionId}:source`,
+      rulesVersion: `${definitionId}:rules`,
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: definition,
+  };
+  state.cardManifest.cards[leader.cardId] = resolvedCard({
+    cardId: leader.cardId,
+    category: "leader",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+      sourceTextHash: definition.metadata.sourceTextHash,
+      rulesVersion: definition.metadata.rulesVersion,
+      cardDataVersion: state.cardManifest.cardDataVersion,
+    },
+  });
+  const beforeOpponentLife = p2State.life.length;
+  const beforeOpponentHand = p2State.hand.length;
+  appendCardPlayedEvent(state, playedCardId, { playerId: p2, sourceCardId });
+
+  const p1Actions = getLegalActions(state, p1).filter(
+    (action) => action.type === "activateEffect",
+  );
+
+  assert.equal(p1Actions.length, 1);
+  assert.equal(p1Actions[0]?.effectId, effectId);
+
+  const result = applyAction(state, must(p1Actions[0], "activated reaction"));
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2 after").life.length,
+    beforeOpponentLife - 1,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2 after").hand.length,
+    beforeOpponentHand + 1,
   );
 });
 

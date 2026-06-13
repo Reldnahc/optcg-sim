@@ -78,11 +78,7 @@ const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
     return true;
   }
   if (trigger.type === "cardPlayed") {
-    return (
-      isSupportedEventCardFilter(trigger.filter) &&
-      trigger.sourceFilter === undefined &&
-      trigger.anyOf === undefined
-    );
+    return isSupportedActivatedReactionCardPlayedTrigger(trigger);
   }
   if (trigger.type === "fieldRemoved") {
     return (
@@ -91,6 +87,18 @@ const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
   }
   return false;
 };
+
+const isSupportedActivatedReactionCardPlayedTrigger = (
+  trigger: Extract<Trigger, { type: "cardPlayed" }>,
+): boolean =>
+  isSupportedEventCardFilter(trigger.filter) &&
+  isSupportedEventCardFilter(trigger.sourceFilter) &&
+  (trigger.anyOf === undefined ||
+    trigger.anyOf.every(
+      (branch) =>
+        isSupportedEventCardFilter(branch.filter) &&
+        isSupportedEventCardFilter(branch.sourceFilter),
+    ));
 
 const isSupportedEventCardFilter = (
   filter: CardFilter | undefined,
@@ -103,6 +111,7 @@ const isSupportedEventCardFilter = (
     (key) =>
       key === "anyOf" ||
       key === "attributesAny" ||
+      key === "baseCost" ||
       key === "categories" ||
       key === "cost" ||
       key === "effectEntryPoint" ||

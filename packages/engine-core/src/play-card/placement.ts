@@ -181,6 +181,7 @@ export const placePlayedCardResult = (params: {
     enterRested: boolean;
     queueEntryId: EffectQueueEntry["id"];
   };
+  effectSourceCardId?: CardInstance["cardId"];
   resolveOnPlayRuntime?: boolean;
   resolvePlayCardEffectRuntime?: ResolvePlayCardEffectRuntime;
   incrementActionSeq?: boolean;
@@ -201,6 +202,7 @@ export const placePlayedCardResult = (params: {
     enterRested,
     runtimePlaySelectedEnterRested,
     runtimePlaySourceOverflow,
+    effectSourceCardId,
     resolveOnPlayRuntime = true,
     resolvePlayCardEffectRuntime,
     incrementActionSeq = true,
@@ -292,6 +294,9 @@ export const placePlayedCardResult = (params: {
         cardId: sourceCard.cardId,
         category: supported.category,
         sourceZone,
+        ...(effectSourceCardId === undefined
+          ? {}
+          : { sourceCardId: effectSourceCardId }),
         turnNumber: state.turn.globalTurn,
       },
       { type: "public" },
@@ -481,6 +486,9 @@ export const placePlayedCardResult = (params: {
       cardId: sourceCard.cardId,
       category: supported.category,
       sourceZone,
+      ...(effectSourceCardId === undefined
+        ? {}
+        : { sourceCardId: effectSourceCardId }),
       turnNumber: state.turn.globalTurn,
     },
     { type: "public" },

@@ -241,13 +241,14 @@ test("canonical event matcher matches fieldRemoved public cardMoved events and r
   });
 });
 
-test("canonical event matcher matches cardPlayed sourceZone and fails closed for sourceFilter evidence", () => {
+test("canonical event matcher matches cardPlayed sourceZone and source-card filters", () => {
   const { source, state, character } = setupEventHookState();
   const event = publicEvent(state, "cardPlayed", {
     playerId: source.controller,
     instanceId: character.instanceId,
     cardId: character.cardId,
     sourceZone: "hand",
+    sourceCardId: source.cardId,
   });
 
   assert.deepEqual(
@@ -262,6 +263,19 @@ test("canonical event matcher matches cardPlayed sourceZone and fails closed for
           { filter: { categories: ["stage"] } },
           { filter: { categories: ["character"] } },
         ],
+      },
+      event,
+    ),
+    { matched: true, triggerTypes: ["cardPlayed"] },
+  );
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "cardPlayed",
+        player: "self",
+        sourceFilter: { categories: ["leader"], typesAny: ["Navy"] },
       },
       event,
     ),

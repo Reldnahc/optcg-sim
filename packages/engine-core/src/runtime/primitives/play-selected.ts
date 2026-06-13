@@ -255,6 +255,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
       sourceZone: selected.zone.zone,
       enterRested: segment.effect.enterRested === true,
       ignoreCost: true,
+      effectSourceCardId: entry.source.cardId,
       causedBy: {
         type: "effect",
         queueEntryId: entry.id,
