@@ -431,6 +431,38 @@ export function parseConditionExpression(
     return direct;
   }
 
+  const disjunctionParts = expandSharedLeaderSubjectDisjunction(
+    splitConditionDisjunction(text)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0),
+  );
+  if (disjunctionParts.length >= 2) {
+    const parsedParts: ConditionParseResult[] = [];
+    let allPartsParsed = true;
+    for (const part of disjunctionParts) {
+      const parsed = parseSingleCondition(part, conditionParsers);
+      if (parsed === undefined) {
+        allPartsParsed = false;
+        break;
+      }
+      parsedParts.push(parsed);
+    }
+
+    if (allPartsParsed) {
+      return {
+        condition: {
+          type: "or",
+          conditions: parsedParts.map((part) => part.condition),
+        },
+        evidence: [
+          "composition:conditionOr",
+          ...parsedParts.flatMap((part) => part.evidence),
+        ],
+        rest: "",
+      };
+    }
+  }
+
   const parts = splitConditionConjunction(text)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
@@ -460,6 +492,19 @@ export function parseConditionExpression(
   };
 }
 
+function splitConditionDisjunction(text: string): string[] {
+  const protectedSubject = "__condition_subject_your_or_opponents__";
+  return text
+    .replace(/\byour or your opponent's\b/giu, protectedSubject)
+    .split(/\s+or\s+/iu)
+    .map((part) =>
+      part.replace(
+        new RegExp(protectedSubject, "gu"),
+        "your or your opponent's",
+      ),
+    );
+}
+
 function splitConditionConjunction(text: string): string[] {
   const protectedSubject = "__condition_subject_you_and_your_opponent__";
   return text
@@ -468,6 +513,27 @@ function splitConditionConjunction(text: string): string[] {
     .map((part) =>
       part.replace(new RegExp(protectedSubject, "gu"), "you and your opponent"),
     );
+}
+
+function expandSharedLeaderSubjectDisjunction(
+  parts: readonly string[],
+): readonly string[] {
+  const first = parts[0];
+  if (first === undefined || parts.length < 2) {
+    return parts;
+  }
+  const match =
+    /^(?<subject>(?:your|your opponent's) Leader (?:is|has(?: the)?))\s+.+$/iu.exec(
+      first,
+    );
+  const subject = match?.groups?.["subject"];
+  if (subject === undefined) {
+    return parts;
+  }
+
+  return parts.map((part, index) =>
+    index === 0 || /\bLeader\b/iu.test(part) ? part : `${subject} ${part}`,
+  );
 }
 
 export function parseLeadingConditionalExpression(
