@@ -454,7 +454,10 @@ describe("card effect reusable parser compositions", () => {
         category: "activate",
         trigger: {
           type: "onOpponentAttack",
-          attackerFilter: { categories: ["character"] },
+          attackerFilter: {
+            categories: ["character"],
+            attributesAny: ["slash"],
+          },
         },
       },
     });
@@ -462,6 +465,33 @@ describe("card effect reusable parser compositions", () => {
       expect.arrayContaining([
         "activation:reaction",
         "filter:category:character",
+        "filter:attribute",
+      ]),
+    );
+  });
+
+  it("parses fullwidth opponent Character attack attribute predicates", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] This effect can be activated when your opponent's Character attacks. If that Character has the ＜Slash＞ attribute, this Character gains +5000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: {
+          type: "onOpponentAttack",
+          attackerFilter: {
+            categories: ["character"],
+            attributesAny: ["slash"],
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "activation:reaction",
+        "filter:category:character",
+        "filter:attribute",
       ]),
     );
   });

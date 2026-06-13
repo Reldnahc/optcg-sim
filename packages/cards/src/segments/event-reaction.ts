@@ -1,8 +1,9 @@
-import type { Attribute, Condition, PlayerRef, Trigger } from "@optcg/types";
+import type { Condition, PlayerRef, Trigger } from "@optcg/types";
 
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 import type { SourceSlice } from "../source-slices.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { parseAngleAttribute } from "../filters/predicates/types.js";
 import {
   containsCharacterCategoryText,
   parseCharacterFilter,
@@ -901,10 +902,12 @@ const activatedReactionBodyPredicate = (
   }
 
   const attackerAttribute =
-    /^If that Character has the <(?<attribute>[^>]+)> attribute,\s*(?<body>.+)$/iu.exec(
+    /^If that Character has the (?<attribute>[<＜][^>＞]+[>＞]) attribute,\s*(?<body>.+)$/iu.exec(
       body,
     );
-  const attribute = attackerAttribute?.groups?.["attribute"];
+  const attribute = parseAngleAttribute(
+    attackerAttribute?.groups?.["attribute"] ?? "",
+  );
   const nextBody = attackerAttribute?.groups?.["body"];
   if (
     when.trim().toLowerCase() === "your opponent's character attacks" &&
@@ -920,7 +923,7 @@ const activatedReactionBodyPredicate = (
           attackerFilter: {
             ...(predicate.trigger.attackerFilter ?? {}),
             categories: ["character"],
-            attributesAny: [attribute as Attribute],
+            attributesAny: [attribute],
           },
         },
         evidence: [...predicate.evidence, "filter:attribute"],
