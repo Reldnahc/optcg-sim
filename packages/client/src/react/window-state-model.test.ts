@@ -4,6 +4,7 @@ import { describe, test } from "vitest";
 import {
   floatingWindowStateAfterDockedWindowReorder,
   floatingWindowStateAfterFloatingGroupOpen,
+  floatingWindowStateAfterExternalWindowSync,
   floatingWindowStateAfterActivation,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
@@ -158,6 +159,42 @@ describe("floating window state model", () => {
 
     assert.deepEqual(closed.floatingWindowZOrder, ["action-log"]);
     assert.deepEqual(docked.floatingWindowZOrder, ["action-log"]);
+  });
+
+  test("syncing external windows registers active reveal windows for activation", () => {
+    const current: FloatingWindowRectState = {
+      scope: "match-1",
+      rects: {},
+      openWindowIds: new Set(["action-log", "reveal:old"]),
+      dockedWindowIds: new Set(["settings", "reveal:docked", "reveal:old"]),
+      floatingWindowZOrder: ["action-log", "reveal:old"],
+    };
+
+    const synced = floatingWindowStateAfterExternalWindowSync({
+      current,
+      scope: "match-1",
+      windowKeys: ["reveal:new", "reveal:docked"],
+      managedWindowKeyPrefix: "reveal:",
+    });
+    const activated = floatingWindowStateAfterActivation({
+      current: synced,
+      scope: "match-1",
+      windowKey: "reveal:new",
+    });
+
+    assert.deepEqual(
+      [...synced.openWindowIds],
+      ["action-log", "reveal:new", "reveal:docked"],
+    );
+    assert.deepEqual(
+      [...synced.dockedWindowIds],
+      ["settings", "reveal:docked"],
+    );
+    assert.deepEqual(synced.floatingWindowZOrder, ["action-log", "reveal:new"]);
+    assert.deepEqual(activated.floatingWindowZOrder, [
+      "action-log",
+      "reveal:new",
+    ]);
   });
 
   test("opening a floating group clears stale member docking and persists the group host", () => {

@@ -13,7 +13,10 @@ import {
   settingsWindowKey,
 } from "./info-window-model.js";
 import { createInfoWindowToolbarControls } from "./info-window-toolbar-controls.js";
-import { opponentRevealWindowsFromState } from "./opponent-reveal-windows.js";
+import {
+  opponentRevealWindowsFromState,
+  revealWindowKey,
+} from "./opponent-reveal-windows.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
@@ -175,6 +178,7 @@ export const MatchApp = ({
     openFloatingWindowGroup,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
+    syncExternalFloatingWindows,
     dockFloatingWindows,
     reorderDockedWindow,
     updateDockedWindowRects,
@@ -300,6 +304,18 @@ export const MatchApp = ({
     activeDismissedRevealIds: activeRevealWindowState.dismissed,
     cardModel,
   });
+  const activeRevealWindowKeySignature = opponentRevealWindows
+    .map((revealWindow) => revealWindowKey(revealWindow.revealId))
+    .join("\n");
+  useEffect(() => {
+    syncExternalFloatingWindows({
+      windowKeys:
+        activeRevealWindowKeySignature === ""
+          ? []
+          : activeRevealWindowKeySignature.split("\n"),
+      managedWindowKeyPrefix: "reveal:",
+    });
+  }, [activeRevealWindowKeySignature, syncExternalFloatingWindows]);
   const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
