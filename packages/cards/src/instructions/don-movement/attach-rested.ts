@@ -693,6 +693,11 @@ const parseRestedDonAttachmentTarget = (
       savedTargetZone: zoneTarget,
     };
   }
+  const typeIncludingLeaderOrCharacter =
+    parseTypeIncludingLeaderOrCharacterAttachmentTarget(targetText);
+  if (typeIncludingLeaderOrCharacter !== undefined) {
+    return typeIncludingLeaderOrCharacter;
+  }
   const normalizedTargetText = targetText.replace(/^1 of your /iu, "");
   const parsed = parseCardFilterPredicates(
     { text: normalizedTargetText },
@@ -744,3 +749,59 @@ const parseRestedDonAttachmentTarget = (
     savedTargetZone: requestZone,
   };
 };
+
+function parseTypeIncludingLeaderOrCharacterAttachmentTarget(
+  targetText: string,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: CardFilter;
+      readonly requestZone: {
+        readonly zones: ["leaderArea", "characterArea"];
+      };
+      readonly savedTargetZone: {
+        readonly zones: ["leaderArea", "characterArea"];
+      };
+    }
+  | undefined {
+  const match =
+    /^your Leader with a type including "(?<leaderType>[^"]+)" or 1 (?:of your )?Characters? with a type including "(?<characterType>[^"]+)"\.?$/iu.exec(
+      targetText,
+    );
+  const leaderType = match?.groups?.["leaderType"]?.trim();
+  const characterType = match?.groups?.["characterType"]?.trim();
+  if (
+    leaderType === undefined ||
+    characterType === undefined ||
+    leaderType.length === 0 ||
+    leaderType !== characterType
+  ) {
+    return undefined;
+  }
+
+  const parsed = parseCardFilterPredicates({
+    text: `with a type including "${leaderType}"`,
+  });
+  if (parsed === undefined || parsed.rest.trim() !== "") {
+    return undefined;
+  }
+
+  const zoneTarget = {
+    zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
+  };
+  return {
+    evidence: [
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:category:leader",
+      "filter:category:character",
+      ...parsed.evidence,
+    ],
+    filter: {
+      categories: ["leader", "character"],
+      ...parsed.filter,
+    },
+    requestZone: zoneTarget,
+    savedTargetZone: zoneTarget,
+  };
+}

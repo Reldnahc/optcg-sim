@@ -174,3 +174,126 @@ it("parses opponent cost-area DON attachment without requiring a rested source",
     ]),
   );
 });
+
+it("parses rested DON attachment to type-including Leader or Character targets", () => {
+  const result = parseCardEffectLine(
+    '[When Attacking] Give up to 1 rested DON!! card to your Leader with a type including "Whitebeard Pirates" or 1 Character with a type including "Whitebeard Pirates".',
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "costArea",
+              player: "self",
+              min: 0,
+              max: 1,
+              filter: { categories: ["don"], state: "rested" },
+            },
+          },
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 1,
+                max: 1,
+                filter: {
+                  categories: ["leader", "character"],
+                  typesIncludeAny: ["Whitebeard Pirates"],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "attachSelectedDon",
+              target: {
+                type: "savedFieldObject",
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                filter: {
+                  categories: ["leader", "character"],
+                  typesIncludeAny: ["Whitebeard Pirates"],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "instruction:attachDon",
+      "filter:state:rested",
+      "filter:type",
+      "filter:category:leader",
+      "filter:category:character",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
+it("parses rested DON attachment to another type-including Leader or Character target", () => {
+  const result = parseCardEffectLine(
+    '[On Play] Give up to 2 rested DON!! cards to your Leader with a type including "Navy" or 1 Character with a type including "Navy".',
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              max: 2,
+              filter: { categories: ["don"], state: "rested" },
+            },
+          },
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                zones: ["leaderArea", "characterArea"],
+                filter: {
+                  categories: ["leader", "character"],
+                  typesIncludeAny: ["Navy"],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "attachSelectedDon",
+              target: {
+                filter: {
+                  categories: ["leader", "character"],
+                  typesIncludeAny: ["Navy"],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:attachDon",
+      "filter:type",
+      "filter:category:leader",
+      "filter:category:character",
+    ]),
+  );
+});
