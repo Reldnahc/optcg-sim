@@ -35,4 +35,32 @@ describe("only matching field cards condition parser", () => {
     });
     expect(basePower?.evidence).toContain("filter:power");
   });
+
+  it("parses you-only-have wording as the same field Character condition", () => {
+    const result = parseOnlyMatchingFieldCardsCondition({
+      text: "you only have {Celestial Dragons} type Characters",
+    });
+
+    expect(result).toMatchObject({
+      condition: {
+        type: "onlyMatchingFieldCards",
+        zone: "characterArea",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Celestial Dragons"],
+        },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:onlyMatchingFieldCards",
+        "player:self",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:type",
+      ]),
+    );
+  });
 });
