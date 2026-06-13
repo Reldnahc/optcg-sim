@@ -170,6 +170,26 @@ describe("event reaction predicate routing", () => {
       evidence: ["trigger:fieldRemoved", "player:self", "filter:type"],
     },
     {
+      text: "one of your {Amazon Lily} or {Kuja Pirates} type Characters with 5000 base power or more is K.O.'d",
+      trigger: {
+        type: "fieldRemoved",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Amazon Lily", "Kuja Pirates"],
+          power: { min: 5000 },
+        },
+        sourceKind: "ko",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:self",
+        "filter:type",
+        "filter:power",
+        "condition:comparator:gte",
+      ],
+    },
+    {
       text: "your {Example} type Character is removed from the field",
       trigger: {
         type: "fieldRemoved",

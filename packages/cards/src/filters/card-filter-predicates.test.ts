@@ -359,6 +359,29 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("composes plural type alternatives with base-power thresholds", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{Amazon Lily} or {Kuja Pirates} type Characters with 5000 base power or more",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        typesAny: ["Amazon Lily", "Kuja Pirates"],
+        power: { min: 5000 },
+      },
+      evidence: [
+        "filter:type",
+        "filter:type",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses multi-type Leader and Character predicates with either conjunction", () => {
     expect(
       parseCardFilterPredicates({

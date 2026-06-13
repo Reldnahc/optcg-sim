@@ -147,6 +147,9 @@ const parseCharacterFilter = (
 const normalizeCharacterFilterText = (text: string): string =>
   text.trim().replace(/^(?:a|an)\s+(?=Character(?: card)?\b)/iu, "");
 
+const containsCharacterCategoryText = (text: string): boolean =>
+  /\bCharacters?\b|\bCharacter cards?\b/iu.test(text);
+
 const onlyMatchingCharactersCondition = (
   text: string,
 ):
@@ -434,7 +437,7 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const yourCharacter =
-    /^your (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your opponent's effect(?: or K\.O\.'d)?)?)$/iu.exec(
+    /^(?:one of your|your) (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your opponent's effect(?: or K\.O\.'d)?)?)$/iu.exec(
       normalized,
     );
   const filterText = yourCharacter?.groups?.["filter"];
@@ -442,7 +445,7 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   if (
     filterText === undefined ||
     removalText === undefined ||
-    !/\bCharacter(?: card)?\b/iu.test(filterText)
+    !containsCharacterCategoryText(filterText)
   ) {
     return undefined;
   }
@@ -515,10 +518,7 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   const playedFromTrash =
     /^(?:a|your) (?<filter>.+) is played from your trash$/iu.exec(normalized);
   const trashFilter = playedFromTrash?.groups?.["filter"];
-  if (
-    trashFilter !== undefined &&
-    /\bCharacter(?: card)?\b/iu.test(trashFilter)
-  ) {
+  if (trashFilter !== undefined && containsCharacterCategoryText(trashFilter)) {
     const parsed = parseCharacterFilter(trashFilter);
     if (parsed === undefined) {
       return undefined;
@@ -547,7 +547,7 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   if (
     playedPlayer === undefined ||
     playedFilter === undefined ||
-    !/\bCharacter(?: card)?\b/iu.test(playedFilter)
+    !containsCharacterCategoryText(playedFilter)
   ) {
     return undefined;
   }
