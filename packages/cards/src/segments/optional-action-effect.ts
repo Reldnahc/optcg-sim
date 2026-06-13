@@ -15,6 +15,11 @@ export function optionalActionEffectSegmentParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): SegmentParser {
   return (input) => {
+    const standalone = parseStandaloneOptionalAction(input, options);
+    if (standalone !== undefined) {
+      return standalone;
+    }
+
     const match =
       /^you may\s+(?<action>.+?)\.\s+If you do,\s+(?<body>.+)$/iu.exec(
         input.text,
@@ -63,6 +68,45 @@ export function optionalActionEffectSegmentParser(options: {
             ],
           }),
     };
+  };
+}
+
+function parseStandaloneOptionalAction(
+  input: ParseInput,
+  options: {
+    readonly instructions: readonly InstructionParser[];
+    readonly expressions?: readonly ((
+      input: ParseInput,
+    ) => ExpressionParseResult | undefined)[];
+  },
+): ReturnType<SegmentParser> {
+  const match = /^you may\s+(?<action>.+)$/iu.exec(input.text);
+  const actionText = match?.groups?.["action"]?.trim();
+  if (actionText === undefined || actionText.length === 0) {
+    return undefined;
+  }
+
+  const action = parseOptionalActionChild(actionText, options, input.source);
+  if (action === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "optional-action",
+          connector: "always",
+          optional: true,
+          effect: action.effect,
+        },
+      ],
+    },
+    evidence: ["composition:optionalActionEffect", ...action.evidence],
+    ...(action.presentationSpans === undefined
+      ? {}
+      : { presentationSpans: action.presentationSpans }),
   };
 }
 

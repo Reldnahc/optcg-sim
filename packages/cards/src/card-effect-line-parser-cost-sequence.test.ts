@@ -326,7 +326,7 @@ it("parses filtered own field-card K.O. cost before an Activate Main all-field b
 it("parses own field-card K.O. cost with type-including filter before a composed body", () => {
   expect(
     parseCardEffectLine(
-      '[Activate: Main] [Once Per Turn] You may K.O. 1 of your Characters with a type including "Baroque Works": Draw 1 card.',
+      '[Activate: Main] [Once Per Turn] You may K.O. 1 of your Characters with a type including "Baroque Works": Give up to 1 of your opponent\'s Characters −10 cost during this turn. Then, you may trash 2 cards from the top of your deck.',
     ),
   ).toMatchObject({
     block: {
@@ -354,9 +354,7 @@ it("parses own field-card K.O. cost with type-including filter before a composed
           {
             connector: "ifYouDo",
             effect: {
-              type: "draw",
-              player: "self",
-              count: 1,
+              type: "sequence",
             },
           },
         ],
@@ -375,9 +373,26 @@ it("parses own field-card K.O. cost with type-including filter before a composed
       "zone:characterArea",
       "filter:category:character",
       "filter:type",
-      "instruction:draw",
+      "expression:sequence",
+      "instruction:modifyCost",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "chooser:self:upTo",
+      "player:opponent",
+      "target:opponentCharacters",
+      "filter:category:character",
+      "modifier:costReduction",
+      "count:positiveInteger",
+      "duration:thisTurn",
+      "connector:then",
+      "composition:optionalActionEffect",
+      "instruction:moveCards",
       "count:positiveInteger",
       "player:self",
+      "zone:deck",
+      "position:top",
+      "destination:trash",
+      "order:original",
       "composition:entryExpression",
     ],
   });
