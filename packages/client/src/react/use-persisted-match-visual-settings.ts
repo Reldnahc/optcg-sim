@@ -42,6 +42,14 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
       );
       setSettings((current) => ({ ...current, backgroundImageFit }));
     },
+    setBackgroundImageCropZoom: (value) => {
+      const backgroundImageCropZoom = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "backgroundImageCropZoom",
+        value,
+      );
+      setSettings((current) => ({ ...current, backgroundImageCropZoom }));
+    },
     setBackgroundImagePositionX: (value) => {
       const backgroundImagePositionX = saveMatchVisualSetting(
         browserPersistentStorage(),

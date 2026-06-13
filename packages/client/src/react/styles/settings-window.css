@@ -160,8 +160,8 @@
   position: absolute;
   left: var(--settings-crop-x);
   top: var(--settings-crop-y);
-  width: 54%;
-  height: 54%;
+  width: var(--settings-crop-size);
+  height: var(--settings-crop-size);
   transform: translate(-50%, -50%);
   border: calc(var(--floating-window-border-width) * 2) solid
     var(--match-accent-strong);

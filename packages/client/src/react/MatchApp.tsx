@@ -53,10 +53,12 @@ const hexColorToRgb = (hexColor: string): string => {
 
 const backgroundImageStyle = ({
   fit,
+  cropZoom,
   positionX,
   positionY,
 }: {
   readonly fit: string;
+  readonly cropZoom: number;
   readonly positionX: number;
   readonly positionY: number;
 }): {
@@ -74,7 +76,7 @@ const backgroundImageStyle = ({
     case "crop":
     default:
       return {
-        size: "cover",
+        size: cropZoom <= 100 ? "cover" : `${String(cropZoom)}% auto`,
         repeat: "no-repeat",
         position: `${String(positionX)}% ${String(positionY)}%`,
       };
@@ -450,6 +452,7 @@ export const MatchApp = ({
   const playmatSurfaceRgb = hexColorToRgb(visualSettings.playmatColor);
   const backgroundStyle = backgroundImageStyle({
     fit: visualSettings.backgroundImageFit,
+    cropZoom: visualSettings.backgroundImageCropZoom,
     positionX: visualSettings.backgroundImagePositionX,
     positionY: visualSettings.backgroundImagePositionY,
   });

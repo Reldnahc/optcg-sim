@@ -62,9 +62,10 @@ const clampVisibility = (
   value: number,
   fallback: number,
   minValue: number,
+  maxValue: number,
 ): number =>
   Number.isFinite(value)
-    ? Math.min(100, Math.max(minValue, Math.round(value)))
+    ? Math.min(maxValue, Math.max(minValue, Math.round(value)))
     : fallback;
 
 const normalizeHexColor = (value: string, fallback: string): string => {
@@ -138,12 +139,14 @@ const visibilitySetting = <K extends MatchVisualSettingId>({
   storageKey,
   defaultValue,
   minValue,
+  maxValue,
 }: {
   readonly id: K;
   readonly groupId: MatchVisualSettingGroupId;
   readonly storageKey: string;
   readonly defaultValue: Extract<MatchVisualSettingsValues[K], number>;
   readonly minValue?: number;
+  readonly maxValue?: number;
 }): MatchVisualSettingDefinition<K> => ({
   id,
   groupId,
@@ -156,12 +159,14 @@ const visibilitySetting = <K extends MatchVisualSettingId>({
           Number.parseInt(stored, 10),
           defaultValue,
           minValue ?? 0,
+          maxValue ?? 100,
         )) as MatchVisualSettingsValues[K],
   normalize: (value) =>
     clampVisibility(
       value as number,
       defaultValue,
       minValue ?? 0,
+      maxValue ?? 100,
     ) as MatchVisualSettingsValues[K],
   serialize: (value) => String(value),
 });
@@ -189,6 +194,14 @@ export const matchVisualSettingDefinitions = {
     storageKey: "optcg:client:background-image-fit",
     defaultValue: defaultMatchVisualSettingsValues.backgroundImageFit,
     allowedValues: ["crop", "stretch", "fit", "tile"],
+  }),
+  backgroundImageCropZoom: visibilitySetting({
+    id: "backgroundImageCropZoom",
+    groupId: "appearance",
+    storageKey: "optcg:client:background-image-crop-zoom",
+    defaultValue: defaultMatchVisualSettingsValues.backgroundImageCropZoom,
+    minValue: 100,
+    maxValue: 250,
   }),
   backgroundImagePositionX: visibilitySetting({
     id: "backgroundImagePositionX",
@@ -280,6 +293,7 @@ export const matchVisualSettingIds = [
   "backgroundColor",
   "backgroundImageUrl",
   "backgroundImageFit",
+  "backgroundImageCropZoom",
   "backgroundImagePositionX",
   "backgroundImagePositionY",
   "backgroundMode",
@@ -342,6 +356,7 @@ export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
   settingId:
     | "soundVolume"
+    | "backgroundImageCropZoom"
     | "backgroundImagePositionX"
     | "backgroundImagePositionY"
     | "windowOpacity"
@@ -368,6 +383,11 @@ export function loadMatchVisualSetting(
       return loadWithDefinition(
         storage,
         matchVisualSettingDefinitions.backgroundImageFit,
+      );
+    case "backgroundImageCropZoom":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImageCropZoom,
       );
     case "backgroundImagePositionX":
       return loadWithDefinition(
@@ -448,6 +468,10 @@ export const loadMatchVisualSettings = (
   backgroundColor: loadMatchVisualSetting(storage, "backgroundColor"),
   backgroundImageUrl: loadMatchVisualSetting(storage, "backgroundImageUrl"),
   backgroundImageFit: loadMatchVisualSetting(storage, "backgroundImageFit"),
+  backgroundImageCropZoom: loadMatchVisualSetting(
+    storage,
+    "backgroundImageCropZoom",
+  ),
   backgroundImagePositionX: loadMatchVisualSetting(
     storage,
     "backgroundImagePositionX",
@@ -526,6 +550,7 @@ export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
   settingId:
     | "soundVolume"
+    | "backgroundImageCropZoom"
     | "backgroundImagePositionX"
     | "backgroundImagePositionY"
     | "zoneBackgroundVisibility"
@@ -557,6 +582,12 @@ export function saveMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.backgroundImageFit,
         String(value) as MatchBackgroundImageFit,
+      );
+    case "backgroundImageCropZoom":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImageCropZoom,
+        typeof value === "number" ? value : Number.NaN,
       );
     case "backgroundImagePositionX":
       return saveWithDefinition(
