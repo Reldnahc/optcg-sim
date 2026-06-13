@@ -783,6 +783,48 @@ test("event reactions queue life removal triggers through the canonical matcher"
   });
 });
 
+test("unsupported matching event reactions do not block canonical event producers", () => {
+  const { source, state } = lifeRemovedReactionState();
+  const definitions = must(
+    state.cardManifest.effectDefinitions,
+    "effect definitions",
+  );
+  const definition = must(
+    definitions["def-life-removed-reaction"],
+    "life removed reaction definition",
+  );
+  const baseEffect = must(definition.effects[0], "base effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-life-removed-reaction": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: "life-removed-unsupported-look-at-top" as EffectDefinition["effects"][number]["id"],
+          effect: { type: "lookAtTop", player: "self", count: 1 },
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    result.events.some((event) => {
+      if (event.type !== "effectQueued") {
+        return false;
+      }
+      const payload = event.payload as { effectBlockId?: unknown };
+      return payload.effectBlockId === "life-removed-unsupported-look-at-top";
+    }),
+    false,
+  );
+  assert.equal(source.zone.zone, "characterArea");
+});
+
 test("event reactions queue effect resolution triggers through the canonical matcher", () => {
   const { source, state } = effectResolvedReactionState();
 

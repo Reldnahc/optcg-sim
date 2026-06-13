@@ -187,16 +187,8 @@ export const createEventReactionTriggerQueueing = (
                 ),
             ),
         );
-        if (matching.length !== reactionEffects.length) {
-          return toEngineResult(
-            state,
-            [],
-            [
-              eventReactionTriggerQueueingError(
-                "unsupported-event-reaction-definition",
-              ),
-            ],
-          );
+        if (matching.length === 0) {
+          continue;
         }
         for (const { effect, triggerTypesForEvent } of matching) {
           if (effect.sourcePresencePolicy === undefined) {
