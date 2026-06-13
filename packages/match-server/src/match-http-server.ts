@@ -8,7 +8,6 @@ import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   createCustomLobbyRegistry,
-  type CreatedCustomLobbyResponse,
   type CustomLobbyRegistry,
 } from "./custom-lobby-registry.js";
 import type { AuthContext, AuthProvider } from "./dev-auth.js";
@@ -55,11 +54,17 @@ import { handleLobbyLoadoutValidationRequest } from "./lobby-loadout-validation-
 import { handleLobbyJoinCodeRequest } from "./lobby-join-code-route.js";
 import { handleRematchRequest } from "./match-rematch-route.js";
 import { handleResetRequest } from "./match-reset-route.js";
+import { handleReplayRequest } from "./replay-route.js";
 import { isRecord, readRequestJson } from "./request-json.js";
+import { playerStatePayload } from "./match-state-payload.js";
 import {
-  playerStatePayload,
-  playerTimerPayload,
-} from "./match-state-payload.js";
+  broadcastLobbyError,
+  broadcastLobbyState,
+  broadcastMatchState,
+  broadcastMatchTimers,
+  broadcastRematchRequest,
+  broadcastSessionTransition,
+} from "./dev-broadcasts.js";
 import {
   createDefaultMatchSetupFactory,
   defaultRematchLobbyDisconnectGraceMs,
@@ -67,9 +72,11 @@ import {
   defaultSocketIdleTimeoutMs,
   resolveAllowRawDeckHashSubmissions,
   resolveCompletedMatchRepository,
+  resolveReplayRepository,
   resolveMatchTimerPolicy,
   type CreateMatchHttpServerOptions,
 } from "./match-http-server-options.js";
+import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -94,6 +101,7 @@ const handleApiRequest = async (
   lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
   simHandoffVerifier: SimHandoffVerifier,
+  replayRepository: CompletedMatchReplayRepository | undefined,
   allowTemplateMatches: boolean,
   allowRawDeckHashSubmissions: boolean,
 ): Promise<void> => {
@@ -101,6 +109,17 @@ const handleApiRequest = async (
   const pathname = new URL(url, "http://localhost").pathname;
   const matchRoute =
     /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
+  if (
+    await handleReplayRequest({
+      request,
+      response,
+      pathname,
+      authProvider,
+      replayRepository,
+    })
+  ) {
+    return;
+  }
   if (request.method === "POST" && pathname === "/api/matches") {
     await handleCreateMatchRequest(
       response,
@@ -475,126 +494,6 @@ const playerSetupPayload = (
   firstPlayerChoice,
 });
 
-const lobbyStatePayload = (
-  lobby: CreatedCustomLobbyResponse,
-  connection: DevLobbySocketConnection,
-): Record<string, unknown> => ({
-  type: "lobbySync",
-  lobbyId: connection.lobbyId,
-  serverSeq: ++connection.serverSeq,
-  lobby,
-});
-
-const broadcastLobbyState = (
-  lobby: CreatedCustomLobbyResponse,
-  connections: Set<DevLobbySocketConnection>,
-): void => {
-  for (const connection of connections) {
-    if (connection.lobbyId === lobby.lobbyId) {
-      sendSocketJson(connection, lobbyStatePayload(lobby, connection));
-    }
-  }
-};
-
-const broadcastLobbyError = (
-  lobbyId: string,
-  message: string,
-  connections: Set<DevLobbySocketConnection>,
-): void => {
-  for (const connection of connections) {
-    if (connection.lobbyId === lobbyId) {
-      sendSocketJson(connection, {
-        type: "lobbyError",
-        lobbyId,
-        serverSeq: ++connection.serverSeq,
-        message,
-      });
-    }
-  }
-};
-
-const broadcastRematchRequest = (
-  matchId: MatchId,
-  requestedBy: PlayerId,
-  connections: Set<DevSocketConnection>,
-): void => {
-  for (const connection of connections) {
-    if (connection.matchId === matchId) {
-      sendSocketJson(connection, {
-        type: "rematchRequest",
-        matchId,
-        serverSeq: ++connection.serverSeq,
-        requestedBy,
-      });
-    }
-  }
-};
-
-const broadcastMatchState = (
-  matchId: MatchId,
-  registry: LocalDevMatchRegistry,
-  connections: Set<DevSocketConnection>,
-  options: { readonly except?: DevSocketConnection } = {},
-): void => {
-  const match = registry.getMatch(matchId);
-  if (match === undefined) {
-    return;
-  }
-  for (const connection of connections) {
-    if (connection.matchId === matchId && connection !== options.except) {
-      sendSocketJson(
-        connection,
-        playerStatePayload(match, connection, connections),
-      );
-    }
-  }
-};
-
-const broadcastMatchTimers = (
-  matchId: MatchId,
-  registry: LocalDevMatchRegistry,
-  connections: Set<DevSocketConnection>,
-): void => {
-  const match = registry.getMatch(matchId);
-  if (match === undefined) {
-    return;
-  }
-  for (const connection of connections) {
-    if (connection.matchId === matchId) {
-      sendSocketJson(connection, playerTimerPayload(match, connection));
-    }
-  }
-};
-
-const broadcastSessionTransition = (
-  sourceMatchId: MatchId,
-  created: {
-    readonly matchId?: MatchId;
-    readonly lobbyId?: string;
-    readonly firstPlayerChoice?: unknown;
-  },
-  connections: Set<DevSocketConnection>,
-): void => {
-  for (const connection of connections) {
-    if (connection.matchId === sourceMatchId) {
-      sendSocketJson(connection, {
-        type: "sessionTransition",
-        matchId: sourceMatchId,
-        serverSeq: ++connection.serverSeq,
-        ...(created.matchId === undefined
-          ? {}
-          : { nextMatchId: created.matchId }),
-        ...(created.lobbyId === undefined
-          ? {}
-          : { nextLobbyId: created.lobbyId }),
-        ...(created.firstPlayerChoice === undefined
-          ? {}
-          : { firstPlayerChoice: created.firstPlayerChoice }),
-      });
-    }
-  }
-};
-
 const handleWebSocketUpgrade = async (
   request: IncomingMessage,
   socket: Duplex,
@@ -681,7 +580,12 @@ const handleWebSocketUpgrade = async (
       }, rematchLobbyDisconnectGraceMs);
       cancelTimer.unref();
     });
-    sendSocketJson(connection, lobbyStatePayload(lobby, connection));
+    sendSocketJson(connection, {
+      type: "lobbySync",
+      lobbyId: connection.lobbyId,
+      serverSeq: ++connection.serverSeq,
+      lobby,
+    });
 
     let buffered: Buffer = Buffer.alloc(0);
     socket.on("data", (chunk: Buffer) => {
@@ -896,6 +800,7 @@ export const createMatchHttpServer = async (
         ? {}
         : { authBaseUrl: options.authBaseUrl }),
     });
+  const replayRepository = resolveReplayRepository(options);
   const socketConnections = new Set<DevSocketConnection>();
   const lobbySocketConnections = new Set<DevLobbySocketConnection>();
   let lastMatchTimerTickMs = Date.now();
@@ -945,6 +850,7 @@ export const createMatchHttpServer = async (
           lobbySocketConnections,
           authProvider,
           simHandoffVerifier,
+          replayRepository,
           allowTemplateMatches,
           allowRawDeckHashSubmissions,
         )

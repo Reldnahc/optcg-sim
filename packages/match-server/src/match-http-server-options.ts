@@ -12,7 +12,9 @@ import {
 } from "./match-timers.js";
 import {
   createPostgresCompletedMatchRepository,
+  createPostgresCompletedMatchReplayRepository,
   type CompletedMatchRepository,
+  type CompletedMatchReplayRepository,
 } from "./postgres-completed-match.js";
 import type { SimHandoffVerifier } from "./sim-handoff.js";
 
@@ -26,6 +28,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly allowRawDeckHashSubmissions?: boolean;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;
+  readonly replayRepository?: CompletedMatchReplayRepository;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;
   readonly rematchLobbyDisconnectGraceMs?: number;
@@ -53,6 +56,14 @@ export const resolveCompletedMatchRepository = (
   options.completedMatchRepository ??
   (process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
     ? createPostgresCompletedMatchRepository()
+    : undefined);
+
+export const resolveReplayRepository = (
+  options: CreateMatchHttpServerOptions,
+): CompletedMatchReplayRepository | undefined =>
+  options.replayRepository ??
+  (process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
+    ? createPostgresCompletedMatchReplayRepository()
     : undefined);
 
 export const createDefaultMatchSetupFactory =
