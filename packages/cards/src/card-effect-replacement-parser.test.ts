@@ -474,6 +474,44 @@ describe("replacement effect parser", () => {
     assert.equal(result.evidence.includes("instruction:trashFromHand"), true);
   });
 
+  it("parses opponent effect field-removal replacement into reusable Life visibility instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If this Character would be removed from the field by your opponent's effect, you may turn 1 card from the top of your Life cards face-up instead.",
+    );
+    if (
+      result === undefined ||
+      !("block" in result) ||
+      result.block.trigger.type !== "replacement" ||
+      result.block.effect.type !== "replacement"
+    ) {
+      assert.fail("expected parsed replacement effect block");
+    }
+    assert.deepEqual(result.block.trigger.replacement, {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      target: { type: "self" },
+    });
+    assert.deepEqual(replacementInstead(result), {
+      type: "setLifeCardFaceUp",
+      player: "self",
+      count: 1,
+      position: "top",
+      faceUp: true,
+    });
+    for (const evidence of [
+      "instruction:setState",
+      "player:self",
+      "zone:life",
+      "position:top",
+      "destination:faceUp",
+      "composition:replacementInstead",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses opponent effect field-removal replacement into reusable trash-self instead primitives", () => {
     const result = parseCardEffectLine(
       "If your {Straw Hat Crew} type Character other than this Character would be removed from the field by your opponent's effect, you may trash this Character instead.",

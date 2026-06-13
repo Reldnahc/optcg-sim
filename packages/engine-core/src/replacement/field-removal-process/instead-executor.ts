@@ -1,12 +1,18 @@
 import type {
+  CardInstance,
   EffectQueueEntry,
   EngineResult,
   EngineError,
   EngineEvent,
   GameState,
+  PlayerId,
 } from "@optcg/types";
 
-import { toEngineResult } from "../../action-results.js";
+import {
+  appendEvent,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import { flattenSequenceEffect } from "../../effect-runtime-sequence/support-normalization.js";
 import { restFieldObjects } from "../../effect-runtime-sequence/saved-field-object.js";
@@ -15,6 +21,7 @@ import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuo
 import { executeNoChoiceEffectPrimitive } from "../../runtime/primitives/draw.js";
 import {
   isSupportedKoSelfInsteadEffect,
+  isSupportedLifeVisibilityInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
   isSupportedRestSelfInsteadEffect,
@@ -104,6 +111,9 @@ export const executeReplacementInsteadEffect = (
       incrementStateSeq: false,
     });
   }
+  if (isSupportedLifeVisibilityInsteadEffect(effect)) {
+    return executeLifeVisibilityInsteadEffect(state, entry, effect);
+  }
   if (isSupportedRestSelfInsteadEffect(effect)) {
     const source = currentPublicFieldRefForInstance(state, entry.source);
     const events: EngineEvent[] = [];
@@ -185,3 +195,98 @@ export const executeReplacementInsteadEffect = (
     incrementStateSeq: false,
   });
 };
+
+const executeLifeVisibilityInsteadEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Extract<ReplacementInsteadEffect, { type: "setLifeCardFaceUp" }>,
+): EngineResult => {
+  const playerId = entry.controllerId;
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [acceptedReplacementError(entry.effectBlockId, "missing-card")],
+    );
+  }
+  const startIndex =
+    effect.position === "top" ? 0 : player.life.length - effect.count;
+  const selected = player.life.slice(startIndex, startIndex + effect.count);
+  if (
+    startIndex < 0 ||
+    selected.length !== effect.count ||
+    selected.some((lifeCard) => lifeCard.faceUp === effect.faceUp)
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        acceptedReplacementError(
+          entry.effectBlockId,
+          "unsupported-effect-shape",
+        ),
+      ],
+    );
+  }
+  const selectedIndexes = new Set(
+    selected.map((_, index) => startIndex + index),
+  );
+  const nextLife = player.life.map((lifeCard, index) =>
+    selectedIndexes.has(index)
+      ? { ...lifeCard, faceUp: effect.faceUp }
+      : lifeCard,
+  );
+  const nextState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    players: {
+      ...state.players,
+      [playerId]: { ...player, life: nextLife },
+    },
+  };
+  const events: EngineEvent[] = [];
+  if (effect.faceUp) {
+    appendEvent(
+      nextState,
+      events,
+      "cardRevealed",
+      {
+        revealId: `reveal:life-face-up:${String(entry.id)}`,
+        cards: selected.map((lifeCard, offset) =>
+          toLifeCardRef(lifeCard.card, playerId, startIndex + offset),
+        ),
+        origin: "life",
+        reason: "replacementEffect",
+      },
+      { type: "public" },
+    );
+    const revealed = events[events.length - 1];
+    if (revealed !== undefined) {
+      revealed.causedBy = entry.causedBy;
+    }
+  }
+  return toEngineResult(
+    {
+      ...nextState,
+      eventJournal: [...nextState.eventJournal, ...events],
+    },
+    events,
+  );
+};
+
+const toLifeCardRef = (
+  card: CardInstance,
+  playerId: PlayerId,
+  index: number,
+) => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: {
+    zone: "life" as const,
+    playerId,
+    slot: "life" as const,
+    index,
+  },
+});

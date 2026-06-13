@@ -108,10 +108,20 @@ export const isSupportedDrawInsteadEffect = (
   Number.isInteger(effect.count) &&
   effect.count > 0;
 
+export const isSupportedLifeVisibilityInsteadEffect = (
+  effect: ReplacementInstead,
+): effect is Extract<ReplacementInstead, { type: "setLifeCardFaceUp" }> =>
+  effect.type === "setLifeCardFaceUp" &&
+  effect.player === "self" &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
+
 const isSupportedAtomicNoDecisionInsteadEffect = (
   effect: SequenceSegmentEffect,
 ): boolean =>
   (effect.type === "moveCards" && isSupportedLifeTopToHandEffect(effect)) ||
+  (effect.type === "setLifeCardFaceUp" &&
+    isSupportedLifeVisibilityInsteadEffect(effect)) ||
   (effect.type === "modifyPower" &&
     isSupportedModifyPowerInsteadEffect(effect)) ||
   (effect.type === "trash" && isSupportedTrashSelfInsteadEffect(effect)) ||
@@ -201,6 +211,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedTrashSelfInsteadEffect(effect) ||
   isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedDrawInsteadEffect(effect) ||
+  isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
@@ -221,6 +232,13 @@ export const replacementOptionLabel = (
       "card",
       "cards",
     )} from Life to hand instead`;
+  }
+  if (isSupportedLifeVisibilityInsteadEffect(instead)) {
+    return `Turn ${String(instead.count)} Life ${plural(
+      instead.count,
+      "card",
+      "cards",
+    )} ${instead.faceUp ? "face-up" : "face-down"} instead`;
   }
   if (isSupportedRestOwnCardsInsteadEffect(instead)) {
     return `Rest ${String(instead.target.request.min)} ${plural(

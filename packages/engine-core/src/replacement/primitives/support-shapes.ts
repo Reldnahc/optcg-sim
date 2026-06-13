@@ -10,6 +10,7 @@ import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-cond
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
 import {
   isSupportedKoSelfInsteadEffect,
+  isSupportedLifeVisibilityInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
   isSupportedOwnerDeckBottomInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
@@ -230,6 +231,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedTrashSelfInsteadEffect(effect) ||
   isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedDrawInsteadEffect(effect) ||
+  isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 

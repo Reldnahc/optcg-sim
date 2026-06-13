@@ -791,6 +791,13 @@ export type Effect =
       faceUp: boolean;
     }
   | {
+      type: "setLifeCardFaceUp";
+      count: number;
+      player: PlayerRef;
+      position: "top" | "bottom";
+      faceUp: boolean;
+    }
+  | {
       type: "revealTop";
       player: PlayerRef;
       zone?: Zone;

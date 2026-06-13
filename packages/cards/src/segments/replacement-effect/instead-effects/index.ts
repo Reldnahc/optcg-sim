@@ -1,5 +1,6 @@
 import type { ReplacementInsteadParseResult } from "../shared.js";
 import { parseDrawInstead } from "./draw.js";
+import { parseLifeVisibilityInstead } from "./life-visibility.js";
 import { parseMoveToOwnerDeckBottomInstead } from "./move-to-owner-deck-bottom.js";
 import {
   parseKoSelfInstead,
@@ -19,6 +20,7 @@ export type ReplacementInsteadParser = (
 export const replacementInsteadBodyParsers: readonly ReplacementInsteadParser[] =
   [
     parseTopLifeToHandInstead,
+    parseLifeVisibilityInstead,
     parseReturnDonInstead,
     parseMoveToOwnerDeckBottomInstead,
     parseTrashFromHandInstead,
