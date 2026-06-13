@@ -81,6 +81,7 @@ const restedDonToLeaderThenOpponentLifeToHandSequence = (): Extract<
                 visibility: "publicOnly",
                 onFailure: "failClosed",
               },
+              sourceState: "rested",
             },
           },
         ],
