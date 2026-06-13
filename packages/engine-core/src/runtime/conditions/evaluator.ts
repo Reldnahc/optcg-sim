@@ -516,6 +516,9 @@ const evaluateOnlyMatchingFieldCards = (
   if (player === undefined) {
     return { supported: false };
   }
+  if (player.characters.length === 0) {
+    return { supported: true, passed: false };
+  }
   return {
     supported: true,
     passed: player.characters.every((card) => {

@@ -99,9 +99,7 @@ export function parseYourSelectedLeaderTarget(
   };
 }
 
-function parseSelectedLeaderFilter(
-  text: string,
-):
+function parseSelectedLeaderFilter(text: string):
   | {
       readonly filter: CardFilter;
       readonly evidence: readonly PrimitiveEvidence[];
@@ -133,11 +131,15 @@ function parseSelectedLeaderFilter(
   if (leaderMatch === null) {
     return undefined;
   }
+  const predicateText = leaderMatch.groups?.["predicates"] ?? "";
+  if (predicateText.trim().length === 0) {
+    return undefined;
+  }
 
   return withSelectedLeaderPredicates(
     { categories: ["leader"] },
     [],
-    leaderMatch.groups?.["predicates"] ?? "",
+    predicateText,
   );
 }
 
