@@ -17,7 +17,7 @@ export function parseUpToCardinality(
   input: ParseInput,
 ): CardinalityParseResult | undefined {
   const match =
-    /^up to (?:a total of )?(?<count>[1-9]\d*)\b\s*(?<rest>.*)$/i.exec(
+    /^(?:a total of )?up to (?:a total of )?(?<count>[1-9]\d*)\b\s*(?<rest>.*)$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
