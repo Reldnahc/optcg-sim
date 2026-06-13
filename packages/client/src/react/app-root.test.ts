@@ -74,6 +74,19 @@ describe("client app root", () => {
     assert.doesNotMatch(html, /Make Lobby/u);
   });
 
+  test("delegates room code routes to the match surface", () => {
+    const html = renderToStaticMarkup(
+      createElement(AppRootContent, {
+        matchSurface: createElement("div", { "data-testid": "room-surface" }),
+        path: "/r/ab12",
+      }),
+    );
+
+    assert.match(html, /data-app-route="match"/u);
+    assert.match(html, /data-testid="room-surface"/u);
+    assert.doesNotMatch(html, /Page not found/u);
+  });
+
   test("gates the routed app while account session is unresolved", () => {
     const html = renderToStaticMarkup(createElement(AppRoot, { path: "/" }));
 
