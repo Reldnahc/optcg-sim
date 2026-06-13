@@ -125,6 +125,79 @@ const installOpponentLifeToOwnerHandDefinition = (
   return { effectBlockId, leader };
 };
 
+const installOpponentLifeToOwnerHandSequenceDefinition = (
+  state: GameState,
+): {
+  readonly effectBlockId: EffectDefinition["effects"][number]["id"];
+  readonly leader: CardInstance;
+} => {
+  const leader = must(must(state.players[p1], "p1").leader, "leader");
+  const supportCard = resolvedCard({
+    cardId: leader.cardId,
+    category: "leader",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-opponent-life-sequence",
+      rulesVersion: "opponent-life-sequence-rules",
+      sourceTextHash: "opponent-life-sequence-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(leader.cardId, supportCard.support);
+  const effectBlockId = toEffectId("opponent-life-sequence");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base effect"),
+        id: effectBlockId,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "draw",
+                count: 0,
+                player: "self",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "lifeCount",
+                  player: "opponent",
+                  op: "gte",
+                  value: 1,
+                },
+                then: {
+                  type: "moveCards",
+                  min: 0,
+                  count: 1,
+                  from: { player: "opponent", zone: "life", position: "top" },
+                  to: { player: "owner", zone: "hand" },
+                  order: "original",
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-opponent-life-sequence": definition,
+  };
+  state.cardManifest.cards[leader.cardId] = supportCard;
+  return { effectBlockId, leader };
+};
+
 test("lifeRemoved reaction queues after opponent Life moves to owner hand", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
@@ -192,6 +265,86 @@ test("lifeRemoved reaction queues after opponent Life moves to owner hand", () =
   assert.equal(
     must(resolved.state.players[p2], "p2 after move").hand.at(-1)?.instanceId,
     topLife.instanceId,
+  );
+  assert.equal(
+    resolved.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        event.causedBy?.type === "ruleProcess" &&
+        event.causedBy.name === "effectRuntime:eventReactionTriggerQueueing",
+    ),
+    true,
+  );
+});
+
+test("lifeRemoved reaction queues after sequenced conditional opponent Life move", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.eventJournal = [];
+  const player = must(state.players[p1], "p1");
+  const reactionSource = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "reaction source"),
+    zone: "characterArea",
+  });
+  player.hand = player.hand.filter(
+    (card) => card.instanceId !== reactionSource.instanceId,
+  );
+  installLifeRemovedReaction(state, reactionSource);
+  const { effectBlockId, leader } =
+    installOpponentLifeToOwnerHandSequenceDefinition(state);
+  const beforeP2 = must(state.players[p2], "p2 before");
+  const topLife = must(beforeP2.life[0], "p2 top life").card;
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-opponent-life-sequence"),
+      timingWindowId: toTimingWindowId("timing-window-opponent-life-sequence"),
+      controllerId: p1,
+      source: {
+        instanceId: leader.instanceId,
+        cardId: leader.cardId,
+        playerId: p1,
+        zone: leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: leader.instanceId,
+        cardId: leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: leader.zone,
+        category: "leader",
+        colors: ["red"],
+        cost: 0,
+        keywords: [],
+      },
+      effectBlockId,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: {
+        type: "ruleProcess",
+        name: "test:opponent-life-sequence",
+      },
+    },
+  ];
+
+  const quantityPaused = processEffectRuntime(state);
+  assert.equal(quantityPaused.errors, undefined);
+  assert.equal(quantityPaused.state.pendingDecision?.type, "chooseQuantity");
+
+  const resolved = applyAction(quantityPaused.state, {
+    type: "respondToDecision",
+    decisionId: quantityPaused.state.pendingDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(
+    must(resolved.state.players[p2], "p2 after move").hand.some(
+      (card) => card.instanceId === topLife.instanceId,
+    ),
+    true,
   );
   assert.equal(
     resolved.events.some(
