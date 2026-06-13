@@ -18,6 +18,7 @@ describe("DON field count condition parser", () => {
         "filter:category:don",
         "filter:state:attached",
         "filter:state:active",
+        "filter:state:rested",
         "player:opponent",
       ],
     });
@@ -140,6 +141,31 @@ describe("DON field count condition parser", () => {
         "player:self",
         "filter:category:don",
         "filter:state:active",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses rested DON field-count conditions as state-filtered DON counts", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have 6 or more rested DON!! cards",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"], state: "rested" },
+        op: "gte",
+        value: 6,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+        "filter:state:rested",
       ],
       rest: "",
     });

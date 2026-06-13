@@ -1,5 +1,12 @@
-import type { ConditionParseResult, ConditionParser } from "../types.js";
-import { parseLeadingCountComparison } from "./comparison.js";
+import type {
+  ConditionParseResult,
+  ConditionParser,
+  PrimitiveEvidence,
+} from "../types.js";
+import {
+  type CountComparisonParseResult,
+  parseLeadingCountComparison,
+} from "./comparison.js";
 
 export const donFieldCountConditionPrimitive = {
   primitiveId: "condition:donFieldCount",
@@ -12,9 +19,18 @@ export const donFieldCountConditionPrimitive = {
     "filter:category:don",
     "filter:state:attached",
     "filter:state:active",
+    "filter:state:rested",
     "player:opponent",
   ],
 } as const;
+
+type DonFieldCountState = "active" | "attached" | "rested";
+
+const donStateEvidenceByState = {
+  active: "filter:state:active",
+  attached: "filter:state:attached",
+  rested: "filter:state:rested",
+} as const satisfies Record<DonFieldCountState, PrimitiveEvidence>;
 
 const isDonCardsOnPlayersField = (
   text: string,
@@ -24,6 +40,38 @@ const isDonCardsOnPlayersField = (
 
   return new RegExp(`^DON!! cards on ${fieldOwner} field$`, "i").test(text);
 };
+
+const stateFromDonCountText = (
+  text: string,
+): DonFieldCountState | undefined => {
+  if (/^given DON!! cards$/i.test(text)) return "attached";
+  if (/^active DON!! cards$/i.test(text)) return "active";
+  if (/^rested DON!! cards$/i.test(text)) return "rested";
+  return undefined;
+};
+
+const buildStateFilteredDonCount = (
+  player: "self" | "opponent",
+  state: DonFieldCountState,
+  comparison: Pick<CountComparisonParseResult, "op" | "value">,
+  comparisonEvidence: readonly PrimitiveEvidence[],
+): ConditionParseResult => ({
+  condition: {
+    type: "fieldCount",
+    player,
+    filter: { categories: ["don"], state },
+    op: comparison.op,
+    value: comparison.value,
+  },
+  evidence: [
+    "condition:donFieldCount",
+    ...comparisonEvidence,
+    player === "self" ? "player:self" : "player:opponent",
+    "filter:category:don",
+    donStateEvidenceByState[state],
+  ],
+  rest: "",
+});
 
 export const parseDonFieldCountCondition: ConditionParser = (
   input,
@@ -157,44 +205,11 @@ export const parseDonFieldCountCondition: ConditionParser = (
     return undefined;
   }
 
-  if (/^given DON!! cards$/i.test(comparison.rest)) {
-    return {
-      condition: {
-        type: "fieldCount",
-        player,
-        filter: { categories: ["don"], state: "attached" },
-        op: comparison.op,
-        value: comparison.value,
-      },
-      evidence: [
-        "condition:donFieldCount",
-        ...comparison.evidence,
-        player === "self" ? "player:self" : "player:opponent",
-        "filter:category:don",
-        "filter:state:attached",
-      ],
-      rest: "",
-    };
-  }
-
-  if (/^active DON!! cards$/i.test(comparison.rest)) {
-    return {
-      condition: {
-        type: "fieldCount",
-        player,
-        filter: { categories: ["don"], state: "active" },
-        op: comparison.op,
-        value: comparison.value,
-      },
-      evidence: [
-        "condition:donFieldCount",
-        ...comparison.evidence,
-        player === "self" ? "player:self" : "player:opponent",
-        "filter:category:don",
-        "filter:state:active",
-      ],
-      rest: "",
-    };
+  const state = stateFromDonCountText(comparison.rest);
+  if (state !== undefined) {
+    return buildStateFilteredDonCount(player, state, comparison, [
+      ...comparison.evidence,
+    ]);
   }
 
   if (!isDonCardsOnPlayersField(comparison.rest, player)) {
