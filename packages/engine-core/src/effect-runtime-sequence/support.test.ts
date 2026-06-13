@@ -378,6 +378,33 @@ test("sequence support accepts conditional bodies with continuous target decisio
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts conditional else bodies through the same child sequence support", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "conditional",
+            if: { type: "trashCount", player: "self", op: "gte", value: 1 },
+            then: { type: "draw", player: "self", count: 1 },
+            else: { type: "draw", player: "self", count: 1 },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts conditional playSelected after optional self-trash costs", () => {
   const selection = "trashSelection:play" as SelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {

@@ -34,6 +34,16 @@ export const conditionalThenSingleEffectPath = (
   index: number,
 ): string[] => [...effectPath, String(index), "then", "single"];
 
+export const conditionalElseSequencePath = (
+  effectPath: readonly string[],
+  index: number,
+): string[] => [...effectPath, String(index), "else", "sequence"];
+
+export const conditionalElseSingleEffectPath = (
+  effectPath: readonly string[],
+  index: number,
+): string[] => [...effectPath, String(index), "else", "single"];
+
 export const nestedSequencePath = (
   effectPath: readonly string[],
   index: number,
@@ -136,22 +146,32 @@ export const resolveSequenceForPath = (
           ? option.effect
           : toSingleEffectSequence(option.effect);
       index += 1;
-    } else if (branchToken === "then" && sequenceToken === "sequence") {
+    } else if (
+      (branchToken === "then" || branchToken === "else") &&
+      sequenceToken === "sequence"
+    ) {
       if (segment.effect.type !== "conditional") {
         return undefined;
       }
-      if (segment.effect.then.type !== "sequence") {
+      const branch =
+        branchToken === "then" ? segment.effect.then : segment.effect.else;
+      if (branch?.type !== "sequence") {
         return undefined;
       }
-      current = segment.effect.then;
-    } else if (branchToken === "then" && sequenceToken === "single") {
+      current = branch;
+    } else if (
+      (branchToken === "then" || branchToken === "else") &&
+      sequenceToken === "single"
+    ) {
       if (segment.effect.type !== "conditional") {
         return undefined;
       }
-      if (segment.effect.then.type === "sequence") {
+      const branch =
+        branchToken === "then" ? segment.effect.then : segment.effect.else;
+      if (branch === undefined || branch.type === "sequence") {
         return undefined;
       }
-      current = toSingleEffectSequence(segment.effect.then);
+      current = toSingleEffectSequence(branch);
     } else {
       return undefined;
     }
@@ -201,6 +221,8 @@ export const conditionalParentForPath = (
   if (
     !(
       (parentToken === "then" &&
+        (branchToken === "sequence" || branchToken === "single")) ||
+      (parentToken === "else" &&
         (branchToken === "sequence" || branchToken === "single")) ||
       (parentToken === "nested" && branchToken === "sequence") ||
       isChoicePath

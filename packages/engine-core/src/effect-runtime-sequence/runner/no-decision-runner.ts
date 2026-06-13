@@ -23,7 +23,6 @@ import {
 } from "../frame-decisions.js";
 import { applyPlaySelectedSequenceSegment } from "../../runtime/primitives/play-selected.js";
 import { applyActivateSelectedEventSequenceSegment } from "../../runtime/primitives/activate-selected-event.js";
-import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
 import { isSupportedContinuousQueueEffect } from "../../runtime/continuous/support.js";
 import { applySelectTargetsSequenceSegment } from "../select-targets.js";
@@ -38,20 +37,16 @@ import {
 } from "../segments.js";
 import { type SupportedSequenceSegment } from "../support.js";
 import { applyRuntimePlaySource } from "../../play-card/core.js";
-import { appendFailedConditionSpotlightEvent } from "../../runtime/failed-condition-presentation.js";
 import { executeDamagePrimitive } from "../../runtime/primitives/execute.js";
 import { createSelectFromSetDecision } from "../selected-segments.js";
 import { applyRevealSelectedSequenceSegment } from "../selected-reveal.js";
 import { applyPlaceSetRemainderSequenceSegment } from "../remainder.js";
 import { scheduleDelayedEffectSequenceSegment } from "../delayed.js";
 import {
-  conditionalThenSequencePath,
-  conditionalThenSingleEffectPath,
   nestedSequencePath,
   rootSequencePath,
   segmentKey,
   segmentKeyForPath,
-  toSingleEffectSequence,
 } from "../paths.js";
 import { sequenceSegmentResultsChanged } from "./composition-results.js";
 import { continuousRecordsCurrentlyApply } from "./continuous-application.js";
@@ -63,6 +58,7 @@ import { applyLifeStateNoDecisionSegment } from "./life-state-segments.js";
 import { pauseForOptionalSequenceSegment } from "./optional-segment.js";
 import { applyForEachSavedTargetSegment } from "./for-each-saved-target.js";
 import { applySelectAllTargetsSegment } from "./select-all-targets-segment.js";
+import { applyConditionalSequenceSegment } from "./conditional-segment.js";
 import {
   pauseForTrashFromHandSegment,
   pauseForTrashFromHandUntilCountSegment,
@@ -860,125 +856,34 @@ export const continueNoDecisionSegments = (
       continue;
     }
     if (segment.effect.type === "conditional") {
-      const condition = evaluateQueuedEffectCondition(
-        nextState,
+      const conditional = applyConditionalSequenceSegment({
+        continueNoDecisionSegments,
+        createTrashDecision,
+        effectBlock,
+        effectPath,
+        emptySegmentResult,
         entry,
-        segment.effect.if,
-        { savedReferences: nextLedgers.savedReferences },
-      );
-      if (!condition.supported) {
+        events,
+        incrementStateSeqForDraw,
+        index,
+        ledgers: nextLedgers,
+        pausedLedgers,
+        segment: segment as SequenceEffect["effects"][number] & {
+          effect: Extract<Effect, { type: "conditional" }>;
+        },
+        segmentKey: ledgerKey,
+        state: nextState,
+      });
+      if (!conditional.ok) {
         return { ok: false };
       }
-      if (!condition.passed) {
-        nextState = appendFailedConditionSpotlightEvent({
-          effectBlock,
-          effectPath,
-          entry,
-          events,
-          sequenceIndex: index,
-          state: nextState,
-        });
-        nextLedgers = {
-          ...nextLedgers,
-          segmentResults: {
-            ...nextLedgers.segmentResults,
-            [ledgerKey(segment, index)]: {
-              ...emptySegmentResult(),
-              attempted: true,
-            },
-          },
-        };
-        continue;
+      if (conditional.kind === "paused") {
+        return conditional;
       }
-      let changedState = false;
-      if (
-        segment.effect.then.type === "sequence" ||
-        !isSupportedContinuousQueueEffect(segment.effect.then)
-      ) {
-        const thenSequence =
-          segment.effect.then.type === "sequence"
-            ? segment.effect.then
-            : toSingleEffectSequence(segment.effect.then);
-        const thenPath =
-          segment.effect.then.type === "sequence"
-            ? conditionalThenSequencePath(effectPath, index)
-            : conditionalThenSingleEffectPath(effectPath, index);
-        const nested = continueNoDecisionSegments(
-          nextState,
-          entry,
-          thenSequence,
-          effectBlock,
-          0,
-          nextLedgers,
-          createTrashDecision,
-          incrementStateSeqForDraw,
-          thenPath,
-        );
-        if (!nested.ok) {
-          return { ok: false };
-        }
-        if (nested.kind === "paused") {
-          return {
-            events: [...events, ...nested.events],
-            kind: "paused",
-            ok: true,
-            state: nested.state,
-          };
-        }
-        nextState = nested.state;
-        nextLedgers = nested.ledgers;
-        events.push(...nested.events);
-        changedState =
-          sequenceSegmentResultsChanged(
-            nested.ledgers.segmentResults,
-            thenSequence,
-            thenPath,
-          ) || nested.events.length > 0;
-      } else {
-        const request = continuousChooseTargetRequest(segment.effect.then);
-        if (request !== undefined) {
-          return createSequenceSelectTargetsPause({
-            effectBlockId: entry.effectBlockId,
-            effectPath,
-            entry,
-            events,
-            index,
-            ledgers: pausedLedgers,
-            request,
-            state: nextState,
-          });
-        }
-        const records = createContinuousRecordsForResolvedEffect(
-          nextState,
-          entry,
-          segment.effect.then,
-          undefined,
-          { savedReferences: nextLedgers.savedReferences },
-        );
-        if (records === null) {
-          return { ok: false };
-        }
-        nextState =
-          records.length === 0
-            ? nextState
-            : {
-                ...nextState,
-                continuousEffects: [...nextState.continuousEffects, ...records],
-              };
-        changedState = continuousRecordsCurrentlyApply(nextState, records);
-      }
-      nextLedgers = {
-        ...nextLedgers,
-        segmentResults: {
-          ...nextLedgers.segmentResults,
-          [ledgerKey(segment, index)]: {
-            ...emptySegmentResult(),
-            attempted: true,
-            succeeded: true,
-            changedState,
-          },
-        },
-      };
+      nextState = conditional.state;
+      nextLedgers = conditional.ledgers;
+      events.length = 0;
+      events.push(...conditional.events);
       continue;
     }
     return pauseForTrashFromHandSegment({

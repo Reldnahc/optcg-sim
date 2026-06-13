@@ -200,6 +200,40 @@ const conditionalDraw = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const conditionalElseDraw = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "conditional-else-draw",
+      connector: "always",
+      effect: {
+        type: "conditional",
+        if: { type: "trashCount", player: "self", op: "gte", value: 99 },
+        then: {
+          type: "sequence",
+          effects: [
+            {
+              id: "conditional-then-draw",
+              connector: "always",
+              effect: { type: "draw", player: "self", count: 1 },
+            },
+          ],
+        },
+        else: {
+          type: "sequence",
+          effects: [
+            {
+              id: "conditional-else-child-draw",
+              connector: "always",
+              effect: { type: "draw", player: "self", count: 1 },
+            },
+          ],
+        },
+      },
+    },
+  ],
+});
+
 const selfRest = (): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
@@ -238,6 +272,11 @@ test("sequence runner executes draw through root, nested, and conditional compos
     { effect: rootDraw(), name: "root", withTrash: false },
     { effect: nestedDraw(), name: "nested", withTrash: false },
     { effect: conditionalDraw(), name: "conditional", withTrash: true },
+    {
+      effect: conditionalElseDraw(),
+      name: "conditional else",
+      withTrash: false,
+    },
   ] as const;
 
   for (const testCase of cases) {

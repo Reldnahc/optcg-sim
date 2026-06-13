@@ -250,34 +250,35 @@ const isSupportedConditionalSegment = (
 ): effect is ConditionalEffect => {
   if (
     effect.type !== "conditional" ||
-    effect.else !== undefined ||
     !isSupportedQueuedEffectConditionShape(effect.if)
   ) {
     return false;
   }
-  const thenSequence =
-    effect.then.type === "sequence"
-      ? effect.then
-      : toSingleEffectSequence(effect.then);
-  const flattenedThen = flattenSequenceEffect(thenSequence);
-  if (flattenedThen === null) {
-    return false;
-  }
-  return isSupportedSequenceBlock(
-    toSyntheticQueueEntry(sourcePresencePolicy),
-    {
-      id: "effect:conditional-child" as EffectDefinition["effects"][number]["id"],
-      category: "auto",
-      trigger: { type: "onPlay" },
-      sourcePresencePolicy,
-      effect: flattenedThen,
-    },
-    {
-      ...options,
-      allowInitialTrashFromHand: true,
-      requirePositiveDrawCount: false,
-    },
-  );
+  return [effect.then, effect.else]
+    .filter((branch): branch is Effect => branch !== undefined)
+    .every((branch) => {
+      const sequence =
+        branch.type === "sequence" ? branch : toSingleEffectSequence(branch);
+      const flattened = flattenSequenceEffect(sequence);
+      if (flattened === null) {
+        return false;
+      }
+      return isSupportedSequenceBlock(
+        toSyntheticQueueEntry(sourcePresencePolicy),
+        {
+          id: "effect:conditional-child" as EffectDefinition["effects"][number]["id"],
+          category: "auto",
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy,
+          effect: flattened,
+        },
+        {
+          ...options,
+          allowInitialTrashFromHand: true,
+          requirePositiveDrawCount: false,
+        },
+      );
+    });
 };
 
 const isSupportedDelayedSegment = (
