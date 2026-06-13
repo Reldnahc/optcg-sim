@@ -1,12 +1,14 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type { DeckHashDeck } from "optcg-deck-hash";
+import type { CardId } from "@optcg/types";
 
 import { createMatchHttpServer } from "./match-http-server.js";
 import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
+import type { ReadyDeckSubmission } from "./deck-submission.js";
 
 interface CreatedCustomLobbyBody {
   lobbyId?: string;
@@ -60,10 +62,22 @@ const requireSnapshot = (
   return body.snapshot;
 };
 
+const fixtureBotDeckSubmission = (): ReadyDeckSubmission => ({
+  source: "deckHash",
+  hash: "fixture-bot-default",
+  status: "ready",
+  decoded: {
+    leader: { cardId: "OP13-079" as CardId, count: 1 },
+    main: [{ cardId: "OP13-080" as CardId, count: 50 }],
+  },
+  donDeckCount: 10,
+});
+
 const createDeckHashMatchHttpServer = async () =>
   createMatchHttpServer({
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
+    botDeckSubmission: fixtureBotDeckSubmission(),
     deckHashCodec: {
       decode: (hash): Promise<DeckHashDeck> =>
         Promise.resolve(

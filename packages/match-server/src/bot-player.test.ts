@@ -54,7 +54,7 @@ describe("bot player", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
-  test("ends main phase before taking proactive board actions", () => {
+  test("plays cards before ending main phase", () => {
     const chosen = chooseBotAction(
       snapshotWithActions([
         {
@@ -66,6 +66,66 @@ describe("bot player", () => {
           index: 1,
           type: "endMainPhase",
           label: "End main phase",
+        },
+      ]),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("attacks before ending main phase", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions([
+        {
+          index: 0,
+          type: "endMainPhase",
+          label: "End main phase",
+        },
+        {
+          index: 1,
+          type: "declareAttack",
+          label: "Attack leader",
+        },
+      ]),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("activates effects before ending main phase", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions([
+        {
+          index: 0,
+          type: "endMainPhase",
+          label: "End main phase",
+        },
+        {
+          index: 1,
+          type: "activateEffect",
+          label: "Activate effect",
+        },
+      ]),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("attaches DON before ending main phase", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions([
+        {
+          index: 0,
+          type: "endMainPhase",
+          label: "End main phase",
+        },
+        {
+          index: 1,
+          type: "attachDon",
+          label: "Attach DON",
         },
       ]),
       botId,

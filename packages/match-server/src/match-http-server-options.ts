@@ -1,6 +1,9 @@
 import type { MatchId } from "@optcg/types";
 
-import type { DeckHashCodecPort } from "./deck-submission.js";
+import type {
+  DeckHashCodecPort,
+  ReadyDeckSubmission,
+} from "./deck-submission.js";
 import {
   createPremadeDevMatchSetup,
   type CreatePremadeDevMatchSetupOptions,
@@ -26,6 +29,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly allowedBrowserOrigins?: readonly string[];
   readonly staticAssetsDirectory?: string;
   readonly deckHashCodec?: DeckHashCodecPort;
+  readonly botDeckSubmission?: ReadyDeckSubmission;
   readonly allowRawDeckHashSubmissions?: boolean;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;

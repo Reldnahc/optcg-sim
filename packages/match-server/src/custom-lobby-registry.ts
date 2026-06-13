@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createRedisCardDataCache, type CardDataCache } from "@optcg/cards";
-import type { CardId, MatchId, PlayerId } from "@optcg/types";
+import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDevMatchSetupFromDeckSubmissions,
@@ -42,6 +42,7 @@ import {
   recordLobbyValidationTimingSpan,
   type LobbyValidationTimingSpan,
 } from "./lobby-validation-timing-log.js";
+import { createDefaultBotDeckSubmission } from "./bot-deck.js";
 
 export interface CreatedCustomLobbyResponse {
   lobbyId: string;
@@ -165,6 +166,7 @@ export interface CustomLobbyRegistry {
 export interface CreateCustomLobbyRegistryOptions extends CreatePremadeDevMatchSetupOptions {
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly lobbyStore?: LobbyStore;
+  readonly botDeckSubmission?: ReadyDeckSubmission;
 }
 
 const devLobbyCreatedAt = "2026-05-04T00:00:00.000Z";
@@ -226,17 +228,6 @@ const botSubject = {
   displayName: "Bot",
 };
 
-const botDeckSubmission = (): ReadyDeckSubmission => ({
-  source: "deckHash",
-  hash: "bot-default",
-  status: "ready",
-  decoded: {
-    leader: { cardId: "OP13-079" as CardId, count: 1 },
-    main: [{ cardId: "OP13-080" as CardId, count: 50 }],
-  },
-  donDeckCount: 10,
-});
-
 const createLobbyStore = async (
   options: CreateCustomLobbyRegistryOptions,
 ): Promise<LobbyStore> => {
@@ -261,6 +252,8 @@ export const createCustomLobbyRegistry = async (
 ): Promise<CustomLobbyRegistry> => {
   const lobbyStore = await createLobbyStore(options);
   const deckHashCodec = options.deckHashCodec ?? createPoneglyphDeckHashCodec();
+  const botDeckSubmission =
+    options.botDeckSubmission ?? createDefaultBotDeckSubmission();
   const redisConfig = resolveRedisConfig({
     redisUrl: options.redisUrl,
     redisMode: options.redisMode,
@@ -499,7 +492,7 @@ export const createCustomLobbyRegistry = async (
         const botSeat = seats["p2"];
         if (botSeat !== undefined) {
           botSeat.subject = botSubject;
-          botSeat.deckSubmission = botDeckSubmission();
+          botSeat.deckSubmission = structuredClone(botDeckSubmission);
         }
       }
       const lobby: CustomLobbyState = {
