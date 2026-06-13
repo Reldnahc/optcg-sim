@@ -30,6 +30,7 @@ import {
   basePowerSwapExpressionParser,
   chooseOneExpressionParser,
   activatedReactionExpressionParser,
+  conditionalSelectedPowerContinuationExpressionParser,
   conditionalBlockExpressionParser,
   conditionalContinuousExpressionParser,
   conditionalCostedBlockExpressionParser,
@@ -53,6 +54,7 @@ import {
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   selectedBasePowerSnapshotExpressionParser,
+  selectedPowerContinuationExpressionParser,
   syntheticInstructionSegmentParser,
   trailingConditionalExpressionSegmentParser,
 } from "../segments/index.js";
@@ -158,6 +160,10 @@ const costedExpressions = [
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
+  conditionalSelectedPowerContinuationExpressionParser({
+    conditions: conditionParsers,
+  }),
+  selectedPowerContinuationExpressionParser,
   basePowerSwapExpressionParser,
   playedObjectKeywordGrantExpressionParser({
     instructions: instructionParsers,
@@ -289,6 +295,7 @@ export const defaultRegistry = {
           expressions: [singleInstructionExpressionParser],
         }),
         selectedOpponentCharactersAttackCostExpressionParser,
+        selectedPowerContinuationExpressionParser,
         singleInstructionExpressionParser,
         generalExpressionParser,
       ],
@@ -306,6 +313,7 @@ export const defaultRegistry = {
     selectedAttackRetargetExpressionParser,
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
+    selectedPowerContinuationExpressionParser,
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
     revealTopConditionalExpressionParser({

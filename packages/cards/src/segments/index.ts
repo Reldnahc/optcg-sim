@@ -27,6 +27,10 @@ export { lookPlayFromTopExpressionParser } from "./look-play-from-top.js";
 export { revealTopConditionalExpressionParser } from "./reveal-top-conditional.js";
 export { revealTopPlayRestedExpressionParser } from "./reveal-top-play-rested.js";
 export { selectedBasePowerSnapshotExpressionParser } from "./selected-base-power-snapshot.js";
+export {
+  conditionalSelectedPowerContinuationExpressionParser,
+  selectedPowerContinuationExpressionParser,
+} from "./selected-power-continuation.js";
 export { searchRevealExpressionParser } from "./search-reveal.js";
 export {
   conditionalCostedBlockExpressionParser,
