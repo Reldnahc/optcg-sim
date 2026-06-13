@@ -1,4 +1,5 @@
 import type { DevVisibleAction } from "./dev-snapshot-types.js";
+import { scoreCombatAction } from "./bot-combat-evaluation.js";
 import {
   cardPower,
   findVisibleCard,
@@ -78,11 +79,13 @@ const choosePendingDecision = ({
   readonly profile: BotBehaviorProfile;
 }): BotActionChoice | undefined => {
   const decision = snapshot.players[botPlayerId]?.view.pendingDecision;
+  const battle = snapshot.players[botPlayerId]?.view.battle;
   if (
     decision === undefined ||
     decision.playerId !== botPlayerId ||
     decision.type === "payCost" ||
-    decision.type === "mulligan"
+    decision.type === "mulligan" ||
+    battle?.step === "counter"
   ) {
     return undefined;
   }
@@ -115,6 +118,7 @@ export const createBotStrategy = (
       if (!defaultActionAllowed(context)) {
         return [];
       }
+      const combatScore = scoreCombatAction(context);
       const profileScore = profile.scoreAction?.(context);
       if (profileScore === false) {
         return [];
@@ -131,7 +135,11 @@ export const createBotStrategy = (
       return [
         {
           action,
-          score: mergedScore(action, [profileScore, ...numericCardScores]),
+          score: mergedScore(action, [
+            combatScore,
+            profileScore,
+            ...numericCardScores,
+          ]),
         },
       ];
     });

@@ -1,4 +1,16 @@
 import type { BotDecisionChoice, BotDecisionContext } from "./bot-types.js";
+import { chooseCombatDecision } from "./bot-combat-evaluation.js";
+
+const defaultSelectableCardCount = (
+  min: number,
+  max: number,
+  availableCount: number,
+): number => {
+  if (max <= 0 || availableCount <= 0) {
+    return 0;
+  }
+  return Math.min(Math.max(min, 1), max, availableCount);
+};
 
 export const chooseDefaultBotDecision = ({
   snapshot,
@@ -8,6 +20,10 @@ export const chooseDefaultBotDecision = ({
   if (decision === undefined || decision.playerId !== botPlayerId) {
     return undefined;
   }
+  const combatDecision = chooseCombatDecision({ snapshot, botPlayerId });
+  if (combatDecision !== undefined) {
+    return combatDecision;
+  }
   switch (decision.type) {
     case "chooseQuantity":
       return {
@@ -15,18 +31,26 @@ export const chooseDefaultBotDecision = ({
         decisionId: decision.id,
         response: { type: "chooseQuantity", quantity: decision.min },
       };
-    case "selectCards":
+    case "selectCards": {
+      const selectableCards = decision.choices
+        .filter((choice) => choice.selectable)
+        .map((choice) => choice.card);
       return {
         type: "respondToDecision",
         decisionId: decision.id,
         response: {
           type: "cards",
-          cards: decision.choices
-            .filter((choice) => choice.selectable)
-            .slice(0, decision.min)
-            .map((choice) => choice.card),
+          cards: selectableCards.slice(
+            0,
+            defaultSelectableCardCount(
+              decision.min,
+              decision.max,
+              selectableCards.length,
+            ),
+          ),
         },
       };
+    }
     case "selectTargets":
       return {
         type: "respondToDecision",

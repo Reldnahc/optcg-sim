@@ -55,8 +55,10 @@ const snapshotWithActions = (
             hand: cards.selfHand ?? [],
             characters: cards.selfCharacters ?? [],
             costArea: cards.selfCostArea ?? [],
+            life: { count: 5, faceUpCards: [] },
           },
           opponent: {
+            handCount: 0,
             leader: {
               instanceId: "opponent-leader",
               cardId: "OP01-002",
@@ -67,6 +69,7 @@ const snapshotWithActions = (
               attachedDonIds: [],
               ...cards.opponentLeader,
             },
+            life: { count: 5, faceUpCards: [] },
             characters: cards.opponentCharacters ?? [],
             costArea: [],
           },
