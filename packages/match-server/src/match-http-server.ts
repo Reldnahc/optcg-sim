@@ -62,6 +62,7 @@ import {
 } from "./match-state-payload.js";
 import {
   createDefaultMatchSetupFactory,
+  defaultRematchLobbyDisconnectGraceMs,
   defaultMatchTimerTickMs,
   defaultSocketIdleTimeoutMs,
   resolveAllowRawDeckHashSubmissions,
@@ -603,6 +604,7 @@ const handleWebSocketUpgrade = async (
   connections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
   socketIdleTimeoutMs: number,
+  rematchLobbyDisconnectGraceMs: number,
 ): Promise<void> => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(
@@ -658,16 +660,26 @@ const handleWebSocketUpgrade = async (
     resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
     registerConnectionLifecycle(connection, () => {
       lobbyConnections.delete(connection);
-      void lobbyRegistry.cancelRematchLobby(lobbyId).then((cancelled) => {
-        if (!cancelled) {
+      const cancelTimer = setTimeout(() => {
+        const reconnected = [...lobbyConnections].some(
+          (candidate) =>
+            candidate.lobbyId === lobbyId && candidate.playerId === playerId,
+        );
+        if (reconnected) {
           return;
         }
-        broadcastLobbyError(
-          lobbyId,
-          "Rematch canceled because a player disconnected from the lobby.",
-          lobbyConnections,
-        );
-      });
+        void lobbyRegistry.cancelRematchLobby(lobbyId).then((cancelled) => {
+          if (!cancelled) {
+            return;
+          }
+          broadcastLobbyError(
+            lobbyId,
+            "Rematch canceled because a player disconnected from the lobby.",
+            lobbyConnections,
+          );
+        });
+      }, rematchLobbyDisconnectGraceMs);
+      cancelTimer.unref();
     });
     sendSocketJson(connection, lobbyStatePayload(lobby, connection));
 
@@ -868,6 +880,9 @@ export const createMatchHttpServer = async (
   const authProvider = createDevAuthProvider();
   const socketIdleTimeoutMs =
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
+  const rematchLobbyDisconnectGraceMs =
+    options.rematchLobbyDisconnectGraceMs ??
+    defaultRematchLobbyDisconnectGraceMs;
   const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
   const allowTemplateMatches = options.allowTemplateMatches ?? true;
@@ -955,6 +970,7 @@ export const createMatchHttpServer = async (
       socketConnections,
       lobbySocketConnections,
       socketIdleTimeoutMs,
+      rematchLobbyDisconnectGraceMs,
     ).catch(() => {
       socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     });

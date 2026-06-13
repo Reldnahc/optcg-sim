@@ -28,11 +28,13 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly completedMatchRepository?: CompletedMatchRepository;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;
+  readonly rematchLobbyDisconnectGraceMs?: number;
   readonly matchTimerPolicy?: MatchTimerPolicy;
   readonly matchTimerTickMs?: number;
 }
 
 export const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
+export const defaultRematchLobbyDisconnectGraceMs = 1_000;
 export const defaultMatchTimerTickMs = 1_000;
 
 export const resolveAllowRawDeckHashSubmissions = (
