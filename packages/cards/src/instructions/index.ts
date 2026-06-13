@@ -76,6 +76,7 @@ export {
 export { parseReturnOrDeckBottomInstruction } from "./return-or-deck-bottom.js";
 export { parseForcedReturnDonInstruction } from "./return-don.js";
 export {
+  parseExplicitDurationProtectionInstruction,
   parseExplicitProtectionInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseProtectionInstruction,

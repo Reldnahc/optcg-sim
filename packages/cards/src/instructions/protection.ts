@@ -1,4 +1,5 @@
 export {
+  parseExplicitDurationProtectionInstruction,
   parseExplicitProtectionInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseProtectionInstruction,

@@ -1,4 +1,5 @@
 import {
+  fieldEffectDurationParsers,
   parseDurationFromSet,
   selfNextTurnStartOnlyDurationParsers,
 } from "../../durations/index.js";
@@ -11,7 +12,11 @@ import {
   parseAllFieldTarget,
   parseProtectionTarget,
 } from "../../targets/index.js";
-import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
+import type {
+  InstructionParseResult,
+  InstructionParser,
+  PrimitiveEvidence,
+} from "../../types.js";
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
 import { buildProtectionEffectWithTarget } from "./builders.js";
 
@@ -46,17 +51,25 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
   }
 
   const source = parseProtectionSource({ text: parsedProcesses.rest });
-  if (source === undefined || source.rest.length > 0) {
+  if (source === undefined) {
+    return undefined;
+  }
+  const explicitDuration =
+    source.rest.length === 0
+      ? undefined
+      : parseDurationFromSet({ text: source.rest }, fieldEffectDurationParsers);
+  if (source.rest.length > 0 && explicitDuration?.rest !== "") {
     return undefined;
   }
 
   const duration =
-    context.condition === undefined
+    explicitDuration?.duration ??
+    (context.condition === undefined
       ? { type: "whileSourceOnField" as const }
       : {
           type: "whileConditionTrue" as const,
           condition: context.condition,
-        };
+        });
 
   const effects = parsedProcesses.processes.map((process) =>
     buildProtectionEffectWithTarget({
@@ -91,9 +104,12 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
       ...target.evidence,
       ...parsedProcesses.evidence,
       ...source.evidence,
-      context.condition === undefined
-        ? "duration:whileSourceOnField"
-        : "duration:whileConditionTrue",
+      ...(explicitDuration?.evidence ??
+        ([
+          context.condition === undefined
+            ? "duration:whileSourceOnField"
+            : "duration:whileConditionTrue",
+        ] as const)),
     ],
     rest: "",
   };
@@ -195,4 +211,19 @@ export const parseExplicitProtectionInstruction: InstructionParser = (
     ],
     rest: "",
   };
+};
+
+export const parseExplicitDurationProtectionInstruction: InstructionParser = (
+  input,
+): InstructionParseResult | undefined => {
+  const result = parseProtectionInstruction(input, { condition: undefined });
+  if (
+    result === undefined ||
+    !result.evidence.some((evidence) => evidence.startsWith("duration:")) ||
+    result.evidence.includes("duration:whileSourceOnField") ||
+    result.evidence.includes("duration:whileConditionTrue")
+  ) {
+    return undefined;
+  }
+  return result;
 };

@@ -121,3 +121,41 @@ it("parses dynamic total-Life cost filters independently from attacking rest bod
     ]),
   );
 });
+
+it("parses all-target temporary K.O. protection independently from On Play", () => {
+  const result = parseCardEffectLine(
+    "[On Play] All of your Characters with 1000 base power or less cannot be K.O.'d by your opponent's effects until the end of your opponent's next turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "protectFromKO",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            power: { max: 1000 },
+          },
+        },
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:giveProtection",
+      "cardinality:all",
+      "filter:power",
+      "protectionProcess:ko",
+      "protectionSource:opponentEffects",
+      "duration:opponentNextEndPhase",
+    ]),
+  );
+});

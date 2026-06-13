@@ -313,4 +313,44 @@ describe("continuous protection instruction parser", () => {
       ]),
     );
   });
+
+  it("parses all-target K.O. protection with an explicit field-effect duration", () => {
+    const result = parseProtectionInstruction(
+      {
+        text: "All of your Characters with 1000 base power or less cannot be K.O.'d by your opponent's effects until the end of your opponent's next turn.",
+      },
+      { condition: undefined },
+    );
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            power: { max: 1000 },
+          },
+        },
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "cardinality:all",
+        "player:self",
+        "filter:category:character",
+        "filter:power",
+        "protectionProcess:ko",
+        "protectionSource:opponentEffects",
+        "duration:opponentNextEndPhase",
+      ]),
+    );
+  });
 });
