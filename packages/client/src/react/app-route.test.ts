@@ -32,6 +32,13 @@ describe("client app routes", () => {
     assert.equal(route.path, "/r/ab12");
   });
 
+  test("maps replay URLs to the replay route", () => {
+    const route = appRouteFromPath("/replays/match-1");
+
+    assert.equal(route.id, "replay");
+    assert.equal(route.path, "/replays/match-1");
+  });
+
   test("preserves query strings for the match route", () => {
     const route = appRouteFromPath("/match?matchId=abc&seat=p2");
 
@@ -61,6 +68,7 @@ describe("client app routes", () => {
     assert.equal(isShellRoute("lobbies"), true);
     assert.equal(isShellRoute("notFound"), true);
     assert.equal(isShellRoute("match"), false);
+    assert.equal(isShellRoute("replay"), false);
     assert.deepEqual(
       appRoutes.map((route) => route.id),
       ["dashboard", "match"],
