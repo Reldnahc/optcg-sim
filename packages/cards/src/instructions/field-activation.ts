@@ -24,6 +24,13 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     return selfOrDonActivation;
   }
 
+  const compoundFieldAndDonActivation = parseCompoundFieldAndDonActivation(
+    input.text,
+  );
+  if (compoundFieldAndDonActivation !== undefined) {
+    return compoundFieldAndDonActivation;
+  }
+
   const massFieldActivation = parseSetLeaderAndCharactersActive(input.text);
   if (massFieldActivation !== undefined) {
     return massFieldActivation;
@@ -275,6 +282,55 @@ function parseSetThisCharacterOrDonActive(
       "composition:chooseOne",
       "choice:option",
       "choice:option",
+      ...donActivation.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseCompoundFieldAndDonActivation(
+  text: string,
+): ReturnType<InstructionParser> {
+  const match =
+    /^set (?<fieldTarget>up to [1-9]\d* of your .+? Characters) and (?<donTarget>up to [1-9]\d* of your DON!! cards) as active\.?$/iu.exec(
+      text,
+    );
+  const fieldTarget = match?.groups?.["fieldTarget"];
+  const donTarget = match?.groups?.["donTarget"];
+  if (fieldTarget === undefined || donTarget === undefined) {
+    return undefined;
+  }
+
+  const fieldActivation = parseSetFieldActiveInstruction({
+    text: `set ${fieldTarget} as active`,
+  });
+  const donActivation = parseSetDonActiveInstruction({
+    text: `set ${donTarget} as active`,
+  });
+  if (fieldActivation === undefined || donActivation === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "activate:field-targets",
+          connector: "always",
+          effect: fieldActivation.effect,
+        },
+        {
+          id: "activate:don-targets",
+          connector: "then",
+          effect: donActivation.effect,
+        },
+      ],
+    },
+    evidence: [
+      "instruction:activate",
+      "composition:compoundActivation",
+      ...fieldActivation.evidence,
       ...donActivation.evidence,
     ],
     rest: "",

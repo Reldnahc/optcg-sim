@@ -214,4 +214,76 @@ describe("field activation instruction parser", () => {
       });
     }
   });
+
+  it("parses compound Character and DON activation through reusable activation primitives", () => {
+    const result = parseSetFieldActiveInstruction({
+      text: "Set up to 1 of your {Fish-Man} or {Merfolk} type Characters and up to 1 of your DON!! cards as active.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+            },
+          },
+        ],
+      },
+    });
+    const [fieldActivation, donActivation] =
+      result?.effect.type === "sequence" ? result.effect.effects : [];
+    expect(fieldActivation?.effect).toMatchObject({
+      type: "sequence",
+      effects: [
+        {
+          effect: {
+            type: "selectTargets",
+            request: {
+              zone: "characterArea",
+              player: "self",
+              filter: {
+                categories: ["character"],
+                typesAny: ["Fish-Man", "Merfolk"],
+              },
+            },
+          },
+        },
+        { effect: { type: "activate" } },
+      ],
+    });
+    expect(donActivation?.effect).toMatchObject({
+      type: "sequence",
+      effects: [
+        {
+          effect: {
+            type: "selectTargets",
+            request: {
+              zone: "costArea",
+              player: "self",
+              filter: { categories: ["don"], state: "rested" },
+            },
+          },
+        },
+        { effect: { type: "activate" } },
+      ],
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:activate",
+        "composition:compoundActivation",
+        "filter:type",
+        "target:yourDonCards",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
 });

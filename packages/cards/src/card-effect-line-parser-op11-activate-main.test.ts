@@ -3,6 +3,42 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("OP11 Activate Main parser primitives", () => {
+  it("parses conditional End of Your Turn Character and DON activation as composed primitives", () => {
+    const result = parseCardEffectLine(
+      "[End of Your Turn] If you have 6 or less cards in your hand, set up to 1 of your {Fish-Man} or {Merfolk} type Characters and up to 1 of your DON!! cards as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "endOfYourTurn" },
+        condition: {
+          type: "handCount",
+          player: "self",
+          op: "lte",
+          value: 6,
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            { connector: "always", effect: { type: "sequence" } },
+            { connector: "then", effect: { type: "sequence" } },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:endOfYourTurn",
+        "condition:handCount",
+        "composition:compoundActivation",
+        "filter:type",
+        "target:yourDonCards",
+        "instruction:activate",
+      ]),
+    );
+  });
+
   it("parses conditional rest-self plus Life face-down costs before KO bodies", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] If your Leader is [Shirahoshi], you may rest this Character and turn 1 card from the top of your Life cards face-down: K.O. up to 1 of your opponent's Characters with a cost of 3 or less.",
