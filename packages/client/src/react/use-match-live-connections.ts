@@ -40,7 +40,7 @@ export const useMatchLiveConnections = ({
         ) {
           setMatchLocation(nextState.matchId);
         } else if (isLobbyClientState(nextState)) {
-          setLobbyLocation(nextState.lobbyId);
+          setLobbyLocation(nextState);
         }
         setClientState(nextState);
         setErrors([]);
@@ -67,7 +67,7 @@ export const useMatchLiveConnections = ({
         ) {
           setMatchLocation(nextState.matchId);
         } else if (isLobbyClientState(nextState)) {
-          setLobbyLocation(nextState.lobbyId);
+          setLobbyLocation(nextState);
         }
         setClientState(nextState);
         setErrors([]);

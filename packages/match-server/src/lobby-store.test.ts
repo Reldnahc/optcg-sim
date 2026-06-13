@@ -67,6 +67,18 @@ describe("redis lobby store", () => {
     expect(await store.getLobby("lobby-test")).toEqual(lobby());
   });
 
+  test("stores lobby join code aliases in Redis", async () => {
+    const redis = new FakeRedis();
+    const store = createRedisLobbyStore({ redis });
+
+    const joinCode = await store.createLobbyJoinCode("lobby-test");
+
+    expect(joinCode).toMatch(/^[0-9a-z]{4}$/u);
+    expect(await store.getLobbyIdByJoinCode(joinCode.toUpperCase())).toBe(
+      "lobby-test",
+    );
+  });
+
   test("updates lobby state under a Redis lock", async () => {
     const redis = new FakeRedis();
     const store = createRedisLobbyStore({ redis });

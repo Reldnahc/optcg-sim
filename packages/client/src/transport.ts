@@ -152,6 +152,7 @@ export interface FirstPlayerChoiceResult {
 
 export interface CustomLobby {
   lobbyId: string;
+  joinCode?: string;
   settings?: CustomLobbySettings;
   seats: Record<
     string,
@@ -326,6 +327,10 @@ export interface MatchTransport {
   createLobby: (input?: CreateCustomLobbyInput) => Promise<CustomLobby>;
   joinLobby: (input: {
     lobbyId: string;
+    sessionToken: string;
+  }) => Promise<JoinedCustomLobby>;
+  joinLobbyByCode: (input: {
+    joinCode: string;
     sessionToken: string;
   }) => Promise<JoinedCustomLobby>;
   submitLobbyDeck: (input: {

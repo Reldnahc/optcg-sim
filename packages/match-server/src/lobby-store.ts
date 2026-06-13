@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
@@ -21,6 +21,7 @@ export interface CustomLobbySettings {
 
 export interface CustomLobbyState {
   readonly lobbyId: string;
+  readonly joinCode?: string;
   readonly seats: Record<string, CustomLobbySeatState>;
   settings?: CustomLobbySettings;
   firstPlayerChoice?: FirstPlayerChoiceState;
@@ -32,6 +33,8 @@ export interface CustomLobbyState {
 export interface LobbyStore {
   createLobby: (lobby: CustomLobbyState) => Promise<CustomLobbyState>;
   getLobby: (lobbyId: string) => Promise<CustomLobbyState | undefined>;
+  createLobbyJoinCode: (lobbyId: string) => Promise<string>;
+  getLobbyIdByJoinCode: (joinCode: string) => Promise<string | undefined>;
   deleteLobby: (lobbyId: string) => Promise<boolean>;
   updateLobby: <T>(
     lobbyId: string,
@@ -53,7 +56,12 @@ const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 
 const keyForLobby = (lobbyId: string): string => `lobby:${lobbyId}:state`;
+const keyForJoinCode = (joinCode: string): string =>
+  `lobby:join-code:${joinCode}`;
 const keyForLock = (lobbyId: string): string => `lobby:${lobbyId}:lock`;
+const joinCodeAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
+const joinCodeLength = 4;
+const joinCodeCreateAttempts = 10;
 
 const serialize = (value: unknown): string => JSON.stringify(value);
 
@@ -70,6 +78,9 @@ const parseLobby = (value: string): CustomLobbyState => {
   }
   return {
     lobbyId: parsed["lobbyId"],
+    ...(typeof parsed["joinCode"] === "string"
+      ? { joinCode: parsed["joinCode"] }
+      : {}),
     seats: parsed["seats"] as CustomLobbyState["seats"],
     ...(isRecord(parsed["settings"]) &&
     typeof parsed["settings"]["formatId"] === "string"
@@ -103,9 +114,18 @@ const parseLobby = (value: string): CustomLobbyState => {
   };
 };
 
+const normalizeJoinCode = (value: string): string => value.trim().toLowerCase();
+
+const createRandomJoinCode = (): string =>
+  Array.from(
+    { length: joinCodeLength },
+    () => joinCodeAlphabet[randomInt(joinCodeAlphabet.length)] ?? "0",
+  ).join("");
+
 export const createMemoryLobbyStore = (): LobbyStore => {
   let nextLobbyNumber = 1;
   const lobbies = new Map<string, CustomLobbyState>();
+  const lobbyIdsByJoinCode = new Map<string, string>();
   return {
     createLobbyId() {
       return `lobby-${String(nextLobbyNumber++)}`;
@@ -120,7 +140,27 @@ export const createMemoryLobbyStore = (): LobbyStore => {
         lobby === undefined ? undefined : structuredClone(lobby),
       );
     },
+    createLobbyJoinCode(lobbyId) {
+      for (let attempt = 0; attempt < joinCodeCreateAttempts; attempt += 1) {
+        const joinCode = createRandomJoinCode();
+        if (lobbyIdsByJoinCode.has(joinCode)) {
+          continue;
+        }
+        lobbyIdsByJoinCode.set(joinCode, lobbyId);
+        return Promise.resolve(joinCode);
+      }
+      throw new Error("Unable to allocate a lobby join code.");
+    },
+    getLobbyIdByJoinCode(joinCode) {
+      return Promise.resolve(
+        lobbyIdsByJoinCode.get(normalizeJoinCode(joinCode)),
+      );
+    },
     deleteLobby(lobbyId) {
+      const lobby = lobbies.get(lobbyId);
+      if (lobby?.joinCode !== undefined) {
+        lobbyIdsByJoinCode.delete(lobby.joinCode);
+      }
       return Promise.resolve(lobbies.delete(lobbyId));
     },
     async updateLobby(lobbyId, update) {
@@ -176,8 +216,34 @@ export const createRedisLobbyStore = ({
     const value = await redis.get(keyForLobby(lobbyId));
     return value === null ? undefined : parseLobby(value);
   },
+  async createLobbyJoinCode(lobbyId) {
+    for (let attempt = 0; attempt < joinCodeCreateAttempts; attempt += 1) {
+      const joinCode = createRandomJoinCode();
+      const created = await redis.set(keyForJoinCode(joinCode), lobbyId, {
+        nx: true,
+        px: ttlMs,
+      });
+      if (created === "OK") {
+        return joinCode;
+      }
+    }
+    throw new Error("Unable to allocate a lobby join code.");
+  },
+  async getLobbyIdByJoinCode(joinCode) {
+    return (
+      (await redis.get(keyForJoinCode(normalizeJoinCode(joinCode)))) ??
+      undefined
+    );
+  },
   async deleteLobby(lobbyId) {
-    return (await redis.del(keyForLobby(lobbyId))) > 0;
+    const value = await redis.get(keyForLobby(lobbyId));
+    const lobby = value === null ? undefined : parseLobby(value);
+    const deleted =
+      (await redis.del(keyForLobby(lobbyId))) +
+      (lobby?.joinCode === undefined
+        ? 0
+        : await redis.del(keyForJoinCode(lobby.joinCode)));
+    return deleted > 0;
   },
   async updateLobby(lobbyId, update) {
     const token = randomUUID();

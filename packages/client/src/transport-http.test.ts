@@ -92,6 +92,53 @@ describe("dev HTTP match transport", () => {
     );
   });
 
+  test("joins primitive lobbies by reusable short join code", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        lobbyId: "lobby-1",
+        joinCode: "ab12",
+        settings: { formatId: "sandbox-open" },
+        seat: { playerId: "p1" },
+        seats: {
+          p1: {
+            playerId: "p1",
+            claimed: true,
+            deck: { status: "missing" },
+          },
+          p2: {
+            playerId: "p2",
+            claimed: false,
+            deck: { status: "missing" },
+          },
+        },
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    const joined = await transport.joinLobbyByCode({
+      joinCode: "ab12",
+      sessionToken: "user:user-1:session-1",
+    });
+
+    const request = recorder.requests[0];
+    if (request === undefined) {
+      throw new Error("Expected a join-by-code request.");
+    }
+    assert.equal(joined.lobbyId, "lobby-1");
+    assert.equal(joined.joinCode, "ab12");
+    assert.equal(
+      request.url,
+      "http://localhost:3000/api/lobbies/by-code/ab12/join",
+    );
+    assert.equal(
+      new Headers(request.init?.headers).get("x-optcg-session-token"),
+      "user:user-1:session-1",
+    );
+  });
+
   test("submits lobby deck hashes with the account session token", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

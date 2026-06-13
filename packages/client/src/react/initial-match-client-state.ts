@@ -4,6 +4,7 @@ import type {
 } from "../controller.js";
 import {
   lobbyFormatIdFromUrl,
+  lobbyJoinCodeFromPath,
   lobbyIdFromPath,
   matchIdFromUrl,
 } from "./useMatchClient-support.js";
@@ -12,6 +13,7 @@ export const loadInitialMatchClientState = async (
   controller: MatchClientController,
 ): Promise<MatchClientSessionState> => {
   const urlMatchId = matchIdFromUrl();
+  const urlLobbyJoinCode = lobbyJoinCodeFromPath();
   const urlLobbyId = lobbyIdFromPath();
   const credential =
     urlMatchId === undefined ? undefined : controller.currentCredential();
@@ -26,6 +28,11 @@ export const loadInitialMatchClientState = async (
   }
   if (urlLobbyId !== undefined) {
     return await controller.joinCustomLobby({ lobbyId: urlLobbyId });
+  }
+  if (urlLobbyJoinCode !== undefined) {
+    return await controller.joinCustomLobbyByCode({
+      joinCode: urlLobbyJoinCode,
+    });
   }
   const lobbyFormatId = lobbyFormatIdFromUrl();
   return await controller.startCustomLobby(

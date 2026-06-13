@@ -26,6 +26,9 @@ const createPendingRematchTransport = (): MatchTransport => ({
   joinLobby() {
     throw new Error("joinLobby was not expected.");
   },
+  joinLobbyByCode() {
+    throw new Error("joinLobbyByCode was not expected.");
+  },
   submitLobbyDeck() {
     throw new Error("submitLobbyDeck was not expected.");
   },
