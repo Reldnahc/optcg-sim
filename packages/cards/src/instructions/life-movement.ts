@@ -1,11 +1,16 @@
 import type { SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import {
   parsePrimitivePattern,
   type PrimitivePatternDefinition,
 } from "../primitive-patterns.js";
-import type { InstructionParseResult, InstructionParser } from "../types.js";
+import type {
+  InstructionParseResult,
+  InstructionParser,
+  PrimitiveEvidence,
+} from "../types.js";
 
 const handToLifeSelection =
   "handSelection:self-hand-to-life-placement" as SelectionId;
@@ -244,13 +249,52 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
     return undefined;
   }
   if (
-    !/^cards? from your hand to the top of your Life cards\.?$/i.test(
+    /^cards? from your hand to the top of your Life cards\.?$/i.test(
       cardinality.rest,
     )
   ) {
+    return buildHandToLifeInstruction({
+      cardinality,
+      filterEvidence: [],
+      destinationFaceUp: false,
+    });
+  }
+
+  const filtered =
+    /^(?<filter>.+?) from your hand to the top of your Life cards(?<faceUp> face-up)?\.?$/iu.exec(
+      cardinality.rest,
+    );
+  const groups = filtered?.groups;
+  const filterText = groups?.["filter"];
+  if (groups === undefined || filterText === undefined) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates({ text: filterText });
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
     return undefined;
   }
 
+  return buildHandToLifeInstruction({
+    cardinality,
+    filter: predicates.filter,
+    filterEvidence: predicates.evidence,
+    destinationFaceUp: groups["faceUp"] !== undefined,
+  });
+};
+
+function buildHandToLifeInstruction({
+  cardinality,
+  destinationFaceUp,
+  filter,
+  filterEvidence,
+}: {
+  readonly cardinality: NonNullable<ReturnType<typeof parseUpToCardinality>>;
+  readonly destinationFaceUp: boolean;
+  readonly filter?: NonNullable<
+    ReturnType<typeof parseCardFilterPredicates>
+  >["filter"];
+  readonly filterEvidence: readonly PrimitiveEvidence[];
+}): InstructionParseResult {
   return {
     effect: {
       type: "sequence",
@@ -267,6 +311,7 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
             max: cardinality.cardinality.max,
             saveAs: handToLifeSelection,
             visibility: "chooserOnly",
+            ...(filter === undefined ? {} : { filter }),
           },
         },
         {
@@ -277,6 +322,7 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
             from: "hand",
             to: "life",
             position: "top",
+            ...(destinationFaceUp ? { destinationFaceUp: true } : {}),
           },
         },
       ],
@@ -289,9 +335,11 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
       "zone:hand",
       "destination:life",
       "position:top",
+      ...(destinationFaceUp ? ["visibility:faceUp" as const] : []),
+      ...filterEvidence,
       "chooser:self:upTo",
       "composition:selectThenMove",
     ],
     rest: "",
   };
-};
+}

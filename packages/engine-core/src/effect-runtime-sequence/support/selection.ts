@@ -114,7 +114,8 @@ export const isSupportedMoveSelectedSegment = (
     (effect.from === "hand" &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
-      effect.destinationFaceUp === undefined &&
+      (effect.destinationFaceUp === undefined ||
+        typeof effect.destinationFaceUp === "boolean") &&
       selectionKind === "hand" &&
       selectionMax === 1) ||
     (isSelectionSetSource(effect.from) &&

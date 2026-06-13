@@ -329,6 +329,122 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses optional Life-to-hand cost before filtered hand-to-Life face-up movement", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may add 1 card from the top or bottom of your Life cards to your hand: Add up to 1 {Supernovas} type Character card with a cost of 5 from your hand to the top of your Life cards face-up.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "moveCards",
+                  from: {
+                    player: "self",
+                    zone: "life",
+                    position: "topOrBottom",
+                  },
+                  to: { player: "self", zone: "hand" },
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Supernovas"],
+                        cost: { op: "eq", value: 5 },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "moveSelected",
+                      from: "hand",
+                      to: "life",
+                      position: "top",
+                      destinationFaceUp: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:optionalCostedEffect",
+        "cost:moveCards",
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "zone:hand",
+        "destination:life",
+        "visibility:faceUp",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+      ]),
+    );
+  });
+
+  it("reuses filtered hand-to-Life face-up movement under Main timing", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may add 1 card from the top of your Life cards to your hand: Add up to 1 {Example} type card from your hand to the top of your Life cards face-up.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {},
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      filter: { typesAny: ["Example"] },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "moveSelected",
+                      from: "hand",
+                      to: "life",
+                      destinationFaceUp: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
+
   it("parses optional turn-Life-face-down cost before rested DON attachment", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] You may turn 1 card from the top of your Life cards face-down: Give up to 1 rested DON!! card to your Leader or 1 of your Characters.",
