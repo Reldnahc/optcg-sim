@@ -14,6 +14,7 @@ import {
   createCollapsedCounterActions,
   cardCostGroupRequiresManualConfirm,
   cardCostPaymentLabel,
+  hasSelectedDonAttachmentTargetAction,
   selectedDonAttachmentMenuAction,
 } from "../index.js";
 import type {
@@ -200,16 +201,6 @@ export const visibleErrors = (errors: readonly string[]): string[] => [
   ...errors,
 ];
 
-export const isSelfAttachmentTarget = (
-  board: BoardViewModel | undefined,
-  instanceId: string,
-): boolean =>
-  board !== undefined &&
-  (String(board.self.leader.instanceId) === instanceId ||
-    board.self.characters.some(
-      (card) => String(card.instanceId) === instanceId,
-    ));
-
 export const cardActionsForInstance = ({
   board,
   instanceId,
@@ -229,7 +220,11 @@ export const cardActionsForInstance = ({
   );
   if (
     selectedCardInstanceId === instanceId &&
-    isSelfAttachmentTarget(board, instanceId)
+    hasSelectedDonAttachmentTargetAction(
+      selectedDonInstanceIds,
+      legalActions,
+      instanceId,
+    )
   ) {
     const attachAction = selectedDonAttachmentMenuAction(
       selectedDonInstanceIds,

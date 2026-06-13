@@ -37,6 +37,18 @@ const hasAttachDonActionForDon = (
       action.attachment?.donInstanceId === (donInstanceId as InstanceId),
   );
 
+export const hasSelectedDonAttachmentTargetAction = (
+  selectedDonInstanceIds: readonly string[],
+  actions: readonly ClientVisibleAction[],
+  targetInstanceId: string,
+): boolean =>
+  selectedDonInstanceIds.length > 0 &&
+  selectedDonInstanceIds.every(
+    (donInstanceId) =>
+      findAttachDonActionIndex(actions, donInstanceId, targetInstanceId) !==
+      undefined,
+  );
+
 const costAreaDon = (
   board: BoardViewModel | undefined,
   instanceId: string,

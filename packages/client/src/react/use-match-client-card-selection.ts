@@ -7,6 +7,7 @@ import {
   cardCostGroupRequiresManualConfirm,
   createDecisionDraft,
   counterTargetActionForInstance,
+  hasSelectedDonAttachmentTargetAction,
   isSelectableCostAreaDon,
   optionalCardCostActionForSelection,
   optionalCardCostInstanceIds,
@@ -26,10 +27,7 @@ import type {
   OptionalCardCostGroup,
   PendingDecisionInteractionMode,
 } from "../index.js";
-import {
-  decisionHasCandidate,
-  isSelfAttachmentTarget,
-} from "./useMatchClient-support.js";
+import { decisionHasCandidate } from "./useMatchClient-support.js";
 
 type PendingDecision =
   | MatchClientState["snapshot"]["players"][PlayerId]["view"]["pendingDecision"]
@@ -184,7 +182,11 @@ export const useMatchClientCardSelection = ({
       }
       if (
         selectedDonInstanceIds.length > 0 &&
-        isSelfAttachmentTarget(board, instanceId)
+        hasSelectedDonAttachmentTargetAction(
+          selectedDonInstanceIds,
+          playerActions,
+          instanceId,
+        )
       ) {
         const intent = selectedDonAttachmentClickIntent({
           confirmAttachDon,

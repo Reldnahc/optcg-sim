@@ -6,6 +6,7 @@ import type { InstanceId } from "@optcg/types";
 import {
   ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
+  hasSelectedDonAttachmentTargetAction,
   isSelectableCostAreaDon,
   selectedDonAttachmentClickIntent,
   selectedDonAttachmentMenuAction,
@@ -160,6 +161,37 @@ describe("DON selection interaction", () => {
     );
     assert.equal(
       isSelectableCostAreaDon(model, "opponent-active-don", actions),
+      false,
+    );
+  });
+
+  test("selected DON attachment targets are driven by legal action metadata", () => {
+    const actions: ClientVisibleAction[] = [
+      {
+        index: 11,
+        type: "respondToDecision",
+        label: "Pay cost",
+        attachment: {
+          donInstanceId: "opponent-rested-don" as InstanceId,
+          targetInstanceId: "opponent-character" as InstanceId,
+        },
+      },
+    ];
+
+    assert.equal(
+      hasSelectedDonAttachmentTargetAction(
+        ["opponent-rested-don"],
+        actions,
+        "opponent-character",
+      ),
+      true,
+    );
+    assert.equal(
+      hasSelectedDonAttachmentTargetAction(
+        ["opponent-rested-don"],
+        actions,
+        "leader-1",
+      ),
       false,
     );
   });

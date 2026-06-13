@@ -17,6 +17,7 @@ import {
   activeCardCostGlobalActions,
   applyActiveCardCostLifeChoiceCards,
   buildGlobalActions,
+  cardActionsForInstance,
   CHOOSE_NO_DECISION_CARDS_ACTION_INDEX,
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
@@ -568,6 +569,40 @@ describe("match client support helpers", () => {
       "self-leader",
       "opponent-leader",
     ]);
+  });
+
+  test("card actions expose selected DON attachment for opponent targets when legal metadata exists", () => {
+    const board = boardWithLife();
+    const opponentCharacter = hiddenLifeCard("opponent-character", "OPP-CHAR");
+    board.opponent.characters = [opponentCharacter];
+    const actions: ClientVisibleAction[] = [
+      {
+        index: 12,
+        type: "respondToDecision",
+        label: "Pay cost",
+        attachment: {
+          donInstanceId: "opponent-rested-don" as InstanceId,
+          targetInstanceId: opponentCharacter.instanceId,
+        },
+      },
+    ];
+
+    assert.deepEqual(
+      cardActionsForInstance({
+        board,
+        instanceId: String(opponentCharacter.instanceId),
+        selectedCardInstanceId: String(opponentCharacter.instanceId),
+        selectedDonInstanceIds: ["opponent-rested-don"],
+        legalActions: actions,
+      }),
+      [
+        {
+          index: -1,
+          type: "attachDon",
+          label: "Attach selected DON!!",
+        },
+      ],
+    );
   });
 
   test("match URL updates preserve reusable room code paths", () => {
