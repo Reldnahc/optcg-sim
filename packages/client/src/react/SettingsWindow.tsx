@@ -1,45 +1,6 @@
-import { createContext, useContext } from "react";
-
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
-
-export interface MatchVisualSettings {
-  readonly backgroundImageUrl: string;
-  readonly confirmAttachDon: boolean;
-  readonly confirmEndTurn: boolean;
-  readonly quickPayActivateMainCosts: boolean;
-  readonly zoneBackgroundVisibility: number;
-  readonly zoneGuideVisibility: number;
-  readonly setBackgroundImageUrl: (url: string) => void;
-  readonly setConfirmAttachDon: (enabled: boolean) => void;
-  readonly setConfirmEndTurn: (enabled: boolean) => void;
-  readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
-  readonly setZoneBackgroundVisibility: (value: number) => void;
-  readonly setZoneGuideVisibility: (value: number) => void;
-}
-
-const noopVisualSettings: MatchVisualSettings = {
-  backgroundImageUrl: "",
-  confirmAttachDon: true,
-  confirmEndTurn: false,
-  quickPayActivateMainCosts: false,
-  zoneBackgroundVisibility: 18,
-  zoneGuideVisibility: 60,
-  setBackgroundImageUrl: () => undefined,
-  setConfirmAttachDon: () => undefined,
-  setConfirmEndTurn: () => undefined,
-  setQuickPayActivateMainCosts: () => undefined,
-  setZoneBackgroundVisibility: () => undefined,
-  setZoneGuideVisibility: () => undefined,
-};
-
-const MatchVisualSettingsContext =
-  createContext<MatchVisualSettings>(noopVisualSettings);
-
-export const MatchVisualSettingsProvider = MatchVisualSettingsContext.Provider;
-
-export const useMatchVisualSettings = (): MatchVisualSettings =>
-  useContext(MatchVisualSettingsContext);
+import { useMatchVisualSettings } from "./match-visual-settings-context.js";
 
 export interface SettingsWindowProps {
   className?: string | undefined;

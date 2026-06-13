@@ -140,6 +140,7 @@ describe("settings window", () => {
       matchApp,
       settingsWindow,
       persistedSettingsHook,
+      settingsStore,
       appShellStyles,
       mainSource,
     ] = await Promise.all([
@@ -149,6 +150,7 @@ describe("settings window", () => {
         join(sourceDirectory, "use-persisted-match-visual-settings.ts"),
         "utf8",
       ),
+      readFile(join(sourceDirectory, "match-visual-settings-store.ts"), "utf8"),
       readFile(join(sourceDirectory, "styles/app-shell.css"), "utf8"),
       readFile(join(sourceDirectory, "main.tsx"), "utf8"),
     ]);
@@ -162,23 +164,19 @@ describe("settings window", () => {
     );
     assert.match(matchApp, /--zone-guide-label-alpha/u);
     assert.match(matchApp, /--zone-guide-background-alpha/u);
-    assert.match(persistedSettingsHook, /optcg:client:background-image-url/u);
-    assert.match(persistedSettingsHook, /optcg:client:zone-guide-visibility/u);
-    assert.match(
-      persistedSettingsHook,
-      /optcg:client:zone-background-visibility/u,
-    );
-    assert.match(persistedSettingsHook, /optcg:client:confirm-end-turn/u);
-    assert.match(
-      persistedSettingsHook,
-      /optcg:client:quick-pay-activate-main-costs/u,
-    );
-    assert.match(persistedSettingsHook, /optcg:client:confirm-attach-don/u);
-    assert.match(persistedSettingsHook, /loadConfirmAttachDon/u);
+    assert.match(settingsStore, /optcg:client:background-image-url/u);
+    assert.match(settingsStore, /optcg:client:zone-guide-visibility/u);
+    assert.match(settingsStore, /optcg:client:zone-background-visibility/u);
+    assert.match(settingsStore, /optcg:client:confirm-end-turn/u);
+    assert.match(settingsStore, /optcg:client:quick-pay-activate-main-costs/u);
+    assert.match(settingsStore, /optcg:client:confirm-attach-don/u);
+    assert.match(settingsStore, /groupId:\s*"appearance"/u);
+    assert.match(settingsStore, /groupId:\s*"gameplay"/u);
+    assert.match(settingsStore, /loadMatchVisualSettings/u);
+    assert.match(settingsStore, /saveMatchVisualSetting/u);
     assert.match(persistedSettingsHook, /createBrowserPersistentStorage/u);
-    assert.match(persistedSettingsHook, /\.getItem/u);
-    assert.match(persistedSettingsHook, /\.setItem/u);
-    assert.match(persistedSettingsHook, /\.removeItem/u);
+    assert.match(persistedSettingsHook, /loadMatchVisualSettings/u);
+    assert.match(persistedSettingsHook, /saveMatchVisualSetting/u);
     assert.match(settingsWindow, /new FileReader\(\)/u);
     assert.match(settingsWindow, /reader\.readAsDataURL\(file\)/u);
     assert.match(settingsWindow, /type="file"/u);
