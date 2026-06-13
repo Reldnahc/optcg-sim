@@ -11,8 +11,6 @@ import {
   type CreatedCustomLobbyResponse,
   type CustomLobbyRegistry,
 } from "./custom-lobby-registry.js";
-import type { CustomLobbySettings } from "./lobby-store.js";
-import { isDevMatchSetup } from "./local-match.js";
 import type { AuthContext, AuthProvider } from "./dev-auth.js";
 import { createDevAuthProvider, parseDevSessionToken } from "./dev-auth.js";
 import {
@@ -49,8 +47,14 @@ import { createSocketActionTiming } from "./action-timing-log.js";
 import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
+import {
+  handleCreateLobbyRequest,
+  handleGetLobbyRequest,
+} from "./lobby-basic-route.js";
 import { handleLobbyLoadoutValidationRequest } from "./lobby-loadout-validation-route.js";
+import { handleLobbyJoinCodeRequest } from "./lobby-join-code-route.js";
 import { handleRematchRequest } from "./match-rematch-route.js";
+import { handleResetRequest } from "./match-reset-route.js";
 import { isRecord, readRequestJson } from "./request-json.js";
 import {
   playerStatePayload,
@@ -69,17 +73,9 @@ import {
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
 
-interface DevResetRequest {
-  setup?: unknown;
-}
-
 interface FirstPlayerChoiceRequest {
   playerId?: unknown;
   choice?: unknown;
-}
-
-interface CreateLobbyRequest {
-  settings?: unknown;
 }
 
 export interface MatchHttpServer {
@@ -87,23 +83,6 @@ export interface MatchHttpServer {
   close: () => Promise<void>;
   url: () => string;
 }
-
-const parseCreateLobbySettings = (
-  body: unknown,
-): Partial<CustomLobbySettings> | "invalid" => {
-  const requestBody: CreateLobbyRequest = isRecord(body) ? body : {};
-  if (requestBody.settings === undefined) {
-    return {};
-  }
-  if (!isRecord(requestBody.settings)) {
-    return "invalid";
-  }
-  const formatId = requestBody.settings["formatId"];
-  if (typeof formatId !== "string" || formatId.trim().length === 0) {
-    return "invalid";
-  }
-  return { formatId: formatId.trim() };
-};
 
 const handleApiRequest = async (
   request: IncomingMessage,
@@ -129,30 +108,37 @@ const handleApiRequest = async (
     );
     return;
   }
-  if (request.method === "POST" && pathname === "/api/lobbies") {
-    const settings = parseCreateLobbySettings(await readRequestJson(request));
-    if (settings === "invalid") {
-      sendJson(response, 400, {
-        errors: ["Lobby format id must be a non-empty string."],
-      });
-      return;
-    }
-    sendJson(response, 201, await lobbyRegistry.createLobby(settings));
+  if (
+    await handleCreateLobbyRequest({
+      request,
+      response,
+      lobbyRegistry,
+    })
+  ) {
     return;
   }
-  const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(pathname);
-  if (lobbyRoute !== null) {
-    const lobbyId = decodeURIComponent(lobbyRoute.groups?.["lobbyId"] ?? "");
-    const lobby = await lobbyRegistry.getLobby(lobbyId);
-    if (lobby === undefined) {
-      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
-      return;
-    }
-    if (request.method === "GET") {
-      sendJson(response, 200, lobby);
-      return;
-    }
-    sendJson(response, 404, { errors: ["API route not found."] });
+  if (
+    await handleLobbyJoinCodeRequest({
+      request,
+      response,
+      pathname,
+      lobbyRegistry,
+      authProvider,
+      onJoined: (lobby) => {
+        broadcastLobbyState(lobby, lobbyConnections);
+      },
+    })
+  ) {
+    return;
+  }
+  if (
+    await handleGetLobbyRequest({
+      request,
+      response,
+      pathname,
+      lobbyRegistry,
+    })
+  ) {
     return;
   }
   const lobbyJoinRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/join$/u.exec(
@@ -452,36 +438,14 @@ const handleApiRequest = async (
     sendJson(response, 404, { errors: ["API route not found."] });
     return;
   }
-  if (request.method === "POST" && pathname === "/api/reset") {
-    let body: unknown;
-    try {
-      body = await readRequestJson(request);
-    } catch {
-      sendJson(response, 400, { errors: ["Request body must be JSON."] });
-      return;
-    }
-    const resetRequest: DevResetRequest = isRecord(body) ? body : {};
-    if (
-      resetRequest.setup === undefined &&
-      registry.getMatch(registry.defaultMatchId) === undefined
-    ) {
-      sendMatchNotFound(response, registry.defaultMatchId);
-      return;
-    }
-    if (
-      resetRequest.setup !== undefined &&
-      !isDevMatchSetup(resetRequest.setup)
-    ) {
-      sendJson(response, 400, { errors: ["Invalid dev match setup."] });
-      return;
-    }
-    const explicitSetup =
-      resetRequest.setup === undefined ? undefined : resetRequest.setup;
-    const reset = await registry.resetMatch(
-      registry.defaultMatchId,
-      explicitSetup,
-    );
-    sendJson(response, 200, reset.snapshot);
+  if (
+    await handleResetRequest({
+      request,
+      response,
+      pathname,
+      registry,
+    })
+  ) {
     return;
   }
   sendJson(response, 404, { errors: ["API route not found."] });

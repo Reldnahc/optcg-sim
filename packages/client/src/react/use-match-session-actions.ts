@@ -86,7 +86,7 @@ export const useMatchSessionActions = ({
     ) {
       setMatchLocation(created.matchId);
     } else if (isLobbyClientState(created)) {
-      setLobbyLocation(created.lobbyId);
+      setLobbyLocation(created);
     }
     resetLocalInteractionState();
     setClientState(created);
@@ -127,7 +127,7 @@ export const useMatchSessionActions = ({
       ) {
         setMatchLocation(result.matchId);
       } else if (isLobbyClientState(result)) {
-        setLobbyLocation(result.lobbyId);
+        setLobbyLocation(result);
       }
       resetLocalInteractionState();
       setClientState(result);

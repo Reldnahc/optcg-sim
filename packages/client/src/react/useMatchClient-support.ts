@@ -102,6 +102,15 @@ export const lobbyIdFromPath = (): string | undefined => {
   return undefined;
 };
 
+export const lobbyJoinCodeFromPath = (): string | undefined => {
+  const url = new URL(window.location.href);
+  const pathMatch = /^\/r\/(?<joinCode>[0-9a-z]{4})$/u.exec(url.pathname);
+  if (pathMatch !== null) {
+    return pathMatch.groups?.["joinCode"];
+  }
+  return undefined;
+};
+
 export const lobbyFormatIdFromUrl = (): string | undefined => {
   const value = new URL(window.location.href).searchParams.get("lobbyFormat");
   const trimmed = value?.trim();
@@ -116,9 +125,16 @@ export const setMatchLocation = (matchId: MatchId): void => {
   window.history.replaceState({}, "", url);
 };
 
-export const setLobbyLocation = (lobbyId: string): void => {
+export const setLobbyLocation = (
+  lobby: string | { readonly lobbyId: string; readonly joinCode?: string },
+): void => {
   const url = new URL(window.location.href);
-  url.pathname = `/lobbies/${encodeURIComponent(lobbyId)}`;
+  if (typeof lobby === "string" || lobby.joinCode === undefined) {
+    const lobbyId = typeof lobby === "string" ? lobby : lobby.lobbyId;
+    url.pathname = `/lobbies/${encodeURIComponent(lobbyId)}`;
+  } else {
+    url.pathname = `/r/${encodeURIComponent(lobby.joinCode)}`;
+  }
   url.search = "";
   window.history.replaceState({}, "", url);
 };

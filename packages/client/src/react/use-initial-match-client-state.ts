@@ -34,7 +34,7 @@ export const useInitialMatchClientState = ({
         ) {
           setMatchLocation(loaded.matchId);
         } else if (isLobbyClientState(loaded)) {
-          setLobbyLocation(loaded.lobbyId);
+          setLobbyLocation(loaded);
         }
         setClientState(loaded);
         setErrors([]);

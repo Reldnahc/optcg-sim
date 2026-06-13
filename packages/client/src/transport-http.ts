@@ -73,6 +73,13 @@ export const createDevHttpMatchTransport = ({
         input.sessionToken,
       );
     },
+    async joinLobbyByCode(input) {
+      return postJson<JoinedCustomLobby>(
+        `${root}/api/lobbies/by-code/${encodeURIComponent(input.joinCode)}/join`,
+        {},
+        input.sessionToken,
+      );
+    },
     async submitLobbyDeck(input) {
       return postJson<CustomLobby>(
         lobbyPath(input.lobbyId, "/deck"),

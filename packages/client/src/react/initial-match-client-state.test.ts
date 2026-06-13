@@ -47,12 +47,15 @@ afterEach(() => {
 
 const fakeController = (): MatchClientController & {
   joinedByAccount: MatchId[];
+  joinedByCode: string[];
   startedLobbies: CreateCustomLobbyInput[];
 } => {
   const joinedByAccount: MatchId[] = [];
+  const joinedByCode: string[] = [];
   const startedLobbies: CreateCustomLobbyInput[] = [];
   return {
     joinedByAccount,
+    joinedByCode,
     startedLobbies,
     startCustomLobby(input = {}) {
       startedLobbies.push(input);
@@ -72,6 +75,24 @@ const fakeController = (): MatchClientController & {
     },
     joinCustomLobby() {
       throw new Error("joinCustomLobby was not expected.");
+    },
+    joinCustomLobbyByCode(input) {
+      joinedByCode.push(input.joinCode);
+      return Promise.resolve({
+        lobbyId: "lobby-1",
+        joinCode: input.joinCode,
+        seat: {
+          lobbyId: "lobby-1",
+          playerId: "p1" as PlayerId,
+          sessionToken: "user:u:s",
+        },
+        lobby: {
+          lobbyId: "lobby-1",
+          joinCode: input.joinCode,
+          settings: { formatId: "sandbox-open" },
+          seats: {},
+        },
+      });
     },
     submitLobbyLoadoutHandoff() {
       throw new Error("submitLobbyLoadoutHandoff was not expected.");
@@ -161,4 +182,18 @@ test("initial match route passes selected lobby format to lobby creation", async
     { settings: { formatId: "Standard" } },
   ]);
   assert.equal("lobbyId" in state, true);
+});
+
+test("initial room alias route joins the lobby by short code", async () => {
+  testWindow.history.replaceState({}, "", "/r/ab12");
+  const controller = fakeController();
+
+  const state = await loadInitialMatchClientState(controller);
+
+  assert.deepEqual(controller.joinedByCode, ["ab12"]);
+  assert.equal("lobbyId" in state, true);
+  if (!("lobbyId" in state)) {
+    throw new Error("Expected a lobby state.");
+  }
+  assert.equal(state.lobbyId, "lobby-1");
 });

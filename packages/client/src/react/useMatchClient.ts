@@ -371,7 +371,7 @@ export const useMatchClient = ({
         ) {
           setMatchLocation(result.matchId);
         } else if (isLobbyClientState(result)) {
-          setLobbyLocation(result.lobbyId);
+          setLobbyLocation(result);
         }
         setClientState(result);
         setErrors([]);

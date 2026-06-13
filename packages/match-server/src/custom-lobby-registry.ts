@@ -45,6 +45,7 @@ import {
 
 export interface CreatedCustomLobbyResponse {
   lobbyId: string;
+  joinCode?: string;
   settings: CustomLobbySettings;
   seats: Record<
     string,
@@ -92,6 +93,12 @@ export interface CustomLobbyRegistry {
   ) => Promise<CreatedCustomLobbyResponse>;
   joinLobby: (
     lobbyId: string,
+    auth: AuthContext | undefined,
+  ) => Promise<
+    CreatedCustomLobbyResponse | "lobbyNotFound" | "unauthenticated" | "full"
+  >;
+  joinLobbyByCode: (
+    joinCode: string,
     auth: AuthContext | undefined,
   ) => Promise<
     CreatedCustomLobbyResponse | "lobbyNotFound" | "unauthenticated" | "full"
@@ -189,6 +196,7 @@ const lobbyResponse = (
   lobby: CustomLobbyState,
 ): CreatedCustomLobbyResponse => ({
   lobbyId: lobby.lobbyId,
+  ...(lobby.joinCode === undefined ? {} : { joinCode: lobby.joinCode }),
   settings: lobbySettings(lobby),
   seats: Object.fromEntries(
     Object.entries(lobby.seats).map(([key, seat]) => [
@@ -413,42 +421,60 @@ export const createCustomLobbyRegistry = async (
     lobby.matchId = created.matchId;
   };
   const pendingRematchVotes = new Map<MatchId, Set<PlayerId>>();
+  const joinLobbyById = async (
+    lobbyId: string,
+    auth: AuthContext | undefined,
+  ): Promise<
+    CreatedCustomLobbyResponse | "lobbyNotFound" | "unauthenticated" | "full"
+  > => {
+    if (auth === undefined) {
+      return "unauthenticated";
+    }
+    return lobbyStore.updateLobby(lobbyId, async (lobby) => {
+      const existing = findSeatForAuth(lobby, auth);
+      if (existing !== undefined) {
+        await ensureMatchWhenReady(lobby);
+        return {
+          ...lobbyResponse(lobby),
+          seat: { playerId: existing.playerId },
+        };
+      }
+      const open = claimOpenSeat(lobby, auth);
+      if (open === "full") {
+        return "full";
+      }
+      await ensureMatchWhenReady(lobby);
+      return {
+        ...lobbyResponse(lobby),
+        seat: { playerId: open.playerId },
+      };
+    });
+  };
 
   return {
-    createLobby(settings) {
+    async createLobby(settings) {
+      const lobbyId = lobbyStore.createLobbyId();
+      const joinCode = await lobbyStore.createLobbyJoinCode(lobbyId);
       const lobby: CustomLobbyState = {
-        lobbyId: lobbyStore.createLobbyId(),
+        lobbyId,
+        joinCode,
         settings:
           settings?.formatId === undefined
             ? defaultLobbySettings()
             : { formatId: settings.formatId },
         seats: createDefaultLobbySeats(),
       };
-      return lobbyStore.createLobby(lobby).then(lobbyResponse);
+      return lobbyResponse(await lobbyStore.createLobby(lobby));
     },
     async joinLobby(lobbyId, auth) {
-      if (auth === undefined) {
-        return "unauthenticated";
+      return await joinLobbyById(lobbyId, auth);
+    },
+    async joinLobbyByCode(joinCode, auth) {
+      const lobbyId = await lobbyStore.getLobbyIdByJoinCode(joinCode);
+      if (lobbyId === undefined) {
+        return "lobbyNotFound";
       }
-      return lobbyStore.updateLobby(lobbyId, async (lobby) => {
-        const existing = findSeatForAuth(lobby, auth);
-        if (existing !== undefined) {
-          await ensureMatchWhenReady(lobby);
-          return {
-            ...lobbyResponse(lobby),
-            seat: { playerId: existing.playerId },
-          };
-        }
-        const open = claimOpenSeat(lobby, auth);
-        if (open === "full") {
-          return "full";
-        }
-        await ensureMatchWhenReady(lobby);
-        return {
-          ...lobbyResponse(lobby),
-          seat: { playerId: open.playerId },
-        };
-      });
+      return await joinLobbyById(lobbyId, auth);
     },
     async submitDeck(lobbyId, auth, deckHash, donDeckCount) {
       if (auth === undefined) {

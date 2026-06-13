@@ -29,6 +29,7 @@ import type {
 
 export interface LobbyClientState {
   lobbyId: string;
+  joinCode?: string;
   seat: {
     lobbyId: string;
     playerId: PlayerId;
@@ -67,6 +68,9 @@ export interface MatchClientController {
   ) => Promise<MatchClientSessionState>;
   joinCustomLobby: (input: {
     lobbyId: string;
+  }) => Promise<MatchClientSessionState>;
+  joinCustomLobbyByCode: (input: {
+    joinCode: string;
   }) => Promise<MatchClientSessionState>;
   submitLobbyLoadoutHandoff: (input: {
     handoffToken: string;
@@ -262,6 +266,9 @@ export const createMatchClientController = ({
       });
       return claimMatchIfReady({
         lobbyId: joinedLobby.lobbyId,
+        ...(joinedLobby.joinCode === undefined
+          ? {}
+          : { joinCode: joinedLobby.joinCode }),
         seat: {
           lobbyId: joinedLobby.lobbyId,
           playerId: joinedLobby.seat.playerId,
@@ -277,10 +284,31 @@ export const createMatchClientController = ({
       });
       return claimMatchIfReady({
         lobbyId: joinedLobby.lobbyId,
+        ...(joinedLobby.joinCode === undefined
+          ? {}
+          : { joinCode: joinedLobby.joinCode }),
         seat: {
           lobbyId: joinedLobby.lobbyId,
           playerId: joinedLobby.seat.playerId,
           sessionToken: accountSessionToken,
+        },
+        lobby: joinedLobby,
+      });
+    },
+    async joinCustomLobbyByCode(input) {
+      const joinedLobby = await transport.joinLobbyByCode({
+        joinCode: input.joinCode,
+        sessionToken: accountSessionToken,
+      });
+      return await claimMatchIfReady({
+        lobbyId: joinedLobby.lobbyId,
+        ...(joinedLobby.joinCode === undefined
+          ? {}
+          : { joinCode: joinedLobby.joinCode }),
+        seat: {
+          lobbyId: joinedLobby.lobbyId,
+          playerId: joinedLobby.seat.playerId,
+          sessionToken: joinedLobby.seat.sessionToken ?? accountSessionToken,
         },
         lobby: joinedLobby,
       });
@@ -295,6 +323,7 @@ export const createMatchClientController = ({
       });
       return claimMatchIfReady({
         lobbyId: lobby.lobbyId,
+        ...(lobby.joinCode === undefined ? {} : { joinCode: lobby.joinCode }),
         seat: {
           lobbyId: lobby.lobbyId,
           playerId: lobby.seat.playerId,
@@ -413,6 +442,9 @@ export const createMatchClientController = ({
         currentFirstPlayerSetupState = undefined;
         currentLobbyState = {
           lobbyId: created.lobbyId,
+          ...(created.joinCode === undefined
+            ? {}
+            : { joinCode: created.joinCode }),
           seat: {
             lobbyId: created.lobbyId,
             playerId: created.seat.playerId,
@@ -554,6 +586,9 @@ export const createMatchClientController = ({
                   .then((joinedLobby) =>
                     claimMatchIfReady({
                       lobbyId: joinedLobby.lobbyId,
+                      ...(joinedLobby.joinCode === undefined
+                        ? {}
+                        : { joinCode: joinedLobby.joinCode }),
                       seat: {
                         lobbyId: joinedLobby.lobbyId,
                         playerId: joinedLobby.seat.playerId,
@@ -587,6 +622,9 @@ export const createMatchClientController = ({
         message: LobbyStateSyncMessage,
       ): LobbyClientState => ({
         lobbyId: message.lobbyId,
+        ...(message.lobby.joinCode === undefined
+          ? {}
+          : { joinCode: message.lobby.joinCode }),
         seat: {
           lobbyId: message.lobbyId,
           playerId,
