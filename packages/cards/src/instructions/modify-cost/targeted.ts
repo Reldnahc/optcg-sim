@@ -1,9 +1,12 @@
+import type { Target } from "@optcg/types";
+
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   attackRestrictionDurationParsers,
   parseDurationFromSet,
 } from "../../durations/index.js";
 import {
+  parseThisCharacterTarget,
   parseTargetFromSet,
   yourFieldEffectTargetParsers,
 } from "../../targets/index.js";
@@ -13,6 +16,28 @@ import { parsePositiveCostModifier } from "./shared.js";
 export const parseTargetedModifyCostInstruction: InstructionParser = (
   input,
 ) => {
+  const directTarget = parseThisCharacterTarget({
+    text: input.text,
+    allowImplicit: true,
+  });
+  if (directTarget !== undefined) {
+    const parsed = parseCostGainForTarget(
+      directTarget.target,
+      directTarget.rest,
+    );
+    if (parsed !== undefined) {
+      return {
+        effect: parsed.effect,
+        evidence: [
+          "instruction:modifyCost",
+          ...directTarget.evidence,
+          ...parsed.evidence,
+        ],
+        rest: "",
+      };
+    }
+  }
+
   const cardinality = parseUpToCardinality(input);
   if (cardinality === undefined) {
     return undefined;
@@ -24,9 +49,29 @@ export const parseTargetedModifyCostInstruction: InstructionParser = (
   );
   if (target?.target === undefined) return undefined;
 
-  const modifierText = /^gains\s+(?<rest>.*)$/i.exec(target.rest)?.groups?.[
-    "rest"
-  ];
+  const parsed = parseCostGainForTarget(target.target, target.rest);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: parsed.effect,
+    evidence: [
+      "instruction:modifyCost",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      ...parsed.evidence,
+    ],
+    rest: "",
+  };
+};
+
+function parseCostGainForTarget(
+  target: Target,
+  rest: string,
+): ReturnType<InstructionParser> {
+  const modifierText = /^gains\s+(?<rest>.*)$/i.exec(rest)?.groups?.["rest"];
   if (modifierText === undefined) {
     return undefined;
   }
@@ -48,18 +93,11 @@ export const parseTargetedModifyCostInstruction: InstructionParser = (
     effect: {
       type: "modifyCost",
       player: "self",
-      target: target.target,
+      target,
       value: modifier.value,
       duration: duration.duration,
     },
-    evidence: [
-      "instruction:modifyCost",
-      ...cardinality.evidence,
-      "chooser:self:upTo",
-      ...target.evidence,
-      ...modifier.evidence,
-      ...duration.evidence,
-    ],
+    evidence: [...modifier.evidence, ...duration.evidence],
     rest: "",
   };
-};
+}

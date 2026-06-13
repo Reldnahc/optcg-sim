@@ -111,4 +111,28 @@ describe("modify cost instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses this Character positive cost modifiers with explicit field duration", () => {
+    expect(
+      parseTargetedModifyCostInstruction({
+        text: "this Character gains +2 cost until the end of your opponent's next End Phase.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        target: { type: "self" },
+        value: 2,
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "modifier:positiveCost",
+        "count:positiveInteger",
+        "duration:opponentNextEndPhase",
+      ],
+      rest: "",
+    });
+  });
 });
