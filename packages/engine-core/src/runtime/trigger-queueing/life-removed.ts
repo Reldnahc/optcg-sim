@@ -18,7 +18,10 @@ import {
 } from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   LifeRemovedTriggerQueueingFailureReason,
@@ -29,6 +32,12 @@ import {
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+
+const lifeRemovedAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType: "lifeRemoved" as const,
+};
 
 const queuedTriggerEventIds = (state: GameState): Set<string> =>
   new Set(
@@ -195,6 +204,7 @@ export const createLifeRemovedTriggerQueueing = (
         }
         const lifeRemovedEffects = lookup.definition.effects.filter(
           (effect) =>
+            isAutoRuntimeTriggerCandidate(effect, lifeRemovedAutoAdapter) &&
             effect.trigger.type === "lifeRemoved" &&
             effect.trigger.players.some((ref) =>
               playerRefMatches(state, source, ref, movedPlayerId),
@@ -204,11 +214,7 @@ export const createLifeRemovedTriggerQueueing = (
           continue;
         }
         const matching = lifeRemovedEffects.filter((effect) =>
-          isSupportedAutoRuntimeEffectBlock(effect, {
-            category: "auto",
-            sourcePresencePolicies: ["mustRemainInSameZone"],
-            triggerType: "lifeRemoved",
-          }),
+          isSupportedAutoRuntimeEffectBlock(effect, lifeRemovedAutoAdapter),
         );
         if (matching.length !== lifeRemovedEffects.length) {
           return toEngineResult(

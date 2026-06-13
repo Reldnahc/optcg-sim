@@ -20,7 +20,10 @@ import {
 } from "../../action-results.js";
 import { cardMatchesSearchFilter, getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import {
   fieldTriggerSources,
   toSnapshot,
@@ -49,6 +52,12 @@ const queuedHandTrashTriggerEventIds = (state: GameState): Set<string> =>
         : [];
     }),
   );
+
+const handTrashedByEffectAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType: "handTrashedByEffect" as const,
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -213,6 +222,10 @@ export const createHandTrashedByEffectTriggerQueueing = (
         }
         const handTrashEffects = lookup.definition.effects.filter(
           (effect) =>
+            isAutoRuntimeTriggerCandidate(
+              effect,
+              handTrashedByEffectAutoAdapter,
+            ) &&
             effect.trigger.type === "handTrashedByEffect" &&
             playerRefMatches(
               state,
@@ -226,11 +239,10 @@ export const createHandTrashedByEffectTriggerQueueing = (
           continue;
         }
         const matching = handTrashEffects.filter((effect) =>
-          isSupportedAutoRuntimeEffectBlock(effect, {
-            category: "auto",
-            sourcePresencePolicies: ["mustRemainInSameZone"],
-            triggerType: "handTrashedByEffect",
-          }),
+          isSupportedAutoRuntimeEffectBlock(
+            effect,
+            handTrashedByEffectAutoAdapter,
+          ),
         );
         if (matching.length !== handTrashEffects.length) {
           return toEngineResult(

@@ -16,13 +16,22 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   EndOfYourTurnTriggerQueueingFailureReason,
 } from "./core.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+
+const endOfYourTurnAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType: "endOfYourTurn" as const,
+};
 
 const endPhaseStartedEvents = (state: GameState): readonly EngineEvent[] => {
   const queuedTriggerEventIds = new Set(
@@ -122,18 +131,14 @@ export const createEndOfTurnTriggerQueueing = (
         if (!lookup.ok) {
           return toEngineResult(state, [], [lookup.error]);
         }
-        const endOfTurnEffects = lookup.definition.effects.filter(
-          (effect) => effect.trigger.type === "endOfYourTurn",
+        const endOfTurnEffects = lookup.definition.effects.filter((effect) =>
+          isAutoRuntimeTriggerCandidate(effect, endOfYourTurnAutoAdapter),
         );
         if (endOfTurnEffects.length === 0) {
           continue;
         }
         const matching = endOfTurnEffects.filter((effect) =>
-          isSupportedAutoRuntimeEffectBlock(effect, {
-            category: "auto",
-            sourcePresencePolicies: ["mustRemainInSameZone"],
-            triggerType: "endOfYourTurn",
-          }),
+          isSupportedAutoRuntimeEffectBlock(effect, endOfYourTurnAutoAdapter),
         );
         if (matching.length !== endOfTurnEffects.length) {
           return toEngineResult(

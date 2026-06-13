@@ -16,6 +16,7 @@ import {
 } from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
+  isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
   triggerContainsType,
 } from "../../effect-runtime-block-support.js";
@@ -76,6 +77,12 @@ const supportedAutoEventReactionTriggerTypes: ReadonlySet<EventReactionTriggerTy
     "effectResolved",
     "triggerActivated",
   ]);
+
+const autoEventReactionAdapter = (triggerType: EventReactionTriggerType) => ({
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType,
+});
 
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
@@ -180,7 +187,11 @@ export const createEventReactionTriggerQueueing = (
           const match = matchEventTrigger(state, source, effect.trigger, event);
           const triggerTypesForEvent = match.triggerTypes.filter(
             (triggerType) =>
-              supportedAutoEventReactionTriggerTypes.has(triggerType),
+              supportedAutoEventReactionTriggerTypes.has(triggerType) &&
+              isAutoRuntimeTriggerCandidate(
+                effect,
+                autoEventReactionAdapter(triggerType),
+              ),
           );
           return triggerTypesForEvent.length === 0
             ? []
@@ -194,11 +205,10 @@ export const createEventReactionTriggerQueueing = (
             triggerTypesForEvent.every(
               (triggerType) =>
                 triggerContainsType(effect.trigger, triggerType) &&
-                isSupportedAutoRuntimeEffectBlock(effect, {
-                  category: "auto",
-                  sourcePresencePolicies: ["mustRemainInSameZone"],
-                  triggerType,
-                }),
+                isSupportedAutoRuntimeEffectBlock(
+                  effect,
+                  autoEventReactionAdapter(triggerType),
+                ),
             ),
         );
         if (matching.length !== reactionEffects.length) {

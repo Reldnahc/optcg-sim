@@ -15,7 +15,10 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnPlayTriggerQueueingFailureReason,
@@ -25,6 +28,15 @@ import {
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
+
+const onPlayAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: [
+    "mustRemainInSameZone",
+    "resolveFromLastKnownInformation",
+  ] as const,
+  triggerType: "onPlay" as const,
+};
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<
@@ -147,18 +159,14 @@ export const createOnPlayTriggerQueueing = (
       if (!lookup.ok) {
         return toEngineResult(state, [], [lookup.error]);
       }
-      const onPlayEffects = lookup.definition.effects.filter(
-        (effect) => effect.trigger.type === "onPlay",
+      const onPlayEffects = lookup.definition.effects.filter((effect) =>
+        isAutoRuntimeTriggerCandidate(effect, onPlayAutoAdapter),
       );
       if (onPlayEffects.length === 0) {
         continue;
       }
       const matching = onPlayEffects.filter((effect) =>
-        isSupportedAutoRuntimeEffectBlock(effect, {
-          category: "auto",
-          sourcePresencePolicies: ["mustRemainInSameZone"],
-          triggerType: "onPlay",
-        }),
+        isSupportedAutoRuntimeEffectBlock(effect, onPlayAutoAdapter),
       );
       if (matching.length !== onPlayEffects.length) {
         return toEngineResult(

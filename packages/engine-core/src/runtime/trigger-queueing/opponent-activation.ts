@@ -18,7 +18,10 @@ import {
 } from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OpponentActivationTriggerQueueingFailureReason,
@@ -70,6 +73,12 @@ const queuedMainEventTriggerEventIds = (state: GameState): Set<string> =>
         : [];
     }),
   );
+
+const opponentActivatedAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType: "opponentActivated" as const,
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -236,6 +245,10 @@ export const createOpponentActivationTriggerQueueing = (
         }
         const activationEffects = lookup.definition.effects.filter(
           (effect) =>
+            isAutoRuntimeTriggerCandidate(
+              effect,
+              opponentActivatedAutoAdapter,
+            ) &&
             effect.trigger.type === "opponentActivated" &&
             effect.trigger.activations.includes(activation.kind),
         );
@@ -243,11 +256,10 @@ export const createOpponentActivationTriggerQueueing = (
           continue;
         }
         const matching = activationEffects.filter((effect) =>
-          isSupportedAutoRuntimeEffectBlock(effect, {
-            category: "auto",
-            sourcePresencePolicies: ["mustRemainInSameZone"],
-            triggerType: "opponentActivated",
-          }),
+          isSupportedAutoRuntimeEffectBlock(
+            effect,
+            opponentActivatedAutoAdapter,
+          ),
         );
         if (matching.length !== activationEffects.length) {
           return toEngineResult(

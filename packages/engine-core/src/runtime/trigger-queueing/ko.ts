@@ -21,7 +21,10 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { zonesEqual } from "../../actions/state.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import { isSupportedEffectResolvedCustomEffect } from "../../effect-runtime-custom-trigger-support.js";
 import type {
   BattleKOTriggerCandidate,
@@ -46,20 +49,21 @@ import {
   lifeTriggerQueueOrigin,
 } from "../../life-trigger/queue-origin.js";
 
+const onKOAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: [
+    "resolveFromDestinationZone",
+    "resolveFromLastKnownInformation",
+  ] as const,
+  triggerType: "onKO" as const,
+};
+
 export const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Effect;
-} =>
-  isSupportedAutoRuntimeEffectBlock(effect, {
-    category: "auto",
-    sourcePresencePolicies: [
-      "resolveFromDestinationZone",
-      "resolveFromLastKnownInformation",
-    ],
-    triggerType: "onKO",
-  });
+} => isSupportedAutoRuntimeEffectBlock(effect, onKOAutoAdapter);
 
 export const createKOTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,
@@ -150,8 +154,8 @@ export const createKOTriggerQueueing = (
       if (!lookup.ok) {
         return { ok: false, error: lookup.error };
       }
-      const onKOEffects = lookup.definition.effects.filter(
-        (effect) => effect.trigger.type === "onKO",
+      const onKOEffects = lookup.definition.effects.filter((effect) =>
+        isAutoRuntimeTriggerCandidate(effect, onKOAutoAdapter),
       );
       if (onKOEffects.length === 0) {
         continue;

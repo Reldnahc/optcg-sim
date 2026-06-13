@@ -16,7 +16,10 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
-import { isSupportedAutoRuntimeEffectBlock } from "../../effect-runtime-block-support.js";
+import {
+  isAutoRuntimeTriggerCandidate,
+  isSupportedAutoRuntimeEffectBlock,
+} from "../../effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnOpponentAttackTriggerQueueingFailureReason,
@@ -104,27 +107,29 @@ const attackDeclaredEventsForOpponentAttackTiming = (
   );
 };
 
+const whenAttackingAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType: "whenAttacking" as const,
+};
+
+const onOpponentAttackAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  triggerType: "onOpponentAttack" as const,
+};
+
 export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   effect: Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0],
 ): effect is Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} =>
-  isSupportedAutoRuntimeEffectBlock(effect, {
-    category: "auto",
-    sourcePresencePolicies: ["mustRemainInSameZone"],
-    triggerType: "whenAttacking",
-  });
+} => isSupportedAutoRuntimeEffectBlock(effect, whenAttackingAutoAdapter);
 
 export const isSupportedOnOpponentAttackCompatibleQueuedEffect = (
   effect: Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0],
 ): effect is Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} =>
-  isSupportedAutoRuntimeEffectBlock(effect, {
-    category: "auto",
-    sourcePresencePolicies: ["mustRemainInSameZone"],
-    triggerType: "onOpponentAttack",
-  });
+} => isSupportedAutoRuntimeEffectBlock(effect, onOpponentAttackAutoAdapter);
 
 export const createAttackTriggerQueueing = (
   dependencies: Pick<
@@ -237,8 +242,8 @@ export const createAttackTriggerQueueing = (
       if (!lookup.ok) {
         return toEngineResult(state, [], [lookup.error]);
       }
-      const whenAttackingEffects = lookup.definition.effects.filter(
-        (effect) => effect.trigger.type === "whenAttacking",
+      const whenAttackingEffects = lookup.definition.effects.filter((effect) =>
+        isAutoRuntimeTriggerCandidate(effect, whenAttackingAutoAdapter),
       );
       if (whenAttackingEffects.length === 0) {
         continue;
@@ -471,7 +476,8 @@ export const createAttackTriggerQueueing = (
           return toEngineResult(state, [], [lookup.error]);
         }
         const onOpponentAttackEffects = lookup.definition.effects.filter(
-          (effect) => effect.trigger.type === "onOpponentAttack",
+          (effect) =>
+            isAutoRuntimeTriggerCandidate(effect, onOpponentAttackAutoAdapter),
         );
         if (onOpponentAttackEffects.length === 0) {
           continue;

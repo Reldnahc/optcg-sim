@@ -21,6 +21,13 @@ export type { AutoRuntimeEntryAdapter } from "./effect-runtime-entry-adapters.js
 
 type EffectBlock = EffectDefinition["effects"][number];
 
+export const isAutoRuntimeTriggerCandidate = (
+  block: EffectBlock,
+  adapter: AutoRuntimeEntryAdapter,
+): boolean =>
+  block.category === adapter.category &&
+  triggerContainsType(block.trigger, adapter.triggerType);
+
 const isSupportedSequenceBody = (
   block: EffectBlock,
   adapter: AutoRuntimeEntryAdapter,
@@ -47,8 +54,7 @@ const hasSupportedBlockEnvelope = (
   block: EffectBlock,
   adapter: AutoRuntimeEntryAdapter,
 ): block is EffectBlock & { sourcePresencePolicy: SourcePresencePolicy } =>
-  block.category === adapter.category &&
-  triggerContainsType(block.trigger, adapter.triggerType) &&
+  isAutoRuntimeTriggerCandidate(block, adapter) &&
   block.sourcePresencePolicy !== undefined &&
   adapter.sourcePresencePolicies.includes(block.sourcePresencePolicy) &&
   block.cost === undefined &&

@@ -16,6 +16,7 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { evaluateEffectBlockRuntimeSupport } from "../../effect-runtime-admission.js";
+import { isAutoRuntimeTriggerCandidate } from "../../effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   MainEventTriggerQueueingFailureReason,
@@ -26,13 +27,22 @@ import {
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 
+const mainEventAutoAdapter = {
+  category: "auto" as const,
+  sourcePresencePolicies: [
+    "noSourceRequired",
+    "resolveFromDestinationZone",
+  ] as const,
+  triggerType: "main" as const,
+};
+
 const isSupportedMainEventEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
 } =>
+  isAutoRuntimeTriggerCandidate(effect, mainEventAutoAdapter) &&
   effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
-  effect.trigger.type === "main" &&
   evaluateEffectBlockRuntimeSupport(effect).supported;
 
 const queuedMainEventTriggerEventIds = (state: GameState): Set<string> =>
@@ -169,8 +179,8 @@ export const createMainEventTriggerQueueing = (
       if (!lookup.ok) {
         return toEngineResult(state, [], [lookup.error]);
       }
-      const mainEffects = lookup.definition.effects.filter(
-        (effect) => effect.trigger.type === "main",
+      const mainEffects = lookup.definition.effects.filter((effect) =>
+        isAutoRuntimeTriggerCandidate(effect, mainEventAutoAdapter),
       );
       if (mainEffects.length === 0) {
         continue;
