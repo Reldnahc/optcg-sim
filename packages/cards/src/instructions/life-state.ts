@@ -2,6 +2,24 @@ import type { InstructionParser } from "../types.js";
 
 export const parseLifeStateInstruction: InstructionParser = (input) => {
   if (
+    /^look at all of your Life cards and place them back in your Life area in any order\.?$/iu.test(
+      input.text,
+    )
+  ) {
+    return {
+      effect: { type: "reorderLife", player: "self", viewer: "self" },
+      evidence: [
+        "instruction:reorder",
+        "player:self",
+        "zone:life",
+        "visibility:private",
+        "order:anyOrder",
+      ],
+      rest: "",
+    };
+  }
+
+  if (
     /^look at all of your opponent's Life cards and place them back in their Life area in any order\.?$/iu.test(
       input.text,
     )

@@ -79,7 +79,7 @@ export const isSupportedReorderLifeSegment = (
   effect: SequenceSegmentEffect,
 ): effect is ReorderLifeEffect =>
   effect.type === "reorderLife" &&
-  effect.player === "opponent" &&
+  (effect.player === "self" || effect.player === "opponent") &&
   effect.viewer === "self";
 
 export const isSupportedSetLifeFaceUpSegment = (
