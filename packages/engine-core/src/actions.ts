@@ -61,6 +61,7 @@ import {
 import {
   applyLifeReorderSequenceAwareResponse,
   applySequenceSelectCardsChoiceResponse,
+  getSequenceSelectCardsChoiceLegalActions,
   applyPlaceSetRemainderSequenceAwareResponse,
   applySelectedHandDeckPlacementSequenceAwareResponse,
   applyTopDeckPlacementSequenceAwareResponse,
@@ -189,6 +190,7 @@ export const getLegalActions = (
     actions.push(...getChooseQuantityLegalActions(state, playerId));
     actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
     actions.push(...getHandSelectionDecisionLegalActions(state, playerId));
+    actions.push(...getSequenceSelectCardsChoiceLegalActions(state, playerId));
     actions.push(...getSetupStartOfGameLegalActions(state, playerId));
     return actions;
   }

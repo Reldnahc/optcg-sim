@@ -1,4 +1,11 @@
-import type { Action, CardRef, EngineResult, GameState } from "@optcg/types";
+import type {
+  Action,
+  CardRef,
+  EngineResult,
+  GameState,
+  LegalAction,
+  PlayerId,
+} from "@optcg/types";
 
 import { toEngineResult } from "../action-results.js";
 import {
@@ -64,6 +71,32 @@ export const applySequenceSelectCardsChoiceResponse = (
     return toEngineResult(state, [], [resumed.error]);
   }
   return toEngineResult(resumed.state, resumed.events);
+};
+
+export const getSequenceSelectCardsChoiceLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.playerId !== playerId ||
+    decision.request.set === undefined ||
+    !hasSequenceFrameForDecision(state, decision.id)
+  ) {
+    return [];
+  }
+  const cards = decision.candidates
+    .slice(0, decision.request.max)
+    .map((candidate) => candidate.card);
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards },
+    },
+  ];
 };
 
 export const resumeSequenceAfterTopDeckPlacementResponse = (
